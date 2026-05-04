@@ -1,5 +1,5 @@
 ---
-description: Close a card with DoD enforcement, log.md closure entry, and commit via Skill(prepare-commit). AUTO-INVOKE when user says "done", "close this", "finish X", "mark complete", "wrap up", "ship it", or completes work that satisfies a card's DoD. The DoD checkboxes ARE the closure contract (Scrum Definition of Done) — `goc done` refuses to close with any unchecked.
+description: Close a card with DoD enforcement, log.md closure entry, and project-specific post-close / commit handoff. AUTO-INVOKE when user says "done", "close this", "finish X", "mark complete", "wrap up", "ship it", or completes work that satisfies a card's DoD. The DoD checkboxes ARE the closure contract (Scrum Definition of Done) — `goc done` refuses to close with any unchecked.
 argument-hint: <title>
 ---
 
@@ -23,7 +23,7 @@ Closure is an eight-step contract — skip a step and the card is dishonest:
 5. Run `goc attest <title>` to record the Closure-verification block in `log.md` (layer-2 + layer-3 DoDs from `.claude/deck-config.yaml`).
 6. Run `goc done <title>` (DoD-100% gated).
 7. Run any project-specific post-close action (status dashboard, changelog row, etc.) defined in the consuming repo's hook.
-8. Hand to `Skill(prepare-commit)`.
+8. Commit or hand off according to the consuming repo's hook / normal runtime workflow.
 
 If at any step the work turns out NOT to be a closure (a fix
 attempt regressed, a hypothesis was disproved during verification),
@@ -176,9 +176,10 @@ The command:
 - Prints `<title>: open → done` on success.
 
 `done` does NOT auto-commit (unlike `status` / `decide` / `advance`),
-because the closure transition is bundled with the work commit via
-Step 8 (prepare-commit). The `done` flip stages alongside the work
-diff.
+because the closure transition belongs in the same work commit as the
+code/doc diff. The `done` flip remains in the working tree until Step 8
+stages and commits it, or until the runtime hands it to the user's
+normal commit flow.
 
 For free-form prose DoDs (zero `[ ]` AND zero `[x]` boxes
 detected), `done` requires `--force` to bypass enforcement — but
@@ -202,18 +203,19 @@ Note: the hook file is *also* loaded in Step 2 above; both steps share
 the same hook file because both are project-rubric questions and the
 consuming repo authors them together.
 
-## Step 8 — commit via `Skill(prepare-commit)`
+## Step 8 — commit or hand off
 
-Invoke `Skill(prepare-commit)`. It runs the full gauntlet
-(`git status` / `diff`, pytest, pre-commit hooks including
-`deck-validate`, ruff/mypy/pylint, doc-consistency-checker), writes
-the commit message, stages, and commits.
+GoC does not ship a commit-helper skill. If the consuming repo wants a
+custom commit flow, it belongs in `.game-of-cards/hooks/finish-card.md`
+and should be followed here. Otherwise use the runtime's normal commit
+workflow: inspect `git status` / `diff`, run the repo's relevant checks,
+stage specific files, and commit the work plus the closure transition.
 
 Note: claim/decide/advance state changes already auto-committed
 earlier in the card's lifecycle (per `Skill(advance-card)` Step 5).
-`prepare-commit` here ships the **work** commit only — the actual
-code/doc changes plus the closure transition (DoD ticks, log.md
-entries from Steps 4 + 5, `status: done`, `closed_at`).
+The final commit here ships the **work** only — the actual code/doc
+changes plus the closure transition (DoD ticks, log.md entries from
+Steps 4 + 5, `status: done`, `closed_at`).
 
 Override the message:
 
@@ -226,17 +228,16 @@ Override the message:
 - **Body:** explain WHY (which user-visible problem this resolves;
   what measurement bias it removed). Include verification numbers
   and the closure log. Reference the `deck/<title>/` archive.
-- **Trailer:** `Co-Authored-By: Claude Opus 4.7 (1M context)
-  <noreply@anthropic.com>`.
+- **Trailer:** follow the consuming repo's authorship convention, if
+  one exists.
 
-If prepare-commit FAILS *because of the work-todo run itself*
-(newly broken test, lint error you introduced, deck-validate
-rejection), fix and re-invoke. If it FAILS on a pre-existing issue,
-surface in chat and stop — that's a separate concern.
+If the commit workflow fails *because of this work* (newly broken test,
+lint error you introduced, deck-validate rejection), fix and re-run it.
+If it fails on a pre-existing issue, surface that in chat and stop —
+that's a separate concern.
 
 ## Cross-references
 
-- `Skill(prepare-commit)` — the commit gauntlet.
 - `Skill(card-schema)` — DoD format + free-form-prose escape.
 - `Skill(advance-card)` — divert here if verification reveals the
   hypothesis was wrong (`→ disproved`) or the fix needs more work

@@ -90,7 +90,7 @@ project-specific reasoning is decisive.
 3. **Commit happens automatically.** `goc decide` auto-commits
    the body + log + gate flip with subject `decide: <title> — <decision>`.
    The decision is git-observable to sibling branches immediately —
-   no separate `prepare-commit` step needed (the diff is purely
+   no separate commit-helper step needed (the diff is purely
    metadata: `README.md` body + `log.md` entry). Pass `--no-commit`
    only when bundling with adjacent state changes is genuinely
    necessary (rare). See `Skill(advance-card)` Step 5 for the

@@ -252,5 +252,5 @@ operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicat
 - `Skill(create-card)` — when a hygiene issue surfaces a NEW
   defect (e.g., the defunct citation reveals a real bug, not just
   rot), file via create-card.
-- `Skill(prepare-commit)` — to land the hygiene edits as a
+- Project commit workflow — to land the hygiene edits as a
   `chore(deck): hygiene pass — <date>` commit.

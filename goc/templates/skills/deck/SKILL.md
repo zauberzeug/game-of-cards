@@ -172,8 +172,8 @@ One skill per job; compose, don't bundle.
   `decision`/`session` → `none`. Status stays `open` so the next
   `pull-card` claims and implements per the recorded decision.
 - `Skill(finish-card)` — close a card: tick DoD, append closure log,
-  run `goc done <title>`, run any project-specific post-close action, hand to
-  `Skill(prepare-commit)`.
+  run `goc done <title>`, then run any project-specific post-close or
+  commit handoff defined by the consuming repo's hook.
 - `Skill(card-schema)` — schema reference (read-only): required
   fields, enums, canonical tags with predicates, DoD detection,
   relationship invariants.

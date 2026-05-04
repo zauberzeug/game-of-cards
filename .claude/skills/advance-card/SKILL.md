@@ -110,8 +110,8 @@ state-only commits don't.
 `goc status` / `advance` / `unadvance` / `decide` ALL auto-commit
 by default. Pass `--no-commit` only when bundling is genuinely
 necessary (rare — you almost never want this). The work commit, when
-it lands later via `Skill(finish-card)` → `Skill(prepare-commit)`,
-contains the actual code/doc changes — NOT the status flip.
+it lands later after `Skill(finish-card)`, contains the actual code/doc
+changes — NOT the status flip.
 
 If the auto-commit is skipped (no git repo, mid-merge / mid-rebase,
 no diff), the CLI prints a one-line note. The on-disk state still

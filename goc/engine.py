@@ -1203,8 +1203,8 @@ def done(title, force):
 # ────────────────────────────────────────────────────────────────────────────
 # Auto-commit — claim/decide/advance state changes commit immediately so
 # multi-branch deck work synchronizes via git rather than racing on
-# uncommitted YAML. The work commit (finish-card → prepare-commit) is
-# still separate; only the state-mutation primitives auto-commit here.
+# uncommitted YAML. The work commit stays separate; only the
+# state-mutation primitives auto-commit here.
 
 
 def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0911

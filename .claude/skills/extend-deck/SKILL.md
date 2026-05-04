@@ -190,8 +190,9 @@ round must produce ≥1 unverified entry before reporting empty.
 ## Phase 4 — Commit
 
 When all `deck/<title>/` dirs (filed + disproved + unverified) are
-written, invoke `Skill(prepare-commit)`. Let the gauntlet run; the
-deck-validate hook rejects schema violations.
+written, commit them according to the consuming repo's normal commit
+workflow and any GoC hook it defines. The deck-validate hook rejects
+schema violations.
 
 ### Canonical commit subject
 
@@ -216,7 +217,7 @@ Brief summary in chat (≤200 words):
 - The contradicted doc/comment (quoted, one line).
 - Disproved candidates added this run, if any (one-liner each).
 - Unverified candidates parked this run, if any.
-- The commit hash from `Skill(prepare-commit)`.
+- The commit hash, if this run created a commit.
 
 Full writeup, code quotes, empirical output, and proposed fix all
 live in `deck/<title>/README.md`. Do not duplicate them in chat.
@@ -230,4 +231,4 @@ live in `deck/<title>/README.md`. Do not duplicate them in chat.
   (open / done / disproved / unverified).
 - `Skill(card-schema)` — DoD format, decision-gate body contract,
   canonical tag predicates.
-- `Skill(prepare-commit)` — final gauntlet.
+- Project commit workflow — final checks, staging, and commit.

@@ -210,5 +210,6 @@ rule: drop the `unverified` tag once a working `reproduce.py` lands.
   queues.
 - `Skill(advance-card)` — if the body reveals the gate should be
   different than what you scaffolded with.
-- `Skill(prepare-commit)` — when the body, DoD, and `reproduce.py`
-  are written, hand to the commit gauntlet to land the filing.
+- Project commit workflow — when the body, DoD, and `reproduce.py`
+  are written, commit the filing according to the consuming repo's
+  normal checks and any GoC hook it defines.
