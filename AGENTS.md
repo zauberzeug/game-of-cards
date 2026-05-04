@@ -7,7 +7,7 @@ from the repo root as `uv run goc ...`; do not assume a bare `goc` executable
 is available on PATH in this repo. Translate every bare `goc ...` example in
 the generated guidance below to `uv run goc ...` while working here.
 
-<!-- BEGIN GOC v0.0.1 -->
+<!-- BEGIN GOC v0.0.2 -->
 ## Game of Cards — methodology runtime
 
 This repo uses [Game of Cards](https://github.com/zauberzeug/game-of-cards), a
@@ -78,9 +78,8 @@ Daily verbs:
 | `goc decide <title> --decision X --because Y` | Lower gate from decision/session → none. |
 | `goc validate` | Validate every card's frontmatter (pre-commit-friendly). |
 
-Schema: see `.claude/skills/card-schema/` (or run `goc validate` to see
-enum constraints in error messages). Workflow lifecycle: see
-`.claude/skills/deck/`.
+Run `goc validate` to see schema and enum constraints in error messages.
+Project-local tag extensions live in `.game-of-cards/canonical-tags.md`.
 
 ## Project-specific extensions
 
@@ -89,9 +88,10 @@ maps, consultation rubrics that pull-card invokes before raising the
 Andon cord). When present, those live in `.game-of-cards/`. Read
 `.game-of-cards/README.md` for the conventions used in this repo.
 
-## Claude Code specifics
+## Runtime-specific extras
 
-See [`CLAUDE.md`](CLAUDE.md) — the silent-runtime hook + 11 skill files
-(`Skill(...)` notation) live there. The Claude-specific deltas don't
-apply to other runtimes.
+When present, [`CLAUDE.md`](CLAUDE.md) contains Claude Code-only extras
+such as prompt hooks and native command wrappers. Codex should use this
+`AGENTS.md` briefing plus the `goc` CLI verbs above; it does not need
+Claude-only files to run the deck workflow.
 <!-- END GOC -->

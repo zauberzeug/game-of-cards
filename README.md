@@ -29,7 +29,14 @@ This is *not* another methodology framework. Spec-Kit ships templates. BMAD ship
 ```bash
 uv tool install game-of-cards     # one-time, machine-wide
 cd any-repo
-goc install                       # adds deck/, CLAUDE.md/AGENTS.md sections, a starter card
+goc install                       # default: Claude Code harness plus shared AGENTS.md guidance
+goc install --agents codex        # Codex harness only: deck/, AGENTS.md, .game-of-cards/
+```
+
+When working from a checkout of this repo, use the repo-local form:
+
+```bash
+uv run goc install --agents codex
 ```
 
 The cost of trying is low. `goc install` adds files; it doesn't take any away. If you decide it isn't for you, `rm -rf deck/` and revert the two README sections — you're back where you started.
@@ -51,7 +58,8 @@ If you're using Claude Code or any `AGENTS.md`-aware editor, you can also just t
 - A `deck/<title>/` directory per card: frontmatter-validated `README.md`, append-only `log.md`.
 - A schema validator suitable for pre-commit and CI.
 - A starter set of Claude Code skills (`scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`) that turn the CLI into an autonomous workflow when you want one.
-- An `AGENTS.md` block for editors that aren't Claude Code.
+- Harness install targets for `claude` and `codex`. `claude` is the no-flag default; `codex` writes AGENTS.md-centered guidance without Claude-only skills or prompt hooks.
+- An `AGENTS.md` block for Codex and other editors that aren't Claude Code.
 - A `.game-of-cards/` per-repo config layer for project-specific content and workflow hooks. The convention — directory layout, file format, hook-point catalog — is documented in [`.game-of-cards/README.md`](goc/templates/game_of_cards/README.md), which `goc install` ships into every consuming repo.
 
 ## Status

@@ -1,22 +1,23 @@
 ---
 title: install-codex-harness
 summary: "Make OpenAI Codex a first-class `goc install` harness option with AGENTS.md-centered guidance and no Claude-only skill or hook assumptions."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: [multi-agent-shim-which-agents-at-v1]
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] `goc install --agents codex` installs the shared GoC repo scaffold and Codex-usable guidance without writing Claude-only `.claude/skills/` or prompt-hook files unless `claude` is also selected
-  - [ ] The installed `AGENTS.md` block is sufficient for Codex to run the GoC session-mode pipeline using CLI verbs (`goc new`, `goc status`, `goc done`, `goc validate`) and contains no `Skill(...)` notation
-  - [ ] Any Codex-specific harness template path/content is generated from shared harness metadata rather than duplicating the full methodology text by hand
-  - [ ] `goc install --dry-run --agents codex` reports the exact Codex harness writes and shared writes
-  - [ ] Documentation lists `codex` as a supported install target, including the expected command examples for local development and installed-package use
-  - [ ] Fresh-repo smoke test: install the Codex harness, remove any Claude-only files if present, create a card, validate the deck, and confirm the AGENTS guidance is the only required runtime briefing
+  - [x] `goc install --agents codex` installs the shared GoC repo scaffold and Codex-usable guidance without writing Claude-only `.claude/skills/` or prompt-hook files unless `claude` is also selected
+  - [x] The installed `AGENTS.md` block is sufficient for Codex to run the GoC session-mode pipeline using CLI verbs (`goc new`, `goc status`, `goc done`, `goc validate`) and contains no `Skill(...)` notation
+  - [x] Any Codex-specific harness template path/content is generated from shared harness metadata rather than duplicating the full methodology text by hand
+  - [x] `goc install --dry-run --agents codex` reports the exact Codex harness writes and shared writes
+  - [x] Documentation lists `codex` as a supported install target, including the expected command examples for local development and installed-package use
+  - [x] Fresh-repo smoke test: install the Codex harness, remove any Claude-only files if present, create a card, validate the deck, and confirm the AGENTS guidance is the only required runtime briefing
+  - [x] This repo itself has the Codex harness installed and verified as working in a smoke test
 ---
 
 # Install Codex Harness
