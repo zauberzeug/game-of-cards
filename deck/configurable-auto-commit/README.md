@@ -1,7 +1,7 @@
 ---
 title: configurable-auto-commit
 summary: "Make GoC's state-change auto-commit behavior explicit and configurable through install-time defaults plus `.game-of-cards/config.yaml`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
