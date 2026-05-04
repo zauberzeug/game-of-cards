@@ -55,7 +55,7 @@ If you're using Claude Code or any `AGENTS.md`-aware editor, you can also just t
 
 ## Status
 
-Pre-`0.1.0`. Extracted from the [phasor-agents](https://github.com/zauberzeug/phasor-agents) monorepo, where it ran in production for six months alongside a research codebase that exercised every primitive harder than they'd be exercised standalone. Most of the rough edges are known, and most of them sit on this repo's own deck.
+Brand new. This is `0.0.1` — only a few days of implementation, no external users yet, plenty of rough edges that are unknown until someone tries it on a fresh project. Bring expectations to match.
 
 The right way to find out if it's for you is to install it, point it at a side project, and see whether it stays out of your way for a week. If it does, you'll keep it. If it doesn't, you've spent five minutes.
 
