@@ -1,7 +1,7 @@
 ---
 title: bootstrap-error-when-cli-not-on-path
 summary: "When someone clones a GoC-using repo onto a machine that doesn't have `goc` installed, every skill/hook invocation will fail with cryptic shell errors (`zsh: command not found: goc` or a Python ImportError). This card adds a small wrapper script that the skills shell to instead — `.claude/skills/_goc-bootstrap.sh` — which detects the missing CLI and emits one clean line: `Game of Cards CLI not found. Install with: pipx install game-of-cards`. Same approach `npm` projects take ('npm not found' is its own helpful message, not a Python traceback). Also handles the `goc` version mismatch case (installed `goc` is older than the schema this repo expects)."
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-03
