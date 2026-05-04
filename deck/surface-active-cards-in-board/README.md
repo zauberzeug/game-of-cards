@@ -1,7 +1,7 @@
 ---
 title: surface-active-cards-in-board
 summary: "Make active cards impossible to miss when agents choose autonomous work: board, status, and default queue views must agree about active cards so parallel sessions do not collide."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
