@@ -1,20 +1,20 @@
 ---
 title: pull-card-action-needs-oidc-and-half-hour-schedule
 summary: "The Pull Card GitHub Actions workflow is active, but scheduled runs fail before Claude can pull a card because the workflow does not grant the OIDC permission required by anthropics/claude-code-action@v1. The workflow should also run on a direct 30-minute cron instead of the earlier 10-minute wake-up plus configurable schedule gate."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `pull-card.yml` grants `id-token: write` for the Claude action's OIDC token request
-  - [ ] `pull-card.yml` uses a native 30-minute GitHub Actions cron
-  - [ ] `uv run python deck/pull-card-action-needs-oidc-and-half-hour-schedule/reproduce.py` exits zero
-  - [ ] `uv run goc validate --quiet` exits zero
+  - [x] `pull-card.yml` grants `id-token: write` for the Claude action's OIDC token request
+  - [x] `pull-card.yml` uses a native 30-minute GitHub Actions cron
+  - [x] `uv run python deck/pull-card-action-needs-oidc-and-half-hour-schedule/reproduce.py` exits zero
+  - [x] `uv run goc validate --quiet` exits zero
 ---
 
 # Pull Card action needs OIDC and a half-hour schedule

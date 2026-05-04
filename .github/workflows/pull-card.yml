@@ -2,23 +2,18 @@
 #
 # Required repository secret:
 #   ANTHROPIC_API_KEY
-#
-# Optional repository variable:
-#   PULL_CARD_INTERVAL_MINUTES
-#     Actual scheduled cadence in minutes. Must be a multiple of 10.
-#     Defaults to 10. The cron below is only the cloud wake-up cadence.
 
 name: Pull Card
 
 on:
   schedule:
-    # Wake up every 10 minutes; the schedule gate below decides whether
-    # this tick should run based on PULL_CARD_INTERVAL_MINUTES.
-    - cron: '3/10 * * * *'
+    # Run one autonomous worker pass every 30 minutes.
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
+  id-token: write
   pull-requests: write
   issues: write
 
@@ -33,56 +28,20 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Check schedule gate
-        id: schedule-gate
-        shell: bash
-        env:
-          INTERVAL_MINUTES: ${{ vars.PULL_CARD_INTERVAL_MINUTES || '10' }}
-        run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if ! [[ "$INTERVAL_MINUTES" =~ ^[0-9]+$ ]]; then
-            echo "::error::PULL_CARD_INTERVAL_MINUTES must be a positive integer."
-            exit 1
-          fi
-
-          if [ "$INTERVAL_MINUTES" -lt 10 ] || [ $((INTERVAL_MINUTES % 10)) -ne 0 ]; then
-            echo "::error::PULL_CARD_INTERVAL_MINUTES must be at least 10 and a multiple of 10."
-            exit 1
-          fi
-
-          slot=$(( $(date -u +%s) / 600 ))
-          every=$(( INTERVAL_MINUTES / 10 ))
-
-          if [ $((slot % every)) -eq 0 ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Running this tick; configured interval is ${INTERVAL_MINUTES} minutes."
-          else
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping this tick; configured interval is ${INTERVAL_MINUTES} minutes."
-          fi
-
       - name: Check out repository
-        if: steps.schedule-gate.outputs.should_run == 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install uv
-        if: steps.schedule-gate.outputs.should_run == 'true'
         uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
 
       - name: Prepare Python environment
-        if: steps.schedule-gate.outputs.should_run == 'true'
         run: uv sync
 
       - name: Pull one GoC card
-        if: steps.schedule-gate.outputs.should_run == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
