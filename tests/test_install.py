@@ -60,6 +60,73 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("agents: claude", default.stdout)
             self.assertIn("shared write  .game-of-cards/config.yaml", default.stdout)
 
+    def test_install_help_describes_auto_detected_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            result = self.run_goc(cwd, "install", "--help")
+
+            self.assert_goc_ok(result)
+            self.assertIn("auto-detect Claude/Codex project markers", result.stdout)
+            self.assertIn("no marker defaults", result.stdout)
+            self.assertIn("to claude", result.stdout)
+
+    def test_install_auto_detects_claude_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            (cwd / "CLAUDE.md").write_text("# Existing Claude guidance\n")
+
+            result = self.run_goc(cwd, "install", "--dry-run")
+
+            self.assert_goc_ok(result)
+            planned = result.stdout
+            self.assertIn("agents: claude", planned)
+            self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", planned)
+            self.assertNotIn(".codex/", planned)
+
+    def test_install_auto_detects_codex_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            (cwd / "AGENTS.md").write_text("# Existing agent guidance\n")
+
+            result = self.run_goc(cwd, "install", "--dry-run")
+
+            self.assert_goc_ok(result)
+            planned = result.stdout
+            self.assertIn("agents: codex", planned)
+            self.assertIn("codex  write  .codex/skills/pull-card/SKILL.md", planned)
+            self.assertNotIn(".claude/", planned)
+
+    def test_install_auto_detects_both_markers_and_explicit_override_wins(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            (cwd / "CLAUDE.md").write_text("# Existing Claude guidance\n")
+            (cwd / ".codex").mkdir()
+
+            detected = self.run_goc(cwd, "install", "--dry-run")
+            explicit = self.run_goc(cwd, "install", "--dry-run", "--agents", "codex")
+
+            self.assert_goc_ok(detected)
+            self.assert_goc_ok(explicit)
+            self.assertIn("agents: claude,codex", detected.stdout)
+            self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", detected.stdout)
+            self.assertIn("codex  write  .codex/skills/pull-card/SKILL.md", detected.stdout)
+            self.assertIn("agents: codex", explicit.stdout)
+            self.assertNotIn(".claude/", explicit.stdout)
+
+    def test_no_marker_install_output_leads_with_llm_prompt_and_defaults_to_claude(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            result = self.run_goc(cwd, "install")
+
+            self.assert_goc_ok(result)
+            self.assertIn("goc 0.0.2 installed for agents: claude (default).", result.stdout)
+            self.assertIn('Next: ask your LLM agent: "create a card for the next change I want to make."', result.stdout)
+            self.assertIn("Engine/debug: `goc` shows the queue; `goc validate` checks cards.", result.stdout)
+            self.assertTrue((cwd / ".claude" / "skills" / "pull-card" / "SKILL.md").is_file())
+            self.assertFalse((cwd / ".codex").exists())
+
     def test_claude_dry_run_lists_only_claude_harness_and_shared_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
@@ -106,7 +173,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
-            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            install = self.run_goc(cwd, "install", "--agents", "claude")
+            self.assert_goc_ok(install)
+            self.assertIn('Next: ask your LLM agent: "create a card for the next change I want to make."', install.stdout)
             self.assertFalse((cwd / ".codex").exists())
             self.assertTrue((cwd / ".claude" / "hooks" / "user-prompt-submit-goc.py").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
@@ -126,7 +195,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
-            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "codex"))
+            install = self.run_goc(cwd, "install", "--agents", "codex")
+            self.assert_goc_ok(install)
+            self.assertIn('Next: ask your LLM agent: "create a card for the next change I want to make."', install.stdout)
             self.assertFalse((cwd / ".claude").exists())
             self.assertTrue(os.access(cwd / ".codex" / "skills" / "_goc-bootstrap.sh", os.X_OK))
             self.assertTrue((cwd / ".codex" / "skills" / "pull-card" / "SKILL.md").is_file())

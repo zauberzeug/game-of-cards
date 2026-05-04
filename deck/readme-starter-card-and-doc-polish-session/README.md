@@ -1,25 +1,25 @@
 ---
 title: readme-starter-card-and-doc-polish-session
 summary: "Make the first-run story LLM-first: auto-detect Claude/Codex harnesses, install matching skills, invite users to create cards by prompting their agent, and align README/PyPI/GitHub metadata with that positioning."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, story, infra]
 definition_of_done: |
-  - [ ] Implement `goc install` agent auto-detection: existing Claude usage installs `claude`, existing Codex usage installs `codex`, both markers install both, and no marker falls back to the documented default
-  - [ ] Post-install output invites the user to create cards by prompting their LLM agent, not by leading with `goc new`; CLI commands remain available as engine/debug affordances
-  - [ ] Rewrite README `Try it`, `Agent harnesses`, `What you get`, and `Status` so the LLM/agent interaction is the main interface and `goc` is described as the engine behind it
-  - [ ] Review PyPI live metadata and local `[project]` metadata (`description`, `keywords`, classifiers, project URLs) so package discovery matches the LLM-first positioning
-  - [ ] Review GitHub About/description/homepage/topics and update them to match the same positioning; remove topics for unshipped harnesses such as `openclaw`
-  - [ ] Update `goc/install.py`, `tests/test_install.py`, and any harness manifests/templates touched by agent auto-detection
-  - [ ] Smoke-test fresh installs for Claude-only, Codex-only, both-detected, and no-marker/default repos, including `goc`, `goc validate`, and an LLM-prompt-oriented next-step message
-  - [ ] Record exact smoke-test commands/output in this card's `log.md`
-  - [ ] `uv run goc validate` and relevant install tests pass after README/doc/code edits
+  - [x] Implement `goc install` agent auto-detection: existing Claude usage installs `claude`, existing Codex usage installs `codex`, both markers install both, and no marker falls back to the documented default
+  - [x] Post-install output invites the user to create cards by prompting their LLM agent, not by leading with `goc new`; CLI commands remain available as engine/debug affordances
+  - [x] Rewrite README `Try it`, `Agent harnesses`, `What you get`, and `Status` so the LLM/agent interaction is the main interface and `goc` is described as the engine behind it
+  - [x] Review PyPI live metadata and local `[project]` metadata (`description`, `keywords`, classifiers, project URLs) so package discovery matches the LLM-first positioning
+  - [x] Review GitHub About/description/homepage/topics and update them to match the same positioning; remove topics for unshipped harnesses such as `openclaw`
+  - [x] Update `goc/install.py`, `tests/test_install.py`, and any harness manifests/templates touched by agent auto-detection
+  - [x] Smoke-test fresh installs for Claude-only, Codex-only, both-detected, and no-marker/default repos, including `goc`, `goc validate`, and an LLM-prompt-oriented next-step message
+  - [x] Record exact smoke-test commands/output in this card's `log.md`
+  - [x] `uv run goc validate` and relevant install tests pass after README/doc/code edits
 ---
 
 # readme-starter-card-and-doc-polish-session

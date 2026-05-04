@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "game-of-cards"
 version = "0.0.2"
-description = "Backlog tracking as a folder of markdown story-cards in your repo. Agent-readable. No proprietary state."
+description = "LLM-first backlog cards for coding agents, stored as markdown in your repo."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
     { name = "Zauberzeug GmbH", email = "info@zauberzeug.com" },
 ]
-keywords = ["agile", "kanban", "xp", "ai-agents", "agentic-workflow", "substrate", "claude-code", "agents-md", "methodology"]
+keywords = ["ai-agents", "llm", "coding-agents", "agents-md", "claude-code", "codex", "kanban", "agile", "developer-tools", "methodology"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

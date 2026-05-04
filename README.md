@@ -29,10 +29,10 @@ This is *not* another methodology framework. Spec-Kit ships templates. BMAD ship
 ```bash
 uv tool install game-of-cards     # one-time, machine-wide
 cd any-repo
-goc install                       # default: Claude Code harness plus shared AGENTS.md guidance
+goc install                       # auto-detect Claude/Codex markers; no marker defaults to Claude
 goc install --agents claude        # explicit Claude Code harness
-goc install --codex               # Codex harness only: deck/, AGENTS.md, .game-of-cards/, .codex/skills/
-goc install --agents codex        # same as --codex
+goc install --agents codex         # explicit Codex harness
+goc install --agents claude,codex  # both harnesses
 ```
 
 When working from a checkout of this repo, use the repo-local form:
@@ -41,25 +41,40 @@ When working from a checkout of this repo, use the repo-local form:
 uv run goc install --agents codex
 ```
 
-The cost of trying is low. `goc install` adds files; it doesn't take any away. If you decide it isn't for you, `rm -rf deck/` and revert the two README sections — you're back where you started.
+Detection is intentionally simple: Claude markers such as `CLAUDE.md` or
+`.claude/` select the Claude harness, Codex markers such as `AGENTS.md` or
+`.codex/` select the Codex harness, and both marker families install both
+harnesses. Explicit `--agents`, `--claude`, and `--codex` flags override
+detection for scripted installs.
 
-A few things you can do once it's installed:
+The cost of trying is low. `goc install` adds files; it doesn't take any away.
+If you decide it isn't for you, remove the generated files and revert the
+marker-bounded guidance blocks.
+
+Once it is installed, talk to your coding agent:
+
+- "create a card for renaming the export button"
+- "implement the highest-leverage open card"
+- "what's open in the deck?"
+
+The agent guidance and skills call `goc` behind the scenes. If you want to
+inspect or debug that engine directly, use the CLI:
 
 ```bash
-goc new "rename the button to Export"
 goc                                # show what's open, sorted by leverage
 goc validate                       # check every card's frontmatter against the schema
+goc new "rename the button to Export"
 goc done rename-the-button-to-export
 ```
 
-If you're using Claude Code or any `AGENTS.md`-aware editor, you can also just talk to it: *"rename the button to Export."* The deck reflects either flow on the same on-disk state.
-
 ## Agent harnesses
 
-The v1 installed harness set is intentionally small:
+Every install writes the shared substrate: `deck/`, `.game-of-cards/`,
+`AGENTS.md`, and `.pre-commit-config.yaml`. Harness selection controls the
+agent-specific files layered on top:
 
-- `claude` is the no-flag default. It writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, `CLAUDE.md`, and the shared `AGENTS.md` guidance.
-- `codex` writes Codex-readable skills under `.codex/skills/` plus the shared `AGENTS.md` guidance, without Claude-only hooks.
+- `claude` writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, and `CLAUDE.md`.
+- `codex` writes Codex-readable skills under `.codex/skills/`, without Claude-only hooks.
 
 OpenCode is a free path: it already reads `.claude/skills/`, so `goc install --agents claude` gives OpenCode the skill files without a separate OpenCode shim. The Claude `UserPromptSubmit` hook is not part of that compatibility path; hooks remain Claude Code-specific.
 
@@ -67,17 +82,18 @@ To add another agent, file an issue or PR that adds `goc/templates/agents/<agent
 
 ## What you get
 
-- A `goc` CLI — 13 verbs covering create, browse, advance, decide, close, validate, and install.
-- A `deck/<title>/` directory per card: frontmatter-validated `README.md`, append-only `log.md`.
-- A schema validator suitable for pre-commit and CI.
-- A starter set of GoC skills (`scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`) that turn the CLI into an autonomous workflow when you want one.
-- Harness install targets for `claude` and `codex`. `claude` is the no-flag default and writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, and the Claude-specific `CLAUDE.md` block; `codex` writes Codex-readable skills and AGENTS.md-centered guidance without Claude-only prompt hooks.
-- An `AGENTS.md` block for Codex and other editors that aren't Claude Code.
+- A `deck/<title>/` directory per card: frontmatter-validated `README.md`, append-only `log.md`, and stable git paths that survive status changes.
 - A `.game-of-cards/` per-repo config layer for project-specific content and workflow hooks. The convention — directory layout, file format, hook-point catalog — is documented in [`.game-of-cards/README.md`](goc/templates/game_of_cards/README.md), which `goc install` ships into every consuming repo.
+- An `AGENTS.md` block for Codex and other editors that read shared repo guidance.
+- Agent skill files (`scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`) so Claude or Codex can turn user prompts into card operations.
+- A `goc` CLI — 13 verbs covering create, browse, advance, decide, close, validate, install, and upgrade — for humans, scripts, hooks, and agent skills.
+- A schema validator suitable for pre-commit and CI.
 
 ## Status
 
-Brand new. This is `0.0.1` — only a few days of implementation, no external users yet, plenty of rough edges that are unknown until someone tries it on a fresh project. Bring expectations to match.
+Brand new alpha: only a few days of implementation, no external users yet,
+and plenty of rough edges that are unknown until someone tries it on a fresh
+project. Bring expectations to match.
 
 The right way to find out if it's for you is to install it, point it at a side project, and see whether it stays out of your way for a week. If it does, you'll keep it. If it doesn't, you've spent five minutes.
 

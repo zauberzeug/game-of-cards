@@ -1,9 +1,10 @@
 """`goc install` — scaffold the methodology into a target repo.
 
 Drops the shared deck/config scaffold plus selected agent harness assets into
-the current working directory. The default harness remains Claude Code; Codex
-uses the shared AGENTS.md guidance plus Codex-readable skills, without
-Claude-only hooks.
+the current working directory. No-flag installs detect existing Claude/Codex
+project surfaces and fall back to the Claude Code reference harness when no
+agent marker is present. Codex uses the shared AGENTS.md guidance plus
+Codex-readable skills, without Claude-only hooks.
 Idempotent — second runs detect existing installs via `deck/.goc-version` and
 exit clean.
 
@@ -30,6 +31,10 @@ GOC_END = "<!-- END GOC -->"
 
 SUPPORTED_AGENTS = ("claude", "codex")
 DEFAULT_AGENTS = ("claude",)
+AGENT_SIGNAL_PATHS = {
+    "claude": (Path("CLAUDE.md"), Path(".claude"), Path(".mcp.json")),
+    "codex": (Path("AGENTS.md"), Path(".codex")),
+}
 
 PRE_COMMIT_HOOK = """\
   - repo: local
@@ -150,6 +155,7 @@ def _parse_agents(
     claude: bool = False,
     codex: bool = False,
     supported_agents: tuple[str, ...] = SUPPORTED_AGENTS,
+    default_agents: tuple[str, ...] = DEFAULT_AGENTS,
 ) -> tuple[str, ...]:
     """Parse comma-separated/repeated `--agents` values into known harness names."""
 
@@ -161,7 +167,7 @@ def _parse_agents(
     if codex:
         tokens.append("codex")
     if not tokens:
-        tokens = list(DEFAULT_AGENTS)
+        tokens = list(default_agents)
 
     unknown = sorted(set(tokens) - set(supported_agents))
     if unknown:
@@ -173,6 +179,36 @@ def _parse_agents(
 
     requested = set(tokens)
     return tuple(agent for agent in supported_agents if agent in requested)
+
+
+def _agent_override_requested(agent_specs: tuple[str, ...], *, claude: bool, codex: bool) -> bool:
+    """Return whether the caller explicitly selected an agent harness."""
+
+    return bool(agent_specs or claude or codex)
+
+
+def _detect_agent_surfaces(
+    target: Path,
+    *,
+    supported_agents: tuple[str, ...] = SUPPORTED_AGENTS,
+) -> tuple[str, ...]:
+    """Detect agent harnesses from repo-local files that predate installation."""
+
+    detected: list[str] = []
+    for agent in supported_agents:
+        signals = AGENT_SIGNAL_PATHS.get(agent, ())
+        if any((target / signal).exists() for signal in signals):
+            detected.append(agent)
+    return tuple(detected)
+
+
+def _default_install_agents(target: Path, *, supported_agents: tuple[str, ...]) -> tuple[str, ...]:
+    """Choose install defaults: detected harnesses, otherwise the documented default."""
+
+    detected = _detect_agent_surfaces(target, supported_agents=supported_agents)
+    if detected:
+        return detected
+    return tuple(agent for agent in supported_agents if agent in DEFAULT_AGENTS) or DEFAULT_AGENTS
 
 
 def _detect_existing(deck_dir: Path) -> str | None:
@@ -406,15 +442,20 @@ def _sync_agent_harness(target: Path, templates: Path, agent: str, *, replace_sk
         _append_marker_block(target / guidance.path, body, header=guidance.header)
 
 
-AGENTS_HELP = (
-    "Agent harnesses to install; repeat or comma-separate. Default: claude. "
+INSTALL_AGENTS_HELP = (
+    "Agent harnesses to install; repeat or comma-separate. "
+    "Omit to auto-detect Claude/Codex project markers; no marker defaults to claude. "
+    "Supported: claude, codex."
+)
+UPGRADE_AGENTS_HELP = (
+    "Agent harnesses to upgrade; repeat or comma-separate. Default: claude. "
     "Supported: claude, codex."
 )
 
 
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Print planned writes; do not touch the filesystem.")
-@click.option("--agents", "agent_specs", multiple=True, help=AGENTS_HELP)
+@click.option("--agents", "agent_specs", multiple=True, help=INSTALL_AGENTS_HELP)
 @click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
 @click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
 def install(
@@ -428,11 +469,16 @@ def install(
     target = Path.cwd().resolve()
     deck_dir = target / "deck"
     templates = _templates_root()
+    supported_agents = _registered_agents(templates)
+    explicit_agents = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
+    detected_agents = _detect_agent_surfaces(target, supported_agents=supported_agents)
+    default_agents = detected_agents or _default_install_agents(target, supported_agents=supported_agents)
     agents = _parse_agents(
         agent_specs,
         claude=claude_flag,
         codex=codex_flag,
-        supported_agents=_registered_agents(templates),
+        supported_agents=supported_agents,
+        default_agents=default_agents,
     )
 
     writes = _plan_writes(target, templates, agents)
@@ -459,13 +505,17 @@ def install(
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
-    click.echo(f"goc {__version__} installed for agents: {','.join(agents)}.")
-    click.echo("Next: `goc new my-first-card`. Run `goc upgrade` later to sync template updates.")
+    source = ""
+    if not explicit_agents:
+        source = " (auto-detected)" if detected_agents else " (default)"
+    click.echo(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
+    click.echo('Next: ask your LLM agent: "create a card for the next change I want to make."')
+    click.echo("Engine/debug: `goc` shows the queue; `goc validate` checks cards. Run `goc upgrade` later to sync template updates.")
 
 
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Print planned writes; do not touch the filesystem.")
-@click.option("--agents", "agent_specs", multiple=True, help=AGENTS_HELP)
+@click.option("--agents", "agent_specs", multiple=True, help=UPGRADE_AGENTS_HELP)
 @click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
 @click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
 def upgrade(
@@ -484,6 +534,7 @@ def upgrade(
         claude=claude_flag,
         codex=codex_flag,
         supported_agents=_registered_agents(templates),
+        default_agents=DEFAULT_AGENTS,
     )
     agents_explicit = bool(agent_specs or claude_flag or codex_flag)
 
