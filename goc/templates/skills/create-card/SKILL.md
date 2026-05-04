@@ -96,34 +96,33 @@ framing in a `## Decision required` section feels like it would
 under-serve the question (the options aren't well-scoped yet, or
 picking would itself need new evidence), use `session` instead.
 
-### Try /mindset before defaulting to `decision`
+### Try the project rubric before defaulting to `decision`
 
-If the card you're filing has a bio-faithful decision at its core
-(framework derivation, mechanism choice between bio-correlates, sign
-convention, default anchored to biology), invoke `Skill(mindset)`
-*before* picking `--gate decision`. The mindset skill loads the full
-vision / axioms / plasticity context.
+If the card you're filing has a substantive decision at its core
+(mechanism choice, sign convention, default anchored to a project
+principle), consult the consuming repo's project-specific rubric
+*before* picking `--gate decision`.
 
-If /mindset gives a clear bio-faithful answer with axiom citation
-(A1/A4 universal vs. A3/A5/A6/A7 architectural) AND primary-source
-backing, scaffold the card with `--gate none` and pre-write a
-`## Decision (mindset-derived)` body section recording:
+!`cat .game-of-cards/hooks/create-card.md 2>/dev/null || true`
+
+If the rubric gives a clear answer with a principle citation AND
+primary-source backing, scaffold the card with `--gate none` and
+pre-write a `## Decision (rubric-derived)` body section recording:
 
 - The choice (one line)
-- The principle invoked (e.g., `/mindset: A6 striosome/matrix
-  separation`)
-- The primary-source citation (paper PMID, textbook chapter, or
-  framework doc section)
+- The principle invoked (citation form prescribed by the hook above)
+- The primary-source citation (paper DOI/PMID, textbook chapter, or
+  project-doc section)
 
 The card joins the autonomous queue immediately; `pull-card`
 implements without waiting on the human. Reserve `decision` /
-`session` gates for questions /mindset cannot answer — resource
+`session` gates for questions the rubric cannot answer — resource
 allocation, scope splits, taste calls, or missing primary-source
 evidence.
 
-This is the lazy Andon pattern: try /mindset, then pull. See
-`Skill(decide-card)`'s "Agent-invoked decide-card" section for the
-full contract.
+This is the lazy Andon pattern: try the rubric, then pull. See
+`Skill(decide-card)`'s "When an agent invokes this skill" section
+for the full contract.
 
 ## Step 4 — scaffold via the CLI
 

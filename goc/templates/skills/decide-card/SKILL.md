@@ -14,28 +14,28 @@ the cord and the whole quality system rots.
 
 Our cord is `human_gate`. `Skill(pull-card)` raises it
 (`none → decision` or `none → session`) when it hits a question only
-a human can answer — but only AFTER attempting `Skill(mindset)` to
-see if bio-faithful principles already determine the answer.
-`Skill(decide-card)` lowers the gate back to `none` in one action,
-which is what makes the line restart cheap. Status stays `open` so
-the next `pull-card` claims and implements per the recorded decision.
+a human can answer — but only AFTER attempting the consuming repo's
+project-specific consultation (wired in via
+`.game-of-cards/hooks/decide-card.md`). `Skill(decide-card)` lowers
+the gate back to `none` in one action, which is what makes the line
+restart cheap. Status stays `open` so the next `pull-card` claims and
+implements per the recorded decision.
 
 The role split (lazy Andon):
 
 ```
-HUMAN  OR  AGENT-WITH-MINDSET           AGENT
+HUMAN  OR  AGENT-WITH-RUBRIC            AGENT
   decide what to do                        claim from gate=none queue
   record why                               implement
   lower the gate                           commit
 ```
 
 Humans never wield the wrench; they only resolve the cause the worker
-flagged. Agents flag-and-wait WHEN /mindset can't resolve the
-question — but agents that can cite a /mindset principle (axiom
-A1–A7, framework doc, primary-source) MAY decide on their own
-behalf via this skill. The Andon-cord is now lazy: try /mindset,
-then pull. Keeps the human out of the loop when bio-faithful
-reasoning is decisive.
+flagged. Agents flag-and-wait when the project-specific rubric can't
+resolve the question — but agents that can cite the rubric MAY decide
+on their own behalf via this skill. The Andon-cord is now lazy: try
+the rubric, then pull. Keeps the human out of the loop when
+project-specific reasoning is decisive.
 
 ## What this skill does to the card
 
@@ -99,33 +99,31 @@ reasoning is decisive.
 ## When an agent invokes this skill (lazy Andon)
 
 `Skill(pull-card)` and `Skill(create-card)` may invoke this skill
-*after* consulting `Skill(mindset)`. The contract for agent-invoked
-decisions:
+*after* consulting the consuming repo's project-specific rubric. The
+contract for agent-invoked decisions:
 
-1. **Cite the principle.** The `--because` MUST start with a
-   `/mindset: <principle>` clause:
-   - `/mindset: A6 striosome/matrix separation — motors aren't
-     predicting environment features` (architectural axiom)
-   - `/mindset: A4 self-annealing — Lyapunov fixed point already
-     bounds growth, additional decay is duplicate` (universal axiom)
-   - `/mindset: framework doc plasticity.md §1 — universal
-     eligibility = e × M × project, no progress-gating prescribed`
+!`cat .game-of-cards/hooks/decide-card.md 2>/dev/null || true`
+
+1. **Cite the rubric.** The `--because` MUST start with a clause
+   identifying the rubric consulted and what it returned. The hook
+   file above defines the citation form the project expects (e.g.,
+   `<rubric-name>: <principle> — <one-line application>`).
 2. **Cite the primary source** when the answer rests on literature:
-   paper PMID, textbook chapter (e.g., Kuramoto §2.2; Strogatz §8.2),
-   or framework doc section.
-3. **No agent-decide for non-bio-faithful questions.** Resource
+   paper DOI/PMID, textbook chapter (e.g., Knuth Vol 3 §6.4), or
+   project-doc section.
+3. **No agent-decide for human-judgement questions.** Resource
    allocation, scope splits, deadlines, multi-stakeholder alignment,
    taste calls — these remain human-only. The agent must raise the
    gate.
-4. **Default to human when ambiguous.** If /mindset doesn't give a
-   clean answer, the agent raises the gate; doesn't guess. Treat the
-   contract as a precondition for autonomy, not a license.
+4. **Default to human when ambiguous.** If the project rubric doesn't
+   give a clean answer, the agent raises the gate; doesn't guess.
+   Treat the contract as a precondition for autonomy, not a license.
 
 If the agent records a decision that violates this contract (no
-/mindset citation, or non-bio-faithful question), the human can
-rewind via `Skill(advance-card) <title> open` (status stays open,
-gate stays none — but the body's `## Decision` section can be edited
-or the user can re-park the gate manually via `deck.py edit`).
+rubric citation, or human-judgement question), the human can rewind
+via `Skill(advance-card) <title> open` (status stays open, gate stays
+none — the body's `## Decision` section can be edited directly or
+the gate re-parked manually).
 
 ## When NOT to use this skill
 

@@ -36,36 +36,31 @@ The card body is the briefing the original filer wrote. Trust it.
   `Skill(extend-deck)` to file one new card from emergent codebase
   observations, then exit. The next invocation can work it.
 
-- **Research-impacting question — try /mindset BEFORE raising the
-  gate.** The body reveals the card is research-impacting (framework
-  derivation, mechanism choice, sign convention, new primitive,
-  lit-anchored default, publication-tier reframing). The Andon cord
-  is lazy: agents try `/mindset` first, then pull.
+- **Decision-class question — try the project-specific consultation
+  BEFORE raising the gate.** The body reveals the card needs a
+  judgement call (mechanism choice, convention, default value, scope
+  reframing, lit-anchored default). The Andon cord is lazy: agents
+  try the project-local consultation first, then pull.
 
-  1. Invoke `Skill(mindset)`. The skill loads the full vision /
-     axioms / plasticity context.
-  2. Apply principles to the parked question. Ask: is the answer
-     determined by axiom citation (A1/A4 universal vs.
-     A3/A5/A6/A7 architectural) plus primary-source backing
-     (paper / textbook / framework doc section)?
-  3. **If /mindset answers confidently:** record the decision via
-     `Skill(decide-card) <title> --decision "<choice>" --because
-     "/mindset: <principle> — <one-line application>"`. The
-     `--because` MUST cite the mindset principle invoked (e.g.,
-     `/mindset: A6 striosome/matrix separation — motors aren't
-     predicting environment features, so Branch 1 conflates action
-     with prediction`). Then continue working the card from the
+  !`cat .game-of-cards/hooks/pull-card.md 2>/dev/null || true`
+
+  1. If the consuming repo defined a consultation skill or rubric in
+     the hook above, follow it. **If it answers confidently:** record
+     the resulting decision via `Skill(decide-card) <title>
+     --decision "<choice>" --because "<consultation-name>:
+     <one-line>"` (the `--because` should cite whatever rubric the
+     hook prescribes). Then continue working the card from the
      decision: implement, close, commit.
-  4. **If /mindset is ambiguous, OR the question is non-bio-faithful
-     in nature** (resource allocation, scope split, deadline,
-     multi-stakeholder alignment, taste call, missing primary-source
-     evidence): raise the gate to `decision` or `session`, write
-     a `## Decision required` body section, commit the gate-and-body
-     update. The human will see the parked card.
+  2. If no hook is defined, OR the consultation is ambiguous, OR the
+     question is non-substantive in nature (resource allocation,
+     scope split, deadline, multi-stakeholder alignment, taste call,
+     missing primary evidence): raise the gate to `decision` or
+     `session`, write a `## Decision required` body section, commit
+     the gate-and-body update. The human will see the parked card.
 
-  This keeps the human out of the loop when bio-faithful reasoning is
-  decisive. The cord still gets pulled — just not for questions
-  /mindset already answers.
+  This keeps the human out of the loop when project-specific
+  reasoning is decisive. The cord still gets pulled — just not for
+  questions the project's own rubric already answers.
 
 - **Fix fails verification.** Revert the work, append
   `## Disproved fix attempt YYYY-MM-DD` to log.md, leave the card
