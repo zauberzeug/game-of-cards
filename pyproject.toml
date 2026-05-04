@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "game-of-cards"
-version = "0.0.1"
+version = "0.0.2"
 description = "Backlog tracking as a folder of markdown story-cards in your repo. Agent-readable. No proprietary state."
 readme = "README.md"
 requires-python = ">=3.10"
