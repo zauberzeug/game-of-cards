@@ -1,7 +1,7 @@
 ---
 title: multi-agent-shim-which-agents-at-v1
 summary: "Spec-Kit's `--integration <agent>` flag is the niche-standard pattern for multi-agent shim install — the same `init` populates per-agent shim directories selectively. GoC needs `goc install --agents` with the v1 runtime set kept intentionally small: Claude and Codex are in scope, OpenCLAW is deferred until a downstream repo needs it. OpenCode remains a separate free path because it natively reads `.claude/skills/`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-03
