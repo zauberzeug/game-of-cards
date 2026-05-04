@@ -1,7 +1,7 @@
 ---
 title: install-codex-harness
 summary: "Make OpenAI Codex a first-class `goc install` harness option with AGENTS.md-centered guidance and no Claude-only skill or hook assumptions."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
