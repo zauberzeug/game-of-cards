@@ -1,7 +1,7 @@
 ---
 title: readme-starter-card-and-doc-polish-session
 summary: "Make the first-run story LLM-first: auto-detect Claude/Codex harnesses, install matching skills, invite users to create cards by prompting their agent, and align README/PyPI/GitHub metadata with that positioning."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
