@@ -1,7 +1,7 @@
 ---
 title: install-openclaw-harness
 summary: "Make OpenClaw a first-class `goc install` harness option, following its native project-guidance convention while sharing GoC's common harness metadata."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
