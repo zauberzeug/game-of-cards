@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "game-of-cards"
 version = "0.0.2"
-description = "LLM-first backlog cards for coding agents, stored as markdown in your repo."
+description = "Agile in the age of AI agents: repo-native backlog cards for human and AI contributors."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

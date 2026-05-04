@@ -1,6 +1,8 @@
 # Game of Cards
 
-A small command-line tool that keeps your project's to-do list as a folder of markdown files inside your repo. Each item is a *card* — a directory under `deck/` with a frontmatter header, a body, and a checklist that decides when it's done.
+Agile in the age of AI agents: Game of Cards is a repo-native agile methodology for turning work into durable, inspectable cards that humans and coding agents can share.
+
+The current implementation is `goc`, a CLI that keeps your project's backlog as a folder of markdown files inside your repo. Each item is a *card* — a directory under `deck/` with a frontmatter header, a body, and a checklist that decides when it's done.
 
 That's it. The rest of this README is why that turns out to be a useful shape.
 
@@ -12,40 +14,44 @@ Three ideas from the 1990s, none of them ours, all still in use:
 - **Definition of Done** — Scrum, Sutherland & Schwaber. A card isn't closed because someone said so. It's closed because a checklist is satisfied.
 - **Status, not location** — Kanban, Anderson, after Toyota. A card stays at `deck/<title>/` while it moves through *open → active → done*. Cross-references don't break.
 
-The argument for taking these seriously *now* is that AI coding agents are a much harder handoff problem than the human teams those ideas were built for. Agents read the full backlog every session, re-derive context from scratch, and never remember yesterday. A card with a stable URL, a machine-checkable closure contract, and a self-contained body stops being "discipline" and starts being how the agent finds its bearings. The 1990s primitives were right for a different reason than the 1990s knew about.
+The argument for taking these seriously *now* is that AI coding agents are a harder handoff problem than the human teams those ideas were built for. Agents read the full backlog every session, re-derive context from scratch, and never remember yesterday. A card with a stable URL, a machine-checkable closure contract, and a self-contained body stops being "discipline" and starts being how the agent finds its bearings. The 1990s primitives were right; AI agents make their handoff value more obvious.
 
 It works without any of that, too. `goc new "rename the button"`, `goc` to see what's open, `goc done rename-the-button` to close it. No AI required. The deck is just markdown files; you read, write, edit, and revert them with the same git you already use.
 
-## What it is, and what it isn't
+## Where it fits
 
-Game of Cards is a *substrate*. The CLI, the schema, the on-disk card layout, the validator — that's all it ships. There's no preferred LLM, no proprietary state, no mandatory workflow.
+The current agent-development ecosystem is real and useful. [Spec Kit](https://github.com/github/spec-kit) gives spec-driven development templates and bootstrapping. [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) brings AI-driven agile workflows and specialized agent roles. [Agent OS](https://github.com/buildermethods/agent-os) captures project standards and specs. [Ruler](https://github.com/intellectronica/ruler) distributes one instruction set to many agent config files. [AGENTS.md](https://agents.md/) is the shared markdown guidance format many agents read.
 
-What sits on top is up to you. Claude Code skills come bundled as the reference harness; any editor that reads `AGENTS.md` (Codex, Cursor, OpenCode, Copilot, Aider) can drive the same deck. So can a shell script. So can your hands.
+Game of Cards is narrower than those. It gives a repo-local backlog lifecycle: stable card paths, explicit status and gate fields, append-only logs, and a Definition of Done that the CLI refuses to close while unchecked boxes remain.
 
-This is *not* another methodology framework. Spec-Kit ships templates. BMAD ships personas. Ruler ships rule fan-out. claude-flow ships swarm orchestration. Each sits on top of a substrate that the consuming team has to provide. Game of Cards *provides* one.
+That means it can sit underneath other tools. It does not choose your planning method, author a PRD, pick personas, or orchestrate a swarm. It gives humans and agents a durable place to put work and a mechanical rule for when that work is actually done.
 
 ## Try it
 
+If you already have a coding agent in the repo, start there:
+
+> Install Game of Cards in this repo, then create a first card for the next small improvement.
+
+The agent should install `goc`, run `goc install`, and then use the generated guidance and skills for card operations. The manual equivalent is:
+
 ```bash
-uv tool install game-of-cards     # one-time, machine-wide
+# Install the goc command once, using a Python app installer you already trust.
+uv tool install game-of-cards
+# or
+pipx install game-of-cards
+
+# Then, inside each repo:
 cd any-repo
-goc install                       # auto-detect Claude/Codex markers; no marker defaults to Claude
-goc install --agents claude        # explicit Claude Code harness
-goc install --agents codex         # explicit Codex harness
-goc install --agents claude,codex  # both harnesses
+goc install
 ```
 
-When working from a checkout of this repo, use the repo-local form:
+Prefer `uv tool install` if `uv` is already standard on your machine; prefer `pipx` if you use the PyPA application-installer path. Plain `pip install` works inside an environment, but it is the least clear global-app story because scripts and dependencies share that environment.
+
+When working from a checkout of this repo, use the repo-local form so you run the checked-out code instead of any globally installed `goc`:
 
 ```bash
 uv run goc install --agents codex
 ```
-
-Detection is intentionally simple: Claude markers such as `CLAUDE.md` or
-`.claude/` select the Claude harness, Codex markers such as `AGENTS.md` or
-`.codex/` select the Codex harness, and both marker families install both
-harnesses. Explicit `--agents`, `--claude`, and `--codex` flags override
-detection for scripted installs.
 
 The cost of trying is low. `goc install` adds files; it doesn't take any away.
 If you decide it isn't for you, remove the generated files and revert the
@@ -67,6 +73,8 @@ goc new "rename the button to Export"
 goc done rename-the-button-to-export
 ```
 
+For install flags, upgrades, and the command reference, see the [CLI guide](docs/cli.md).
+
 ## Agent harnesses
 
 Every install writes the shared substrate: `deck/`, `.game-of-cards/`,
@@ -75,6 +83,12 @@ agent-specific files layered on top:
 
 - `claude` writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, and `CLAUDE.md`.
 - `codex` writes Codex-readable skills under `.codex/skills/`, without Claude-only hooks.
+
+Detection is intentionally simple: Claude markers such as `CLAUDE.md` or
+`.claude/` select the Claude harness, Codex markers such as `AGENTS.md` or
+`.codex/` select the Codex harness, and both marker families install both
+harnesses. Explicit `--agents`, `--claude`, and `--codex` flags override
+detection for scripted installs.
 
 OpenCode is a free path: it already reads `.claude/skills/`, so `goc install --agents claude` gives OpenCode the skill files without a separate OpenCode shim. The Claude `UserPromptSubmit` hook is not part of that compatibility path; hooks remain Claude Code-specific.
 
