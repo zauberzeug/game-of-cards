@@ -22,7 +22,7 @@ Game of Cards is a *substrate*. The CLI, the schema, the on-disk card layout, th
 
 What sits on top is up to you. Claude Code skills come bundled as the reference harness; any editor that reads `AGENTS.md` (Codex, Cursor, OpenCode, Copilot, Aider) can drive the same deck. So can a shell script. So can your hands.
 
-This is *not* another methodology framework. Spec-Kit ships templates. BMAD ships personas. Ruler ships rule fan-out. claude-flow ships swarm orchestration. Each sits on top of a substrate that the consuming team has to provide. Game of Cards ships *that*.
+This is *not* another methodology framework. Spec-Kit ships templates. BMAD ships personas. Ruler ships rule fan-out. claude-flow ships swarm orchestration. Each sits on top of a substrate that the consuming team has to provide. Game of Cards *provides* one.
 
 ## Try it
 
