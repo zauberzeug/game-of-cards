@@ -1,22 +1,22 @@
 ---
 title: move-deck-config-to-game-of-cards-config
 summary: "Move GoC closure/configuration state out of Claude-specific `.claude/deck-config.yaml` and into a runtime-neutral `.game-of-cards/config.yaml`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: [configurable-auto-commit]
 advanced_by: []
 tags: [infra, api-contract]
 definition_of_done: |
-  - [ ] Add `.game-of-cards/config.yaml` to the shipped template set with documented sections for closure attestation and workflow options
-  - [ ] Update `goc attest` / config loading to read `.game-of-cards/config.yaml` first, with a clear migration path for existing `.claude/deck-config.yaml`
-  - [ ] Remove live references to `.claude/deck-config.yaml` from shipped skills, card-schema guidance, and engine comments
-  - [ ] Update `goc install` / `goc upgrade` so new installs get runtime-neutral config and existing installs are migrated without clobbering custom checks
-  - [ ] Update phasor-agents migration notes or hooks so its project-specific closure checks can live under `.game-of-cards/config.yaml`
-  - [ ] `goc validate` and a focused `goc attest` smoke test pass against the new config location
+  - [x] Add `.game-of-cards/config.yaml` to the shipped template set with documented sections for closure attestation and workflow options
+  - [x] Update `goc attest` / config loading to read `.game-of-cards/config.yaml` first, with a clear migration path for existing `.claude/deck-config.yaml`
+  - [x] Remove live references to `.claude/deck-config.yaml` from shipped skills, card-schema guidance, and engine comments
+  - [x] Update `goc install` / `goc upgrade` so new installs get runtime-neutral config and existing installs are migrated without clobbering custom checks
+  - [x] Update phasor-agents migration notes or hooks so its project-specific closure checks can live under `.game-of-cards/config.yaml`
+  - [x] `goc validate` and a focused `goc attest` smoke test pass against the new config location
 ---
 
 # move-deck-config-to-game-of-cards-config

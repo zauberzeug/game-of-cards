@@ -21,6 +21,7 @@ generic flow.
 | Stub | Inlined into | What goes here |
 |---|---|---|
 | `canonical-tags.md` | `card-schema` skill (end of predicate table) AND parsed by `goc validate` to extend the canonical-tag enum | Project-specific tag predicates + a fenced YAML block listing the new tags (see existing file's header) |
+| `config.yaml` | `goc attest` | Runtime-neutral closure attestation checks (`layer_2_project_dod`, `layer_3_goc_dod`) plus workflow options. Legacy `.claude/deck-config.yaml` is migrated here on upgrade. |
 | `domain-vocabulary.md` | (reserved for project use) | Glossary of project-specific terms |
 | `domain-examples.md` | (reserved for project use) | Concrete example card bodies for project-specific bug classes |
 | `tooling-conventions.md` | `extend-deck` skill (Phase 2 brief, model-tier guidance) | Project tooling rules (e.g., `uv run` discipline, `model: "opus"` mandate, parallelization rules) |

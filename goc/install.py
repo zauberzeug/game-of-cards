@@ -231,16 +231,32 @@ def _print_plan(command: str, target: Path, writes: list[PlannedWrite], agents: 
         click.echo(f"  {write.owner:6s} {write.action:6s} {write.path.relative_to(target)}")
 
 
-def _copy_tree(src: Path, dst: Path) -> None:
+def _copy_tree(src: Path, dst: Path, *, skip_existing: set[Path] | None = None) -> None:
     """Copy a directory tree, skipping `__pycache__`."""
 
+    skip_existing = skip_existing or set()
     for asset in src.rglob("*"):
         if asset.is_dir() or "__pycache__" in asset.parts:
             continue
         rel = asset.relative_to(src)
         target = dst / rel
+        if rel in skip_existing and target.exists():
+            continue
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(asset, target)
+
+
+def _sync_game_of_cards_config(target: Path, templates: Path, *, migrate_legacy: bool = False) -> None:
+    """Sync `.game-of-cards/` assets, preserving migrated closure config."""
+
+    config_dst = target / ".game-of-cards"
+    config_dst.mkdir(parents=True, exist_ok=True)
+    config_file = config_dst / "config.yaml"
+    legacy_config = target / ".claude" / "deck-config.yaml"
+    if migrate_legacy and not config_file.exists() and legacy_config.exists():
+        shutil.copy2(legacy_config, config_file)
+    skip_existing = {Path("config.yaml")} if migrate_legacy else set()
+    _copy_tree(templates / "game_of_cards", config_dst, skip_existing=skip_existing)
 
 
 def _frontmatter_value(text: str, key: str) -> str:
@@ -437,10 +453,7 @@ def install(
     (deck_dir / "log.md").write_text("# Deck Log\n\nAppend deck-level events here (sprint notes, schema bumps, etc.).\n")
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
-    config_src = templates / "game_of_cards"
-    config_dst = target / ".game-of-cards"
-    config_dst.mkdir(parents=True, exist_ok=True)
-    _copy_tree(config_src, config_dst)
+    _sync_game_of_cards_config(target, templates)
 
     _sync_methodology_blocks(target, templates)
 
@@ -491,11 +504,7 @@ def upgrade(
     for agent in agents:
         _sync_agent_harness(target, templates, agent, replace_skills=True)
 
-    config_dst = target / ".game-of-cards"
-    if config_dst.exists():
-        shutil.rmtree(config_dst)
-    config_dst.mkdir(parents=True, exist_ok=True)
-    _copy_tree(templates / "game_of_cards", config_dst)
+    _sync_game_of_cards_config(target, templates, migrate_legacy=True)
 
     _sync_methodology_blocks(target, templates)
 

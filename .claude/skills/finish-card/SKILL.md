@@ -20,7 +20,7 @@ Closure is an eight-step contract — skip a step and the card is dishonest:
 2. Run the project-specific closure audit (or honestly note that no project rubric applies).
 3. Tick the DoD checkboxes in the README.
 4. Append closure context to `log.md` (including the audit outcome).
-5. Run `goc attest <title>` to record the Closure-verification block in `log.md` (layer-2 + layer-3 DoDs from `.claude/deck-config.yaml`).
+5. Run `goc attest <title>` to record the Closure-verification block in `log.md` (layer-2 + layer-3 DoDs from `.game-of-cards/config.yaml`).
 6. Run `goc done <title>` (DoD-100% gated).
 7. Run any project-specific post-close action (status dashboard, changelog row, etc.) defined in the consuming repo's hook.
 8. Commit or hand off according to the consuming repo's hook / normal runtime workflow.
@@ -135,7 +135,7 @@ every closure regardless of what the card does. Today they're invisible:
 a 6-month-old reader sees the layer-1 ticked boxes but no record of
 whether layer-2 or layer-3 was actually verified.
 
-`goc attest` reads `.claude/deck-config.yaml`, runs each layer-2 +
+`goc attest` reads `.game-of-cards/config.yaml`, runs each layer-2 +
 layer-3 check (or prompts the closer for manual ones), and appends a
 "Closure verification (DATE)" block to `log.md`. The block is the
 audit trail.

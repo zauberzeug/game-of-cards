@@ -192,8 +192,8 @@ closure but live elsewhere:
 | Layer | Where it lives | Visible at closure | Recorded by |
 |---|---|---|---|
 | 1 — card-specific | frontmatter `definition_of_done` | ✓ ticked boxes in README | `goc done` (counts boxes) |
-| 2 — project-wide | `.claude/deck-config.yaml` `layer_2_project_dod` (extracted from CLAUDE.md prose) | ✓ since 2026-05-03 | `goc attest` (writes block to log.md) |
-| 3 — GoC-wide | `.claude/deck-config.yaml` `layer_3_goc_dod` (universal across installations) | ✓ since 2026-05-03 | `goc attest` |
+| 2 — project-wide | `.game-of-cards/config.yaml` `layer_2_project_dod` (extracted from CLAUDE.md prose) | ✓ since 2026-05-03 | `goc attest` (writes block to log.md) |
+| 3 — GoC-wide | `.game-of-cards/config.yaml` `layer_3_goc_dod` (universal across installations) | ✓ since 2026-05-03 | `goc attest` |
 
 Layer 2 typically covers tests-pass / linting / project-defined
 audits (e.g. closure-criteria audits per

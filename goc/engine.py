@@ -33,7 +33,8 @@ PACKAGE_DIR = Path(__file__).resolve().parent  # installed package dir (goc/)
 REPO_ROOT = Path.cwd()  # project being managed (consuming repo's root)
 DECK_DIR = REPO_ROOT / "deck"
 SCHEMA_FILE = PACKAGE_DIR / "schema.yaml"
-DECK_CONFIG_FILE = REPO_ROOT / ".claude" / "deck-config.yaml"
+GAME_OF_CARDS_CONFIG_FILE = REPO_ROOT / ".game-of-cards" / "config.yaml"
+LEGACY_DECK_CONFIG_FILE = REPO_ROOT / ".claude" / "config.yaml"
 
 # ────────────────────────────────────────────────────────────────────────────
 # Frontmatter parser — used for SCHEMA.md AND every card's README.md
@@ -1310,13 +1311,15 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
 
 # ────────────────────────────────────────────────────────────────────────────
 # Closure attestation — runs layer-2 (project) + layer-3 (GoC) DoD checks
-# defined in .claude/deck-config.yaml and records the result in log.md.
+# defined in .game-of-cards/config.yaml and records the result in log.md.
 
 
 def load_deck_config() -> dict:
-    if not DECK_CONFIG_FILE.exists():
-        return {"layer_2_project_dod": [], "layer_3_goc_dod": []}
-    return yaml.safe_load(DECK_CONFIG_FILE.read_text()) or {}
+    if GAME_OF_CARDS_CONFIG_FILE.exists():
+        return yaml.safe_load(GAME_OF_CARDS_CONFIG_FILE.read_text()) or {}
+    if LEGACY_DECK_CONFIG_FILE.exists():
+        return yaml.safe_load(LEGACY_DECK_CONFIG_FILE.read_text()) or {}
+    return {"layer_2_project_dod": [], "layer_3_goc_dod": []}
 
 
 def _run_automated_check(check: dict) -> tuple[bool, str]:

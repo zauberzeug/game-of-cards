@@ -58,6 +58,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(explicit)
             self.assertEqual(default.stdout, explicit.stdout)
             self.assertIn("agents: claude", default.stdout)
+            self.assertIn("shared write  .game-of-cards/config.yaml", default.stdout)
 
     def test_claude_dry_run_lists_only_claude_harness_and_shared_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -142,6 +143,53 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
             )
             self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
+
+    def test_install_writes_runtime_neutral_config_and_attest_reads_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            self.assertTrue(config.is_file())
+            config.write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod:\n"
+                "  - name: dod-100-percent\n"
+                "    kind: derived\n"
+            )
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+            readme = cwd / "deck" / "smoke-card" / "README.md"
+            readme.write_text(readme.read_text().replace("- [ ] (replace with real criteria)", "- [x] closure ok"))
+
+            attest = self.run_goc(cwd, "attest", "smoke-card", "--non-interactive")
+
+            self.assert_goc_ok(attest)
+            self.assertIn("Layer-3 (GoC) checks", attest.stdout)
+            self.assertIn("dod-100-percent", (cwd / "deck" / "smoke-card" / "log.md").read_text())
+
+    def test_upgrade_migrates_legacy_deck_config_without_clobbering_existing_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            legacy = cwd / ".claude" / "deck-config.yaml"
+            config.unlink()
+            legacy.write_text("layer_3_goc_dod:\n  - name: legacy-check\n    kind: derived\n")
+
+            self.assert_goc_ok(self.run_goc(cwd, "upgrade", "--agents", "claude"))
+
+            self.assertIn("legacy-check", config.read_text())
+
+            config.write_text("layer_3_goc_dod:\n  - name: existing-check\n    kind: derived\n")
+            legacy.write_text("layer_3_goc_dod:\n  - name: legacy-new\n    kind: derived\n")
+
+            self.assert_goc_ok(self.run_goc(cwd, "upgrade", "--agents", "claude"))
+
+            self.assertIn("existing-check", config.read_text())
+            self.assertNotIn("legacy-new", config.read_text())
 
     def test_upgrade_claude_does_not_clobber_cards_or_non_claude_harness_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
