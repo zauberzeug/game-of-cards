@@ -1,20 +1,20 @@
 ---
 title: invalid-status-filter-silently-empties-queue
 summary: "`goc --status bogus` exits successfully with an empty queue because the read-only status filter is not validated against the status enum."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (invalid read-only status filters are rejected)
-  - [ ] `goc --status bogus` exits with a concise Click validation error
-  - [ ] Valid status filters, including `all`, still render matching cards
-  - [ ] `goc validate` passes after the filter validation fix
+  - [x] reproduce.py exits zero (invalid read-only status filters are rejected)
+  - [x] `goc --status bogus` exits with a concise Click validation error
+  - [x] Valid status filters, including `all`, still render matching cards
+  - [x] `goc validate` passes after the filter validation fix
 ---
 
 # invalid-status-filter-silently-empties-queue

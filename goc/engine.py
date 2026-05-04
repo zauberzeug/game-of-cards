@@ -462,6 +462,9 @@ def detect_advance_cycles(cards: list[Card]) -> list[str]:
 # ────────────────────────────────────────────────────────────────────────────
 # Filtering + sorting
 
+STATUS_VALUES = ("open", "active", "blocked", "done", "disproved", "superseded")
+STATUS_FILTER_VALUES = (*STATUS_VALUES, "all")
+MUTABLE_STATUS_VALUES = tuple(status for status in STATUS_VALUES if status != "done")
 CONTRIBUTION_ORDER = {"high": 0, "medium": 1, "low": 2}
 STAGE_ORDER = ["null", "alpha", "beta", "stable"]
 
@@ -851,7 +854,13 @@ def render_active_notice(
 @click.group(invoke_without_command=True)
 @click.option("--tag", "tags", multiple=True, help="Filter by tag (repeatable; AND).")
 @click.option("--contribution", type=click.Choice(["high", "medium", "low"]))
-@click.option("--status", "status_flag", default=None, help="One status, or 'all'. Default: open.")
+@click.option(
+    "--status",
+    "status_flag",
+    type=click.Choice(STATUS_FILTER_VALUES),
+    default=None,
+    help="One status, or 'all'. Default: open.",
+)
 @click.option("--stage", "stage_flag", default=None, help="Stage filter; supports range like 'alpha-beta'.")
 @click.option("--human-gate", type=click.Choice(["none", "decision", "session"]))
 @click.option("--done", "done_flag", is_flag=True, help="Shortcut for --status done.")
@@ -1160,7 +1169,13 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
 
 
 @cli.command("quality-pass")
-@click.option("--status", "status_flag", default="open", help="Filter by status (default: open).")
+@click.option(
+    "--status",
+    "status_flag",
+    type=click.Choice(STATUS_FILTER_VALUES),
+    default="open",
+    help="Filter by status (default: open).",
+)
 @click.option("--llm/--no-llm", default=False, help="Also run a Sonnet-batched summary+DoD audit (cost ~$0.40/pass).")
 @click.option("--limit", type=int, default=None, help="With --llm: cap card count (testing/sampling).")
 @click.option("--dry-run", is_flag=True, help="With --llm: print verdicts; skip the interactive accept/reject walk.")
@@ -1541,7 +1556,7 @@ def attest(title, skips, non_interactive):
 
 @cli.command()
 @click.argument("title")
-@click.argument("new_status", type=click.Choice(["open", "active", "blocked", "disproved", "superseded"]))
+@click.argument("new_status", type=click.Choice(MUTABLE_STATUS_VALUES))
 @click.option("--commit", is_flag=True, help="Force auto-commit for this status flip.")
 @click.option("--no-commit", is_flag=True, help="Skip auto-commit for this status flip.")
 def status(title, new_status, commit, no_commit):
