@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "game-of-cards"
 version = "0.0.1"
-description = "Game of Cards methodology framework — XP-style story-card kanban with DoD enforcement, Andon-cord, additive Bellman value math; CLI + Claude Code skills."
+description = "Agile substrate for human + AI-agent swarms — story-cards as the runtime when nobody remembers yesterday."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
     { name = "Zauberzeug GmbH", email = "info@zauberzeug.com" },
 ]
-keywords = ["kanban", "agile", "xp", "claude-code", "agents", "methodology", "deck"]
+keywords = ["agile", "kanban", "xp", "ai-agents", "agentic-workflow", "substrate", "claude-code", "agents-md", "methodology"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
