@@ -17,6 +17,7 @@ The methodology ships 11 Claude Code skills under `.claude/skills/`:
 - **Hygiene**: `Skill(improve-deck)` (retag stale, prune parks); `Skill(extend-deck)` (hunt new defects).
 - **Reference**: `Skill(card-schema)` (required/optional fields, enums, canonical tags).
 - **Autonomous**: `Skill(pull-card)` (one round of pull → claim → work → close → commit).
+- **Overview**: `Skill(deck)` (methodology front door and shared operating model).
 
 These wrap the same `goc <verb>` CLI documented in AGENTS.md, but
 expose them as Claude Code's skill primitive so they're invokable

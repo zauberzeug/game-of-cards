@@ -41,6 +41,9 @@ jobs:
           goc --version
           goc --help | head -5
 
+      - name: Run regression tests
+        run: uv run python -m unittest discover -s tests
+
       - name: Verify package data ships templates
         run: |
           uv run python -c "
