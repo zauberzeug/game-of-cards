@@ -1,7 +1,7 @@
 ---
 title: move-deck-config-to-game-of-cards-config
 summary: "Move GoC closure/configuration state out of Claude-specific `.claude/deck-config.yaml` and into a runtime-neutral `.game-of-cards/config.yaml`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
