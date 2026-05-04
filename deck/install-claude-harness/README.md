@@ -1,7 +1,7 @@
 ---
 title: install-claude-harness
 summary: "Make Claude Code a first-class `goc install` harness option, preserving the existing skills + hook experience behind an explicit installer selector."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
