@@ -908,6 +908,8 @@ def cli(
     if ctx.invoked_subcommand is not None:
         return
     cards = load_all_cards()
+    if done_flag and status_flag is not None:
+        raise click.UsageError("pass only one of --done / --status")
     if done_flag:
         status = "done"
     elif status_flag is None:

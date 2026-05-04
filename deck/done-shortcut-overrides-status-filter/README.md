@@ -1,20 +1,20 @@
 ---
 title: done-shortcut-overrides-status-filter
 summary: "`goc --done --status open` silently ignores the explicit status filter and returns done cards because the shortcut wins without validation."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (`--done` and `--status` can no longer conflict silently)
-  - [ ] `goc --done --status open` exits with a concise usage error
-  - [ ] `goc --done` and `goc --status done` still return done cards
-  - [ ] `goc validate` passes after the filter conflict fix
+  - [x] reproduce.py exits zero (`--done` and `--status` can no longer conflict silently)
+  - [x] `goc --done --status open` exits with a concise usage error
+  - [x] `goc --done` and `goc --status done` still return done cards
+  - [x] `goc validate` passes after the filter conflict fix
 ---
 
 # done-shortcut-overrides-status-filter

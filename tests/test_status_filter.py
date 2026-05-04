@@ -76,6 +76,22 @@ class StatusFilterTest(unittest.TestCase):
             self.assertIn("open-card", all_cards.stdout)
             self.assertIn("done-card", all_cards.stdout)
 
+    def test_done_shortcut_conflicts_with_explicit_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "done-card", "done")
+
+            conflict = self.run_goc(cwd, "--done", "--status", "open")
+            done_shortcut = self.run_goc(cwd, "--done")
+            done_status = self.run_goc(cwd, "--status", "done")
+
+            self.assertEqual(2, conflict.returncode, msg=conflict.stdout + conflict.stderr)
+            self.assertIn("pass only one of --done / --status", conflict.stderr)
+            self.assertEqual(0, done_shortcut.returncode, msg=done_shortcut.stderr)
+            self.assertIn("done-card", done_shortcut.stdout)
+            self.assertEqual(0, done_status.returncode, msg=done_status.stderr)
+            self.assertIn("done-card", done_status.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
