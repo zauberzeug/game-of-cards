@@ -305,8 +305,6 @@ def load_all_cards() -> list[Card]:
     for sub in sorted(DECK_DIR.iterdir()):
         if not sub.is_dir():
             continue
-        if (sub / "REDIRECT.md").exists() and not (sub / "README.md").exists():
-            continue
         t = load_card(sub)
         if t is not None:
             cards.append(t)
@@ -327,6 +325,29 @@ def _is_iso_date(value) -> bool:
 
 LIST_REL_FIELDS = ("advances", "advanced_by")
 INVERSE_REL = {"advances": "advanced_by", "advanced_by": "advances"}
+
+
+def validate_deck_directories() -> list[str]:
+    """Reject stale deck subdirectories that are not real card directories."""
+
+    if not DECK_DIR.exists():
+        return []
+
+    errors: list[str] = []
+    for sub in sorted(DECK_DIR.iterdir()):
+        if not sub.is_dir():
+            continue
+        readme = sub / "README.md"
+        if not readme.exists():
+            if (sub / "REDIRECT.md").exists():
+                errors.append(f"{sub.name}: stale card directory contains REDIRECT.md but no README.md")
+            else:
+                errors.append(f"{sub.name}: card directory missing README.md")
+            continue
+        fm, _body = parse_frontmatter(readme.read_text())
+        if not fm:
+            errors.append(f"{sub.name}: README.md missing frontmatter")
+    return errors
 
 
 def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
@@ -862,6 +883,9 @@ def validate(quiet):
     cards = load_all_cards()
     all_titles = {t.title for t in cards}
     errors: list[str] = []
+    for e in validate_deck_directories():
+        click.echo(f"ERROR: {e}", err=True)
+        errors.append(e)
     for t in cards:
         per = validate_card(t, schema, all_titles)
         errors.extend(per)
@@ -1599,7 +1623,7 @@ def unadvance(title, advancer, no_commit):
 @click.argument("old_title")
 @click.argument("new_title")
 def move(old_title, new_title):
-    """Rename a title; rewrite cross-references; leave a REDIRECT.md stub."""
+    """Rename a title and rewrite known cross-references."""
     schema = load_schema()
     if not re.match(schema.title_pattern, new_title):
         click.echo(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", err=True)
@@ -1635,9 +1659,6 @@ def move(old_title, new_title):
                 changed = True
         if changed:
             readme.write_text(emit_frontmatter(fm_data, body=body))
-    redirect_dir = src
-    redirect_dir.mkdir(parents=True, exist_ok=True)
-    (redirect_dir / "REDIRECT.md").write_text(f"Moved to [{new_title}](../{new_title}/).\n")
     click.echo(f"{old_title} → {new_title}")
 
 

@@ -162,6 +162,53 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / "deck" / "smoke-card" / "README.md").is_file())
             self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
 
+    def test_move_renames_without_redirect_and_rewrites_relations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "new", "parent-card", "--gate", "none", "--tag", "story"))
+            self.assert_goc_ok(self.run_goc(cwd, "new", "child-card", "--gate", "none", "--tag", "story"))
+            self.assert_goc_ok(self.run_goc(cwd, "advance", "child-card", "--by", "parent-card", "--no-commit"))
+
+            move_result = self.run_goc(cwd, "move", "child-card", "renamed-card")
+
+            self.assert_goc_ok(move_result)
+            self.assertFalse((cwd / "deck" / "child-card").exists())
+            self.assertTrue((cwd / "deck" / "renamed-card" / "README.md").is_file())
+            parent_readme = (cwd / "deck" / "parent-card" / "README.md").read_text()
+            renamed_readme = (cwd / "deck" / "renamed-card" / "README.md").read_text()
+            self.assertIn("advances: [renamed-card]", parent_readme)
+            self.assertNotIn("child-card", parent_readme)
+            self.assertIn("title: renamed-card", renamed_readme)
+            self.assertFalse((cwd / "deck" / "child-card" / "REDIRECT.md").exists())
+            self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
+
+            help_result = self.run_goc(cwd, "move", "--help")
+            self.assert_goc_ok(help_result)
+            self.assertNotIn("REDIRECT", help_result.stdout)
+            self.assertNotIn("redirect", help_result.stdout.lower())
+
+    def test_validate_rejects_redirect_only_dirs_missing_readmes_and_stale_relations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "new", "source-card", "--gate", "none", "--tag", "story"))
+            readme = cwd / "deck" / "source-card" / "README.md"
+            readme.write_text(readme.read_text().replace("advances: []", "advances: [missing-card]"))
+            redirect_dir = cwd / "deck" / "old-card"
+            redirect_dir.mkdir()
+            (redirect_dir / "REDIRECT.md").write_text("Moved to elsewhere.\n")
+            stale_dir = cwd / "deck" / "stale-card"
+            stale_dir.mkdir()
+            (stale_dir / "notes.md").write_text("not a card\n")
+
+            result = self.run_goc(cwd, "validate", "--quiet")
+
+            self.assertNotEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("old-card: stale card directory contains REDIRECT.md but no README.md", result.stderr)
+            self.assertIn("stale-card: card directory missing README.md", result.stderr)
+            self.assertIn("source-card: advances: references unknown title 'missing-card'", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
