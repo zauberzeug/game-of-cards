@@ -1,7 +1,7 @@
 ---
 title: drop-card-redirect-directories
 summary: "Remove GoC's REDIRECT.md card-directory behavior: `goc move` should leave only the renamed card, validation should catch stale title references directly, and existing redirect-only directories should be deleted so decks do not accumulate dead weight."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
