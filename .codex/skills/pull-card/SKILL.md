@@ -1,6 +1,6 @@
 ---
 name: pull-card
-description: Pull the highest-leverage `human_gate: none` open card off the queue, claim it, work it, close it, commit. AUTO-INVOKE when the user says "drain the queue", "pull a card", "let the agents work", "autonomous mode", "make progress", or when invoked via /loop or /schedule.
+description: "Pull the highest-leverage `human_gate: none` open card off the queue, claim it, work it, close it, commit. AUTO-INVOKE when the user says \"drain the queue\", \"pull a card\", \"let the agents work\", \"autonomous mode\", \"make progress\", or when invoked via /loop or /schedule."
 ---
 
 # Pull a card

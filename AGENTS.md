@@ -91,7 +91,8 @@ Andon cord). When present, those live in `.game-of-cards/`. Read
 ## Runtime-specific extras
 
 When present, [`CLAUDE.md`](CLAUDE.md) contains Claude Code-only extras
-such as prompt hooks and native command wrappers. Codex should use this
-`AGENTS.md` briefing plus the `goc` CLI verbs above; it does not need
-Claude-only files to run the deck workflow.
+such as prompt hooks and native command wrappers. Codex installs may
+also provide GoC skill files under `.codex/skills/`; those skills wrap
+the same `goc` CLI verbs above and should be treated as optional
+runtime affordances, not separate methodology state.
 <!-- END GOC -->

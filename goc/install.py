@@ -2,7 +2,8 @@
 
 Drops the shared deck/config scaffold plus selected agent harness assets into
 the current working directory. The default harness remains Claude Code; Codex
-uses the shared AGENTS.md guidance without Claude-only skills or hooks.
+uses the shared AGENTS.md guidance plus Codex-readable skills, without
+Claude-only hooks.
 Idempotent — second runs detect existing installs via `deck/.goc-version` and
 exit clean.
 
@@ -11,6 +12,7 @@ Reads templates via `importlib.resources` so it works from a wheel install.
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import sys
@@ -28,6 +30,7 @@ GOC_END = "<!-- END GOC -->"
 
 SUPPORTED_AGENTS = ("claude", "codex")
 DEFAULT_AGENTS = ("claude",)
+CODEX_SKILLS_DIR = Path(".codex") / "skills"
 
 PRE_COMMIT_HOOK = """\
   - repo: local
@@ -65,12 +68,16 @@ def _templates_root() -> Path:
     return Path(str(resources.files("goc.templates")))
 
 
-def _parse_agents(agent_specs: tuple[str, ...]) -> tuple[str, ...]:
+def _parse_agents(agent_specs: tuple[str, ...], *, claude: bool = False, codex: bool = False) -> tuple[str, ...]:
     """Parse comma-separated/repeated `--agents` values into known harness names."""
 
     tokens: list[str] = []
     for spec in agent_specs:
         tokens.extend(part.strip().lower() for part in spec.split(",") if part.strip())
+    if claude:
+        tokens.append("claude")
+    if codex:
+        tokens.append("codex")
     if not tokens:
         tokens = list(DEFAULT_AGENTS)
 
@@ -110,15 +117,13 @@ def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list
     agents_owner = "codex" if "codex" in agents else "shared"
     writes.append(PlannedWrite(agents_owner, "append", target / AGENTS_GUIDANCE.path))
     if "claude" in agents:
-        skills_src = templates / "skills"
-        for skill_dir in sorted(p for p in skills_src.iterdir() if p.is_dir()):
-            for asset in skill_dir.rglob("*"):
-                if asset.is_dir() or "__pycache__" in asset.parts:
-                    continue
-                rel = asset.relative_to(skills_src)
-                writes.append(PlannedWrite("claude", "write", target / ".claude" / "skills" / rel))
+        for rel in _iter_skill_assets(templates / "skills"):
+            writes.append(PlannedWrite("claude", "write", target / ".claude" / "skills" / rel))
         writes.append(PlannedWrite("claude", "write", target / ".claude" / "hooks" / "user-prompt-submit-goc.py"))
         writes.append(PlannedWrite("claude", "append", target / CLAUDE_GUIDANCE.path))
+    if "codex" in agents:
+        for rel in _iter_skill_assets(templates / "skills"):
+            writes.append(PlannedWrite("codex", "write", target / CODEX_SKILLS_DIR / rel))
     writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml"))
     return writes
 
@@ -151,6 +156,88 @@ def _copy_tree(src: Path, dst: Path) -> None:
             continue
         rel = asset.relative_to(src)
         target = dst / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(asset, target)
+
+
+def _frontmatter_value(text: str, key: str) -> str:
+    """Extract a single-line frontmatter value without requiring valid YAML."""
+
+    prefix = f"{key}:"
+    for line in text.splitlines():
+        if not line.startswith(prefix):
+            continue
+        value = line[len(prefix) :].strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            return value[1:-1]
+        return value
+    return ""
+
+
+def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
+    """Write a Codex-compatible SKILL.md copy from the shared template."""
+
+    text = src.read_text()
+    if not text.startswith("---\n"):
+        shutil.copy2(src, dst)
+        return
+
+    try:
+        _, frontmatter, body = text.split("---", 2)
+    except ValueError:
+        shutil.copy2(src, dst)
+        return
+
+    name = _frontmatter_value(frontmatter, "name") or skill_name
+    description = _frontmatter_value(frontmatter, "description")
+    codex_frontmatter = "\n".join(
+        (
+            "---",
+            f"name: {name}",
+            f"description: {json.dumps(description, ensure_ascii=False)}",
+            "---",
+        )
+    )
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(codex_frontmatter + body)
+
+
+def _iter_skill_assets(skills_src: Path) -> list[Path]:
+    """Return bundled skill assets relative to the skill tree root."""
+
+    paths: list[Path] = []
+    for skill_dir in sorted(p for p in skills_src.iterdir() if p.is_dir()):
+        for asset in skill_dir.rglob("*"):
+            if asset.is_dir() or "__pycache__" in asset.parts:
+                continue
+            paths.append(asset.relative_to(skills_src))
+    return paths
+
+
+def _sync_skill_tree(
+    templates: Path,
+    skills_dst: Path,
+    *,
+    replace_skills: bool = False,
+    codex_frontmatter: bool = False,
+) -> None:
+    """Copy GoC skills into a runtime-specific skill root."""
+
+    skills_src = templates / "skills"
+    skills_dst.mkdir(parents=True, exist_ok=True)
+    if replace_skills:
+        for skill_dir in sorted(p for p in skills_src.iterdir() if p.is_dir()):
+            target = skills_dst / skill_dir.name
+            if target.exists():
+                shutil.rmtree(target)
+    for asset in skills_src.rglob("*"):
+        if asset.is_dir() or "__pycache__" in asset.parts:
+            continue
+        rel = asset.relative_to(skills_src)
+        target = skills_dst / rel
+        if codex_frontmatter and asset.name == "SKILL.md":
+            _write_codex_skill(asset, target, skill_name=rel.parts[0])
+            continue
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(asset, target)
 
@@ -203,29 +290,47 @@ def _sync_claude_harness(target: Path, templates: Path, *, replace_skills: bool 
     """Copy Claude-only skills and prompt hook."""
 
     skills_dst = target / ".claude" / "skills"
-    if replace_skills and skills_dst.exists():
-        shutil.rmtree(skills_dst)
-    skills_dst.mkdir(parents=True, exist_ok=True)
-    _copy_tree(templates / "skills", skills_dst)
+    _sync_skill_tree(templates, skills_dst, replace_skills=replace_skills)
 
     hooks_dst = target / ".claude" / "hooks"
     hooks_dst.mkdir(parents=True, exist_ok=True)
     shutil.copy2(templates / "hooks" / "user-prompt-submit.py", hooks_dst / "user-prompt-submit-goc.py")
 
 
-AGENTS_HELP = "Agent harnesses to install; repeat or comma-separate. Default: claude. Supported: claude, codex."
+def _sync_codex_harness(target: Path, templates: Path, *, replace_skills: bool = False) -> None:
+    """Copy Codex-readable GoC skills."""
+
+    _sync_skill_tree(
+        templates,
+        target / CODEX_SKILLS_DIR,
+        replace_skills=replace_skills,
+        codex_frontmatter=True,
+    )
+
+
+AGENTS_HELP = (
+    "Agent harnesses to install; repeat or comma-separate. Default: claude. "
+    "Supported: claude, codex."
+)
 
 
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Print planned writes; do not touch the filesystem.")
 @click.option("--agents", "agent_specs", multiple=True, help=AGENTS_HELP)
-def install(dry_run: bool, agent_specs: tuple[str, ...]) -> None:
+@click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
+@click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
+def install(
+    dry_run: bool,
+    agent_specs: tuple[str, ...],
+    claude_flag: bool,
+    codex_flag: bool,
+) -> None:
     """Scaffold a fresh repo with the shared GoC files and selected harnesses."""
 
     target = Path.cwd().resolve()
     deck_dir = target / "deck"
     templates = _templates_root()
-    agents = _parse_agents(agent_specs)
+    agents = _parse_agents(agent_specs, claude=claude_flag, codex=codex_flag)
 
     writes = _plan_writes(target, templates, agents)
     if dry_run:
@@ -240,6 +345,8 @@ def install(dry_run: bool, agent_specs: tuple[str, ...]) -> None:
 
     if "claude" in agents:
         _sync_claude_harness(target, templates)
+    if "codex" in agents:
+        _sync_codex_harness(target, templates)
 
     deck_dir.mkdir(parents=True, exist_ok=True)
     (deck_dir / "log.md").write_text("# Deck Log\n\nAppend deck-level events here (sprint notes, schema bumps, etc.).\n")
@@ -261,14 +368,21 @@ def install(dry_run: bool, agent_specs: tuple[str, ...]) -> None:
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Print planned writes; do not touch the filesystem.")
 @click.option("--agents", "agent_specs", multiple=True, help=AGENTS_HELP)
-def upgrade(dry_run: bool, agent_specs: tuple[str, ...]) -> None:
+@click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
+@click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
+def upgrade(
+    dry_run: bool,
+    agent_specs: tuple[str, ...],
+    claude_flag: bool,
+    codex_flag: bool,
+) -> None:
     """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
 
     target = Path.cwd().resolve()
     deck_dir = target / "deck"
     templates = _templates_root()
-    agents = _parse_agents(agent_specs)
-    agents_explicit = bool(agent_specs)
+    agents = _parse_agents(agent_specs, claude=claude_flag, codex=codex_flag)
+    agents_explicit = bool(agent_specs or claude_flag or codex_flag)
 
     existing = _detect_existing(deck_dir)
     if existing is None:
@@ -286,6 +400,8 @@ def upgrade(dry_run: bool, agent_specs: tuple[str, ...]) -> None:
 
     if "claude" in agents:
         _sync_claude_harness(target, templates, replace_skills=True)
+    if "codex" in agents:
+        _sync_codex_harness(target, templates, replace_skills=True)
 
     config_dst = target / ".game-of-cards"
     if config_dst.exists():

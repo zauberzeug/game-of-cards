@@ -1,7 +1,6 @@
 ---
 name: scan-deck
-description: Browse the deck — supportive triage view, filtered queues, kanban board, JSON dump, decision Q&A. Read-only by default. AUTO-INVOKE when user says "what's up?", "where do you need me?", "what's open", "show me the deck", "list cards", "kanban view", or "decisions to make". ALSO auto-invoke before Skill(create-card) to dedup against existing titles. Kanban first practice (make work visible).
-argument-hint: omit for triage view; "decisions to make" for interactive Q&A; title/tag/filter expression for everything else
+description: "Browse the deck — supportive triage view, filtered queues, kanban board, JSON dump, decision Q&A. Read-only by default. AUTO-INVOKE when user says \"what's up?\", \"where do you need me?\", \"what's open\", \"show me the deck\", \"list cards\", \"kanban view\", or \"decisions to make\". ALSO auto-invoke before Skill(create-card) to dedup against existing titles. Kanban first practice (make work visible)."
 ---
 
 # Scan the deck

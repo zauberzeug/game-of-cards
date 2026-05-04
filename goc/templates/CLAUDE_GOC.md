@@ -33,6 +33,6 @@ view of the user message. The reminder runs the silent pipeline
 without announcing card operations to the user. Vibe coders see code,
 not bookkeeping.
 
-Other agent runtimes implement the same flow, but invoked explicitly
-by the user ("file a card for X", "show the deck") rather than
-auto-detected from prompt phrasing.
+Other agent runtimes implement the same flow either through their own
+installed GoC skills or by invoking the CLI verbs from `AGENTS.md`. The
+prompt hook remains Claude-only.

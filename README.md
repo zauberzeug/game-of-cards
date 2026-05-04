@@ -30,7 +30,8 @@ This is *not* another methodology framework. Spec-Kit ships templates. BMAD ship
 uv tool install game-of-cards     # one-time, machine-wide
 cd any-repo
 goc install                       # default: Claude Code harness plus shared AGENTS.md guidance
-goc install --agents codex        # Codex harness only: deck/, AGENTS.md, .game-of-cards/
+goc install --codex               # Codex harness only: deck/, AGENTS.md, .game-of-cards/, .codex/skills/
+goc install --agents codex        # same as --codex
 ```
 
 When working from a checkout of this repo, use the repo-local form:
@@ -57,8 +58,8 @@ If you're using Claude Code or any `AGENTS.md`-aware editor, you can also just t
 - A `goc` CLI — 13 verbs covering create, browse, advance, decide, close, validate, and install.
 - A `deck/<title>/` directory per card: frontmatter-validated `README.md`, append-only `log.md`.
 - A schema validator suitable for pre-commit and CI.
-- A starter set of Claude Code skills (`scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`) that turn the CLI into an autonomous workflow when you want one.
-- Harness install targets for `claude` and `codex`. `claude` is the no-flag default; `codex` writes AGENTS.md-centered guidance without Claude-only skills or prompt hooks.
+- A starter set of GoC skills (`scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`) that turn the CLI into an autonomous workflow when you want one.
+- Harness install targets for `claude` and `codex`. `claude` is the no-flag default; `codex` writes Codex-readable skills and AGENTS.md-centered guidance without Claude-only prompt hooks.
 - An `AGENTS.md` block for Codex and other editors that aren't Claude Code.
 - A `.game-of-cards/` per-repo config layer for project-specific content and workflow hooks. The convention — directory layout, file format, hook-point catalog — is documented in [`.game-of-cards/README.md`](goc/templates/game_of_cards/README.md), which `goc install` ships into every consuming repo.
 
