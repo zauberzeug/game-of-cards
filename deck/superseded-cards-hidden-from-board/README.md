@@ -1,20 +1,20 @@
 ---
 title: superseded-cards-hidden-from-board
 summary: "`goc --board` silently omits cards with the valid `superseded` status because the board renderer never creates a SUPERSEDED column."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (superseded cards appear on the board)
-  - [ ] `goc --board` renders a SUPERSEDED column for full-board views
-  - [ ] Existing board columns for open/active/blocked/done/disproved still render
-  - [ ] `goc validate` passes after the board fix
+  - [x] reproduce.py exits zero (superseded cards appear on the board)
+  - [x] `goc --board` renders a SUPERSEDED column for full-board views
+  - [x] Existing board columns for open/active/blocked/done/disproved still render
+  - [x] `goc validate` passes after the board fix
 ---
 
 # superseded-cards-hidden-from-board

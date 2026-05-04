@@ -783,7 +783,7 @@ def render_board(
 ) -> str:
     if values is None:
         values = compute_values(cards)
-    columns = ["open", "active", "blocked", "done", "disproved"]
+    columns = ["open", "active", "blocked", "done", "disproved", "superseded"]
     by_status: dict[str, list[Card]] = {c: [] for c in columns}
     for t in cards:
         if t.status in by_status:
