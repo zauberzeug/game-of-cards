@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-03
 closed_at: null
-human_gate: none
+human_gate: session
 advances: []
 advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, drop-card-redirect-directories, surface-active-cards-in-board]
 tags: [epic, infra, meta-fix]
