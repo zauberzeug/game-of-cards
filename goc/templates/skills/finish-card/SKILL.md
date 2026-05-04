@@ -1,5 +1,5 @@
 ---
-description: Close a card with DoD enforcement, log.md closure entry, STATUS.md refresh, and commit via Skill(prepare-commit). AUTO-INVOKE when user says "done", "close this", "finish X", "mark complete", "wrap up", "ship it", or completes work that satisfies a card's DoD. The DoD checkboxes ARE the closure contract (Scrum Definition of Done) — `deck.py done` refuses to close with any unchecked.
+description: Close a card with DoD enforcement, log.md closure entry, and commit via Skill(prepare-commit). AUTO-INVOKE when user says "done", "close this", "finish X", "mark complete", "wrap up", "ship it", or completes work that satisfies a card's DoD. The DoD checkboxes ARE the closure contract (Scrum Definition of Done) — `goc done` refuses to close with any unchecked.
 argument-hint: <title>
 ---
 
@@ -17,12 +17,12 @@ list is the audit trail.
 Closure is an eight-step contract — skip a step and the card is dishonest:
 
 1. Verify the work satisfies the DoD criteria.
-2. Run a `/mindset` audit (closure must align with axioms or honestly note "no axiom touched").
+2. Run the project-specific closure audit (or honestly note that no project rubric applies).
 3. Tick the DoD checkboxes in the README.
 4. Append closure context to `log.md` (including the audit outcome).
-5. Run `deck.py attest <title>` to record the Closure-verification block in `log.md` (layer-2 + layer-3 DoDs from `.claude/deck-config.yaml`).
-6. Run `deck.py done <title>` (DoD-100% gated).
-7. Refresh `demos/pong/STATUS.md` dashboard.
+5. Run `goc attest <title>` to record the Closure-verification block in `log.md` (layer-2 + layer-3 DoDs from `.claude/deck-config.yaml`).
+6. Run `goc done <title>` (DoD-100% gated).
+7. Run any project-specific post-close action (status dashboard, changelog row, etc.) defined in the consuming repo's hook.
 8. Hand to `Skill(prepare-commit)`.
 
 If at any step the work turns out NOT to be a closure (a fix
@@ -54,39 +54,39 @@ If any criterion is NOT actually satisfied, **stop the closure**:
 - If verification revealed the hypothesis was wrong → divert to
   `Skill(advance-card) <title> disproved`.
 
-## Step 2 — `/mindset` audit (closure must align with axioms)
+## Step 2 — project-specific closure audit
 
-Bio-faithfulness is the methodology's target (CLAUDE.md "Bio-divergence
-is a bug, not a tradeoff"). A fix that passes pytest + ruff but encodes
-a non-bio-faithful default, silently disables a primitive to mask a
-side-effect, or drifts a documented contract is debt-accumulating even
-when "green". The audit forces the closer to articulate *which*
-principle the closure aligns with — or to honestly note that no axiom
-is touched (engineering-substrate fixes: cache invalidation, bounds
-checks, field-symmetric serialization).
+Closure should align with the consuming repo's project principles, not
+just pass pytest + ruff. A fix that turns its tests green but encodes
+a default the project's documented principles disagree with, silently
+disables a primitive to mask a side-effect, or drifts a documented
+contract is debt-accumulating even when "green". The audit forces the
+closer to articulate *which* project principle the closure aligns with
+— or to honestly note that no principle is touched (mechanical fixes:
+cache invalidation, bounds checks, field-symmetric serialization).
 
-Invoke `Skill(mindset)` to load the vision / axioms / plasticity
-context (skip for clearly mechanical fixes — but only if you can
-honestly write the "no axiom touched" statement without /mindset
-loaded). Then write the outcome into the Step 4 `log.md` closure
+!`cat .game-of-cards/hooks/finish-card.md 2>/dev/null || true`
+
+If the consuming repo defined a closure-audit rubric in the hook above,
+follow it. Then write the outcome into the Step 4 `log.md` closure
 entry as exactly ONE of:
 
-- **`/mindset audit: PASS — invokes <axiom> + <primary source>`** for
-  fixes that touch axiomatic mechanisms. Example: `"/mindset audit:
-  PASS — invokes A5 layer-3b-F heterosynaptic LTD (Eckmann 2024 /
-  Royer-Paré 2003); fix shifts the row-L1 invariant from row-L2
-  toward bio-faithful row-L1 sum."`
-- **`/mindset audit: PASS — no axiom touched, mechanical fix`** for
-  engineering-substrate fixes that don't touch any biological
-  mechanism. Be honest — if the fix has *any* axiom binding, name
-  it instead.
+- **`<rubric-name> audit: PASS — invokes <principle> + <primary source>`**
+  for fixes that touch a project principle.
+- **`<rubric-name> audit: PASS — no principle touched, mechanical fix`**
+  for fixes that don't bind to any project principle. Be honest — if the
+  fix has *any* principle binding, name it instead.
 
-If the audit FAILS — the fix encodes a non-bio-faithful default,
-masks a missing concept, or contradicts a documented axiom — STOP
-the closure. Either redesign the fix to be bio-faithful (preferred),
-or divert to `Skill(advance-card) <title> open` and append a
-`## /mindset audit failed` section to `log.md` documenting what's
-wrong and what a bio-faithful resolution would look like.
+If the audit FAILS — the fix encodes a default the project rubric
+disagrees with, masks a missing concept, or contradicts a documented
+principle — STOP the closure. Either redesign the fix to align
+(preferred), or divert to `Skill(advance-card) <title> open` and append
+a `## audit failed` section to `log.md` documenting what's wrong and
+what an aligned resolution would look like.
+
+If no project rubric is defined (the hook above is absent or empty),
+the audit reduces to: "no rubric configured; mechanical fix" — record
+that verbatim.
 
 **No per-card DoD checkbox required.** This audit is a workflow gate
 on every closure, not a per-card promise. Cards inherit the gate from
@@ -99,8 +99,8 @@ Edit `deck/<title>/README.md` and mark each criterion `- [x]`:
 ```yaml
 definition_of_done: |
   - [x] reproduce.py exits zero (defect no longer fires)
-  - [x] axioms.md A5 Layer 3b-F lists row-L1 invariant
-  - [x] 10-seed pong sweep within 2σ of prescribed motor row-L1
+  - [x] documented contract reflects the new default
+  - [x] regression test added covering the previous-failing path
 ```
 
 If the fix added a sub-criterion the original DoD didn't anticipate,
@@ -119,16 +119,16 @@ never rewrite existing entries. Format the closure entry:
 
 - **What changed**: <file:line> — <one-line essence>
 - **Verification**: <one or two key numbers>
-- **/mindset audit**: PASS — <axiom + primary source> | PASS — no axiom touched, mechanical fix
-- **Pong impact**: dormant / +Xpp probe / -Ypp regression / etc.
-- **Tests**: <count> passed / <count> failed (Bug 119 baseline) / <count> xfailed
+- **Audit**: PASS — <principle + primary source> | PASS — no principle touched, mechanical fix
+- **Project impact**: <project-defined dashboard line, or "n/a">
+- **Tests**: <count> passed / <count> failed / <count> xfailed
 - **Bundled with**: <title-A>, <title-B> (if any)
 ```
 
 ## Step 5 — record the Closure verification (`deck.py attest`)
 
-Implicit DoD layers — the project-wide rules in CLAUDE.md ("tests
-pass, ruff green, /mindset audit pass, doc-consistency-checker") and
+Implicit DoD layers — project-wide rules (e.g. "tests pass, ruff
+green, audit pass, doc-consistency-checker") and
 the GoC-wide rules ("schema valid, advanced_by closed, log.md has
 closure entry, DoD 100%") — are the *meta*-contract that applies to
 every closure regardless of what the card does. Today they're invisible:
@@ -149,7 +149,7 @@ The command:
   `ruff format --check`, `deck.py validate`). Non-zero exit fails.
 - **Derived checks** compute from card state (DoD %, advanced_by
   closure, log.md grep for the Step 4 closure section).
-- **Manual checks** (`/mindset audit`, `no-debug-code`) prompt the
+- **Manual checks** (`audit`, `no-debug-code`) prompt the
   closer interactively for pass/fail + a one-line rationale. The
   rationale is recorded verbatim in the log block.
 - **Agent checks** (`doc-consistency-checker`) prompt the closer to
@@ -189,47 +189,18 @@ prefer adding checkboxes over forcing.
 Each gets its own `closed_at` and its own attestation block.
 Cite the sibling slugs in each body's log entry.
 
-## Step 7 — update `demos/pong/STATUS.md`
+## Step 7 — project-specific post-close action
 
-Always add a Recent activity row for the closure (even if metrics
-/ config didn't shift — mark "pong-dormant" in the Subject text).
-The row is the dashboard's audit trail; omitting it makes the
-closure invisible from the entry-point doc and trips
-doc-consistency-checker.
+If the consuming repo defined a post-close action in
+`.game-of-cards/hooks/finish-card.md` (a status dashboard refresh, a
+changelog row, a release-notes entry, etc.), the hook below carries
+the recipe. Otherwise this step is a no-op.
 
-!`head -100 demos/pong/STATUS.md`
+!`cat .game-of-cards/hooks/finish-card.md 2>/dev/null || true`
 
-Format:
-
-```markdown
-| YYYY-MM-DD | closed | <title> — <one-line subject>; <pong impact> | [→](../../deck/<title>/) |
-```
-
-If shipping config changed, also edit the matching Shipping config
-table row. If shipping metrics changed (you ran a sweep), replace
-the "Latest metrics" table with the new sweep's numbers and add a
-one-line footnote referencing the title.
-
-### Enforce STATUS.md dashboard form
-
-After updating STATUS.md (Step 7), verify:
-
-1. **Section order:** Shipping config → Latest metrics → Recent
-   activity → Active open items → Key design principles →
-   Pointers. Past-sprint analyses do NOT belong here — move them
-   to HISTORY.md.
-2. **Shipping config is a single table.** No prose between rows.
-3. **Latest metrics is a single table.** At most ONE footnote of
-   ≤ 3 sentences.
-4. **Recent activity** is a 3–5 row table, newest first. Rotate
-   out the oldest row when adding a new one.
-5. **Active open items** — bulleted list, every item ≤ 200 chars.
-6. **Key design principles** — bulleted list, each ≤ 200 chars.
-7. **No section is dedicated to a single past sprint's analysis.**
-
-If any check fails, fix it before commit. The dashboard property
-is load-bearing — STATUS.md is read at-a-glance; the moment it
-grows past one screen of compact tables it loses that role.
+Note: the hook file is *also* loaded in Step 2 above; both steps share
+the same hook file because both are project-rubric questions and the
+consuming repo authors them together.
 
 ## Step 8 — commit via `Skill(prepare-commit)`
 
