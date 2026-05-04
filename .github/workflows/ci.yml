@@ -1,0 +1,67 @@
+# CI workflow — smoke-tests the package on every push and pull-request.
+#
+# Confirms:
+#   - Package builds cleanly with hatchling
+#   - `goc --version` reports correctly via the console-script entry point
+#   - `goc validate` passes on the repo's own deck (once a deck exists)
+#   - All 11 skill templates ship as importable package data
+#
+# Once `goc-install-command-scaffolds-repo` (sub-card 2) ships and the
+# repo's own `deck/` directory contains cards, the `goc validate` step
+# becomes the gate that keeps card frontmatter consistent.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: Build + import + validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package
+        run: uv pip install --system -e .
+
+      - name: Verify console script
+        run: |
+          goc --version
+          goc --help | head -5
+
+      - name: Verify package data ships templates
+        run: |
+          uv run python -c "
+          from importlib.resources import files
+          root = files('goc.templates')
+          skills = ['advance-card', 'card-schema', 'create-card', 'decide-card', 'deck', 'extend-deck', 'finish-card', 'improve-deck', 'next-card', 'pull-card', 'scan-deck']
+          for s in skills:
+              skill_md = root / 'skills' / s / 'SKILL.md'
+              assert skill_md.is_file(), f'missing {skill_md}'
+              print(f'  ✓ {s}/SKILL.md')
+          schema = files('goc') / 'schema.yaml'
+          assert schema.is_file(), 'missing schema.yaml'
+          print('  ✓ schema.yaml')
+          print(f'\nAll 11 skills + schema ship as package data.')
+          "
+
+      - name: Validate deck (if exists)
+        run: |
+          if [ -d deck ]; then
+            goc validate
+          else
+            echo "No deck/ directory yet — skipping validation."
+            echo "(once goc install scaffolds the repo, this step becomes load-bearing)"
+          fi

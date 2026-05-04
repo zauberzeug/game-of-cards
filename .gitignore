@@ -1,0 +1,33 @@
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+
+# uv: lockfile committed for reproducibility
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local-only
+tmp/
