@@ -52,6 +52,7 @@ If you're using Claude Code or any `AGENTS.md`-aware editor, you can also just t
 - A schema validator suitable for pre-commit and CI.
 - A starter set of Claude Code skills (`scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`) that turn the CLI into an autonomous workflow when you want one.
 - An `AGENTS.md` block for editors that aren't Claude Code.
+- A `.game-of-cards/` per-repo config layer for project-specific content and workflow hooks. The convention — directory layout, file format, hook-point catalog — is documented in [`.game-of-cards/README.md`](goc/templates/game_of_cards/README.md), which `goc install` ships into every consuming repo.
 
 ## Status
 

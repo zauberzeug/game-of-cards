@@ -1,0 +1,64 @@
+# `.game-of-cards/` — project-specific configuration for goc
+
+This directory holds the per-repo configuration the goc-shipped skills
+read at runtime. The skills are domain-agnostic; project specifics
+live here.
+
+Two file kinds:
+
+## Content stubs (root)
+
+Markdown files inlined verbatim into skill bodies at documented
+injection points. The skill loads them via:
+
+```
+!`cat .game-of-cards/<filename>.md 2>/dev/null || true`
+```
+
+If the file is absent or empty, the skill falls through to its
+generic flow.
+
+| Stub | Inlined into | What goes here |
+|---|---|---|
+| `canonical-tags.md` | `card-schema` skill (end of predicate table) AND parsed by `goc validate` to extend the canonical-tag enum | Project-specific tag predicates + a fenced YAML block listing the new tags (see existing file's header) |
+| `domain-vocabulary.md` | (reserved for project use) | Glossary of project-specific terms |
+| `domain-examples.md` | (reserved for project use) | Concrete example card bodies for project-specific bug classes |
+| `tooling-conventions.md` | `extend-deck` skill (Phase 2 brief, model-tier guidance) | Project tooling rules (e.g., `uv run` discipline, `model: "opus"` mandate, parallelization rules) |
+| `documentation-conventions.md` | (reserved for project use) | Doc-style rules — STATUS.md vs SPEC.md split, per-doc consistency invariants |
+| `file-path-map.md` | (reserved for project use) | Project filesystem map — where scripts/tests/docs live, what's gitignored |
+
+## Workflow-hook stubs (`hooks/<skill>.md`)
+
+Markdown instructions a goc-shipped skill follows at a defined
+hook-point in its workflow. Same injection syntax as content stubs:
+
+```
+!`cat .game-of-cards/hooks/<skill>.md 2>/dev/null || true`
+```
+
+| Hook | Loaded by | Workflow point |
+|---|---|---|
+| `hooks/create-card.md` | `create-card` | Pre-decision-gate-raise consultation (when filing a card with a substantive decision at its core) |
+| `hooks/decide-card.md` | `decide-card` | Agent-invoked decision contract (citation form for `--because`) |
+| `hooks/finish-card.md` | `finish-card` | Step 2 closure-criteria audit AND Step 7 post-close action (status-dashboard refresh, changelog row, etc.) |
+| `hooks/pull-card.md` | `pull-card` | Lazy-Andon trial: when a parked question can be resolved by a project rubric instead of raising the gate |
+| `hooks/extend-deck.md` | `extend-deck` | Phase 0 priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
+
+## Authoring guidelines
+
+- **Empty stub = generic flow.** The skills are designed so an empty
+  hook file is a no-op; the consuming repo enables project-specific
+  behavior by authoring content into the file.
+- **Markdown only.** Hook files are inlined verbatim into skill
+  bodies, which the agent reads as prompt text. Plain markdown
+  works; YAML and code blocks are rendered as-is.
+- **Header comment is for the human author, not the agent.** When
+  the skill `!`cat`s the file, the header comment becomes part of
+  the agent's prompt. Once the file is authored, replace the
+  comment with real instructions.
+- **Versioned in git, kept in the repo root.** `.game-of-cards/` is
+  intentionally not gitignored. Project-specific GoC configuration
+  is project content; it ships with the repo.
+- **Sub-card 6 handles migration.** When phasor-agents migrates off
+  the vendored `deck.py`, this directory will be authored from the
+  audit catalogue (`deck/goc-package-pyproject-and-pypi-release/audit_catalogue.md`).
