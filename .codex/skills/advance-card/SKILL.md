@@ -95,27 +95,26 @@ goc status <title> disproved
 goc status <title> superseded
 ```
 
-The CLI prints `<title>: <prior> → <new>` on success **and auto-commits
-the state mutation** (subject: `deck: <title> <prior> → <new>`).
+The CLI prints `<title>: <prior> → <new>` on success and follows the
+repo's `.game-of-cards/config.yaml` `workflow.auto_commit` policy.
 
 ## Step 5 — claim is its own commit (multi-branch coordination)
 
-Status flips and edge mutations commit IMMEDIATELY, separately from
-the work commit. Reason: when two branches both work the deck, the
-soft lock (`status: active`) must be git-observable so a sibling
-branch pulling sees "this card is claimed" before it races on the
-same YAML. Uncommitted state changes turn into merge conflicts; tiny
-state-only commits don't.
+Status flips and edge mutations normally commit immediately, separately
+from the work commit. Reason: when two branches both work the deck, the
+soft lock (`status: active`) should be git-observable so a sibling branch
+pulling sees "this card is claimed" before it races on the same YAML.
 
-`goc status` / `advance` / `unadvance` / `decide` ALL auto-commit
-by default. Pass `--no-commit` only when bundling is genuinely
-necessary (rare — you almost never want this). The work commit, when
-it lands later after `Skill(finish-card)`, contains the actual code/doc
-changes — NOT the status flip.
+`goc status` / `advance` / `unadvance` / `decide` read
+`workflow.auto_commit` from `.game-of-cards/config.yaml` (default:
+`true`). Pass `--no-commit` to skip for one invocation, or `--commit`
+to force a state-only commit when the repo config disables automatic
+commits. The work commit, when it lands later after `Skill(finish-card)`,
+contains the actual code/doc changes — NOT the status flip.
 
-If the auto-commit is skipped (no git repo, mid-merge / mid-rebase,
-no diff), the CLI prints a one-line note. The on-disk state still
-mutated; only the visibility-to-other-branches step deferred.
+If the configured/forced auto-commit is skipped (no git repo, mid-merge /
+mid-rebase, no diff), the CLI prints a one-line note. The on-disk state
+still mutated; only the visibility-to-other-branches step deferred.
 
 ## Cross-references
 

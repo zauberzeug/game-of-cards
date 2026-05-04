@@ -8,5 +8,7 @@ layer_2_project_dod: []
 layer_3_goc_dod: []
 
 workflow:
-  # Reserved for runtime-neutral workflow options such as auto-commit defaults.
-  auto_commit: null
+  # State-change commands auto-commit by default so active-card claims and
+  # decision handoffs are visible to parallel agents. Set false to leave those
+  # mutations in the working tree unless a command is run with `--commit`.
+  auto_commit: true

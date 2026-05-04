@@ -1252,10 +1252,10 @@ def done(title, force):
 
 
 # ────────────────────────────────────────────────────────────────────────────
-# Auto-commit — claim/decide/advance state changes commit immediately so
-# multi-branch deck work synchronizes via git rather than racing on
-# uncommitted YAML. The work commit stays separate; only the
-# state-mutation primitives auto-commit here.
+# Auto-commit policy — claim/decide/advance state changes can commit
+# immediately so multi-branch deck work synchronizes via git rather than
+# racing on uncommitted YAML. The default is configured in
+# .game-of-cards/config.yaml; per-command flags override it.
 
 
 def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0911
@@ -1307,6 +1307,39 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         return False
     except FileNotFoundError:
         return False
+
+
+def _coerce_config_bool(value, *, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+    return bool(value)
+
+
+def _commit_override(commit: bool, no_commit: bool) -> bool | None:
+    if commit and no_commit:
+        click.echo("ERROR: pass only one of --commit / --no-commit", err=True)
+        sys.exit(2)
+    if commit:
+        return True
+    if no_commit:
+        return False
+    return None
+
+
+def auto_commit_enabled(override: bool | None = None) -> bool:
+    if override is not None:
+        return override
+    config = load_deck_config()
+    workflow = config.get("workflow") or {}
+    return _coerce_config_bool(workflow.get("auto_commit"), default=True)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -1483,12 +1516,13 @@ def attest(title, skips, non_interactive):
 @cli.command()
 @click.argument("title")
 @click.argument("new_status", type=click.Choice(["open", "active", "blocked", "disproved", "superseded"]))
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit of the status flip (rare; use only when bundling).")
-def status(title, new_status, no_commit):
+@click.option("--commit", is_flag=True, help="Force auto-commit for this status flip.")
+@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this status flip.")
+def status(title, new_status, commit, no_commit):
     """Mutate any status except `done` (which has its own enforcement gate).
 
-    The state flip auto-commits unless --no-commit is passed, so multi-branch
-    deck work synchronizes via git. The work commit follows separately.
+    The state flip follows `.game-of-cards/config.yaml` `workflow.auto_commit`.
+    `--commit` and `--no-commit` override that policy for one invocation.
     """
     card_dir = DECK_DIR / title
     t = load_card(card_dir)
@@ -1503,7 +1537,8 @@ def status(title, new_status, no_commit):
     text = mutate_frontmatter_field(text, "status", new_status)
     (card_dir / "README.md").write_text(text)
     click.echo(f"{title}: {prior} → {new_status}")
-    if not no_commit:
+    commit_policy = _commit_override(commit, no_commit)
+    if auto_commit_enabled(commit_policy):
         if _git_auto_commit([card_dir], f"deck: {title} {prior} → {new_status}"):
             click.echo("  committed")
 
@@ -1622,15 +1657,17 @@ def _mutate_pair(child_title: str, parent_title: str, field_on_child: str, field
 @cli.command()
 @click.argument("title")
 @click.option("--by", "advancer", required=True, help="Slug of the card that advances <title>.")
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit of the edge mutation.")
-def advance(title, advancer, no_commit):
+@click.option("--commit", is_flag=True, help="Force auto-commit for this edge mutation.")
+@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this edge mutation.")
+def advance(title, advancer, commit, no_commit):
     """Add bidirectional value-flow edge: title.advanced_by += advancer, advancer.advances += title."""
     if title == advancer:
         click.echo("ERROR: cannot advance a card with itself", err=True)
         sys.exit(2)
     _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
     click.echo(f"advance: {title}.advanced_by += {advancer}; {advancer}.advances += {title}")
-    if not no_commit:
+    commit_policy = _commit_override(commit, no_commit)
+    if auto_commit_enabled(commit_policy):
         if _git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], f"deck: {advancer} advances {title}"):
             click.echo("  committed")
 
@@ -1638,12 +1675,14 @@ def advance(title, advancer, no_commit):
 @cli.command()
 @click.argument("title")
 @click.option("--by", "advancer", required=True)
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit of the edge mutation.")
-def unadvance(title, advancer, no_commit):
+@click.option("--commit", is_flag=True, help="Force auto-commit for this edge mutation.")
+@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this edge mutation.")
+def unadvance(title, advancer, commit, no_commit):
     """Remove bidirectional value-flow edge."""
     _mutate_pair(title, advancer, "advanced_by", "advances", add=False)
     click.echo(f"unadvance: {title}.advanced_by -= {advancer}; {advancer}.advances -= {title}")
-    if not no_commit:
+    commit_policy = _commit_override(commit, no_commit)
+    if auto_commit_enabled(commit_policy):
         if _git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], f"deck: {advancer} no longer advances {title}"):
             click.echo("  committed")
 
@@ -1695,8 +1734,9 @@ def move(old_title, new_title):
 @click.argument("title")
 @click.option("--decision", required=True, help="One-line decision (the WHAT).")
 @click.option("--because", "reasoning", required=True, help="One-line reasoning (the WHY).")
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit of the decision record.")
-def decide(title, decision, reasoning, no_commit):
+@click.option("--commit", is_flag=True, help="Force auto-commit for this decision record.")
+@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this decision record.")
+def decide(title, decision, reasoning, commit, no_commit):
     """Record a decision in the body + log; lower the human gate to `none`.
 
     The Andon-cord lowering action: pull-card raises the gate when it can't
@@ -1733,7 +1773,8 @@ def decide(title, decision, reasoning, no_commit):
         + f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
     )
     click.echo(f"{title}: decision recorded; gate {prior_gate} → none")
-    if not no_commit:
+    commit_policy = _commit_override(commit, no_commit)
+    if auto_commit_enabled(commit_policy):
         decision_short = decision[:60] + ("…" if len(decision) > 60 else "")
         if _git_auto_commit([card_dir], f"decide: {title} — {decision_short}"):
             click.echo("  committed")

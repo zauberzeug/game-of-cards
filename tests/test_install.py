@@ -191,6 +191,59 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("existing-check", config.read_text())
             self.assertNotIn("legacy-new", config.read_text())
 
+    def test_state_mutations_respect_auto_commit_config_and_cli_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            subprocess.run(["git", "init"], cwd=cwd, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=cwd, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=cwd, check=True)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "commit-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+            subprocess.run(["git", "add", "."], cwd=cwd, check=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=cwd, check=True, capture_output=True)
+
+            committed = self.run_goc(cwd, "status", "commit-card", "active")
+            self.assert_goc_ok(committed)
+            self.assertIn("committed", committed.stdout)
+            self.assertEqual("", subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout)
+
+            skipped = self.run_goc(cwd, "status", "commit-card", "open", "--no-commit")
+            self.assert_goc_ok(skipped)
+            self.assertNotIn("committed", skipped.stdout)
+            self.assertIn(
+                " M deck/commit-card/README.md",
+                subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout,
+            )
+
+            subprocess.run(["git", "add", "deck/commit-card/README.md"], cwd=cwd, check=True)
+            subprocess.run(["git", "commit", "-m", "manual open"], cwd=cwd, check=True, capture_output=True)
+            self.assertEqual("", subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout)
+
+            (cwd / ".game-of-cards" / "config.yaml").write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod: []\n"
+                "workflow:\n"
+                "  auto_commit: false\n"
+            )
+            subprocess.run(["git", "add", ".game-of-cards/config.yaml"], cwd=cwd, check=True)
+            subprocess.run(["git", "commit", "-m", "disable auto commit"], cwd=cwd, check=True, capture_output=True)
+
+            disabled = self.run_goc(cwd, "status", "commit-card", "active")
+            self.assert_goc_ok(disabled)
+            self.assertNotIn("committed", disabled.stdout)
+            self.assertIn(
+                " M deck/commit-card/README.md",
+                subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout,
+            )
+
+            forced_again = self.run_goc(cwd, "status", "commit-card", "blocked", "--commit")
+            self.assert_goc_ok(forced_again)
+            self.assertIn("committed", forced_again.stdout)
+            self.assertEqual("", subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout)
+
     def test_upgrade_claude_does_not_clobber_cards_or_non_claude_harness_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

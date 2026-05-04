@@ -175,11 +175,12 @@ The command:
   regex (no YAML round-trip; comments and key order preserved).
 - Prints `<title>: open → done` on success.
 
-`done` does NOT auto-commit (unlike `status` / `decide` / `advance`),
-because the closure transition belongs in the same work commit as the
+`done` does NOT auto-commit. The configurable `workflow.auto_commit`
+policy applies to state-only coordination commands (`status`, `decide`,
+`advance`, `unadvance`); closure belongs in the same work commit as the
 code/doc diff. The `done` flip remains in the working tree until Step 8
-stages and commits it, or until the runtime hands it to the user's
-normal commit flow.
+stages and commits it, or until the runtime hands it to the user's normal
+commit flow.
 
 For free-form prose DoDs (zero `[ ]` AND zero `[x]` boxes
 detected), `done` requires `--force` to bypass enforcement — but
@@ -211,8 +212,10 @@ and should be followed here. Otherwise use the runtime's normal commit
 workflow: inspect `git status` / `diff`, run the repo's relevant checks,
 stage specific files, and commit the work plus the closure transition.
 
-Note: claim/decide/advance state changes already auto-committed
-earlier in the card's lifecycle (per `Skill(advance-card)` Step 5).
+Note: claim/decide/advance state changes may already have committed earlier
+in the card's lifecycle, depending on `.game-of-cards/config.yaml`
+`workflow.auto_commit` and any per-command `--commit` / `--no-commit`
+override (per `Skill(advance-card)` Step 5).
 The final commit here ships the **work** only — the actual code/doc
 changes plus the closure transition (DoD ticks, log.md entries from
 Steps 4 + 5, `status: done`, `closed_at`).

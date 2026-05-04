@@ -88,14 +88,13 @@ project-specific reasoning is decisive.
        --because "<one-line why>"
    ```
 
-3. **Commit happens automatically.** `goc decide` auto-commits
-   the body + log + gate flip with subject `decide: <title> — <decision>`.
-   The decision is git-observable to sibling branches immediately —
-   no separate commit-helper step needed (the diff is purely
-   metadata: `README.md` body + `log.md` entry). Pass `--no-commit`
-   only when bundling with adjacent state changes is genuinely
-   necessary (rare). See `Skill(advance-card)` Step 5 for the
-   multi-branch coordination rationale.
+3. **Commit follows repo policy.** `goc decide` reads
+   `.game-of-cards/config.yaml` `workflow.auto_commit` (default: `true`)
+   before committing the body + log + gate flip with subject
+   `decide: <title> — <decision>`. Pass `--no-commit` to skip for one
+   invocation, or `--commit` to force a state-only commit when the repo
+   config disables automatic commits. See `Skill(advance-card)` Step 5
+   for the multi-branch coordination rationale.
 
 ## When an agent invokes this skill (lazy Andon)
 
