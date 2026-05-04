@@ -1,8 +1,9 @@
 """`goc install` — scaffold the methodology into a target repo.
 
-Drops the methodology assets (skills, hook, CLAUDE.md sections, pre-commit
-hook, deck scaffold) into the current working directory. Idempotent — second
-runs detect existing installs via `deck/.goc-version` and exit clean.
+Drops the methodology assets (skills, hook, AGENTS.md sections, CLAUDE.md
+sections, pre-commit hook, deck scaffold) into the current working directory.
+Idempotent — second runs detect existing installs via `deck/.goc-version`
+and exit clean.
 
 Reads templates via `importlib.resources` so it works from a wheel install.
 """
@@ -19,7 +20,6 @@ import click
 
 from goc import __version__
 
-# Marker bracket lets `goc upgrade` re-sync without clobbering user content.
 GOC_BEGIN = f"<!-- BEGIN GOC v{__version__} -->"
 GOC_BEGIN_RE = re.compile(r"<!-- BEGIN GOC v[\d.]+ -->")
 GOC_END = "<!-- END GOC -->"
@@ -52,11 +52,7 @@ def _detect_existing(deck_dir: Path) -> str | None:
 
 
 def _plan_writes(target: Path, templates: Path) -> list[tuple[str, Path]]:
-    """Compute the list of writes the installer will perform.
-
-    Returns (action, destination_path) tuples for `--dry-run` printing and
-    smoke-test enumeration.
-    """
+    """Compute the list of writes the installer will perform."""
 
     writes: list[tuple[str, Path]] = []
     skills_src = templates / "skills"
@@ -75,6 +71,7 @@ def _plan_writes(target: Path, templates: Path) -> list[tuple[str, Path]]:
             continue
         rel = asset.relative_to(config_src)
         writes.append(("write", target / ".game-of-cards" / rel))
+    writes.append(("append", target / "AGENTS.md"))
     writes.append(("append", target / "CLAUDE.md"))
     writes.append(("append", target / ".pre-commit-config.yaml"))
     return writes
@@ -92,12 +89,16 @@ def _copy_tree(src: Path, dst: Path) -> None:
         shutil.copy2(asset, target)
 
 
-def _append_claude_md_block(target: Path, block_body: str) -> None:
-    """Append (or replace) the marker-bounded GoC section in CLAUDE.md."""
+def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
+    """Append (or replace) a marker-bounded GoC section in a markdown file.
+
+    Works for both AGENTS.md and CLAUDE.md — the marker pattern is identical;
+    only the content and the file-creation header differ.
+    """
 
     block = f"{GOC_BEGIN}\n{block_body.rstrip()}\n{GOC_END}\n"
     if not target.exists():
-        target.write_text(f"# AI Agent Guidelines\n\n{block}")
+        target.write_text(f"{header}\n\n{block}")
         return
     text = target.read_text()
     pattern = re.compile(rf"{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n?", re.DOTALL)
@@ -119,6 +120,16 @@ def _append_precommit_hook(target: Path) -> None:
     if not text.endswith("\n"):
         text += "\n"
     target.write_text(text + PRE_COMMIT_HOOK)
+
+
+def _sync_methodology_blocks(target: Path, templates: Path) -> None:
+    """Write the AGENTS.md + CLAUDE.md marker-bounded methodology blocks."""
+
+    agents_body = (templates / "AGENTS_GOC.md").read_text()
+    _append_marker_block(target / "AGENTS.md", agents_body, header="# Agent Guidelines")
+
+    claude_body = (templates / "CLAUDE_GOC.md").read_text()
+    _append_marker_block(target / "CLAUDE.md", claude_body, header="# Claude Code Guidelines")
 
 
 @click.command()
@@ -160,8 +171,7 @@ def install(dry_run: bool) -> None:
     config_dst.mkdir(parents=True, exist_ok=True)
     _copy_tree(config_src, config_dst)
 
-    block_body = (templates / "CLAUDE_GOC.md").read_text()
-    _append_claude_md_block(target / "CLAUDE.md", block_body)
+    _sync_methodology_blocks(target, templates)
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
@@ -172,7 +182,7 @@ def install(dry_run: bool) -> None:
 @click.command()
 @click.option("--dry-run", is_flag=True, help="Print planned writes; do not touch the filesystem.")
 def upgrade(dry_run: bool) -> None:
-    """Re-sync skill templates and CLAUDE.md sections from the installed package version."""
+    """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
 
     target = Path.cwd().resolve()
     deck_dir = target / "deck"
@@ -191,6 +201,7 @@ def upgrade(dry_run: bool) -> None:
         click.echo(f"goc upgrade (dry-run) — {existing} → {__version__}")
         click.echo("  re-extract .claude/skills/ from package")
         click.echo("  re-extract .game-of-cards/ from package")
+        click.echo("  re-sync AGENTS.md GOC block")
         click.echo("  re-sync CLAUDE.md GOC block")
         click.echo("  bump deck/.goc-version")
         return
@@ -207,8 +218,7 @@ def upgrade(dry_run: bool) -> None:
     config_dst.mkdir(parents=True, exist_ok=True)
     _copy_tree(templates / "game_of_cards", config_dst)
 
-    block_body = (templates / "CLAUDE_GOC.md").read_text()
-    _append_claude_md_block(target / "CLAUDE.md", block_body)
+    _sync_methodology_blocks(target, templates)
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
