@@ -25,7 +25,7 @@ User argument: $ARGUMENTS
 
 Slug pattern: `^[a-z0-9][a-z0-9-]*[a-z0-9]$` (per `Skill(card-schema)`).
 Short, hyphenated, descriptive. Examples:
-`heterosynaptic-ltd-absent-fchannel`, `phantom-contact-motor-mask`,
+`csv-export-button-truncates-rows-over-10000`, `auth-cookie-expires-too-soon`,
 `test-zero-w-prediction-tautology-compares-identical-graphs`.
 
 `goc new` enforces a **title-antipattern guard** at filing time
@@ -131,7 +131,7 @@ goc new <title> \
   --contribution <high|medium|low> \
   --gate <none|decision|session> \
   --tag bug \
-  --tag <area-tag>     # plasticity / fchannel / documentation / etc.
+  --tag <area-tag>     # documentation / api-contract / infra / etc.
 ```
 
 The CLI creates `deck/<title>/README.md` with valid flat frontmatter

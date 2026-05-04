@@ -173,6 +173,8 @@ def load_schema() -> Schema:
         click.echo(f"FATAL: {SCHEMA_FILE} missing", err=True)
         sys.exit(3)
     fm = yaml.safe_load(SCHEMA_FILE.read_text()) or {}
+    canonical_tags = set(fm.get("canonical_tags") or [])
+    canonical_tags |= _load_consuming_repo_tags()
     try:
         return Schema(
             required_fields=fm["required_fields"],
@@ -183,11 +185,38 @@ def load_schema() -> Schema:
             contribution_values=fm["contribution_values"],
             human_gate_values=fm["human_gate_values"],
             human_gate_default=fm["human_gate_default"],
-            canonical_tags=set(fm["canonical_tags"]),
+            canonical_tags=canonical_tags,
         )
     except KeyError as e:
         click.echo(f"FATAL: schema.yaml missing field {e}", err=True)
         sys.exit(3)
+
+
+_FENCED_YAML = re.compile(r"```ya?ml\n(.*?)```", re.DOTALL)
+
+
+def _load_consuming_repo_tags() -> set[str]:
+    """Merge tags declared in `.game-of-cards/canonical-tags.md`.
+
+    Consuming repos extend goc's canonical_tags set by adding a fenced
+    YAML block:
+
+        ```yaml
+        canonical_tags:
+          - my-project-tag
+          - another-tag
+        ```
+
+    Multiple blocks accumulate. Missing or empty file: no-op (returns set()).
+    """
+    extension_file = REPO_ROOT / ".game-of-cards" / "canonical-tags.md"
+    if not extension_file.exists():
+        return set()
+    out: set[str] = set()
+    for match in _FENCED_YAML.finditer(extension_file.read_text()):
+        block = yaml.safe_load(match.group(1)) or {}
+        out.update(block.get("canonical_tags") or [])
+    return out
 
 
 # ────────────────────────────────────────────────────────────────────────────

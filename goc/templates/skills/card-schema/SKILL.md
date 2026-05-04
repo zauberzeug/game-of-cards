@@ -195,8 +195,10 @@ closure but live elsewhere:
 | 2 — project-wide | `.claude/deck-config.yaml` `layer_2_project_dod` (extracted from CLAUDE.md prose) | ✓ since 2026-05-03 | `goc attest` (writes block to log.md) |
 | 3 — GoC-wide | `.claude/deck-config.yaml` `layer_3_goc_dod` (universal across installations) | ✓ since 2026-05-03 | `goc attest` |
 
-Layer 2 covers tests-pass / ruff / `/mindset` audit / no-debug /
-doc-consistency-checker. Layer 3 covers schema-validates /
+Layer 2 typically covers tests-pass / linting / project-defined
+audits (e.g. closure-criteria audits per
+`.game-of-cards/hooks/finish-card.md`) / no-debug /
+doc-consistency. Layer 3 covers schema-validates /
 advanced_by-closed / log.md-has-closure-entry / DoD-100%.
 
 `Skill(finish-card)` Step 5 runs `goc attest <title>` which appends
@@ -289,24 +291,24 @@ rots quickly — the body / log is the right place for it.
 
 ```yaml
 ---
-title: heterosynaptic-ltd-absent-fchannel
-summary: F-channel `W_coupling` lacks the in-step row-budget redistribution primitive that biology implements as heterosynaptic LTD. Latent across any plastic F-cascade with fan-in ≥ 2 and PING-coherent presynaptic phase; pong-demonstrated via Bug 138 R87-R90 saturation pathology.
+title: csv-export-button-truncates-rows-over-10000
+summary: The CSV export endpoint silently caps output at 10000 rows when the underlying query returns more. No error, no warning header — large reports are missing data. Reproduces against the staging dataset.
 status: open
 stage: null
 contribution: high
-created: 2026-04-29
+created: 2026-05-04
 closed_at: null
-human_gate: session
+human_gate: none
 advances: []
-advanced_by: [r-target-plumbing-tgc-cache]
-tags: [bug, plasticity, fchannel, framework]
+advanced_by: []
+tags: [bug, api-contract]
 definition_of_done: |
   - [ ] reproduce.py exits non-zero (defect no longer fires)
-  - [ ] axioms.md A5 Layer 3b-F lists row-L1 invariant
-  - [ ] 10-seed pong sweep within 2σ of prescribed motor row-L1
+  - [ ] export endpoint streams without row cap, or surfaces a 413 with documented limit
+  - [ ] regression test added covering >10000-row exports
 ---
 
-# Bug — Heterosynaptic LTD on `W_coupling` not implemented
+# Bug — CSV export silently truncates large datasets
 
 (free-form markdown body explaining the defect, evidence, and fix path;
 spawned-from / lineage notes go in log.md, not frontmatter)
@@ -329,8 +331,8 @@ must understand what each card is about without opening the body.
 | Math symbols (`Δ`, `≤`, `²`, `√`, `±`) | `late-hr-≥-0.5` | Use words (`gte`, `at-least`); the slug pattern allows `[a-z0-9-]` only |
 
 When the regex fires, the CLI suggests an alternative phrasing
-based on the *observable problem*, e.g. `r88-csubstrate-replication`
-→ `pong-cannot-recover-prior-task-performance`.
+based on the *observable problem*, e.g. `r88-fix-attempt-3`
+→ `csv-export-button-truncates-rows-over-10000`.
 
 The Layer-2 quality pass (Sonnet-batched, in `Skill(improve-deck)
 --quality-pass`) checks the same dimensions across the existing deck
@@ -338,11 +340,30 @@ and surfaces engineer-jargon titles for retitling via `goc move`.
 
 ## Adding new tags
 
-New canonical tags require a SCHEMA.md PR (one tag per PR for review
-hygiene). `goc validate` rejects unknown tags. Demo-name tags
-(`line-follower`, `target-tracking`, `olfactory-classification`) get
-added when a card actually needs them — `pong` is the only demo-name
-tag in v1.
+The goc-shipped canonical-tag set is intentionally small. Project-
+specific tags (domain vocabulary, demo / sub-project names,
+literature-citation surfaces) are added by the consuming repo via
+`.game-of-cards/canonical-tags.md`:
+
+```markdown
+<!-- .game-of-cards/canonical-tags.md -->
+
+```yaml
+canonical_tags:
+  - my-project-area
+  - external-dependency
+  - regulatory-review
+```
+```
+
+`goc validate` reads this file from the consuming repo's root and
+merges its `canonical_tags` list into the shipped enum. A consuming-
+repo predicate table for these new tags can be appended to this skill
+body via `!`cat .game-of-cards/canonical-tags.md`` injection at the
+end of the predicate table below.
+
+Adding a new generic tag to goc itself requires a PR against the
+`game-of-cards` repo — one tag per PR for review hygiene.
 
 ## Tag application criteria
 
@@ -358,25 +379,15 @@ carry filters nothing.
 | `epic` | this card coordinates a coherent body of work; multiple other cards block it from closing OR carry the same epic-grouping tag (manually applied; conventionally one canonical-tag-per-epic, retired when the epic closes) |
 | `story` | this card is part of an epic-grouping (manually applied; carries the same epic-grouping tag) |
 | `unverified` | dir has no working `reproduce.py` AND was tagged at filing |
-| `plasticity` | body or title cites `TGC`, `CompetitionPlasticity`, `PredictionPlasticity`, `IntrinsicPlasticity`, `SynapticScaling`, `StriosomalPlasticity`, `GatePlasticity`, `phasor_agents/plasticity`, or title contains a plasticity-rule token |
-| `fchannel` | body or title cites `F-channel`, `W_coupling`, `W_pred`, or title contains `fchannel` / `f-channel` / `coupling` |
-| `alpha-channel` | body or title cites `α-channel`, `W_competition`, `W_prediction`, `α_eff`, `RFI` (word-boundary), or title contains `alpha-channel` / `alpha-gate` / `competition` |
-| `prediction` | body or title cites `W_prediction`, `PredictionPlasticity`, `StriosomalPlasticity`, `kappa`/`κ`, `self-anneal`, `striosomal`, or title contains `prediction` / `kappa` / `striosomal` |
-| `documentation` | finding's primary failure mode is doc-quality: title contains `doc` / `docstring` / `stale` / `drift` / `mismatch` / `cite` / `ambiguity` / `cross-doc` / `intra-doc` / `claim` / `framing` / `vision-md` / `axiom-` / `architecture-md` / `readme-` / `status-`, or body cites `docstring`, `doc claim`, `doc-vs-`, `.md says/states/claims` |
-| `literature-drift` | body cites a published author surface (`Schultz`, `Frémaux`, `Gerstner`, `Pathak`, `Laurent`, `Fries`, `Deco`, `Jirsa`, `Kim & Large`, `Eckmann`, `Royer`, `Paré`, `Hudspeth`, `Friedman`, `Frey`, `Morris`, `Stuart-Landau`, `Hopf`, `Daw`, `Sutton`, `van Rossum`, `Turrigiano`, `Oja`, `Smolen`, `Mink`, `Aron`, `Schmidt`, `Jin`, `Costa`, `Krishna`, `Stromsdorfer`, `Gast`, `Sakaguchi`, `Kuramoto`, `Breakspear`, `Fremaux`) |
-| `axiom` | title starts `axiom-` / `a4-` / `a5-` / etc., or body cites `axioms.md` or `Axiom A1..A5` |
-| `framework` | title contains `framework` / `axiom` / `vision` / `computational-principles` / `stability-hierarchy` / `operating-amplitude`, or body cites `docs/framework/` |
-| `api-contract` | title or body cites a public API name (`TopologyBuilder`, `Topology.copy`, `frozen_learning`, `load_into`, `add-edge`, `from-density`) |
-| `silent-state-corruption` | title or body cites silent corruption (`_has_*`, `stale flag`, `compartment-map`, `topology-copy`, `init-time-snapshot`, `cache-invalidation`, `frozen-learning-leak`) |
-| `boundary-state` | title or body cites a boundary call (`reset()`, `frozen_learning`, `Topology.copy`, `load_into`, `.symmetrize`, `.prune`, `.scale_weights`, `checkpoint`, `snapshot-restore`) |
+| `documentation` | finding's primary failure mode is doc-quality: title contains `doc` / `docstring` / `stale` / `drift` / `mismatch` / `cite` / `ambiguity` / `cross-doc` / `intra-doc` / `claim` / `framing` / `readme-`, or body cites `docstring`, `doc claim`, `doc-vs-`, `.md says/states/claims` |
 | `test` | title starts `test-` or contains `tolerance` / `vacuous` / `regression`, or body cites `pytest`, `tests/`, `test_`, `assertion`, `tolerance creep` |
-| `default-config` | title or body cites a shipping default value (`tgc.eta=`, `factory_default`, `library default`, `shipping config`, `shipping default`) |
-| `regime-coverage` | title or body cites a regime gap (`regime`, `coverage`, `parameter space`, `regime-not-tested`) |
-| `infra` | title or body touches infra (`pre-commit`, `pyproject.toml`, `uv.lock`, `tooling`, `kanban`, `.pre-commit-config`) |
-| `sweep-deferred` | body explicitly says `sweep deferred` / `deferred sweep` / `10-seed sweep would settle` |
+| `api-contract` | title or body cites a public API surface (a class, function, route, schema field that callers depend on) |
+| `infra` | title or body touches infrastructure (`pre-commit`, `pyproject.toml`, `uv.lock`, `tooling`, CI workflows, packaging) |
 | `meta-fix` | literal `meta-fix` / `family meta-fix` in title, title, or body |
-| `research` | body says `research-impacting` / `research move` / `open research` |
-| `pong` | title contains `pong` or body cites `demos/pong/`, `pong/agent.py`, `pong/simulation.py`, `pong/STATUS.md`, `pong/config.py` |
+
+Project-specific tag predicates appended below (consuming-repo authored):
+
+!`cat .game-of-cards/canonical-tags.md 2>/dev/null || true`
 
 These criteria are the v1 tag-application contract. New filings via
 `goc new <title> --tag X` should fire on the same predicates; the

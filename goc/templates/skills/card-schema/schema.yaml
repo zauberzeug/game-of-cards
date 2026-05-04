@@ -20,27 +20,14 @@ contribution_values:  [high, medium, low]
 human_gate_values: [none, decision, session]
 human_gate_default: decision
 canonical_tags:
+  # Generic tag set shipped by goc. Consuming repos extend this list via
+  # `.game-of-cards/canonical-tags.md` (parsed by `goc validate`).
   - bug
-  - plasticity
-  - fchannel
-  - alpha-channel
-  - prediction
-  - axiom
   - documentation
   - test
   - api-contract
-  - silent-state-corruption
-  - literature-drift
   - meta-fix
-  - boundary-state
-  - default-config
-  - regime-coverage
   - infra
-  - sweep-deferred
   - unverified
   - epic
   - story
-  - framework
-  - research
-  - pong
-  - nrem

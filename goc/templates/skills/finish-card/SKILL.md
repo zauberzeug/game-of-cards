@@ -219,8 +219,8 @@ Override the message:
 
 - **Subject:** `fix(<scope>): <one-line subject> — closes <title>`.
   Examples:
-  - `fix(plasticity/synaptic_scaling): wire heterosynaptic LTD on W_coupling — closes heterosynaptic-ltd-absent-fchannel`
-  - `fix(pong/agent): remove phantom contact→motor plasticity mask — closes phantom-contact-motor-mask`
+  - `fix(api/csv-export): stream rows without 10000-row cap — closes csv-export-button-truncates-rows-over-10000`
+  - `fix(auth/cookie): bump cookie max-age to 24h — closes auth-cookie-expires-too-soon`
 - For bundled closures, append additional slugs:
   `fix(<scope>): <subject> — closes <title-A>, <title-B>, <title-C>`.
 - **Body:** explain WHY (which user-visible problem this resolves;

@@ -238,7 +238,7 @@ Example output:
 
 ```
 heuristic-driven-eta: tags=[unverified] created 2026-01-15 (107d) → recommend Skill(advance-card) → disproved (3 rounds without reproduction)
-phantom-contact-motor-mask: body cites pong/agent.py:412 (file ends at L398) → recommend mechanical citation update
+auth-cookie-expires-too-soon: body cites auth/cookie.ts:84 (file ends at L72) → recommend mechanical citation update
 schultz-eligibility-trace-doc-drift: missing summary → wrote ≤3-sentence summary into frontmatter
 operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → strip tag
 ```
