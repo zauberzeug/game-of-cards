@@ -606,6 +606,16 @@ def parse_since_filter(_ctx, _param, value: str | None) -> str | None:
     return value
 
 
+def validate_tag_filters(tags: tuple[str, ...]) -> list[str] | None:
+    if not tags:
+        return None
+    schema = load_schema()
+    unknown = [tag for tag in tags if tag not in schema.canonical_tags]
+    if unknown:
+        raise click.BadParameter(f"unknown tag '{unknown[0]}'", param_hint="--tag")
+    return list(tags)
+
+
 def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> list[Card]:
     """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
 
@@ -906,13 +916,14 @@ def cli(
         status = status_flag
     status_filter_explicit = bool(done_flag or status_flag is not None)
     stages = parse_stage_filter(stage_flag)
+    tag_filters = validate_tag_filters(tags)
     filtered = filter_cards(
         cards,
         status=status,
         stages=stages,
         contribution=contribution,
         human_gate=human_gate,
-        tags=list(tags) or None,
+        tags=tag_filters,
         since=since,
         advances=advances,
         advanced_by=advanced_by,

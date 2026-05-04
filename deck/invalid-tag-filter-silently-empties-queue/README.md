@@ -1,20 +1,20 @@
 ---
 title: invalid-tag-filter-silently-empties-queue
 summary: "`goc --tag not-a-real-tag` exits successfully with an empty queue even though tags are canonical schema values elsewhere."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (invalid read-only tag filters are rejected)
-  - [ ] `goc --tag not-a-real-tag` exits with a concise Click validation error
-  - [ ] Valid built-in and project-extended tag filters still render matching cards
-  - [ ] `goc validate` passes after the filter validation fix
+  - [x] reproduce.py exits zero (invalid read-only tag filters are rejected)
+  - [x] `goc --tag not-a-real-tag` exits with a concise Click validation error
+  - [x] Valid built-in and project-extended tag filters still render matching cards
+  - [x] `goc validate` passes after the filter validation fix
 ---
 
 # invalid-tag-filter-silently-empties-queue
