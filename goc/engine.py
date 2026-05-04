@@ -591,6 +591,18 @@ def parse_stage_filter(stage_flag: str | None) -> list[str] | None:
     return [stage_flag]
 
 
+def parse_since_filter(_ctx, _param, value: str | None) -> str | None:
+    if value is None:
+        return None
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
+        raise click.BadParameter("expected YYYY-MM-DD")
+    try:
+        date.fromisoformat(value)
+    except ValueError as e:
+        raise click.BadParameter("expected YYYY-MM-DD") from e
+    return value
+
+
 def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> list[Card]:
     """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
 
@@ -843,7 +855,7 @@ def render_active_notice(
 @click.option("--stage", "stage_flag", default=None, help="Stage filter; supports range like 'alpha-beta'.")
 @click.option("--human-gate", type=click.Choice(["none", "decision", "session"]))
 @click.option("--done", "done_flag", is_flag=True, help="Shortcut for --status done.")
-@click.option("--since", default=None, help="With --done: filter on closed_at >= YYYY-MM-DD.")
+@click.option("--since", default=None, callback=parse_since_filter, help="With --done: filter on closed_at >= YYYY-MM-DD.")
 @click.option("--advances", default=None, help="Filter to cards that advance this title.")
 @click.option("--advanced-by", default=None, help="Filter to cards advanced by this title.")
 @click.option(

@@ -1,20 +1,20 @@
 ---
 title: invalid-since-date-silently-empties-done-query
 summary: "`goc --done --since nope` exits successfully with an empty result because the date filter is treated as an unchecked string."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (invalid `--since` values are rejected)
-  - [ ] `goc --done --since nope` exits with a concise Click validation error
-  - [ ] Valid `YYYY-MM-DD` `--since` filters still return matching done cards
-  - [ ] `goc validate` passes after the filter validation fix
+  - [x] reproduce.py exits zero (invalid `--since` values are rejected)
+  - [x] `goc --done --since nope` exits with a concise Click validation error
+  - [x] Valid `YYYY-MM-DD` `--since` filters still return matching done cards
+  - [x] `goc validate` passes after the filter validation fix
 ---
 
 # invalid-since-date-silently-empties-done-query
