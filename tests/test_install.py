@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -72,6 +73,34 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("claude append CLAUDE.md", planned)
             self.assertNotIn(".codex/", planned)
 
+    def test_v1_agent_manifests_register_claude_and_codex_shims(self) -> None:
+        agents_root = ROOT / "goc" / "templates" / "agents"
+        claude = json.loads((agents_root / "claude" / "manifest.json").read_text())
+        codex = json.loads((agents_root / "codex" / "manifest.json").read_text())
+
+        self.assertEqual(".claude/skills", claude["skills"]["target"])
+        self.assertEqual("native", claude["skills"]["frontmatter"])
+        self.assertEqual(".codex/skills", codex["skills"]["target"])
+        self.assertEqual("codex", codex["skills"]["frontmatter"])
+        self.assertEqual(
+            ".claude/hooks/user-prompt-submit-goc.py",
+            claude["files"][0]["target"],
+        )
+
+    def test_multi_agent_dry_run_lists_both_registered_harnesses(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            result = self.run_goc(cwd, "install", "--dry-run", "--agents", "claude,codex")
+
+            self.assert_goc_ok(result)
+            planned = result.stdout
+            self.assertIn("agents: claude,codex", planned)
+            self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", planned)
+            self.assertIn("claude write  .claude/hooks/user-prompt-submit-goc.py", planned)
+            self.assertIn("codex  write  .codex/skills/pull-card/SKILL.md", planned)
+            self.assertNotIn("openclaw", planned.lower())
+
     def test_claude_install_smoke_creates_valid_deck_and_matching_skills(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
@@ -86,6 +115,26 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             for skill_name in SKILL_NAMES:
                 self.assertTrue((cwd / ".claude" / "skills" / skill_name / "SKILL.md").is_file())
                 self.assertIn(f"Skill({skill_name})", claude_text)
+
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+            self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
+
+    def test_codex_install_smoke_generates_codex_frontmatter_without_claude_hook(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "codex"))
+            self.assertFalse((cwd / ".claude").exists())
+            self.assertTrue((cwd / ".codex" / "skills" / "pull-card" / "SKILL.md").is_file())
+            self.assertTrue((cwd / "AGENTS.md").is_file())
+            self.assertFalse((cwd / "CLAUDE.md").exists())
+
+            codex_skill = (cwd / ".codex" / "skills" / "pull-card" / "SKILL.md").read_text()
+            self.assertIn("name: pull-card", codex_skill)
+            self.assertIn("description: ", codex_skill)
+            self.assertIn("# Pull a card", codex_skill)
 
             self.assert_goc_ok(
                 self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")

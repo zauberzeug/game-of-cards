@@ -30,7 +30,6 @@ GOC_END = "<!-- END GOC -->"
 
 SUPPORTED_AGENTS = ("claude", "codex")
 DEFAULT_AGENTS = ("claude",)
-CODEX_SKILLS_DIR = Path(".codex") / "skills"
 
 PRE_COMMIT_HOOK = """\
   - repo: local
@@ -58,6 +57,26 @@ class GuidanceBlock:
     header: str
 
 
+@dataclass(frozen=True)
+class ShimFile:
+    source: Path
+    target: Path
+
+
+@dataclass(frozen=True)
+class SkillShim:
+    target: Path
+    frontmatter: str
+
+
+@dataclass(frozen=True)
+class AgentShim:
+    name: str
+    skills: SkillShim | None
+    files: tuple[ShimFile, ...]
+    guidance: tuple[GuidanceBlock, ...]
+
+
 AGENTS_GUIDANCE = GuidanceBlock("AGENTS.md", "AGENTS_GOC.md", "# Agent Guidelines")
 CLAUDE_GUIDANCE = GuidanceBlock("CLAUDE.md", "CLAUDE_GOC.md", "# Claude Code Guidelines")
 
@@ -68,7 +87,65 @@ def _templates_root() -> Path:
     return Path(str(resources.files("goc.templates")))
 
 
-def _parse_agents(agent_specs: tuple[str, ...], *, claude: bool = False, codex: bool = False) -> tuple[str, ...]:
+def _registered_agents(templates: Path) -> tuple[str, ...]:
+    """Return installable agent names backed by `templates/agents/<agent>/`."""
+
+    agents_root = templates / "agents"
+    if not agents_root.exists():
+        return SUPPORTED_AGENTS
+
+    discovered = {path.name for path in agents_root.iterdir() if (path / "manifest.json").is_file()}
+    ordered = [agent for agent in SUPPORTED_AGENTS if agent in discovered]
+    ordered.extend(sorted(discovered - set(ordered)))
+    return tuple(ordered) or SUPPORTED_AGENTS
+
+
+def _load_agent_shim(templates: Path, agent: str) -> AgentShim:
+    """Load the path/format convention for one agent harness."""
+
+    manifest_path = templates / "agents" / agent / "manifest.json"
+    try:
+        raw = json.loads(manifest_path.read_text())
+    except FileNotFoundError as exc:
+        raise click.ClickException(f"agent {agent!r} has no template manifest at {manifest_path}") from exc
+
+    skills = None
+    if raw.get("skills"):
+        skill_spec = raw["skills"]
+        frontmatter = skill_spec.get("frontmatter", "native")
+        if frontmatter not in {"native", "codex"}:
+            raise click.ClickException(
+                f"agent {agent!r} uses unsupported skill frontmatter mode {frontmatter!r}"
+            )
+        skills = SkillShim(target=Path(skill_spec["target"]), frontmatter=frontmatter)
+
+    files = tuple(
+        ShimFile(source=Path(file_spec["source"]), target=Path(file_spec["target"]))
+        for file_spec in raw.get("files", [])
+    )
+    guidance = tuple(
+        GuidanceBlock(
+            path=guidance_spec["target"],
+            template=guidance_spec["source"],
+            header=guidance_spec["header"],
+        )
+        for guidance_spec in raw.get("guidance", [])
+    )
+    return AgentShim(
+        name=raw.get("name", agent),
+        skills=skills,
+        files=files,
+        guidance=guidance,
+    )
+
+
+def _parse_agents(
+    agent_specs: tuple[str, ...],
+    *,
+    claude: bool = False,
+    codex: bool = False,
+    supported_agents: tuple[str, ...] = SUPPORTED_AGENTS,
+) -> tuple[str, ...]:
     """Parse comma-separated/repeated `--agents` values into known harness names."""
 
     tokens: list[str] = []
@@ -81,16 +158,16 @@ def _parse_agents(agent_specs: tuple[str, ...], *, claude: bool = False, codex: 
     if not tokens:
         tokens = list(DEFAULT_AGENTS)
 
-    unknown = sorted(set(tokens) - set(SUPPORTED_AGENTS))
+    unknown = sorted(set(tokens) - set(supported_agents))
     if unknown:
-        supported = ", ".join(SUPPORTED_AGENTS)
+        supported = ", ".join(supported_agents)
         raise click.BadParameter(
             f"unknown agent(s): {', '.join(unknown)}; supported: {supported}",
             param_hint="--agents",
         )
 
     requested = set(tokens)
-    return tuple(agent for agent in SUPPORTED_AGENTS if agent in requested)
+    return tuple(agent for agent in supported_agents if agent in requested)
 
 
 def _detect_existing(deck_dir: Path) -> str | None:
@@ -116,14 +193,15 @@ def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list
         writes.append(PlannedWrite("shared", "write", target / ".game-of-cards" / rel))
     agents_owner = "codex" if "codex" in agents else "shared"
     writes.append(PlannedWrite(agents_owner, "append", target / AGENTS_GUIDANCE.path))
-    if "claude" in agents:
-        for rel in _iter_skill_assets(templates / "skills"):
-            writes.append(PlannedWrite("claude", "write", target / ".claude" / "skills" / rel))
-        writes.append(PlannedWrite("claude", "write", target / ".claude" / "hooks" / "user-prompt-submit-goc.py"))
-        writes.append(PlannedWrite("claude", "append", target / CLAUDE_GUIDANCE.path))
-    if "codex" in agents:
-        for rel in _iter_skill_assets(templates / "skills"):
-            writes.append(PlannedWrite("codex", "write", target / CODEX_SKILLS_DIR / rel))
+    for agent in agents:
+        shim = _load_agent_shim(templates, agent)
+        if shim.skills:
+            for rel in _iter_skill_assets(templates / "skills"):
+                writes.append(PlannedWrite(agent, "write", target / shim.skills.target / rel))
+        for file in shim.files:
+            writes.append(PlannedWrite(agent, "write", target / file.target))
+        for guidance in shim.guidance:
+            writes.append(PlannedWrite(agent, "append", target / guidance.path))
     writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml"))
     return writes
 
@@ -275,37 +353,33 @@ def _append_precommit_hook(target: Path) -> None:
     target.write_text(text + PRE_COMMIT_HOOK)
 
 
-def _sync_methodology_blocks(target: Path, templates: Path, agents: tuple[str, ...]) -> None:
-    """Write the selected marker-bounded methodology blocks."""
+def _sync_methodology_blocks(target: Path, templates: Path) -> None:
+    """Write the shared marker-bounded methodology block."""
 
     agents_body = (templates / AGENTS_GUIDANCE.template).read_text()
     _append_marker_block(target / AGENTS_GUIDANCE.path, agents_body, header=AGENTS_GUIDANCE.header)
 
-    if "claude" in agents:
-        claude_body = (templates / CLAUDE_GUIDANCE.template).read_text()
-        _append_marker_block(target / CLAUDE_GUIDANCE.path, claude_body, header=CLAUDE_GUIDANCE.header)
 
+def _sync_agent_harness(target: Path, templates: Path, agent: str, *, replace_skills: bool = False) -> None:
+    """Copy and render one agent's shim from its template manifest."""
 
-def _sync_claude_harness(target: Path, templates: Path, *, replace_skills: bool = False) -> None:
-    """Copy Claude-only skills and prompt hook."""
+    shim = _load_agent_shim(templates, agent)
+    if shim.skills:
+        _sync_skill_tree(
+            templates,
+            target / shim.skills.target,
+            replace_skills=replace_skills,
+            codex_frontmatter=shim.skills.frontmatter == "codex",
+        )
 
-    skills_dst = target / ".claude" / "skills"
-    _sync_skill_tree(templates, skills_dst, replace_skills=replace_skills)
+    for file in shim.files:
+        destination = target / file.target
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(templates / file.source, destination)
 
-    hooks_dst = target / ".claude" / "hooks"
-    hooks_dst.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(templates / "hooks" / "user-prompt-submit.py", hooks_dst / "user-prompt-submit-goc.py")
-
-
-def _sync_codex_harness(target: Path, templates: Path, *, replace_skills: bool = False) -> None:
-    """Copy Codex-readable GoC skills."""
-
-    _sync_skill_tree(
-        templates,
-        target / CODEX_SKILLS_DIR,
-        replace_skills=replace_skills,
-        codex_frontmatter=True,
-    )
+    for guidance in shim.guidance:
+        body = (templates / guidance.template).read_text()
+        _append_marker_block(target / guidance.path, body, header=guidance.header)
 
 
 AGENTS_HELP = (
@@ -330,7 +404,12 @@ def install(
     target = Path.cwd().resolve()
     deck_dir = target / "deck"
     templates = _templates_root()
-    agents = _parse_agents(agent_specs, claude=claude_flag, codex=codex_flag)
+    agents = _parse_agents(
+        agent_specs,
+        claude=claude_flag,
+        codex=codex_flag,
+        supported_agents=_registered_agents(templates),
+    )
 
     writes = _plan_writes(target, templates, agents)
     if dry_run:
@@ -343,10 +422,8 @@ def install(
         click.echo("run `goc upgrade` to re-sync templates.")
         sys.exit(1)
 
-    if "claude" in agents:
-        _sync_claude_harness(target, templates)
-    if "codex" in agents:
-        _sync_codex_harness(target, templates)
+    for agent in agents:
+        _sync_agent_harness(target, templates, agent)
 
     deck_dir.mkdir(parents=True, exist_ok=True)
     (deck_dir / "log.md").write_text("# Deck Log\n\nAppend deck-level events here (sprint notes, schema bumps, etc.).\n")
@@ -357,7 +434,7 @@ def install(
     config_dst.mkdir(parents=True, exist_ok=True)
     _copy_tree(config_src, config_dst)
 
-    _sync_methodology_blocks(target, templates, agents)
+    _sync_methodology_blocks(target, templates)
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
@@ -381,7 +458,12 @@ def upgrade(
     target = Path.cwd().resolve()
     deck_dir = target / "deck"
     templates = _templates_root()
-    agents = _parse_agents(agent_specs, claude=claude_flag, codex=codex_flag)
+    agents = _parse_agents(
+        agent_specs,
+        claude=claude_flag,
+        codex=codex_flag,
+        supported_agents=_registered_agents(templates),
+    )
     agents_explicit = bool(agent_specs or claude_flag or codex_flag)
 
     existing = _detect_existing(deck_dir)
@@ -398,10 +480,8 @@ def upgrade(
         _print_plan("upgrade", target, _plan_upgrade_writes(target, templates, agents), agents)
         return
 
-    if "claude" in agents:
-        _sync_claude_harness(target, templates, replace_skills=True)
-    if "codex" in agents:
-        _sync_codex_harness(target, templates, replace_skills=True)
+    for agent in agents:
+        _sync_agent_harness(target, templates, agent, replace_skills=True)
 
     config_dst = target / ".game-of-cards"
     if config_dst.exists():
@@ -409,7 +489,7 @@ def upgrade(
     config_dst.mkdir(parents=True, exist_ok=True)
     _copy_tree(templates / "game_of_cards", config_dst)
 
-    _sync_methodology_blocks(target, templates, agents)
+    _sync_methodology_blocks(target, templates)
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 

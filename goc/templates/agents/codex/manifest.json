@@ -1,0 +1,10 @@
+{
+  "name": "codex",
+  "description": "OpenAI Codex harness with Codex-readable skills and shared AGENTS.md guidance.",
+  "skills": {
+    "target": ".codex/skills",
+    "frontmatter": "codex"
+  },
+  "files": [],
+  "guidance": []
+}

@@ -1,22 +1,22 @@
 ---
 title: multi-agent-shim-which-agents-at-v1
 summary: "Spec-Kit's `--integration <agent>` flag is the niche-standard pattern for multi-agent shim install — the same `init` populates per-agent shim directories selectively. GoC needs `goc install --agents` with the v1 runtime set kept intentionally small: Claude and Codex are in scope, OpenCLAW is deferred until a downstream repo needs it. OpenCode remains a separate free path because it natively reads `.claude/skills/`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-03
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: [ship-game-of-cards-as-cross-agent-cli]
 advanced_by: [install-claude-harness, install-codex-harness]
 tags: [story, infra]
 definition_of_done: |
   - [x] Decision recorded: v1 agent set is Claude + Codex; OpenCLAW is deferred until a downstream repo needs it
-  - [ ] `goc install --agents <list>` flag implemented; `goc install` with no flag defaults to `claude` (or whatever the v1 default decision says)
-  - [ ] For each v1 agent, a `templates/agents/<agent>/` directory exists with the shim files for that agent's convention (e.g., `.cursor/rules/goc.mdc`, `.codex/...`, `.github/copilot-instructions.md`)
-  - [ ] Per-agent shim content is generated, not duplicated — the slash-command surface and skill descriptions come from a shared source; only the *file format and path convention* differs per agent
-  - [ ] Documentation: README on the new repo lists supported agents at v1, with a clear "to add agent X, file an issue / PR template Y" section for community extension
-  - [ ] OpenCode mentioned explicitly as free (reads `.claude/skills/` natively); hooks-not-supported caveat documented
+  - [x] `goc install --agents <list>` flag implemented; `goc install` with no flag defaults to `claude` (or whatever the v1 default decision says)
+  - [x] For each v1 agent, a `templates/agents/<agent>/` directory exists with the shim files for that agent's convention (e.g., `.cursor/rules/goc.mdc`, `.codex/...`, `.github/copilot-instructions.md`)
+  - [x] Per-agent shim content is generated, not duplicated — the slash-command surface and skill descriptions come from a shared source; only the *file format and path convention* differs per agent
+  - [x] Documentation: README on the new repo lists supported agents at v1, with a clear "to add agent X, file an issue / PR template Y" section for community extension
+  - [x] OpenCode mentioned explicitly as free (reads `.claude/skills/` natively); hooks-not-supported caveat documented
 ---
 
 # Multi-agent shim — which agents at v1?

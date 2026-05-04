@@ -1,0 +1,21 @@
+{
+  "name": "claude",
+  "description": "Claude Code reference harness with native skills, prompt hook, and CLAUDE.md guidance.",
+  "skills": {
+    "target": ".claude/skills",
+    "frontmatter": "native"
+  },
+  "files": [
+    {
+      "source": "hooks/user-prompt-submit.py",
+      "target": ".claude/hooks/user-prompt-submit-goc.py"
+    }
+  ],
+  "guidance": [
+    {
+      "source": "CLAUDE_GOC.md",
+      "target": "CLAUDE.md",
+      "header": "# Claude Code Guidelines"
+    }
+  ]
+}

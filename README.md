@@ -54,6 +54,17 @@ goc done rename-the-button-to-export
 
 If you're using Claude Code or any `AGENTS.md`-aware editor, you can also just talk to it: *"rename the button to Export."* The deck reflects either flow on the same on-disk state.
 
+## Agent harnesses
+
+The v1 installed harness set is intentionally small:
+
+- `claude` is the no-flag default. It writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, `CLAUDE.md`, and the shared `AGENTS.md` guidance.
+- `codex` writes Codex-readable skills under `.codex/skills/` plus the shared `AGENTS.md` guidance, without Claude-only hooks.
+
+OpenCode is a free path: it already reads `.claude/skills/`, so `goc install --agents claude` gives OpenCode the skill files without a separate OpenCode shim. The Claude `UserPromptSubmit` hook is not part of that compatibility path; hooks remain Claude Code-specific.
+
+To add another agent, file an issue or PR that adds `goc/templates/agents/<agent>/manifest.json`, any renderer support needed for that agent's file format, and installer tests covering `goc install --agents <agent>` plus `goc upgrade --agents <agent>`. OpenCLAW is deferred until a downstream repo needs native OpenCLAW guidance.
+
 ## What you get
 
 - A `goc` CLI — 13 verbs covering create, browse, advance, decide, close, validate, and install.
