@@ -8,7 +8,7 @@ created: 2026-05-03
 closed_at: null
 human_gate: none
 advances: []
-advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, migrate-phasor-agents-off-vendored-deckpy, drop-card-redirect-directories, surface-active-cards-in-board]
+advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, drop-card-redirect-directories, surface-active-cards-in-board]
 tags: [epic, infra, meta-fix]
 definition_of_done: |
   - [ ] `game-of-cards` package published on PyPI; `pipx install game-of-cards` puts `goc` on PATH (sub-card: package-pyproject-and-pypi-release)
@@ -16,7 +16,7 @@ definition_of_done: |
   - [ ] `goc install` writes/merges `AGENTS.md` so Codex/Cursor/OpenCode/Copilot/Aider see the methodology (sub-card: write-agentsmd-alongside-claudemd)
   - [ ] `goc install --agents <list>` populates per-agent shims; v1 agent set decided and documented (sub-card: multi-agent-shim-which-agents-at-v1)
   - [ ] When `goc` is missing from PATH, skills/hooks emit one-line `pipx install game-of-cards` instructions instead of cryptic shell errors (sub-card: bootstrap-error-when-cli-not-on-path)
-  - [ ] phasor-agents repo itself runs on PATH-resolved `goc`, vendored `.claude/skills/deck/deck.py` removed (sub-card: migrate-phasor-agents-off-vendored-deckpy)
+  - [ ] phasor-agents repo itself runs on PATH-resolved `goc`, vendored `.claude/skills/deck/deck.py` removed (tracked in phasor-agents: `goc-migrate-phasor-agents-off-vendored-deckpy`)
   - [ ] One external repo (any Zauberzeug project or volunteer) successfully runs `pipx install game-of-cards && goc install` end-to-end with no manual fix-up
   - [ ] README on the new repo explains the cross-agent positioning (substrate beneath Spec-Kit/BMAD; not another spec-driven framework)
 ---
@@ -52,14 +52,14 @@ The CLI is the engine; skills become trivial shells (`bash: goc new "$@"`, `bash
 
 ## How (high level — sub-cards have detail)
 
-The work splits into six largely-independent streams, wired as sub-cards under this epic:
+The initial work split into these in-repo streams, plus one phasor-agents dogfood card tracked in that repo:
 
 1. **Packaging** (`package-pyproject-and-pypi-release`) — `pyproject.toml`, entry-point wiring, package-data layout for skill templates, PyPI release pipeline.
 2. **Install command** (`install-command-scaffolds-repo`) — the `goc install` flow that drops files into a target repo: `.claude/skills/`, `deck/`, hooks, CLAUDE.md sections, validator pre-commit hook.
 3. **AGENTS.md output** (`write-agentsmd-alongside-claudemd`) — write/merge AGENTS.md so the methodology is visible to all six major agent runtimes, not just Claude Code.
 4. **Multi-agent shims** (`multi-agent-shim-which-agents-at-v1`) — `--agents` flag + per-agent shim templates. **Decision**: which agents at v1 (claude only? +cursor? +codex? +copilot?).
 5. **Bootstrap UX** (`bootstrap-error-when-cli-not-on-path`) — when someone clones a GoC-using repo without `goc` installed, skills emit `pipx install game-of-cards` instead of cryptic Python tracebacks.
-6. **Dogfood migration** (`migrate-phasor-agents-off-vendored-deckpy`) — phasor-agents itself currently vendors `deck.py`. Once `goc` is on PyPI, this repo deletes the vendored copy and shells to PATH like any other consumer. **Decision**: when (immediately after v1, or wait for v1.1)?
+6. **Dogfood migration** (`../phasor-agents/deck/goc-migrate-phasor-agents-off-vendored-deckpy`) — phasor-agents itself currently vendors `deck.py`. Once `goc` is on PyPI, phasor-agents deletes the vendored copy and shells to PATH like any other consumer. **Decision**: immediate cutover on v1 release.
 
 ## Why this is high-contribution
 
@@ -69,9 +69,9 @@ The work splits into six largely-independent streams, wired as sub-cards under t
 
 ## Decision
 
-*Resolved 2026-05-03:* Approve scope as drafted: six sub-cards in package → install → AGENTS.md → bootstrap → multi-agent-shim → dogfood-migrate sequence
+*Resolved 2026-05-03:* Approve scope as drafted: package → install → AGENTS.md → bootstrap → multi-agent-shim in this repo, with dogfood migration tracked in phasor-agents
 
-*Reasoning:* the six-sub-card decomposition mirrors the niche standard (Spec-Kit, BMAD, Agent OS, Ruler) and the dogfood migration on phasor-agents is the integration test that proves the whole epic; sub-card-level gates (v1 agent set, cutover timing) get decided independently when their cards are pulled
+*Reasoning:* the decomposition mirrors the niche standard (Spec-Kit, BMAD, Agent OS, Ruler) and the dogfood migration on phasor-agents is the integration test that proves the whole epic; sub-card-level gates (v1 agent set, cutover timing) get decided independently where their cards live
 ## Cross-references
 
 - Existing in-repo installer: `Skill(use-game-of-cards)` — supersedes once `goc install` is on PyPI.
