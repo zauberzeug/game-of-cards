@@ -22,7 +22,7 @@ User argument: $ARGUMENTS — `<title> <new-status> [--by <other-title>]`.
 
 ## Step 1 — read the card
 
-!`goc show <title>`
+!`.codex/skills/_goc-bootstrap.sh show <title>`
 
 Confirm:
 - Current status matches the transition you're about to make

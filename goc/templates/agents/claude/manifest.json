@@ -7,6 +7,11 @@
   },
   "files": [
     {
+      "source": "bootstrap/_goc-bootstrap.sh",
+      "target": ".claude/skills/_goc-bootstrap.sh",
+      "mode": "executable"
+    },
+    {
       "source": "hooks/user-prompt-submit.py",
       "target": ".claude/hooks/user-prompt-submit-goc.py"
     }

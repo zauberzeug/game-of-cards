@@ -6,13 +6,13 @@ argument-hint: optional area filter within the project (consuming repo defines i
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
-!`goc`
+!`.claude/skills/_goc-bootstrap.sh`
 
-!`goc --done`
+!`.claude/skills/_goc-bootstrap.sh --done`
 
-!`goc --status disproved`
+!`.claude/skills/_goc-bootstrap.sh --status disproved`
 
-!`goc --tag unverified`
+!`.claude/skills/_goc-bootstrap.sh --tag unverified`
 
 !`cat .game-of-cards/hooks/extend-deck.md 2>/dev/null || true`
 

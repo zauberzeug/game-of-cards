@@ -5,9 +5,9 @@ description: "Pick the highest-leverage open card to work on next. Read-only ver
 
 ## Context
 
-!`goc --status active -v 2>&1 | head -20`
+!`.codex/skills/_goc-bootstrap.sh --status active -v 2>&1 | head -20`
 
-!`goc --status open --human-gate none -v`
+!`.codex/skills/_goc-bootstrap.sh --status open --human-gate none -v`
 
 # Pick the next card
 

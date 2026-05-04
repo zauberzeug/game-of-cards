@@ -5,13 +5,13 @@ description: "Hunt for one previously-undocumented defect, derivation gap, doc d
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
-!`goc`
+!`.codex/skills/_goc-bootstrap.sh`
 
-!`goc --done`
+!`.codex/skills/_goc-bootstrap.sh --done`
 
-!`goc --status disproved`
+!`.codex/skills/_goc-bootstrap.sh --status disproved`
 
-!`goc --tag unverified`
+!`.codex/skills/_goc-bootstrap.sh --tag unverified`
 
 !`cat .game-of-cards/hooks/extend-deck.md 2>/dev/null || true`
 

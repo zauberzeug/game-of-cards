@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -69,6 +70,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("shared write  deck/.goc-version", planned)
             self.assertIn("shared append AGENTS.md", planned)
             self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", planned)
+            self.assertIn("claude write  .claude/skills/_goc-bootstrap.sh", planned)
             self.assertIn("claude write  .claude/hooks/user-prompt-submit-goc.py", planned)
             self.assertIn("claude append CLAUDE.md", planned)
             self.assertNotIn(".codex/", planned)
@@ -82,10 +84,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         self.assertEqual("native", claude["skills"]["frontmatter"])
         self.assertEqual(".codex/skills", codex["skills"]["target"])
         self.assertEqual("codex", codex["skills"]["frontmatter"])
-        self.assertEqual(
-            ".claude/hooks/user-prompt-submit-goc.py",
-            claude["files"][0]["target"],
-        )
+        self.assertIn(".claude/skills/_goc-bootstrap.sh", [file["target"] for file in claude["files"]])
+        self.assertIn(".claude/hooks/user-prompt-submit-goc.py", [file["target"] for file in claude["files"]])
 
     def test_multi_agent_dry_run_lists_both_registered_harnesses(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -127,6 +127,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "codex"))
             self.assertFalse((cwd / ".claude").exists())
+            self.assertTrue(os.access(cwd / ".codex" / "skills" / "_goc-bootstrap.sh", os.X_OK))
             self.assertTrue((cwd / ".codex" / "skills" / "pull-card" / "SKILL.md").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
             self.assertFalse((cwd / "CLAUDE.md").exists())
@@ -135,6 +136,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("name: pull-card", codex_skill)
             self.assertIn("description: ", codex_skill)
             self.assertIn("# Pull a card", codex_skill)
+            self.assertIn(".codex/skills/_goc-bootstrap.sh", codex_skill)
 
             self.assert_goc_ok(
                 self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
@@ -161,6 +163,88 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertEqual("custom codex skill\n", codex_skill.read_text())
             self.assertTrue((cwd / "deck" / "smoke-card" / "README.md").is_file())
             self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
+
+    def test_bootstrap_wrapper_reports_missing_and_old_cli_and_execs_current_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            wrapper = cwd / ".claude" / "skills" / "_goc-bootstrap.sh"
+            self.assertTrue(os.access(wrapper, os.X_OK))
+
+            missing_env = os.environ.copy()
+            missing_env["PATH"] = ""
+            missing = subprocess.run(
+                [str(wrapper), "new", "anything"],
+                cwd=cwd,
+                env=missing_env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(127, missing.returncode)
+            self.assertEqual("", missing.stdout)
+            self.assertEqual(
+                "Game of Cards CLI not found. Install with: pipx install game-of-cards\n",
+                missing.stderr,
+            )
+
+            bin_dir = cwd / "bin"
+            bin_dir.mkdir()
+            fake_goc = bin_dir / "goc"
+            fake_goc.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = "--version" ]; then echo "goc, version 0.0.1"; exit 0; fi\n'
+                'echo "old goc should not run"\n'
+            )
+            fake_goc.chmod(0o755)
+            fake_env = os.environ.copy()
+            fake_env["PATH"] = f"{bin_dir}:/usr/bin:/bin"
+
+            old = subprocess.run(
+                [str(wrapper), "new", "anything"],
+                cwd=cwd,
+                env=fake_env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(1, old.returncode)
+            self.assertEqual("", old.stdout)
+            self.assertEqual(
+                "Game of Cards CLI is older than this repo's schema "
+                "(installed: 0.0.1, required: 0.0.2). Run: pipx upgrade game-of-cards\n",
+                old.stderr,
+            )
+
+            fake_goc.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = "--version" ]; then echo "goc, version 0.0.2"; exit 0; fi\n'
+                'printf "fake:%s\\n" "$*"\n'
+            )
+            fake_goc.chmod(0o755)
+            current = subprocess.run(
+                [str(wrapper), "show", "smoke-card"],
+                cwd=cwd,
+                env=fake_env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(0, current.returncode)
+            self.assertEqual("fake:show smoke-card\n", current.stdout)
+            self.assertEqual("", current.stderr)
+
+    def test_skill_command_injections_use_bootstrap_wrapper(self) -> None:
+        roots = [
+            ROOT / "goc" / "templates" / "skills",
+            ROOT / ".claude" / "skills",
+            ROOT / ".codex" / "skills",
+        ]
+        for root in roots:
+            for skill_name in SKILL_NAMES:
+                skill = root / skill_name / "SKILL.md"
+                text = skill.read_text()
+                self.assertIsNone(re.search(r"^!`goc\b", text, flags=re.MULTILINE), msg=str(skill))
 
     def test_move_renames_without_redirect_and_rewrites_relations(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

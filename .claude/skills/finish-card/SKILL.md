@@ -35,7 +35,7 @@ User argument: $ARGUMENTS — title.
 
 Read the card:
 
-!`goc show <title>`
+!`.claude/skills/_goc-bootstrap.sh show <title>`
 
 Re-confirm each DoD criterion against the actual work:
 

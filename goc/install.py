@@ -61,6 +61,7 @@ class GuidanceBlock:
 class ShimFile:
     source: Path
     target: Path
+    mode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -120,7 +121,11 @@ def _load_agent_shim(templates: Path, agent: str) -> AgentShim:
         skills = SkillShim(target=Path(skill_spec["target"]), frontmatter=frontmatter)
 
     files = tuple(
-        ShimFile(source=Path(file_spec["source"]), target=Path(file_spec["target"]))
+        ShimFile(
+            source=Path(file_spec["source"]),
+            target=Path(file_spec["target"]),
+            mode=file_spec.get("mode"),
+        )
         for file_spec in raw.get("files", [])
     )
     guidance = tuple(
@@ -268,6 +273,7 @@ def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
 
     name = _frontmatter_value(frontmatter, "name") or skill_name
     description = _frontmatter_value(frontmatter, "description")
+    body = body.replace(".claude/skills/_goc-bootstrap.sh", ".codex/skills/_goc-bootstrap.sh")
     codex_frontmatter = "\n".join(
         (
             "---",
@@ -376,6 +382,8 @@ def _sync_agent_harness(target: Path, templates: Path, agent: str, *, replace_sk
         destination = target / file.target
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(templates / file.source, destination)
+        if file.mode == "executable":
+            destination.chmod(destination.stat().st_mode | 0o755)
 
     for guidance in shim.guidance:
         body = (templates / guidance.template).read_text()

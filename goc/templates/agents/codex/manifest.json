@@ -5,6 +5,12 @@
     "target": ".codex/skills",
     "frontmatter": "codex"
   },
-  "files": [],
+  "files": [
+    {
+      "source": "bootstrap/_goc-bootstrap.sh",
+      "target": ".codex/skills/_goc-bootstrap.sh",
+      "mode": "executable"
+    }
+  ],
   "guidance": []
 }

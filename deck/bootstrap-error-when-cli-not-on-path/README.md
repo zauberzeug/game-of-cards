@@ -1,23 +1,23 @@
 ---
 title: bootstrap-error-when-cli-not-on-path
 summary: "When someone clones a GoC-using repo onto a machine that doesn't have `goc` installed, every skill/hook invocation will fail with cryptic shell errors (`zsh: command not found: goc` or a Python ImportError). This card adds a small wrapper script that the skills shell to instead — `.claude/skills/_goc-bootstrap.sh` — which detects the missing CLI and emits one clean line: `Game of Cards CLI not found. Install with: pipx install game-of-cards`. Same approach `npm` projects take ('npm not found' is its own helpful message, not a Python traceback). Also handles the `goc` version mismatch case (installed `goc` is older than the schema this repo expects)."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-03
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: [ship-game-of-cards-as-cross-agent-cli]
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] `.claude/skills/_goc-bootstrap.sh` (or `.py`) wrapper exists; skills shell to it instead of `goc` directly
-  - [ ] When `goc` is on PATH and version is compatible: wrapper exec's `goc "$@"` transparently (no overhead beyond one shell layer)
-  - [ ] When `goc` is missing from PATH: wrapper exits with code 127 and prints exactly one line: `Game of Cards CLI not found. Install with: pipx install game-of-cards`
-  - [ ] When `goc --version` reports older than `.goc-version` sentinel in `deck/`: wrapper exits with code 1 and prints: `Game of Cards CLI is older than this repo's schema (installed: X, required: Y). Run: pipx upgrade game-of-cards`
-  - [ ] All 11 skill SKILL.md files updated to invoke `.claude/skills/_goc-bootstrap.sh` instead of `goc` (or `uv run python .claude/skills/deck/deck.py`) directly
-  - [ ] `goc install` writes the bootstrap wrapper as part of the scaffold
-  - [ ] Tested on a clean machine without `goc` installed: cloning a GoC repo and asking the agent to file a card produces the helpful install message, not a traceback
+  - [x] `.claude/skills/_goc-bootstrap.sh` (or `.py`) wrapper exists; skills shell to it instead of `goc` directly
+  - [x] When `goc` is on PATH and version is compatible: wrapper exec's `goc "$@"` transparently (no overhead beyond one shell layer)
+  - [x] When `goc` is missing from PATH: wrapper exits with code 127 and prints exactly one line: `Game of Cards CLI not found. Install with: pipx install game-of-cards`
+  - [x] When `goc --version` reports older than `.goc-version` sentinel in `deck/`: wrapper exits with code 1 and prints: `Game of Cards CLI is older than this repo's schema (installed: X, required: Y). Run: pipx upgrade game-of-cards`
+  - [x] All 11 skill SKILL.md files updated to invoke `.claude/skills/_goc-bootstrap.sh` instead of `goc` (or `uv run python .claude/skills/deck/deck.py`) directly
+  - [x] `goc install` writes the bootstrap wrapper as part of the scaffold
+  - [x] Tested on a clean machine without `goc` installed: cloning a GoC repo and asking the agent to file a card produces the helpful install message, not a traceback
 ---
 
 # Bootstrap error when `goc` is not on PATH
