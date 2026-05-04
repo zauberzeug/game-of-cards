@@ -1,6 +1,6 @@
 ---
 title: generated-agents-guidance-overstates-done-commit
-summary: "Generated AGENTS guidance still tells agents that `goc done <title>` closes and commits, but the shipped finish-card contract and engine make `done` a non-committing closure-state flip. This can leave autonomous agents believing the closure landed in git when the final work commit is still required."
+summary: "Generated agent guidance still tells agents that closure commands close and commit, but the shipped finish-card contract and engine make `done` a non-committing closure-state flip. This can leave autonomous agents believing the closure landed in git when the final work commit is still required."
 status: open
 stage: null
 contribution: high
@@ -12,9 +12,10 @@ advanced_by: []
 tags: [documentation, api-contract, infra]
 definition_of_done: |
   - [ ] `goc/templates/AGENTS_GOC.md` no longer describes `goc done <title>` as the commit step
+  - [ ] `goc/templates/hooks/user-prompt-submit.py` no longer describes `Skill(finish-card)` as "close + commit" without the separate final commit workflow
   - [ ] The repo-local generated `AGENTS.md` block is aligned with the corrected template wording
   - [ ] Any CLI/user-facing docs that mention closure keep `done` as DoD-gated state change and leave committing to finish-card/runtime workflow
-  - [ ] A focused test or grep-based regression prevents the generated AGENTS guidance from reintroducing "Close + commit: `goc done <title>`"
+  - [ ] A focused test or grep-based regression prevents generated guidance from reintroducing "Close + commit: `goc done <title>`" or "close + commit" as a single finish-card step
 ---
 
 # generated-agents-guidance-overstates-done-commit
@@ -23,6 +24,7 @@ definition_of_done: |
 
 - `goc/templates/AGENTS_GOC.md:19`
 - `goc/templates/AGENTS_GOC.md:70`
+- `goc/templates/hooks/user-prompt-submit.py:55`
 - `AGENTS.md:29`
 - `AGENTS.md:80`
 - `goc/templates/skills/finish-card/SKILL.md:179`
@@ -41,6 +43,13 @@ The generated daily-verb table repeats the same contract:
 
 ```markdown
 | `goc done <title>` | Close + DoD enforcement + commit. |
+```
+
+The generated Claude prompt hook carries the same stale shortcut for the
+skill-level close operation:
+
+```text
+5. Skill(finish-card) <title> — close + commit.
 ```
 
 That contradicts the current finish-card contract:
@@ -64,14 +73,14 @@ def done(title, force):
 
 ## Evidence
 
-The citation set above is the evidence: two generated guidance surfaces
+The citation set above is the evidence: three generated guidance surfaces
 claim commit behavior, while the shipped finish-card skill and engine say
-the command is non-committing.
+the command is non-committing until the final runtime commit workflow.
 
 `rg -n 'goc done <title>|Close \+ commit|done` does NOT auto-commit|def done\(' ...`
 found the conflicting lines in `goc/templates/AGENTS_GOC.md`,
-repo-local `AGENTS.md`, `goc/templates/skills/finish-card/SKILL.md`,
-and `goc/engine.py`.
+repo-local `AGENTS.md`, `goc/templates/hooks/user-prompt-submit.py`,
+`goc/templates/skills/finish-card/SKILL.md`, and `goc/engine.py`.
 
 ## Why it matters
 
@@ -88,9 +97,10 @@ AGENTS template still carries the older shortcut wording.
 
 ## Fix
 
-Update `goc/templates/AGENTS_GOC.md` and the generated repo-local
-`AGENTS.md` block so the session pipeline separates closure from commit.
-For example:
+Update `goc/templates/AGENTS_GOC.md`,
+`goc/templates/hooks/user-prompt-submit.py`, and the generated
+repo-local `AGENTS.md` block so the session pipeline separates closure
+from commit. For example:
 
 ```markdown
 5. Close with `goc done <title>`, then commit the work and closure.
