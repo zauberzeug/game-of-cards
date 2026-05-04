@@ -1,20 +1,20 @@
 ---
 title: invalid-stage-range-crashes-queue-view
 summary: "Passing an invalid stage range such as `--stage foo-bar` crashes the queue view with a Python traceback instead of returning a normal CLI validation error."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (invalid stage ranges no longer traceback)
-  - [ ] `goc --stage foo-bar` exits non-zero with a concise Click error
-  - [ ] valid stage filters and ranges still work
-  - [ ] `goc validate` passes after the CLI validation fix
+  - [x] reproduce.py exits zero (invalid stage ranges no longer traceback)
+  - [x] `goc --stage foo-bar` exits non-zero with a concise Click error
+  - [x] valid stage filters and ranges still work
+  - [x] `goc validate` passes after the CLI validation fix
 ---
 
 # invalid-stage-range-crashes-queue-view

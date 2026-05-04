@@ -463,6 +463,7 @@ def detect_advance_cycles(cards: list[Card]) -> list[str]:
 # Filtering + sorting
 
 CONTRIBUTION_ORDER = {"high": 0, "medium": 1, "low": 2}
+STAGE_ORDER = ["null", "alpha", "beta", "stable"]
 
 # GRPW sort: per-card contribution composes through the `advances` graph
 # into a `value` score with Bellman discount γ per hop. See
@@ -567,6 +568,27 @@ def filter_cards(
     if advanced_by:
         out = [t for t in out if advanced_by in (t.frontmatter.get("advanced_by") or [])]
     return out
+
+
+def parse_stage_filter(stage_flag: str | None) -> list[str] | None:
+    if not stage_flag:
+        return None
+    valid = ", ".join(STAGE_ORDER)
+    if "-" in stage_flag:
+        a, b = stage_flag.split("-", 1)
+        if a not in STAGE_ORDER or b not in STAGE_ORDER:
+            raise click.BadParameter(
+                f"expected one of {valid}, or a range like alpha-stable",
+                param_hint="--stage",
+            )
+        ai, bi = STAGE_ORDER.index(a), STAGE_ORDER.index(b)
+        return STAGE_ORDER[min(ai, bi) : max(ai, bi) + 1]
+    if stage_flag not in STAGE_ORDER:
+        raise click.BadParameter(
+            f"expected one of {valid}, or a range like alpha-stable",
+            param_hint="--stage",
+        )
+    return [stage_flag]
 
 
 def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> list[Card]:
@@ -862,15 +884,7 @@ def cli(
     else:
         status = status_flag
     status_filter_explicit = bool(done_flag or status_flag is not None)
-    stages = None
-    if stage_flag:
-        if "-" in stage_flag:
-            order = ["null", "alpha", "beta", "stable"]
-            a, b = stage_flag.split("-", 1)
-            ai, bi = order.index(a), order.index(b)
-            stages = order[min(ai, bi) : max(ai, bi) + 1]
-        else:
-            stages = [stage_flag]
+    stages = parse_stage_filter(stage_flag)
     filtered = filter_cards(
         cards,
         status=status,
