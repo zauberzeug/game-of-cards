@@ -2,7 +2,7 @@
 
 Agile in the age of AI agents: Game of Cards is a repo-native agile methodology for turning work into durable, inspectable cards that humans and coding agents can share.
 
-The current implementation is `goc`, a CLI that keeps your project's backlog as a folder of markdown files inside your repo. Each item is a *card* — a directory under `deck/` with a frontmatter header, a body, and a checklist that decides when it's done.
+It is implemented as the `goc` command-line interface (CLI). It keeps your project's backlog as a folder of markdown files inside your repo. Each item is a *card* — a directory under `deck/` with a frontmatter header, a body, and a checklist that decides when it's done.
 
 That's it. The rest of this README is why that turns out to be a useful shape.
 
@@ -30,9 +30,9 @@ That means it can sit underneath other tools. It does not choose your planning m
 
 If you already have a coding agent in the repo, start there:
 
-> Install Game of Cards in this repo, then create a first card for the next small improvement.
+> Install Game of Cards (https://github.com/zauberzeug/game-of-cards) in this repo, then create a first card for the next small improvement.
 
-The agent should install `goc`, run `goc install`, and then use the generated guidance and skills for card operations. The manual equivalent is:
+The agent can then install `goc`, run `goc install`, and use the generated guidance and skills for card operations. The manual equivalent is:
 
 ```bash
 # Install the goc command once, using a Python app installer you already trust.
@@ -46,12 +46,6 @@ goc install
 ```
 
 Prefer `uv tool install` if `uv` is already standard on your machine; prefer `pipx` if you use the PyPA application-installer path. Plain `pip install` works inside an environment, but it is the least clear global-app story because scripts and dependencies share that environment.
-
-When working from a checkout of this repo, use the repo-local form so you run the checked-out code instead of any globally installed `goc`:
-
-```bash
-uv run goc install --agents codex
-```
 
 The cost of trying is low. `goc install` adds files; it doesn't take any away.
 If you decide it isn't for you, remove the generated files and revert the
@@ -110,6 +104,18 @@ and plenty of rough edges that are unknown until someone tries it on a fresh
 project. Bring expectations to match.
 
 The right way to find out if it's for you is to install it, point it at a side project, and see whether it stays out of your way for a week. If it does, you'll keep it. If it doesn't, you've spent five minutes.
+
+## Contributing
+
+When working from a checkout of this repo, use the repo-local form so you run the checked-out code instead of any globally installed `goc`:
+
+```bash
+uv run goc install --agents codex
+```
+
+This repo uses Game of Cards to track its own work. The `deck/` directory is the backlog; each card is a directory under that with a frontmatter-validated `README.md` and an append-only `log.md`. If you want to contribute to existing work, pick an open card and update that card as part of your change. If you want to propose new work, run `uv run goc new "card title"` to scaffold the card directory.
+
+We are open to contributions of all sizes, from fixing typos to implementing new features. If you're not sure where to start, ask your LLM to check the open cards in `deck/` and see if anything catches your eye. If you want to propose a new feature or improvement, feel free to file an issue or PR; we will convert issues into cards quickly.
 
 ## License
 
