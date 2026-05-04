@@ -209,6 +209,37 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("stale-card: card directory missing README.md", result.stderr)
             self.assertIn("source-card: advances: references unknown title 'missing-card'", result.stderr)
 
+    def test_board_and_open_queue_surface_active_cards(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "new", "open-card", "--gate", "none", "--tag", "story"))
+            self.assert_goc_ok(self.run_goc(cwd, "new", "active-card", "--gate", "none", "--tag", "story"))
+            self.assert_goc_ok(self.run_goc(cwd, "status", "active-card", "active", "--no-commit"))
+
+            board = self.run_goc(cwd, "--board", "--no-color")
+            active = self.run_goc(cwd, "--status", "active", "--no-color")
+            default_queue = self.run_goc(cwd, "--no-color")
+            open_queue = self.run_goc(cwd, "--status", "open", "--no-color")
+            full_deck = self.run_goc(cwd, "--status", "all", "--no-color")
+
+            self.assert_goc_ok(board)
+            self.assert_goc_ok(active)
+            self.assert_goc_ok(default_queue)
+            self.assert_goc_ok(open_queue)
+            self.assert_goc_ok(full_deck)
+
+            self.assertIn("ACTIVE", board.stdout)
+            self.assertIn("active-card", board.stdout)
+            self.assertIn("open-card", board.stdout)
+            self.assertIn("active-card", active.stdout)
+            self.assertIn("ACTIVE: 1 claimed card outside this open queue: active-card.", default_queue.stdout)
+            self.assertIn("open-card", default_queue.stdout)
+            self.assertIn("ACTIVE: 1 claimed card outside this open queue: active-card.", open_queue.stdout)
+            self.assertIn("active-card", full_deck.stdout)
+            self.assertIn("open-card", full_deck.stdout)
+            self.assertIn("active", full_deck.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

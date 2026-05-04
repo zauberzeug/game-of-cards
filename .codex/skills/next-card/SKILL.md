@@ -5,6 +5,8 @@ description: "Pick the highest-leverage open card to work on next. Read-only ver
 
 ## Context
 
+!`goc --status active -v 2>&1 | head -20`
+
 !`goc --status open --human-gate none -v`
 
 # Pick the next card
@@ -20,6 +22,10 @@ Recommend, do not claim. **Status does NOT flip here** — that is
 `Skill(advance-card)`'s contract. The pull is a two-step gesture (pick,
 then claim) so the human or /loop can abort between them without
 half-state on disk.
+
+Before recommending, read the active slice above. Active cards are claimed
+soft locks; avoid recommending the same card or adjacent/conflicting work
+unless the user explicitly asks to continue that active card.
 
 User argument: $ARGUMENTS — if non-empty (a title or area like
 an area tag or path prefix), narrow the queue. If empty, scan the full

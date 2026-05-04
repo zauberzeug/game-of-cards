@@ -17,6 +17,14 @@ in the queue and at what gate.
 
 ## What to do
 
+Check for already-claimed work first:
+
+!`goc --status active -v 2>&1 | head -20`
+
+Treat any listed active card as a soft lock. Do not claim the same card,
+or adjacent/conflicting work, unless the user explicitly asks to continue
+that active card.
+
 Pick the highest-contribution `human_gate: none` open card:
 
 !`goc --status open --human-gate none -v 2>&1 | head -20`

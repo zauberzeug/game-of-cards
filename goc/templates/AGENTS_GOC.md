@@ -35,6 +35,9 @@ it end-to-end, and commits. Multiple parallel sessions work different
 cards — the `status: active` field is the soft lock; git's merge handles
 rare claim-races.
 
+Before recommending or claiming new work, autonomous agents check
+`goc --status active` and treat listed cards as already claimed soft locks.
+
 The pull principle is what makes this safe: work isn't pushed at agents
 on a timer; agents pull on their own terms, filtered to gate=none. The
 human steers by curating WHAT'S in the queue and at what gate.

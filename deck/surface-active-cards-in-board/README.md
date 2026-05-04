@@ -1,22 +1,22 @@
 ---
 title: surface-active-cards-in-board
 summary: "Make active cards impossible to miss when agents choose autonomous work: board, status, and default queue views must agree about active cards so parallel sessions do not collide."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: [ship-game-of-cards-as-cross-agent-cli]
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `goc --board` shows active cards in the ACTIVE column whenever `goc --status active` returns cards; the two commands agree on titles in a mixed open/active deck
-  - [ ] The default `goc` / `goc --status open` queue view surfaces a concise active-card warning or summary when active cards exist but are not included in the open list
-  - [ ] `goc --status all` remains a reliable full-deck view and documents/labels active cards clearly enough for parallel agents to avoid claimed work
-  - [ ] Agent-facing guidance for choosing autonomous work tells agents to check active cards explicitly before recommending or claiming a new card
-  - [ ] Tests cover board rendering and default queue rendering for a deck with at least one open card and one active card
-  - [ ] Smoke test in this repo: with `install-codex-harness` active, `uv run goc --board`, `uv run goc --status active`, and the default queue make the active card visible or explicitly accounted for
+  - [x] `goc --board` shows active cards in the ACTIVE column whenever `goc --status active` returns cards; the two commands agree on titles in a mixed open/active deck
+  - [x] The default `goc` / `goc --status open` queue view surfaces a concise active-card warning or summary when active cards exist but are not included in the open list
+  - [x] `goc --status all` remains a reliable full-deck view and documents/labels active cards clearly enough for parallel agents to avoid claimed work
+  - [x] Agent-facing guidance for choosing autonomous work tells agents to check active cards explicitly before recommending or claiming a new card
+  - [x] Tests cover board rendering and default queue rendering for a deck with at least one open card and one active card
+  - [x] Smoke test in this repo: with an active card present (`surface-active-cards-in-board`; original repro card `install-codex-harness` is now done), `uv run goc --board`, `uv run goc --status active`, and the default queue make the active card visible or explicitly accounted for
 ---
 
 # Surface Active Cards in Board

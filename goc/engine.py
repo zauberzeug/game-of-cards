@@ -679,7 +679,7 @@ def render_table(
     out_lines: list[str] = []
     out_lines.append("  ".join(h.ljust(widths[i]) for i, h in enumerate(headers)))
     out_lines.append("  ".join("-" * widths[i] for i in range(len(headers))))
-    for t, r in zip(cards, rows, strict=True):
+    for t, r in zip(cards, rows):
         if verbose >= 1:
             cells = [
                 r[0].ljust(widths[0]),
@@ -787,6 +787,28 @@ def render_board(
     return "\n".join(out)
 
 
+def render_active_notice(
+    cards: list[Card],
+    *,
+    values: dict[str, tuple[float, list[str]]] | None = None,
+) -> str:
+    """Warn open-queue readers about claimed cards outside the open filter."""
+
+    if values is None:
+        values = compute_values(cards)
+    active = sort_default([t for t in cards if t.status == "active"], values=values)
+    if not active:
+        return ""
+    shown = ", ".join(t.title for t in active[:3])
+    if len(active) > 3:
+        shown += f", +{len(active) - 3} more"
+    noun = "card" if len(active) == 1 else "cards"
+    return (
+        f"ACTIVE: {len(active)} claimed {noun} outside this open queue: {shown}. "
+        "Check `goc --status active` or `goc --board` before claiming new work."
+    )
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Click app
 
@@ -838,6 +860,7 @@ def cli(
         status = "open"
     else:
         status = status_flag
+    status_filter_explicit = bool(done_flag or status_flag is not None)
     stages = None
     if stage_flag:
         if "-" in stage_flag:
@@ -862,17 +885,20 @@ def cli(
     full_by_title = {t.title: t for t in cards}
     filtered = sort_default(filtered, values=full_values)
     if board:
+        board_cards = cards if status == "all" or not status_filter_explicit else filtered
         click.echo(
             render_board(
-                cards if status == "all" else filtered, max_rows=max_rows, no_color=no_color, values=full_values
+                board_cards, max_rows=max_rows, no_color=no_color, values=full_values
             )
         )
     elif as_json:
         click.echo(render_json(filtered, values=full_values))
     else:
         out = render_table(filtered, verbose=verbose, no_color=no_color, values=full_values, by_title=full_by_title)
-        if out:
-            click.echo(out)
+        active_notice = render_active_notice(cards, values=full_values) if status == "open" else ""
+        lines = [part for part in (active_notice, out) if part]
+        if lines:
+            click.echo("\n".join(lines))
 
 
 @cli.command()
