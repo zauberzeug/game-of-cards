@@ -1,7 +1,7 @@
 ---
 title: install-openclaw-harness
 summary: "Make OpenClaw a first-class `goc install` harness option, following its native project-guidance convention while sharing GoC's common harness metadata."
-status: active
+status: blocked
 stage: null
 contribution: medium
 created: 2026-05-04
@@ -30,9 +30,13 @@ Definition-of-Done behavior.
 
 ## What
 
-Add an OpenClaw harness target to the install selector. The first implementation
-step is to confirm OpenClaw's current guidance-file convention, then add the
-smallest native shim that points OpenClaw at the shared GoC runtime.
+Deferred as of 2026-05-04. OpenCLAW installation is not needed in this repo, so
+the harness should stay out of the current implementation queue until a concrete
+downstream repo needs OpenCLAW-native GoC guidance.
+
+If reopened, the first implementation step is still to confirm OpenCLAW's
+current guidance-file convention, then add the smallest native shim that points
+OpenCLAW at the shared GoC runtime.
 
 ## Cross-references
 
