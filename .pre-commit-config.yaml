@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: goc-validate
+        name: goc validate
+        entry: goc validate
+        language: system
+        pass_filenames: false
+        files: ^deck/.*$
