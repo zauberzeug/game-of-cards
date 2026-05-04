@@ -1,20 +1,20 @@
 ---
 title: negative-board-row-limit-hides-cards
 summary: "`goc --board --max-rows -1` is accepted and slices cards out of each board column instead of rejecting the nonsensical negative row limit."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-04
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (negative max rows are rejected)
-  - [ ] `goc --board --max-rows -1` exits with a concise Click validation error
-  - [ ] Non-negative `--max-rows` values still render the board
-  - [ ] `goc validate` passes after the option validation fix
+  - [x] reproduce.py exits zero (negative max rows are rejected)
+  - [x] `goc --board --max-rows -1` exits with a concise Click validation error
+  - [x] Non-negative `--max-rows` values still render the board
+  - [x] `goc validate` passes after the option validation fix
 ---
 
 # negative-board-row-limit-hides-cards

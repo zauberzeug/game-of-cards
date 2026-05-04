@@ -855,7 +855,7 @@ def render_active_notice(
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable JSON.")
 @click.option("--no-color", is_flag=True)
 @click.option("--board", is_flag=True, help="ASCII multi-column kanban board.")
-@click.option("--max-rows", default=20, help="Cap rows per column in --board.")
+@click.option("--max-rows", type=click.IntRange(min=0), default=20, help="Cap rows per column in --board.")
 @click.pass_context
 def cli(
     ctx,

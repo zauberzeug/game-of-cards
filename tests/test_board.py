@@ -61,6 +61,20 @@ class BoardRenderingTest(unittest.TestCase):
             for status in ("open", "active", "blocked", "done", "disproved", "superseded"):
                 self.assertIn(f"{status}-card", result.stdout)
 
+    def test_board_rejects_negative_max_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "open-card", "open")
+
+            negative = self.run_goc(cwd, "--board", "--max-rows", "-1")
+            zero = self.run_goc(cwd, "--board", "--max-rows", "0")
+            one = self.run_goc(cwd, "--board", "--max-rows", "1")
+
+            self.assertEqual(2, negative.returncode, msg=negative.stdout + negative.stderr)
+            self.assertIn("Invalid value for '--max-rows'", negative.stderr)
+            self.assertEqual(0, zero.returncode, msg=zero.stderr)
+            self.assertEqual(0, one.returncode, msg=one.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
