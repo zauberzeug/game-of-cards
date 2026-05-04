@@ -1,36 +1,64 @@
 # Game of Cards
 
-**Agile in the age of AI agents.**
+A small command-line tool that keeps your project's to-do list as a folder of markdown files inside your repo. Each item is a *card* — a directory under `deck/` with a frontmatter header, a body, and a checklist that decides when it's done.
 
-The original agile artifacts — the card on a wall, the standup, the retro — were designed for humans who needed lightweight handoffs. AI agents are a more aggressive handoff-stress-test: they read the full backlog every session, re-derive context from scratch, and never remember yesterday. That makes machine-checkable DoDs and slug-as-URL more load-bearing now than they were in 2001 — XP got the right primitives for the wrong reason.
+That's it. The rest of this README is why that turns out to be a useful shape.
 
-The Game-of-Thrones cadence is the part XP, Scrum, and Kanban don't even attempt to name: the emergent, uncontrollable quality of work in a human + AI-agent swarm. You don't drive the swarm; events surface, you respond. That's the 2020s addition to the agile canon.
+## The agile thinking behind it
 
-## Substrate, not framework
+Three ideas from the 1990s, none of them ours, all still in use:
 
-Spec-Kit ships templates. BMAD ships personas. Ruler ships rule fan-out. claude-flow ships swarm orchestration. Each of those sits *on top of* a substrate that you, the consuming team, have to provide.
+- **One card, one thing** — XP, Beck 1999. Small enough to fit on an index card. Enough context that anyone, or anything, can pick it up.
+- **Definition of Done** — Scrum, Sutherland & Schwaber. A card isn't closed because someone said so. It's closed because a checklist is satisfied.
+- **Status, not location** — Kanban, Anderson, after Toyota. A card stays at `deck/<title>/` while it moves through *open → active → done*. Cross-references don't break.
 
-Game of Cards ships the substrate. The CLI, the schema, the on-disk story-card layout, the lifecycle enforcement (DoD-checked closure, Andon-cord escalation, additive Bellman value math across the full card graph, status-as-soft-lock for parallel agents) — that's the layer underneath. The harness on top is interchangeable: Claude Code skills are shipped here as the reference harness, but Codex, Cursor, OpenCode, Copilot, and Aider all read [`AGENTS.md`](https://agents.md), so any of them — or all of them, in parallel — can drive the same cards.
+The argument for taking these seriously *now* is that AI coding agents are a much harder handoff problem than the human teams those ideas were built for. Agents read the full backlog every session, re-derive context from scratch, and never remember yesterday. A card with a stable URL, a machine-checkable closure contract, and a self-contained body stops being "discipline" and starts being how the agent finds its bearings. The 1990s primitives were right for a different reason than the 1990s knew about.
 
-## Install
+It works without any of that, too. `goc new "rename the button"`, `goc` to see what's open, `goc done rename-the-button` to close it. No AI required. The deck is just markdown files; you read, write, edit, and revert them with the same git you already use.
+
+## What it is, and what it isn't
+
+Game of Cards is a *substrate*. The CLI, the schema, the on-disk card layout, the validator — that's all it ships. There's no preferred LLM, no proprietary state, no mandatory workflow.
+
+What sits on top is up to you. Claude Code skills come bundled as the reference harness; any editor that reads `AGENTS.md` (Codex, Cursor, OpenCode, Copilot, Aider) can drive the same deck. So can a shell script. So can your hands.
+
+This is *not* another methodology framework. Spec-Kit ships templates. BMAD ships personas. Ruler ships rule fan-out. claude-flow ships swarm orchestration. Each sits on top of a substrate that the consuming team has to provide. Game of Cards ships *that*.
+
+## Try it
 
 ```bash
-uv tool install game-of-cards
-goc --version
+uv tool install game-of-cards     # one-time, machine-wide
+cd any-repo
+goc install                       # adds deck/, CLAUDE.md/AGENTS.md sections, a starter card
 ```
 
-The PyPI distribution is published as `game-of-cards`; the import name and console script are `goc` (the *pyyaml* pattern: long descriptive distribution name, terse working name everywhere else).
+The cost of trying is low. `goc install` adds files; it doesn't take any away. If you decide it isn't for you, `rm -rf deck/` and revert the two README sections — you're back where you started.
+
+A few things you can do once it's installed:
+
+```bash
+goc new "rename the button to Export"
+goc                                # show what's open, sorted by leverage
+goc validate                       # check every card's frontmatter against the schema
+goc done rename-the-button-to-export
+```
+
+If you're using Claude Code or any `AGENTS.md`-aware editor, you can also just talk to it: *"rename the button to Export."* The deck reflects either flow on the same on-disk state.
 
 ## What you get
 
-- **`goc` CLI** — manages a `deck/<title>/` directory of story-cards (frontmatter-driven, schema-validated). 13 verbs: `new`, `done`, `move`, `validate`, `triage`, `show`, `status`, `advance`, `unadvance`, `decide`, `attest`, `quality-pass`, `install`. This is the substrate.
-- **Claude Code skill set** — `scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`. Turns the substrate into an autonomous workflow under Claude Code. One harness, shipped.
-- **`AGENTS.md` block + `.game-of-cards/` config layer** — the Linux-Foundation-stewarded shared-substrate convention; agent runtimes other than Claude Code see the same workflow without Claude-specific bindings. Project-local content stubs and workflow hooks slot in via `.game-of-cards/`.
+- A `goc` CLI — 13 verbs covering create, browse, advance, decide, close, validate, and install.
+- A `deck/<title>/` directory per card: frontmatter-validated `README.md`, append-only `log.md`.
+- A schema validator suitable for pre-commit and CI.
+- A starter set of Claude Code skills (`scan-deck`, `next-card`, `create-card`, `advance-card`, `decide-card`, `finish-card`, `improve-deck`, `extend-deck`, `pull-card`, `card-schema`, `deck`) that turn the CLI into an autonomous workflow when you want one.
+- An `AGENTS.md` block for editors that aren't Claude Code.
 
 ## Status
 
-Pre-`0.1.0` — extracted from the [phasor-agents](https://github.com/zauberzeug/phasor-agents) monorepo, where the methodology was developed in production over six months alongside a research codebase that needed every primitive earlier than it would have been built standalone.
+Pre-`0.1.0`. Extracted from the [phasor-agents](https://github.com/zauberzeug/phasor-agents) monorepo, where it ran in production for six months alongside a research codebase that exercised every primitive harder than they'd be exercised standalone. Most of the rough edges are known, and most of them sit on this repo's own deck.
+
+The right way to find out if it's for you is to install it, point it at a side project, and see whether it stays out of your way for a week. If it does, you'll keep it. If it doesn't, you've spent five minutes.
 
 ## License
 
-MIT — Copyright (c) 2026 Zauberzeug GmbH. See `LICENSE`.
+MIT — Copyright (c) 2026 Zauberzeug GmbH. See [`LICENSE`](LICENSE).
