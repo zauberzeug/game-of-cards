@@ -87,7 +87,7 @@ project-specific reasoning is decisive.
        --because "<one-line why>"
    ```
 
-3. **Commit happens automatically.** `deck.py decide` auto-commits
+3. **Commit happens automatically.** `goc decide` auto-commits
    the body + log + gate flip with subject `decide: <title> — <decision>`.
    The decision is git-observable to sibling branches immediately —
    no separate `prepare-commit` step needed (the diff is purely

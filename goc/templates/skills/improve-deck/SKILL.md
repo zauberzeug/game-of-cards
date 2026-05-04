@@ -183,7 +183,7 @@ grep -rE 'Migration v1.v2.*formerly `(parent|spawned_from):' deck/ --include='lo
 For each surfaced card: read the body and the migration log
 note, judge the direction (epic-of → epic `advanced_by` child;
 predecessor → child `advanced_by` predecessor; family member →
-instance `advanced_by` meta-fix), and apply via `deck.py advance X
+instance `advanced_by` meta-fix), and apply via `goc advance X
 --by Y`. The advance command is symmetric-by-construction so the
 validator stays happy.
 
@@ -197,14 +197,14 @@ goc quality-pass --status all
 
 What it surfaces:
 
-- **Title antipatterns** — same regex predicates `deck.py new` uses to
+- **Title antipatterns** — same regex predicates `goc new` uses to
   reject filings (engineer-jargon: `r88`, `path-2`, `phase-3`,
   `bug-140`, `_md_`/`_py_` infixes, camelCase tokens, math symbols).
   Catches legacy cards filed before the antipattern guard was wired.
-  For each surfaced title: rename via `deck.py move <old> <new>` so
+  For each surfaced title: rename via `goc move <old> <new>` so
   cross-references rewrite atomically.
 - **Missing summaries** — pre-2026-05-01 cards may lack the
-  `summary:` frontmatter field that triage views (`deck.py -v`)
+  `summary:` frontmatter field that triage views (`goc -v`)
   depend on. For each: read the body, write a ≤3-sentence summary
   into the YAML.
 

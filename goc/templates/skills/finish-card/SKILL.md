@@ -10,7 +10,7 @@ The DoD is the agreement, set when the card was filed, that the work
 is actually complete — not "the test passed once," but every named
 criterion satisfied. An LLM agent reading the card at 3 AM in a /loop
 iteration must not be able to mark the work done by accident; the
-contract is enforced by `deck.py done`, which counts unchecked boxes
+contract is enforced by `goc done`, which counts unchecked boxes
 and refuses to flip the status if any remain. The human-typed checkbox
 list is the audit trail.
 
@@ -125,7 +125,7 @@ never rewrite existing entries. Format the closure entry:
 - **Bundled with**: <title-A>, <title-B> (if any)
 ```
 
-## Step 5 — record the Closure verification (`deck.py attest`)
+## Step 5 — record the Closure verification (`goc attest`)
 
 Implicit DoD layers — project-wide rules (e.g. "tests pass, ruff
 green, audit pass, doc-consistency-checker") and
@@ -135,7 +135,7 @@ every closure regardless of what the card does. Today they're invisible:
 a 6-month-old reader sees the layer-1 ticked boxes but no record of
 whether layer-2 or layer-3 was actually verified.
 
-`deck.py attest` reads `.claude/deck-config.yaml`, runs each layer-2 +
+`goc attest` reads `.claude/deck-config.yaml`, runs each layer-2 +
 layer-3 check (or prompts the closer for manual ones), and appends a
 "Closure verification (DATE)" block to `log.md`. The block is the
 audit trail.
@@ -146,7 +146,7 @@ goc attest <title>
 
 The command:
 - **Automated checks** run as subprocesses (`pytest`, `ruff check`,
-  `ruff format --check`, `deck.py validate`). Non-zero exit fails.
+  `ruff format --check`, `goc validate`). Non-zero exit fails.
 - **Derived checks** compute from card state (DoD %, advanced_by
   closure, log.md grep for the Step 4 closure section).
 - **Manual checks** (`audit`, `no-debug-code`) prompt the
@@ -185,7 +185,7 @@ detected), `done` requires `--force` to bypass enforcement — but
 prefer adding checkboxes over forcing.
 
 **Bundled closures** (one fix resolves multiple cards): run
-`deck.py attest <title>` then `deck.py done <title>` for each.
+`goc attest <title>` then `goc done <title>` for each.
 Each gets its own `closed_at` and its own attestation block.
 Cite the sibling slugs in each body's log entry.
 

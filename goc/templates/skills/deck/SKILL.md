@@ -17,7 +17,7 @@ The deck inherits three traditions deliberately:
   team member can pick it up. We keep the size discipline; the medium
   is markdown instead of cardboard.
 - **Scrum's Definition of Done (Sutherland & Schwaber).** Every card
-  carries a checkbox-list DoD as a closure contract. `deck.py done
+  carries a checkbox-list DoD as a closure contract. `goc done
   <title>` refuses to flip the status until every box is `- [x]`. The
   contract is machine-checkable, not a verbal handoff.
 - **Kanban (Anderson, Toyota lineage).** Status mutates; position on
@@ -164,15 +164,15 @@ One skill per job; compose, don't bundle.
 - `Skill(create-card)` — file a new card with proper frontmatter,
   DoD scaffold, and (for bug-class) reproduce.py stub.
 - `Skill(advance-card)` — flip status (open→active, active→blocked,
-  blocked→active, *→disproved, *→superseded). Wraps `deck.py status`
-  and `deck.py block`/`unblock`. Status only — gate is `decide-card`'s
+  blocked→active, *→disproved, *→superseded). Wraps `goc status`
+  and `goc block`/`unblock`. Status only — gate is `decide-card`'s
   responsibility.
 - `Skill(decide-card)` — the human's Andon-cord lowering action.
   Records `<decision> + <because>` on a parked card and flips gate
   `decision`/`session` → `none`. Status stays `open` so the next
   `pull-card` claims and implements per the recorded decision.
 - `Skill(finish-card)` — close a card: tick DoD, append closure log,
-  run `deck.py done <title>`, refresh STATUS.md dashboard, hand to
+  run `goc done <title>`, run any project-specific post-close action, hand to
   `Skill(prepare-commit)`.
 - `Skill(card-schema)` — schema reference (read-only): required
   fields, enums, canonical tags with predicates, DoD detection,
@@ -195,7 +195,7 @@ prior closure verified, so it inserted a checked placeholder for
 already-`done` entries (validation passes; forensic record is the
 closing commit's body) and an unchecked placeholder for still-`open`
 entries (forces the next `Skill(finish-card)` run to write a real DoD
-before `deck.py done <title>` will accept closure).
+before `goc done <title>` will accept closure).
 
 The two skills `find-todo` and `work-todo` were the v1 names. Their
 responsibilities split:

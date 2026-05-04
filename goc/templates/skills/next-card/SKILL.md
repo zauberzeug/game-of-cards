@@ -1,6 +1,6 @@
 ---
 description: Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status. AUTO-INVOKE when user says "what's next", "pick something", "work on the queue", "what should I do", "next item", "drain the deck", or initiates autonomous-loop work. Filters to `human_gate: none` for loop safety; Kanban pull principle (work is taken, not pushed).
-argument-hint: optional area filter (e.g. demos/pong, plasticity); omit for full open queue
+argument-hint: optional area filter (e.g. an area-tag or path prefix); omit for full open queue
 ---
 
 ## Context
@@ -22,7 +22,7 @@ then claim) so the human or /loop can abort between them without
 half-state on disk.
 
 User argument: $ARGUMENTS — if non-empty (a title or area like
-`demos/pong`), narrow the queue. If empty, scan the full
+an area tag or path prefix), narrow the queue. If empty, scan the full
 `human_gate: none` slice.
 
 ## Selection criteria
@@ -47,9 +47,9 @@ to the autonomy gate below.
 
 ### Effort / independence / reversibility
 
-- **Effort** — files touched, library (`phasor_agents/`) vs demo
-  (`demos/`), test coverage required. A library default change
-  carries higher cost.
+- **Effort** — files touched, area of the project (library code
+  vs application code, test coverage required). Library default
+  changes carry higher cost.
 - **Independence** — fixes whose effect can be verified without first
   fixing another card ship before the dependent ones. Read the
   body's "Why it matters" notes and any `advanced_by:` chain.

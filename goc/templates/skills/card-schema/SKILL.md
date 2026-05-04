@@ -16,7 +16,7 @@ loses its read-pattern guarantee.
 This is the read-only reference. Mutations go through
 `Skill(create-card)`, `Skill(advance-card)`, and `Skill(finish-card)`.
 The authoritative schema lives in `Skill(card-schema)` frontmatter, which
-`deck.py` parses with the same parser it uses for every card's
+`goc` parses with the same parser it uses for every card's
 `README.md` — one parser, one mental model. The body of `Skill(card-schema)`
 is a stub that points here; this file is the canonical explanation.
 
@@ -45,7 +45,7 @@ blocked, done, disproved, or superseded.
 | `open` | candidate for work; in the queue | promotion to `active`/`done`/`disproved`/`superseded` |
 | `active` | work in progress (one author/agent at a time, by convention) | usually flips to `done` (or `blocked` mid-flight) |
 | `blocked` | needs another card or external input; body should explain | unblocking; usually flips back to `active` |
-| `done` | DoD checklist all ticked; `deck.py done <title>` enforces this | terminal |
+| `done` | DoD checklist all ticked; `goc done <title>` enforces this | terminal |
 | `disproved` | hypothesis investigated and ruled out; body documents the rebuttal | terminal |
 | `superseded` | replaced by another card; replacement narrative in `log.md`; preserved for forensic continuity | terminal |
 
@@ -58,7 +58,7 @@ the promotion rule is "drop the `unverified` tag once a working
 
 `summary` is a free-form one-to-three-sentence description of the
 card. It answers "what is this and why does it matter?" in scannable
-form so triage views (`deck.py -v`) and the extend-deck / next-card
+form so triage views (`goc -v`) and the extend-deck / next-card
 skills can prioritize without opening every body.
 
 Guidelines:
@@ -131,7 +131,7 @@ Three-value autonomy ladder:
   brainstorming/exploration cases. Example: research-impacting
   framework derivation; open architectural choice.
 
-Default for new cards created via `deck.py new`: `decision`.
+Default for new cards created via `goc new`: `decision`.
 Auto-agents (extend-deck, next-card reclassification) should pick a more
 specific gate when the body content makes the choice clear (mechanical
 → `none`; research move → `session`).
@@ -169,7 +169,7 @@ a `## Decision required` section with:
 3. **Recommendation** — the agent's leaning, one line, with the
    dominant pro that drives it. Not binding; the human can override.
 
-Without this section, `deck.py validate` accepts the card (the body is
+Without this section, `goc validate` accepts the card (the body is
 free-form), but the convention is enforced by the extend-deck /
 next-card skills: a `decision` gate without a `Decision required`
 section is a process bug, not a valid filing.
@@ -191,15 +191,15 @@ closure but live elsewhere:
 
 | Layer | Where it lives | Visible at closure | Recorded by |
 |---|---|---|---|
-| 1 — card-specific | frontmatter `definition_of_done` | ✓ ticked boxes in README | `deck.py done` (counts boxes) |
-| 2 — project-wide | `.claude/deck-config.yaml` `layer_2_project_dod` (extracted from CLAUDE.md prose) | ✓ since 2026-05-03 | `deck.py attest` (writes block to log.md) |
-| 3 — GoC-wide | `.claude/deck-config.yaml` `layer_3_goc_dod` (universal across installations) | ✓ since 2026-05-03 | `deck.py attest` |
+| 1 — card-specific | frontmatter `definition_of_done` | ✓ ticked boxes in README | `goc done` (counts boxes) |
+| 2 — project-wide | `.claude/deck-config.yaml` `layer_2_project_dod` (extracted from CLAUDE.md prose) | ✓ since 2026-05-03 | `goc attest` (writes block to log.md) |
+| 3 — GoC-wide | `.claude/deck-config.yaml` `layer_3_goc_dod` (universal across installations) | ✓ since 2026-05-03 | `goc attest` |
 
 Layer 2 covers tests-pass / ruff / `/mindset` audit / no-debug /
 doc-consistency-checker. Layer 3 covers schema-validates /
 advanced_by-closed / log.md-has-closure-entry / DoD-100%.
 
-`Skill(finish-card)` Step 5 runs `deck.py attest <title>` which appends
+`Skill(finish-card)` Step 5 runs `goc attest <title>` which appends
 a `## Closure verification (YYYY-MM-DD)` block to `log.md` listing
 each layer-2 + layer-3 check with pass/fail. Six months from now,
 a reader can see *exactly* what was checked at the moment of closure
@@ -213,10 +213,10 @@ on any automated/derived failure. No silent waivers.
 Either:
 
 - **Checkbox list (preferred):** `- [ ]` items that mutate to `- [x]`
-  as criteria are met. `deck.py done <title>` requires every box to be
+  as criteria are met. `goc done <title>` requires every box to be
   `- [x]`.
 - **Free-form prose:** allowed when checkboxes are awkward.
-  `deck.py done` with prose DoDs requires explicit `--force` to bypass
+  `goc done` with prose DoDs requires explicit `--force` to bypass
   enforcement.
 
 DoD detection: the CLI parses the field text for `^- \[[ x]\]` lines.
@@ -241,8 +241,8 @@ rather than silent rot.
   closure. Inverse of `advances`.
 
 **Invariant:** if `A.advances` contains `B`, then `B.advanced_by` MUST
-contain `A`. The validator reports any half-edge. The `deck.py advance
-<title> --by <other>` and `deck.py unadvance <title> --by <other>`
+contain `A`. The validator reports any half-edge. The `goc advance
+<title> --by <other>` and `goc unadvance <title> --by <other>`
 commands maintain both sides atomically.
 
 Cycles are forbidden. A card advancing itself transitively is a
@@ -314,9 +314,9 @@ spawned-from / lineage notes go in log.md, not frontmatter)
 
 ## Title antipatterns (rejected at filing time)
 
-Titles ARE the kanban label — a non-engineer reading `deck.py --board`
+Titles ARE the kanban label — a non-engineer reading `goc --board`
 must understand what each card is about without opening the body.
-`deck.py new` rejects titles matching any of these antipatterns:
+`goc new` rejects titles matching any of these antipatterns:
 
 | Pattern | Example | Why bad |
 |---|---|---|
@@ -334,12 +334,12 @@ based on the *observable problem*, e.g. `r88-csubstrate-replication`
 
 The Layer-2 quality pass (Sonnet-batched, in `Skill(improve-deck)
 --quality-pass`) checks the same dimensions across the existing deck
-and surfaces engineer-jargon titles for retitling via `deck.py move`.
+and surfaces engineer-jargon titles for retitling via `goc move`.
 
 ## Adding new tags
 
 New canonical tags require a SCHEMA.md PR (one tag per PR for review
-hygiene). `deck.py validate` rejects unknown tags. Demo-name tags
+hygiene). `goc validate` rejects unknown tags. Demo-name tags
 (`line-follower`, `target-tracking`, `olfactory-classification`) get
 added when a card actually needs them — `pong` is the only demo-name
 tag in v1.
@@ -379,6 +379,6 @@ carry filters nothing.
 | `pong` | title contains `pong` or body cites `demos/pong/`, `pong/agent.py`, `pong/simulation.py`, `pong/STATUS.md`, `pong/config.py` |
 
 These criteria are the v1 tag-application contract. New filings via
-`deck.py new <title> --tag X` should fire on the same predicates; the
+`goc new <title> --tag X` should fire on the same predicates; the
 migration's 2026-05-01 pruning pass applied this contract retroactively
 to legacy entries.

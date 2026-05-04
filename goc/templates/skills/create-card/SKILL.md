@@ -28,7 +28,7 @@ Short, hyphenated, descriptive. Examples:
 `heterosynaptic-ltd-absent-fchannel`, `phantom-contact-motor-mask`,
 `test-zero-w-prediction-tautology-compares-identical-graphs`.
 
-`deck.py new` enforces a **title-antipattern guard** at filing time
+`goc new` enforces a **title-antipattern guard** at filing time
 (see `Skill(card-schema)` "Title antipatterns"): the regex set rejects
 `rN` round-references, `path-N` / `phase-N` step-numbers, `bug-N`
 tracker-numbering, `_md_` / `_py_` source-file infixes, camelCase

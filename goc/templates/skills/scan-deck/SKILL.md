@@ -153,10 +153,10 @@ goc show <title>                  # full card body
 **Default to `-v`**: summaries surface the qualitative context that
 the `contribution` tier alone can't capture (pong-active vs pong-DORMANT,
 recent regression vs old doc-rot, blocking-other-work vs standalone).
-Use bare `deck.py` only when scanning for titles/counts (the terse
+Use bare `goc` only when scanning for titles/counts (the terse
 table is faster to read at a glance but loses importance signal).
 
-If the user passed a title, also run `deck.py show <title>` so the
+If the user passed a title, also run `goc show <title>` so the
 full body lands in the conversation.
 
 ## Why the triage view is the default

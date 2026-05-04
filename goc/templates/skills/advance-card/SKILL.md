@@ -38,17 +38,17 @@ Confirm:
 
 | transition | CLI | notes |
 |---|---|---|
-| `open → active` | `deck.py status <title> active` | "claiming" the card |
-| `active → blocked` | `deck.py status <title> blocked` (+ optionally `deck.py advance <title> --by <other>` if a specific card is what's needed) | flip status; optional edge |
-| `blocked → active` | `deck.py status <title> active` (+ optionally `deck.py unadvance <title> --by <other>` if removing an obsolete edge) | flip status; optional edge |
-| `* → open` | `deck.py status <title> open` | re-queue (rare) |
-| `* → disproved` | `deck.py status <title> disproved` | populate rebuttal first |
-| `* → superseded` | `deck.py status <title> superseded` | log replacement rationale in old card's `log.md` |
+| `open → active` | `goc status <title> active` | "claiming" the card |
+| `active → blocked` | `goc status <title> blocked` (+ optionally `goc advance <title> --by <other>` if a specific card is what's needed) | flip status; optional edge |
+| `blocked → active` | `goc status <title> active` (+ optionally `goc unadvance <title> --by <other>` if removing an obsolete edge) | flip status; optional edge |
+| `* → open` | `goc status <title> open` | re-queue (rare) |
+| `* → disproved` | `goc status <title> disproved` | populate rebuttal first |
+| `* → superseded` | `goc status <title> superseded` | log replacement rationale in old card's `log.md` |
 
-`deck.py advance` and `deck.py unadvance` maintain the bidirectional
+`goc advance` and `goc unadvance` maintain the bidirectional
 value-flow edge atomically (validator-enforced — if `A.advances`
 contains `B`, `B.advanced_by` MUST contain `A`). The status `blocked`
-is independent — set it via `deck.py status` when the card is parked
+is independent — set it via `goc status` when the card is parked
 on external input.
 
 ## Step 3 — populate the body for terminal transitions
@@ -69,7 +69,7 @@ verification cycle.
 ### Superseded
 
 The new card's body explains what it supersedes and why. Run
-`deck.py status <title> superseded` on the old card.
+`goc status <title> superseded` on the old card.
 
 Edit the old card's `log.md` to record the replacement: name the
 replacement card, link it as `[<new-title>](../<new-title>/)`, and
@@ -107,7 +107,7 @@ branch pulling sees "this card is claimed" before it races on the
 same YAML. Uncommitted state changes turn into merge conflicts; tiny
 state-only commits don't.
 
-`deck.py status` / `advance` / `unadvance` / `decide` ALL auto-commit
+`goc status` / `advance` / `unadvance` / `decide` ALL auto-commit
 by default. Pass `--no-commit` only when bundling is genuinely
 necessary (rare — you almost never want this). The work commit, when
 it lands later via `Skill(finish-card)` → `Skill(prepare-commit)`,

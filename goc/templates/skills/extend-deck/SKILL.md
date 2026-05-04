@@ -1,6 +1,6 @@
 ---
 description: Hunt for one previously-undocumented defect, derivation gap, doc drift, missing test or wrong concept. Also architectural ugliness, code smells and inconsistencies. Files via Skill(create-card). AUTO-INVOKE when user says "find me a bug", "audit X", "check for inconsistencies", "what could be wrong", "hunt for issues", "scan the codebase", "look for gaps", or invokes /extend-deck. Treats nothing as truth — inconsistencies are the primary lead (XP spike + Scrum backlog refinement).
-argument-hint: optional sub-path within default scope (docs/ + phasor_agents/ + demos/pong/)
+argument-hint: optional area filter within the project (consuming repo defines its default scope in `.game-of-cards/hooks/extend-deck.md`)
 ---
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
@@ -13,15 +13,7 @@ argument-hint: optional sub-path within default scope (docs/ + phasor_agents/ + 
 
 !`goc --tag unverified`
 
-!`cat docs/framework/vision.md`
-
-!`cat docs/framework/axioms.md`
-
-!`cat docs/framework/architecture.md`
-
-!`cat docs/framework/plasticity.md`
-
-!`cat demos/pong/STATUS.md`
+!`cat .game-of-cards/hooks/extend-deck.md 2>/dev/null || true`
 
 # Hunt
 
@@ -43,16 +35,17 @@ a defect. "I looked and didn't find anything" is a failure mode,
 not an acceptable outcome.
 
 User argument: $ARGUMENTS — if non-empty, narrow within the
-default scope (`docs/` + `phasor_agents/` + `demos/pong/`).
-Out-of-scope arguments (`paper/`, other demos) are flagged and
-ignored.
+default scope (the consuming repo defines this in
+`.game-of-cards/hooks/extend-deck.md`). Out-of-scope arguments are
+flagged and ignored.
 
 ## Mindset (compressed)
 
-- **Code is suspect first; theory second.** When code and stated
-  theory disagree, the default presumption is the code drifted.
-  The project's mission is to reverse-engineer biology — the
-  theory is the target, the code is the approximation.
+- **Code is suspect first; documentation second.** When code and
+  the project's stated principles disagree, the default presumption
+  is the code drifted. Documentation is the target the code is
+  meant to approximate; the consuming repo's hook (above) names the
+  doc surfaces that count as ground truth.
 - **Empirical or it didn't happen.** Every reported defect needs
   evidence — no "I think this might be." For behavioral defects
   (bugs, derivation gaps, missing tests), evidence is a
@@ -63,7 +56,7 @@ ignored.
   violation, quoted with file:line. Either form is concrete; "it
   feels off" is not.
 - **Disproved dedup before filing.** Grep
-  `goc/engine.py --status disproved` for the candidate's
+  `goc --status disproved` for the candidate's
   identifying string. Re-promote only with new evidence (cited
   code changed since the rebuttal date).
 - **Hunt the big thing first.** Impact ladder: `high` outranks
@@ -76,137 +69,80 @@ ignored.
   a patch.
 
 The bullets above are for _rapid hunt triage_. When a candidate
-touches framework derivation, mechanism choice, or deeper
-bio-plausibility — and especially when the right gate for the new
-card is unclear — invoke `Skill(mindset)` for the full vision /
-axioms / plasticity context. /mindset often reveals that what looks
-like a research-impacting decision is already determined by an
-existing axiom + primary source, in which case the card can be filed
-with `--gate none` and a `## Decision (mindset-derived)` body section
-(see `Skill(create-card)` Step 3). Keeps the human out of the loop
-when bio-faithful reasoning is decisive.
+touches a substantive design decision (mechanism choice, sign
+convention, default anchored to a project principle) — and
+especially when the right gate for the new card is unclear —
+consult the consuming repo's project-specific rubric (wired in via
+`.game-of-cards/hooks/extend-deck.md`, loaded above). The rubric
+often reveals that what looks like a fresh decision is already
+determined by an existing principle + primary source, in which case
+the card can be filed with `--gate none` and a `## Decision
+(rubric-derived)` body section (see `Skill(create-card)` Step 3).
+Keeps the human out of the loop when project-specific reasoning is
+decisive.
 
 ## Phase 1 — Probe (run BEFORE static hunting)
 
 Static analysis converges to "no new defect" within ~5 rounds.
-Behavioral defects — NaN/Inf, weight divergence, silent
-boundary-state corruption — require running the actual demo.
+Behavioral defects — NaN/Inf, divergence, silent boundary-state
+corruption — require running the actual project. Run the probe AND
+doc-quality hunters concurrently; the probe is I/O-bound and the
+doc hunters have no probe dependency.
 
-**Pong is the canonical reference.** Run the probe AND doc-quality
-hunters concurrently — the probe is I/O-bound; doc hunters have
-no probe dependency.
+The consuming repo defines its probe recipe in
+`.game-of-cards/hooks/extend-deck.md` (already loaded above).
+Typical probes:
 
-### Phase A — metrics probe (steady-state)
+- **Metrics probe (steady-state):** run the canonical demo / test
+  suite for a few seeds in parallel; compare to a baseline metrics
+  table; flag divergence ≥ 2σ as a candidate.
+- **Boundary-exercise probe:** snapshot state, hit reset / freeze /
+  checkpoint surfaces, diff. Silent state-leaks live here.
+- **Introspection-trace probe:** run any project-specific trace
+  tool, triage `[FAIL]` / `nan` / `inf` / discontinuity hits.
 
-Write `tmp/grow_deck_probe.py` (Python; tmp/ is gitignored, so
-regenerate fresh each round). It should:
+Triage:
 
-1. Build the shipping pong topology + agent (no overrides) and
-   step it for ~300 s with 2-3 seeds, parallelized via
-   `multiprocessing.Pool` (so it runs in ~5 min wall-clock).
-2. Log per-seed: probe_after, late_HR, |W_coupling| max,
-   |W_competition| max, any NaN/Inf in `graph._state`, any logged
-   warnings, any metric outside the STATUS.md "Latest metrics"
-   σ-bands.
-3. Compare to STATUS.md and flag divergence ≥ 2σ as a candidate.
-
-Run via `uv run python tmp/grow_deck_probe.py 2>&1 > tmp/probe_out.log`.
-
-### Phase B — boundary-exercise probe
-
-Most recurring family defects live at boundaries — `reset()`,
-`frozen_learning()`, checkpoint save/load, `Topology.copy()`.
-Phase A doesn't hit these surfaces. Phase B exercises them
-explicitly:
-
-1. Build a fresh pong graph, train ~200 s.
-2. Snapshot every public state field via reflection.
-3. **Reset diff:** call `graph.reset()`, snapshot again. Any field
-   that differs but isn't in the documented "reset clears" list is
-   a silent-state-leak candidate.
-4. **frozen_learning diff:** wrap `graph.step()` × 100 in
-   `with graph.frozen_learning():` — any plasticity-class field
-   that mutates inside the context is a candidate.
-5. **Checkpoint diff:** save + load_into a fresh graph — any field
-   that doesn't match is a candidate.
-
-### Phase C — introspection-trace probe
-
-Pong ships `demos/pong/trace_approach.py`:
-
-```bash
-uv run python demos/pong/trace_approach.py --seed 42 2>&1 > tmp/trace_fresh.log
-```
-
-Triage output: any `[FAIL]` chain check is high-impact (chain
-link broken). Any `nan` / `inf` / `±0.0000` in a signal that
-should be active is high-impact. Sudden discontinuity in motor /
-F-channel / VTA without a court event is a candidate.
-
-### Triage all three phases before spawning hunters
-
-- Phase surfaces NaN/Inf, out-of-range metric, state-leak diff,
-  `[FAIL]`: that's the primary lead. Skip Phase 2, go to Phase 3
-  (file).
-- Phase suggestively close to a documented bound: record as
+- Probe surfaces NaN/Inf, out-of-range metric, state-leak diff, or
+  a project-specific `[FAIL]` marker: that's the primary lead.
+  Skip Phase 2, go to Phase 3 (file).
+- Probe suggestively close to a documented bound: record as
   `tags: [unverified]` with a sweep recipe.
-- All three clean: proceed to Phase 2 static hunting.
+- Probe clean (or no probe configured): proceed to Phase 2 static
+  hunting.
 
 ## Phase 2 — Hunt (parallel agents in a single message)
 
-Spawn at minimum:
+The consuming repo defines its hunter roster in
+`.game-of-cards/hooks/extend-deck.md` (already loaded above) — which
+specialized agents to spawn for which scopes, and which surfaces
+each is briefed against.
 
-- **`analytical-reviewer`** — primary hunter; finds inconsistency
-  between doc and code. Always include.
-- **`pr-review-toolkit:silent-failure-hunter`** — error handling,
-  catches, silent fallbacks.
-- **`Explore`** with `thoroughness: very thorough` — for areas
-  the analytical-reviewer hasn't visited.
-
-Add when applicable:
-
-- **`visionary`** — high-impact + `tags: [documentation]` hunter
-  for principle / cross-doc / intra-doc claims. Reads
-  `docs/framework/*.md` against `axioms.md` and `vision.md` for
-  principle violations, cross-doc contradictions, intra-doc
-  ambiguity. Always include when scope touches `docs/`.
-- **`bio-reviewer` / `neuro-reviewer` / `ml-reviewer`** — for
-  docs-vs-literature drift. Brief them with the citation surfaces
-  (Frémaux/Gerstner, Schultz, Pathak, Laurent, Fries,
-  Deco/Jirsa, Frey/Morris, etc.) and instruct them to actually
-  `WebFetch` the cited papers and check the doc's claims against
-  the source. **Taking the doc's paraphrase at face value defeats
-  the hunt.**
-- **`hardcore-tester`** — for tests that pass for the wrong
-  reason.
-- **`substrate-reviewer`** — when the defect might be "this isn't
-  really using the phasor substrate as documented."
-- **`creative-cs`** — for architectural ugliness: five special
-  cases hiding one rule, mechanisms in the wrong module, modules
-  that must be detached together. The pattern-collapsing hunter.
-- **`pragmatic-engineer`** — for code smells: duplicated logic,
-  defensive scaffolding around a hidden bug, abstraction that
-  pays no rent, cross-cutting concerns smeared across modules.
+If no hunter roster is configured, default to spawning ONE
+`general-purpose` agent with the user's scope and the briefing
+items below — every Claude Code installation has this agent
+available.
 
 Brief each agent with:
 
-1. The catalog floor — point at the deck CLI queries for
+1. The catalog floor — point at the goc CLI queries for
    `open` / `done` / `disproved` / `unverified`. Agents should
-   `deck.py show <title>` for full READMEs of specific entries.
+   `goc show <title>` for full READMEs of specific entries.
 2. The user's scope.
-3. Mindset: prioritize `contribution: high` (structural / algorithmic)
-   over `contribution: low` (text-rot).
-4. Deliverable: top 3 candidates with **file:line** citation, an
-   **contribution classification** (high/medium/low) + relevant **tags**,
-   and a **falsifiable prediction** about what
+3. Mindset: prioritize `contribution: high` (structural /
+   algorithmic) over `contribution: low` (text-rot).
+4. Deliverable: top 3 candidates with **file:line** citation, a
+   **contribution classification** (high/medium/low) + relevant
+   **tags**, and a **falsifiable prediction** about what
    `deck/<title>/reproduce.py` would print.
 
-Use `model: "opus"` per project CLAUDE.md.
+For model-tier guidance (e.g. mandating `model: "opus"`), see
+`.game-of-cards/tooling-conventions.md`.
 
-If a hunter returns three `contribution: low` candidates and no `high`,
-send it back with explicit pointers to under-audited high-impact
-seams (the integrator, plasticity update equations, state-restore
-paths, default-parameter table, public API contracts).
+If a hunter returns three `contribution: low` candidates and no
+`high`, send it back with explicit pointers to under-audited
+high-impact seams (the integrator, the core update logic, state-
+restore paths, default-parameter table, public API contracts).
 
 ## Phase 3 — File (one card per confirmed defect)
 
