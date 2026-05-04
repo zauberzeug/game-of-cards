@@ -1,7 +1,7 @@
 ---
 title: investigate-fix-version-drift
 summary: "Find and fix the repo's self-hosted version drift: generated marker blocks and user-facing docs still mention older releases while the package reports the current version."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
