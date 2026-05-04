@@ -8,7 +8,7 @@ created: 2026-05-03
 closed_at: null
 human_gate: none
 advances: []
-advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, migrate-phasor-agents-off-vendored-deckpy]
+advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, migrate-phasor-agents-off-vendored-deckpy, surface-active-cards-in-board]
 tags: [epic, infra, meta-fix]
 definition_of_done: |
   - [ ] `game-of-cards` package published on PyPI; `pipx install game-of-cards` puts `goc` on PATH (sub-card: package-pyproject-and-pypi-release)
