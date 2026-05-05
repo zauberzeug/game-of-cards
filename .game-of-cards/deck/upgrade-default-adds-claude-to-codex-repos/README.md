@@ -1,20 +1,20 @@
 ---
 title: upgrade-default-adds-claude-to-codex-repos
 summary: "A no-flag `goc upgrade` in an older Codex-only install defaults to `agents: claude` instead of detecting the existing Codex harness. The upgrade path can add Claude-only files to Codex repos and skip refreshing `.codex/skills` unless the user remembers `--agents codex`."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/upgrade-default-adds-claude-to-codex-repos/reproduce.py` exits zero
-  - [ ] No-flag `goc upgrade` detects existing installed agent surfaces the same way install does
-  - [ ] A Codex-only install upgrades Codex assets by default and does not plan Claude-only writes unless Claude is present or explicitly requested
-  - [ ] Regression coverage exercises no-flag upgrade in Codex-only, Claude-only, and mixed installs
+  - [x] `uv run python deck/upgrade-default-adds-claude-to-codex-repos/reproduce.py` exits zero
+  - [x] No-flag `goc upgrade` detects existing installed agent surfaces the same way install does
+  - [x] A Codex-only install upgrades Codex assets by default and does not plan Claude-only writes unless Claude is present or explicitly requested
+  - [x] Regression coverage exercises no-flag upgrade in Codex-only, Claude-only, and mixed installs
 ---
 
 # upgrade-default-adds-claude-to-codex-repos

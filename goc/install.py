@@ -206,6 +206,30 @@ def _detect_agent_surfaces(
     return tuple(detected)
 
 
+def _detect_installed_surfaces(
+    target: Path,
+    templates: Path,
+    *,
+    supported_agents: tuple[str, ...] = SUPPORTED_AGENTS,
+) -> tuple[str, ...]:
+    """Detect which agent harnesses GoC previously installed into *target*.
+
+    Uses each harness's skill-tree directory as the canonical install marker,
+    since those paths are agent-specific and GoC never writes one harness's
+    skill directory for another harness.
+    """
+
+    detected: list[str] = []
+    for agent in supported_agents:
+        try:
+            shim = _load_agent_shim(templates, agent)
+        except click.ClickException:
+            continue
+        if shim.skills and (target / shim.skills.target).is_dir():
+            detected.append(agent)
+    return tuple(detected)
+
+
 def _default_install_agents(target: Path, *, supported_agents: tuple[str, ...]) -> tuple[str, ...]:
     """Choose install defaults: detected harnesses, otherwise the documented default."""
 
@@ -515,7 +539,8 @@ INSTALL_AGENTS_HELP = (
     "Supported: claude, codex."
 )
 UPGRADE_AGENTS_HELP = (
-    "Agent harnesses to upgrade; repeat or comma-separate. Default: claude. "
+    "Agent harnesses to upgrade; repeat or comma-separate. "
+    "Omit to auto-detect from installed harnesses; no harness defaults to claude. "
     "Supported: claude, codex."
 )
 NO_HARNESS_HELP = (
@@ -616,19 +641,25 @@ def upgrade(
 
     target = Path.cwd().resolve()
     templates = _templates_root()
+    supported_agents = _registered_agents(templates)
 
     if no_harness:
         agents: tuple[str, ...] = ()
         agents_explicit = True
     else:
+        agents_explicit = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
+        if agents_explicit:
+            default_agents: tuple[str, ...] = DEFAULT_AGENTS
+        else:
+            installed = _detect_installed_surfaces(target, templates, supported_agents=supported_agents)
+            default_agents = installed or DEFAULT_AGENTS
         agents = _parse_agents(
             agent_specs,
             claude=claude_flag,
             codex=codex_flag,
-            supported_agents=_registered_agents(templates),
-            default_agents=DEFAULT_AGENTS,
+            supported_agents=supported_agents,
+            default_agents=default_agents,
         )
-        agents_explicit = bool(agent_specs or claude_flag or codex_flag or no_harness)
 
     deck_dir = _find_installed_deck_dir(target)
     if deck_dir is None:

@@ -40,7 +40,7 @@ def main() -> int:
             print(install.stdout)
             print(install.stderr)
             return install.returncode
-        (cwd / "deck" / ".goc-version").write_text("0.0.1\n")
+        (cwd / ".game-of-cards" / "deck" / ".goc-version").write_text("0.0.1\n")
         upgrade = _run(cwd, env, "upgrade", "--dry-run")
 
     first_lines = "\n".join(upgrade.stdout.splitlines()[:8])
