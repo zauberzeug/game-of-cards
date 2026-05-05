@@ -1,26 +1,37 @@
-# Pages deployment — renders README.md as the site at game-of-cards.com.
+# Pages deployment — renders README.md, goc.md, and ABOUT.md as the site
+# at game-of-cards.com, AND publishes raw markdown mirrors at fixed paths
+# so LLMs can fetch the same content as plain text/markdown.
 #
-# README.md is the single source of truth for the marketing surface
-# (decided by `build-game-of-cards-project-website`). This workflow
-# synthesizes the Jekyll site at deploy time so we never check in a
-# duplicate index.md that could drift:
+# Three source files are the single source of truth:
+#   README.md           → /              (rendered HTML for humans)
+#                       → /index.md      (raw markdown for LLMs)
+#                       → /README.md     (raw mirror at conventional name)
+#   goc.md              → /goc/          (rendered)
+#                       → /goc.md        (raw)
+#   ABOUT.md            → /about/        (rendered)
+#                       → /ABOUT.md      (raw)
 #
-#   1. Drop the README's leading H1 + the blank line that follows it
-#      (the Jekyll layout supplies the page title).
-#   2. Rewrite repo-relative markdown links (docs/, goc/, deck/,
-#      assets/, LICENSE) to absolute GitHub blob URLs so they resolve
-#      from the rendered site.
-#   3. Build with the GitHub-supported jekyll-theme-cayman.
-#   4. Publish to game-of-cards.com (CNAME shipped with the artifact).
+# A curated /llms.txt (llmstxt.org convention) gives crawlers a terse
+# summary plus pointers to the raw documents.
 #
-# DNS: the apex `game-of-cards.com` needs A records pointing at GitHub
-# Pages IPs (or `www.game-of-cards.com` as a CNAME → zauberzeug.github.io).
-# That's a one-time setup at the domain registrar, outside this repo.
+# Pipeline:
+#   1. Python step synthesizes _pages/{index,goc,about}.md by stripping
+#      each source's H1 and rewriting repo-relative markdown links to
+#      site paths (goc.md → /goc/, ABOUT.md → /about/) or absolute
+#      GitHub blob URLs (AGENTS.md, LICENSE, goc/, deck/, .game-of-cards/).
+#   2. Same step copies assets/ into _pages/assets so embedded images
+#      (the comic strip and the how-it-works diagram) resolve identically
+#      on GitHub and on the rendered site.
+#   3. Jekyll renders _pages/ to _site/ via jekyll-theme-cayman (mobile-
+#      responsive, CSS-only — no JS components, so the rendered HTML
+#      stays scrapable).
+#   4. Post-build step drops raw markdown mirrors + llms.txt into _site/
+#      AFTER Jekyll has run, so they're served as static files (no
+#      front matter, no rendering).
 #
-# Security: the only github-context expression used in `run:` is
-# `github.repository`, which is the canonical owner/repo slug and not
-# attacker-controlled. It is still indirected through an `env:` binding
-# per the safe-injection pattern.
+# Security: only `github.repository` is interpolated into a run: command,
+# and it's indirected through env: per the safe-injection pattern. No
+# attacker-controlled inputs are used.
 
 name: Deploy GitHub Pages
 
@@ -29,6 +40,9 @@ on:
     branches: [main]
     paths:
       - README.md
+      - goc.md
+      - ABOUT.md
+      - assets/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -47,34 +61,79 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Synthesize Jekyll site from README.md
+      - name: Synthesize Jekyll site
         env:
           REPO: ${{ github.repository }}
         run: |
-          set -euo pipefail
-          mkdir -p _pages
-          BASE="https://github.com/${REPO}/blob/main"
+          python3 <<'PY'
+          import os
+          import re
+          import shutil
+          from pathlib import Path
 
-          {
-            cat <<'FRONT'
-          ---
-          layout: default
-          title: Game of Cards
-          description: Agile in the age of AI agents — repo-native cards humans and AI agents share.
-          ---
-          FRONT
-            sed '1,/^$/d' README.md \
-              | sed -E "s#\]\(((docs|goc|deck|assets)/[^)]+)\)#](${BASE}/\1)#g" \
-              | sed -E "s#\]\((LICENSE)\)#](${BASE}/\1)#g"
-          } > _pages/index.md
+          repo = os.environ["REPO"]
+          base = f"https://github.com/{repo}/blob/main"
+          out = Path("_pages")
+          out.mkdir(exist_ok=True)
 
-          cat > _pages/_config.yml <<'CONF'
-          title: Game of Cards
-          description: Agile in the age of AI agents — repo-native cards humans and AI agents share.
-          theme: jekyll-theme-cayman
-          CONF
+          def rewrite_links(text: str) -> str:
+              rules = [
+                  (r"\]\(README\.md\)", "](/)"),
+                  (r"\]\(goc\.md\)", "](/goc/)"),
+                  (r"\]\(ABOUT\.md\)", "](/about/)"),
+                  (r"\]\(AGENTS\.md\)", f"]({base}/AGENTS.md)"),
+                  (r"\]\(LICENSE\)", f"]({base}/LICENSE)"),
+                  (r"\]\((goc/[^)]+|\.game-of-cards/[^)]+|deck/[^)]+)\)",
+                   f"]({base}/\\1)"),
+              ]
+              for pat, repl in rules:
+                  text = re.sub(pat, repl, text)
+              return text
 
-          echo "game-of-cards.com" > _pages/CNAME
+          def strip_first_h1(text: str) -> str:
+              lines = text.splitlines(keepends=True)
+              for i, line in enumerate(lines):
+                  if line.startswith("# "):
+                      del lines[i]
+                      if i < len(lines) and lines[i].strip() == "":
+                          del lines[i]
+                      break
+              return "".join(lines)
+
+          def synthesize(src: str, dst: str, title: str, permalink: str,
+                         description: str = "") -> None:
+              body = rewrite_links(strip_first_h1(Path(src).read_text()))
+              front = ["---", "layout: default", f"title: {title}",
+                      f"permalink: {permalink}"]
+              if description:
+                  front.append(f"description: {description}")
+              front.append("---")
+              (out / dst).write_text("\n".join(front) + "\n" + body)
+
+          synthesize(
+              "README.md", "index.md",
+              "Game of Cards", "/",
+              "Agile in the age of AI agents — repo-native cards humans and AI agents share.",
+          )
+          synthesize(
+              "goc.md", "goc.md",
+              "goc — the Game of Cards CLI", "/goc/",
+          )
+          synthesize(
+              "ABOUT.md", "about.md",
+              "Background — context for Game of Cards", "/about/",
+          )
+
+          (out / "_config.yml").write_text(
+              "title: Game of Cards\n"
+              "description: Agile in the age of AI agents — repo-native cards humans and AI agents share.\n"
+              "theme: jekyll-theme-cayman\n"
+          )
+          (out / "CNAME").write_text("game-of-cards.com\n")
+
+          if Path("assets").is_dir():
+              shutil.copytree("assets", out / "assets")
+          PY
 
       - uses: actions/configure-pages@v5
 
@@ -82,6 +141,41 @@ jobs:
         with:
           source: ./_pages
           destination: ./_site
+
+      - name: Drop raw markdown mirrors and llms.txt into _site
+        run: |
+          set -euo pipefail
+          cp README.md _site/README.md
+          cp README.md _site/index.md
+          cp goc.md _site/goc.md
+          cp ABOUT.md _site/ABOUT.md
+          cat > _site/llms.txt <<'EOF'
+          # Game of Cards
+
+          > Agile in the age of AI agents: a repo-native methodology for turning work into durable, inspectable cards that humans and coding agents share.
+
+          ## Install
+
+          Bootstrap via the PyPI package `game-of-cards`. The simplest path is to ask your coding agent in any repo:
+
+          > Install Game of Cards (https://github.com/zauberzeug/game-of-cards) in this repo, then create a first card for the next small improvement.
+
+          Manual: `uv tool install game-of-cards` or `pipx install game-of-cards`, then `goc install` inside any repo.
+
+          ## How it works
+
+          The agent translates plain-English intent into card operations through skills (markdown protocols). The CLI `goc` implements the operations. Cards are markdown directories under `deck/` with frontmatter, an append-only log, and a Definition-of-Done checklist the CLI refuses to close while any box is unchecked. A card's `human_gate` field can park it waiting on a human; agents resume autonomously when the gate is lowered.
+
+          ## Documents
+
+          - https://game-of-cards.com/index.md — full README
+          - https://game-of-cards.com/goc.md — CLI reference
+          - https://game-of-cards.com/ABOUT.md — methodology context, why the name, where it fits
+
+          ## Source
+
+          https://github.com/zauberzeug/game-of-cards
+          EOF
 
       - uses: actions/upload-pages-artifact@v3
 

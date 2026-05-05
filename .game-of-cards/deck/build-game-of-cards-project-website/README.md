@@ -8,7 +8,7 @@ created: 2026-05-05
 closed_at: null
 human_gate: session
 advances: [ship-game-of-cards-as-cross-agent-cli]
-advanced_by: [create-project-website-explanatory-illustration]
+advanced_by: [create-project-website-explanatory-illustration, redesign-readme-as-llm-first-marketing-page]
 tags: [story, documentation]
 definition_of_done: |
   - [ ] Website scope decided in a session: audience, primary pages/sections, deployment target, and content source of truth

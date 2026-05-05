@@ -22,7 +22,7 @@ def _repo_root() -> Path:
 
 def _find_invalid_examples(repo: Path) -> list[tuple[str, int, str]]:
     hits: list[tuple[str, int, str]] = []
-    for rel in (Path("README.md"), Path("docs/cli.md")):
+    for rel in (Path("README.md"), Path("goc.md")):
         for lineno, line in enumerate((repo / rel).read_text().splitlines(), start=1):
             if INVALID_QUOTED_NEW.search(line):
                 hits.append((str(rel), lineno, line.strip()))

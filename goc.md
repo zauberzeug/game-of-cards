@@ -1,6 +1,6 @@
-# Game of Cards CLI
+# `goc` — the Game of Cards CLI
 
-This is the command-level reference for the `goc` implementation. The methodology is described in the main README.
+This is the command-level reference for the `goc` implementation. The methodology is described in the main [README](README.md); the broader context (why "Game of Cards", agile lineage, where it fits) lives in [`ABOUT.md`](ABOUT.md).
 
 ## Install the command
 
@@ -80,7 +80,7 @@ Generated guidance blocks are marker-bounded so user-authored content outside th
 goc
 goc --board
 goc -v --status all
-goc new "rename the button to Export"
+goc new rename-the-button-to-export
 goc status rename-the-button-to-export active
 goc done rename-the-button-to-export
 goc validate
