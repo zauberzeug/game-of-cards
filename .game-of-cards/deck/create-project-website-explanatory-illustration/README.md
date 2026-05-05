@@ -1,11 +1,11 @@
 ---
 title: create-project-website-explanatory-illustration
 summary: "Create the project-website illustration that explains Game of Cards visually. This is not a generic flow diagram for README prose; it is a session-built visual asset for the project site, and the session should decide the metaphor, content density, style, and export format."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: [build-game-of-cards-project-website]
 advanced_by: []
