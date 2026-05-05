@@ -23,10 +23,11 @@ run_goc() {
     fi
 }
 
-required_file="$repo_root/deck/.goc-version"
 required=""
-if [ -f "$required_file" ]; then
-    required=$(cat "$required_file" 2>/dev/null || true)
+if [ -f "$repo_root/.game-of-cards/deck/.goc-version" ]; then
+    required=$(cat "$repo_root/.game-of-cards/deck/.goc-version" 2>/dev/null || true)
+elif [ -f "$repo_root/deck/.goc-version" ]; then
+    required=$(cat "$repo_root/deck/.goc-version" 2>/dev/null || true)
 fi
 
 if [ -n "$required" ]; then

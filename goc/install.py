@@ -5,8 +5,8 @@ the current working directory. No-flag installs detect existing Claude/Codex
 project surfaces and fall back to the Claude Code reference harness when no
 agent marker is present. Codex uses the shared AGENTS.md guidance plus
 Codex-readable skills, without Claude-only hooks.
-Idempotent — second runs detect existing installs via `deck/.goc-version` and
-exit clean.
+Idempotent — second runs detect existing installs via `.game-of-cards/deck/.goc-version`
+(or legacy `deck/.goc-version`) and exit clean.
 
 Reads templates via `importlib.resources` so it works from a wheel install.
 """
@@ -44,7 +44,7 @@ PRE_COMMIT_HOOK = """\
         entry: goc validate
         language: system
         pass_filenames: false
-        files: ^deck/.*$
+        files: ^\\.game-of-cards/deck/.*$
 """
 
 
@@ -213,7 +213,7 @@ def _default_install_agents(target: Path, *, supported_agents: tuple[str, ...]) 
 
 
 def _detect_existing(deck_dir: Path) -> str | None:
-    """Return the version pinned by `deck/.goc-version`, or None if absent."""
+    """Return the version pinned by `<deck_dir>/.goc-version`, or None if absent."""
 
     sentinel = deck_dir / ".goc-version"
     if not sentinel.exists():
@@ -221,12 +221,24 @@ def _detect_existing(deck_dir: Path) -> str | None:
     return sentinel.read_text().strip()
 
 
+def _find_installed_deck_dir(target: Path) -> Path | None:
+    """Return the path of an existing GoC install (new or legacy), or None."""
+    new = target / ".game-of-cards" / "deck"
+    if (new / ".goc-version").exists():
+        return new
+    legacy = target / "deck"
+    if (legacy / ".goc-version").exists():
+        return legacy
+    return None
+
+
 def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list[PlannedWrite]:
     """Compute the list of writes the installer will perform."""
 
+    deck_dir = target / ".game-of-cards" / "deck"
     writes: list[PlannedWrite] = []
-    writes.append(PlannedWrite("shared", "write", target / "deck" / "log.md", "project-state"))
-    writes.append(PlannedWrite("shared", "write", target / "deck" / ".goc-version", "project-state"))
+    writes.append(PlannedWrite("shared", "write", deck_dir / "log.md", "project-state"))
+    writes.append(PlannedWrite("shared", "write", deck_dir / ".goc-version", "project-state"))
     config_src = templates / "game_of_cards"
     for asset in config_src.rglob("*"):
         if asset.is_dir() or "__pycache__" in asset.parts:
@@ -487,7 +499,7 @@ def install(
     """Scaffold a fresh repo with the shared GoC files and selected harnesses."""
 
     target = Path.cwd().resolve()
-    deck_dir = target / "deck"
+    deck_dir = target / ".game-of-cards" / "deck"
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
 
@@ -512,9 +524,11 @@ def install(
         _print_plan("install", target, writes, agents)
         return
 
-    existing = _detect_existing(deck_dir)
-    if existing is not None:
-        click.echo(f"already installed (deck/.goc-version → {existing})", err=True)
+    existing_dir = _find_installed_deck_dir(target)
+    if existing_dir is not None:
+        existing = _detect_existing(existing_dir)
+        rel = existing_dir.relative_to(target)
+        click.echo(f"already installed ({rel}/.goc-version → {existing})", err=True)
         click.echo("run `goc upgrade` to re-sync templates.")
         sys.exit(1)
 
@@ -559,7 +573,6 @@ def upgrade(
     """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
 
     target = Path.cwd().resolve()
-    deck_dir = target / "deck"
     templates = _templates_root()
 
     if no_harness:
@@ -575,10 +588,11 @@ def upgrade(
         )
         agents_explicit = bool(agent_specs or claude_flag or codex_flag or no_harness)
 
-    existing = _detect_existing(deck_dir)
-    if existing is None:
+    deck_dir = _find_installed_deck_dir(target)
+    if deck_dir is None:
         click.echo("no existing install detected — run `goc install` first.", err=True)
         sys.exit(1)
+    existing = _detect_existing(deck_dir)
 
     if existing == __version__ and not dry_run and not agents_explicit:
         click.echo(f"already at goc {__version__} — nothing to do.")
