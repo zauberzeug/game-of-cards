@@ -139,7 +139,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("shared append AGENTS.md", planned)
             self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", planned)
             self.assertIn("claude write  .claude/skills/_goc-bootstrap.sh", planned)
-            self.assertIn("claude write  .claude/hooks/user-prompt-submit-goc.py", planned)
+            self.assertIn("claude write  .claude/hooks/deck_prompt_router.py", planned)
+            self.assertIn("claude write  .claude/hooks/deck_session_start.py", planned)
+            self.assertIn("claude merge  .claude/settings.json", planned)
             self.assertIn("claude append CLAUDE.md", planned)
             self.assertNotIn(".codex/", planned)
 
@@ -153,7 +155,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         self.assertEqual(".codex/skills", codex["skills"]["target"])
         self.assertEqual("codex", codex["skills"]["frontmatter"])
         self.assertIn(".claude/skills/_goc-bootstrap.sh", [file["target"] for file in claude["files"]])
-        self.assertIn(".claude/hooks/user-prompt-submit-goc.py", [file["target"] for file in claude["files"]])
+        self.assertIn(".claude/hooks/deck_prompt_router.py", [file["target"] for file in claude["files"]])
+        self.assertIn(".claude/hooks/deck_session_start.py", [file["target"] for file in claude["files"]])
+        self.assertEqual(".claude/settings.json", claude.get("settings_json"))
 
     def test_multi_agent_dry_run_lists_both_registered_harnesses(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -165,7 +169,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             planned = result.stdout
             self.assertIn("agents: claude,codex", planned)
             self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", planned)
-            self.assertIn("claude write  .claude/hooks/user-prompt-submit-goc.py", planned)
+            self.assertIn("claude write  .claude/hooks/deck_prompt_router.py", planned)
+            self.assertIn("claude write  .claude/hooks/deck_session_start.py", planned)
+            self.assertIn("claude merge  .claude/settings.json", planned)
             self.assertIn("codex  write  .codex/skills/pull-card/SKILL.md", planned)
             self.assertNotIn("openclaw", planned.lower())
 
@@ -177,7 +183,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(install)
             self.assertIn('Next: ask your LLM agent: "create a card for the next change I want to make."', install.stdout)
             self.assertFalse((cwd / ".codex").exists())
-            self.assertTrue((cwd / ".claude" / "hooks" / "user-prompt-submit-goc.py").is_file())
+            self.assertTrue((cwd / ".claude" / "hooks" / "deck_prompt_router.py").is_file())
+            self.assertTrue((cwd / ".claude" / "hooks" / "deck_session_start.py").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
             self.assertTrue((cwd / "CLAUDE.md").is_file())
 
@@ -645,6 +652,82 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(result)
             self.assertTrue((legacy_deck / ".goc-version").is_file())
+
+
+    def test_claude_install_writes_settings_json_with_both_hook_registrations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+
+            settings_path = cwd / ".claude" / "settings.json"
+            self.assertTrue(settings_path.is_file())
+            settings = json.loads(settings_path.read_text())
+            hooks = settings.get("hooks", {})
+            session_cmds = [
+                h.get("command")
+                for group in hooks.get("SessionStart", [])
+                for h in group.get("hooks", [])
+            ]
+            prompt_cmds = [
+                h.get("command")
+                for group in hooks.get("UserPromptSubmit", [])
+                for h in group.get("hooks", [])
+            ]
+            self.assertIn(
+                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+                session_cmds,
+            )
+            self.assertIn(
+                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
+                prompt_cmds,
+            )
+
+    def test_claude_upgrade_merges_settings_json_without_clobbering_existing_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            settings_path = cwd / ".claude" / "settings.json"
+            existing = json.loads(settings_path.read_text())
+            existing["theme"] = "dark"
+            existing["hooks"]["PreToolUse"] = [{"hooks": [{"type": "command", "command": "echo pre"}]}]
+            settings_path.write_text(json.dumps(existing, indent=2))
+
+            self.assert_goc_ok(self.run_goc(cwd, "upgrade", "--agents", "claude"))
+
+            merged = json.loads(settings_path.read_text())
+            self.assertEqual("dark", merged.get("theme"))
+            self.assertIn("PreToolUse", merged["hooks"])
+            session_cmds = [
+                h.get("command")
+                for group in merged["hooks"].get("SessionStart", [])
+                for h in group.get("hooks", [])
+            ]
+            self.assertIn(
+                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+                session_cmds,
+            )
+
+    def test_claude_upgrade_does_not_duplicate_hook_registrations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            self.assert_goc_ok(self.run_goc(cwd, "upgrade", "--agents", "claude"))
+
+            settings_path = cwd / ".claude" / "settings.json"
+            settings = json.loads(settings_path.read_text())
+            session_cmds = [
+                h.get("command")
+                for group in settings["hooks"].get("SessionStart", [])
+                for h in group.get("hooks", [])
+            ]
+            goc_count = sum(
+                1 for c in session_cmds
+                if "deck_session_start" in (c or "")
+            )
+            self.assertEqual(1, goc_count)
 
 
 if __name__ == "__main__":

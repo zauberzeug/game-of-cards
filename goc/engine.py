@@ -472,6 +472,31 @@ def detect_advance_cycles(cards: list[Card]) -> list[str]:
     return errors
 
 
+def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) -> bool:
+    """Return True if adding `title.advanced_by += advancer` would create a cycle.
+
+    The proposed edge is advancer→title in the advances direction.  A cycle
+    exists when title can already reach advancer by following existing advances
+    edges — closing that path back to advancer would form a loop.
+    """
+    by_title = {c.title: c for c in cards}
+    seen: set[str] = set()
+    stack: list[str] = [title]
+    while stack:
+        cur = stack.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        card = by_title.get(cur)
+        if card is None:
+            continue
+        for a in card.frontmatter.get("advances") or []:
+            if a == advancer:
+                return True
+            stack.append(a)
+    return False
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Filtering + sorting
 
@@ -1730,6 +1755,10 @@ def advance(title, advancer, commit, no_commit):
     """Add bidirectional value-flow edge: title.advanced_by += advancer, advancer.advances += title."""
     if title == advancer:
         click.echo("ERROR: cannot advance a card with itself", err=True)
+        sys.exit(2)
+    cards = load_all_cards()
+    if _would_create_advance_cycle(cards, title, advancer):
+        click.echo(f"ERROR: adding {advancer} → {title} would create a cycle in the advances graph", err=True)
         sys.exit(2)
     _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
     click.echo(f"advance: {title}.advanced_by += {advancer}; {advancer}.advances += {title}")

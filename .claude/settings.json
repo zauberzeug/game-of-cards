@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py"
+          }
+        ]
+      }
+    ]
+  }
+}

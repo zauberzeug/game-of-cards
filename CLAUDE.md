@@ -115,19 +115,25 @@ expose them as Claude Code's skill primitive so they're invokable
 by name and can carry richer prompt scaffolding (decision rubrics,
 Andon-cord guards, etc.).
 
-### Silent runtime via `UserPromptSubmit` hook
+### Runtime hooks and `.claude/settings.json`
 
-`.claude/hooks/user-prompt-submit-goc.py` is an **optional** Claude-Code-only
-hook installed by `goc install --agents claude`. It detects work-initiating
-prompts and injects a deck-first reminder into Claude's view of the user
-message. The reminder runs the silent pipeline
-(`scan-deck → create-card → advance-card → implement → finish-card`)
-without announcing card operations to the user. Vibe coders see code,
-not bookkeeping.
+`goc install --agents claude` installs two hook scripts and registers them
+in `.claude/settings.json` so Claude Code actually executes them:
 
-The hook is not required for GoC to work — it is a convenience affordance.
-Repos without it still get full GoC functionality through the `goc` CLI and
-the AGENTS.md guidance. Other agent runtimes implement the same flow through
-their own installed GoC skills or by invoking the CLI verbs from `AGENTS.md`.
-The prompt hook remains Claude-only.
+| Hook event | Script | Purpose |
+|---|---|---|
+| `SessionStart` | `.claude/hooks/deck_session_start.py` | Prints active-card reminder at session start; silent when no cards are in-flight. |
+| `UserPromptSubmit` | `.claude/hooks/deck_prompt_router.py` | Detects work-initiating prompts; injects a deck-first reminder into Claude's view. |
+
+**`.claude/settings.json`** is the Claude Code hook registration file — it is
+what makes Claude Code invoke the scripts. `goc install` and `goc upgrade`
+*merge* this file (adding GoC entries without removing your other settings or
+hook registrations). It is **Claude-specific** and distinct from
+`.game-of-cards/config.yaml`, which is the runtime-neutral GoC configuration
+for workflow options and closure checks shared across all agent runtimes.
+
+The hooks are optional. Repos without them still get full GoC functionality
+through the `goc` CLI and AGENTS.md guidance; skills work regardless. Other
+agent runtimes (Codex, OpenCode, Cursor) use their own hook systems and do
+not share this registration. The prompt-router hook remains Claude-only.
 <!-- END GOC -->

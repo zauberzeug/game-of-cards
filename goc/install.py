@@ -82,6 +82,7 @@ class AgentShim:
     skills: SkillShim | None
     files: tuple[ShimFile, ...]
     guidance: tuple[GuidanceBlock, ...]
+    settings_json: Path | None = None
 
 
 AGENTS_GUIDANCE = GuidanceBlock("AGENTS.md", "AGENTS_GOC.md", "# Agent Guidelines")
@@ -142,11 +143,13 @@ def _load_agent_shim(templates: Path, agent: str) -> AgentShim:
         )
         for guidance_spec in raw.get("guidance", [])
     )
+    settings_json = Path(raw["settings_json"]) if raw.get("settings_json") else None
     return AgentShim(
         name=raw.get("name", agent),
         skills=skills,
         files=files,
         guidance=guidance,
+        settings_json=settings_json,
     )
 
 
@@ -232,6 +235,40 @@ def _find_installed_deck_dir(target: Path) -> Path | None:
     return None
 
 
+GOC_CLAUDE_HOOKS: dict[str, str] = {
+    "SessionStart": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+    "UserPromptSubmit": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
+}
+
+
+def _merge_claude_settings(settings_path: Path) -> None:
+    """Write or merge .claude/settings.json with GoC hook registrations.
+
+    Adds GoC-managed hook entries under each event type without removing
+    unrelated keys or hooks that belong to the user.
+    """
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    settings: dict = {}
+    if settings_path.exists():
+        try:
+            settings = json.loads(settings_path.read_text())
+        except json.JSONDecodeError:
+            pass
+
+    hooks = settings.setdefault("hooks", {})
+    for event, command in GOC_CLAUDE_HOOKS.items():
+        event_hooks: list = hooks.setdefault(event, [])
+        already = any(
+            any(h.get("command") == command for h in group.get("hooks", []))
+            for group in event_hooks
+            if isinstance(group, dict)
+        )
+        if not already:
+            event_hooks.append({"hooks": [{"type": "command", "command": command}]})
+
+    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+
+
 def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list[PlannedWrite]:
     """Compute the list of writes the installer will perform."""
 
@@ -255,6 +292,8 @@ def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list
             writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
         for guidance in shim.guidance:
             writes.append(PlannedWrite(agent, "append", target / guidance.path, "harness"))
+        if shim.settings_json:
+            writes.append(PlannedWrite(agent, "merge", target / shim.settings_json, "harness"))
     writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
     return writes
 
@@ -465,6 +504,9 @@ def _sync_agent_harness(target: Path, templates: Path, agent: str, *, replace_sk
     for guidance in shim.guidance:
         body = (templates / guidance.template).read_text()
         _append_marker_block(target / guidance.path, body, header=guidance.header)
+
+    if shim.settings_json:
+        _merge_claude_settings(target / shim.settings_json)
 
 
 INSTALL_AGENTS_HELP = (
