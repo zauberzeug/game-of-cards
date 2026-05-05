@@ -1,19 +1,19 @@
 ---
 title: add-plausible-analytics-to-marketing-site
 summary: Inject Plausible privacy-friendly analytics snippet into site/index.html so visits to the marketing page are tracked without cookies or PII.
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-05
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: []
 definition_of_done: |
-  - [ ] Plausible loader + init shim added inside `<head>` of `site/index.html`
-  - [ ] data-domain / script src match the user-provided snippet (pa-BeDjiXGZwVeJ1mhrWfx0W.js)
-  - [ ] Page still renders (visual check) and no console errors from the snippet
+  - [x] Plausible loader + init shim added inside `<head>` of `site/index.html`
+  - [x] data-domain / script src match the user-provided snippet (pa-BeDjiXGZwVeJ1mhrWfx0W.js)
+  - [x] Page still renders (visual check) and no console errors from the snippet
 ---
 
 # add-plausible-analytics-to-marketing-site
