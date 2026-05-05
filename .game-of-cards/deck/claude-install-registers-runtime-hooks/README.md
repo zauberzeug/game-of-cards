@@ -1,22 +1,22 @@
 ---
 title: claude-install-registers-runtime-hooks
 summary: "The Claude harness installs a UserPromptSubmit hook script, but it does not write the `.claude/settings.json` hook registration that makes Claude Code run it. Match the working phasor-agents shape by installing Claude hook config for SessionStart and UserPromptSubmit without clobbering user settings."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] `goc install --agents claude` writes or merges `.claude/settings.json` hook registrations without clobbering existing user settings
-  - [ ] Claude install registers `SessionStart -> uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py`
-  - [ ] Claude install registers `UserPromptSubmit -> uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py`
-  - [ ] The installed hook scripts exist under `.claude/hooks/` and are packaged from `goc/templates/hooks/`
-  - [ ] Tests cover fresh Claude install, upgrade re-sync, and preservation of unrelated `.claude/settings.json` keys/hooks
-  - [ ] README/CLAUDE guidance accurately distinguishes Claude hook registration from `.game-of-cards/config.yaml`
+  - [x] `goc install --agents claude` writes or merges `.claude/settings.json` hook registrations without clobbering existing user settings
+  - [x] Claude install registers `SessionStart -> uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py`
+  - [x] Claude install registers `UserPromptSubmit -> uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py`
+  - [x] The installed hook scripts exist under `.claude/hooks/` and are packaged from `goc/templates/hooks/`
+  - [x] Tests cover fresh Claude install, upgrade re-sync, and preservation of unrelated `.claude/settings.json` keys/hooks
+  - [x] README/CLAUDE guidance accurately distinguishes Claude hook registration from `.game-of-cards/config.yaml`
 ---
 
 # claude-install-registers-runtime-hooks

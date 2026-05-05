@@ -12,10 +12,15 @@
       "mode": "executable"
     },
     {
-      "source": "hooks/user-prompt-submit.py",
-      "target": ".claude/hooks/user-prompt-submit-goc.py"
+      "source": "hooks/deck_prompt_router.py",
+      "target": ".claude/hooks/deck_prompt_router.py"
+    },
+    {
+      "source": "hooks/deck_session_start.py",
+      "target": ".claude/hooks/deck_session_start.py"
     }
   ],
+  "settings_json": ".claude/settings.json",
   "guidance": [
     {
       "source": "CLAUDE_GOC.md",
