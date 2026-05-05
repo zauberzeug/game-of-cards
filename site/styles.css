@@ -126,6 +126,14 @@ code:not(pre code) {
   gap: 14px;
 }
 .brand:hover { color: var(--parchment); }
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Optical correction: uppercase serif sits above line-box center, so
+     nudge the geometric mark up to align with cap-height midline. */
+  transform: translateY(-1px);
+}
 nav.site-nav { display: flex; gap: 28px; align-items: center; }
 nav.site-nav a {
   font-family: var(--sans-body);
@@ -297,7 +305,8 @@ nav.site-nav .gh-link {
 }
 
 .readme-figure {
-  margin: 32px 0 36px;
+  max-width: 80%;
+  margin: 32px auto 36px;
   padding: 0;
   background: transparent;
   border: 1px solid var(--line);
@@ -314,20 +323,6 @@ nav.site-nav .gh-link {
   max-width: 560px;
   margin: 28px auto;
   border: 1px solid var(--line);
-}
-
-.llm-hint {
-  margin-top: 24px;
-  padding: 14px 18px;
-  border-left: 2px solid var(--gold);
-  background: rgba(201, 168, 117, 0.05);
-  font-size: 14px;
-  color: var(--silver-3);
-  line-height: 1.6;
-}
-.llm-hint strong {
-  color: var(--silver-2);
-  font-weight: 600;
 }
 
 .more-list {
