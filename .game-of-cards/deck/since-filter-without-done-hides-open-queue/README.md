@@ -1,7 +1,7 @@
 ---
 title: since-filter-without-done-hides-open-queue
 summary: "`goc --since YYYY-MM-DD` without `--done` applies a closed-date filter to the default open queue and returns no rows instead of reporting an invalid filter combination."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
