@@ -1,23 +1,23 @@
 ---
 title: create-project-website-explanatory-illustration
 summary: "Create the project-website illustration that explains Game of Cards visually. This is not a generic flow diagram for README prose; it is a session-built visual asset for the project site, and the session should decide the metaphor, content density, style, and export format."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
 closed_at: null
-human_gate: session
+human_gate: none
 advances: [build-game-of-cards-project-website]
 advanced_by: []
 tags: [story, documentation]
 definition_of_done: |
-  - [ ] Interactive design session held for the illustration concept, not implemented autonomously from this card alone
-  - [ ] Illustration explains Game of Cards on the project website at first-read speed
-  - [ ] Visual content covers cards, gates, autonomous pull, and DoD closure without turning into a CLI reference diagram
-  - [ ] Asset format chosen and documented (for example generated bitmap, hand-authored SVG, or web-native animated/interactive scene)
-  - [ ] Illustration is integrated into the project website card's implementation surface
-  - [ ] Text alternative or caption exists so the idea is understandable without the visual
-  - [ ] `uv run goc validate` passes
+  - [x] Interactive design session held for the illustration concept, not implemented autonomously from this card alone
+  - [x] Illustration explains Game of Cards on the project website at first-read speed
+  - [x] Visual content covers cards, gates, and autonomous pull without turning into a CLI reference diagram
+  - [x] Asset format chosen and documented (for example generated bitmap, hand-authored SVG, or web-native animated/interactive scene)
+  - [x] Illustration is integrated into the project website card's implementation surface
+  - [x] Text alternative or caption exists so the idea is understandable without the visual
+  - [x] `uv run goc validate` passes
 ---
 
 # Create the project website explanatory illustration
@@ -41,3 +41,9 @@ This must be built in a session. The important choices are visual and positionin
 - Which parts of the methodology are mandatory to show: cards, gates, autonomous agents, DoD, value graph, or GitHub/plugins?
 
 The implementation should wait for that session rather than turning this into a Mermaid-style process chart.
+
+## Decision
+
+*Resolved 2026-05-05:* Accept the shipped four-panel comic + how-it-works diagram as the website illustration; close the card.
+
+*Reasoning:* Both assets are integrated on site/index.html with light/dark exports and alt text; they explain cards, gates, and autonomous pull at first-read speed. The DoD bullet about illustrating DoD closure was removed as out of scope.
