@@ -36,7 +36,7 @@ def main() -> int:
         env["PYTHONPATH"] = str(repo) if not pythonpath else f"{repo}{os.pathsep}{pythonpath}"
         create = _run(cwd, env, "new", "source-card", "--gate", "none", "--tag", "story")
         moved = _run(cwd, env, "move", "source-card", "renamed-card")
-        renamed_exists = (cwd / "deck" / "renamed-card" / "README.md").is_file()
+        renamed_exists = (cwd / ".game-of-cards" / "deck" / "renamed-card" / "README.md").is_file()
 
     print(f"create_exit={create.returncode}")
     print(f"move_exit={moved.returncode}")

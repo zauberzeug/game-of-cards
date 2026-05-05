@@ -436,6 +436,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             move_result = self.run_goc(cwd, "move", "child-card", "renamed-card")
 
             self.assert_goc_ok(move_result)
+            self.assertEqual("", move_result.stderr, "non-git move fallback must not leak git fatal to stderr")
             self.assertFalse((cwd / ".game-of-cards" / "deck" / "child-card").exists())
             self.assertTrue((cwd / ".game-of-cards" / "deck" / "renamed-card" / "README.md").is_file())
             parent_readme = (cwd / ".game-of-cards" / "deck" / "parent-card" / "README.md").read_text()

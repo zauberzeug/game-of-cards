@@ -1825,7 +1825,7 @@ def move(old_title, new_title):
         click.echo(f"ERROR: {dst} already exists", err=True)
         sys.exit(2)
     try:
-        subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True)
+        subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         shutil.move(str(src), str(dst))
     text = (dst / "README.md").read_text()
