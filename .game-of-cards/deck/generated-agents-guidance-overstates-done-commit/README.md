@@ -1,7 +1,7 @@
 ---
 title: generated-agents-guidance-overstates-done-commit
 summary: "Generated agent guidance still tells agents that closure commands close and commit, but the shipped finish-card contract and engine make `done` a non-committing closure-state flip. This can leave autonomous agents believing the closure landed in git when the final work commit is still required."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-04
