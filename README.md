@@ -57,6 +57,8 @@ Once it is installed, talk to your coding agent:
 - "implement the highest-leverage open card"
 - "what's open in the deck?"
 
+They can also work autonomously in the background, draining the queue and raising a flag only when a decision needs you.
+
 The agent guidance and skills call `goc` behind the scenes. If you want to
 inspect or debug that engine directly, use the CLI:
 
