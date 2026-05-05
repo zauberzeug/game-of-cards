@@ -1,7 +1,7 @@
 ---
 title: prompt-hook-misses-rename-work-requests
 summary: "The shipped Claude UserPromptSubmit hook does not recognize `rename the button to Export` as work-initiating, even though the generated AGENTS guidance uses that exact shape as a persistent-work example. Those prompts bypass the silent GoC pipeline reminder."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
