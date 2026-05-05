@@ -37,9 +37,9 @@ def main() -> int:
 
         install = _run(cwd, env, "install", "--agents", "codex")
         new = _run(cwd, env, "new", "smoke-card", "--gate", "none", "--tag", "story")
-        readme = cwd / "deck" / "smoke-card" / "README.md"
+        readme = cwd / ".game-of-cards" / "deck" / "smoke-card" / "README.md"
         readme.write_text(readme.read_text().replace("- [ ] (replace with real criteria)", "- [x] closure ok"))
-        log = cwd / "deck" / "smoke-card" / "log.md"
+        log = cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md"
         log.write_text("## 2026-05-04 — Closure\n\n- ok\n")
         attest = _run(cwd, env, "attest", "smoke-card", "--non-interactive")
         config_text = (cwd / ".game-of-cards" / "config.yaml").read_text()
