@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-05
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
@@ -68,3 +68,9 @@ If asked to pick, I'd lean toward **A + B + A** (lightweight prompt-only, only a
 - The hook lives in `goc/templates/hooks/` (template surface) AND `.claude/hooks/` (consumer copy in this repo). Per CLAUDE.md, edit both in lockstep until next `goc upgrade`.
 - Naming candidates: `pattern-generalization-check.py`, `unfiled-card-check.py`, `before-stop-card-check.py`. Pick during implementation.
 - This card is itself an instance of the pattern it proposes to automate — the install.py:598 change was the seed instance of the verb-output pattern, then we hand-filed `cli-output-suggests-next-step-after-each-verb`, and now we're hand-filing this card to automate the hand-filing. Recursive but well-founded.
+
+## Decision
+
+*Resolved 2026-05-05:* A+B+A: lightweight prompt-only Stop hook, fires only after code-mutating tool calls, reminder-only (no stop-block); default-on with opt-out via .game-of-cards/config.yaml (hooks.pattern_generalization_check)
+
+*Reasoning:* Cheapest experiment that addresses the real failure mode; FP cost is structurally low (extra system reminder, no forced action), so opt-in gating would suppress adoption. Promote axes only if FP/FN rate proves unacceptable in practice.
