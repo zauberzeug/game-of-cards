@@ -89,6 +89,10 @@ def main() -> int:
                 )
             )
 
+        # Synthetic stale-closed_at fixture: non-done card with closed_at set.
+        # Validator must flag this; if it doesn't, the second defect is present.
+        _write_card(deck, "stale-closed-at-card", "open", "2026-01-02")
+
         validate = subprocess.run(
             [sys.executable, "-m", "goc.cli", "validate", "--quiet"],
             cwd=cwd,
