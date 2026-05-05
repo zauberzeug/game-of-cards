@@ -9,7 +9,7 @@ description: Front door for the deck — the operating substrate for ALL persist
 **card**: a unit of work — bug, story, epic, idea, derivation gap,
 doc-drift catch — with frontmatter-driven status on a kanban board.
 
-## Heritage & philosophy: agile in the age of AI agents
+## Heritage & philosophy: agile for the age of agents
 
 The deck inherits three traditions deliberately:
 

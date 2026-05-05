@@ -124,7 +124,7 @@ jobs:
           render_page(
               "README.md", "home.md",
               "Game of Cards", "/",
-              "Agile in the age of AI agents — repo-native cards humans and AI agents share.",
+              "Agile for the age of agents — repo-native cards humans and AI agents share.",
           )
           render_page(
               "goc.md", "goc-page.md",
@@ -146,7 +146,7 @@ jobs:
           # documents above (llmstxt.org convention).
           (out / "llms.txt").write_text("""# Game of Cards
 
-          > Agile in the age of AI agents: a repo-native methodology for turning work into durable, inspectable cards that humans and coding agents share.
+          > Agile for the age of agents: a repo-native methodology for turning work into durable, inspectable cards that humans and coding agents share.
 
           ## Install
 
@@ -173,7 +173,7 @@ jobs:
 
           (out / "_config.yml").write_text(
               "title: Game of Cards\n"
-              "description: Agile in the age of AI agents — repo-native cards humans and AI agents share.\n"
+              "description: Agile for the age of agents — repo-native cards humans and AI agents share.\n"
               "theme: jekyll-theme-cayman\n"
           )
           (out / "CNAME").write_text("game-of-cards.com\n")
