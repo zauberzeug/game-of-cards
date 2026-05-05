@@ -1,0 +1,1 @@
+../../goc/templates/hooks/deck_prompt_router.py
