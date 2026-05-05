@@ -124,7 +124,7 @@ jobs:
           render_page(
               "README.md", "home.md",
               "Game of Cards", "/",
-              "Agile for the age of agents — repo-native cards humans and AI agents share.",
+              "Turn work into durable, inspectable cards that humans and LLMs can collaborate on.",
           )
           render_page(
               "goc.md", "goc-page.md",
@@ -173,7 +173,7 @@ jobs:
 
           (out / "_config.yml").write_text(
               "title: Game of Cards\n"
-              "description: Agile for the age of agents — repo-native cards humans and AI agents share.\n"
+              "description: Turn work into durable, inspectable cards that humans and LLMs can collaborate on.\n"
               "theme: jekyll-theme-cayman\n"
           )
           (out / "CNAME").write_text("game-of-cards.com\n")
