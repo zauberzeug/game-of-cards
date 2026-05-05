@@ -1,7 +1,7 @@
 ---
 title: second-install-exits-nonzero
 summary: "The installer is documented as idempotent and the original install card says a second run exits cleanly, but `goc install` currently returns exit code 1 when `deck/.goc-version` already exists. That turns a no-op reinstall into a script failure."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
