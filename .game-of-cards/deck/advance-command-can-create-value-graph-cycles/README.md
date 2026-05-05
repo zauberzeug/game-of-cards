@@ -1,20 +1,20 @@
 ---
 title: advance-command-can-create-value-graph-cycles
 summary: "`goc advance` can add an edge that creates an `advances`/`advanced_by` cycle. The command exits zero and can auto-commit the mutation, but `goc validate` immediately rejects the resulting deck."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/advance-command-can-create-value-graph-cycles/reproduce.py` exits zero
-  - [ ] `goc advance` rejects edge additions that would introduce a cycle
-  - [ ] Failed cycle attempts leave both cards' relation lists unchanged
-  - [ ] Regression coverage proves a two-card cycle and a longer transitive cycle are rejected before write/commit
+  - [x] `uv run python deck/advance-command-can-create-value-graph-cycles/reproduce.py` exits zero
+  - [x] `goc advance` rejects edge additions that would introduce a cycle
+  - [x] Failed cycle attempts leave both cards' relation lists unchanged
+  - [x] Regression coverage proves a two-card cycle and a longer transitive cycle are rejected before write/commit
 ---
 
 # advance-command-can-create-value-graph-cycles
