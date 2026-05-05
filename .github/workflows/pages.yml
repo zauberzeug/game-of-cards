@@ -178,6 +178,20 @@ jobs:
           )
           (out / "CNAME").write_text("game-of-cards.com\n")
 
+          # Cayman's default layout pulls in _includes/head_custom.html;
+          # we use it for an inline SVG-data-URL favicon (no asset file
+          # needed). The joker emoji ties to the project name and renders
+          # legibly at favicon sizes on every modern browser.
+          includes = out / "_includes"
+          includes.mkdir(exist_ok=True)
+          favicon_svg = (
+              "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>"
+              "<text y='.9em' font-size='90'>🃏</text></svg>"
+          )
+          (includes / "head_custom.html").write_text(
+              f'<link rel="icon" href="data:image/svg+xml,{favicon_svg}">\n'
+          )
+
           if Path("assets").is_dir():
               shutil.copytree("assets", out / "assets")
           PY
