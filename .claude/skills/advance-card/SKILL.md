@@ -1,4 +1,5 @@
 ---
+name: advance-card
 description: Mutate a card's status (open / active / blocked / disproved / superseded — everything except `done`). AUTO-INVOKE when user says "I'll start on X", "I'm working on", "this is blocked by Y", "mark this disproved", "supersede with Z", "unblock", or describes any non-done status change. Status transitions are documented agreements (Kanban explicit policies, Anderson).
 argument-hint: <title> <new-status: active|blocked|open|disproved|superseded> [--by <other-title>]
 ---

@@ -8,7 +8,13 @@ What's **Claude-specific** and lives only here:
 
 ### Skill surface (the 11 verbs as `Skill(...)`)
 
-The methodology ships 11 Claude Code skills under `.claude/skills/`:
+Skills under `.claude/skills/` are **optional runtime affordances** installed
+by `goc install --agents claude`. The core methodology works with just the
+`goc` CLI; skills are convenience wrappers that surface the same verbs as
+Claude Code's `Skill(...)` primitive. Repos that use GoC without a checked-in
+Claude harness invoke the CLI directly via AGENTS.md guidance.
+
+When installed, the 11 skills are:
 
 - **Browse**: `Skill(scan-deck)` (triage default + filtered views + decision Q&A); `Skill(next-card)` (auto-pick highest-leverage gate=none card).
 - **File new**: `Skill(create-card)` (scaffold frontmatter + DoD).
@@ -26,14 +32,16 @@ Andon-cord guards, etc.).
 
 ### Silent runtime via `UserPromptSubmit` hook
 
-`.claude/hooks/user-prompt-submit-goc.py` is a Claude-Code-only hook
-(Codex/Cursor/OpenCode/Copilot do not have an equivalent). It detects
-work-initiating prompts and injects a deck-first reminder into Claude's
-view of the user message. The reminder runs the silent pipeline
+`.claude/hooks/user-prompt-submit-goc.py` is an **optional** Claude-Code-only
+hook installed by `goc install --agents claude`. It detects work-initiating
+prompts and injects a deck-first reminder into Claude's view of the user
+message. The reminder runs the silent pipeline
 (`scan-deck → create-card → advance-card → implement → finish-card`)
 without announcing card operations to the user. Vibe coders see code,
 not bookkeeping.
 
-Other agent runtimes implement the same flow either through their own
-installed GoC skills or by invoking the CLI verbs from `AGENTS.md`. The
-prompt hook remains Claude-only.
+The hook is not required for GoC to work — it is a convenience affordance.
+Repos without it still get full GoC functionality through the `goc` CLI and
+the AGENTS.md guidance. Other agent runtimes implement the same flow through
+their own installed GoC skills or by invoking the CLI verbs from `AGENTS.md`.
+The prompt hook remains Claude-only.

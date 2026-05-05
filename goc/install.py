@@ -53,6 +53,7 @@ class PlannedWrite:
     owner: str
     action: str
     path: Path
+    category: str  # "project-state" | "guidance" | "harness"
 
 
 @dataclass(frozen=True)
@@ -224,26 +225,25 @@ def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list
     """Compute the list of writes the installer will perform."""
 
     writes: list[PlannedWrite] = []
-    writes.append(PlannedWrite("shared", "write", target / "deck" / "log.md"))
-    writes.append(PlannedWrite("shared", "write", target / "deck" / ".goc-version"))
+    writes.append(PlannedWrite("shared", "write", target / "deck" / "log.md", "project-state"))
+    writes.append(PlannedWrite("shared", "write", target / "deck" / ".goc-version", "project-state"))
     config_src = templates / "game_of_cards"
     for asset in config_src.rglob("*"):
         if asset.is_dir() or "__pycache__" in asset.parts:
             continue
         rel = asset.relative_to(config_src)
-        writes.append(PlannedWrite("shared", "write", target / ".game-of-cards" / rel))
-    agents_owner = "codex" if "codex" in agents else "shared"
-    writes.append(PlannedWrite(agents_owner, "append", target / AGENTS_GUIDANCE.path))
+        writes.append(PlannedWrite("shared", "write", target / ".game-of-cards" / rel, "project-state"))
+    writes.append(PlannedWrite("shared", "append", target / AGENTS_GUIDANCE.path, "guidance"))
     for agent in agents:
         shim = _load_agent_shim(templates, agent)
         if shim.skills:
             for rel in _iter_skill_assets(templates / "skills"):
-                writes.append(PlannedWrite(agent, "write", target / shim.skills.target / rel))
+                writes.append(PlannedWrite(agent, "write", target / shim.skills.target / rel, "harness"))
         for file in shim.files:
-            writes.append(PlannedWrite(agent, "write", target / file.target))
+            writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
         for guidance in shim.guidance:
-            writes.append(PlannedWrite(agent, "append", target / guidance.path))
-    writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml"))
+            writes.append(PlannedWrite(agent, "append", target / guidance.path, "harness"))
+    writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
     return writes
 
 
@@ -255,16 +255,29 @@ def _plan_upgrade_writes(target: Path, templates: Path, agents: tuple[str, ...])
         if write.path.name == "log.md":
             continue
         action = "sync" if write.action == "write" else write.action
-        writes.append(PlannedWrite(write.owner, action, write.path))
+        writes.append(PlannedWrite(write.owner, action, write.path, write.category))
     return writes
 
 
-def _print_plan(command: str, target: Path, writes: list[PlannedWrite], agents: tuple[str, ...]) -> None:
-    """Render a dry-run write plan with shared vs harness ownership."""
+_CATEGORY_LABELS = [
+    ("project-state", "Project state"),
+    ("guidance", "Guidance"),
+    ("harness", "Runtime affordances"),
+]
 
-    click.echo(f"goc {command} (dry-run) — agents: {','.join(agents)} — {len(writes)} writes planned")
-    for write in writes:
-        click.echo(f"  {write.owner:6s} {write.action:6s} {write.path.relative_to(target)}")
+
+def _print_plan(command: str, target: Path, writes: list[PlannedWrite], agents: tuple[str, ...]) -> None:
+    """Render a dry-run write plan grouped by category."""
+
+    agents_str = ",".join(agents) if agents else "none"
+    click.echo(f"goc {command} (dry-run) — agents: {agents_str} — {len(writes)} writes planned")
+    for cat_key, cat_label in _CATEGORY_LABELS:
+        cat_writes = [w for w in writes if w.category == cat_key]
+        if not cat_writes:
+            continue
+        click.echo(f"\n{cat_label}:")
+        for write in cat_writes:
+            click.echo(f"  {write.owner:6s} {write.action:6s} {write.path.relative_to(target)}")
 
 
 def _copy_tree(src: Path, dst: Path, *, skip_existing: set[Path] | None = None) -> None:
@@ -451,6 +464,11 @@ UPGRADE_AGENTS_HELP = (
     "Agent harnesses to upgrade; repeat or comma-separate. Default: claude. "
     "Supported: claude, codex."
 )
+NO_HARNESS_HELP = (
+    "Install project state and shared guidance only. "
+    "Skips all agent-specific skills, hooks, and guidance files. "
+    "Use --agents to add a harness later."
+)
 
 
 @click.command()
@@ -458,11 +476,13 @@ UPGRADE_AGENTS_HELP = (
 @click.option("--agents", "agent_specs", multiple=True, help=INSTALL_AGENTS_HELP)
 @click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
 @click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
+@click.option("--no-harness", "no_harness", is_flag=True, help=NO_HARNESS_HELP)
 def install(
     dry_run: bool,
     agent_specs: tuple[str, ...],
     claude_flag: bool,
     codex_flag: bool,
+    no_harness: bool,
 ) -> None:
     """Scaffold a fresh repo with the shared GoC files and selected harnesses."""
 
@@ -470,16 +490,22 @@ def install(
     deck_dir = target / "deck"
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
-    explicit_agents = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
-    detected_agents = _detect_agent_surfaces(target, supported_agents=supported_agents)
-    default_agents = detected_agents or _default_install_agents(target, supported_agents=supported_agents)
-    agents = _parse_agents(
-        agent_specs,
-        claude=claude_flag,
-        codex=codex_flag,
-        supported_agents=supported_agents,
-        default_agents=default_agents,
-    )
+
+    if no_harness:
+        agents: tuple[str, ...] = ()
+        explicit_agents = True
+        detected_agents: tuple[str, ...] = ()
+    else:
+        explicit_agents = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
+        detected_agents = _detect_agent_surfaces(target, supported_agents=supported_agents)
+        default_agents = detected_agents or _default_install_agents(target, supported_agents=supported_agents)
+        agents = _parse_agents(
+            agent_specs,
+            claude=claude_flag,
+            codex=codex_flag,
+            supported_agents=supported_agents,
+            default_agents=default_agents,
+        )
 
     writes = _plan_writes(target, templates, agents)
     if dry_run:
@@ -505,12 +531,16 @@ def install(
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
-    source = ""
-    if not explicit_agents:
-        source = " (auto-detected)" if detected_agents else " (default)"
-    click.echo(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
-    click.echo('Next: ask your LLM agent: "create a card for the next change I want to make."')
-    click.echo("Engine/debug: `goc` shows the queue; `goc validate` checks cards. Run `goc upgrade` later to sync template updates.")
+    if no_harness:
+        click.echo(f"goc {__version__} installed (project state only; no agent harness).")
+        click.echo("Use `goc install --agents claude` (or codex) in a new repo to add a harness.")
+    else:
+        source = ""
+        if not explicit_agents:
+            source = " (auto-detected)" if detected_agents else " (default)"
+        click.echo(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
+        click.echo('Next: ask your LLM agent: "create a card for the next change I want to make."')
+        click.echo("Engine/debug: `goc` shows the queue; `goc validate` checks cards. Run `goc upgrade` later to sync template updates.")
 
 
 @click.command()
@@ -518,25 +548,32 @@ def install(
 @click.option("--agents", "agent_specs", multiple=True, help=UPGRADE_AGENTS_HELP)
 @click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
 @click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
+@click.option("--no-harness", "no_harness", is_flag=True, help=NO_HARNESS_HELP)
 def upgrade(
     dry_run: bool,
     agent_specs: tuple[str, ...],
     claude_flag: bool,
     codex_flag: bool,
+    no_harness: bool,
 ) -> None:
     """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
 
     target = Path.cwd().resolve()
     deck_dir = target / "deck"
     templates = _templates_root()
-    agents = _parse_agents(
-        agent_specs,
-        claude=claude_flag,
-        codex=codex_flag,
-        supported_agents=_registered_agents(templates),
-        default_agents=DEFAULT_AGENTS,
-    )
-    agents_explicit = bool(agent_specs or claude_flag or codex_flag)
+
+    if no_harness:
+        agents: tuple[str, ...] = ()
+        agents_explicit = True
+    else:
+        agents = _parse_agents(
+            agent_specs,
+            claude=claude_flag,
+            codex=codex_flag,
+            supported_agents=_registered_agents(templates),
+            default_agents=DEFAULT_AGENTS,
+        )
+        agents_explicit = bool(agent_specs or claude_flag or codex_flag or no_harness)
 
     existing = _detect_existing(deck_dir)
     if existing is None:
@@ -561,7 +598,10 @@ def upgrade(
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
-    click.echo(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    if no_harness:
+        click.echo(f"goc upgrade complete (project state only) — {existing} → {__version__}.")
+    else:
+        click.echo(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
 
 
 if __name__ == "__main__":

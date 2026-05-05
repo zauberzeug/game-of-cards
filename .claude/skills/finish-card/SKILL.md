@@ -1,4 +1,5 @@
 ---
+name: finish-card
 description: Close a card with DoD enforcement, log.md closure entry, and project-specific post-close / commit handoff. AUTO-INVOKE when user says "done", "close this", "finish X", "mark complete", "wrap up", "ship it", or completes work that satisfies a card's DoD. The DoD checkboxes ARE the closure contract (Scrum Definition of Done) — `goc done` refuses to close with any unchecked.
 argument-hint: <title>
 ---

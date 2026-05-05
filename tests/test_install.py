@@ -497,5 +497,73 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("active", full_deck.stdout)
 
 
+    def test_no_harness_install_creates_only_project_state_and_guidance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            result = self.run_goc(cwd, "install", "--no-harness")
+
+            self.assert_goc_ok(result)
+            self.assertIn("project state only", result.stdout)
+            self.assertTrue((cwd / "deck" / ".goc-version").is_file())
+            self.assertTrue((cwd / ".game-of-cards" / "config.yaml").is_file())
+            self.assertTrue((cwd / "AGENTS.md").is_file())
+            self.assertFalse((cwd / ".claude").exists())
+            self.assertFalse((cwd / ".codex").exists())
+            self.assertFalse((cwd / "CLAUDE.md").exists())
+
+    def test_no_harness_dry_run_shows_project_state_and_guidance_categories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            result = self.run_goc(cwd, "install", "--no-harness", "--dry-run")
+
+            self.assert_goc_ok(result)
+            planned = result.stdout
+            self.assertIn("agents: none", planned)
+            self.assertIn("Project state:", planned)
+            self.assertIn("Guidance:", planned)
+            self.assertNotIn("Runtime affordances:", planned)
+            self.assertNotIn(".claude/", planned)
+            self.assertNotIn(".codex/", planned)
+            self.assertIn("shared write  .game-of-cards/config.yaml", planned)
+            self.assertIn("shared append AGENTS.md", planned)
+
+    def test_dry_run_with_agents_groups_writes_into_three_categories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            result = self.run_goc(cwd, "install", "--dry-run", "--agents", "claude")
+
+            self.assert_goc_ok(result)
+            planned = result.stdout
+            self.assertIn("Project state:", planned)
+            self.assertIn("Guidance:", planned)
+            self.assertIn("Runtime affordances:", planned)
+            state_pos = planned.index("Project state:")
+            guidance_pos = planned.index("Guidance:")
+            harness_pos = planned.index("Runtime affordances:")
+            self.assertLess(state_pos, guidance_pos)
+            self.assertLess(guidance_pos, harness_pos)
+            self.assertIn("shared write  .game-of-cards/config.yaml", planned)
+            self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", planned)
+
+    def test_upgrade_no_harness_syncs_project_state_without_touching_harness_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+            claude_skill = cwd / ".claude" / "skills" / "pull-card" / "SKILL.md"
+            claude_skill.write_text("stale claude skill\n")
+
+            result = self.run_goc(cwd, "upgrade", "--no-harness")
+
+            self.assert_goc_ok(result)
+            self.assertIn("project state only", result.stdout)
+            self.assertEqual("stale claude skill\n", claude_skill.read_text())
+            self.assertTrue((cwd / ".game-of-cards" / "config.yaml").is_file())
+            self.assertTrue((cwd / "AGENTS.md").is_file())
+
+
 if __name__ == "__main__":
     unittest.main()

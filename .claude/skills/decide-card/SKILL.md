@@ -1,4 +1,5 @@
 ---
+name: decide-card
 description: Record a decision (what + why) on a parked card and lower the human gate from `decision` or `session` to `none`. AUTO-INVOKE when the user says "I decided X", "let's go with Y", "the answer is Z", "go ahead with", "approved", or otherwise resolves a parked card. The Andon-cord lowering action — pull-card raises the gate; this skill is the human's one-action handoff so pull-card can resume.
 argument-hint: <title> --decision "<one-line what>" --because "<one-line why>"
 ---

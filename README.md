@@ -71,18 +71,26 @@ For install flags, upgrades, and the command reference, see the [CLI guide](docs
 
 ## Agent harnesses
 
-Every install writes the shared substrate: `deck/`, `.game-of-cards/`,
-`AGENTS.md`, and `.pre-commit-config.yaml`. Harness selection controls the
-agent-specific files layered on top:
+Install output is split into three layers:
 
-- `claude` writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, and `CLAUDE.md`.
-- `codex` writes Codex-readable skills under `.codex/skills/`, without Claude-only hooks.
+- **Project state** — `deck/`, `.game-of-cards/` — always written. This is
+  the methodology's durable state; no agent runtime required.
+- **Guidance** — `AGENTS.md`, `.pre-commit-config.yaml` — written by default,
+  readable by any agent that follows `AGENTS.md` conventions.
+- **Runtime affordances** — skills, hooks, and agent-specific guidance files
+  — written only when an agent harness is selected.
+
+Harness selection controls which runtime affordances are installed:
+
+- `--agents claude` writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, and `CLAUDE.md`.
+- `--agents codex` writes Codex-readable skills under `.codex/skills/`, without Claude-only hooks.
+- `--no-harness` installs project state and guidance only — no skills, no hooks, no agent-specific files. Useful for repos that drive GoC purely through the `goc` CLI or that use a plugin-provided harness.
 
 Detection is intentionally simple: Claude markers such as `CLAUDE.md` or
 `.claude/` select the Claude harness, Codex markers such as `AGENTS.md` or
 `.codex/` select the Codex harness, and both marker families install both
-harnesses. Explicit `--agents`, `--claude`, and `--codex` flags override
-detection for scripted installs.
+harnesses. Explicit `--agents`, `--claude`, `--codex`, and `--no-harness`
+flags override detection for scripted installs.
 
 OpenCode is a free path: it already reads `.claude/skills/`, so `goc install --agents claude` gives OpenCode the skill files without a separate OpenCode shim. The Claude `UserPromptSubmit` hook is not part of that compatibility path; hooks remain Claude Code-specific.
 

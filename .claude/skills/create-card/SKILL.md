@@ -1,4 +1,5 @@
 ---
+name: create-card
 description: File a new card with frontmatter, DoD scaffold, and (for bugs) reproduce.py stub. AUTO-INVOKE when user says "let's do X", "implement Y", "fix Z", "add support for", "I want to", "we need to", describes a bug, requests a feature, or initiates ANY persistent work item. The card is filed BEFORE implementation — the body is the briefing the next reader (human or AI agent) needs to act cold. Title must be user-facing, descriptive, PO-readable (not engineer's jargon).
 argument-hint: <title> [--contribution high|medium|low] [--gate none|decision|session] [--tag <canonical-tag>]
 ---

@@ -1,24 +1,24 @@
 ---
 title: make-skill-and-hook-installation-optional
 summary: "Change install/upgrade so generated agent skills and hooks are optional runtime affordances, not mandatory checked-in files in every consuming repo. CLI-only GoC should be usable with `.game-of-cards` project state, while users can opt into repo-local shims or plugin-provided skills/hooks."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-05
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: [support-external-game-of-cards-state-location]
 advanced_by: []
 tags: [story, infra, api-contract]
 definition_of_done: |
-  - [ ] `goc install` exposes an explicit mode that installs project state without generated agent skills/hooks
-  - [ ] Existing Claude/Codex harness installation remains available as an opt-in compatibility mode
-  - [ ] Install/upgrade dry-run output clearly separates project state, guidance files, and runtime affordances
-  - [ ] Generated AGENTS/CLAUDE/Codex guidance no longer implies skills/hooks must be checked into the repo
-  - [ ] Hook registration is skipped cleanly when hooks are not requested
-  - [ ] Tests cover CLI-only install, Claude/Codex opt-in install, upgrade from older installs, and dry-run output
-  - [ ] Docs explain when to use CLI-only, repo-local harness, or plugin-provided runtime files
-  - [ ] `uv run goc validate` passes
+  - [x] `goc install` exposes an explicit mode that installs project state without generated agent skills/hooks
+  - [x] Existing Claude/Codex harness installation remains available as an opt-in compatibility mode
+  - [x] Install/upgrade dry-run output clearly separates project state, guidance files, and runtime affordances
+  - [x] Generated AGENTS/CLAUDE/Codex guidance no longer implies skills/hooks must be checked into the repo
+  - [x] Hook registration is skipped cleanly when hooks are not requested
+  - [x] Tests cover CLI-only install, Claude/Codex opt-in install, upgrade from older installs, and dry-run output
+  - [x] Docs explain when to use CLI-only, repo-local harness, or plugin-provided runtime files
+  - [x] `uv run goc validate` passes
 ---
 
 # Make skill and hook installation optional

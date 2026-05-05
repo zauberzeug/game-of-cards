@@ -1,4 +1,5 @@
 ---
+name: extend-deck
 description: Hunt for one previously-undocumented defect, derivation gap, doc drift, missing test or wrong concept. Also architectural ugliness, code smells and inconsistencies. Files via Skill(create-card). AUTO-INVOKE when user says "find me a bug", "audit X", "check for inconsistencies", "what could be wrong", "hunt for issues", "scan the codebase", "look for gaps", or invokes /extend-deck. Treats nothing as truth — inconsistencies are the primary lead (XP spike + Scrum backlog refinement).
 argument-hint: optional area filter within the project (consuming repo defines its default scope in `.game-of-cards/hooks/extend-deck.md`)
 ---
