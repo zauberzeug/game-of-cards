@@ -31,3 +31,5 @@ env/
 
 # Local-only
 tmp/
+.tmp-design-review/
+.playwright-mcp/

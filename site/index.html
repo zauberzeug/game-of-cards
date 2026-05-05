@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Game of Cards — agile for the age of agents</title>
+  <meta name="description" content="Turn work into durable, inspectable cards that humans and LLMs can collaborate on. A repo-local methodology runtime built for swarms, not standups." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+SC:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+</head>
+<body>
+  <canvas class="starfield" aria-hidden="true"></canvas>
+
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="brand">
+        <span class="brand-mark">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2 L20 12 L12 22 L4 12 Z" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M12 7 L17 12 L12 17 L7 12 Z" stroke="currentColor" stroke-width="0.8" opacity="0.6"/>
+            <circle cx="12" cy="12" r="1.1" fill="currentColor" opacity="0.9"/>
+          </svg>
+        </span>
+        <span>Game of Cards</span>
+      </a>
+      <nav class="site-nav">
+        <a href="#try">Try it</a>
+        <a href="#how">How it works</a>
+        <a href="#more">More</a>
+        <a class="gh-link" href="https://github.com/zauberzeug/game-of-cards">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.22.48-2.69-1.07-2.69-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.88 2.34.67.07-.52.28-.88.51-1.08-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.13 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.11.16 1.93.08 2.13.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.74.54 1.49v2.21c0 .21.15.46.55.38A8 8 0 0 0 8 0z"/>
+          </svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top">
+      <div class="container">
+        <h1 class="wordmark">Game <span class="of">of</span> Cards</h1>
+        <span class="wordmark-rule" aria-hidden="true"></span>
+        <p class="tagline">agile for the age of agents</p>
+      </div>
+    </section>
+
+    <div class="container body-container">
+      <article class="readme">
+        <p class="lede">
+          Turn work into durable, inspectable cards that humans and LLMs can collaborate on.
+        </p>
+
+        <figure class="readme-figure">
+          <img src="assets/game-of-cards-dark.png" alt="Four-panel comic explaining Game of Cards: setup, card creation, parallel session and background work, and the human-input handoff." />
+        </figure>
+
+        <h2 id="try">Try it</h2>
+        <p>In any repo, ask your coding agent:</p>
+        <pre class="code-block"><code>Install game-of-cards.com in this repo.</code></pre>
+        <p>
+          That's it. Bootstrapping flows from the PyPI package <code>game-of-cards</code>.
+          If you'd rather drive the install by hand, see <a href="/goc/"><code>goc.md</code></a> for the manual recipe and CLI reference.
+        </p>
+
+        <h2 id="how">How it works</h2>
+
+        <figure class="readme-figure narrow-figure">
+          <img src="assets/how-it-works-dark.png" alt="How it works: YOU → skills → LLM → goc → Cards" />
+        </figure>
+
+        <p>
+          You speak in plain English. The agent translates your intent into card operations through
+          <strong>skills</strong> — small markdown protocols that turn
+          <code>"create a card for renaming the export button"</code> into the right CLI calls.
+          <strong>goc</strong> is the CLI that implements those operations. <strong>Cards</strong>
+          are markdown directories under <code>deck/</code> with frontmatter, an append-only log,
+          and a Definition-of-Done checklist the CLI refuses to close while any box is unchecked.
+        </p>
+        <p>
+          Cards move through <em>open → active → done</em>; their file location stays the same,
+          so cross-references survive. Agents only work on cards without a human gate. Others are
+          parked, waiting on decisions or full sessions with you. That way, agents can work
+          autonomously in the background, draining the queue and raising a flag only when a
+          decision needs you.
+        </p>
+
+        <h2>Status</h2>
+        <p>
+          Brand new alpha — only a few days of implementation, no external users yet, plenty of
+          rough edges that are unknown until someone tries it on a fresh project. The right way to
+          find out if it's for you is to install it, point it at a side project, and see whether
+          it stays out of your way for a week.
+        </p>
+
+        <h2 id="more">More</h2>
+        <ul class="more-list">
+          <li><a href="/goc/"><code>goc.md</code></a> — CLI reference and manual install recipe.</li>
+          <li><a href="/about/"><code>ABOUT.md</code></a> — methodology context: why "Game of Cards", agile lineage, and how it relates to other agent-coding tools.</li>
+          <li><a href="https://github.com/zauberzeug/game-of-cards/blob/main/AGENTS.md"><code>AGENTS.md</code></a> — agent operating modes (session / autonomous / Andon-cord).</li>
+          <li><a href="https://github.com/zauberzeug/game-of-cards">GitHub repo</a> — source, issues, contributions.</li>
+        </ul>
+
+        <h2>License</h2>
+        <p>
+          MIT — Copyright (c) 2026 Zauberzeug GmbH. See
+          <a href="https://github.com/zauberzeug/game-of-cards/blob/main/LICENSE">LICENSE</a>.
+        </p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="seal">— Zauberzeug GmbH · MMXXVI —</div>
+      <div>MIT licensed · <a href="https://github.com/zauberzeug/game-of-cards/blob/main/LICENSE">LICENSE</a></div>
+    </div>
+  </footer>
+
+  <script src="stars.js"></script>
+</body>
+</html>

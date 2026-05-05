@@ -1,0 +1,351 @@
+/* ============================================================
+   Game of Cards — landing page
+   Header + chronicle hero, then plain README body.
+   ============================================================ */
+
+:root {
+  --ink-0: #060912;
+  --ink-1: #0b1220;
+  --ink-2: #111a2c;
+  --ink-3: #1a2640;
+  --line: rgba(201, 207, 219, 0.14);
+  --line-strong: rgba(201, 207, 219, 0.28);
+  --silver-1: #e9edf3;
+  --silver-2: #c9cfdb;
+  --silver-3: #8f97a8;
+  --silver-4: #5b6478;
+  --parchment: #e8dcc1;
+  --gold: #c9a875;
+  --gold-bright: #e3c48a;
+
+  --serif-display: 'Cormorant SC', 'Cinzel', Georgia, serif;
+  --sans-body:     'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:          'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { background: var(--ink-0); color: var(--silver-1); }
+body {
+  font-family: var(--sans-body);
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--silver-2);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,168,117,0.05), transparent 60%),
+    radial-gradient(ellipse 100% 80% at 50% 30%, rgba(20,40,80,0.45), transparent 70%),
+    var(--ink-1);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.starfield {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+}
+
+main, header, footer { position: relative; z-index: 1; }
+
+/* ============================================================
+   Type
+   ============================================================ */
+
+h1, h2, h3, h4 {
+  font-family: var(--serif-display);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--silver-1);
+  margin: 0;
+}
+
+a {
+  color: var(--gold-bright);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(201,168,117,0.25);
+  transition: border-color 180ms, color 180ms;
+}
+a:hover { color: var(--parchment); border-bottom-color: var(--gold-bright); }
+
+code, pre {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+code:not(pre code) {
+  color: var(--parchment);
+  background: rgba(232, 220, 193, 0.06);
+  padding: 0.08em 0.4em;
+  border-radius: 3px;
+  border: 1px solid rgba(232,220,193,0.10);
+  font-size: 0.82em;
+}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ============================================================
+   Site header
+   ============================================================ */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  background: rgba(11, 18, 32, 0.72);
+  border-bottom: 1px solid var(--line);
+}
+.site-header .inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.brand {
+  font-family: var(--serif-display);
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--silver-1);
+  border: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand:hover { color: var(--parchment); }
+nav.site-nav { display: flex; gap: 28px; align-items: center; }
+nav.site-nav a {
+  font-family: var(--sans-body);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--silver-3);
+  border: 0;
+  font-weight: 500;
+}
+nav.site-nav a:hover { color: var(--parchment); }
+nav.site-nav .gh-link {
+  color: var(--silver-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  nav.site-nav a:not(.gh-link) { display: none; }
+}
+
+/* ============================================================
+   Hero — masthead only, no CTA
+   ============================================================ */
+
+.hero {
+  padding: 110px 0 90px;
+  text-align: center;
+  position: relative;
+}
+.hero .container {
+  max-width: 1400px;
+  padding: 0 24px;
+}
+.wordmark {
+  font-family: var(--serif-display);
+  font-weight: 500;
+  font-size: min(8.5vw, 132px);
+  letter-spacing: 0.04em;
+  line-height: 0.95;
+  margin: 0;
+  white-space: nowrap;
+  padding: 0 0.1em;
+  background: linear-gradient(
+    180deg,
+    #f6f7fa 0%,
+    #c9cfdb 35%,
+    #6e7689 60%,
+    #b3b9c6 78%,
+    #e6e9f0 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.04),
+    0 2px 8px rgba(0,0,0,0.55);
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+}
+.wordmark .of {
+  font-size: 0.6em;
+  letter-spacing: 0.18em;
+  vertical-align: 0.18em;
+  font-weight: 400;
+}
+.wordmark-rule {
+  display: block;
+  width: min(560px, 70%);
+  margin: 26px auto 18px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--silver-4) 20%,
+    var(--silver-2) 50%,
+    var(--silver-4) 80%,
+    transparent);
+}
+.tagline {
+  font-family: var(--sans-body);
+  font-size: clamp(15px, 1.6vw, 18px);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--silver-3);
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ============================================================
+   README body — straightforward documentation styling
+   ============================================================ */
+
+.body-container {
+  padding-bottom: 80px;
+}
+
+.readme {
+  max-width: clamp(720px, 70vw, 940px);
+  margin: 0 auto;
+}
+
+/* Bridge: from mythic masthead to practical body */
+.readme .lede {
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--silver-1);
+  margin: 0 0 48px;
+  text-align: center;
+  padding: 0 0 36px;
+  font-weight: 400;
+  position: relative;
+}
+.readme .lede::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 1px;
+  background: var(--gold);
+  opacity: 0.5;
+}
+
+.readme h2 {
+  font-family: var(--sans-body);
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 64px 0 18px;
+  font-weight: 600;
+}
+.readme h2:first-of-type {
+  margin-top: 48px;
+}
+
+.readme p {
+  margin: 0 0 1.2em;
+  color: var(--silver-2);
+}
+.readme p strong {
+  color: var(--silver-1);
+  font-weight: 600;
+}
+.readme em {
+  color: var(--parchment);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.readme .code-block {
+  background: #050810;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  overflow-x: auto;
+  color: var(--parchment);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.readme .code-block code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.readme-figure {
+  margin: 32px 0 36px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px -10px rgba(0,0,0,0.45);
+}
+.readme-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.readme-figure.narrow-figure {
+  max-width: 560px;
+  margin: 28px auto;
+  border: 1px solid var(--line);
+}
+
+.more-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.more-list li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--silver-2);
+  font-size: 16px;
+}
+.more-list li:last-child { border-bottom: 0; }
+
+/* ============================================================
+   Footer
+   ============================================================ */
+
+footer.site-footer {
+  border-top: 1px solid var(--line);
+  padding: 50px 0 70px;
+  text-align: center;
+  color: var(--silver-4);
+  font-size: 13px;
+  font-family: var(--sans-body);
+}
+footer.site-footer .seal {
+  font-family: var(--serif-display);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--silver-3);
+  margin-bottom: 14px;
+}
