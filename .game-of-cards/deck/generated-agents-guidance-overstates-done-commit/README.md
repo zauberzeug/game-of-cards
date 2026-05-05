@@ -1,21 +1,21 @@
 ---
 title: generated-agents-guidance-overstates-done-commit
 summary: "Generated agent guidance still tells agents that closure commands close and commit, but the shipped finish-card contract and engine make `done` a non-committing closure-state flip. This can leave autonomous agents believing the closure landed in git when the final work commit is still required."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract, infra]
 definition_of_done: |
-  - [ ] `goc/templates/AGENTS_GOC.md` no longer describes `goc done <title>` as the commit step
-  - [ ] `goc/templates/hooks/user-prompt-submit.py` no longer describes `Skill(finish-card)` as "close + commit" without the separate final commit workflow
-  - [ ] The repo-local generated `AGENTS.md` block is aligned with the corrected template wording
-  - [ ] Any CLI/user-facing docs that mention closure keep `done` as DoD-gated state change and leave committing to finish-card/runtime workflow
-  - [ ] A focused test or grep-based regression prevents generated guidance from reintroducing "Close + commit: `goc done <title>`" or "close + commit" as a single finish-card step
+  - [x] `goc/templates/AGENTS_GOC.md` no longer describes `goc done <title>` as the commit step
+  - [x] `goc/templates/hooks/user-prompt-submit.py` no longer describes `Skill(finish-card)` as "close + commit" without the separate final commit workflow
+  - [x] The repo-local generated `AGENTS.md` block is aligned with the corrected template wording
+  - [x] Any CLI/user-facing docs that mention closure keep `done` as DoD-gated state change and leave committing to finish-card/runtime workflow
+  - [x] A focused test or grep-based regression prevents generated guidance from reintroducing "Close + commit: `goc done <title>`" or "close + commit" as a single finish-card step
 ---
 
 # generated-agents-guidance-overstates-done-commit

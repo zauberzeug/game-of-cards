@@ -16,7 +16,7 @@ a CSV export", "fix the auth bug"), run the GoC pipeline silently:
 2. If not, file a card: `goc new <kebab-title>` and edit the body.
 3. Claim it: `goc status <title> active`.
 4. Implement.
-5. Close + commit: `goc done <title>`.
+5. Close: `goc done <title>`, then commit the work and closure.
 
 **Card operations are not announced to the user** — the user sees the
 code, not the bookkeeping. The deck records what they wanted; the
@@ -67,7 +67,7 @@ Daily verbs:
 | `goc --status done --since YYYY-MM-DD` | Recently closed cards. |
 | `goc new <title>` | Scaffold a new card under `deck/<title>/`. |
 | `goc status <title> <state>` | Flip status (open/active/blocked/disproved/superseded). |
-| `goc done <title>` | Close + DoD enforcement + commit. |
+| `goc done <title>` | Close + DoD enforcement (no auto-commit). |
 | `goc decide <title> --decision X --because Y` | Lower gate from decision/session → none. |
 | `goc validate` | Validate every card's frontmatter (pre-commit-friendly). |
 
