@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-04
 closed_at: null
-human_gate: session
+human_gate: none
 advances: [ship-game-of-cards-as-cross-agent-cli]
 advanced_by: [move-deck-into-game-of-cards-directory, make-skill-and-hook-installation-optional, provide-claude-code-plugin-for-skills-and-hooks, provide-codex-plugin-for-skills-and-hooks, provide-openclaw-plugin-for-skills-and-hooks, publish-game-of-cards-agent-plugins]
 tags: [epic, story, infra, api-contract]
@@ -59,3 +59,9 @@ Keep `goc` as the stable engine and separate three concerns:
 - Runtime affordances: agent plugins or optional local installs for skills and hooks.
 
 The key invariant: queue safety, validation, and DoD closure must not depend on whether skills/hooks are checked into the project repo.
+
+## Decision
+
+*Resolved 2026-05-05:* (1) .game-of-cards/ is checked in by default but users may gitignore it; (2) config.yaml stays canonical, no .yml alias; (3) pull-card runs in local sessions or via cron — no CI commitment required when the deck is uncommitted; (4) the AGENTS.md/CLAUDE.md <!-- BEGIN GOC --> marker block is the canonical repo-visible discovery surface, no extra dotfile
+
+*Reasoning:* Anchors every child card to one consistent stance: the deck is project planning history (so checked-in is the team default), one config spelling avoids surface-area drift, and dropping the CI-must-work constraint unblocks the gitignore-friendly path without inventing branch/issue-sync machinery. Reusing the existing marker block avoids a second discovery mechanism.
