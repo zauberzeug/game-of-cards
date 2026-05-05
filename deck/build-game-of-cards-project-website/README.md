@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-05
 closed_at: null
-human_gate: session
+human_gate: none
 advances: [ship-game-of-cards-as-cross-agent-cli]
 advanced_by: [create-project-website-explanatory-illustration]
 tags: [story, documentation]
@@ -40,3 +40,9 @@ The site should cover:
 ## Session required
 
 The site needs a design/content session before implementation. The main decisions are stack, deployment target, page structure, visual direction, and what claims belong on the marketing surface versus the CLI reference.
+
+## Decision
+
+*Resolved 2026-05-05:* Render README.md at game-of-cards.com via GitHub Pages, single-source from README
+
+*Reasoning:* Rodja owns the domain and wants README as the single source of truth for the marketing surface, with no duplicate copy to drift
