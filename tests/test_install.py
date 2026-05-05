@@ -135,7 +135,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(result)
             planned = result.stdout
-            self.assertIn("shared write  deck/.goc-version", planned)
+            self.assertIn("shared write  .game-of-cards/deck/.goc-version", planned)
             self.assertIn("shared append AGENTS.md", planned)
             self.assertIn("claude write  .claude/skills/pull-card/SKILL.md", planned)
             self.assertIn("claude write  .claude/skills/_goc-bootstrap.sh", planned)
@@ -231,14 +231,14 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(
                 self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
             )
-            readme = cwd / "deck" / "smoke-card" / "README.md"
+            readme = cwd / ".game-of-cards" / "deck" / "smoke-card" / "README.md"
             readme.write_text(readme.read_text().replace("- [ ] (replace with real criteria)", "- [x] closure ok"))
 
             attest = self.run_goc(cwd, "attest", "smoke-card", "--non-interactive")
 
             self.assert_goc_ok(attest)
             self.assertIn("Layer-3 (GoC) checks", attest.stdout)
-            self.assertIn("dod-100-percent", (cwd / "deck" / "smoke-card" / "log.md").read_text())
+            self.assertIn("dod-100-percent", (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text())
 
     def test_upgrade_migrates_legacy_deck_config_without_clobbering_existing_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -285,11 +285,11 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(skipped)
             self.assertNotIn("committed", skipped.stdout)
             self.assertIn(
-                " M deck/commit-card/README.md",
+                " M .game-of-cards/deck/commit-card/README.md",
                 subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout,
             )
 
-            subprocess.run(["git", "add", "deck/commit-card/README.md"], cwd=cwd, check=True)
+            subprocess.run(["git", "add", ".game-of-cards/deck/commit-card/README.md"], cwd=cwd, check=True)
             subprocess.run(["git", "commit", "-m", "manual open"], cwd=cwd, check=True, capture_output=True)
             self.assertEqual("", subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout)
 
@@ -306,7 +306,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(disabled)
             self.assertNotIn("committed", disabled.stdout)
             self.assertIn(
-                " M deck/commit-card/README.md",
+                " M .game-of-cards/deck/commit-card/README.md",
                 subprocess.run(["git", "status", "--short"], cwd=cwd, text=True, capture_output=True).stdout,
             )
 
@@ -333,7 +333,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assertIn("# Pull a card", claude_skill.read_text())
             self.assertEqual("custom codex skill\n", codex_skill.read_text())
-            self.assertTrue((cwd / "deck" / "smoke-card" / "README.md").is_file())
+            self.assertTrue((cwd / ".game-of-cards" / "deck" / "smoke-card" / "README.md").is_file())
             self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
 
     def test_bootstrap_wrapper_reports_missing_and_old_cli_and_execs_current_cli(self) -> None:
@@ -429,14 +429,14 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             move_result = self.run_goc(cwd, "move", "child-card", "renamed-card")
 
             self.assert_goc_ok(move_result)
-            self.assertFalse((cwd / "deck" / "child-card").exists())
-            self.assertTrue((cwd / "deck" / "renamed-card" / "README.md").is_file())
-            parent_readme = (cwd / "deck" / "parent-card" / "README.md").read_text()
-            renamed_readme = (cwd / "deck" / "renamed-card" / "README.md").read_text()
+            self.assertFalse((cwd / ".game-of-cards" / "deck" / "child-card").exists())
+            self.assertTrue((cwd / ".game-of-cards" / "deck" / "renamed-card" / "README.md").is_file())
+            parent_readme = (cwd / ".game-of-cards" / "deck" / "parent-card" / "README.md").read_text()
+            renamed_readme = (cwd / ".game-of-cards" / "deck" / "renamed-card" / "README.md").read_text()
             self.assertIn("advances: [renamed-card]", parent_readme)
             self.assertNotIn("child-card", parent_readme)
             self.assertIn("title: renamed-card", renamed_readme)
-            self.assertFalse((cwd / "deck" / "child-card" / "REDIRECT.md").exists())
+            self.assertFalse((cwd / ".game-of-cards" / "deck" / "child-card" / "REDIRECT.md").exists())
             self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
 
             help_result = self.run_goc(cwd, "move", "--help")
@@ -449,12 +449,12 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             cwd = Path(tmp)
 
             self.assert_goc_ok(self.run_goc(cwd, "new", "source-card", "--gate", "none", "--tag", "story"))
-            readme = cwd / "deck" / "source-card" / "README.md"
+            readme = cwd / ".game-of-cards" / "deck" / "source-card" / "README.md"
             readme.write_text(readme.read_text().replace("advances: []", "advances: [missing-card]"))
-            redirect_dir = cwd / "deck" / "old-card"
+            redirect_dir = cwd / ".game-of-cards" / "deck" / "old-card"
             redirect_dir.mkdir()
             (redirect_dir / "REDIRECT.md").write_text("Moved to elsewhere.\n")
-            stale_dir = cwd / "deck" / "stale-card"
+            stale_dir = cwd / ".game-of-cards" / "deck" / "stale-card"
             stale_dir.mkdir()
             (stale_dir / "notes.md").write_text("not a card\n")
 
@@ -505,7 +505,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(result)
             self.assertIn("project state only", result.stdout)
-            self.assertTrue((cwd / "deck" / ".goc-version").is_file())
+            self.assertTrue((cwd / ".game-of-cards" / "deck" / ".goc-version").is_file())
             self.assertTrue((cwd / ".game-of-cards" / "config.yaml").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
             self.assertFalse((cwd / ".claude").exists())
@@ -563,6 +563,88 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertEqual("stale claude skill\n", claude_skill.read_text())
             self.assertTrue((cwd / ".game-of-cards" / "config.yaml").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
+
+
+    def test_install_uses_new_canonical_deck_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--agents", "claude"))
+
+            self.assertTrue((cwd / ".game-of-cards" / "deck" / ".goc-version").is_file())
+            self.assertFalse((cwd / "deck").exists())
+
+    def test_legacy_root_deck_still_works_as_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            deck = cwd / "deck"
+            deck.mkdir()
+            (deck / "legacy-card").mkdir()
+            (deck / "legacy-card" / "README.md").write_text(
+                "---\ntitle: legacy-card\nsummary: legacy\nstatus: open\nstage: null\n"
+                "contribution: low\ncreated: 2026-05-01\nclosed_at: null\nhuman_gate: none\n"
+                "advances: []\nadvanced_by: []\ntags: [bug]\ndefinition_of_done: |\n  - [x] ok\n---\n"
+            )
+
+            result = self.run_goc(cwd, "--no-color")
+
+            self.assert_goc_ok(result)
+            self.assertIn("legacy-card", result.stdout)
+
+    def test_mixed_deck_locations_prefer_new_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            legacy_deck = cwd / "deck"
+            legacy_deck.mkdir()
+            (legacy_deck / "legacy-card").mkdir()
+            (legacy_deck / "legacy-card" / "README.md").write_text(
+                "---\ntitle: legacy-card\nsummary: legacy\nstatus: open\nstage: null\n"
+                "contribution: low\ncreated: 2026-05-01\nclosed_at: null\nhuman_gate: none\n"
+                "advances: []\nadvanced_by: []\ntags: [bug]\ndefinition_of_done: |\n  - [x] ok\n---\n"
+            )
+            new_deck = cwd / ".game-of-cards" / "deck"
+            new_deck.mkdir(parents=True)
+            (new_deck / "new-card").mkdir()
+            (new_deck / "new-card" / "README.md").write_text(
+                "---\ntitle: new-card\nsummary: new\nstatus: open\nstage: null\n"
+                "contribution: low\ncreated: 2026-05-01\nclosed_at: null\nhuman_gate: none\n"
+                "advances: []\nadvanced_by: []\ntags: [story]\ndefinition_of_done: |\n  - [x] ok\n---\n"
+            )
+
+            result = self.run_goc(cwd, "--no-color")
+
+            self.assert_goc_ok(result)
+            self.assertIn("new-card", result.stdout)
+            self.assertNotIn("legacy-card", result.stdout)
+
+    def test_install_detects_legacy_deck_as_existing_install(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            legacy_deck = cwd / "deck"
+            legacy_deck.mkdir()
+            (legacy_deck / ".goc-version").write_text("0.0.1\n")
+
+            result = self.run_goc(cwd, "install", "--agents", "claude")
+
+            self.assertEqual(1, result.returncode)
+            self.assertIn("already installed", result.stderr)
+            self.assertIn("deck/.goc-version", result.stderr)
+
+    def test_upgrade_works_against_legacy_deck_location(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            subprocess.run(["git", "init"], cwd=cwd, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=cwd, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=cwd, check=True)
+            legacy_deck = cwd / "deck"
+            legacy_deck.mkdir()
+            (legacy_deck / ".goc-version").write_text("0.0.1\n")
+            (legacy_deck / "log.md").write_text("# Deck Log\n")
+
+            result = self.run_goc(cwd, "upgrade", "--agents", "claude")
+
+            self.assert_goc_ok(result)
+            self.assertTrue((legacy_deck / ".goc-version").is_file())
 
 
 if __name__ == "__main__":

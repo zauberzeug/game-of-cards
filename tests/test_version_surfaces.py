@@ -25,7 +25,7 @@ class VersionSurfaceTest(unittest.TestCase):
 
     def test_self_hosted_generated_surfaces_match_package_version(self) -> None:
         version = _project_version()
-        self.assertEqual(version, (ROOT / "deck" / ".goc-version").read_text().strip())
+        self.assertEqual(version, (ROOT / ".game-of-cards" / "deck" / ".goc-version").read_text().strip())
 
         for relative in ("AGENTS.md", "CLAUDE.md"):
             text = (ROOT / relative).read_text()

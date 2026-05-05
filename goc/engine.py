@@ -31,7 +31,20 @@ import yaml
 
 PACKAGE_DIR = Path(__file__).resolve().parent  # installed package dir (goc/)
 REPO_ROOT = Path.cwd()  # project being managed (consuming repo's root)
-DECK_DIR = REPO_ROOT / "deck"
+
+
+def _resolve_deck_dir(repo_root: Path) -> Path:
+    """Return the deck directory: `.game-of-cards/deck` if present, else `deck/` fallback."""
+    canonical = repo_root / ".game-of-cards" / "deck"
+    if canonical.exists():
+        return canonical
+    legacy = repo_root / "deck"
+    if legacy.exists():
+        return legacy
+    return canonical
+
+
+DECK_DIR = _resolve_deck_dir(REPO_ROOT)
 SCHEMA_FILE = PACKAGE_DIR / "schema.yaml"
 GAME_OF_CARDS_CONFIG_FILE = REPO_ROOT / ".game-of-cards" / "config.yaml"
 LEGACY_DECK_CONFIG_FILE = REPO_ROOT / ".claude" / "config.yaml"

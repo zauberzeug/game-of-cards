@@ -6,4 +6,4 @@ repos:
         entry: goc validate
         language: system
         pass_filenames: false
-        files: ^deck/.*$
+        files: ^\.game-of-cards/deck/.*$

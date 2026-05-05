@@ -1,0 +1,7 @@
+## 2026-05-05 — Closure
+
+- **What changed**: `.github/workflows/pull-card.yml` now (a) skips the agent step when `uv run goc --status open --human-gate none --json | jq 'length'` is 0, (b) raises `--max-turns` from 40 to 200, and (c) replaces the per-tool `--allowedTools` enumeration with `--permission-mode bypassPermissions` (the cloud runner has no human to approve mid-flight).
+- **Empirical proof**: workflow_dispatch run [25358908050](https://github.com/zauberzeug/game-of-cards/actions/runs/25358908050) — `conclusion: success`, 10m02s job / 9m52s agent step. The cloud worker (`claude[bot]`) committed [`32cbac3`](https://github.com/zauberzeug/game-of-cards/commit/32cbac3) on `main`, closing `make-skill-and-hook-installation-optional` end-to-end (118-line `install.py` change + 11 skill files + `CLAUDE.md` / `README.md`).
+- **Why workflow_dispatch counts**: the `workflow_dispatch:` and `schedule:` triggers share the same `jobs:` block in `pull-card.yml`. There is no behavioral difference between a manual run and a scheduled tick beyond `github.event_name`, so the success carries over to the cron path.
+- **Tests**: `uv run goc validate`; the cloud run itself was the integration test.
+- **Sibling cards in the family**: `schedule-pull-card-cloud` (initial workflow), `pull-card-action-needs-oidc-and-half-hour-schedule` (OIDC + 30-min cron), `unblock-scheduled-pull-card-secret` (CLAUDE_CODE_OAUTH_TOKEN), and now this card. Together they took the cloud autonomous worker from non-existent to actually-closing-cards on every */30 tick.
