@@ -1810,12 +1810,28 @@ def unadvance(title, advancer, commit, no_commit):
 @cli.command()
 @click.argument("old_title")
 @click.argument("new_title")
-def move(old_title, new_title):
+@click.option(
+    "--allow-jargon", is_flag=True, help="Bypass the title-antipattern check (rare; used by migration tools)."
+)
+def move(old_title, new_title, allow_jargon):
     """Rename a title and rewrite known cross-references."""
     schema = load_schema()
     if not re.match(schema.title_pattern, new_title):
         click.echo(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", err=True)
         sys.exit(2)
+    if not allow_jargon:
+        antipatterns_hit = _check_title_antipatterns(new_title)
+        if antipatterns_hit:
+            click.echo(f"ERROR: title {new_title!r} contains engineer-jargon antipattern(s):", err=True)
+            for reason in antipatterns_hit:
+                click.echo(f"  - {reason}", err=True)
+            click.echo(
+                "\n  Titles are kanban labels; a non-engineer must understand the card from the title alone.", err=True
+            )
+            click.echo("  Rephrase to describe the *observable problem* (e.g.", err=True)
+            click.echo("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", err=True)
+            click.echo("  Pass --allow-jargon to bypass (rare; for migration tools).", err=True)
+            sys.exit(2)
     src = DECK_DIR / old_title
     dst = DECK_DIR / new_title
     if not src.exists():
