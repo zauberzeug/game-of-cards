@@ -1,7 +1,7 @@
 ---
 title: done-rerun-rewrites-closure-date
 summary: "Running `goc done <title>` on a card that is already `status: done` rewrites `closed_at` to today's date. That destroys the original closure timestamp and makes repeated close attempts non-idempotent."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
