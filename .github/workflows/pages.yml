@@ -1,0 +1,96 @@
+# Pages deployment — renders README.md as the site at game-of-cards.com.
+#
+# README.md is the single source of truth for the marketing surface
+# (decided by `build-game-of-cards-project-website`). This workflow
+# synthesizes the Jekyll site at deploy time so we never check in a
+# duplicate index.md that could drift:
+#
+#   1. Drop the README's leading H1 + the blank line that follows it
+#      (the Jekyll layout supplies the page title).
+#   2. Rewrite repo-relative markdown links (docs/, goc/, deck/,
+#      assets/, LICENSE) to absolute GitHub blob URLs so they resolve
+#      from the rendered site.
+#   3. Build with the GitHub-supported jekyll-theme-cayman.
+#   4. Publish to game-of-cards.com (CNAME shipped with the artifact).
+#
+# DNS: the apex `game-of-cards.com` needs A records pointing at GitHub
+# Pages IPs (or `www.game-of-cards.com` as a CNAME → zauberzeug.github.io).
+# That's a one-time setup at the domain registrar, outside this repo.
+#
+# Security: the only github-context expression used in `run:` is
+# `github.repository`, which is the canonical owner/repo slug and not
+# attacker-controlled. It is still indirected through an `env:` binding
+# per the safe-injection pattern.
+
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - README.md
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Synthesize Jekyll site from README.md
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p _pages
+          BASE="https://github.com/${REPO}/blob/main"
+
+          {
+            cat <<'FRONT'
+          ---
+          layout: default
+          title: Game of Cards
+          description: Agile in the age of AI agents — repo-native cards humans and AI agents share.
+          ---
+          FRONT
+            sed '1,/^$/d' README.md \
+              | sed -E "s#\]\(((docs|goc|deck|assets)/[^)]+)\)#](${BASE}/\1)#g" \
+              | sed -E "s#\]\((LICENSE)\)#](${BASE}/\1)#g"
+          } > _pages/index.md
+
+          cat > _pages/_config.yml <<'CONF'
+          title: Game of Cards
+          description: Agile in the age of AI agents — repo-native cards humans and AI agents share.
+          theme: jekyll-theme-cayman
+          CONF
+
+          echo "game-of-cards.com" > _pages/CNAME
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./_pages
+          destination: ./_site
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
