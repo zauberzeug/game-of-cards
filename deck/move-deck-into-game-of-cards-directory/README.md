@@ -1,7 +1,7 @@
 ---
 title: move-deck-into-game-of-cards-directory
 summary: "Move the canonical deck location from root `deck/` to `.game-of-cards/deck` so GoC-owned project state lives under one runtime-neutral directory. Preserve compatibility or provide a migration path for existing decks, and keep config under `.game-of-cards` with one documented filename."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-05
