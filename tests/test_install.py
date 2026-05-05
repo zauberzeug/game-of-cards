@@ -599,31 +599,98 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(result)
             self.assertIn("legacy-card", result.stdout)
 
-    def test_mixed_deck_locations_prefer_new_path(self) -> None:
+    _LEGACY_CARD_FRONTMATTER = (
+        "---\ntitle: legacy-card\nsummary: legacy\nstatus: open\nstage: null\n"
+        "contribution: low\ncreated: 2026-05-01\nclosed_at: null\nhuman_gate: none\n"
+        "advances: []\nadvanced_by: []\ntags: [bug]\ndefinition_of_done: |\n  - [x] ok\n---\n"
+    )
+
+    def _make_legacy_card(self, cwd: Path) -> Path:
+        deck = cwd / "deck"
+        deck.mkdir(exist_ok=True)
+        (deck / "legacy-card").mkdir(exist_ok=True)
+        (deck / "legacy-card" / "README.md").write_text(self._LEGACY_CARD_FRONTMATTER)
+        return deck
+
+    def _make_canonical_deck(self, cwd: Path) -> Path:
+        deck = cwd / ".game-of-cards" / "deck"
+        deck.mkdir(parents=True, exist_ok=True)
+        return deck
+
+    def test_dual_tree_blocks_all_commands_and_suggests_migrate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
-            legacy_deck = cwd / "deck"
-            legacy_deck.mkdir()
-            (legacy_deck / "legacy-card").mkdir()
-            (legacy_deck / "legacy-card" / "README.md").write_text(
-                "---\ntitle: legacy-card\nsummary: legacy\nstatus: open\nstage: null\n"
-                "contribution: low\ncreated: 2026-05-01\nclosed_at: null\nhuman_gate: none\n"
-                "advances: []\nadvanced_by: []\ntags: [bug]\ndefinition_of_done: |\n  - [x] ok\n---\n"
-            )
-            new_deck = cwd / ".game-of-cards" / "deck"
-            new_deck.mkdir(parents=True)
-            (new_deck / "new-card").mkdir()
-            (new_deck / "new-card" / "README.md").write_text(
+            self._make_legacy_card(cwd)
+            canonical = self._make_canonical_deck(cwd)
+            (canonical / "new-card").mkdir()
+            (canonical / "new-card" / "README.md").write_text(
                 "---\ntitle: new-card\nsummary: new\nstatus: open\nstage: null\n"
                 "contribution: low\ncreated: 2026-05-01\nclosed_at: null\nhuman_gate: none\n"
                 "advances: []\nadvanced_by: []\ntags: [story]\ndefinition_of_done: |\n  - [x] ok\n---\n"
             )
 
-            result = self.run_goc(cwd, "--no-color")
+            for args in [["--no-color"], ["validate"], ["--status", "all", "--no-color"]]:
+                result = self.run_goc(cwd, *args)
+                self.assertNotEqual(0, result.returncode, msg=f"Expected failure for: {args}")
+                self.assertIn("two deck trees found", result.stderr)
+                self.assertIn("goc migrate", result.stderr)
+                self.assertIn(str(cwd / ".game-of-cards" / "deck"), result.stderr)
+                self.assertIn(str(cwd / "deck"), result.stderr)
+
+    def test_migrate_moves_legacy_only_cards_and_removes_legacy_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_legacy_card(cwd)
+            self._make_canonical_deck(cwd)
+
+            result = self.run_goc(cwd, "migrate", "--yes")
 
             self.assert_goc_ok(result)
-            self.assertIn("new-card", result.stdout)
-            self.assertNotIn("legacy-card", result.stdout)
+            self.assertIn("migrated: legacy-card", result.stdout)
+            self.assertFalse((cwd / "deck").exists())
+            self.assertTrue((cwd / ".game-of-cards" / "deck" / "legacy-card" / "README.md").is_file())
+            self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
+
+    def test_migrate_refuses_when_same_card_content_differs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            legacy = self._make_legacy_card(cwd)
+            canonical = self._make_canonical_deck(cwd)
+            (canonical / "legacy-card").mkdir()
+            (canonical / "legacy-card" / "README.md").write_text(
+                self._LEGACY_CARD_FRONTMATTER.replace("summary: legacy", "summary: diverged")
+            )
+
+            result = self.run_goc(cwd, "migrate", "--yes")
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("content drift", result.stderr)
+            self.assertIn("legacy-card/README.md", result.stderr)
+            self.assertTrue((legacy / "legacy-card").exists(), "legacy tree must be untouched after conflict")
+
+    def test_migrate_dry_run_shows_plan_without_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_legacy_card(cwd)
+            self._make_canonical_deck(cwd)
+
+            result = self.run_goc(cwd, "migrate", "--dry-run")
+
+            self.assert_goc_ok(result)
+            self.assertIn("Dry run", result.stdout)
+            self.assertIn("legacy-card", result.stdout)
+            self.assertTrue((cwd / "deck").exists(), "dry run must not remove legacy tree")
+            self.assertFalse((cwd / ".game-of-cards" / "deck" / "legacy-card").exists())
+
+    def test_migrate_no_legacy_reports_nothing_to_do(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_canonical_deck(cwd)
+
+            result = self.run_goc(cwd, "migrate")
+
+            self.assert_goc_ok(result)
+            self.assertIn("No legacy deck/", result.stdout)
 
     def test_install_detects_legacy_deck_as_existing_install(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

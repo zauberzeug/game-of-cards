@@ -133,6 +133,32 @@ For full dynamic feature support, either:
 
 A future release will fix the bootstrap path to use `${CLAUDE_SKILL_DIR}` so the plugin is fully self-contained.
 
+## Migrating a legacy deck layout
+
+Versions before 0.0.4 stored the deck under `deck/` at the project root. From 0.0.4 onward the deck lives under `.game-of-cards/deck/`. Both layouts work for single-tree repos, but **if both trees exist at the same time, `goc` will refuse to operate** — any command other than `goc migrate` exits with an error naming both paths.
+
+### Why dual-tree is fatal
+
+Two deck trees cause silent drift: a stale `goc` binary (installed globally as 0.0.3) writes to `deck/`; the local `uv run goc` (0.0.4) writes to `.game-of-cards/deck/`. Both validate independently. The divergence is invisible until a human diffs the two trees. This happened in practice — 12 hours of parallel writes in May 2026, reconciled in commit `004756d`.
+
+### How to recover
+
+```bash
+goc migrate          # interactive — asks for confirmation before removing legacy tree
+goc migrate --yes    # non-interactive
+goc migrate --dry-run  # preview what would change
+```
+
+`goc migrate` inspects both trees, refuses if the same card has different content in each (drift), migrates legacy-only cards to canonical, then removes `deck/`. After a clean migration, `goc validate` confirms integrity.
+
+If the same card appears in both trees with differing content, resolve the drift manually:
+
+1. Decide which version is authoritative.
+2. Copy the authoritative file into `.game-of-cards/deck/<card>/README.md`.
+3. Re-run `goc migrate`.
+
+If you prefer to delete the stale tree directly: `rm -rf deck/` removes the legacy path; `rm -rf .game-of-cards/deck/` removes the canonical path. Only remove the tree you are certain is fully superseded.
+
 ## Daily commands
 
 ```bash
@@ -158,5 +184,6 @@ Common verbs:
 | `goc validate` | Validate card frontmatter and schema constraints. |
 | `goc install` | Install the methodology into the current repo. |
 | `goc upgrade` | Re-sync generated templates in an existing install. |
+| `goc migrate` | Merge legacy `deck/` into `.game-of-cards/deck/` and remove the stale tree. |
 
 Run `goc --help` or `goc <command> --help` for the full CLI surface.

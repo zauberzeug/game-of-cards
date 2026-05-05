@@ -1,22 +1,22 @@
 ---
 title: engine-refuses-to-start-when-both-deck-trees-exist
 summary: "After the 2026-05-05 migration, `_resolve_deck_dir` silently prefers `.game-of-cards/deck/` when both it and legacy `deck/` exist. Two `goc` clients writing to different trees (e.g., a stale uv-tool install and `uv run goc` from source) drifted in parallel for 12h before a human noticed. Make the engine refuse to operate (or require explicit migration) when both deck trees exist, so the dual-tree drift incident cannot recur silently."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-05
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] `_resolve_deck_dir` (or its caller) detects when both `.game-of-cards/deck/` and `deck/` exist and exits with a clear error pointing at a remediation path
-  - [ ] A `goc migrate` (or equivalent) verb performs the legacy-to-canonical merge with confirmation, including drift-detection across same-named cards
-  - [ ] The error message names both paths and tells the user how to resolve (run `goc migrate`, or delete the stale tree)
-  - [ ] Tests cover: only-canonical (passes), only-legacy (passes with deprecation), both-present (fails with actionable error), migration command (resolves drift)
-  - [ ] Docs explain the failure mode, why dual-tree drift was a real incident, and how to recover
-  - [ ] `uv run goc validate` passes
+  - [x] `_resolve_deck_dir` (or its caller) detects when both `.game-of-cards/deck/` and `deck/` exist and exits with a clear error pointing at a remediation path
+  - [x] A `goc migrate` (or equivalent) verb performs the legacy-to-canonical merge with confirmation, including drift-detection across same-named cards
+  - [x] The error message names both paths and tells the user how to resolve (run `goc migrate`, or delete the stale tree)
+  - [x] Tests cover: only-canonical (passes), only-legacy (passes with deprecation), both-present (fails with actionable error), migration command (resolves drift)
+  - [x] Docs explain the failure mode, why dual-tree drift was a real incident, and how to recover
+  - [x] `uv run goc validate` passes
 ---
 
 # Engine refuses to start when both deck trees exist

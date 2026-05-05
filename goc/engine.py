@@ -33,14 +33,32 @@ PACKAGE_DIR = Path(__file__).resolve().parent  # installed package dir (goc/)
 REPO_ROOT = Path.cwd()  # project being managed (consuming repo's root)
 
 
+_DUAL_TREE_CONFLICT: bool = False
+_LEGACY_ONLY: bool = False
+
+
 def _resolve_deck_dir(repo_root: Path) -> Path:
-    """Return the deck directory: `.game-of-cards/deck` if present, else `deck/` fallback."""
+    """Return the deck directory for single-tree scenarios.
+
+    Sets _DUAL_TREE_CONFLICT when both .game-of-cards/deck/ and deck/ exist
+    so the CLI group can refuse before dispatching any mutating subcommand.
+    Sets _LEGACY_ONLY when only deck/ exists so callers can warn.
+    """
+    global _DUAL_TREE_CONFLICT, _LEGACY_ONLY
     canonical = repo_root / ".game-of-cards" / "deck"
-    if canonical.exists():
-        return canonical
     legacy = repo_root / "deck"
+    if canonical.exists() and legacy.exists():
+        _DUAL_TREE_CONFLICT = True
+        _LEGACY_ONLY = False
+        return canonical
+    _DUAL_TREE_CONFLICT = False
+    if canonical.exists():
+        _LEGACY_ONLY = False
+        return canonical
     if legacy.exists():
+        _LEGACY_ONLY = True
         return legacy
+    _LEGACY_ONLY = False
     return canonical
 
 
@@ -948,6 +966,22 @@ def cli(
     board,
     max_rows,
 ):
+    if _DUAL_TREE_CONFLICT and ctx.invoked_subcommand != "migrate":
+        _canonical = REPO_ROOT / ".game-of-cards" / "deck"
+        _legacy = REPO_ROOT / "deck"
+        click.echo(
+            f"ERROR: two deck trees found — cannot operate safely:\n"
+            f"  canonical: {_canonical}\n"
+            f"  legacy:    {_legacy}\n"
+            f"\nRun `goc migrate` to merge legacy → canonical and remove the stale tree.",
+            err=True,
+        )
+        sys.exit(1)
+    if _LEGACY_ONLY and ctx.invoked_subcommand not in ("migrate", "install", "upgrade"):
+        click.echo(
+            "WARNING: using legacy deck/ location. Run `goc upgrade` to migrate to .game-of-cards/deck/.",
+            err=True,
+        )
     if ctx.invoked_subcommand is not None:
         return
     cards = load_all_cards()
@@ -1994,6 +2028,104 @@ def show(title):
         click.echo(f"ERROR: {p} not found", err=True)
         sys.exit(2)
     click.echo(p.read_text())
+
+
+@cli.command()
+@click.option("--dry-run", is_flag=True, help="Show what would happen without making changes.")
+@click.option("--yes", "auto_yes", is_flag=True, help="Skip confirmation prompt.")
+def migrate(dry_run, auto_yes):
+    """Merge legacy deck/ into .game-of-cards/deck/ and remove the stale tree.
+
+    Refuses if any card exists in both trees with differing content — resolve
+    the drift manually first, then re-run.  Safe to run against a single-tree
+    repo (it reports nothing to do and exits cleanly).
+    """
+    canonical = REPO_ROOT / ".game-of-cards" / "deck"
+    legacy = REPO_ROOT / "deck"
+
+    if not legacy.exists():
+        click.echo("No legacy deck/ found; nothing to migrate.")
+        return
+
+    if not canonical.exists():
+        click.echo(
+            f"ERROR: canonical deck location {canonical} does not exist.\n"
+            "Run `goc install` first to set up the canonical deck location.",
+            err=True,
+        )
+        sys.exit(1)
+
+    legacy_dirs = {d.name: d for d in legacy.iterdir() if d.is_dir()}
+    canonical_dirs = {d.name: d for d in canonical.iterdir() if d.is_dir()}
+
+    conflicts: list[str] = []
+    to_copy: list[str] = []
+    identical: list[str] = []
+
+    for name in sorted(legacy_dirs):
+        if name not in canonical_dirs:
+            to_copy.append(name)
+            continue
+        drifted = False
+        for fname in ["README.md", "log.md"]:
+            lf = legacy_dirs[name] / fname
+            cf = canonical_dirs[name] / fname
+            if lf.exists() and cf.exists() and lf.read_text() != cf.read_text():
+                conflicts.append(f"  {name}/{fname}: content differs between trees")
+                drifted = True
+            elif lf.exists() and not cf.exists():
+                conflicts.append(f"  {name}/{fname}: exists in legacy but missing in canonical")
+                drifted = True
+        if not drifted:
+            identical.append(name)
+
+    if conflicts:
+        click.echo(
+            "ERROR: cards with content drift — cannot merge safely:",
+            err=True,
+        )
+        for c in conflicts:
+            click.echo(c, err=True)
+        click.echo(
+            "\nResolve the drifted cards manually (pick the authoritative version),\n"
+            "then re-run `goc migrate`.",
+            err=True,
+        )
+        sys.exit(1)
+
+    if to_copy:
+        click.echo("Cards to migrate (legacy-only):")
+        for name in to_copy:
+            click.echo(f"  deck/{name}/  →  .game-of-cards/deck/{name}/")
+    if identical:
+        click.echo(f"Cards already in canonical tree (identical, will skip): {len(identical)}")
+
+    if not to_copy and not identical:
+        click.echo("Legacy deck/ contains no card directories; nothing to migrate.")
+        if not dry_run and not _DUAL_TREE_CONFLICT:
+            return
+
+    if dry_run:
+        if to_copy or not legacy_dirs:
+            click.echo(f"Would remove legacy tree: {legacy}")
+        click.echo("Dry run — no changes made.")
+        return
+
+    if to_copy or identical:
+        if not auto_yes:
+            click.confirm(
+                f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?",
+                abort=True,
+            )
+
+    for name in to_copy:
+        shutil.copytree(str(legacy_dirs[name]), str(canonical / name))
+        click.echo(f"  migrated: {name}")
+
+    shutil.rmtree(legacy)
+    click.echo(f"\nRemoved legacy tree: {legacy}")
+    click.echo("Migration complete. Run `goc validate` to confirm.")
+    click.echo("Next: `goc validate` to verify card integrity after migration.")
 
 
 if __name__ == "__main__":
