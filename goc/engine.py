@@ -1340,6 +1340,9 @@ def done(title, force):
         click.echo(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", err=True)
         sys.exit(2)
     prior = t.status
+    if prior == "done":
+        click.echo(f"{title}: already done; closed_at unchanged")
+        return
     _TERMINAL_NON_DONE = frozenset({"disproved", "superseded"})
     if prior in _TERMINAL_NON_DONE:
         click.echo(
