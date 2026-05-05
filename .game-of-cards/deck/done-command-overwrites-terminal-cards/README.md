@@ -1,20 +1,20 @@
 ---
 title: done-command-overwrites-terminal-cards
 summary: "`goc done` can be run on cards already in other terminal states (`disproved` and `superseded`), rewriting their forensic status to `done` and stamping `closed_at`. That erases the terminal meaning recorded by the prior investigation or supersession."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/done-command-overwrites-terminal-cards/reproduce.py` exits zero
-  - [ ] `goc done` refuses cards currently in terminal non-done states (`disproved`, `superseded`)
-  - [ ] The refusal message tells the user to use the appropriate supersede/disprove workflow instead of closing
-  - [ ] Focused regression coverage proves `disproved` and `superseded` cards keep their status when `goc done` is attempted
+  - [x] `uv run python deck/done-command-overwrites-terminal-cards/reproduce.py` exits zero
+  - [x] `goc done` refuses cards currently in terminal non-done states (`disproved`, `superseded`)
+  - [x] The refusal message tells the user to use the appropriate supersede/disprove workflow instead of closing
+  - [x] Focused regression coverage proves `disproved` and `superseded` cards keep their status when `goc done` is attempted
 ---
 
 # done-command-overwrites-terminal-cards

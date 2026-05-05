@@ -1335,6 +1335,14 @@ def done(title, force):
         click.echo(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", err=True)
         sys.exit(2)
     prior = t.status
+    _TERMINAL_NON_DONE = frozenset({"disproved", "superseded"})
+    if prior in _TERMINAL_NON_DONE:
+        click.echo(
+            f"ERROR: {title}: status is {prior!r} (terminal); "
+            f"use the supersede/disprove workflow — 'done' cannot overwrite terminal states",
+            err=True,
+        )
+        sys.exit(2)
     today = date.today().isoformat()
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", "done")
