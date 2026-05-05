@@ -63,6 +63,13 @@ Repo-local development form:
 uv run goc install --agents codex
 ```
 
+## First cards
+
+Once `goc install` has scaffolded the substrate, the deck is empty. Two ways to seed it:
+
+- **Ask your coding agent.** Say "expand the deck" (or "find issues to file as cards"). This triggers the `extend-deck` skill, which audits the repo for previously-undocumented defects, doc drift, missing tests, or architectural smells, and files each finding as a card via `goc new`. Re-invoke until the queue is the size you want.
+- **By hand.** `goc new "rename the export button"` scaffolds a single card with valid frontmatter and a placeholder Definition of Done that `goc done` will refuse to close until you fill it in.
+
 ## Upgrade an install
 
 After upgrading the machine-wide `goc` command, refresh generated files in a repo:

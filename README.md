@@ -9,7 +9,7 @@ Agile for the age of agents — turn work into durable, inspectable cards that h
 In any repo, ask your coding agent:
 
 ```
-Install game-of-cards.com in this repo, then create a first card for the next small improvement.
+Install game-of-cards.com in this repo.
 ```
 
 That's it. Bootstrapping flows from the PyPI package `game-of-cards`. If you'd rather drive the install by hand, see [`goc.md`](goc.md) for the manual recipe and CLI reference.
