@@ -1393,6 +1393,7 @@ def done(title, force):
     text = mutate_frontmatter_field(text, "closed_at", today)
     (card_dir / "README.md").write_text(text)
     click.echo(f"{title}: {prior} → done")
+    click.echo("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -1655,6 +1656,7 @@ def attest(title, skips, non_interactive):
         click.echo("\nERROR: attestation has failures; finish-card will block closure.", err=True)
         sys.exit(2)
     click.echo("\nAttestation OK.")
+    click.echo(f"Next: goc done {title} to close once all DoD items are ticked.")
 
 
 @cli.command()
@@ -1689,6 +1691,8 @@ def status(title, new_status, commit, no_commit):
     text = mutate_frontmatter_field(text, "status", new_status)
     (card_dir / "README.md").write_text(text)
     click.echo(f"{title}: {prior} → {new_status}")
+    if new_status == "active":
+        click.echo(f"Next: implement the card; tick DoD items as you go; then goc done {title}.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         if _git_auto_commit([card_dir], f"deck: {title} {prior} → {new_status}"):
@@ -1765,6 +1769,7 @@ def new(title, contribution, gate, tags, allow_jargon):
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     (card_dir / "log.md").write_text("")
     click.echo(f"created {card_dir.relative_to(REPO_ROOT)}/")
+    click.echo(f"Next: edit deck/{title}/README.md to fill the body and DoD; then ask your agent to implement the card.")
 
 
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
@@ -1945,6 +1950,7 @@ def decide(title, decision, reasoning, commit, no_commit):
         + f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
     )
     click.echo(f"{title}: decision recorded; gate {prior_gate} → none")
+    click.echo("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         decision_short = decision[:60] + ("…" if len(decision) > 60 else "")
@@ -2015,7 +2021,7 @@ def triage(as_json):
                 first = entry["summary"].splitlines()[0][:140]
                 lines.append(f"  > {first}")
             lines.append("")
-    lines.append("Tip: ask `decisions to make` to walk each via Q&A and record via Skill(decide-card).")
+    lines.append("Next: ask your agent \"decisions to make\" (Skill(scan-deck)) to walk each card and record decisions via Skill(decide-card).")
     click.echo("\n".join(lines))
 
 

@@ -689,6 +689,7 @@ def upgrade(
         click.echo(f"goc upgrade complete (project state only) — {existing} → {__version__}.")
     else:
         click.echo(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    click.echo("Next: re-run goc validate to confirm cards parse against the new schema.")
 
 
 if __name__ == "__main__":
