@@ -14,20 +14,28 @@
 # A curated /llms.txt (llmstxt.org convention) gives crawlers a terse
 # summary plus pointers to the raw documents.
 #
-# Pipeline:
-#   1. Python step synthesizes _pages/{index,goc,about}.md by stripping
-#      each source's H1 and rewriting repo-relative markdown links to
-#      site paths (goc.md → /goc/, ABOUT.md → /about/) or absolute
-#      GitHub blob URLs (AGENTS.md, LICENSE, goc/, deck/, .game-of-cards/).
-#   2. Same step copies assets/ into _pages/assets so embedded images
-#      (the comic strip and the how-it-works diagram) resolve identically
-#      on GitHub and on the rendered site.
-#   3. Jekyll renders _pages/ to _site/ via jekyll-theme-cayman (mobile-
+# Pipeline (single Python step, then Jekyll):
+#   1. The Python step writes everything Jekyll needs into _pages/:
+#      - Rendered sources (home.md, goc-page.md, about-page.md) with
+#        front matter, permalinks, H1 stripped, repo-relative markdown
+#        links rewritten to site paths or absolute GitHub blob URLs.
+#      - Raw mirrors (index.md, README.md, goc.md, ABOUT.md, llms.txt)
+#        with NO front matter — Jekyll treats files without front matter
+#        as static assets and copies them through verbatim.
+#      - assets/ copied so the comic and how-it-works diagram resolve
+#        identically on GitHub and on the rendered site.
+#   2. Jekyll builds _pages/ → _site/ via jekyll-theme-cayman (mobile-
 #      responsive, CSS-only — no JS components, so the rendered HTML
 #      stays scrapable).
-#   4. Post-build step drops raw markdown mirrors + llms.txt into _site/
-#      AFTER Jekyll has run, so they're served as static files (no
-#      front matter, no rendering).
+#   3. upload-pages-artifact ships _site/ untouched.
+#
+# Why a single pre-Jekyll synthesis step (no post-build step):
+# `actions/jekyll-build-pages` runs Jekyll in a Docker container as a
+# different UID, so a host-runner step writing into _site/ after the
+# build hits "Permission denied". Putting the raw mirrors into the
+# Jekyll source instead lets the container do all the writes, and
+# Jekyll's pass-through rule for front-matter-less files preserves
+# them byte-for-byte at the requested URL.
 #
 # Security: only `github.repository` is interpolated into a run: command,
 # and it's indirected through env: per the safe-injection pattern. No
@@ -100,57 +108,43 @@ jobs:
                       break
               return "".join(lines)
 
-          def synthesize(src: str, dst: str, title: str, permalink: str,
-                         description: str = "") -> None:
+          def render_page(src: str, out_name: str, title: str,
+                          permalink: str, description: str = "") -> None:
               body = rewrite_links(strip_first_h1(Path(src).read_text()))
               front = ["---", "layout: default", f"title: {title}",
                       f"permalink: {permalink}"]
               if description:
                   front.append(f"description: {description}")
               front.append("---")
-              (out / dst).write_text("\n".join(front) + "\n" + body)
+              (out / out_name).write_text("\n".join(front) + "\n" + body)
 
-          synthesize(
-              "README.md", "index.md",
+          # Rendered HTML pages — Jekyll processes these via permalink.
+          # The source filenames don't appear in URLs (permalink wins),
+          # so they're chosen to NOT collide with the raw mirrors below.
+          render_page(
+              "README.md", "home.md",
               "Game of Cards", "/",
               "Agile in the age of AI agents — repo-native cards humans and AI agents share.",
           )
-          synthesize(
-              "goc.md", "goc.md",
+          render_page(
+              "goc.md", "goc-page.md",
               "goc — the Game of Cards CLI", "/goc/",
           )
-          synthesize(
-              "ABOUT.md", "about.md",
+          render_page(
+              "ABOUT.md", "about-page.md",
               "Background — context for Game of Cards", "/about/",
           )
 
-          (out / "_config.yml").write_text(
-              "title: Game of Cards\n"
-              "description: Agile in the age of AI agents — repo-native cards humans and AI agents share.\n"
-              "theme: jekyll-theme-cayman\n"
-          )
-          (out / "CNAME").write_text("game-of-cards.com\n")
+          # Raw markdown mirrors — no front matter means Jekyll treats
+          # them as static files and copies them through unchanged.
+          (out / "index.md").write_text(Path("README.md").read_text())
+          (out / "README.md").write_text(Path("README.md").read_text())
+          (out / "goc.md").write_text(Path("goc.md").read_text())
+          (out / "ABOUT.md").write_text(Path("ABOUT.md").read_text())
 
-          if Path("assets").is_dir():
-              shutil.copytree("assets", out / "assets")
-          PY
-
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./_pages
-          destination: ./_site
-
-      - name: Drop raw markdown mirrors and llms.txt into _site
-        run: |
-          set -euo pipefail
-          cp README.md _site/README.md
-          cp README.md _site/index.md
-          cp goc.md _site/goc.md
-          cp ABOUT.md _site/ABOUT.md
-          cat > _site/llms.txt <<'EOF'
-          # Game of Cards
+          # Curated llms.txt — terse summary + pointers to the raw
+          # documents above (llmstxt.org convention).
+          (out / "llms.txt").write_text("""# Game of Cards
 
           > Agile in the age of AI agents: a repo-native methodology for turning work into durable, inspectable cards that humans and coding agents share.
 
@@ -175,7 +169,25 @@ jobs:
           ## Source
 
           https://github.com/zauberzeug/game-of-cards
-          EOF
+          """.replace("          ", ""))
+
+          (out / "_config.yml").write_text(
+              "title: Game of Cards\n"
+              "description: Agile in the age of AI agents — repo-native cards humans and AI agents share.\n"
+              "theme: jekyll-theme-cayman\n"
+          )
+          (out / "CNAME").write_text("game-of-cards.com\n")
+
+          if Path("assets").is_dir():
+              shutil.copytree("assets", out / "assets")
+          PY
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./_pages
+          destination: ./_site
 
       - uses: actions/upload-pages-artifact@v3
 
