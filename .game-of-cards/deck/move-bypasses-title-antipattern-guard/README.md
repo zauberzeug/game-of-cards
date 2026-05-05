@@ -1,7 +1,7 @@
 ---
 title: move-bypasses-title-antipattern-guard
 summary: "`goc new` rejects engineer-jargon title antipatterns such as `bug-123-*`, but `goc move` accepts the same bad slug and `goc validate` stays green. Retitling can therefore create titles the filing path forbids."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-04
