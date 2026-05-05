@@ -1,7 +1,7 @@
 ---
 title: install-openclaw-harness
 summary: "Make OpenClaw a first-class `goc install` harness option, following its native project-guidance convention while sharing GoC's common harness metadata."
-status: blocked
+status: superseded
 stage: null
 contribution: medium
 created: 2026-05-04
@@ -20,6 +20,12 @@ definition_of_done: |
 ---
 
 # Install OpenClaw Harness
+
+## Superseded
+
+This card is replaced by [provide-openclaw-plugin-for-skills-and-hooks](../provide-openclaw-plugin-for-skills-and-hooks/).
+
+The product direction changed from repo-local harness installation (`goc install --agents openclaw`) to plugin-provided runtime affordances. OpenClaw support should follow the plugin path after the Claude Code and Codex plugin shapes are proven, instead of adding another checked-in harness target.
 
 ## Why
 

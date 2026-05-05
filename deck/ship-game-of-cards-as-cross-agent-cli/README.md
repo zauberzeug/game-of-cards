@@ -1,6 +1,6 @@
 ---
 title: ship-game-of-cards-as-cross-agent-cli
-summary: "Ship Game of Cards as a standalone, cross-agent CLI (`goc`) installable from PyPI. Today the methodology lives only inside this repo as `.claude/skills/deck/deck.py` plus 11 Claude Code skills, vendored per-repo via `Skill(use-game-of-cards)`. The niche has converged on the CLI-installer pattern (Spec-Kit, BMAD, Agent OS, Ruler all ship `pipx`/`npx`/`uvx` installers that drop per-agent shims into a target repo); shipping as a Claude marketplace plugin is the road no serious methodology framework took. The epic covers PyPI packaging, `goc install` / `goc upgrade` per-repo scaffolding, AGENTS.md output for cross-agent reach (Codex, OpenCode, Cursor, Copilot all read it; OpenCode also reads `.claude/skills/` natively), multi-agent shim strategy, the missing-CLI bootstrap message, and migrating phasor-agents itself off the vendored `deck.py` once the CLI is on PATH."
+summary: "Ship Game of Cards as a standalone, cross-agent CLI (`goc`) installable from PyPI, with durable project state under `.game-of-cards` and agent runtime affordances supplied optionally or through plugins. The CLI remains the engine; Claude Code, Codex, and later OpenClaw plugins provide skills/hooks without requiring consuming repos to check generated runtime files into source control."
 status: open
 stage: null
 contribution: high
@@ -8,13 +8,13 @@ created: 2026-05-03
 closed_at: null
 human_gate: session
 advances: []
-advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, drop-card-redirect-directories, surface-active-cards-in-board]
+advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, drop-card-redirect-directories, surface-active-cards-in-board, support-external-game-of-cards-state-location, integrate-github-issues-discussions-and-pull-requests, support-custom-card-workflows-and-statuses, build-game-of-cards-project-website]
 tags: [epic, infra, meta-fix]
 definition_of_done: |
   - [ ] `game-of-cards` package published on PyPI; `pipx install game-of-cards` puts `goc` on PATH (sub-card: package-pyproject-and-pypi-release)
-  - [ ] `goc install` populates `.claude/skills/`, `deck/`, hooks, CLAUDE.md sections in any target repo (sub-card: install-command-scaffolds-repo)
+  - [ ] `goc install` scaffolds `.game-of-cards` project state and supports optional runtime affordances without requiring checked-in skills/hooks (sub-cards: install-command-scaffolds-repo, support-external-game-of-cards-state-location)
   - [ ] `goc install` writes/merges `AGENTS.md` so Codex/Cursor/OpenCode/Copilot/Aider see the methodology (sub-card: write-agentsmd-alongside-claudemd)
-  - [ ] `goc install --agents <list>` populates per-agent shims; v1 agent set decided and documented (sub-card: multi-agent-shim-which-agents-at-v1)
+  - [ ] Agent runtime affordances exist for the supported set through opt-in repo-local shims or plugins; v1/v2 agent set decided and documented (sub-cards: multi-agent-shim-which-agents-at-v1, support-external-game-of-cards-state-location)
   - [ ] When `goc` is missing from PATH, skills/hooks emit one-line `pipx install game-of-cards` instructions instead of cryptic shell errors (sub-card: bootstrap-error-when-cli-not-on-path)
   - [ ] phasor-agents repo itself runs on PATH-resolved `goc`, vendored `.claude/skills/deck/deck.py` removed (tracked in phasor-agents: `goc-migrate-phasor-agents-off-vendored-deckpy`)
   - [ ] One external repo (any Zauberzeug project or volunteer) successfully runs `pipx install game-of-cards && goc install` end-to-end with no manual fix-up
@@ -37,29 +37,31 @@ The peer landscape settled this question already. Spec-Kit (`uv tool install spe
 
 ## What
 
-A standalone Python package — `game-of-cards` on PyPI, exposing the `goc` entry point — that absorbs the role of today's `.claude/skills/deck/deck.py` engine plus the `Skill(use-game-of-cards)` scaffolder. Every repo that wants the methodology runs `pipx install game-of-cards` once and `goc install` per-repo.
+A standalone Python package — `game-of-cards` on PyPI, exposing the `goc` entry point — that absorbs the role of today's `.claude/skills/deck/deck.py` engine plus the `Skill(use-game-of-cards)` scaffolder. Every repo that wants the methodology runs `pipx install game-of-cards` once and `goc install` per-repo. Agent skills/hooks become optional runtime affordances, preferably plugin-provided where the agent supports that model.
 
 ```
 pipx install game-of-cards            # machine-wide, once
 cd any-repo
-goc install                           # populates .claude/skills/, deck/, hooks, CLAUDE.md, AGENTS.md
-goc install --agents claude,cursor    # multi-agent shims selectively
+goc install                           # creates .game-of-cards project state and guidance
+goc install --agents claude,codex     # optional repo-local shims where requested
 goc upgrade                           # re-syncs skill templates from latest package version
 goc kanban / goc new / goc done / ... # all existing deck.py verbs as top-level commands
 ```
 
-The CLI is the engine; skills become trivial shells (`bash: goc new "$@"`, `bash: goc done "$@"`). Skill templates ship as package data via `importlib.resources` — `goc install` extracts them into the target repo. AGENTS.md is the canonical guidance file (LF-stewarded standard now read by Claude Code, Codex, Cursor, Copilot, OpenCode, Aider); CLAUDE.md becomes a Claude-specific delta.
+The CLI is the engine; skills become trivial shells (`bash: goc new "$@"`, `bash: goc done "$@"`) whether they are installed repo-locally or supplied by an agent plugin. AGENTS.md remains the canonical cross-agent guidance surface; agent-specific files become deltas or plugin assets.
 
 ## How (high level — sub-cards have detail)
 
 The initial work split into these in-repo streams, plus one phasor-agents dogfood card tracked in that repo:
 
 1. **Packaging** (`package-pyproject-and-pypi-release`) — `pyproject.toml`, entry-point wiring, package-data layout for skill templates, PyPI release pipeline.
-2. **Install command** (`install-command-scaffolds-repo`) — the `goc install` flow that drops files into a target repo: `.claude/skills/`, `deck/`, hooks, CLAUDE.md sections, validator pre-commit hook.
+2. **Install command** (`install-command-scaffolds-repo`, updated by `support-external-game-of-cards-state-location`) — the `goc install` flow that creates `.game-of-cards` project state, guidance, and optional runtime affordances.
 3. **AGENTS.md output** (`write-agentsmd-alongside-claudemd`) — write/merge AGENTS.md so the methodology is visible to all six major agent runtimes, not just Claude Code.
 4. **Multi-agent shims** (`multi-agent-shim-which-agents-at-v1`) — `--agents` flag + per-agent shim templates. **Decision**: which agents at v1 (claude only? +cursor? +codex? +copilot?).
 5. **Bootstrap UX** (`bootstrap-error-when-cli-not-on-path`) — when someone clones a GoC-using repo without `goc` installed, skills emit `pipx install game-of-cards` instead of cryptic Python tracebacks.
 6. **Dogfood migration** (`../phasor-agents/deck/goc-migrate-phasor-agents-off-vendored-deckpy`) — phasor-agents itself currently vendors `deck.py`. Once `goc` is on PyPI, phasor-agents deletes the vendored copy and shells to PATH like any other consumer. **Decision**: immediate cutover on v1 release.
+7. **Website** (`build-game-of-cards-project-website`) — project website and explanatory illustration for the public surface.
+8. **GitHub/workflow extensions** (`integrate-github-issues-discussions-and-pull-requests`, `support-custom-card-workflows-and-statuses`) — session-gated compatibility and schema-extension work.
 
 ## Why this is high-contribution
 
