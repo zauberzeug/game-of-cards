@@ -595,7 +595,7 @@ def install(
         if not explicit_agents:
             source = " (auto-detected)" if detected_agents else " (default)"
         click.echo(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
-        click.echo('Next: ask your LLM agent: "create a card for the next change I want to make."')
+        click.echo('Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. Or "create a card for X" if you already know the first change you want to make.')
         click.echo("Engine/debug: `goc` shows the queue; `goc validate` checks cards. Run `goc upgrade` later to sync template updates.")
 
 
