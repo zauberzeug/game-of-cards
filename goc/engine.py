@@ -410,6 +410,11 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             errors.append(f"{t.title}: closed_at: must be set when status=done")
         if t.dod_open > 0:
             errors.append(f"{t.title}: definition_of_done: status=done with {t.dod_open} unchecked boxes")
+    elif closed_at is not None:
+        errors.append(
+            f"{t.title}: closed_at: must be null when status is not done"
+            f" (status={fm.get('status')!r}, closed_at={closed_at!r})"
+        )
 
     for field in LIST_REL_FIELDS:
         v = fm.get(field) or []
@@ -1633,6 +1638,14 @@ def status(title, new_status, commit, no_commit):
     if prior == new_status:
         click.echo(f"{title}: already {new_status}; nothing to do")
         return
+    _TERMINAL = frozenset({"done", "disproved", "superseded"})
+    if prior in _TERMINAL:
+        click.echo(
+            f"ERROR: {title}: status is {prior!r} (terminal);"
+            f" terminal cards cannot be moved backward through `goc status`",
+            err=True,
+        )
+        sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
     (card_dir / "README.md").write_text(text)

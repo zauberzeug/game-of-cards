@@ -1,20 +1,20 @@
 ---
 title: status-command-reopens-terminal-cards
 summary: "The generic `goc status` command can move terminal cards (`done`, `disproved`, `superseded`) back to open. That contradicts the schema lifecycle and, for done cards, leaves a reopened card with a stale `closed_at` date that still validates."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/status-command-reopens-terminal-cards/reproduce.py` exits zero
-  - [ ] `goc status <title> open` rejects or otherwise refuses cards currently in terminal states
-  - [ ] Reopened/non-done cards cannot retain `closed_at` values unnoticed by `goc validate`
-  - [ ] Focused regression coverage proves terminal `done`, `disproved`, and `superseded` cards cannot be moved backward by `status`
+  - [x] `uv run python deck/status-command-reopens-terminal-cards/reproduce.py` exits zero
+  - [x] `goc status <title> open` rejects or otherwise refuses cards currently in terminal states
+  - [x] Reopened/non-done cards cannot retain `closed_at` values unnoticed by `goc validate`
+  - [x] Focused regression coverage proves terminal `done`, `disproved`, and `superseded` cards cannot be moved backward by `status`
 ---
 
 # status-command-reopens-terminal-cards

@@ -1,7 +1,7 @@
 ---
 title: pypi-trusted-publisher-missing-for-release-workflow
 summary: "The tag-triggered release workflow builds valid artifacts but PyPI rejects the trusted-publishing token because no matching publisher is configured for zauberzeug/game-of-cards, release.yml, environment pypi."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-04
