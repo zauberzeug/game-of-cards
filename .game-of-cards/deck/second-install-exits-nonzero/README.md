@@ -1,20 +1,20 @@
 ---
 title: second-install-exits-nonzero
 summary: "The installer is documented as idempotent and the original install card says a second run exits cleanly, but `goc install` currently returns exit code 1 when `deck/.goc-version` already exists. That turns a no-op reinstall into a script failure."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/second-install-exits-nonzero/reproduce.py` exits zero
-  - [ ] Re-running `goc install` in an already-installed repo exits zero when it makes no changes
-  - [ ] The "already installed; run goc upgrade" message remains visible to the user
-  - [ ] Regression coverage asserts the second install return code and zero filesystem changes
+  - [x] `uv run python .game-of-cards/deck/second-install-exits-nonzero/reproduce.py` exits zero
+  - [x] Re-running `goc install` in an already-installed repo exits zero when it makes no changes
+  - [x] The "already installed; run goc upgrade" message remains visible to the user
+  - [x] Regression coverage asserts the second install return code and zero filesystem changes
 ---
 
 # second-install-exits-nonzero
