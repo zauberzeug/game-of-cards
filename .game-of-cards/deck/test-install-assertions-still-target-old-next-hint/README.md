@@ -1,19 +1,19 @@
 ---
 title: test-install-assertions-still-target-old-next-hint
 summary: "Three assertions in tests/test_install.py still expect the pre-65e222b 'create a card for the next change' wording from the install command's Next: hint. The hint was intentionally redirected to 'expand the deck' in 65e222b but the tests were not updated, so CI has been red on every push since then."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-05
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] All 3 assertions in tests/test_install.py for the install "Next:" hint match the current goc/install.py output (the "expand the deck" wording from 65e222b)
-  - [ ] `uv run python -m unittest discover -s tests` passes locally with 0 failures
-  - [ ] `uv run goc validate` passes
+  - [x] All 3 assertions in tests/test_install.py for the install "Next:" hint match the current goc/install.py output (the "expand the deck" wording from 65e222b)
+  - [x] `uv run python -m unittest discover -s tests` passes locally with 0 failures
+  - [x] `uv run goc validate` passes
 ---
 
 # tests/test_install.py asserts the pre-65e222b "Next:" hint

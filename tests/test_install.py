@@ -122,7 +122,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(result)
             self.assertIn("goc 0.0.3 installed for agents: claude (default).", result.stdout)
-            self.assertIn('Next: ask your LLM agent: "create a card for the next change I want to make."', result.stdout)
+            self.assertIn('Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. Or "create a card for X" if you already know the first change you want to make.', result.stdout)
             self.assertIn("Engine/debug: `goc` shows the queue; `goc validate` checks cards.", result.stdout)
             self.assertTrue((cwd / ".claude" / "skills" / "pull-card" / "SKILL.md").is_file())
             self.assertFalse((cwd / ".codex").exists())
@@ -181,7 +181,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             install = self.run_goc(cwd, "install", "--agents", "claude")
             self.assert_goc_ok(install)
-            self.assertIn('Next: ask your LLM agent: "create a card for the next change I want to make."', install.stdout)
+            self.assertIn('Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. Or "create a card for X" if you already know the first change you want to make.', install.stdout)
             self.assertFalse((cwd / ".codex").exists())
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_prompt_router.py").is_file())
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_session_start.py").is_file())
@@ -204,7 +204,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             install = self.run_goc(cwd, "install", "--agents", "codex")
             self.assert_goc_ok(install)
-            self.assertIn('Next: ask your LLM agent: "create a card for the next change I want to make."', install.stdout)
+            self.assertIn('Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. Or "create a card for X" if you already know the first change you want to make.', install.stdout)
             self.assertFalse((cwd / ".claude").exists())
             self.assertTrue(os.access(cwd / ".codex" / "skills" / "_goc-bootstrap.sh", os.X_OK))
             self.assertTrue((cwd / ".codex" / "skills" / "pull-card" / "SKILL.md").is_file())
