@@ -37,8 +37,7 @@ goc install
 
 `goc install` writes the shared substrate:
 
-- `deck/`
-- `.game-of-cards/`
+- `.game-of-cards/` — project state: `deck/` (cards) and `config.yaml` (workflow config)
 - `AGENTS.md`
 - `.pre-commit-config.yaml`
 

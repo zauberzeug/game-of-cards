@@ -18,7 +18,7 @@ That's it. Bootstrapping flows from the PyPI package `game-of-cards`. If you'd r
 
 <p align="center"><img src="assets/how-it-works.png" width="80%" alt="How it works: YOU → skills → LLM → goc → Cards" /></p>
 
-You speak in plain English. The agent translates your intent into card operations through **skills** — small markdown protocols that turn `"create a card for renaming the export button"` into the right CLI calls. **`goc`** is the CLI that implements those operations. **Cards** are markdown directories under `deck/` with frontmatter, an append-only log, and a Definition-of-Done checklist the CLI refuses to close while any box is unchecked.
+You speak in plain English. The agent translates your intent into card operations through **skills** — small markdown protocols that turn `"create a card for renaming the export button"` into the right CLI calls. **`goc`** is the CLI that implements those operations. **Cards** are markdown directories under `.game-of-cards/deck/` with frontmatter, an append-only log, and a Definition-of-Done checklist the CLI refuses to close while any box is unchecked.
 
 Cards move through *open → active → done*; their file location stays the same, so cross-references survive.
 Agents only work on cards without a human gate. Others are parked, waiting on decisions or full sessions with you.

@@ -6,20 +6,20 @@ stage: null
 contribution: high
 created: 2026-05-04
 closed_at: null
-human_gate: none
+human_gate: session
 advances: [ship-game-of-cards-as-cross-agent-cli]
 advanced_by: [move-deck-into-game-of-cards-directory, make-skill-and-hook-installation-optional, provide-claude-code-plugin-for-skills-and-hooks, provide-codex-plugin-for-skills-and-hooks, provide-openclaw-plugin-for-skills-and-hooks, publish-game-of-cards-agent-plugins]
 tags: [epic, story, infra, api-contract]
 definition_of_done: |
-  - [ ] Deck storage moves under `.game-of-cards/deck` with compatibility or migration for existing root `deck/` repos
-  - [ ] Runtime-neutral config remains under `.game-of-cards` (currently `.game-of-cards/config.yaml`) and all docs use one spelling
-  - [ ] Skill/hook installation is optional and users can install CLI-only GoC without generated agent files
-  - [ ] Claude Code skills/hooks are available through a plugin path rather than only checked-in repo files
+  - [x] Deck storage moves under `.game-of-cards/deck` with compatibility or migration for existing root `deck/` repos
+  - [x] Runtime-neutral config remains under `.game-of-cards` (currently `.game-of-cards/config.yaml`) and all docs use one spelling
+  - [x] Skill/hook installation is optional and users can install CLI-only GoC without generated agent files
+  - [x] Claude Code skills/hooks are available through a plugin path rather than only checked-in repo files
   - [ ] Codex skills/hooks are available through a comparable plugin path
   - [x] OpenClaw plugin direction supersedes the blocked OpenClaw harness card
   - [x] Plugin publication is tracked as explicit release work
-  - [ ] README/AGENTS guidance explains what is project state, what is runtime installation, and what should be checked in
-  - [ ] `uv run goc validate` passes
+  - [x] README/AGENTS guidance explains what is project state, what is runtime installation, and what should be checked in
+  - [x] `uv run goc validate` passes
 ---
 
 # Support not-checked-in Game of Cards state and runtime files
@@ -65,3 +65,7 @@ The key invariant: queue safety, validation, and DoD closure must not depend on 
 *Resolved 2026-05-05:* (1) .game-of-cards/ is checked in by default but users may gitignore it; (2) config.yaml stays canonical, no .yml alias; (3) pull-card runs in local sessions or via cron — no CI commitment required when the deck is uncommitted; (4) the AGENTS.md/CLAUDE.md <!-- BEGIN GOC --> marker block is the canonical repo-visible discovery surface, no extra dotfile
 
 *Reasoning:* Anchors every child card to one consistent stance: the deck is project planning history (so checked-in is the team default), one config spelling avoids surface-area drift, and dropping the CI-must-work constraint unblocks the gitignore-friendly path without inventing branch/issue-sync machinery. Reusing the existing marker block avoids a second discovery mechanism.
+
+## Session required
+
+8 of 9 DoD items are now checked. The remaining item — Codex skills/hooks via a comparable plugin path — is tracked by `provide-codex-plugin-for-skills-and-hooks`, which is parked at `human_gate: session`. Lower the gate on that card to unblock this epic's final closure.
