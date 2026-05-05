@@ -1,7 +1,7 @@
 ---
 title: default-config-omits-goc-closure-checks
 summary: "The shipped `.game-of-cards/config.yaml` leaves `layer_3_goc_dod` empty, so a fresh install's `goc attest` writes an empty Closure verification block and passes. The finish-card/card-schema guidance says GoC-wide checks such as DoD 100% and log closure are universal and recorded by attest."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-04
