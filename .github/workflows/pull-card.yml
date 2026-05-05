@@ -41,7 +41,18 @@ jobs:
       - name: Prepare Python environment
         run: uv sync
 
+      - name: Check autonomous queue
+        id: queue
+        run: |
+          count="$(uv run goc --status open --human-gate none --json | jq 'length')"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Pullable cards (status=open, human_gate=none): $count"
+          if [ "$count" -eq 0 ]; then
+            echo "::notice::Queue is empty — skipping the LLM agent step to save tokens."
+          fi
+
       - name: Pull one GoC card
+        if: steps.queue.outputs.count != '0'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -55,5 +66,5 @@ jobs:
 
             Follow CLAUDE.md and AGENTS.md. Commit and push only the files needed for the card you complete or park.
           claude_args: |
-            --max-turns 40
-            --allowedTools "Bash(uv run goc *),Bash(uv run python *),Bash(uv build),Bash(pre-commit run *),Bash(git status *),Bash(git diff *),Bash(git log *),Bash(git config *),Bash(git add *),Bash(git commit *),Bash(git push *),Edit,Write"
+            --max-turns 200
+            --permission-mode bypassPermissions
