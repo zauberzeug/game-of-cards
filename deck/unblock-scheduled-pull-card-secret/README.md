@@ -1,20 +1,20 @@
 ---
 title: unblock-scheduled-pull-card-secret
-summary: "Unblock the scheduled pull-card GitHub Action by providing a repository-level model API secret and verifying the workflow reaches the agent step."
-status: open
+summary: Unblock the scheduled pull-card GitHub Action by providing a repository-level model API secret and verifying the workflow reaches the agent step.
+status: done
 stage: null
 contribution: high
 created: 2026-05-05
-closed_at: null
-human_gate: session
+closed_at: 2026-05-05
+human_gate: none
 advances: []
 advanced_by: []
 tags: [infra]
 definition_of_done: |
-  - [ ] Repository secret `ANTHROPIC_API_KEY` is set for `zauberzeug/game-of-cards`, or the workflow is intentionally switched to another provider with the matching secret.
-  - [ ] `.github/workflows/pull-card.yml` documents or clearly references the required secret name.
-  - [ ] A manual `pull-card` workflow run reaches the agent execution step without failing on missing credentials.
-  - [ ] The verification run URL is recorded in this card's log.
+  - [x] Repository secret `ANTHROPIC_API_KEY` is set for `zauberzeug/game-of-cards`, or the workflow is intentionally switched to another provider with the matching secret.
+  - [x] `.github/workflows/pull-card.yml` documents or clearly references the required secret name.
+  - [x] A manual `pull-card` workflow run reaches the agent execution step without failing on missing credentials.
+  - [x] The verification run URL is recorded in this card's log.
 ---
 
 # Unblock scheduled pull-card secret
@@ -46,3 +46,9 @@ If the repo should use Codex instead of Claude, update the workflow intentionall
 ## Verification
 
 After the secret is set, trigger the workflow manually and record the run URL in `log.md`.
+
+## Decision
+
+*Resolved 2026-05-05:* Switch pull-card.yml to CLAUDE_CODE_OAUTH_TOKEN provisioned by the Claude GitHub App
+
+*Reasoning:* PR #1 installed the Claude GitHub App, which provisions CLAUDE_CODE_OAUTH_TOKEN automatically; ANTHROPIC_API_KEY was never set, so this is the lower-friction path the DoD explicitly allows ('intentionally switched to another provider with the matching secret')
