@@ -1,3 +1,0 @@
-## 2026-05-05: decision recorded
-
-(1) .game-of-cards/ is checked in by default but users may gitignore it; (2) config.yaml stays canonical, no .yml alias; (3) pull-card runs in local sessions or via cron — no CI commitment required when the deck is uncommitted; (4) the AGENTS.md/CLAUDE.md <!-- BEGIN GOC --> marker block is the canonical repo-visible discovery surface, no extra dotfile — Anchors every child card to one consistent stance: the deck is project planning history (so checked-in is the team default), one config spelling avoids surface-area drift, and dropping the CI-must-work constraint unblocks the gitignore-friendly path without inventing branch/issue-sync machinery. Reusing the existing marker block avoids a second discovery mechanism.. Gate session → none.

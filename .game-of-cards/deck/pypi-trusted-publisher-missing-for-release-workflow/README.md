@@ -1,12 +1,12 @@
 ---
 title: pypi-trusted-publisher-missing-for-release-workflow
 summary: "The tag-triggered release workflow builds valid artifacts but PyPI rejects the trusted-publishing token because no matching publisher is configured for zauberzeug/game-of-cards, release.yml, environment pypi."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
-human_gate: none
+closed_at: 2026-05-05
+human_gate: session
 advances: []
 advanced_by: []
 tags: [bug, infra]
@@ -89,3 +89,13 @@ Environment: pypi
 
 Then re-run a tag-triggered release with a fresh version and verify PyPI
 publishes without `UV_PUBLISH_TOKEN`.
+
+## Human action required
+
+DoD item 3 is already satisfied — `.github/workflows/release.yml` lines 9–14
+document the exact OIDC claims. The remaining two items need a human session:
+
+1. Log into https://pypi.org/manage/project/game-of-cards/settings/publishing/
+   and add a GitHub trusted publisher with the claims above.
+2. Bump `pyproject.toml` version, tag (`git tag vX.Y.Z && git push --tags`),
+   and confirm the Actions publish job succeeds without a manual token.
