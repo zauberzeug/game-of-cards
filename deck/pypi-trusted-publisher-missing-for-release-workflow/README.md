@@ -1,18 +1,18 @@
 ---
 title: pypi-trusted-publisher-missing-for-release-workflow
 summary: "The tag-triggered release workflow builds valid artifacts but PyPI rejects the trusted-publishing token because no matching publisher is configured for zauberzeug/game-of-cards, release.yml, environment pypi."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: session
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] PyPI trusted publisher is configured for owner `zauberzeug`, repo `game-of-cards`, workflow `release.yml`, environment `pypi`
-  - [ ] A tag-triggered release publish succeeds without a manual PyPI token
+  - [x] PyPI trusted publisher is configured for owner `zauberzeug`, repo `game-of-cards`, workflow `release.yml`, environment `pypi`
+  - [x] A tag-triggered release publish succeeds without a manual PyPI token
   - [x] Release docs or workflow comments include the exact claims needed to repair the setup
 ---
 

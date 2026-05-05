@@ -11,9 +11,9 @@ advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] PyPI trusted publisher is configured for owner `zauberzeug`, repo `game-of-cards`, workflow `release.yml`, environment `pypi`
-  - [ ] A tag-triggered release publish succeeds without a manual PyPI token
-  - [ ] Release docs or workflow comments include the exact claims needed to repair the setup
+  - [x] PyPI trusted publisher is configured for owner `zauberzeug`, repo `game-of-cards`, workflow `release.yml`, environment `pypi`
+  - [x] A tag-triggered release publish succeeds without a manual PyPI token
+  - [x] Release docs or workflow comments include the exact claims needed to repair the setup
 ---
 
 # PyPI Trusted Publisher Missing For Release Workflow
