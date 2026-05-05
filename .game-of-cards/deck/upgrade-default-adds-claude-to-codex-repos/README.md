@@ -1,7 +1,7 @@
 ---
 title: upgrade-default-adds-claude-to-codex-repos
 summary: "A no-flag `goc upgrade` in an older Codex-only install defaults to `agents: claude` instead of detecting the existing Codex harness. The upgrade path can add Claude-only files to Codex repos and skip refreshing `.codex/skills` unless the user remembers `--agents codex`."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-04
