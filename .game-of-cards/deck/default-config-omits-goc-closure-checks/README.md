@@ -1,20 +1,20 @@
 ---
 title: default-config-omits-goc-closure-checks
 summary: "The shipped `.game-of-cards/config.yaml` leaves `layer_3_goc_dod` empty, so a fresh install's `goc attest` writes an empty Closure verification block and passes. The finish-card/card-schema guidance says GoC-wide checks such as DoD 100% and log closure are universal and recorded by attest."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/default-config-omits-goc-closure-checks/reproduce.py` exits zero
-  - [ ] Fresh installs include default layer-3 GoC checks for `advanced-by-closed`, `dod-100-percent`, and `log-md-closure-entry`
-  - [ ] `goc attest` on a fresh install records non-empty Layer-3 results in `log.md`
-  - [ ] Regression coverage proves the packaged config template and self-hosted `.game-of-cards/config.yaml` contain the universal layer-3 checks
+  - [x] `uv run python deck/default-config-omits-goc-closure-checks/reproduce.py` exits zero
+  - [x] Fresh installs include default layer-3 GoC checks for `advanced-by-closed`, `dod-100-percent`, and `log-md-closure-entry`
+  - [x] `goc attest` on a fresh install records non-empty Layer-3 results in `log.md`
+  - [x] Regression coverage proves the packaged config template and self-hosted `.game-of-cards/config.yaml` contain the universal layer-3 checks
 ---
 
 # default-config-omits-goc-closure-checks

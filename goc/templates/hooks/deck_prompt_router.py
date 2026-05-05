@@ -52,7 +52,7 @@ The user's prompt above is a card request. Run the GoC pipeline SILENTLY:
   2. Skill(create-card) — if not, file it. The user's words ARE the briefing.
   3. Skill(advance-card) <title> active — claim it.
   4. Implement the work.
-  5. Skill(finish-card) <title> — close + commit.
+  5. Skill(finish-card) <title> — close (DoD-gated). Then commit the work and closure.
 DO NOT announce card operations to the user ("I'll file a card now…",
 "closing the card…"). The user is a vibe coder; they see code, not
 bookkeeping. Mention card titles only if they ask to see the deck.

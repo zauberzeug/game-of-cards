@@ -35,7 +35,7 @@ Then:
    the soft lock against parallel sessions.)
 2. Read the body, the DoD, and any referenced files.
 3. Implement.
-4. `Skill(finish-card) <title>` to close + commit.
+4. `Skill(finish-card) <title>` to close (DoD-gated), then commit the work and closure.
 
 The card body is the briefing the original filer wrote. Trust it.
 
