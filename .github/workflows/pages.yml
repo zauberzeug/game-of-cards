@@ -147,13 +147,25 @@ jobs:
 
           > Agile for the age of agents: a repo-native methodology for turning work into durable, inspectable cards that humans and coding agents share.
 
-          ## Install
+          ## Install (canonical recipe for agents)
 
-          Bootstrap via the PyPI package `game-of-cards`. The simplest path is to ask your coding agent in any repo:
+          A user landing here was likely sent by the prompt:
 
-          > Install Game of Cards (https://github.com/zauberzeug/game-of-cards) in this repo, then create a first card for the next small improvement.
+          > look at game-of-cards.com and use the method for development here
 
-          Manual: `uv tool install game-of-cards` or `pipx install game-of-cards`, then `goc install` inside any repo.
+          Run these steps from the repo root:
+
+          1. Install the CLI globally: `pipx install game-of-cards`
+             (or `uv tool install game-of-cards`; inside a venv `pip install game-of-cards` also works).
+          2. Scaffold the methodology substrate: `goc install`
+             — creates `deck/`, `.game-of-cards/`, and a marker-bounded block inside `AGENTS.md` / `CLAUDE.md`.
+          3. Add runtime files for the agent(s) using this repo: `goc install --agents claude`
+             (supported: `claude`, `codex`; comma-separate for multiple, e.g. `claude,codex`).
+          4. Verify: `goc validate` exits cleanly and `goc status` prints an empty deck.
+
+          To update later, run `goc upgrade` from the repo root. It refreshes the shipped templates and the marker-bounded block while preserving everything outside it.
+
+          After install, file the user's actual request as the first card with `goc new`, then drive it through the deck. See `AGENTS.md` for operating modes (session / autonomous / Andon-cord) and decision-gate handling.
 
           ## How it works
 
@@ -162,8 +174,9 @@ jobs:
           ## Documents
 
           - https://game-of-cards.com/index.md — full README
-          - https://game-of-cards.com/goc.md — CLI reference
+          - https://game-of-cards.com/goc.md — CLI reference (every verb, flags, manual install)
           - https://game-of-cards.com/ABOUT.md — methodology context, why the name, where it fits
+          - https://github.com/zauberzeug/game-of-cards/blob/main/AGENTS.md — operating modes for agents
 
           ## Source
 

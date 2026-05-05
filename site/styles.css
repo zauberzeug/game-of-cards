@@ -316,6 +316,20 @@ nav.site-nav .gh-link {
   border: 1px solid var(--line);
 }
 
+.llm-hint {
+  margin-top: 24px;
+  padding: 14px 18px;
+  border-left: 2px solid var(--gold);
+  background: rgba(201, 168, 117, 0.05);
+  font-size: 14px;
+  color: var(--silver-3);
+  line-height: 1.6;
+}
+.llm-hint strong {
+  color: var(--silver-2);
+  font-weight: 600;
+}
+
 .more-list {
   list-style: none;
   padding: 0;
