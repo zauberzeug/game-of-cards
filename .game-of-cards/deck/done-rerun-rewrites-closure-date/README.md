@@ -1,20 +1,20 @@
 ---
 title: done-rerun-rewrites-closure-date
 summary: "Running `goc done <title>` on a card that is already `status: done` rewrites `closed_at` to today's date. That destroys the original closure timestamp and makes repeated close attempts non-idempotent."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/done-rerun-rewrites-closure-date/reproduce.py` exits zero
-  - [ ] `goc done <title>` leaves `closed_at` unchanged when the card is already done
-  - [ ] The command reports a no-op or otherwise avoids a misleading `done -> done` transition
-  - [ ] A focused regression test covers re-running `done` on an already-done card
+  - [x] `uv run python deck/done-rerun-rewrites-closure-date/reproduce.py` exits zero
+  - [x] `goc done <title>` leaves `closed_at` unchanged when the card is already done
+  - [x] The command reports a no-op or otherwise avoids a misleading `done -> done` transition
+  - [x] A focused regression test covers re-running `done` on an already-done card
 ---
 
 # done-rerun-rewrites-closure-date
