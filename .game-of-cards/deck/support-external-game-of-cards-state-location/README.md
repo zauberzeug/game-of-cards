@@ -1,7 +1,7 @@
 ---
 title: support-external-game-of-cards-state-location
 summary: "Track the repo-footprint redesign: GoC project state should live under `.game-of-cards` and generated runtime affordances should not have to be checked into consuming repositories. The direction is `.game-of-cards/deck` plus the existing `.game-of-cards/config.yaml`, optional skill/hook installation, and agent plugins for Claude Code, Codex, and later OpenClaw."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-04
