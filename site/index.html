@@ -98,6 +98,27 @@
           decision needs you.
         </p>
 
+        <p class="prompt-intro">In practice, you talk to your agent in plain English. A few things you can say:</p>
+        <dl class="prompt-examples">
+          <dt><span class="prompt">create a card for renaming the export button</span></dt>
+          <dd>Files a new <em>card</em> in your <em>deck</em> with a <em>Definition of Done (DoD)</em>.</dd>
+
+          <dt><span class="prompt">run an autonomous loop that pulls cards</span></dt>
+          <dd>Agent <em>pulls</em> the highest-leverage open card without a human gate, works it, closes it — over and over until the deck is drained.</dd>
+
+          <dt><span class="prompt">what are the cards you need my decision on?</span></dt>
+          <dd>Lists cards parked behind a <em>human gate</em>, waiting on you.</dd>
+
+          <dt><span class="prompt">for the export-button card, add a smoke test to its Definition of Done</span></dt>
+          <dd>Edits a specific card so a missed acceptance criterion becomes part of the closure contract.</dd>
+
+          <dt><span class="prompt">enhance the deck</span></dt>
+          <dd>Agent hunts the codebase for inconsistencies and gaps and files new cards for what it finds (<em>extend</em>).</dd>
+
+          <dt><span class="prompt">close this one</span></dt>
+          <dd><em>Finishes</em> the active card — refused if any DoD checkbox is still unchecked.</dd>
+        </dl>
+
         <h2>Status</h2>
         <p>
           Brand new alpha — only a few days of implementation, no external users yet, plenty of

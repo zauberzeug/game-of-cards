@@ -325,6 +325,63 @@ nav.site-nav .gh-link {
   border: 1px solid var(--line);
 }
 
+.prompt-intro {
+  margin-top: 28px;
+  color: var(--silver-2);
+}
+.prompt-examples {
+  margin: 16px 0 8px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 14px;
+}
+.prompt-examples dt {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--silver-1);
+}
+.prompt-examples .prompt {
+  font-family: var(--sans-body);
+  font-style: italic;
+  color: var(--parchment);
+  background: rgba(232, 220, 193, 0.05);
+  border-left: 2px solid var(--gold);
+  padding: 2px 10px 2px 8px;
+  border-radius: 0 3px 3px 0;
+}
+.prompt-examples .prompt::before {
+  content: '“';
+  color: var(--gold);
+  font-style: normal;
+  margin-right: 2px;
+}
+.prompt-examples .prompt::after {
+  content: '”';
+  color: var(--gold);
+  font-style: normal;
+  margin-left: 2px;
+}
+.prompt-examples .prompt-or {
+  color: var(--silver-3);
+  font-size: 13px;
+  margin: 0 4px;
+}
+.prompt-examples dd {
+  margin: 4px 0 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--line);
+  color: var(--silver-3);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.prompt-examples dd em {
+  color: var(--gold);
+  font-style: normal;
+  font-weight: 500;
+}
+
 .more-list {
   list-style: none;
   padding: 0;
