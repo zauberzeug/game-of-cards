@@ -1,14 +1,16 @@
 # Game of Cards
 
-![Four-panel comic explaining Game of Cards: setup, card creation, parallel session and background work, and the human-input handoff.](assets/game-of-cards.png)
+Agile for age of agents — turn work into durable, inspectable cards that humans and LLMs can collaborate on.
 
-Agile in the age of AI agents — turn work into durable, inspectable cards that humans and coding agents share.
+![Four-panel comic explaining Game of Cards: setup, card creation, parallel session and background work, and the human-input handoff.](assets/game-of-cards.png)
 
 ## Try it
 
 In any repo, ask your coding agent:
 
-> Install Game of Cards (https://github.com/zauberzeug/game-of-cards) in this repo, then create a first card for the next small improvement.
+```
+Install game-of-cards.com in this repo, then create a first card for the next small improvement.
+```
 
 That's it. Bootstrapping flows from the PyPI package `game-of-cards`. If you'd rather drive the install by hand, see [`goc.md`](goc.md) for the manual recipe and CLI reference.
 
@@ -18,7 +20,9 @@ That's it. Bootstrapping flows from the PyPI package `game-of-cards`. If you'd r
 
 You speak in plain English. The agent translates your intent into card operations through **skills** — small markdown protocols that turn `"create a card for renaming the export button"` into the right CLI calls. **`goc`** is the CLI that implements those operations. **Cards** are markdown directories under `deck/` with frontmatter, an append-only log, and a Definition-of-Done checklist the CLI refuses to close while any box is unchecked.
 
-Cards move through *open → active → done*; their paths never change, so cross-references survive. A card's `human_gate` field can park it waiting on you; agents resume autonomously when you lower it. They can also work autonomously in the background, draining the queue and raising a flag only when a decision needs you.
+Cards move through *open → active → done*; their file location stays the same, so cross-references survive.
+Agents only work on cards without a human gate. Others are parked, waiting on decisions or full sessions with you.
+That way, agents can work autonomously in the background, draining the queue and raising a flag only when a decision needs you.
 
 ## Status
 
