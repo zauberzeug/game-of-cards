@@ -597,7 +597,7 @@ def install(
         rel = existing_dir.relative_to(target)
         click.echo(f"already installed ({rel}/.goc-version → {existing})", err=True)
         click.echo("run `goc upgrade` to re-sync templates.")
-        sys.exit(1)
+        sys.exit(0)
 
     for agent in agents:
         _sync_agent_harness(target, templates, agent)

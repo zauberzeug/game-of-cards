@@ -1,0 +1,1 @@
+../../goc/templates/hooks/deck_session_start.py
