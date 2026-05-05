@@ -960,6 +960,8 @@ def cli(
     else:
         status = status_flag
     status_filter_explicit = bool(done_flag or status_flag is not None)
+    if since and status != "done":
+        raise click.UsageError("--since requires --done (or --status done)")
     stages = parse_stage_filter(stage_flag)
     tag_filters = validate_tag_filters(tags)
     filtered = filter_cards(
