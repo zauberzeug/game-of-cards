@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] `.claude/hooks/` consumer copy in this repo updated alongside the template (per CLAUDE.md's lockstep edit rule until next `goc upgrade`)
   - [ ] AGENTS.md / CLAUDE.md mention the hook so users know it exists and how to disable it
   - [ ] `uv run goc validate` passes
+---
 
 # Agent flags unfiled pattern-generalization cards before stop
 
