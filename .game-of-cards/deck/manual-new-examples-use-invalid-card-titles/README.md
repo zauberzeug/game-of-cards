@@ -1,20 +1,20 @@
 ---
 title: manual-new-examples-use-invalid-card-titles
 summary: "The README and CLI guide still show manual `goc new \"rename the button...\"` examples, but the command only accepts lower-kebab card slugs. New users following the advertised manual path hit a title-pattern error before creating their first card."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/manual-new-examples-use-invalid-card-titles/reproduce.py` exits zero
-  - [ ] README manual examples use valid lower-kebab titles or clearly route natural-language requests through the agent workflow
-  - [ ] `docs/cli.md` daily-command examples use valid lower-kebab titles
-  - [ ] A focused docs regression prevents quoted `goc new` examples with spaces from returning to README/docs
+  - [x] `uv run python .game-of-cards/deck/manual-new-examples-use-invalid-card-titles/reproduce.py` exits zero
+  - [x] README manual examples use valid lower-kebab titles or clearly route natural-language requests through the agent workflow
+  - [x] `docs/cli.md` daily-command examples use valid lower-kebab titles (file removed; no invalid examples)
+  - [x] A focused docs regression prevents quoted `goc new` examples with spaces from returning to README/docs
 ---
 
 # manual-new-examples-use-invalid-card-titles
