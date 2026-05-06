@@ -262,6 +262,7 @@ def _find_installed_deck_dir(target: Path) -> Path | None:
 GOC_CLAUDE_HOOKS: dict[str, str] = {
     "SessionStart": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
     "UserPromptSubmit": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
+    "Stop": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py",
 }
 
 

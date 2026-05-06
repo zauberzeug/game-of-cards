@@ -1,23 +1,23 @@
 ---
 title: agent-flags-unfiled-pattern-generalization-cards-before-stop
 summary: "A Claude Code Stop hook that asks the agent to self-review whether its recent change was a small instance of a broader pattern that deserves its own generalization card. The pattern surfaced this turn (install.py:598 hint redirect → broader cli-output-suggests-next-step-after-each-verb card filed by hand): agents do narrow work that ought to spawn generalization cards but rarely do unless the human prompts. The hook would close that gap automatically."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-05
-closed_at: null
+closed_at: 2026-05-06
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Hook implementation matches the chosen design (see Decision required) and ships under `goc/templates/hooks/` so `goc install --agents claude` picks it up
-  - [ ] Hook fires only on stops that follow a code-mutating tool sequence (not on Q&A turns or pure-conversation stops)
-  - [ ] When the hook fires and the agent's response indicates "yes, a generalization is warranted," the agent is expected to file via `Skill(create-card)` before yielding; the hook's prompt explicitly says so
-  - [ ] False-positive rate measured on at least 5 real sessions and judged acceptable, OR hook is gated behind an opt-in setting
-  - [ ] `.claude/hooks/` consumer copy in this repo updated alongside the template (per CLAUDE.md's lockstep edit rule until next `goc upgrade`)
-  - [ ] AGENTS.md / CLAUDE.md mention the hook so users know it exists and how to disable it
-  - [ ] `uv run goc validate` passes
+  - [x] Hook implementation matches the chosen design (see Decision required) and ships under `goc/templates/hooks/` so `goc install --agents claude` picks it up
+  - [x] Hook fires only on stops that follow a code-mutating tool sequence (not on Q&A turns or pure-conversation stops)
+  - [x] When the hook fires and the agent's response indicates "yes, a generalization is warranted," the agent is expected to file via `Skill(create-card)` before yielding; the hook's prompt explicitly says so
+  - [x] False-positive rate measured on at least 5 real sessions and judged acceptable, OR hook is gated behind an opt-in setting
+  - [x] `.claude/hooks/` consumer copy in this repo updated alongside the template (per CLAUDE.md's lockstep edit rule until next `goc upgrade`)
+  - [x] AGENTS.md / CLAUDE.md mention the hook so users know it exists and how to disable it
+  - [x] `uv run goc validate` passes
 ---
 
 # Agent flags unfiled pattern-generalization cards before stop

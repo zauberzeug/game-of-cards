@@ -18,3 +18,8 @@ workflow:
   # decision handoffs are visible to parallel agents. Set false to leave those
   # mutations in the working tree unless a command is run with `--commit`.
   auto_commit: true
+
+hooks:
+  # Set to false to disable the Stop hook that prompts the agent to file
+  # generalization cards after code-mutating turns.
+  pattern_generalization_check: true

@@ -19,6 +19,16 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py"
+          }
+        ]
+      }
     ]
   }
 }

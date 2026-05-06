@@ -117,13 +117,14 @@ Andon-cord guards, etc.).
 
 ### Runtime hooks and `.claude/settings.json`
 
-`goc install --agents claude` installs two hook scripts and registers them
+`goc install --agents claude` installs three hook scripts and registers them
 in `.claude/settings.json` so Claude Code actually executes them:
 
 | Hook event | Script | Purpose |
 |---|---|---|
 | `SessionStart` | `.claude/hooks/deck_session_start.py` | Prints active-card reminder at session start; silent when no cards are in-flight. |
 | `UserPromptSubmit` | `.claude/hooks/deck_prompt_router.py` | Detects work-initiating prompts; injects a deck-first reminder into Claude's view. |
+| `Stop` | `.claude/hooks/pattern_generalization_check.py` | After code-mutating turns, asks the agent to self-assess whether the change is an instance of a broader pattern that warrants a generalization card. Opt-out: set `hooks.pattern_generalization_check: false` in `.game-of-cards/config.yaml`. |
 
 **`.claude/settings.json`** is the Claude Code hook registration file — it is
 what makes Claude Code invoke the scripts. `goc install` and `goc upgrade`
