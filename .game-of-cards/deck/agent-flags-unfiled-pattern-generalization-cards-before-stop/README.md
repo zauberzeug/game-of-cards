@@ -1,7 +1,7 @@
 ---
 title: agent-flags-unfiled-pattern-generalization-cards-before-stop
 summary: "A Claude Code Stop hook that asks the agent to self-review whether its recent change was a small instance of a broader pattern that deserves its own generalization card. The pattern surfaced this turn (install.py:598 hint redirect → broader cli-output-suggests-next-step-after-each-verb card filed by hand): agents do narrow work that ought to spawn generalization cards but rarely do unless the human prompts. The hook would close that gap automatically."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-05
