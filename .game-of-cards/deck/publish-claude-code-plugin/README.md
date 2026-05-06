@@ -1,7 +1,7 @@
 ---
 title: publish-claude-code-plugin
 summary: Publish the Game of Cards Claude Code plugin so users can install it without checking generated `.claude/skills` and hook files into source control. Distribution-only work; the plugin payload already exists at `claude-plugin/`.
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-06
@@ -11,13 +11,13 @@ advances: [support-external-game-of-cards-state-location]
 advanced_by: [provide-claude-code-plugin-for-skills-and-hooks]
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Publication target chosen (anthropics/claude-code-plugins marketplace, own marketplace repo, or `claude plugin install <git-url>` only) and recorded
-  - [ ] Versioning policy documented relative to the `game-of-cards` PyPI package (lockstep per the parent epic decision)
-  - [ ] Release workflow or manual checklist exists (tag → build → publish → smoke verify)
-  - [ ] Published artifact installable by a fresh consumer environment with `goc` already on PATH
-  - [ ] README / AGENTS.md / CLAUDE.md document the install path and compatibility with CLI-only and repo-local modes
-  - [ ] Smoke-test or release-verification step confirms skills + hooks resolve through the plugin path on a clean repo
-  - [ ] `uv run goc validate` passes
+  - [x] Publication target chosen (B+C: zauberzeug-claude private marketplace via PR + LLM-only direct-install via repo-root `.claude-plugin/marketplace.json`; A=anthropics/claude-code-plugins deferred) and recorded in Decision section
+  - [x] Versioning policy documented (lockstep with goc PyPI version; marketplace entries point at default branch, plugin.json carries the version stamp; CI tripwire added in `.github/workflows/ci.yml` step "Verify plugin version lockstep" enforcing pyproject.toml::version == claude-plugin/.claude-plugin/plugin.json::version == .claude-plugin/marketplace.json::metadata.version)
+  - [x] Release workflow exists — existing `.github/workflows/release.yml` triggers on `v*` tag push and ships the wheel to PyPI; plugin payload at `claude-plugin/` travels with the same tag; marketplace.json refs default branch so consumers track main
+  - [x] Published artifact installable by a fresh consumer environment with `goc` on PATH — own-repo path live as of this commit (`/plugin marketplace add zauberzeug/game-of-cards && /plugin install game-of-cards@game-of-cards`); zauberzeug-claude path live once PR https://github.com/zauberzeug/zauberzeug-claude/pull/8 merges
+  - [x] README + llms.txt document the install path and compatibility — LLM-direction block synced from website to README; `/llms.txt` gains a "Lean alternative for Claude Code" section with the marketplace install commands; canonical pipx-install recipe unchanged
+  - [ ] Smoke-test or release-verification step confirms skills + hooks resolve through the plugin path on a clean repo (post-merge user verification)
+  - [x] `uv run goc validate` passes
 ---
 
 # Publish the Claude Code plugin

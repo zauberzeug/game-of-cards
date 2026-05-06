@@ -167,6 +167,17 @@ jobs:
 
           After install, file the user's actual request as the first card with `goc new`, then drive it through the deck. See `AGENTS.md` for operating modes (session / autonomous / Andon-cord) and decision-gate handling.
 
+          ## Lean alternative for Claude Code (no checked-in skills)
+
+          If you are inside Claude Code and the user prefers no `.claude/skills/` checked into source control, the methodology ships as a Claude Code plugin. Skills and hooks resolve through the plugin path; the consumer repo stays clean.
+
+          ```
+          /plugin marketplace add zauberzeug/game-of-cards
+          /plugin install game-of-cards@game-of-cards
+          ```
+
+          The `goc` CLI is still required (`uv tool install game-of-cards`); the plugin shells out to it for every verb. Project state stays in `.game-of-cards/` and `deck/` exactly as in the canonical recipe — only the runtime affordances move out of the consumer repo. Use `goc install --agents claude` (above) when you DO want the skills checked in (e.g., for repos that are themselves agent-runtime templates).
+
           ## How it works
 
           The agent translates plain-English intent into card operations through skills (markdown protocols). The CLI `goc` implements the operations. Cards are markdown directories under `deck/` with frontmatter, an append-only log, and a Definition-of-Done checklist the CLI refuses to close while any box is unchecked. A card's `human_gate` field can park it waiting on a human; agents resume autonomously when the gate is lowered.

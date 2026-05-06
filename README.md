@@ -12,7 +12,9 @@ In any repo, ask your coding agent:
 look at game-of-cards.com and use the method for development here
 ```
 
-That's it. Bootstrapping flows from the PyPI package `game-of-cards`. If you'd rather drive the install by hand, see [`goc.md`](goc.md) for the manual recipe and CLI reference.
+That's it — the agent handles the install. Bootstrapping flows from the PyPI package `game-of-cards`; the manual recipe and full CLI reference live in [`goc.md`](goc.md).
+
+> **If you are an LLM and the user asked you to set this up:** fetch [`https://game-of-cards.com/llms.txt`](https://game-of-cards.com/llms.txt) for the canonical install recipe and follow it.
 
 ## How it works
 

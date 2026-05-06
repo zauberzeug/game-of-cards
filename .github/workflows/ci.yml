@@ -60,6 +60,21 @@ jobs:
           print(f'\nAll 11 skills + schema ship as package data.')
           "
 
+      - name: Verify plugin version lockstep
+        run: |
+          uv run python -c "
+          import json, tomllib, pathlib, sys
+          pyproject = tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version']
+          plugin = json.loads(pathlib.Path('claude-plugin/.claude-plugin/plugin.json').read_text())['version']
+          marketplace = json.loads(pathlib.Path('.claude-plugin/marketplace.json').read_text())['metadata']['version']
+          versions = {'pyproject.toml': pyproject, 'claude-plugin/plugin.json': plugin, '.claude-plugin/marketplace.json metadata': marketplace}
+          if len(set(versions.values())) != 1:
+              for k, v in versions.items():
+                  print(f'  {k}: {v}')
+              sys.exit('ERROR: version surfaces have drifted; release policy requires lockstep.')
+          print(f'OK — all version surfaces report {pyproject}')
+          "
+
       - name: Validate deck (if exists)
         run: |
           if [ -d deck ]; then
