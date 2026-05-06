@@ -2092,7 +2092,7 @@ def triage(as_json):
         by_gate.setdefault(entry["gate"], []).append(entry)
 
     lines = [f"## Waiting on you (gate ≠ none) — {len(payload)} cards", ""]
-    for gate in ("decision", "session"):
+    for gate in sorted(by_gate.keys()):
         items = by_gate.get(gate, [])
         if not items:
             continue

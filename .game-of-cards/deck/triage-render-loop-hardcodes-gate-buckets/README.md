@@ -1,17 +1,18 @@
 ---
 title: triage-render-loop-hardcodes-gate-buckets
 summary: "`goc triage` selects parked cards via `human_gate != 'none'` (correct), but the text-mode render loop only emits buckets for `'decision'` and `'session'` literally. Schema currently allows only those two non-`none` values, so the bug is latent: any future or migration-introduced gate value would be counted in the `Waiting on you (gate ≠ none)` header but never rendered. Unverified: not currently reachable through the supported schema; surfaces only after the open card `support-custom-card-workflows-and-statuses` adds gate values, or a hand-edit slips in. Park as a sentinel against forward drift."
-status: open
+status: done
 stage: null
 contribution: low
 created: 2026-05-06
-closed_at: null
+closed_at: 2026-05-06
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, unverified, api-contract]
 definition_of_done: |
-  - [ ] (replace with real criteria)
+  - [x] `engine.py` triage render loop driven off `sorted(by_gate.keys())` instead of hard-coded `("decision", "session")` tuple
+  - [x] All existing gate values (`decision`, `session`) still render correctly (output unchanged for current schema)
 ---
 
 # triage-render-loop-hardcodes-gate-buckets
