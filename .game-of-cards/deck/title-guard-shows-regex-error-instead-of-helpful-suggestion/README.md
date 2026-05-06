@@ -1,7 +1,7 @@
 ---
 title: title-guard-shows-regex-error-instead-of-helpful-suggestion
 summary: "The TITLE_ANTIPATTERNS guard at engine.py:1662 carries two patterns (_md_|_py_ and camelCase) that the schema's title regex strips first, so anyone typing `fix_md_thing` or `fixThing` sees a cryptic regex-pattern error instead of the helpful 'source-file infix; describe the *concept*, not the file' suggestion the maintainer authored. The dead branches also misalign with the LLM quality-pass prompt, which still tells Sonnet those antipatterns are catchable."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-05
