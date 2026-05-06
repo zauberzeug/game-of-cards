@@ -1,20 +1,20 @@
 ---
 title: prompt-hook-misses-rename-work-requests
 summary: "The shipped Claude UserPromptSubmit hook does not recognize `rename the button to Export` as work-initiating, even though the generated AGENTS guidance uses that exact shape as a persistent-work example. Those prompts bypass the silent GoC pipeline reminder."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `uv run python deck/prompt-hook-misses-rename-work-requests/reproduce.py` exits zero
-  - [ ] The prompt hook emits the GoC reminder for rename-style work requests
-  - [ ] The hook still stays silent for pure exploration and one-shot tooling prompts
-  - [ ] Focused tests cover the canonical AGENTS examples: rename, add CSV export, and fix auth bug
+  - [x] `uv run python .game-of-cards/deck/prompt-hook-misses-rename-work-requests/reproduce.py` exits zero
+  - [x] The prompt hook emits the GoC reminder for rename-style work requests
+  - [x] The hook still stays silent for pure exploration and one-shot tooling prompts
+  - [x] Focused tests cover the canonical AGENTS examples: rename, add CSV export, and fix auth bug
 ---
 
 # prompt-hook-misses-rename-work-requests

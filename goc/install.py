@@ -596,8 +596,8 @@ def install(
         existing = _detect_existing(existing_dir)
         rel = existing_dir.relative_to(target)
         click.echo(f"already installed ({rel}/.goc-version → {existing})", err=True)
-        click.echo("run `goc upgrade` to re-sync templates.")
-        sys.exit(0)
+        click.echo("Run `goc upgrade` to re-sync templates.", err=True)
+        sys.exit(1)
 
     for agent in agents:
         _sync_agent_harness(target, templates, agent)
@@ -689,6 +689,7 @@ def upgrade(
         click.echo(f"goc upgrade complete (project state only) — {existing} → {__version__}.")
     else:
         click.echo(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    click.echo("Next: re-run goc validate to confirm cards parse against the new schema.")
 
 
 if __name__ == "__main__":

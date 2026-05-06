@@ -1,20 +1,20 @@
 ---
 title: move-bypasses-title-antipattern-guard
 summary: "`goc new` rejects engineer-jargon title antipatterns such as `bug-123-*`, but `goc move` accepts the same bad slug and `goc validate` stays green. Retitling can therefore create titles the filing path forbids."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] `uv run python deck/move-bypasses-title-antipattern-guard/reproduce.py` exits zero
-  - [ ] `goc move` applies the same title-antipattern guard as `goc new`
-  - [ ] A deliberate bypass, if still needed for migrations, is explicit and named consistently with `--allow-jargon`
-  - [ ] Regression coverage proves `bug-123-*`, `r88-*`, and camelCase retitle targets are rejected by default
+  - [x] `uv run python deck/move-bypasses-title-antipattern-guard/reproduce.py` exits zero
+  - [x] `goc move` applies the same title-antipattern guard as `goc new`
+  - [x] A deliberate bypass, if still needed for migrations, is explicit and named consistently with `--allow-jargon`
+  - [x] Regression coverage proves `bug-123-*`, `r88-*`, and camelCase retitle targets are rejected by default
 ---
 
 # move-bypasses-title-antipattern-guard

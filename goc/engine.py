@@ -33,14 +33,32 @@ PACKAGE_DIR = Path(__file__).resolve().parent  # installed package dir (goc/)
 REPO_ROOT = Path.cwd()  # project being managed (consuming repo's root)
 
 
+_DUAL_TREE_CONFLICT: bool = False
+_LEGACY_ONLY: bool = False
+
+
 def _resolve_deck_dir(repo_root: Path) -> Path:
-    """Return the deck directory: `.game-of-cards/deck` if present, else `deck/` fallback."""
+    """Return the deck directory for single-tree scenarios.
+
+    Sets _DUAL_TREE_CONFLICT when both .game-of-cards/deck/ and deck/ exist
+    so the CLI group can refuse before dispatching any mutating subcommand.
+    Sets _LEGACY_ONLY when only deck/ exists so callers can warn.
+    """
+    global _DUAL_TREE_CONFLICT, _LEGACY_ONLY
     canonical = repo_root / ".game-of-cards" / "deck"
-    if canonical.exists():
-        return canonical
     legacy = repo_root / "deck"
+    if canonical.exists() and legacy.exists():
+        _DUAL_TREE_CONFLICT = True
+        _LEGACY_ONLY = False
+        return canonical
+    _DUAL_TREE_CONFLICT = False
+    if canonical.exists():
+        _LEGACY_ONLY = False
+        return canonical
     if legacy.exists():
+        _LEGACY_ONLY = True
         return legacy
+    _LEGACY_ONLY = False
     return canonical
 
 
@@ -948,6 +966,22 @@ def cli(
     board,
     max_rows,
 ):
+    if _DUAL_TREE_CONFLICT and ctx.invoked_subcommand != "migrate":
+        _canonical = REPO_ROOT / ".game-of-cards" / "deck"
+        _legacy = REPO_ROOT / "deck"
+        click.echo(
+            f"ERROR: two deck trees found — cannot operate safely:\n"
+            f"  canonical: {_canonical}\n"
+            f"  legacy:    {_legacy}\n"
+            f"\nRun `goc migrate` to merge legacy → canonical and remove the stale tree.",
+            err=True,
+        )
+        sys.exit(1)
+    if _LEGACY_ONLY and ctx.invoked_subcommand not in ("migrate", "install", "upgrade"):
+        click.echo(
+            "WARNING: using legacy deck/ location. Run `goc upgrade` to migrate to .game-of-cards/deck/.",
+            err=True,
+        )
     if ctx.invoked_subcommand is not None:
         return
     cards = load_all_cards()
@@ -960,6 +994,8 @@ def cli(
     else:
         status = status_flag
     status_filter_explicit = bool(done_flag or status_flag is not None)
+    if since and status != "done":
+        raise click.UsageError("--since requires --done (or --status done)")
     stages = parse_stage_filter(stage_flag)
     tag_filters = validate_tag_filters(tags)
     filtered = filter_cards(
@@ -1357,6 +1393,7 @@ def done(title, force):
     text = mutate_frontmatter_field(text, "closed_at", today)
     (card_dir / "README.md").write_text(text)
     click.echo(f"{title}: {prior} → done")
+    click.echo("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -1619,6 +1656,7 @@ def attest(title, skips, non_interactive):
         click.echo("\nERROR: attestation has failures; finish-card will block closure.", err=True)
         sys.exit(2)
     click.echo("\nAttestation OK.")
+    click.echo(f"Next: goc done {title} to close once all DoD items are ticked.")
 
 
 @cli.command()
@@ -1653,6 +1691,8 @@ def status(title, new_status, commit, no_commit):
     text = mutate_frontmatter_field(text, "status", new_status)
     (card_dir / "README.md").write_text(text)
     click.echo(f"{title}: {prior} → {new_status}")
+    if new_status == "active":
+        click.echo(f"Next: implement the card; tick DoD items as you go; then goc done {title}.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         if _git_auto_commit([card_dir], f"deck: {title} {prior} → {new_status}"):
@@ -1729,6 +1769,7 @@ def new(title, contribution, gate, tags, allow_jargon):
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     (card_dir / "log.md").write_text("")
     click.echo(f"created {card_dir.relative_to(REPO_ROOT)}/")
+    click.echo(f"Next: edit deck/{title}/README.md to fill the body and DoD; then ask your agent to implement the card.")
 
 
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
@@ -1810,12 +1851,28 @@ def unadvance(title, advancer, commit, no_commit):
 @cli.command()
 @click.argument("old_title")
 @click.argument("new_title")
-def move(old_title, new_title):
+@click.option(
+    "--allow-jargon", is_flag=True, help="Bypass the title-antipattern check (rare; used by migration tools)."
+)
+def move(old_title, new_title, allow_jargon):
     """Rename a title and rewrite known cross-references."""
     schema = load_schema()
     if not re.match(schema.title_pattern, new_title):
         click.echo(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", err=True)
         sys.exit(2)
+    if not allow_jargon:
+        antipatterns_hit = _check_title_antipatterns(new_title)
+        if antipatterns_hit:
+            click.echo(f"ERROR: title {new_title!r} contains engineer-jargon antipattern(s):", err=True)
+            for reason in antipatterns_hit:
+                click.echo(f"  - {reason}", err=True)
+            click.echo(
+                "\n  Titles are kanban labels; a non-engineer must understand the card from the title alone.", err=True
+            )
+            click.echo("  Rephrase to describe the *observable problem* (e.g.", err=True)
+            click.echo("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", err=True)
+            click.echo("  Pass --allow-jargon to bypass (rare; for migration tools).", err=True)
+            sys.exit(2)
     src = DECK_DIR / old_title
     dst = DECK_DIR / new_title
     if not src.exists():
@@ -1825,7 +1882,7 @@ def move(old_title, new_title):
         click.echo(f"ERROR: {dst} already exists", err=True)
         sys.exit(2)
     try:
-        subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True)
+        subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         shutil.move(str(src), str(dst))
     text = (dst / "README.md").read_text()
@@ -1893,6 +1950,7 @@ def decide(title, decision, reasoning, commit, no_commit):
         + f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
     )
     click.echo(f"{title}: decision recorded; gate {prior_gate} → none")
+    click.echo("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         decision_short = decision[:60] + ("…" if len(decision) > 60 else "")
@@ -1963,7 +2021,7 @@ def triage(as_json):
                 first = entry["summary"].splitlines()[0][:140]
                 lines.append(f"  > {first}")
             lines.append("")
-    lines.append("Tip: ask `decisions to make` to walk each via Q&A and record via Skill(decide-card).")
+    lines.append("Next: ask your agent \"decisions to make\" (Skill(scan-deck)) to walk each card and record decisions via Skill(decide-card).")
     click.echo("\n".join(lines))
 
 
@@ -1976,6 +2034,104 @@ def show(title):
         click.echo(f"ERROR: {p} not found", err=True)
         sys.exit(2)
     click.echo(p.read_text())
+
+
+@cli.command()
+@click.option("--dry-run", is_flag=True, help="Show what would happen without making changes.")
+@click.option("--yes", "auto_yes", is_flag=True, help="Skip confirmation prompt.")
+def migrate(dry_run, auto_yes):
+    """Merge legacy deck/ into .game-of-cards/deck/ and remove the stale tree.
+
+    Refuses if any card exists in both trees with differing content — resolve
+    the drift manually first, then re-run.  Safe to run against a single-tree
+    repo (it reports nothing to do and exits cleanly).
+    """
+    canonical = REPO_ROOT / ".game-of-cards" / "deck"
+    legacy = REPO_ROOT / "deck"
+
+    if not legacy.exists():
+        click.echo("No legacy deck/ found; nothing to migrate.")
+        return
+
+    if not canonical.exists():
+        click.echo(
+            f"ERROR: canonical deck location {canonical} does not exist.\n"
+            "Run `goc install` first to set up the canonical deck location.",
+            err=True,
+        )
+        sys.exit(1)
+
+    legacy_dirs = {d.name: d for d in legacy.iterdir() if d.is_dir()}
+    canonical_dirs = {d.name: d for d in canonical.iterdir() if d.is_dir()}
+
+    conflicts: list[str] = []
+    to_copy: list[str] = []
+    identical: list[str] = []
+
+    for name in sorted(legacy_dirs):
+        if name not in canonical_dirs:
+            to_copy.append(name)
+            continue
+        drifted = False
+        for fname in ["README.md", "log.md"]:
+            lf = legacy_dirs[name] / fname
+            cf = canonical_dirs[name] / fname
+            if lf.exists() and cf.exists() and lf.read_text() != cf.read_text():
+                conflicts.append(f"  {name}/{fname}: content differs between trees")
+                drifted = True
+            elif lf.exists() and not cf.exists():
+                conflicts.append(f"  {name}/{fname}: exists in legacy but missing in canonical")
+                drifted = True
+        if not drifted:
+            identical.append(name)
+
+    if conflicts:
+        click.echo(
+            "ERROR: cards with content drift — cannot merge safely:",
+            err=True,
+        )
+        for c in conflicts:
+            click.echo(c, err=True)
+        click.echo(
+            "\nResolve the drifted cards manually (pick the authoritative version),\n"
+            "then re-run `goc migrate`.",
+            err=True,
+        )
+        sys.exit(1)
+
+    if to_copy:
+        click.echo("Cards to migrate (legacy-only):")
+        for name in to_copy:
+            click.echo(f"  deck/{name}/  →  .game-of-cards/deck/{name}/")
+    if identical:
+        click.echo(f"Cards already in canonical tree (identical, will skip): {len(identical)}")
+
+    if not to_copy and not identical:
+        click.echo("Legacy deck/ contains no card directories; nothing to migrate.")
+        if not dry_run and not _DUAL_TREE_CONFLICT:
+            return
+
+    if dry_run:
+        if to_copy or not legacy_dirs:
+            click.echo(f"Would remove legacy tree: {legacy}")
+        click.echo("Dry run — no changes made.")
+        return
+
+    if to_copy or identical:
+        if not auto_yes:
+            click.confirm(
+                f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?",
+                abort=True,
+            )
+
+    for name in to_copy:
+        shutil.copytree(str(legacy_dirs[name]), str(canonical / name))
+        click.echo(f"  migrated: {name}")
+
+    shutil.rmtree(legacy)
+    click.echo(f"\nRemoved legacy tree: {legacy}")
+    click.echo("Migration complete. Run `goc validate` to confirm.")
+    click.echo("Next: `goc validate` to verify card integrity after migration.")
 
 
 if __name__ == "__main__":

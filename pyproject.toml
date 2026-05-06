@@ -42,3 +42,8 @@ packages = ["goc"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "goc/schema.yaml" = "goc/schema.yaml"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

@@ -1,20 +1,20 @@
 ---
 title: since-filter-without-done-hides-open-queue
 summary: "`goc --since YYYY-MM-DD` without `--done` applies a closed-date filter to the default open queue and returns no rows instead of reporting an invalid filter combination."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (`--since` without a done-status query no longer hides open cards)
-  - [ ] `goc --since 2026-05-04` exits with a concise usage error, or explicitly implies the done-card query
-  - [ ] `goc --done --since 2026-05-04` and `goc --status done --since 2026-05-04` still work
-  - [ ] `goc validate` passes after the filter-combination fix
+  - [x] reproduce.py exits zero (`--since` without a done-status query no longer hides open cards)
+  - [x] `goc --since 2026-05-04` exits with a concise usage error, or explicitly implies the done-card query
+  - [x] `goc --done --since 2026-05-04` and `goc --status done --since 2026-05-04` still work
+  - [x] `goc validate` passes after the filter-combination fix
 ---
 
 # since-filter-without-done-hides-open-queue

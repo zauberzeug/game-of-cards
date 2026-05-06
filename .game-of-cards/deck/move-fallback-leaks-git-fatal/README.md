@@ -1,20 +1,20 @@
 ---
 title: move-fallback-leaks-git-fatal
 summary: "`goc move` falls back from `git mv` to `shutil.move` outside git repositories, but the failed `git mv` subprocess writes `fatal: not a git repository` to stderr before the successful move. The command exits zero while still showing a scary failure."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `uv run python deck/move-fallback-leaks-git-fatal/reproduce.py` exits zero
-  - [ ] `goc move` in a non-git directory exits zero with no git fatal text on stderr
-  - [ ] The fallback still renames the card and rewrites relation fields
-  - [ ] Regression coverage asserts stderr is clean for the non-git fallback path
+  - [x] `uv run python deck/move-fallback-leaks-git-fatal/reproduce.py` exits zero
+  - [x] `goc move` in a non-git directory exits zero with no git fatal text on stderr
+  - [x] The fallback still renames the card and rewrites relation fields
+  - [x] Regression coverage asserts stderr is clean for the non-git fallback path
 ---
 
 # move-fallback-leaks-git-fatal

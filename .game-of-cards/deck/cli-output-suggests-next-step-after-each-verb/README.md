@@ -1,23 +1,23 @@
 ---
 title: cli-output-suggests-next-step-after-each-verb
 summary: "Every successful goc verb that mutates state should print a one-line Next: hint pointing at the natural follow-up action. The verb's stdout is part of the LLM's tool-call result and the most reliable channel to keep the methodology flow visible — more reliable than expecting the agent to have read goc.md or AGENTS.md. `goc install` already does this; the rest of the verb surface doesn't."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-05
-closed_at: null
+closed_at: 2026-05-05
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Audit done: list of every `click.echo` line in `goc/cli.py`, `goc/engine.py`, and `goc/install.py` that fires on a successful state mutation
-  - [ ] Each verb with an obvious natural next-step gets a one-line `Next:` hint appended to its success path (style matching the existing `goc install` hint)
-  - [ ] Hints align with the AGENTS.md operating modes — autonomous loop (pull-card), Andon-cord (decide-card), session work (advance-card → implement → finish-card)
-  - [ ] Hints are NOT printed on `--dry-run` or no-op success paths ("already installed", "already at goc X", etc.) so they don't add noise to non-action invocations
-  - [ ] Hints are tested via existing CI's `goc --version` and `goc validate` smoke matrix (or a new minimal stdout-capture test if one is warranted)
-  - [ ] No flag or behavior changes — additions are stdout-only
-  - [ ] `uv run goc validate` passes
+  - [x] Audit done: list of every `click.echo` line in `goc/cli.py`, `goc/engine.py`, and `goc/install.py` that fires on a successful state mutation
+  - [x] Each verb with an obvious natural next-step gets a one-line `Next:` hint appended to its success path (style matching the existing `goc install` hint)
+  - [x] Hints align with the AGENTS.md operating modes — autonomous loop (pull-card), Andon-cord (decide-card), session work (advance-card → implement → finish-card)
+  - [x] Hints are NOT printed on `--dry-run` or no-op success paths ("already installed", "already at goc X", etc.) so they don't add noise to non-action invocations
+  - [x] Hints are tested via existing CI's `goc --version` and `goc validate` smoke matrix (or a new minimal stdout-capture test if one is warranted)
+  - [x] No flag or behavior changes — additions are stdout-only
+  - [x] `uv run goc validate` passes
 ---
 
 # CLI output suggests the natural next step after each verb

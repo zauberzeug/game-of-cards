@@ -11,9 +11,10 @@ the generated guidance below to `uv run goc ...` while working here.
 ## Game of Cards — methodology runtime
 
 This repo uses [Game of Cards](https://github.com/zauberzeug/game-of-cards), a
-backlog-as-folder methodology where each task is a directory under `deck/`
-with frontmatter, body, and a Definition-of-Done checklist that decides when
-it closes. The CLI is `goc`. Run `goc --help` for the full verb list.
+backlog-as-folder methodology where each task is a directory under
+`.game-of-cards/deck/` with frontmatter, body, and a Definition-of-Done
+checklist that decides when it closes. The CLI is `goc`. Run `goc --help` for
+the full verb list.
 
 **Three operating modes coexist.**
 
@@ -75,7 +76,7 @@ Daily verbs:
 | `goc` | Show the open queue (impact-sorted). |
 | `goc --board` | Multi-column kanban view. |
 | `goc --status done --since YYYY-MM-DD` | Recently closed cards. |
-| `goc new <title>` | Scaffold a new card under `deck/<title>/`. |
+| `goc new <title>` | Scaffold a new card under `.game-of-cards/deck/<title>/`. |
 | `goc status <title> <state>` | Flip status (open/active/blocked/disproved/superseded). |
 | `goc done <title>` | Close + DoD enforcement (no auto-commit). |
 | `goc decide <title> --decision X --because Y` | Lower gate from decision/session → none. |
@@ -98,4 +99,16 @@ such as prompt hooks and native command wrappers. Codex installs may
 also provide GoC skill files under `.codex/skills/`; those skills wrap
 the same `goc` CLI verbs above and should be treated as optional
 runtime affordances, not separate methodology state.
+
+## What lives where
+
+**Project state** — check in by default, under `.game-of-cards/`:
+- `.game-of-cards/deck/` — the card deck (planning history, valuable to the team)
+- `.game-of-cards/config.yaml` — closure checks and workflow config
+
+**Runtime affordances** — optional, not required in source control:
+- Claude Code skills and hooks — install via `goc install --agents claude` or the Claude Code plugin
+- Codex skills — install via `goc install --agents codex`
+
+**Discovery marker** — the `<!-- BEGIN GOC -->` block in `AGENTS.md` is the canonical repo-visible signal that GoC is in use. Agent plugins discover GoC through this marker without requiring skills or hooks to be checked in.
 <!-- END GOC -->
