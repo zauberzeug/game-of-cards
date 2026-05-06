@@ -82,7 +82,7 @@ those markers is preserved across `goc install` / `goc upgrade`. This
 section is therefore safe to extend; the block below it is generated
 from `goc/templates/CLAUDE_GOC.md` and round-trips cleanly.
 
-<!-- BEGIN GOC v0.0.4 -->
+<!-- BEGIN GOC v0.0.5 -->
 ## Game of Cards — Claude Code specifics
 
 The shared briefing is in [AGENTS.md](AGENTS.md) — three operating

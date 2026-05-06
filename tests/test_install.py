@@ -121,7 +121,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             result = self.run_goc(cwd, "install")
 
             self.assert_goc_ok(result)
-            self.assertIn("goc 0.0.4 installed for agents: claude (default).", result.stdout)
+            self.assertIn("goc 0.0.5 installed for agents: claude (default).", result.stdout)
             self.assertIn('Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. Or "create a card for X" if you already know the first change you want to make.', result.stdout)
             self.assertIn("Engine/debug: `goc` shows the queue; `goc validate` checks cards.", result.stdout)
             self.assertTrue((cwd / ".claude" / "skills" / "pull-card" / "SKILL.md").is_file())
@@ -391,13 +391,13 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertEqual("", old.stdout)
             self.assertEqual(
                 "Game of Cards CLI is older than this repo's schema "
-                "(installed: 0.0.1, required: 0.0.4). Run: pipx upgrade game-of-cards\n",
+                "(installed: 0.0.1, required: 0.0.5). Run: pipx upgrade game-of-cards\n",
                 old.stderr,
             )
 
             fake_goc.write_text(
                 '#!/bin/sh\n'
-                'if [ "$1" = "--version" ]; then echo "goc, version 0.0.4"; exit 0; fi\n'
+                'if [ "$1" = "--version" ]; then echo "goc, version 0.0.5"; exit 0; fi\n'
                 'printf "fake:%s\\n" "$*"\n'
             )
             fake_goc.chmod(0o755)
