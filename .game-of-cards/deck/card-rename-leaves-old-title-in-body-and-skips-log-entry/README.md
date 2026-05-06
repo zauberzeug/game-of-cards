@@ -1,23 +1,23 @@
 ---
 title: card-rename-leaves-old-title-in-body-and-skips-log-entry
 summary: "`goc move` rewrites only the moved card's frontmatter `title` and other cards' `advances`/`advanced_by` list fields. Every other slug reference in the repo silently rots: the moved card's own `# {title}` H1, prose / link references in other cards' bodies, log.md mentions across the deck, and slug references in AGENTS.md / CLAUDE.md / docs / website / scripts. The right model is repo-wide: enumerate every text file under the repo, rewrite known structural references (heading, link, deck-path), and write a dated `## renamed from <old>` log entry. No log.md entry records the rename either — `decide` and `attest` write structured log entries; `move` does not."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-06
-closed_at: null
+closed_at: 2026-05-06
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (defect no longer fires)
-  - [ ] `goc move` rewrites the moved card's H1 heading from `# {old_title}` to `# {new_title}` (the heading scaffolded by `goc new` at engine.py:1768)
-  - [ ] `goc move` performs a repo-wide pass (text files only; binaries skipped; `.git/` skipped; `.gitignore`-respecting via `git ls-files`) and rewrites every occurrence of `old_title` in: card bodies (including this card's own body), every `log.md`, AGENTS.md, CLAUDE.md, docs/, site/, README.md, and any other tracked text file
-  - [ ] The rewrite pass is conservative — it rewrites the bare-slug, the `[<old>](../<old>/)` link form, and `deck/<old>/` path form. Other token boundaries (slug as substring of a longer word) are left alone. The exact match rules are documented in the `move` docstring
-  - [ ] `goc move` appends a dated rename entry to the moved card's `log.md` (e.g. `## YYYY-MM-DD: renamed from <old_title>`), matching the structured-log convention used by `decide` and `attest`
-  - [ ] `goc move --dry-run` prints the list of file:line sites that would be rewritten, so the user can review before committing (renames are rare, getting a chance to inspect is cheap insurance)
-  - [ ] Outside-repo references (commit messages, GitHub PRs, external docs) are explicitly out of scope and called out in the docstring
+  - [x] reproduce.py exits zero (defect no longer fires)
+  - [x] `goc move` rewrites the moved card's H1 heading from `# {old_title}` to `# {new_title}` (the heading scaffolded by `goc new` at engine.py:1768)
+  - [x] `goc move` performs a repo-wide pass (text files only; binaries skipped; `.git/` skipped; `.gitignore`-respecting via `git ls-files`) and rewrites every occurrence of `old_title` in: card bodies (including this card's own body), every `log.md`, AGENTS.md, CLAUDE.md, docs/, site/, README.md, and any other tracked text file
+  - [x] The rewrite pass is conservative — it rewrites the bare-slug, the `[<old>](../<old>/)` link form, and `deck/<old>/` path form. Other token boundaries (slug as substring of a longer word) are left alone. The exact match rules are documented in the `move` docstring
+  - [x] `goc move` appends a dated rename entry to the moved card's `log.md` (e.g. `## YYYY-MM-DD: renamed from <old_title>`), matching the structured-log convention used by `decide` and `attest`
+  - [x] `goc move --dry-run` prints the list of file:line sites that would be rewritten, so the user can review before committing (renames are rare, getting a chance to inspect is cheap insurance)
+  - [x] Outside-repo references (commit messages, GitHub PRs, external docs) are explicitly out of scope and called out in the docstring
 ---
 
 # card-rename-leaves-old-title-in-body-and-skips-log-entry

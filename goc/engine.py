@@ -1848,14 +1848,97 @@ def unadvance(title, advancer, commit, no_commit):
             click.echo("  committed")
 
 
+def _move_text_rewrite(text: str, old: str, new: str) -> str:
+    """Rewrite old slug to new in the four canonical text forms."""
+    esc = re.escape(old)
+    # H1 heading at line start
+    text = re.sub(rf"^(# ){esc}$", rf"\g<1>{new}", text, flags=re.MULTILINE)
+    # Markdown cross-link: [old](../old/)
+    text = text.replace(f"[{old}](../{old}/)", f"[{new}](../{new}/)")
+    # Path forms
+    text = text.replace(f".game-of-cards/deck/{old}/", f".game-of-cards/deck/{new}/")
+    text = text.replace(f"deck/{old}/", f"deck/{new}/")
+    # Bare slug: not preceded/followed by [-\w] (slug-boundary anchoring)
+    text = re.sub(rf"(?<![-\w]){esc}(?![-\w])", new, text)
+    return text
+
+
+def _move_iter_tracked_text_files():
+    """Yield (Path, str) for tracked text files; falls back to rglob outside git."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=str(REPO_ROOT), capture_output=True, check=True, timeout=30,
+        )
+        paths = [
+            REPO_ROOT / entry.decode("utf-8", errors="replace")
+            for entry in result.stdout.split(b"\x00")
+            if entry
+        ]
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        paths = [p for p in REPO_ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            raw = path.read_bytes()
+            if b"\x00" in raw:
+                continue
+            yield path, raw.decode("utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+
+def _move_rewrite_tracked_files(old: str, new: str) -> list[Path]:
+    """Rewrite all tracked text files; return modified paths."""
+    modified = []
+    for path, original in _move_iter_tracked_text_files():
+        rewritten = _move_text_rewrite(original, old, new)
+        if rewritten != original:
+            path.write_text(rewritten, encoding="utf-8")
+            modified.append(path)
+    return modified
+
+
+def _move_preview_sites(old: str, new: str) -> list[str]:
+    """Return 'file:line: ...' preview strings for --dry-run."""
+    sites = []
+    for path, original in _move_iter_tracked_text_files():
+        rewritten = _move_text_rewrite(original, old, new)
+        if rewritten == original:
+            continue
+        rel = str(path.relative_to(REPO_ROOT))
+        orig_lines = original.splitlines()
+        new_lines = rewritten.splitlines()
+        for i, (ol, nl) in enumerate(zip(orig_lines, new_lines), 1):
+            if ol != nl:
+                sites.append(f"{rel}:{i}: {ol.strip()!r} → {nl.strip()!r}")
+        if len(orig_lines) != len(new_lines):
+            sites.append(f"{rel}: (line count changed {len(orig_lines)} → {len(new_lines)})")
+    return sites
+
+
 @cli.command()
 @click.argument("old_title")
 @click.argument("new_title")
 @click.option(
     "--allow-jargon", is_flag=True, help="Bypass the title-antipattern check (rare; used by migration tools)."
 )
-def move(old_title, new_title, allow_jargon):
-    """Rename a title and rewrite known cross-references."""
+@click.option("--dry-run", is_flag=True, help="Print sites that would be rewritten without making changes.")
+def move(old_title, new_title, allow_jargon, dry_run):
+    """Rename a title and rewrite known cross-references.
+
+    Rewrites references in tracked text files (via ``git ls-files``):
+
+    \b
+    - ``# {old}`` H1 headings
+    - ``[{old}](../{old}/)`` markdown cross-link form
+    - ``deck/{old}/`` and ``.game-of-cards/deck/{old}/`` path forms
+    - bare slug with slug-boundary anchoring (not preceded/followed by ``[-\\w]``)
+
+    Appends a dated rename entry to the moved card's log.md.
+    Outside-repo references (commit messages, GitHub PRs, external docs) are out of scope.
+    """
     schema = load_schema()
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(new_title)
@@ -1881,29 +1964,33 @@ def move(old_title, new_title, allow_jargon):
     if dst.exists():
         click.echo(f"ERROR: {dst} already exists", err=True)
         sys.exit(2)
+
+    if dry_run:
+        sites = _move_preview_sites(old_title, new_title)
+        if sites:
+            for site in sites:
+                click.echo(site)
+        else:
+            click.echo("(no tracked text files would be modified)")
+        click.echo(f"(directory move: {src} → {dst})")
+        return
+
     try:
         subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         shutil.move(str(src), str(dst))
-    text = (dst / "README.md").read_text()
-    text = mutate_frontmatter_field(text, "title", new_title)
-    (dst / "README.md").write_text(text)
-    for t in load_all_cards():
-        if t.title == new_title:
-            continue
-        readme = t.path / "README.md"
-        original = readme.read_text()
-        fm_data, body = parse_frontmatter(original)
-        if not fm_data:
-            continue
-        changed = False
-        for f in (*LIST_REL_FIELDS,):
-            cur = fm_data.get(f) or []
-            if isinstance(cur, list) and old_title in cur:
-                fm_data[f] = [new_title if s == old_title else s for s in cur]
-                changed = True
-        if changed:
-            readme.write_text(emit_frontmatter(fm_data, body=body))
+
+    # Repo-wide text rewrite: H1s, markdown links, path forms, bare slugs,
+    # frontmatter title/advances/advanced_by fields.
+    _move_rewrite_tracked_files(old_title, new_title)
+
+    # Dated rename log entry.
+    today = date.today().isoformat()
+    log_path = dst / "log.md"
+    existing = log_path.read_text() if log_path.exists() else ""
+    sep = "\n\n" if existing.strip() else ""
+    log_path.write_text(existing.rstrip("\n") + sep + f"## {today}: renamed from {old_title}\n")
+
     click.echo(f"{old_title} → {new_title}")
 
 
