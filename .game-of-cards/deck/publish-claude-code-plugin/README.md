@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: null
-human_gate: session
+human_gate: none
 advances: [support-external-game-of-cards-state-location]
 advanced_by: [provide-claude-code-plugin-for-skills-and-hooks]
 tags: [story, infra]
@@ -50,3 +50,9 @@ This card is Claude-only. Codex, OpenClaw, and any future Cursor publishing live
 
 - Supersedes the Claude portion of the previous bundled card `publish-game-of-cards-agent-plugins`.
 - The `claude-plugin/.claude-plugin/plugin.json` is at version 0.0.4; that needs to track `pyproject.toml`'s version per the lockstep decision.
+
+## Decision
+
+*Resolved 2026-05-06:* Q1 marketplace: list in private zauberzeug-claude marketplace (PR there) + LLM-only direct-install path documented in goc docs; pursue Anthropic-official marketplace later. Q2 versioning: marketplace entries point at default branch, plugin.json carries version stamp, add CI tripwire enforcing pyproject.toml::version == claude-plugin/.claude-plugin/plugin.json::version. Q3 goc-on-PATH: runtime-only check via the existing bootstrap-error-when-cli-not-on-path card; LLM install instructions document uv tool install game-of-cards as prerequisite.
+
+*Reasoning:* B+C unblocks Claude Code lean-install today without waiting on Anthropic review. zauberzeug-claude is private team-internal so it stays unmentioned in goc public docs. Direct-install path is LLM-targeted because human users get told 'pipx install game-of-cards + goc install' (the canonical recipe via llms.txt); the plugin path is the LLM-recognized lean alternative when running inside Claude Code. CI tripwire makes the lockstep policy enforced rather than aspirational — version drift was caught manually this session, won't be next time.
