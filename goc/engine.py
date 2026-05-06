@@ -1725,9 +1725,6 @@ def _check_title_antipatterns(title: str) -> list[str]:
 def new(title, contribution, gate, tags, allow_jargon):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
     schema = load_schema()
-    if not re.match(schema.title_pattern, title):
-        click.echo(f"ERROR: title {title!r} does not match {schema.title_pattern!r}", err=True)
-        sys.exit(2)
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(title)
         if antipatterns_hit:
@@ -1741,6 +1738,9 @@ def new(title, contribution, gate, tags, allow_jargon):
             click.echo("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", err=True)
             click.echo("  Pass --allow-jargon to bypass (rare; for migration tools).", err=True)
             sys.exit(2)
+    if not re.match(schema.title_pattern, title):
+        click.echo(f"ERROR: title {title!r} does not match {schema.title_pattern!r}", err=True)
+        sys.exit(2)
     card_dir = DECK_DIR / title
     if card_dir.exists():
         click.echo(f"ERROR: {card_dir} already exists", err=True)
@@ -1857,9 +1857,6 @@ def unadvance(title, advancer, commit, no_commit):
 def move(old_title, new_title, allow_jargon):
     """Rename a title and rewrite known cross-references."""
     schema = load_schema()
-    if not re.match(schema.title_pattern, new_title):
-        click.echo(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", err=True)
-        sys.exit(2)
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(new_title)
         if antipatterns_hit:
@@ -1873,6 +1870,9 @@ def move(old_title, new_title, allow_jargon):
             click.echo("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", err=True)
             click.echo("  Pass --allow-jargon to bypass (rare; for migration tools).", err=True)
             sys.exit(2)
+    if not re.match(schema.title_pattern, new_title):
+        click.echo(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", err=True)
+        sys.exit(2)
     src = DECK_DIR / old_title
     dst = DECK_DIR / new_title
     if not src.exists():
