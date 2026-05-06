@@ -1,7 +1,7 @@
 ---
 title: state-flip-verbs-skip-log-md-entry
 summary: "`goc decide` and `goc attest` write structured dated entries to a card's `log.md`, but `goc status` and `goc done` only mutate frontmatter — no log entry is written. The `Skill(advance-card)` doc table at `goc/templates/skills/advance-card/SKILL.md:47` explicitly says `* → superseded` should log replacement rationale in the old card's `log.md`, but the CLI never does this. Unverified: the design may intentionally leave prose-shaped log entries to skills/humans, since the CLI has no structured payload to record on a bare status flip. Needs a design call before promoting to a fix."
-status: active
+status: disproved
 stage: null
 contribution: medium
 created: 2026-05-06
@@ -11,7 +11,7 @@ advances: []
 advanced_by: []
 tags: [bug, unverified, api-contract]
 definition_of_done: |
-  - [ ] (replace with real criteria)
+  - [x] Rebuttal documented: verdict, source of error, and lesson recorded in README.md body
 ---
 
 # state-flip-verbs-skip-log-md-entry
@@ -76,3 +76,13 @@ Promotion path: ask the maintainer which interpretation is canonical. If the doc
 ## Surfaced by
 
 `extend-deck` round 2 hunt (general-purpose agent, candidate #2 of 3).
+
+## Disproved 2026-05-06
+
+**Hypothesis**: The `advance-card` skill table at line 47 describes a CLI contract that `goc status` violates by not writing to `log.md`.
+
+**Verdict**: FALSE. The skill table's "notes" column describes **agent/skill** workflow behavior, not CLI auto-behavior. `Skill(advance-card)` Step 3 (lines 72-80) makes this explicit: "Edit the old card's `log.md` to record the replacement." The agent is instructed to write the entry; the CLI is not supposed to.
+
+**Source of error**: Misreading the "notes" column as a promise about CLI output rather than a workflow instruction to the agent executing the skill.
+
+**Lesson**: `goc decide` and `goc attest` write to `log.md` because they carry structured semantic payload (decision text + reasoning, checkbox audit). `goc status` carries only old→new state, already captured in frontmatter and git history — CLI silence is the correct design.
