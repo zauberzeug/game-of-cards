@@ -1,14 +1,14 @@
 ---
 title: publish-game-of-cards-agent-plugins
 summary: "Publish the Game of Cards agent plugins once Claude Code, Codex, and later OpenClaw plugin packages exist. This is release/distribution work distinct from implementing any one plugin."
-status: open
+status: superseded
 stage: null
 contribution: medium
 created: 2026-05-05
 closed_at: null
-human_gate: session
-advances: [support-external-game-of-cards-state-location]
-advanced_by: [provide-claude-code-plugin-for-skills-and-hooks, provide-codex-plugin-for-skills-and-hooks, provide-openclaw-plugin-for-skills-and-hooks]
+human_gate: none
+advances: []
+advanced_by: []
 tags: [story, infra]
 definition_of_done: |
   - [ ] Publication targets accepted for each plugin runtime
@@ -29,3 +29,14 @@ Implementing plugin files in the repo is not the same as making them available t
 ## Scope
 
 This card tracks publishing, not plugin implementation. It depends on the runtime-specific plugin cards.
+
+## Superseded 2026-05-06
+
+Bundling all-runtime publication into one card meant Claude release was gated on Codex + OpenClaw publication, even though the Claude plugin payload is already done. There is also a likely fourth target (Cursor) that doesn't fit a fixed-runtime list. Split into per-runtime publish cards so each can ship independently:
+
+- `publish-claude-code-plugin`
+- `publish-codex-plugin`
+- `publish-openclaw-plugin`
+
+Future targets (e.g. `publish-cursor-plugin`) get their own cards as those runtimes' plugin formats settle.
+

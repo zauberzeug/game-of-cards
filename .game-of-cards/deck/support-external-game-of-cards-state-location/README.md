@@ -8,7 +8,7 @@ created: 2026-05-04
 closed_at: null
 human_gate: session
 advances: [ship-game-of-cards-as-cross-agent-cli]
-advanced_by: [move-deck-into-game-of-cards-directory, make-skill-and-hook-installation-optional, provide-claude-code-plugin-for-skills-and-hooks, provide-codex-plugin-for-skills-and-hooks, provide-openclaw-plugin-for-skills-and-hooks, publish-game-of-cards-agent-plugins]
+advanced_by: [move-deck-into-game-of-cards-directory, make-skill-and-hook-installation-optional, provide-claude-code-plugin-for-skills-and-hooks, provide-codex-plugin-for-skills-and-hooks, provide-openclaw-plugin-for-skills-and-hooks, publish-claude-code-plugin, publish-codex-plugin, publish-openclaw-plugin]
 tags: [epic, story, infra, api-contract]
 definition_of_done: |
   - [x] Deck storage moves under `.game-of-cards/deck` with compatibility or migration for existing root `deck/` repos
