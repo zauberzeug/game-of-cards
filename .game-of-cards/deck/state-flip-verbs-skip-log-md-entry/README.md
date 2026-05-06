@@ -1,7 +1,7 @@
 ---
 title: state-flip-verbs-skip-log-md-entry
 summary: "`goc decide` and `goc attest` write structured dated entries to a card's `log.md`, but `goc status` and `goc done` only mutate frontmatter — no log entry is written. The `Skill(advance-card)` doc table at `goc/templates/skills/advance-card/SKILL.md:47` explicitly says `* → superseded` should log replacement rationale in the old card's `log.md`, but the CLI never does this. Unverified: the design may intentionally leave prose-shaped log entries to skills/humans, since the CLI has no structured payload to record on a bare status flip. Needs a design call before promoting to a fix."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-06
