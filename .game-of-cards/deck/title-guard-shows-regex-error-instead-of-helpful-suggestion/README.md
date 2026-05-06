@@ -1,20 +1,20 @@
 ---
 title: title-guard-shows-regex-error-instead-of-helpful-suggestion
 summary: "The TITLE_ANTIPATTERNS guard at engine.py:1662 carries two patterns (_md_|_py_ and camelCase) that the schema's title regex strips first, so anyone typing `fix_md_thing` or `fixThing` sees a cryptic regex-pattern error instead of the helpful 'source-file infix; describe the *concept*, not the file' suggestion the maintainer authored. The dead branches also misalign with the LLM quality-pass prompt, which still tells Sonnet those antipatterns are catchable."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-05
-closed_at: null
+closed_at: 2026-05-06
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] reproduce.py exits zero (defect no longer fires)
-  - [ ] `goc new fix_md_thing` (and similarly `goc new fixThing`) prints the antipattern reason ("source-file infix..." / "camelCase token...") instead of (or alongside) the bare regex-mismatch error
-  - [ ] TITLE_ANTIPATTERNS and the `_QUALITY_PROMPT_TEMPLATE` antipattern enumeration agree about which antipatterns are catchable at filing time
-  - [ ] No regression in the existing rN / path-N / phase-N / bug-N branches (still reachable, still rejected with their authored reasons)
+  - [x] reproduce.py exits zero (defect no longer fires)
+  - [x] `goc new fix_md_thing` (and similarly `goc new fixThing`) prints the antipattern reason ("source-file infix..." / "camelCase token...") instead of (or alongside) the bare regex-mismatch error
+  - [x] TITLE_ANTIPATTERNS and the `_QUALITY_PROMPT_TEMPLATE` antipattern enumeration agree about which antipatterns are catchable at filing time
+  - [x] No regression in the existing rN / path-N / phase-N / bug-N branches (still reachable, still rejected with their authored reasons)
 ---
 
 # title-guard-shows-regex-error-instead-of-helpful-suggestion
