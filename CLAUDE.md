@@ -74,6 +74,24 @@ edit `goc/templates/...` and re-run `goc upgrade`** (or edit both
 copies in lockstep). Editing only `.claude/skills/...` is silently
 lost on the next upgrade.
 
+### Plugin assets are duplicated — keep them in lockstep
+
+The Claude Code plugin payload at `claude-plugin/` ships skills + the
+two deck-aware hook scripts. Because Claude Code's marketplace install
+only extracts the `source: ./claude-plugin` subtree, those assets must
+be **real files** (not symlinks pointing outside the subtree, which
+silently disappear on consumer install). They are therefore byte-for-byte
+duplicates of `goc/templates/...`:
+
+| Plugin path | Source-of-truth template |
+|---|---|
+| `claude-plugin/skills/` | `goc/templates/skills/` |
+| `claude-plugin/hooks/deck_prompt_router.py` | `goc/templates/hooks/deck_prompt_router.py` |
+| `claude-plugin/hooks/deck_session_start.py` | `goc/templates/hooks/deck_session_start.py` |
+
+When changing any of these files, update **both copies**. CI fails the
+"Verify plugin assets match templates byte-for-byte" step on drift.
+
 ### Marker-bounded merge for AGENTS.md / CLAUDE.md
 
 `install._append_marker_block` rewrites only the content between
