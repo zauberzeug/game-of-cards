@@ -7,7 +7,7 @@ contribution: high
 created: 2026-05-05
 closed_at: 2026-05-05
 human_gate: none
-advances: [support-external-game-of-cards-state-location, publish-claude-code-plugin]
+advances: [support-external-game-of-cards-state-location, publish-claude-code-plugin, claude-install-defaults-to-plugin-path]
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

@@ -7,7 +7,7 @@ contribution: medium
 created: 2026-05-06
 closed_at: null
 human_gate: none
-advances: [support-external-game-of-cards-state-location]
+advances: [support-external-game-of-cards-state-location, claude-install-defaults-to-plugin-path]
 advanced_by: [provide-claude-code-plugin-for-skills-and-hooks]
 tags: [story, infra]
 definition_of_done: |
