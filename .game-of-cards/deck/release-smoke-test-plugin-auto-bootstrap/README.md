@@ -1,11 +1,11 @@
 ---
 title: release-smoke-test-plugin-auto-bootstrap
 summary: "Add an automated end-to-end smoke test that runs before a release tag publishes — spin up Claude Code headlessly in an empty temp dir, install the plugin from the marketplace, invoke a skill, and assert the bootstrap routing flow correctly handles missing CLI / missing permission allowance / missing project state."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-07
 human_gate: none
 advances: [publish-claude-code-plugin]
 advanced_by: []
@@ -19,7 +19,7 @@ definition_of_done: |
   - [x] Auth surface: reuses `CLAUDE_CODE_OAUTH_TOKEN` from `pull-card.yml` (no new secret); billing is the existing Claude Code subscription, not raw API tokens
   - [x] Local-dev runner: `scripts/smoke_release.sh` mirrors the workflow exactly via `claude` CLI directly; supports `./scripts/smoke_release.sh A`, `B`, or `AB` (default)
   - [x] Workflow fails the release if any assertion fails; `publish.needs: [build, smoke]` enforces the gate
-  - [ ] Smoke job verified by running v0.0.7-test or a `workflow_dispatch` invocation and confirming Path A + Path B both pass against real Claude Code action behavior (uncertainty around `--plugin-dir` flag passthrough and `Skill(...)` allowedTools syntax — needs a live run to confirm)
+  - [x] Smoke job verified live: workflow run 25499697517 (commit c7f1ad7, dry_run=true) — Path A passed in ~67s ($0.18, 0 permission_denials, terminal_reason completed, .game-of-cards/deck/ created and result.txt:A:passed); Path B passed in ~91s ($0.18, terminal_reason completed, B:passed written). Total job 2m43s, total cost ~$0.36. `--plugin-dir` and `Skill(...)` allowedTools both confirmed working as passthrough to claude_args. Caveat noted in log.md: Path B's cwd is the checked-out repo (which has `.game-of-cards/deck/`), so bootstrap's Step 1 short-circuits — the substring check still catches regressions in bootstrap's body and extend-deck's preflight, but not regressions in bootstrap's runtime branching. Improving Path B fidelity is a candidate follow-up
 ---
 
 # Release-time auto-bootstrap smoke test
