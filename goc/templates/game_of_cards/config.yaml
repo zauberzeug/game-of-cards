@@ -19,6 +19,13 @@ workflow:
   # mutations in the working tree unless a command is run with `--commit`.
   auto_commit: true
 
+  # worktree_deck: shared   # uncomment to share a single deck across all git
+  #                         # worktrees of this repo. When set, `goc` running
+  #                         # in any linked worktree resolves .game-of-cards/
+  #                         # from the primary working tree instead of the
+  #                         # worktree's own checkout. Also available as the
+  #                         # GOC_WORKTREE_DECK=shared environment variable.
+
 hooks:
   # Set to false to disable the Stop hook that prompts the agent to file
   # generalization cards after code-mutating turns.

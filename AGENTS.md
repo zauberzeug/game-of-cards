@@ -110,5 +110,13 @@ runtime affordances, not separate methodology state.
 - Claude Code skills and hooks — install via `goc install --agents claude` or the Claude Code plugin
 - Codex skills — install via `goc install --agents codex`
 
+**Worktrees** — by default each git worktree sees its own checkout's deck. Set
+`workflow.worktree_deck: shared` in `.game-of-cards/config.yaml` (or export
+`GOC_WORKTREE_DECK=shared`) to make all linked worktrees share the deck in the
+primary working tree. Useful when one person juggles multiple branches on the
+same project and wants a single queue. When auto-commit is on, deck mutations
+from a worktree commit to the primary working tree's branch, not the
+worktree's branch.
+
 **Discovery marker** — the `<!-- BEGIN GOC -->` block in `AGENTS.md` is the canonical repo-visible signal that GoC is in use. Agent plugins discover GoC through this marker without requiring skills or hooks to be checked in.
 <!-- END GOC -->

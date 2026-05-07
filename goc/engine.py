@@ -37,6 +37,60 @@ _DUAL_TREE_CONFLICT: bool = False
 _LEGACY_ONLY: bool = False
 
 
+def _detect_worktree_common_root(cwd: Path) -> Path | None:
+    """Return primary working tree root if cwd is inside a git worktree, else None.
+
+    Signal: git rev-parse --git-common-dir differs from --git-dir when cwd is
+    a linked worktree; the common dir is then the primary .git directory.
+    """
+    try:
+        r_git = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            capture_output=True, text=True, cwd=str(cwd), timeout=5,
+        )
+        r_common = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            capture_output=True, text=True, cwd=str(cwd), timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if r_git.returncode != 0 or r_common.returncode != 0:
+        return None
+    git_dir = r_git.stdout.strip()
+    common_dir = r_common.stdout.strip()
+    if git_dir == common_dir:
+        return None  # primary working tree, not a worktree
+    common_path = Path(common_dir)
+    if not common_path.is_absolute():
+        common_path = (cwd / common_path).resolve()
+    return common_path.parent
+
+
+def _resolve_deck_root(cwd: Path) -> Path:
+    """Return the root for deck and config file resolution.
+
+    When running inside a git worktree AND worktree_deck=shared is enabled
+    (GOC_WORKTREE_DECK=shared env var or workflow.worktree_deck: shared in
+    the common root's config.yaml), returns the primary working tree root so
+    all worktrees share a single deck. Otherwise returns cwd unchanged.
+    """
+    common_root = _detect_worktree_common_root(cwd)
+    if common_root is None:
+        return cwd
+    # Env var wins without requiring the config to exist yet.
+    if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
+        return common_root
+    config_path = common_root / ".game-of-cards" / "config.yaml"
+    if config_path.exists():
+        try:
+            cfg = yaml.safe_load(config_path.read_text()) or {}
+            if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
+                return common_root
+        except Exception:
+            pass
+    return cwd
+
+
 def _resolve_deck_dir(repo_root: Path) -> Path:
     """Return the deck directory for single-tree scenarios.
 
@@ -62,10 +116,11 @@ def _resolve_deck_dir(repo_root: Path) -> Path:
     return canonical
 
 
-DECK_DIR = _resolve_deck_dir(REPO_ROOT)
+DECK_ROOT = _resolve_deck_root(REPO_ROOT)
+DECK_DIR = _resolve_deck_dir(DECK_ROOT)
 SCHEMA_FILE = PACKAGE_DIR / "schema.yaml"
-GAME_OF_CARDS_CONFIG_FILE = REPO_ROOT / ".game-of-cards" / "config.yaml"
-LEGACY_DECK_CONFIG_FILE = REPO_ROOT / ".claude" / "config.yaml"
+GAME_OF_CARDS_CONFIG_FILE = DECK_ROOT / ".game-of-cards" / "config.yaml"
+LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"
 
 # ────────────────────────────────────────────────────────────────────────────
 # Frontmatter parser — used for SCHEMA.md AND every card's README.md
@@ -241,7 +296,7 @@ def _load_consuming_repo_tags() -> set[str]:
 
     Multiple blocks accumulate. Missing or empty file: no-op (returns set()).
     """
-    extension_file = REPO_ROOT / ".game-of-cards" / "canonical-tags.md"
+    extension_file = DECK_ROOT / ".game-of-cards" / "canonical-tags.md"
     if not extension_file.exists():
         return set()
     out: set[str] = set()
@@ -967,8 +1022,8 @@ def cli(
     max_rows,
 ):
     if _DUAL_TREE_CONFLICT and ctx.invoked_subcommand != "migrate":
-        _canonical = REPO_ROOT / ".game-of-cards" / "deck"
-        _legacy = REPO_ROOT / "deck"
+        _canonical = DECK_ROOT / ".game-of-cards" / "deck"
+        _legacy = DECK_ROOT / "deck"
         click.echo(
             f"ERROR: two deck trees found — cannot operate safely:\n"
             f"  canonical: {_canonical}\n"
@@ -1413,39 +1468,43 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
     """
     if not card_dirs:
         return False
+    # Deck files may live in the shared primary working tree (DECK_ROOT),
+    # not the current worktree (REPO_ROOT). Git operations on deck files
+    # must use DECK_ROOT so relative paths and staging work correctly.
+    git_cwd = str(DECK_ROOT)
     try:
         repo_check = subprocess.run(
             ["git", "rev-parse", "--git-dir"],
             capture_output=True,
             text=True,
-            cwd=str(REPO_ROOT),
+            cwd=git_cwd,
             check=False,
         )
         if repo_check.returncode != 0:
             return False
         git_dir = Path(repo_check.stdout.strip())
         if not git_dir.is_absolute():
-            git_dir = REPO_ROOT / git_dir
+            git_dir = DECK_ROOT / git_dir
         if any((git_dir / sf).exists() for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD")):
             click.echo("  (auto-commit skipped: merge/rebase/cherry-pick in progress)", err=True)
             return False
         paths: list[str] = [
-            str(p.relative_to(REPO_ROOT))
+            str(p.relative_to(DECK_ROOT))
             for d in card_dirs
             for fname in ("README.md", "log.md")
             if (p := d / fname).exists()
         ]
         if not paths:
             return False
-        subprocess.run(["git", "add", "--", *paths], check=True, cwd=str(REPO_ROOT))
+        subprocess.run(["git", "add", "--", *paths], check=True, cwd=git_cwd)
         diff_check = subprocess.run(
             ["git", "diff", "--cached", "--quiet", "--", *paths],
-            cwd=str(REPO_ROOT),
+            cwd=git_cwd,
             check=False,
         )
         if diff_check.returncode == 0:
             return False
-        subprocess.run(["git", "commit", "-m", message], check=True, cwd=str(REPO_ROOT))
+        subprocess.run(["git", "commit", "-m", message], check=True, cwd=git_cwd)
         return True
     except subprocess.CalledProcessError as e:
         click.echo(f"  (auto-commit failed: {e})", err=True)
@@ -1677,7 +1736,14 @@ def status(title, new_status, commit, no_commit):
         sys.exit(2)
     prior = t.status
     if prior == new_status:
-        click.echo(f"{title}: already {new_status}; nothing to do")
+        if new_status == "active":
+            click.echo(
+                f"WARNING: {title}: already active — possible racing claim;"
+                f" check `goc --status active` before proceeding",
+                err=True,
+            )
+        else:
+            click.echo(f"{title}: already {new_status}; nothing to do")
         return
     _TERMINAL = frozenset({"done", "disproved", "superseded"})
     if prior in _TERMINAL:
