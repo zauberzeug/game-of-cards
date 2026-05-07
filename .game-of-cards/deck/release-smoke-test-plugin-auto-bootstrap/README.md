@@ -60,33 +60,59 @@ Path B is what an unprepared consumer actually experiences, so it's the
 one that catches preflight regressions. Probably worth running both as
 two separate steps.
 
-## Open design questions (session required)
+## Constraints from Claude Code headless mode
 
-1. **Trigger point.** Pre-tag (run on every push to main, slow CI) vs
-   on-tag-before-publish (only at release, but blocks the release). The
-   on-tag-before-publish shape matches the user's ask but means a failed
-   smoke means a botched release artifact (no PyPI publish, but tag
-   exists). Mitigation: use a candidate-tag pattern (`v*-rc*`) that
-   only publishes after smoke passes, then promote to `v*`.
+Investigated 2026-05-07 against https://code.claude.com/docs/en/headless and
+https://code.claude.com/docs/en/permission-modes:
 
-2. **API cost ceiling.** Each run is 1 Claude session, probably ~5–10
-   tool turns. Need order-of-magnitude estimate before wiring secret.
+- **Slash commands are interactive-only**: `/plugin marketplace add` and
+  `/plugin install` do **not** execute in `claude -p` headless mode. There
+  is no `claude plugin install` CLI subcommand either.
+- **Workaround**: `claude --plugin-dir ./claude-plugin -p "<prompt>"` loads
+  the plugin directly from a local path. That bypasses the marketplace
+  cache entirely and tests the *plugin payload as it sits on disk*.
+- **Permission policy is fully active in headless**: use
+  `--permission-mode dontAsk --allowedTools "Bash(goc:*),Read"` to enforce
+  a known allowlist without prompts.
+- **API**: bills against `ANTHROPIC_API_KEY`. `--bare` skips OAuth and
+  local-config discovery for reproducible runs.
 
-3. **Pre-seeded allowance.** If we pre-seed `Bash(goc:*)`, we lose
-   coverage of the bootstrap-Step-3 (permission-routing) path that just
-   landed in `247d8c0`. If we don't pre-seed, the LLM can't actually
-   install goc and complete the bootstrap, so the test only verifies
-   "Skill(bootstrap) gets invoked" not "bootstrap actually works." Two
-   separate steps with different settings probably resolves this.
+This means the smoke test cannot exercise the *marketplace-install* path
+end-to-end — that part stays manual until Claude Code adds headless
+slash-command support. But it **can** exercise:
+- Plugin payload loads cleanly from a `--plugin-dir` checkout (no broken
+  symlinks, all 12 skills + 3 hooks discoverable)
+- Skill `!`-blocks render correctly (preflight section visible to the
+  LLM, no `_goc-bootstrap.sh` references leaking back in)
+- Bootstrap routing fires when goc is missing or denied (Path B)
+- Bootstrap completes when goc + allowance are pre-seeded (Path A)
 
-4. **Headless slash commands.** Need to verify whether `claude -p` (or
-   whatever the headless flag is) supports the `/plugin marketplace add`
-   and `/plugin install` slash commands. If not, fall back to manually
-   pre-cloning the marketplace cache to simulate the install.
+The marketplace-install path is partially covered today by the
+byte-for-byte tripwire in `ci.yml` ("Verify plugin assets match templates")
+which catches the symlink-strip class of bug at every push. Stale
+marketplace cache UX remains manual.
 
-5. **Local-dev runnable.** Should mirror the CI step exactly, runnable
-   via `make smoke` or `./scripts/smoke_release.sh`. Same Claude CLI,
-   same prompt fixture, just different secret source.
+## Remaining design questions (session required)
+
+1. **Trigger point.** On-tag-before-publish blocks broken releases but
+   means a failed test leaves the tag without artifacts. Candidate-tag
+   pattern (`v*-rc*` runs smoke, `v*` only after green) is safer but
+   adds workflow complexity. Or run on every push to main and gate the
+   release on the latest main being green (cheapest user effort, highest
+   CI cost).
+
+2. **API cost ceiling.** Each run is ~1 Claude session, ~5–15 tool turns,
+   ~30k–100k tokens. Need user concurrence on running per-tag.
+
+3. **Path A vs B coverage.** Run both as separate workflow steps?
+   - Step A pre-seeds `Bash(goc:*)`, installs goc, asserts bootstrap
+     completes and `.game-of-cards/deck/` is created.
+   - Step B leaves the allowance unset, asserts the `!`-block fails
+     and the LLM emits the bootstrap remediation text. Both steps are
+     valuable; both cost API tokens.
+
+4. **Local-dev runner.** `scripts/smoke_release.sh` mirrors the CI step
+   exactly. Useful for iterating without burning CI minutes.
 
 ## Notes
 
