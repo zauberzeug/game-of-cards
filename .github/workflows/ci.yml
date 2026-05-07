@@ -83,7 +83,6 @@ jobs:
               ('goc/templates/skills', 'claude-plugin/skills'),
               ('goc/templates/hooks/deck_prompt_router.py', 'claude-plugin/hooks/deck_prompt_router.py'),
               ('goc/templates/hooks/deck_session_start.py', 'claude-plugin/hooks/deck_session_start.py'),
-              ('goc/templates/bootstrap/_goc-bootstrap.sh', 'claude-plugin/bootstrap/_goc-bootstrap.sh'),
           ]
           drift = []
           for src, dst in pairs:

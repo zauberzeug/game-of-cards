@@ -6,9 +6,9 @@ argument-hint: optional area filter (e.g. an area-tag or path prefix); omit for 
 
 ## Context
 
-!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --status active -v 2>&1 | head -20`
+!`goc --status active -v 2>&1 | head -20`
 
-!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --status open --human-gate none -v`
+!`goc --status open --human-gate none -v`
 
 # Pick the next card
 

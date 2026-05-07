@@ -6,13 +6,13 @@ argument-hint: optional area filter within the project (consuming repo defines i
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
-!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh"`
+!`goc`
 
-!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --done`
+!`goc --done`
 
-!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --status disproved`
+!`goc --status disproved`
 
-!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --tag unverified`
+!`goc --tag unverified`
 
 !`cat .game-of-cards/hooks/extend-deck.md 2>/dev/null || true`
 

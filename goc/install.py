@@ -528,14 +528,6 @@ def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
 
     name = _frontmatter_value(frontmatter, "name") or skill_name
     description = _frontmatter_value(frontmatter, "description")
-    # Codex has no ${CLAUDE_SKILL_DIR} substitution, so reduce the Claude
-    # plugin/local probe expression to the static .codex shim path.
-    claude_probe = (
-        '"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] '
-        '&& echo "${CLAUDE_SKILL_DIR}/../../bootstrap" '
-        '|| echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh"'
-    )
-    body = body.replace(claude_probe, ".codex/skills/_goc-bootstrap.sh")
     codex_frontmatter = "\n".join(
         (
             "---",

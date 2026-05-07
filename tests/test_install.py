@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -228,7 +227,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("name: pull-card", codex_skill)
             self.assertIn("description: ", codex_skill)
             self.assertIn("# Pull a card", codex_skill)
-            self.assertIn(".codex/skills/_goc-bootstrap.sh", codex_skill)
+            self.assertIn("!`goc", codex_skill)
+            self.assertNotIn("_goc-bootstrap.sh", codex_skill)
             self.assertNotIn("CLAUDE_SKILL_DIR", codex_skill)
 
             self.assert_goc_ok(
@@ -725,7 +725,10 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertEqual("fake:show smoke-card\n", current.stdout)
             self.assertEqual("", current.stderr)
 
-    def test_skill_command_injections_use_bootstrap_wrapper(self) -> None:
+    def test_skill_command_injections_call_goc_directly(self) -> None:
+        # Skills shell out to `goc` directly (not via a bootstrap shim) so
+        # plugin-installed skills don't trip Claude Code's bash-policy ban
+        # on executing scripts shipped from a plugin cache directory.
         roots = [
             ROOT / "goc" / "templates" / "skills",
             ROOT / ".claude" / "skills",
@@ -735,7 +738,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             for skill_name in SKILL_NAMES:
                 skill = root / skill_name / "SKILL.md"
                 text = skill.read_text()
-                self.assertIsNone(re.search(r"^!`goc\b", text, flags=re.MULTILINE), msg=str(skill))
+                self.assertNotIn("_goc-bootstrap.sh", text, msg=str(skill))
+                self.assertNotIn("CLAUDE_SKILL_DIR", text, msg=str(skill))
 
     # ── Other install/upgrade tests ───────────────────────────────────────────
 
