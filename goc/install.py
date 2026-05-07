@@ -14,6 +14,7 @@ Reads templates via `importlib.resources` so it works from a wheel install.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import sys
@@ -259,11 +260,31 @@ def _find_installed_deck_dir(target: Path) -> Path | None:
     return None
 
 
+def _detect_claude_code() -> bool:
+    """Return True if running inside a Claude Code session."""
+    return bool(
+        os.environ.get("CLAUDECODE")
+        or os.environ.get("CLAUDE_CODE")
+        or os.environ.get("CLAUDE_PROJECT_DIR")
+    )
+
+
+def _should_use_local_skills(agent: str, *, local_skills: bool) -> bool:
+    """True if this agent should use the vendored skills layout (vs the plugin path).
+
+    Codex always uses vendored layout (no plugin yet).
+    Claude defaults to the plugin path; --local-skills opts in to vendored.
+    """
+    return agent != "claude" or local_skills
+
+
 GOC_CLAUDE_HOOKS: dict[str, str] = {
     "SessionStart": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
     "UserPromptSubmit": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
     "Stop": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py",
 }
+
+_HOOK_FILE_RE = re.compile(r"\$\{CLAUDE_PROJECT_DIR\}/(.+?\.py)")
 
 
 def _merge_claude_settings(settings_path: Path) -> None:
@@ -294,8 +315,93 @@ def _merge_claude_settings(settings_path: Path) -> None:
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
 
-def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list[PlannedWrite]:
-    """Compute the list of writes the installer will perform."""
+def _strip_goc_settings_entries(settings_path: Path) -> None:
+    """Remove GoC-managed hook entries from .claude/settings.json."""
+    if not settings_path.exists():
+        return
+    try:
+        settings = json.loads(settings_path.read_text())
+    except json.JSONDecodeError:
+        return
+
+    goc_commands = set(GOC_CLAUDE_HOOKS.values())
+    hooks = settings.get("hooks", {})
+    changed = False
+    for event in list(hooks.keys()):
+        new_groups: list = []
+        for group in hooks[event]:
+            if not isinstance(group, dict):
+                new_groups.append(group)
+                continue
+            filtered = [h for h in group.get("hooks", []) if h.get("command") not in goc_commands]
+            if len(filtered) != len(group.get("hooks", [])):
+                changed = True
+            if filtered:
+                new_groups.append({**group, "hooks": filtered})
+        if new_groups != hooks[event]:
+            changed = True
+        hooks[event] = new_groups
+
+    for event in list(hooks.keys()):
+        if not hooks[event]:
+            del hooks[event]
+            changed = True
+
+    if not hooks:
+        settings.pop("hooks", None)
+
+    if changed:
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+
+
+def _strip_claude_vendored_harness(target: Path, templates: Path) -> None:
+    """Remove GoC-managed vendored files from a Claude install.
+
+    Removes the skill tree, hook files (from the manifest and settings),
+    and strips GoC entries from .claude/settings.json. User-authored files
+    in .claude/ are not touched.
+    """
+    shim = _load_agent_shim(templates, "claude")
+
+    if shim.skills:
+        skills_dir = target / shim.skills.target
+        if skills_dir.is_dir():
+            shutil.rmtree(skills_dir)
+
+    files_to_remove: set[Path] = set()
+    for file in shim.files:
+        files_to_remove.add(target / file.target)
+    for cmd in GOC_CLAUDE_HOOKS.values():
+        m = _HOOK_FILE_RE.search(cmd)
+        if m:
+            files_to_remove.add(target / m.group(1))
+
+    for f in files_to_remove:
+        if f.is_file():
+            f.unlink()
+        parent = f.parent
+        try:
+            if parent.is_dir() and not any(parent.iterdir()):
+                parent.rmdir()
+        except OSError:
+            pass
+
+    if shim.settings_json:
+        _strip_goc_settings_entries(target / shim.settings_json)
+
+
+def _plan_writes(
+    target: Path,
+    templates: Path,
+    agents: tuple[str, ...],
+    *,
+    local_skills_agents: frozenset[str] = frozenset(),
+) -> list[PlannedWrite]:
+    """Compute the list of writes the installer will perform.
+
+    Agents in `local_skills_agents` get the full vendored layout (skills +
+    hooks + settings). Other agents get guidance only (plugin path model).
+    """
 
     deck_dir = target / ".game-of-cards" / "deck"
     writes: list[PlannedWrite] = []
@@ -310,24 +416,32 @@ def _plan_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list
     writes.append(PlannedWrite("shared", "append", target / AGENTS_GUIDANCE.path, "guidance"))
     for agent in agents:
         shim = _load_agent_shim(templates, agent)
-        if shim.skills:
+        is_local = agent in local_skills_agents
+        if is_local and shim.skills:
             for rel in _iter_skill_assets(templates / "skills"):
                 writes.append(PlannedWrite(agent, "write", target / shim.skills.target / rel, "harness"))
-        for file in shim.files:
-            writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
+        if is_local:
+            for file in shim.files:
+                writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
         for guidance in shim.guidance:
-            writes.append(PlannedWrite(agent, "append", target / guidance.path, "harness"))
-        if shim.settings_json:
+            writes.append(PlannedWrite(agent, "append", target / guidance.path, "guidance"))
+        if is_local and shim.settings_json:
             writes.append(PlannedWrite(agent, "merge", target / shim.settings_json, "harness"))
     writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
     return writes
 
 
-def _plan_upgrade_writes(target: Path, templates: Path, agents: tuple[str, ...]) -> list[PlannedWrite]:
+def _plan_upgrade_writes(
+    target: Path,
+    templates: Path,
+    agents: tuple[str, ...],
+    *,
+    local_skills_agents: frozenset[str] = frozenset(),
+) -> list[PlannedWrite]:
     """Compute the list of writes the upgrader will perform."""
 
     writes: list[PlannedWrite] = []
-    for write in _plan_writes(target, templates, agents):
+    for write in _plan_writes(target, templates, agents, local_skills_agents=local_skills_agents):
         if write.path.name == "log.md":
             continue
         action = "sync" if write.action == "write" else write.action
@@ -507,31 +621,44 @@ def _sync_methodology_blocks(target: Path, templates: Path) -> None:
     _append_marker_block(target / AGENTS_GUIDANCE.path, agents_body, header=AGENTS_GUIDANCE.header)
 
 
-def _sync_agent_harness(target: Path, templates: Path, agent: str, *, replace_skills: bool = False) -> None:
-    """Copy and render one agent's shim from its template manifest."""
+def _sync_agent_harness(
+    target: Path,
+    templates: Path,
+    agent: str,
+    *,
+    replace_skills: bool = False,
+    guidance_only: bool = False,
+) -> None:
+    """Copy and render one agent's shim from its template manifest.
+
+    When `guidance_only=True`, only the agent's guidance block (e.g. CLAUDE.md)
+    is written. Skills, hook files, and settings.json are skipped — the plugin
+    path model.
+    """
 
     shim = _load_agent_shim(templates, agent)
-    if shim.skills:
-        _sync_skill_tree(
-            templates,
-            target / shim.skills.target,
-            replace_skills=replace_skills,
-            codex_frontmatter=shim.skills.frontmatter == "codex",
-        )
+    if not guidance_only:
+        if shim.skills:
+            _sync_skill_tree(
+                templates,
+                target / shim.skills.target,
+                replace_skills=replace_skills,
+                codex_frontmatter=shim.skills.frontmatter == "codex",
+            )
 
-    for file in shim.files:
-        destination = target / file.target
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(templates / file.source, destination)
-        if file.mode == "executable":
-            destination.chmod(destination.stat().st_mode | 0o755)
+        for file in shim.files:
+            destination = target / file.target
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(templates / file.source, destination)
+            if file.mode == "executable":
+                destination.chmod(destination.stat().st_mode | 0o755)
+
+        if shim.settings_json:
+            _merge_claude_settings(target / shim.settings_json)
 
     for guidance in shim.guidance:
         body = (templates / guidance.template).read_text()
         _append_marker_block(target / guidance.path, body, header=guidance.header)
-
-    if shim.settings_json:
-        _merge_claude_settings(target / shim.settings_json)
 
 
 INSTALL_AGENTS_HELP = (
@@ -544,10 +671,20 @@ UPGRADE_AGENTS_HELP = (
     "Omit to auto-detect from installed harnesses; no harness defaults to claude. "
     "Supported: claude, codex."
 )
-NO_HARNESS_HELP = (
-    "Install project state and shared guidance only. "
-    "Skips all agent-specific skills, hooks, and guidance files. "
-    "Use --agents to add a harness later."
+LOCAL_SKILLS_HELP = (
+    "Vendor skills, hooks, and settings entries into source control. "
+    "Default for Codex (no plugin yet); opt-in for Claude. "
+    "Use for CI environments without plugin support, or repos that fork/template GoC."
+)
+KEEP_LOCAL_SKILLS_HELP = (
+    "Preserve the existing vendored skills layout and refresh templates in place. "
+    "Skips the migration to the plugin path. "
+    "Use in scripted contexts (CI cron, etc.) to opt out of migration."
+)
+
+_PLUGIN_INSTALL_CMDS = (
+    "  /plugin marketplace add zauberzeug/game-of-cards\n"
+    "  /plugin install game-of-cards@game-of-cards"
 )
 
 
@@ -556,13 +693,13 @@ NO_HARNESS_HELP = (
 @click.option("--agents", "agent_specs", multiple=True, help=INSTALL_AGENTS_HELP)
 @click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
 @click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
-@click.option("--no-harness", "no_harness", is_flag=True, help=NO_HARNESS_HELP)
+@click.option("--local-skills", "local_skills", is_flag=True, help=LOCAL_SKILLS_HELP)
 def install(
     dry_run: bool,
     agent_specs: tuple[str, ...],
     claude_flag: bool,
     codex_flag: bool,
-    no_harness: bool,
+    local_skills: bool,
 ) -> None:
     """Scaffold a fresh repo with the shared GoC files and selected harnesses."""
 
@@ -571,23 +708,20 @@ def install(
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
 
-    if no_harness:
-        agents: tuple[str, ...] = ()
-        explicit_agents = True
-        detected_agents: tuple[str, ...] = ()
-    else:
-        explicit_agents = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
-        detected_agents = _detect_agent_surfaces(target, supported_agents=supported_agents)
-        default_agents = detected_agents or _default_install_agents(target, supported_agents=supported_agents)
-        agents = _parse_agents(
-            agent_specs,
-            claude=claude_flag,
-            codex=codex_flag,
-            supported_agents=supported_agents,
-            default_agents=default_agents,
-        )
+    explicit_agents = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
+    detected_agents = _detect_agent_surfaces(target, supported_agents=supported_agents)
+    default_agents = detected_agents or _default_install_agents(target, supported_agents=supported_agents)
+    agents = _parse_agents(
+        agent_specs,
+        claude=claude_flag,
+        codex=codex_flag,
+        supported_agents=supported_agents,
+        default_agents=default_agents,
+    )
 
-    writes = _plan_writes(target, templates, agents)
+    local_skills_agents = frozenset(a for a in agents if _should_use_local_skills(a, local_skills=local_skills))
+
+    writes = _plan_writes(target, templates, agents, local_skills_agents=local_skills_agents)
     if dry_run:
         _print_plan("install", target, writes, agents)
         return
@@ -601,7 +735,8 @@ def install(
         sys.exit(1)
 
     for agent in agents:
-        _sync_agent_harness(target, templates, agent)
+        guidance_only = agent not in local_skills_agents
+        _sync_agent_harness(target, templates, agent, guidance_only=guidance_only)
 
     deck_dir.mkdir(parents=True, exist_ok=True)
     (deck_dir / "log.md").write_text("# Deck Log\n\nAppend deck-level events here (sprint notes, schema bumps, etc.).\n")
@@ -613,16 +748,31 @@ def install(
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
-    if no_harness:
-        click.echo(f"goc {__version__} installed (project state only; no agent harness).")
-        click.echo("Use `goc install --agents claude` (or codex) in a new repo to add a harness.")
-    else:
-        source = ""
-        if not explicit_agents:
-            source = " (auto-detected)" if detected_agents else " (default)"
-        click.echo(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
-        click.echo('Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. Or "create a card for X" if you already know the first change you want to make.')
-        click.echo("Engine/debug: `goc` shows the queue; `goc validate` checks cards. Run `goc upgrade` later to sync template updates.")
+    source = ""
+    if not explicit_agents:
+        source = " (auto-detected)" if detected_agents else " (default)"
+    click.echo(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
+    click.echo(
+        'Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. '
+        'Or "create a card for X" if you already know the first change you want to make.'
+    )
+
+    if "claude" in agents and "claude" not in local_skills_agents:
+        if _detect_claude_code():
+            click.echo(
+                "GoC plugin: to enable skills and hooks, ask the user to confirm then run:\n"
+                + _PLUGIN_INSTALL_CMDS
+            )
+        else:
+            click.echo(
+                "Next steps for Claude Code users — install the GoC plugin (one-time per machine):\n"
+                + _PLUGIN_INSTALL_CMDS
+            )
+
+    click.echo(
+        "Engine/debug: `goc` shows the queue; `goc validate` checks cards. "
+        "Run `goc upgrade` later to sync template updates."
+    )
 
 
 @click.command()
@@ -630,13 +780,13 @@ def install(
 @click.option("--agents", "agent_specs", multiple=True, help=UPGRADE_AGENTS_HELP)
 @click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
 @click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
-@click.option("--no-harness", "no_harness", is_flag=True, help=NO_HARNESS_HELP)
+@click.option("--keep-local-skills", "keep_local_skills", is_flag=True, help=KEEP_LOCAL_SKILLS_HELP)
 def upgrade(
     dry_run: bool,
     agent_specs: tuple[str, ...],
     claude_flag: bool,
     codex_flag: bool,
-    no_harness: bool,
+    keep_local_skills: bool,
 ) -> None:
     """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
 
@@ -644,23 +794,19 @@ def upgrade(
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
 
-    if no_harness:
-        agents: tuple[str, ...] = ()
-        agents_explicit = True
+    agents_explicit = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
+    if agents_explicit:
+        default_agents: tuple[str, ...] = DEFAULT_AGENTS
     else:
-        agents_explicit = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
-        if agents_explicit:
-            default_agents: tuple[str, ...] = DEFAULT_AGENTS
-        else:
-            installed = _detect_installed_surfaces(target, templates, supported_agents=supported_agents)
-            default_agents = installed or DEFAULT_AGENTS
-        agents = _parse_agents(
-            agent_specs,
-            claude=claude_flag,
-            codex=codex_flag,
-            supported_agents=supported_agents,
-            default_agents=default_agents,
-        )
+        installed = _detect_installed_surfaces(target, templates, supported_agents=supported_agents)
+        default_agents = installed or DEFAULT_AGENTS
+    agents = _parse_agents(
+        agent_specs,
+        claude=claude_flag,
+        codex=codex_flag,
+        supported_agents=supported_agents,
+        default_agents=default_agents,
+    )
 
     deck_dir = _find_installed_deck_dir(target)
     if deck_dir is None:
@@ -668,17 +814,62 @@ def upgrade(
         sys.exit(1)
     existing = _detect_existing(deck_dir)
 
-    if existing == __version__ and not dry_run and not agents_explicit:
+    # Determine migration status for Claude: vendored → plugin path
+    claude_has_vendored = False
+    if "claude" in agents:
+        claude_shim = _load_agent_shim(templates, "claude")
+        claude_has_vendored = bool(claude_shim.skills and (target / claude_shim.skills.target).is_dir())
+
+    do_migrate_claude = claude_has_vendored and not keep_local_skills
+    agents_to_migrate: frozenset[str] = frozenset(["claude"]) if do_migrate_claude else frozenset()
+
+    # For the vendored-layout question: either explicitly kept, or migrating away, or never had vendored
+    local_skills_agents: frozenset[str]
+    if keep_local_skills:
+        local_skills_agents = frozenset(a for a in agents if a == "claude" and claude_has_vendored) | frozenset(
+            a for a in agents if a != "claude"
+        )
+    else:
+        # After migration (or if no vendored layout): only codex uses local skills
+        local_skills_agents = frozenset(a for a in agents if a != "claude")
+
+    pending_migration = do_migrate_claude and not dry_run
+
+    if existing == __version__ and not dry_run and not agents_explicit and not pending_migration and not keep_local_skills:
         click.echo(f"already at goc {__version__} — nothing to do.")
         return
 
     if dry_run:
-        click.echo(f"goc upgrade would sync {existing} → {__version__}")
-        _print_plan("upgrade", target, _plan_upgrade_writes(target, templates, agents), agents)
+        migration_note = " (will migrate vendored .claude/skills/ → plugin path)" if do_migrate_claude else ""
+        click.echo(f"goc upgrade would sync {existing} → {__version__}{migration_note}")
+        _print_plan(
+            "upgrade",
+            target,
+            _plan_upgrade_writes(target, templates, agents, local_skills_agents=local_skills_agents),
+            agents,
+        )
         return
 
+    # Interactive migration prompt for Claude vendored → plugin path
+    if do_migrate_claude:
+        click.echo(
+            "This repo has vendored GoC skills. goc upgrade now defaults to the plugin path —\n"
+            "this will remove .claude/skills/, .claude/hooks/ (GoC-managed), and GoC\n"
+            "entries from .claude/settings.json. Pass --keep-local-skills to skip."
+        )
+        confirmed = click.confirm("Migrate to plugin path?", default=True)
+        if not confirmed:
+            agents_to_migrate = frozenset()
+            local_skills_agents = local_skills_agents | frozenset(["claude"])
+
+    for agent in agents_to_migrate:
+        if agent == "claude":
+            _strip_claude_vendored_harness(target, templates)
+
     for agent in agents:
-        _sync_agent_harness(target, templates, agent, replace_skills=True)
+        guidance_only = agent not in local_skills_agents
+        replace = agent in local_skills_agents
+        _sync_agent_harness(target, templates, agent, guidance_only=guidance_only, replace_skills=replace)
 
     _sync_game_of_cards_config(target, templates, migrate_legacy=True)
 
@@ -686,10 +877,7 @@ def upgrade(
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
-    if no_harness:
-        click.echo(f"goc upgrade complete (project state only) — {existing} → {__version__}.")
-    else:
-        click.echo(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    click.echo(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
     click.echo("Next: re-run goc validate to confirm cards parse against the new schema.")
 
 
