@@ -23,6 +23,7 @@ advanced_by:
   - bundle-goc-engine-inside-plugin-payload
   - make-claude-md-and-agents-md-merge-opt-in-via-skill
 tags: [epic, story, infra, api-contract]
+worker: {who: "claude[bot]", where: main}
 definition_of_done: |
   - [x] Deck storage moves under `.game-of-cards/deck` with compatibility or migration for existing root `deck/` repos
   - [x] Runtime-neutral config remains under `.game-of-cards` (currently `.game-of-cards/config.yaml`) and all docs use one spelling

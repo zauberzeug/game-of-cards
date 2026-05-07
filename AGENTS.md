@@ -89,6 +89,13 @@ Project-local tag extensions live in `.game-of-cards/canonical-tags.md`.
 per line) when non-empty; empty lists stay as `[]`. The `tags` field uses
 inline flow style. Follow this convention when editing frontmatter by hand.
 
+**`worker` field:** Optional identifier naming who works on a card. Flat
+string (`worker: rodja`) or mapping with branch context
+(`worker: {who: rodja, where: feature/foo}`). Use a person slug, machine
+name, or capability tag (e.g. `gpu-required`, `human`). Auto-populated at
+claim time by `goc status <title> active`. Filter with `goc --worker <X>`
+or set `GOC_WORKER` env var for runner-scoped queue views.
+
 ## Project-specific extensions
 
 Some repos extend GoC with project-local content (vocabulary, file-path

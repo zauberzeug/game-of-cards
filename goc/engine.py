@@ -178,13 +178,33 @@ def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
 _BLOCK_LIST_FIELDS = frozenset({"advances", "advanced_by"})
 
 
+def _emit_worker(value) -> str:
+    """Emit the `worker` field value as inline YAML.
+
+    Flat string (`worker: gpu-rig`) when only `who` is set; inline mapping
+    (`worker: {who: gpu-rig, where: feature/foo}`) when both are set.
+    """
+    if value is None:
+        return "null"
+    if isinstance(value, str):
+        return _yaml_inline(value)
+    if isinstance(value, dict):
+        who = value.get("who", "")
+        where = value.get("where")
+        if where:
+            return f"{{who: {_yaml_inline(who)}, where: {_yaml_inline(where)}}}"
+        return _yaml_inline(who)
+    return _yaml_inline(str(value))
+
+
 def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     """Render frontmatter as flat YAML matching the schema's example format.
 
     `definition_of_done` always uses `|` block style. `advances` and
     `advanced_by` use block-style lists (one `- item` per line) when non-empty;
-    empty lists still render as `[]`. Other multi-line strings use `|-` block
-    style. Single-line strings are rendered inline.
+    empty lists still render as `[]`. `worker` emits as a flat string when only
+    `who` is set, or an inline mapping when `where` is also set. Other multi-line
+    strings use `|-` block style. Single-line strings are rendered inline.
     """
     lines = ["---"]
     for key, value in fm.items():
@@ -195,6 +215,9 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
             lines.append(f"{key}:")
             for item in value:
                 lines.append(f"  - {_yaml_inline(item)}")
+            continue
+        if key == "worker":
+            lines.append(f"{key}: {_emit_worker(value)}")
             continue
         if isinstance(value, str) and "\n" in value:
             lines.extend(_emit_block_field(key, value, indicator="|-"))
@@ -372,6 +395,29 @@ class Card:
     def summary(self) -> str:
         return self.frontmatter.get("summary") or ""
 
+    @property
+    def worker(self) -> dict | None:
+        """Normalize worker frontmatter to `{who, where?}` dict, or None."""
+        v = self.frontmatter.get("worker")
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return {"who": v}
+        if isinstance(v, dict):
+            return v
+        return None
+
+
+def _worker_who(raw) -> str:
+    """Extract `who` string from a raw worker frontmatter value (str or dict)."""
+    if raw is None:
+        return ""
+    if isinstance(raw, str):
+        return raw
+    if isinstance(raw, dict):
+        return str(raw.get("who") or "")
+    return ""
+
 
 def count_dod_boxes(dod_field: str) -> tuple[int, int]:
     if not isinstance(dod_field, str):
@@ -501,6 +547,21 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             f"{t.title}: closed_at: must be null when status is not done"
             f" (status={fm.get('status')!r}, closed_at={closed_at!r})"
         )
+
+    worker = fm.get("worker")
+    if worker is not None:
+        if isinstance(worker, str):
+            if not worker:
+                errors.append(f"{t.title}: worker: must not be an empty string")
+        elif isinstance(worker, dict):
+            if "who" not in worker:
+                errors.append(f"{t.title}: worker: mapping must have a 'who' key")
+            elif not isinstance(worker.get("who"), str) or not worker["who"]:
+                errors.append(f"{t.title}: worker: 'who' must be a non-empty string")
+            if "where" in worker and not isinstance(worker.get("where"), str):
+                errors.append(f"{t.title}: worker: 'where' must be a string")
+        else:
+            errors.append(f"{t.title}: worker: must be a string or mapping with 'who'")
 
     for field in LIST_REL_FIELDS:
         v = fm.get(field) or []
@@ -679,6 +740,7 @@ def filter_cards(
     since: str | None = None,
     advances: str | None = None,
     advanced_by: str | None = None,
+    worker: str | None = None,
 ) -> list[Card]:
     out = list(cards)
     if statuses is not None:
@@ -699,6 +761,9 @@ def filter_cards(
         out = [t for t in out if advances in (t.frontmatter.get("advances") or [])]
     if advanced_by:
         out = [t for t in out if advanced_by in (t.frontmatter.get("advanced_by") or [])]
+    if worker:
+        needle = worker.lower()
+        out = [t for t in out if needle in _worker_who(t.frontmatter.get("worker")).lower()]
     return out
 
 
@@ -887,6 +952,14 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
+            w = t.worker
+            if w:
+                who = w.get("who", "")
+                where = w.get("where")
+                worker_str = f"worker: {who}"
+                if where:
+                    worker_str += f" @ {where}"
+                out_lines.append(f"    {worker_str}")
         if verbose >= 2:
             for field in ("advances", "advanced_by"):
                 v = t.frontmatter.get(field) or []
@@ -917,6 +990,7 @@ def render_json(cards: list[Card], values: dict[str, tuple[float, list[str]]] | 
                 "closed_at": str(t.closed_at) if t.closed_at else None,
                 "advances": t.frontmatter.get("advances") or [],
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
+                "worker": t.worker,
                 "dod_open": t.dod_open,
                 "dod_done": t.dod_done,
                 "dod_freeform": t.dod_freeform,
@@ -956,7 +1030,12 @@ def render_board(
         for c in columns:
             if i < len(by_status[c]):
                 t = by_status[c][i]
-                cell = f"{t.title[: col_w - 3]} [{t.contribution[0]}]"
+                who = _worker_who(t.frontmatter.get("worker"))
+                if who:
+                    suffix = f" [{t.contribution[0]}] @{who[:8]}"
+                    cell = f"{t.title[: col_w - len(suffix)].rstrip()}{suffix}"
+                else:
+                    cell = f"{t.title[: col_w - 3]} [{t.contribution[0]}]"
             else:
                 cell = ""
             cells.append(cell.ljust(col_w))
@@ -1007,6 +1086,12 @@ def render_active_notice(
 @click.option("--advances", default=None, help="Filter to cards that advance this title.")
 @click.option("--advanced-by", default=None, help="Filter to cards advanced by this title.")
 @click.option(
+    "--worker",
+    default=None,
+    envvar="GOC_WORKER",
+    help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.",
+)
+@click.option(
     "-v",
     "verbose",
     count=True,
@@ -1028,6 +1113,7 @@ def cli(
     since,
     advances,
     advanced_by,
+    worker,
     verbose,
     as_json,
     no_color,
@@ -1076,12 +1162,13 @@ def cli(
         since=since,
         advances=advances,
         advanced_by=advanced_by,
+        worker=worker,
     )
     full_values = compute_values(cards)
     full_by_title = {t.title: t for t in cards}
     filtered = sort_default(filtered, values=full_values)
     if board:
-        board_cards = cards if status == "all" or not status_filter_explicit else filtered
+        board_cards = filtered if (status_filter_explicit or worker) else cards
         click.echo(
             render_board(
                 board_cards, max_rows=max_rows, no_color=no_color, values=full_values
@@ -1731,16 +1818,65 @@ def attest(title, skips, non_interactive):
     click.echo(f"Next: goc done {title} to close once all DoD items are ticked.")
 
 
+def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worker_where: str | None) -> str:
+    """Populate the `worker` field on a card being claimed as active.
+
+    If the card already has a worker.who (designation), preserve it and only
+    add/update `where`. If no prior worker, auto-detect `who` from git config
+    and `where` from the current branch. Explicit --worker-who / --worker-where
+    flags override auto-detection for either sub-field.
+    """
+    existing = card.frontmatter.get("worker")
+    if isinstance(existing, str):
+        existing_dict: dict = {"who": existing}
+    elif isinstance(existing, dict):
+        existing_dict = dict(existing)
+    else:
+        existing_dict = {}
+
+    if worker_who is not None:
+        who = worker_who
+    elif "who" in existing_dict:
+        who = existing_dict["who"]
+    else:
+        r = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5)
+        who = r.stdout.strip() if r.returncode == 0 else ""
+
+    if worker_where is not None:
+        where: str | None = worker_where
+    else:
+        r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5)
+        where = r.stdout.strip() if r.returncode == 0 else None
+        if where in ("", "HEAD"):
+            where = None
+
+    if not who and not where:
+        return text
+
+    # Build the YAML inline value and mutate the frontmatter line-anchored.
+    who_yaml = _yaml_inline(who) if who else '""'
+    if where:
+        where_yaml = _yaml_inline(where)
+        worker_yaml = f"{{who: {who_yaml}, where: {where_yaml}}}"
+    else:
+        worker_yaml = who_yaml
+    return mutate_frontmatter_field(text, "worker", worker_yaml)
+
+
 @cli.command()
 @click.argument("title")
 @click.argument("new_status", type=click.Choice(MUTABLE_STATUS_VALUES))
 @click.option("--commit", is_flag=True, help="Force auto-commit for this status flip.")
 @click.option("--no-commit", is_flag=True, help="Skip auto-commit for this status flip.")
-def status(title, new_status, commit, no_commit):
+@click.option("--worker-who", default=None, help="Override worker.who identity (person, machine, or capability tag).")
+@click.option("--worker-where", default=None, help="Override worker.where branch or path for this claim.")
+def status(title, new_status, commit, no_commit, worker_who, worker_where):
     """Mutate any status except `done` (which has its own enforcement gate).
 
     The state flip follows `.game-of-cards/config.yaml` `workflow.auto_commit`.
     `--commit` and `--no-commit` override that policy for one invocation.
+    When flipping to `active`, auto-populates `worker.who` from `git config
+    user.name` and `worker.where` from the current branch unless already set.
     """
     card_dir = DECK_DIR / title
     t = load_card(card_dir)
@@ -1768,6 +1904,8 @@ def status(title, new_status, commit, no_commit):
         sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
+    if new_status == "active":
+        text = _auto_populate_worker(text, t, worker_who, worker_where)
     (card_dir / "README.md").write_text(text)
     click.echo(f"{title}: {prior} → {new_status}")
     if new_status == "active":
@@ -1798,10 +1936,11 @@ def _check_title_antipatterns(title: str) -> list[str]:
 @click.option("--contribution", type=click.Choice(["high", "medium", "low"]), default="medium")
 @click.option("--gate", type=click.Choice(["none", "decision", "session"]), default="decision")
 @click.option("--tag", "tags", multiple=True)
+@click.option("--worker", default=None, help="Worker designation — person, machine, or capability tag.")
 @click.option(
     "--allow-jargon", is_flag=True, help="Bypass the title-antipattern check (rare; used by migration tools)."
 )
-def new(title, contribution, gate, tags, allow_jargon):
+def new(title, contribution, gate, tags, worker, allow_jargon):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
     schema = load_schema()
     if not allow_jargon:
@@ -1844,6 +1983,8 @@ def new(title, contribution, gate, tags, allow_jargon):
         "tags": list(tags),
         "definition_of_done": "- [ ] (replace with real criteria)",
     }
+    if worker:
+        fm["worker"] = worker
     body = f"\n# {title}\n\n(write the design doc here)\n"
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     (card_dir / "log.md").write_text("")
@@ -2126,7 +2267,13 @@ def decide(title, decision, reasoning, commit, no_commit):
 
 @cli.command()
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON for Q&A consumers.")
-def triage(as_json):
+@click.option(
+    "--worker",
+    default=None,
+    envvar="GOC_WORKER",
+    help="Filter parked cards by worker.who (substring match). Also read from GOC_WORKER env var.",
+)
+def triage(as_json, worker):
     """List parked cards (gate ≠ none), grouped by gate, oldest-first.
 
     The supportive default for `Skill(scan-deck)` when the user asks
@@ -2135,7 +2282,12 @@ def triage(as_json):
     `## Decision required` body section preview. With `--json`, returns
     structured payload for the AskUserQuestion-driven Q&A flow.
     """
-    cards = [t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"]
+    all_cards = [t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"]
+    if worker:
+        needle = worker.lower()
+        cards = [t for t in all_cards if needle in _worker_who(t.frontmatter.get("worker")).lower()]
+    else:
+        cards = all_cards
     today = date.today()
 
     def aged_days(t: Card) -> int:

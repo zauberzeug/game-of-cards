@@ -125,6 +125,16 @@ When filing GoC cards in this repo:
   stay as `[]`. The `tags` field uses inline flow style. The emitter
   enforces this automatically; when editing frontmatter by hand,
   follow the same convention to avoid merge conflicts.
+- **`worker` field:** Optional free-form identifier naming who should or
+  does work on a card. Use a flat string for a single identifier
+  (`worker: rodja`), or a mapping when branch context is known
+  (`worker: {who: rodja, where: feature/foo}`). The flat form is sugar
+  for `{who: <value>}`. The value is unregistered — use a person slug,
+  a machine name, or a capability tag (e.g. `gpu-required`, `human`,
+  `rendering-expert`). The field persists after close as a historical
+  record; `goc status <title> active` auto-populates it at claim time.
+  Filter with `goc --worker <X>` or set `GOC_WORKER` env var for
+  runner-specific queue views.
 
 <!-- BEGIN GOC v0.0.6 -->
 ## Game of Cards — Claude Code specifics

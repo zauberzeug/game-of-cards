@@ -12,7 +12,7 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 !`goc --status active -v 2>&1 | head -20`
 
-!`goc --status open --human-gate none -v`
+!`goc --status open --human-gate none -v${GOC_WORKER:+ --worker "$GOC_WORKER"}`
 
 # Pick the next card
 

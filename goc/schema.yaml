@@ -13,6 +13,7 @@ optional_fields:
   - advances
   - advanced_by
   - tags
+  - worker
 title_pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
 status_values:        [open, active, blocked, done, disproved, superseded]
 stage_values:         [null, alpha, beta, stable]
