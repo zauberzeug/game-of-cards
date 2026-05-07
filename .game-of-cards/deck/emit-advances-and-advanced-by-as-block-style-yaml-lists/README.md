@@ -1,7 +1,7 @@
 ---
 title: emit-advances-and-advanced-by-as-block-style-yaml-lists
 summary: "Switch the frontmatter emitter to render `advances` and `advanced_by` as YAML block-style lists (one item per line) instead of the current inline flow style (`[a, b, c]`). This eliminates the guaranteed merge conflict that today happens whenever two participants concurrently add a child card to the same parent epic — both end up rewriting the same single line. `tags` stays inline because it is short, stable, and rarely concurrent-edited. Includes a one-time migration of all existing cards' frontmatter so the new style is uniform across the deck."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
