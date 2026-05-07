@@ -33,3 +33,4 @@ env/
 tmp/
 .tmp-design-review/
 .playwright-mcp/
+.claude/scheduled_tasks.lock
