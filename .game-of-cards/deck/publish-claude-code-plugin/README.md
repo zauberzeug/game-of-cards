@@ -1,14 +1,14 @@
 ---
 title: publish-claude-code-plugin
 summary: Publish the Game of Cards Claude Code plugin so users can install it without checking generated `.claude/skills` and hook files into source control. Distribution-only work; the plugin payload already exists at `claude-plugin/`.
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-06
-closed_at: null
+closed_at: 2026-05-07
 human_gate: none
 advances: [support-external-game-of-cards-state-location, claude-install-defaults-to-plugin-path, plugin-bootstraps-cli-and-project-state-on-first-use]
-advanced_by: [provide-claude-code-plugin-for-skills-and-hooks]
+advanced_by: [provide-claude-code-plugin-for-skills-and-hooks, release-smoke-test-plugin-auto-bootstrap]
 tags: [story, infra]
 definition_of_done: |
   - [x] Publication target chosen (B+C: zauberzeug-claude private marketplace via PR + LLM-only direct-install via repo-root `.claude-plugin/marketplace.json`; A=anthropics/claude-code-plugins deferred) and recorded in Decision section
@@ -16,7 +16,7 @@ definition_of_done: |
   - [x] Release workflow exists — existing `.github/workflows/release.yml` triggers on `v*` tag push and ships the wheel to PyPI; plugin payload at `claude-plugin/` travels with the same tag; marketplace.json refs default branch so consumers track main
   - [x] Published artifact installable by a fresh consumer environment with `goc` on PATH — own-repo path live as of this commit (`/plugin marketplace add zauberzeug/game-of-cards && /plugin install game-of-cards@game-of-cards`); zauberzeug-claude path live once PR https://github.com/zauberzeug/zauberzeug-claude/pull/8 merges
   - [x] README + llms.txt document the install path and compatibility — LLM-direction block synced from website to README; `/llms.txt` gains a "Lean alternative for Claude Code" section with the marketplace install commands; canonical pipx-install recipe unchanged
-  - [ ] Smoke-test or release-verification step confirms skills + hooks resolve through the plugin path on a clean repo (post-merge user verification)
+  - [x] Smoke-test or release-verification step confirms skills + hooks resolve through the plugin path on a clean repo (verified 2026-05-07 by Rodja in coffee-sort: `/plugin marketplace add zauberzeug/game-of-cards` + `/plugin install game-of-cards@game-of-cards` delivers all 12 skills and 3 hooks intact, and `/extend-deck` runs end-to-end after the bootstrap-routed `Bash(goc:*)` permission is added; automated equivalent tracked separately as `release-smoke-test-plugin-auto-bootstrap`)
   - [x] `uv run goc validate` passes
 ---
 
