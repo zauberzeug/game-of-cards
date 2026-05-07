@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-04
 closed_at: 2026-05-04
 human_gate: none
-advances: [configurable-auto-commit]
+advances:
+  - configurable-auto-commit
 advanced_by: []
 tags: [infra, api-contract]
 definition_of_done: |

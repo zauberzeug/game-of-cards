@@ -1,25 +1,25 @@
 ---
 title: emit-advances-and-advanced-by-as-block-style-yaml-lists
 summary: "Switch the frontmatter emitter to render `advances` and `advanced_by` as YAML block-style lists (one item per line) instead of the current inline flow style (`[a, b, c]`). This eliminates the guaranteed merge conflict that today happens whenever two participants concurrently add a child card to the same parent epic — both end up rewriting the same single line. `tags` stays inline because it is short, stable, and rarely concurrent-edited. Includes a one-time migration of all existing cards' frontmatter so the new style is uniform across the deck."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-07
 human_gate: none
 advances:
   - support-multi-branch-and-multi-user-deck-workflows
 advanced_by: []
 tags: [story, infra, api-contract]
 definition_of_done: |
-  - [ ] `engine.emit_frontmatter` renders `advances` and `advanced_by` in YAML block-style (one `- item` per line) when the list is non-empty; empty lists still render as `advances: []` (single line, no false diff)
-  - [ ] All other list fields (currently just `tags`) continue to render as inline flow-style — no change to today's `tags: [story, infra]` form
-  - [ ] `engine.mutate_frontmatter_field` handles multi-line list fields: replacing `advances` or `advanced_by` updates the spanning block, not just one line. Mutators called from `goc advance` / `goc done` / etc. continue to work
-  - [ ] `engine.parse_frontmatter` (already uses `yaml.safe_load`) requires no change — both styles parse to the same Python list. Verify by adding a test that round-trips a card from flow → block via the emitter
-  - [ ] Schema example (`goc/schema.yaml`) updated to show block-style for `advances` / `advanced_by` so contributors copying the example get the new format
-  - [ ] One-time migration script re-emits every card under `.game-of-cards/deck/` through the updated emitter, producing a single bulk commit. Diff is purely whitespace-equivalent for all fields except `advances` / `advanced_by`
-  - [ ] `goc validate` passes after migration
-  - [ ] Documented in CLAUDE.md / AGENTS.md so contributors editing frontmatter by hand know the convention (block for `advances` / `advanced_by`, inline for `tags`)
+  - [x] `engine.emit_frontmatter` renders `advances` and `advanced_by` in YAML block-style (one `- item` per line) when the list is non-empty; empty lists still render as `advances: []` (single line, no false diff)
+  - [x] All other list fields (currently just `tags`) continue to render as inline flow-style — no change to today's `tags: [story, infra]` form
+  - [x] `engine.mutate_frontmatter_field` handles multi-line list fields: replacing `advances` or `advanced_by` updates the spanning block, not just one line. Mutators called from `goc advance` / `goc done` / etc. continue to work
+  - [x] `engine.parse_frontmatter` (already uses `yaml.safe_load`) requires no change — both styles parse to the same Python list. Verify by adding a test that round-trips a card from flow → block via the emitter
+  - [x] Schema example (`goc/schema.yaml`) updated to show block-style for `advances` / `advanced_by` so contributors copying the example get the new format
+  - [x] One-time migration script re-emits every card under `.game-of-cards/deck/` through the updated emitter, producing a single bulk commit. Diff is purely whitespace-equivalent for all fields except `advances` / `advanced_by`
+  - [x] `goc validate` passes after migration
+  - [x] Documented in CLAUDE.md / AGENTS.md so contributors editing frontmatter by hand know the convention (block for `advances` / `advanced_by`, inline for `tags`)
 ---
 
 # Emit advances and advanced_by as block-style YAML lists

@@ -8,7 +8,8 @@ created: 2026-05-04
 closed_at: 2026-05-04
 human_gate: none
 advances: []
-advanced_by: [move-deck-config-to-game-of-cards-config]
+advanced_by:
+  - move-deck-config-to-game-of-cards-config
 tags: [infra, api-contract]
 definition_of_done: |
   - [x] Add a shipped `.game-of-cards/config.yaml` template with an `auto_commit` setting and documented default

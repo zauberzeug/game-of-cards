@@ -85,6 +85,10 @@ Daily verbs:
 Run `goc validate` to see schema and enum constraints in error messages.
 Project-local tag extensions live in `.game-of-cards/canonical-tags.md`.
 
+**YAML format:** `advances` and `advanced_by` use block-style (one `- item`
+per line) when non-empty; empty lists stay as `[]`. The `tags` field uses
+inline flow style. Follow this convention when editing frontmatter by hand.
+
 ## Project-specific extensions
 
 Some repos extend GoC with project-local content (vocabulary, file-path

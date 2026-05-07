@@ -1,14 +1,19 @@
 ---
 title: publish-claude-code-plugin
-summary: Publish the Game of Cards Claude Code plugin so users can install it without checking generated `.claude/skills` and hook files into source control. Distribution-only work; the plugin payload already exists at `claude-plugin/`.
+summary: "Publish the Game of Cards Claude Code plugin so users can install it without checking generated `.claude/skills` and hook files into source control. Distribution-only work; the plugin payload already exists at `claude-plugin/`."
 status: done
 stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: 2026-05-07
 human_gate: none
-advances: [support-external-game-of-cards-state-location, claude-install-defaults-to-plugin-path, plugin-bootstraps-cli-and-project-state-on-first-use]
-advanced_by: [provide-claude-code-plugin-for-skills-and-hooks, release-smoke-test-plugin-auto-bootstrap]
+advances:
+  - support-external-game-of-cards-state-location
+  - claude-install-defaults-to-plugin-path
+  - plugin-bootstraps-cli-and-project-state-on-first-use
+advanced_by:
+  - provide-claude-code-plugin-for-skills-and-hooks
+  - release-smoke-test-plugin-auto-bootstrap
 tags: [story, infra]
 definition_of_done: |
   - [x] Publication target chosen (B+C: zauberzeug-claude private marketplace via PR + LLM-only direct-install via repo-root `.claude-plugin/marketplace.json`; A=anthropics/claude-code-plugins deferred) and recorded in Decision section

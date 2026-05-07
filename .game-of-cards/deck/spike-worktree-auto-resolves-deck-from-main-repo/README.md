@@ -7,7 +7,8 @@ contribution: high
 created: 2026-05-07
 closed_at: 2026-05-07
 human_gate: none
-advances: [support-multi-branch-and-multi-user-deck-workflows]
+advances:
+  - support-multi-branch-and-multi-user-deck-workflows
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

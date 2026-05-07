@@ -1,6 +1,6 @@
 ---
 title: codex-harness-installs-skills
-summary: "Make the Codex install target write GoC skill files so Codex can discover and invoke the workflow by skill name."
+summary: Make the Codex install target write GoC skill files so Codex can discover and invoke the workflow by skill name.
 status: done
 stage: null
 contribution: medium

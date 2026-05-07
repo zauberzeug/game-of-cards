@@ -7,8 +7,12 @@ contribution: high
 created: 2026-05-07
 closed_at: 2026-05-07
 human_gate: none
-advances: [support-external-game-of-cards-state-location, plugin-bootstraps-cli-and-project-state-on-first-use]
-advanced_by: [provide-claude-code-plugin-for-skills-and-hooks, publish-claude-code-plugin]
+advances:
+  - support-external-game-of-cards-state-location
+  - plugin-bootstraps-cli-and-project-state-on-first-use
+advanced_by:
+  - provide-claude-code-plugin-for-skills-and-hooks
+  - publish-claude-code-plugin
 tags: [story, infra, api-contract]
 definition_of_done: |
   - [x] `goc install` (no flags, claude detected or default) writes project state + AGENTS.md + CLAUDE.md GoC blocks but does NOT install `.claude/skills/`, `.claude/hooks/`, or register GoC entries in `.claude/settings.json`

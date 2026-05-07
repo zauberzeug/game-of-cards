@@ -141,7 +141,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 _YAML_RESERVED = {"null", "true", "false", "yes", "no"}
-_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,]")
+_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 
 
 def _yaml_inline(value) -> str:
@@ -175,17 +175,26 @@ def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
     return out
 
 
+_BLOCK_LIST_FIELDS = frozenset({"advances", "advanced_by"})
+
+
 def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     """Render frontmatter as flat YAML matching the schema's example format.
 
-    `definition_of_done` always uses `|` block style. Other multi-line strings
-    use `|-` block style (strip-trailing-newline). Single-line strings are
-    rendered inline; embedded quotes/backslashes are escaped.
+    `definition_of_done` always uses `|` block style. `advances` and
+    `advanced_by` use block-style lists (one `- item` per line) when non-empty;
+    empty lists still render as `[]`. Other multi-line strings use `|-` block
+    style. Single-line strings are rendered inline.
     """
     lines = ["---"]
     for key, value in fm.items():
         if key == "definition_of_done":
             lines.extend(_emit_block_field(key, value or "", indicator="|"))
+            continue
+        if key in _BLOCK_LIST_FIELDS and isinstance(value, list) and value:
+            lines.append(f"{key}:")
+            for item in value:
+                lines.append(f"  - {_yaml_inline(item)}")
             continue
         if isinstance(value, str) and "\n" in value:
             lines.extend(_emit_block_field(key, value, indicator="|-"))
@@ -201,15 +210,19 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
 def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
     """Line-anchored regex replacement of `field: <whatever>`.
 
-    Avoids YAML round-trip (which reorders keys and strips comments). Safe
-    given the schema's flat-YAML constraint — every field is one line.
+    Handles both single-line fields (`field: value`) and block-style fields
+    (`field:\n  - item`). Avoids YAML round-trip (which reorders keys).
     """
     m = FRONTMATTER_RE.match(text)
     if not m:
         raise ValueError("no frontmatter found")
     fm_text = m.group(1)
     body = m.group(2)
-    pattern = re.compile(rf"^({re.escape(field_name)}):[ \t]*.*$", re.MULTILINE)
+    # Match the field header and any subsequent indented block lines.
+    pattern = re.compile(
+        rf"^{re.escape(field_name)}:[ \t]*[^\n]*(?:\n[ \t]+[^\n]*)*",
+        re.MULTILINE,
+    )
     if not pattern.search(fm_text):
         # Field absent — append at the end of the frontmatter block.
         fm_text = fm_text.rstrip() + f"\n{field_name}: {new_value}"
@@ -2285,6 +2298,51 @@ def migrate(dry_run, auto_yes):
     click.echo(f"\nRemoved legacy tree: {legacy}")
     click.echo("Migration complete. Run `goc validate` to confirm.")
     click.echo("Next: `goc validate` to verify card integrity after migration.")
+
+
+@cli.command("migrate-list-style")
+@click.option("--dry-run", is_flag=True, help="Show which cards would change without writing files.")
+def migrate_list_style(dry_run):
+    """Re-emit every card to convert advances/advanced_by to block-style lists.
+
+    One-time migration: after running this, all cards will use block-style
+    for `advances` and `advanced_by` (one `- item` per line) instead of
+    inline flow style (`[a, b, c]`). Empty lists remain as `[]`.
+    The diff is whitespace-equivalent for all fields except these two.
+    """
+    if not DECK_DIR.exists():
+        click.echo(f"ERROR: {DECK_DIR} does not exist", err=True)
+        sys.exit(1)
+
+    changed: list[str] = []
+    for card_dir in sorted(DECK_DIR.iterdir()):
+        readme = card_dir / "README.md"
+        if not readme.exists():
+            continue
+        original = readme.read_text()
+        fm, body = parse_frontmatter(original)
+        if not fm:
+            continue
+        rewritten = emit_frontmatter(fm, body=body)
+        if rewritten != original:
+            changed.append(card_dir.name)
+            if not dry_run:
+                readme.write_text(rewritten)
+
+    if not changed:
+        click.echo("All cards already use block-style for advances/advanced_by — nothing to do.")
+        return
+
+    if dry_run:
+        click.echo(f"Would rewrite {len(changed)} card(s):")
+        for name in changed:
+            click.echo(f"  {name}")
+        click.echo("Dry run — no changes made.")
+    else:
+        click.echo(f"Rewrote {len(changed)} card(s):")
+        for name in changed:
+            click.echo(f"  {name}")
+        click.echo("Done. Run `goc validate` to confirm.")
 
 
 if __name__ == "__main__":

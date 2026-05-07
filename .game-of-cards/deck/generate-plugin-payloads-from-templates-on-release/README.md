@@ -7,7 +7,9 @@ contribution: high
 created: 2026-05-07
 closed_at: null
 human_gate: session
-advances: [ship-game-of-cards-as-cross-agent-cli, support-multi-branch-and-multi-user-deck-workflows]
+advances:
+  - ship-game-of-cards-as-cross-agent-cli
+  - support-multi-branch-and-multi-user-deck-workflows
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

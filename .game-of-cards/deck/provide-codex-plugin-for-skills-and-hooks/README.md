@@ -7,7 +7,9 @@ contribution: high
 created: 2026-05-05
 closed_at: null
 human_gate: session
-advances: [support-external-game-of-cards-state-location, publish-codex-plugin]
+advances:
+  - support-external-game-of-cards-state-location
+  - publish-codex-plugin
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

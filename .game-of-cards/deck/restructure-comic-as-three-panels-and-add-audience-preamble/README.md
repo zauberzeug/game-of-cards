@@ -7,8 +7,10 @@ contribution: medium
 created: 2026-05-07
 closed_at: null
 human_gate: none
-advances: [ship-game-of-cards-as-cross-agent-cli]
-advanced_by: [define-personas-and-use-cases-for-game-of-cards]
+advances:
+  - ship-game-of-cards-as-cross-agent-cli
+advanced_by:
+  - define-personas-and-use-cases-for-game-of-cards
 tags: [story, documentation]
 definition_of_done: |
   - [ ] Comic asset reduced to 3 panels — the install panel is removed; remaining panels carry the cards-and-autonomy story

@@ -7,8 +7,15 @@ contribution: high
 created: 2026-05-07
 closed_at: null
 human_gate: session
-advances: [ship-game-of-cards-as-cross-agent-cli]
-advanced_by: [spike-worktree-auto-resolves-deck-from-main-repo, design-claim-protocol-with-branch-and-author-metadata, evaluate-deck-as-separate-repo-or-submodule, generate-plugin-payloads-from-templates-on-release, make-autocommit-mandatory-when-deck-is-version-controlled, emit-advances-and-advanced-by-as-block-style-yaml-lists]
+advances:
+  - ship-game-of-cards-as-cross-agent-cli
+advanced_by:
+  - spike-worktree-auto-resolves-deck-from-main-repo
+  - design-claim-protocol-with-branch-and-author-metadata
+  - evaluate-deck-as-separate-repo-or-submodule
+  - generate-plugin-payloads-from-templates-on-release
+  - make-autocommit-mandatory-when-deck-is-version-controlled
+  - emit-advances-and-advanced-by-as-block-style-yaml-lists
 tags: [epic, infra]
 definition_of_done: |
   - [ ] Worktree case (one user, multiple branches) has a documented and tested workflow — covered by `spike-worktree-auto-resolves-deck-from-main-repo`

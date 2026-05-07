@@ -120,6 +120,11 @@ When filing GoC cards in this repo:
   bodies. State the technical motivation directly. If a card needs
   context that only an internal source provides, summarize the
   technical fact, not its origin.
+- **YAML format for list fields:** `advances` and `advanced_by` use
+  block-style (one `- item` per line) when non-empty; empty lists
+  stay as `[]`. The `tags` field uses inline flow style. The emitter
+  enforces this automatically; when editing frontmatter by hand,
+  follow the same convention to avoid merge conflicts.
 
 <!-- BEGIN GOC v0.0.6 -->
 ## Game of Cards — Claude Code specifics

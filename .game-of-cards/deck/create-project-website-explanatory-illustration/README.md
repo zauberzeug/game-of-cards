@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-04
 closed_at: 2026-05-05
 human_gate: none
-advances: [build-game-of-cards-project-website]
+advances:
+  - build-game-of-cards-project-website
 advanced_by: []
 tags: [story, documentation]
 definition_of_done: |

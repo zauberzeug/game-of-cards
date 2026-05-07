@@ -248,6 +248,19 @@ contain `A`. The validator reports any half-edge. The `goc advance
 <title> --by <other>` and `goc unadvance <title> --by <other>`
 commands maintain both sides atomically.
 
+**YAML format:** non-empty `advances` and `advanced_by` lists are
+rendered as block-style (one `- item` per line). Empty lists use
+inline `[]`. The `tags` field stays inline. Example:
+
+```yaml
+advances:
+  - parent-epic-slug
+  - another-dependency
+advanced_by:
+  - child-story-slug
+tags: [story, api-contract]
+```
+
 Cycles are forbidden. A card advancing itself transitively is a
 configuration error.
 

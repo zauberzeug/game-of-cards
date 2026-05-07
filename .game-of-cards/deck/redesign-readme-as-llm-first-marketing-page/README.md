@@ -7,7 +7,8 @@ contribution: high
 created: 2026-05-05
 closed_at: 2026-05-05
 human_gate: none
-advances: [build-game-of-cards-project-website]
+advances:
+  - build-game-of-cards-project-website
 advanced_by: []
 tags: [documentation, story]
 definition_of_done: |

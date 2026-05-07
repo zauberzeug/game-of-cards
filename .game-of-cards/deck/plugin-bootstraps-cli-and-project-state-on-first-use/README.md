@@ -7,8 +7,11 @@ contribution: high
 created: 2026-05-07
 closed_at: 2026-05-07
 human_gate: none
-advances: [support-external-game-of-cards-state-location]
-advanced_by: [publish-claude-code-plugin, claude-install-defaults-to-plugin-path]
+advances:
+  - support-external-game-of-cards-state-location
+advanced_by:
+  - publish-claude-code-plugin
+  - claude-install-defaults-to-plugin-path
 tags: [story, infra]
 definition_of_done: |
   - [x] A plugin-provided bootstrap skill (working title: `Skill(bootstrap)` — alt names: `Skill(install)`, `Skill(setup)`; pick during implementation; must not collide with existing skills) detects whether the current repo is GoC-initialized (presence of `.game-of-cards/deck/`) and offers to bootstrap if not

@@ -1,6 +1,6 @@
 ---
 title: schedule-pull-card-cloud
-summary: "Add a configurable GitHub Actions cloud schedule that invokes the Claude Code pull-card skill."
+summary: Add a configurable GitHub Actions cloud schedule that invokes the Claude Code pull-card skill.
 status: done
 stage: null
 contribution: high

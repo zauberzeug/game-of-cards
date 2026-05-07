@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-04
 closed_at: 2026-05-04
 human_gate: none
-advances: [multi-agent-shim-which-agents-at-v1]
+advances:
+  - multi-agent-shim-which-agents-at-v1
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

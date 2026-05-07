@@ -1,13 +1,15 @@
 ---
 title: provide-openclaw-plugin-for-skills-and-hooks
-summary: Replace the blocked OpenClaw harness direction with a later OpenClaw plugin/runtime package for Game of Cards skills and hooks. This supersedes `install-openclaw-harness` and should wait until the Claude/Codex plugin pattern is clear or an OpenClaw consumer appears.
+summary: "Replace the blocked OpenClaw harness direction with a later OpenClaw plugin/runtime package for Game of Cards skills and hooks. This supersedes `install-openclaw-harness` and should wait until the Claude/Codex plugin pattern is clear or an OpenClaw consumer appears."
 status: open
 stage: null
 contribution: medium
 created: 2026-05-05
 closed_at: null
 human_gate: session
-advances: [support-external-game-of-cards-state-location, publish-openclaw-plugin]
+advances:
+  - support-external-game-of-cards-state-location
+  - publish-openclaw-plugin
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

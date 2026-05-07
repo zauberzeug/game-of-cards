@@ -1,14 +1,16 @@
 ---
 title: publish-codex-plugin
-summary: Publish the Game of Cards Codex plugin/runtime package once `provide-codex-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to the Codex runtime.
+summary: "Publish the Game of Cards Codex plugin/runtime package once `provide-codex-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to the Codex runtime."
 status: open
 stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: null
 human_gate: session
-advances: [support-external-game-of-cards-state-location]
-advanced_by: [provide-codex-plugin-for-skills-and-hooks]
+advances:
+  - support-external-game-of-cards-state-location
+advanced_by:
+  - provide-codex-plugin-for-skills-and-hooks
 tags: [story, infra]
 definition_of_done: |
   - [ ] Codex publication target chosen and recorded (Codex marketplace if/when it exists, npm package, or direct-install URL)

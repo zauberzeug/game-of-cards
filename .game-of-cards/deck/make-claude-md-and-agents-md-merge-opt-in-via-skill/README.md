@@ -7,7 +7,9 @@ contribution: medium
 created: 2026-05-07
 closed_at: null
 human_gate: session
-advances: [ship-game-of-cards-as-cross-agent-cli, support-external-game-of-cards-state-location]
+advances:
+  - ship-game-of-cards-as-cross-agent-cli
+  - support-external-game-of-cards-state-location
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

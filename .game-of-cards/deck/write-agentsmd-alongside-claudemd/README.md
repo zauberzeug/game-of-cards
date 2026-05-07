@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-03
 closed_at: null
 human_gate: session
-advances: [ship-game-of-cards-as-cross-agent-cli]
+advances:
+  - ship-game-of-cards-as-cross-agent-cli
 advanced_by: []
 tags: [story, infra, documentation]
 definition_of_done: |

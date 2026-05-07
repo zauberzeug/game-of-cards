@@ -8,7 +8,25 @@ created: 2026-05-03
 closed_at: null
 human_gate: session
 advances: []
-advanced_by: [package-pyproject-and-pypi-release, install-command-scaffolds-repo, write-agentsmd-alongside-claudemd, multi-agent-shim-which-agents-at-v1, bootstrap-error-when-cli-not-on-path, drop-card-redirect-directories, surface-active-cards-in-board, support-external-game-of-cards-state-location, integrate-github-issues-discussions-and-pull-requests, support-custom-card-workflows-and-statuses, build-game-of-cards-project-website, restructure-comic-as-three-panels-and-add-audience-preamble, generate-plugin-payloads-from-templates-on-release, bundle-goc-engine-inside-plugin-payload, make-claude-md-and-agents-md-merge-opt-in-via-skill, support-multi-branch-and-multi-user-deck-workflows, define-personas-and-use-cases-for-game-of-cards, explore-saas-deck-hosting-with-optional-tracker-sync]
+advanced_by:
+  - package-pyproject-and-pypi-release
+  - install-command-scaffolds-repo
+  - write-agentsmd-alongside-claudemd
+  - multi-agent-shim-which-agents-at-v1
+  - bootstrap-error-when-cli-not-on-path
+  - drop-card-redirect-directories
+  - surface-active-cards-in-board
+  - support-external-game-of-cards-state-location
+  - integrate-github-issues-discussions-and-pull-requests
+  - support-custom-card-workflows-and-statuses
+  - build-game-of-cards-project-website
+  - restructure-comic-as-three-panels-and-add-audience-preamble
+  - generate-plugin-payloads-from-templates-on-release
+  - bundle-goc-engine-inside-plugin-payload
+  - make-claude-md-and-agents-md-merge-opt-in-via-skill
+  - support-multi-branch-and-multi-user-deck-workflows
+  - define-personas-and-use-cases-for-game-of-cards
+  - explore-saas-deck-hosting-with-optional-tracker-sync
 tags: [epic, infra, meta-fix]
 definition_of_done: |
   - [ ] `game-of-cards` package published on PyPI; `pipx install game-of-cards` puts `goc` on PATH (sub-card: package-pyproject-and-pypi-release)

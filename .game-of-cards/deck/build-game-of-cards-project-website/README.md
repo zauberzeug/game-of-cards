@@ -7,8 +7,11 @@ contribution: medium
 created: 2026-05-05
 closed_at: 2026-05-05
 human_gate: none
-advances: [ship-game-of-cards-as-cross-agent-cli]
-advanced_by: [create-project-website-explanatory-illustration, redesign-readme-as-llm-first-marketing-page]
+advances:
+  - ship-game-of-cards-as-cross-agent-cli
+advanced_by:
+  - create-project-website-explanatory-illustration
+  - redesign-readme-as-llm-first-marketing-page
 tags: [story, documentation]
 definition_of_done: |
   - [x] Website scope decided in a session: stack, visual direction, page structure, and content source of truth (resolved 2026-05-05 — see Decision)

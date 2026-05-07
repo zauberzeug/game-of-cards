@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-07
 closed_at: null
 human_gate: session
-advances: [support-multi-branch-and-multi-user-deck-workflows]
+advances:
+  - support-multi-branch-and-multi-user-deck-workflows
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

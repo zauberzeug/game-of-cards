@@ -7,8 +7,11 @@ contribution: medium
 created: 2026-05-03
 closed_at: 2026-05-04
 human_gate: none
-advances: [ship-game-of-cards-as-cross-agent-cli]
-advanced_by: [install-claude-harness, install-codex-harness]
+advances:
+  - ship-game-of-cards-as-cross-agent-cli
+advanced_by:
+  - install-claude-harness
+  - install-codex-harness
 tags: [story, infra]
 definition_of_done: |
   - [x] Decision recorded: v1 agent set is Claude + Codex; OpenCLAW is deferred until a downstream repo needs it

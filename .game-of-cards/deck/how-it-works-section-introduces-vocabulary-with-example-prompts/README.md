@@ -1,6 +1,6 @@
 ---
 title: how-it-works-section-introduces-vocabulary-with-example-prompts
-summary: Close the "How it works" section with concrete prompt examples that introduce the GoC vocabulary (cards, deck, skills, gates, advance/finish) so first-time readers know what to actually say to their agent.
+summary: "Close the \"How it works\" section with concrete prompt examples that introduce the GoC vocabulary (cards, deck, skills, gates, advance/finish) so first-time readers know what to actually say to their agent."
 status: done
 stage: null
 contribution: medium
