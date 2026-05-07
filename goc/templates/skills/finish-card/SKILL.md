@@ -36,7 +36,7 @@ User argument: $ARGUMENTS — title.
 
 Read the card:
 
-!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" show <title>`
+!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" show <title>`
 
 Re-confirm each DoD criterion against the actual work:
 

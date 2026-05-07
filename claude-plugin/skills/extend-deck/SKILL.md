@@ -6,13 +6,13 @@ argument-hint: optional area filter within the project (consuming repo defines i
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
-!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh"`
+!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh"`
 
-!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --done`
+!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --done`
 
-!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --status disproved`
+!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --status disproved`
 
-!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --tag unverified`
+!`"$([ -f "${CLAUDE_SKILL_DIR}/../../bootstrap/_goc-bootstrap.sh" ] && echo "${CLAUDE_SKILL_DIR}/../../bootstrap" || echo "${CLAUDE_SKILL_DIR}/..")/_goc-bootstrap.sh" --tag unverified`
 
 !`cat .game-of-cards/hooks/extend-deck.md 2>/dev/null || true`
 
