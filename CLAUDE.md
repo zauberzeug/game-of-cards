@@ -100,6 +100,27 @@ those markers is preserved across `goc install` / `goc upgrade`. This
 section is therefore safe to extend; the block below it is generated
 from `goc/templates/CLAUDE_GOC.md` and round-trips cleanly.
 
+## Card authoring rules
+
+When filing GoC cards in this repo:
+
+- **English only.** All card titles, summaries, body, and DoD items
+  are written in English, even when the conversation that motivated
+  the card was in another language. Cards are read cold by future
+  agents and contributors who may not share the original language.
+- **No direct quotes from discussions.** Do not paste verbatim
+  quotes from meetings, transcripts, chat, or coding-coffee
+  retrospectives into card bodies. Synthesize the technical content
+  into the card's own voice. Quotes age poorly, attribute work to
+  individuals who may not want to be cited, and pull conversation
+  context into a permanent artefact where it does not belong.
+- **No references to internal events or projects by name.**
+  Specifically: do not name internal meetings (e.g. coding coffee),
+  internal projects (e.g. Zoe), or individual participants in card
+  bodies. State the technical motivation directly. If a card needs
+  context that only an internal source provides, summarize the
+  technical fact, not its origin.
+
 <!-- BEGIN GOC v0.0.6 -->
 ## Game of Cards — Claude Code specifics
 
