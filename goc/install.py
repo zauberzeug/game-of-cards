@@ -528,6 +528,7 @@ def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
 
     name = _frontmatter_value(frontmatter, "name") or skill_name
     description = _frontmatter_value(frontmatter, "description")
+    body = body.replace("echo .claude/skills", "echo .codex/skills")
     body = body.replace(".claude/skills/_goc-bootstrap.sh", ".codex/skills/_goc-bootstrap.sh")
     codex_frontmatter = "\n".join(
         (

@@ -41,7 +41,7 @@ autonomous loop decides whether to flip to `Skill(advance-card)`,
 
 ## Step 1 — sanity floor
 
-!`.claude/skills/_goc-bootstrap.sh validate`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" validate`
 
 If validate fails, fix the half-edges / unknown tags / missing
 required fields FIRST. Hygiene runs on a valid deck.
@@ -50,7 +50,7 @@ required fields FIRST. Hygiene runs on a valid deck.
 
 ### Stale unverified parks
 
-!`.claude/skills/_goc-bootstrap.sh --tag unverified -v`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --tag unverified -v`
 
 For each entry: check `created` against today's date. Cards parked
 > 90 days that nobody has reproduced or refuted are decay
@@ -69,7 +69,7 @@ candidates. Options:
 
 ### Stale-open cards (no log activity)
 
-!`.claude/skills/_goc-bootstrap.sh --status open --json | head -100`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --status open --json | head -100`
 
 Cards with `status: open` whose `log.md` has no entries in 60+
 days are at risk of being forgotten. For each: read the body,

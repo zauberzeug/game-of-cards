@@ -88,6 +88,7 @@ duplicates of `goc/templates/...`:
 | `claude-plugin/skills/` | `goc/templates/skills/` |
 | `claude-plugin/hooks/deck_prompt_router.py` | `goc/templates/hooks/deck_prompt_router.py` |
 | `claude-plugin/hooks/deck_session_start.py` | `goc/templates/hooks/deck_session_start.py` |
+| `claude-plugin/bootstrap/_goc-bootstrap.sh` | `goc/templates/bootstrap/_goc-bootstrap.sh` |
 
 When changing any of these files, update **both copies**. CI fails the
 "Verify plugin assets match templates byte-for-byte" step on drift.

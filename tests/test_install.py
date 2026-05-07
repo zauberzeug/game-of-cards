@@ -228,7 +228,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("name: pull-card", codex_skill)
             self.assertIn("description: ", codex_skill)
             self.assertIn("# Pull a card", codex_skill)
-            self.assertIn(".codex/skills/_goc-bootstrap.sh", codex_skill)
+            self.assertIn("echo .codex/skills", codex_skill)
+            self.assertNotIn("echo .claude/skills", codex_skill)
 
             self.assert_goc_ok(
                 self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")

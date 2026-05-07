@@ -23,7 +23,7 @@ User argument: $ARGUMENTS — `<title> <new-status> [--by <other-title>]`.
 
 ## Step 1 — read the card
 
-!`.claude/skills/_goc-bootstrap.sh show <title>`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" show <title>`
 
 Confirm:
 - Current status matches the transition you're about to make

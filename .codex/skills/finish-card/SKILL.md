@@ -35,7 +35,7 @@ User argument: $ARGUMENTS — title.
 
 Read the card:
 
-!`.codex/skills/_goc-bootstrap.sh show <title>`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .codex/skills)/_goc-bootstrap.sh" show <title>`
 
 Re-confirm each DoD criterion against the actual work:
 

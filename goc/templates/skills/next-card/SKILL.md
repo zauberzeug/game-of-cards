@@ -6,9 +6,9 @@ argument-hint: optional area filter (e.g. an area-tag or path prefix); omit for 
 
 ## Context
 
-!`.claude/skills/_goc-bootstrap.sh --status active -v 2>&1 | head -20`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --status active -v 2>&1 | head -20`
 
-!`.claude/skills/_goc-bootstrap.sh --status open --human-gate none -v`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --status open --human-gate none -v`
 
 # Pick the next card
 

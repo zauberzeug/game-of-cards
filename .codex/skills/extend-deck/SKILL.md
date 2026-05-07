@@ -5,13 +5,13 @@ description: "Hunt for one previously-undocumented defect, derivation gap, doc d
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
-!`.codex/skills/_goc-bootstrap.sh`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .codex/skills)/_goc-bootstrap.sh"`
 
-!`.codex/skills/_goc-bootstrap.sh --done`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .codex/skills)/_goc-bootstrap.sh" --done`
 
-!`.codex/skills/_goc-bootstrap.sh --status disproved`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .codex/skills)/_goc-bootstrap.sh" --status disproved`
 
-!`.codex/skills/_goc-bootstrap.sh --tag unverified`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .codex/skills)/_goc-bootstrap.sh" --tag unverified`
 
 !`cat .game-of-cards/hooks/extend-deck.md 2>/dev/null || true`
 

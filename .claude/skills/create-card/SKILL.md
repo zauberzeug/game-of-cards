@@ -58,7 +58,7 @@ also avoid:
 
 Verify it doesn't already exist:
 
-!`.claude/skills/_goc-bootstrap.sh show <title> 2>&1 | head -3`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" show <title> 2>&1 | head -3`
 
 Existence (frontmatter dump returned) → pick a different title.
 Non-existence ("ERROR: ... not found") → safe to proceed.
@@ -69,7 +69,7 @@ Same root cause as an existing card = supporting evidence on that
 card's body + a `log.md` appendage on the existing entry, NOT a new
 filing. Grep for the candidate's identifying string:
 
-!`.claude/skills/_goc-bootstrap.sh --status all 2>&1 | grep -i <near-name-fragment>`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .claude/skills)/_goc-bootstrap.sh" --status all 2>&1 | grep -i <near-name-fragment>`
 
 If a `disproved` rebuttal exists for this hypothesis, re-read it
 before filing. Re-promote only if `git log -p -- <cited-file>` shows

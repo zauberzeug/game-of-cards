@@ -19,7 +19,7 @@ in the queue and at what gate.
 
 Check for already-claimed work first:
 
-!`.codex/skills/_goc-bootstrap.sh --status active -v 2>&1 | head -20`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .codex/skills)/_goc-bootstrap.sh" --status active -v 2>&1 | head -20`
 
 Treat any listed active card as a soft lock. Do not claim the same card,
 or adjacent/conflicting work, unless the user explicitly asks to continue
@@ -27,7 +27,7 @@ that active card.
 
 Pick the highest-contribution `human_gate: none` open card:
 
-!`.codex/skills/_goc-bootstrap.sh --status open --human-gate none -v 2>&1 | head -20`
+!`"$([ -n "$CLAUDE_PLUGIN_ROOT" ] && echo "$CLAUDE_PLUGIN_ROOT/bootstrap" || echo .codex/skills)/_goc-bootstrap.sh" --status open --human-gate none -v 2>&1 | head -20`
 
 Then:
 
