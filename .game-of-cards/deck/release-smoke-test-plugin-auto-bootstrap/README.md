@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-07
 closed_at: null
-human_gate: session
+human_gate: none
 advances: [publish-claude-code-plugin]
 advanced_by: []
 tags: [story, infra]
@@ -121,3 +121,9 @@ marketplace cache UX remains manual.
 - Companion to (but distinct from) the existing CI tripwire that checks
   `claude-plugin/` matches `goc/templates/` byte-for-byte. That tripwire
   is fast and runs every push; this one is expensive and runs on tag.
+
+## Decision
+
+*Resolved 2026-05-07:* Trigger on v* tag, gating PyPI publish; run both Path A (full bootstrap with allowance pre-seeded) and Path B (routing-only with allowance absent) as separate steps; reuse anthropics/claude-code-action@v1 with the existing CLAUDE_CODE_OAUTH_TOKEN
+
+*Reasoning:* Tag-blocking matches the user's explicit ask and a botched tag without artifacts is a recoverable inconvenience vs. a broken release reaching PyPI; both paths cover distinct regression surfaces (preflight routing vs. bootstrap completeness); reusing pull-card.yml's auth surface adds zero new secrets and zero new billing exposure

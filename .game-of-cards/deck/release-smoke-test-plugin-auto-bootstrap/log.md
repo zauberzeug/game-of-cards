@@ -1,0 +1,3 @@
+## 2026-05-07: decision recorded
+
+Trigger on v* tag, gating PyPI publish; run both Path A (full bootstrap with allowance pre-seeded) and Path B (routing-only with allowance absent) as separate steps; reuse anthropics/claude-code-action@v1 with the existing CLAUDE_CODE_OAUTH_TOKEN — Tag-blocking matches the user's explicit ask and a botched tag without artifacts is a recoverable inconvenience vs. a broken release reaching PyPI; both paths cover distinct regression surfaces (preflight routing vs. bootstrap completeness); reusing pull-card.yml's auth surface adds zero new secrets and zero new billing exposure. Gate session → none.
