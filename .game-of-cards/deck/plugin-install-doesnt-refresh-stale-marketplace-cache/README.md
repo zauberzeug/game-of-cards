@@ -1,7 +1,7 @@
 ---
 title: plugin-install-doesnt-refresh-stale-marketplace-cache
 summary: Document — and ideally automate — the workaround for Claude Code's `/plugin install` not refreshing the marketplace clone, so consumers updating to a newer plugin version don't silently get the cached old bytes.
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
