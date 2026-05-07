@@ -1,7 +1,7 @@
 ---
 title: spike-worktree-auto-resolves-deck-from-main-repo
 summary: "Spike: when `goc` runs inside a git worktree, can it automatically detect that and resolve `.game-of-cards/` in the parent repo's working directory rather than the worktree's? This is the smallest viable experiment for the single-user-multi-thread case — one person juggling several worktrees on the same project should see ONE deck across all of them. Outcome of this spike informs whether the wider multi-human / multi-AI design (sibling cards) needs the same auto-resolution or a different mechanism."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-07
