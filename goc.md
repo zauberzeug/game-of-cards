@@ -102,6 +102,36 @@ uv tool install game-of-cards   # or: pipx install game-of-cards
 
 The plugin does not carry a minimum version check itself, but features added in later releases require matching `goc` builds.
 
+### Install from the marketplace (consumers)
+
+From inside Claude Code, install the plugin once per machine:
+
+```
+/plugin marketplace add zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+**Updating after a new release:** `/plugin install` reuses a local clone of the
+marketplace repository and does not refresh it automatically. Run the marketplace
+update step before reinstalling:
+
+```
+/plugin marketplace update zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+If `/plugin marketplace update` is not available in your Claude Code build, the
+equivalent round-trip is:
+
+```
+/plugin marketplace remove zauberzeug/game-of-cards
+/plugin marketplace add zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+Skipping the marketplace update installs from a stale local clone — the old bytes
+are used even after an explicit reinstall.
+
 ### Install the plugin (local development)
 
 Clone or check out this repository, then point Claude Code at the plugin directory:

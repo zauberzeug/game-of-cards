@@ -9,6 +9,10 @@ This skill is the **plugin-first entry point**: the plugin is already installed,
 and now the repo needs project state. It runs **idempotently** — if GoC is
 already set up, it exits silently in a single sentence.
 
+> **Updating the plugin?** Run `/plugin marketplace update zauberzeug/game-of-cards`
+> before `/plugin install` — Claude Code reuses its local marketplace clone and does
+> not refresh it automatically. Skipping this step silently installs the old bytes.
+
 ## What is checked, what is created, what confirmations to expect
 
 | Step | Check | If absent | User confirmation? |

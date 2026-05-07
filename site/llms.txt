@@ -1,0 +1,82 @@
+# Game of Cards
+
+> Agile for the age of agents — turn work into durable, inspectable cards that humans and LLMs can collaborate on.
+
+Game of Cards (GoC) is a repo-local methodology runtime built for swarms, not standups. Work lives in cards under `.game-of-cards/deck/`; agents pull, work, and close them autonomously; humans steer by curating the queue and resolving decision gates.
+
+## Install
+
+Install the `goc` CLI once per machine:
+
+```bash
+uv tool install game-of-cards   # preferred
+# or: pipx install game-of-cards
+```
+
+Initialize a repo (run from the project root):
+
+```bash
+goc install
+```
+
+This creates `.game-of-cards/deck/`, `.game-of-cards/config.yaml`, and merges GoC guidance into `AGENTS.md` / `CLAUDE.md`.
+
+Full CLI reference: https://game-of-cards.com/goc/
+
+## Lean alternative for Claude Code
+
+If the user is on Claude Code, the GoC plugin delivers all skills and hooks without requiring any checked-in files in the consuming repo.
+
+Install the plugin once per machine (run these slash commands inside Claude Code):
+
+```
+/plugin marketplace add zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+**Updating after a new release — run this first:**
+
+```
+/plugin marketplace update zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+Claude Code's `/plugin install` reuses a local marketplace clone and does not refresh it automatically. Skipping the `marketplace update` step installs from stale bytes even after an explicit reinstall. If `/plugin marketplace update` is not available, the equivalent round-trip is:
+
+```
+/plugin marketplace remove zauberzeug/game-of-cards
+/plugin marketplace add zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+Once the plugin is installed, bootstrap any repo with:
+
+```
+/bootstrap
+```
+
+or tell your agent: "use game of cards for this repo".
+
+## Key concepts
+
+- **Cards** — markdown dirs under `.game-of-cards/deck/<title>/README.md` with YAML frontmatter (status, contribution, human_gate, definition_of_done).
+- **Human gate** — `none` lets agents work autonomously; `decision` or `session` parks the card until a human resolves it.
+- **Skills** — small markdown protocols the agent follows for each verb (`create-card`, `pull-card`, `finish-card`, …).
+- **Andon cord** — when an agent hits a decision-class question it cannot resolve locally, it raises the gate and parks, rather than guessing.
+
+## Daily commands
+
+```bash
+goc                        # open queue sorted by leverage
+goc --board                # kanban board by status
+goc new rename-the-button  # scaffold a new card
+goc status <title> active  # claim a card
+goc done <title>           # close after all DoD boxes are ticked
+goc validate               # check frontmatter
+```
+
+## More
+
+- CLI reference and install recipe: https://game-of-cards.com/goc/
+- About the methodology: https://game-of-cards.com/about/
+- GitHub: https://github.com/zauberzeug/game-of-cards
