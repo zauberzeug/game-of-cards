@@ -3,6 +3,10 @@ name: advance-card
 description: "Mutate a card's status (open / active / blocked / disproved / superseded — everything except `done`). AUTO-INVOKE when user says \"I'll start on X\", \"I'm working on\", \"this is blocked by Y\", \"mark this disproved\", \"supersede with Z\", \"unblock\", or describes any non-done status change. Status transitions are documented agreements (Kanban explicit policies, Anderson)."
 ---
 
+## Preflight
+
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(bootstrap)` first**. Bootstrap detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after bootstrap completes.
+
 # Advance a card
 
 Kanban's **explicit policies** (Anderson): every status transition is

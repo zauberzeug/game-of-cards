@@ -3,6 +3,10 @@ name: next-card
 description: "Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status. AUTO-INVOKE when user says \"what's next\", \"pick something\", \"work on the queue\", \"what should I do\", \"next item\", \"drain the deck\", or initiates autonomous-loop work. Filters to `human_gate: none` for loop safety; Kanban pull principle (work is taken, not pushed)."
 ---
 
+## Preflight
+
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(bootstrap)` first**. Bootstrap detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after bootstrap completes.
+
 ## Context
 
 !`goc --status active -v 2>&1 | head -20`

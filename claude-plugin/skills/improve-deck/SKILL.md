@@ -3,6 +3,10 @@ name: improve-deck
 description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct file:line references, surface orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surface engineer-jargon titles for retitling, propose new canonical tags. AUTO-INVOKE when user says "tidy up the deck", "check for stale cards", "hygiene pass", "clean up the queue", "archive old", "audit the deck", or invokes /improve-deck. The board itself gets refactored each iteration (XP refactor mercilessly + Kanban continuous improvement).
 ---
 
+## Preflight
+
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(bootstrap)` first**. Bootstrap detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after bootstrap completes.
+
 # Improve the deck
 
 XP's **"refactor mercilessly"** (Beck, 1999) applied to the work

@@ -3,6 +3,10 @@ name: extend-deck
 description: "Hunt for one previously-undocumented defect, derivation gap, doc drift, missing test or wrong concept. Also architectural ugliness, code smells and inconsistencies. Files via Skill(create-card). AUTO-INVOKE when user says \"find me a bug\", \"audit X\", \"check for inconsistencies\", \"what could be wrong\", \"hunt for issues\", \"scan the codebase\", \"look for gaps\", or invokes /extend-deck. Treats nothing as truth — inconsistencies are the primary lead (XP spike + Scrum backlog refinement)."
 ---
 
+## Preflight
+
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(bootstrap)` first**. Bootstrap detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after bootstrap completes.
+
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
 !`goc`

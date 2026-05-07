@@ -4,6 +4,10 @@ description: Hunt for one previously-undocumented defect, derivation gap, doc dr
 argument-hint: optional area filter within the project (consuming repo defines its default scope in `.game-of-cards/hooks/extend-deck.md`)
 ---
 
+## Preflight
+
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(bootstrap)` first**. Bootstrap detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after bootstrap completes.
+
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
 !`goc`

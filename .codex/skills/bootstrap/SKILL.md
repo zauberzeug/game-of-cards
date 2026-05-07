@@ -15,10 +15,11 @@ already set up, it exits silently in a single sentence.
 |---|---|---|---|
 | 1 | `.game-of-cards/deck/` exists | Run bootstrap | — |
 | 2 | `goc` on PATH | Offer CLI install | **Yes — Confirmation 1** |
-| 3 | Project state scaffolded | Run `goc install` | **Yes — Confirmation 2** |
+| 3 | `Bash(goc:*)` in `permissions.allow` | Ask user to add it manually | **Yes — Confirmation 2** |
+| 4 | Project state scaffolded | Run `goc install` | **Yes — Confirmation 3** |
 
-At most **two confirmations** on first use in a fresh environment. Zero
-confirmations on subsequent repos once `goc` is already installed.
+At most **three confirmations** on first use in a fresh environment. Zero
+confirmations on subsequent repos once `goc` is allowed and installed.
 
 Created by this skill (via `goc install`):
 - `.game-of-cards/deck/` — the card deck directory
@@ -58,12 +59,37 @@ If `goc` is missing:
 
 If `goc` is already on PATH: skip this step silently.
 
-## Step 3 — scaffold project state
+## Step 3 — ensure Claude Code allows `goc` to run
+
+Even with `goc` on PATH, Claude Code's bash-permission policy denies
+skill-body invocations of unfamiliar commands by default — especially
+right after a plugin install. Without an allowance rule, every `!`goc …``
+block in every other skill will fail with "Permission for this action has
+been denied."
+
+Use the Read tool on `~/.claude/settings.json` (and, if it exists, the
+project's `.claude/settings.json`). Look for `"Bash(goc:*)"` inside
+`permissions.allow`.
+
+If absent in both, tell the user **verbatim**:
+
+> Claude Code needs explicit permission to run `goc`. Please add
+> `"Bash(goc:*)"` to the `permissions.allow` array in
+> `~/.claude/settings.json` (or your project's `.claude/settings.json`),
+> then **fully restart Claude Code** for the change to take effect.
+> I'll wait for you to confirm before continuing.
+
+Wait for **Confirmation 2**. Do not attempt to add the allowance yourself
+— Claude Code's policy refuses self-grants on its own settings file.
+
+If `"Bash(goc:*)"` is already present: skip this step silently.
+
+## Step 4 — scaffold project state
 
 Tell the user: "Set up Game of Cards in this repo? This creates
 `.game-of-cards/` and updates `AGENTS.md` / `CLAUDE.md`."
 
-Wait for **Confirmation 2**.
+Wait for **Confirmation 3**.
 
 Run:
 
@@ -75,7 +101,7 @@ goc install
 guidance blocks into `AGENTS.md` and `CLAUDE.md`, but does NOT install
 `.claude/skills/` or `.claude/hooks/` — those come from the plugin.
 
-## Step 4 — confirm ready and suggest next step
+## Step 5 — confirm ready and suggest next step
 
 Report to the user:
 

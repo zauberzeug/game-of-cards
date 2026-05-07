@@ -3,6 +3,10 @@ name: finish-card
 description: "Close a card with DoD enforcement, log.md closure entry, and project-specific post-close / commit handoff. AUTO-INVOKE when user says \"done\", \"close this\", \"finish X\", \"mark complete\", \"wrap up\", \"ship it\", or completes work that satisfies a card's DoD. The DoD checkboxes ARE the closure contract (Scrum Definition of Done) — `goc done` refuses to close with any unchecked."
 ---
 
+## Preflight
+
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(bootstrap)` first**. Bootstrap detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after bootstrap completes.
+
 # Close a card
 
 Scrum's **Definition of Done** as a machine-checkable closure contract.

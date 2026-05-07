@@ -3,6 +3,10 @@ name: create-card
 description: "File a new card with frontmatter, DoD scaffold, and (for bugs) reproduce.py stub. AUTO-INVOKE when user says \"let's do X\", \"implement Y\", \"fix Z\", \"add support for\", \"I want to\", \"we need to\", describes a bug, requests a feature, or initiates ANY persistent work item. The card is filed BEFORE implementation — the body is the briefing the next reader (human or AI agent) needs to act cold. Title must be user-facing, descriptive, PO-readable (not engineer's jargon)."
 ---
 
+## Preflight
+
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(bootstrap)` first**. Bootstrap detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after bootstrap completes.
+
 # File a new card
 
 XP's **story card as conversation** (Beck, 1999): a card is a
