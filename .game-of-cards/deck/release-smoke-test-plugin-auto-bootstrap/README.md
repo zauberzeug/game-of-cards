@@ -1,7 +1,7 @@
 ---
 title: release-smoke-test-plugin-auto-bootstrap
 summary: "Add an automated end-to-end smoke test that runs before a release tag publishes — spin up Claude Code headlessly in an empty temp dir, install the plugin from the marketplace, invoke a skill, and assert the bootstrap routing flow correctly handles missing CLI / missing permission allowance / missing project state."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
