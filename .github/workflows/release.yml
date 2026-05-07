@@ -74,7 +74,9 @@ jobs:
     name: End-to-end auto-bootstrap smoke
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    # Run on real tag pushes AND on workflow_dispatch (so dry_run can exercise
+    # the smoke without publishing). Only skip when nothing else triggers it.
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
