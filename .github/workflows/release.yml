@@ -61,9 +61,124 @@ jobs:
           path: dist/
           retention-days: 7
 
+  smoke:
+    # End-to-end smoke test that gates PyPI publish on the plugin actually
+    # working in a fresh consumer environment. Reuses the same Claude Code
+    # OAuth surface as pull-card.yml — no new secrets required.
+    #
+    # Path A: pre-installs goc + grants Bash(goc:*); asserts Skill(bootstrap)
+    #   completes and creates .game-of-cards/deck/.
+    # Path B: no goc install + no Bash(goc:*) allowance; asserts the LLM
+    #   correctly routes from Skill(extend-deck) to Skill(bootstrap) and
+    #   that bootstrap surfaces the verbatim remediation text.
+    name: End-to-end auto-bootstrap smoke
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv (Path A pre-install of goc)
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+
+      - name: Pre-install goc CLI for Path A
+        run: |
+          uv tool install --force "${{ github.workspace }}"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Set up Path A workspace
+        run: |
+          rm -rf /tmp/smoke-A && mkdir -p /tmp/smoke-A
+          ( cd /tmp/smoke-A && git init -q -b main )
+
+      - name: Path A — bootstrap completes against fresh repo
+        id: smoke_a
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          show_full_output: true
+          prompt: |
+            CI smoke test, Path A. Test directory: /tmp/smoke-A (a fresh empty
+            git repo with no `.game-of-cards/`).
+
+            1. `cd /tmp/smoke-A`.
+            2. Invoke `Skill(extend-deck)`. Its preflight section will tell
+               you to invoke `Skill(bootstrap)` because the deck doesn't exist.
+            3. Run `Skill(bootstrap)` to completion. `goc` is on PATH and
+               `Bash(goc:*)` is in the allowlist for this run. Bootstrap should
+               run `goc install` and create `.game-of-cards/deck/`.
+            4. Verify `.game-of-cards/deck/` exists, then write `A:passed` to
+               `/tmp/smoke-A/result.txt`. Exit afterward.
+
+            Do not run additional cards or queue work. The only goal is to
+            prove bootstrap succeeds end-to-end.
+          claude_args: |
+            --plugin-dir ${{ github.workspace }}/claude-plugin
+            --permission-mode dontAsk
+            --allowedTools "Read,Write,Edit,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(goc:*),Bash(git:*),Bash(which:*),Skill(bootstrap),Skill(extend-deck)"
+            --max-turns 30
+
+      - name: Assert Path A
+        run: |
+          test -d /tmp/smoke-A/.game-of-cards/deck \
+            || { echo "FAIL Path A: .game-of-cards/deck/ not created"; exit 1; }
+          grep -q '^A:passed' /tmp/smoke-A/result.txt \
+            || { echo "FAIL Path A: result.txt missing or wrong"; cat /tmp/smoke-A/result.txt 2>/dev/null; exit 1; }
+          echo "::notice::Path A passed"
+
+      - name: Set up Path B workspace
+        run: |
+          rm -rf /tmp/smoke-B && mkdir -p /tmp/smoke-B
+          ( cd /tmp/smoke-B && git init -q -b main )
+
+      - name: Path B — preflight routes to bootstrap when goc is not allowed
+        id: smoke_b
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          show_full_output: true
+          prompt: |
+            CI smoke test, Path B. Test directory: /tmp/smoke-B (a fresh empty
+            git repo with no `.game-of-cards/`).
+
+            `goc` is intentionally NOT in the allowlist for this run, simulating
+            a fresh consumer install where `Bash(goc:*)` has not yet been
+            granted.
+
+            1. `cd /tmp/smoke-B`.
+            2. Invoke `Skill(extend-deck)`. The `!`-blocks that call `goc` will
+               be denied; the skill's preflight section instructs you to invoke
+               `Skill(bootstrap)` in response.
+            3. Run `Skill(bootstrap)`. It should detect the missing
+               `Bash(goc:*)` rule and surface the verbatim remediation text
+               telling the user to add it to `~/.claude/settings.json`.
+            4. After confirming bootstrap surfaced text containing
+               `"Bash(goc:*)"` and the words `permissions.allow`, write
+               `B:passed` to `/tmp/smoke-B/result.txt`. Exit.
+
+            Do NOT attempt to install goc, modify settings, or run goc commands.
+            The only goal is to prove the routing fires and the remediation
+            text is emitted.
+          claude_args: |
+            --plugin-dir ${{ github.workspace }}/claude-plugin
+            --permission-mode dontAsk
+            --allowedTools "Read,Write,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(which:*),Skill(bootstrap),Skill(extend-deck)"
+            --max-turns 20
+
+      - name: Assert Path B
+        run: |
+          grep -q '^B:passed' /tmp/smoke-B/result.txt \
+            || { echo "FAIL Path B: result.txt missing or wrong"; cat /tmp/smoke-B/result.txt 2>/dev/null; exit 1; }
+          echo "::notice::Path B passed"
+
   publish:
     name: Publish to PyPI
-    needs: build
+    needs: [build, smoke]
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
     environment:

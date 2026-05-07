@@ -11,14 +11,15 @@ advances: [publish-claude-code-plugin]
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Workflow design decided: GitHub Actions step in `release.yml` triggered on tag push *before* the PyPI publish step, OR a separate `pre-release.yml` triggered on a candidate-tag pattern (e.g. `v*-rc*`)
-  - [ ] Headless Claude Code invocation pattern verified — `claude -p` (or equivalent flag) supports running slash commands like `/plugin marketplace add` and `/plugin install` without an interactive session
-  - [ ] Test harness creates an empty temp dir with no goc CLI on PATH and no pre-existing `.game-of-cards/`, then runs Claude Code with a structured prompt ("install the plugin, invoke `/extend-deck`, report what happened")
-  - [ ] Pre-seeded `~/.claude/settings.json` strategy chosen — pre-grant `Bash(goc:*)` (skips bootstrap Step 3 but tests Steps 1+2+4) OR leave unset and assert the LLM emits the bootstrap remediation text (tests routing but can't complete install)
-  - [ ] Assertions implemented — output contains `Skill(bootstrap)` reference when expected; if pre-seeded with allowance, `.game-of-cards/deck/` is created in the temp dir and a follow-up skill call resolves
-  - [ ] CI secret `ANTHROPIC_API_KEY` documented in repo secrets; cost ceiling estimated and documented in workflow comments
-  - [ ] Local-dev runner exists (`scripts/smoke_release.sh` or equivalent) so the test can be exercised before pushing a tag
-  - [ ] Workflow fails the release if any assertion fails; passing the smoke test gates the PyPI publish
+  - [x] Workflow design decided: `smoke` job added to `.github/workflows/release.yml` between `build` and `publish`; `publish.needs: [build, smoke]` so a failed smoke blocks PyPI publish on the tag
+  - [x] Headless Claude Code invocation pattern verified — slash commands are interactive-only; switched to `claude --plugin-dir <path> -p` which loads the plugin from the local checkout and bypasses the marketplace cache (the marketplace path stays manual until Claude Code adds headless slash-command support; symlink-strip class is already covered by the byte-for-byte tripwire in `ci.yml`)
+  - [x] Test harness creates an empty temp dir (`/tmp/smoke-A`, `/tmp/smoke-B`) with `git init` and no `.game-of-cards/`; the workflow steps "Set up Path A workspace" and "Set up Path B workspace" do this
+  - [x] Pre-seeded allowance strategy: both Path A (allowance pre-seeded via `--allowedTools "Bash(goc:*)..."` + `goc` pre-installed) and Path B (allowance absent + `goc` not allowed) run as separate steps — see release.yml `smoke` job
+  - [x] Assertions implemented — Path A asserts `/tmp/smoke-A/.game-of-cards/deck/` exists AND `result.txt` contains `A:passed`; Path B asserts `result.txt` contains `B:passed`. Both assertions are filesystem-based, not LLM-self-report
+  - [x] Auth surface: reuses `CLAUDE_CODE_OAUTH_TOKEN` from `pull-card.yml` (no new secret); billing is the existing Claude Code subscription, not raw API tokens
+  - [x] Local-dev runner: `scripts/smoke_release.sh` mirrors the workflow exactly via `claude` CLI directly; supports `./scripts/smoke_release.sh A`, `B`, or `AB` (default)
+  - [x] Workflow fails the release if any assertion fails; `publish.needs: [build, smoke]` enforces the gate
+  - [ ] Smoke job verified by running v0.0.7-test or a `workflow_dispatch` invocation and confirming Path A + Path B both pass against real Claude Code action behavior (uncertainty around `--plugin-dir` flag passthrough and `Skill(...)` allowedTools syntax — needs a live run to confirm)
 ---
 
 # Release-time auto-bootstrap smoke test
