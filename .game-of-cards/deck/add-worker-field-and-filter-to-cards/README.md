@@ -1,7 +1,7 @@
 ---
 title: add-worker-field-and-filter-to-cards
 summary: "Add an optional `worker` frontmatter field that names WHO should/will/does work on a card — a specific person, a specific machine, or a capability tag (e.g. GPU-equipped runner, human with rendering expertise). The field is editable on cards in any status (set at filing time as designation, refined at claim time with branch context, persists across status changes). Display the field in `goc -v` and `goc --board` views and add a `--worker <X>` filter so autonomous loops on specialized runners can pull only the cards they are qualified for. Resolves the storage-location and field-name questions from `design-claim-protocol-with-branch-and-author-metadata` while expanding scope to capability-based routing."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
