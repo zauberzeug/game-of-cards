@@ -1,20 +1,20 @@
 ---
 title: plugin-install-doesnt-refresh-stale-marketplace-cache
 summary: Document — and ideally automate — the workaround for Claude Code's `/plugin install` not refreshing the marketplace clone, so consumers updating to a newer plugin version don't silently get the cached old bytes.
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-07
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, bug, documentation]
 definition_of_done: |
-  - [ ] README.md `Plugin install` section documents the refresh sequence: `/plugin marketplace update zauberzeug/game-of-cards` (or remove + re-add) BEFORE `/plugin install` for any version after the first
-  - [ ] llms.txt mirrors the same guidance in its "Lean alternative for Claude Code" section so LLM agents that direct users through plugin install also direct them through plugin update
-  - [ ] Bootstrap skill body adds a one-line note about the refresh idiom (so the LLM directing a consumer to `/plugin install` also surfaces `/plugin marketplace update` if a previous version is installed)
-  - [ ] Investigation notes whether Claude Code's `/plugin install` itself can be flagged via `/feedback` to auto-refresh the marketplace clone before installing — if there's a clean upstream fix, file that as the canonical resolution and treat the doc updates as the interim
+  - [x] README.md `Plugin install` section documents the refresh sequence: `/plugin marketplace update zauberzeug/game-of-cards` (or remove + re-add) BEFORE `/plugin install` for any version after the first
+  - [x] llms.txt mirrors the same guidance in its "Lean alternative for Claude Code" section so LLM agents that direct users through plugin install also direct them through plugin update
+  - [x] Bootstrap skill body adds a one-line note about the refresh idiom (so the LLM directing a consumer to `/plugin install` also surfaces `/plugin marketplace update` if a previous version is installed)
+  - [x] Investigation notes whether Claude Code's `/plugin install` itself can be flagged via `/feedback` to auto-refresh the marketplace clone before installing — if there's a clean upstream fix, file that as the canonical resolution and treat the doc updates as the interim
 ---
 
 # Plugin install doesn't refresh stale marketplace cache
@@ -75,3 +75,18 @@ both human users and LLM agents the right idiom.
 - Consider filing a `/feedback` to Anthropic asking that
   `/plugin install` either auto-refresh or warn when the marketplace
   clone is older than N hours.
+
+## Investigation: upstream /feedback path
+
+No API or CLI mechanism exists to programmatically submit a `/feedback`
+report to Anthropic — the slash command is Claude Code UI-only. The
+cleanest upstream fix would be for Claude Code's `/plugin install` to
+`git pull` the marketplace clone before extracting the plugin payload
+(or at minimum warn when the clone is older than N hours).
+
+This is a Claude Code product bug, not something we can fix in `goc`.
+The interim mitigation documented in `goc.md`, `site/llms.txt`, and the
+bootstrap skill body is the correct resolution until Anthropic addresses
+it upstream. Filing a `/feedback` from Claude Code to report this
+behavior to Anthropic is recommended — it surfaces the issue with
+concrete reproduction steps from the card's `## Reproduction` section.
