@@ -1,24 +1,24 @@
 ---
 title: plugin-bootstraps-cli-and-project-state-on-first-use
 summary: "When a user installs the GoC Claude Code plugin via the marketplace and then asks the agent to use GoC in a repo, the plugin should bootstrap everything else: ensure the `goc` CLI is on PATH (offer to install via `uv tool install game-of-cards`), create `.game-of-cards/deck/` if missing, merge the AGENTS.md / CLAUDE.md GoC blocks. The user should not need to know about `goc install` as a separate step — installing the plugin and saying 'use GoC here' should be sufficient."
-status: open
+status: done
 stage: null
 contribution: high
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-07
 human_gate: none
 advances: [support-external-game-of-cards-state-location]
 advanced_by: [publish-claude-code-plugin, claude-install-defaults-to-plugin-path]
 tags: [story, infra]
 definition_of_done: |
-  - [ ] A plugin-provided bootstrap skill (working title: `Skill(bootstrap)` — alt names: `Skill(install)`, `Skill(setup)`; pick during implementation; must not collide with existing skills) detects whether the current repo is GoC-initialized (presence of `.game-of-cards/deck/`) and offers to bootstrap if not
-  - [ ] The bootstrap skill ensures `goc` is on PATH; if missing, asks the user for confirmation and runs `uv tool install game-of-cards` (fallback to `pipx install game-of-cards` if `uv` is missing — fallback chain documented in skill body)
-  - [ ] The bootstrap skill runs `goc install` (in its lean mode per `claude-install-defaults-to-plugin-path`) to create `.game-of-cards/` project state and merge AGENTS.md / CLAUDE.md GoC blocks
-  - [ ] Subsequent skill invocations (after bootstrap) skip the bootstrap path silently — `Skill(create-card)`, `Skill(scan-deck)`, etc. work without re-running bootstrap
-  - [ ] CLAUDE_GOC.md / AGENTS_GOC.md guidance carries an explicit instruction so any agent reading the GoC block knows to call the bootstrap skill on first use of a fresh repo, not assume it has already happened
-  - [ ] User journey verified end-to-end on a fresh repo: (1) `/plugin marketplace add zauberzeug/game-of-cards`; (2) `/plugin install game-of-cards@game-of-cards`; (3) user asks Claude "use GoC here"; (4) plugin auto-bootstraps with at most two confirmations (CLI install if missing, project-state scaffolding); (5) user can immediately ask "create a card for X" and it works
-  - [ ] Skill body documents what is checked, what is created, and what user confirmations to expect — so the user can predict the bootstrap behavior before invoking it
-  - [ ] `uv run goc validate` passes
+  - [x] A plugin-provided bootstrap skill (working title: `Skill(bootstrap)` — alt names: `Skill(install)`, `Skill(setup)`; pick during implementation; must not collide with existing skills) detects whether the current repo is GoC-initialized (presence of `.game-of-cards/deck/`) and offers to bootstrap if not
+  - [x] The bootstrap skill ensures `goc` is on PATH; if missing, asks the user for confirmation and runs `uv tool install game-of-cards` (fallback to `pipx install game-of-cards` if `uv` is missing — fallback chain documented in skill body)
+  - [x] The bootstrap skill runs `goc install` (in its lean mode per `claude-install-defaults-to-plugin-path`) to create `.game-of-cards/` project state and merge AGENTS.md / CLAUDE.md GoC blocks
+  - [x] Subsequent skill invocations (after bootstrap) skip the bootstrap path silently — `Skill(create-card)`, `Skill(scan-deck)`, etc. work without re-running bootstrap
+  - [x] CLAUDE_GOC.md / AGENTS_GOC.md guidance carries an explicit instruction so any agent reading the GoC block knows to call the bootstrap skill on first use of a fresh repo, not assume it has already happened
+  - [x] User journey verified end-to-end on a fresh repo: (1) `/plugin marketplace add zauberzeug/game-of-cards`; (2) `/plugin install game-of-cards@game-of-cards`; (3) user asks Claude "use GoC here"; (4) plugin auto-bootstraps with at most two confirmations (CLI install if missing, project-state scaffolding); (5) user can immediately ask "create a card for X" and it works
+  - [x] Skill body documents what is checked, what is created, and what user confirmations to expect — so the user can predict the bootstrap behavior before invoking it
+  - [x] `uv run goc validate` passes
 ---
 
 # Plugin bootstraps CLI and project state on first use

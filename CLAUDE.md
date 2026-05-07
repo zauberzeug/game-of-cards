@@ -114,11 +114,31 @@ was done with `goc install --local-skills`. Running `goc upgrade`
 on those repos will prompt to migrate to the plugin path, or pass
 `--keep-local-skills` to keep the vendored layout.
 
-### Skill surface (the 11 verbs as `Skill(...)`)
+### First use: bootstrap a new repo (one-time per repo)
 
-When the plugin is installed, the 11 GoC skills are available as
+**Before using any GoC skill in a repo for the first time, check whether
+GoC project state is present:**
+
+```bash
+ls .game-of-cards/deck/ 2>/dev/null || echo "not initialized"
+```
+
+If `.game-of-cards/deck/` is **missing**, call `Skill(bootstrap)` before
+doing anything else. Bootstrap will:
+
+1. Install the `goc` CLI if it's not on PATH (asks for confirmation).
+2. Run `goc install` to create `.game-of-cards/` and merge GoC guidance
+   into `AGENTS.md` / `CLAUDE.md` (asks for confirmation).
+
+Once bootstrap completes, all other skills work immediately — do not
+re-run bootstrap on subsequent uses.
+
+### Skill surface (the 12 verbs as `Skill(...)`)
+
+When the plugin is installed, the 12 GoC skills are available as
 Claude Code's `Skill(...)` primitive:
 
+- **First-time setup**: `Skill(bootstrap)` (check + scaffold `.game-of-cards/` + install `goc` CLI if missing).
 - **Browse**: `Skill(scan-deck)` (triage default + filtered views + decision Q&A); `Skill(next-card)` (auto-pick highest-leverage gate=none card).
 - **File new**: `Skill(create-card)` (scaffold frontmatter + DoD).
 - **Advance**: `Skill(advance-card)` (status flip), `Skill(finish-card)` (close + DoD enforcement + commit).
