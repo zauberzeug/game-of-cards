@@ -8,7 +8,7 @@ created: 2026-05-07
 closed_at: null
 human_gate: session
 advances: [publish-claude-code-plugin]
-advanced_by: [publish-claude-code-plugin]
+advanced_by: []
 tags: [story, infra]
 definition_of_done: |
   - [ ] Workflow design decided: GitHub Actions step in `release.yml` triggered on tag push *before* the PyPI publish step, OR a separate `pre-release.yml` triggered on a candidate-tag pattern (e.g. `v*-rc*`)
