@@ -13,6 +13,7 @@ skill bodies) lives under `.claude/skills/`.
 
 from __future__ import annotations
 
+import filecmp
 import json
 import os
 import re
@@ -519,6 +520,67 @@ def validate_skill_dir_parity() -> list[str]:
                 f"{relative}: missing skills {sorted(missing)} that goc templates ship; "
                 "run `goc upgrade --keep-local-skills` to resync"
             )
+    return errors
+
+
+def validate_plugin_mirror_parity() -> list[str]:
+    """Check that claude-plugin/ mirrors match their source-of-truth trees byte-for-byte.
+
+    Only runs when claude-plugin/ exists at REPO_ROOT (i.e., inside the goc source repo).
+    Drift means a source-of-truth file was edited without updating the plugin mirror;
+    fix is to copy the changed file(s) into claude-plugin/ and re-run `goc validate`.
+
+    Mirrors the CI step "Verify plugin assets match templates byte-for-byte" so
+    contributors catch drift locally before push.
+    """
+    plugin_root = REPO_ROOT / "claude-plugin"
+    if not plugin_root.exists():
+        return []
+
+    def _walk(cmp: filecmp.dircmp, src_rel: str, dst_rel: str, prefix: str = "") -> list[str]:
+        out: list[str] = []
+        out += [f"{prefix}{n} (only in {src_rel})" for n in cmp.left_only]
+        out += [f"{prefix}{n} (only in {dst_rel})" for n in cmp.right_only]
+        out += [f"{prefix}{n} (differs)" for n in cmp.diff_files]
+        for sub_name, sub_cmp in cmp.subdirs.items():
+            out += _walk(sub_cmp, src_rel, dst_rel, prefix=prefix + sub_name + "/")
+        return out
+
+    pairs = [
+        (REPO_ROOT / "goc" / "templates" / "skills", plugin_root / "skills"),
+        (
+            REPO_ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
+            plugin_root / "hooks" / "deck_prompt_router.py",
+        ),
+        (
+            REPO_ROOT / "goc" / "templates" / "hooks" / "deck_session_start.py",
+            plugin_root / "hooks" / "deck_session_start.py",
+        ),
+        (REPO_ROOT / "goc", plugin_root / "goc"),
+    ]
+    errors: list[str] = []
+    for src, dst in pairs:
+        if not src.exists():
+            continue
+        src_rel = str(src.relative_to(REPO_ROOT))
+        dst_rel = str(dst.relative_to(REPO_ROOT))
+        if src.is_dir():
+            if not dst.exists():
+                errors.append(f"plugin mirror: {dst_rel} missing; copy from {src_rel}")
+                continue
+            diffs = _walk(filecmp.dircmp(src, dst), src_rel, dst_rel)
+            if diffs:
+                errors.append(
+                    f"plugin mirror drift: {src_rel} vs {dst_rel}: " + ", ".join(diffs)
+                )
+        else:
+            if not dst.exists():
+                errors.append(f"plugin mirror: {dst_rel} missing; copy from {src_rel}")
+            elif not filecmp.cmp(src, dst, shallow=False):
+                errors.append(
+                    f"plugin mirror: {dst_rel} differs from {src_rel}; "
+                    "re-sync the duplicated file"
+                )
     return errors
 
 
@@ -1222,6 +1284,9 @@ def validate(quiet):
         click.echo(f"ERROR: {e}", err=True)
         errors.append(e)
     for e in validate_skill_dir_parity():
+        click.echo(f"ERROR: {e}", err=True)
+        errors.append(e)
+    for e in validate_plugin_mirror_parity():
         click.echo(f"ERROR: {e}", err=True)
         errors.append(e)
     for t in cards:

@@ -1,23 +1,23 @@
 ---
 title: extend-skill-parity-tripwire-to-claude-plugin-mirrors
 summary: "The skill-parity tripwire (`validate_skill_dir_parity` in `goc/engine.py`) only checks consumer skill copies under `.claude/skills/` and `.codex/skills/`. It does not check the `claude-plugin/` mirrors that ship the bundled engine — `claude-plugin/skills/`, `claude-plugin/hooks/*.py`, and the nested `claude-plugin/goc/` tree. The byte-for-byte CI step does check those, but only after push, so contributors discover drift in the red CI run rather than locally. Two drift incidents in three days (kickoff SKILL.md after `make-kickoff-idempotent-on-restart`; the same file again after `bundle-goc-engine-inside-plugin-payload`) confirm the gap is real. Extend the local tripwire to mirror the CI check so drift is caught pre-push."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-08
-closed_at: null
+closed_at: 2026-05-08
 human_gate: none
 advances:
   - prevent-skill-rename-from-breaking-ci-silently
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `goc validate` (or a dedicated `goc validate --plugin-mirrors` sub-check) reproduces the CI byte-for-byte parity check across all four mirror pairs: `goc/templates/skills` ↔ `claude-plugin/skills`, the two hook scripts, and `goc` ↔ `claude-plugin/goc`
-  - [ ] The check fails locally with the same drift report shape CI prints, so contributors don't have to read CI logs to diagnose
-  - [ ] Pre-commit runs the check (extend the existing `goc validate` hook in `.pre-commit-config.yaml`)
-  - [ ] A regression test deliberately breaks one of the four mirror pairs and asserts the new check fails with a useful message
-  - [ ] CI's `Verify plugin assets match templates byte-for-byte` step remains as belt-and-braces, but the local check is now first-line defence
-  - [ ] `uv run goc validate` and the full test suite pass under a CI-clean env (`HOME=$(mktemp -d)`)
+  - [x] `goc validate` (or a dedicated `goc validate --plugin-mirrors` sub-check) reproduces the CI byte-for-byte parity check across all four mirror pairs: `goc/templates/skills` ↔ `claude-plugin/skills`, the two hook scripts, and `goc` ↔ `claude-plugin/goc`
+  - [x] The check fails locally with the same drift report shape CI prints, so contributors don't have to read CI logs to diagnose
+  - [x] Pre-commit runs the check (extend the existing `goc validate` hook in `.pre-commit-config.yaml`)
+  - [x] A regression test deliberately breaks one of the four mirror pairs and asserts the new check fails with a useful message
+  - [x] CI's `Verify plugin assets match templates byte-for-byte` step remains as belt-and-braces, but the local check is now first-line defence
+  - [x] `uv run goc validate` and the full test suite pass under a CI-clean env (`HOME=$(mktemp -d)`)
 worker: {who: "claude[bot]", where: main}
 ---
 
