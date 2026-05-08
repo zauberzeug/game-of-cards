@@ -6,7 +6,7 @@ stage: null
 contribution: low
 created: 2026-05-08
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
 advanced_by:
@@ -14,14 +14,14 @@ advanced_by:
   - align-skill-names-with-agile-vocabulary
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Plugin is self-contained — installing the plugin is the only opt-in step; no separate `pipx install game-of-cards` / `pip install game-of-cards` is required for `goc` to be callable from skills. Depends on `bundle-goc-engine-inside-plugin-payload`
-  - [ ] `claude-plugin/README.md` exists and renders cleanly on GitHub
-  - [ ] README states what the plugin provides (current GoC skill set + hooks, with counts that match the deck at close-time)
-  - [ ] README documents the install path live at close-time (community marketplace `@claude-community` once listed, otherwise the existing `zauberzeug/game-of-cards` direct path)
-  - [ ] README explains the first-run experience: plugin install + one prompt; **no** instructions to install a separate PyPI package for normal use
-  - [ ] README links to the project homepage (game-of-cards.com), the upstream repo, and the MIT license
-  - [ ] Rodja reads the rendered text and signs off before close
-  - [ ] `uv run goc validate` passes
+  - [x] Plugin is self-contained — installing the plugin is the only opt-in step; no separate `pipx install game-of-cards` / `pip install game-of-cards` is required for `goc` to be callable from skills. Depends on `bundle-goc-engine-inside-plugin-payload`
+  - [x] `claude-plugin/README.md` exists and renders cleanly on GitHub
+  - [x] README states what the plugin provides (current GoC skill set + hooks, with counts that match the deck at close-time)
+  - [x] README documents the install path live at close-time (community marketplace `@claude-community` once listed, otherwise the existing `zauberzeug/game-of-cards` direct path)
+  - [x] README explains the first-run experience: plugin install + one prompt; **no** instructions to install a separate PyPI package for normal use
+  - [x] README links to the project homepage (game-of-cards.com), the upstream repo, and the MIT license
+  - [x] Rodja reads the rendered text and signs off before close
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -127,3 +127,9 @@ To close after sign-off:
 goc decide add-readme-to-claude-code-plugin --decision "approved" --because "Rodja: text is marketplace-ready"
 goc done add-readme-to-claude-code-plugin
 ```
+
+## Decision
+
+*Resolved 2026-05-08:* approved
+
+*Reasoning:* Rodja: text is marketplace-ready
