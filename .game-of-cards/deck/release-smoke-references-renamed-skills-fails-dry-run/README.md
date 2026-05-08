@@ -1,11 +1,11 @@
 ---
 title: release-smoke-references-renamed-skills-fails-dry-run
 summary: "After `align-skill-names-with-agile-vocabulary` renamed `bootstrap` → `kickoff` and `extend-deck` → `audit-deck`, three external consumers were left referencing the old names: `.github/workflows/release.yml` (Path A + Path B prompts and `--allowedTools` lists), `scripts/smoke_release.sh` (the local mirror of the workflow), and `goc.md` (the public CLI reference). A dry-run triggered against current main on 2026-05-08 (run 25560080412) failed `Assert Path B` because Path B grants only `Skill(bootstrap)` / `Skill(extend-deck)` plus `Read,Write,Bash(cat:*),Bash(ls:*)` — when those skills don't resolve, the LLM has no fallback and never emits the verbatim remediation text the assertion greps for. Path A passed only because its allowance includes general `Bash`, letting the LLM run `goc install` directly bypassing the missing skill — a false pass that masks the same bug. Replace all stale references with the new names and re-run the dry-run."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-08
-closed_at: null
+closed_at: 2026-05-08
 human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
@@ -13,12 +13,12 @@ advanced_by:
   - align-skill-names-with-agile-vocabulary
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `.github/workflows/release.yml` Path A + Path B prompts reference `Skill(audit-deck)` and `Skill(kickoff)` (not `extend-deck` / `bootstrap`), and the matching `--allowedTools` lists are updated in lockstep
-  - [ ] `scripts/smoke_release.sh` Path A + Path B mirror the same rename
-  - [ ] `goc.md` autonomous-loop sentence references `audit-deck` (not `extend-deck`)
-  - [ ] No `Skill(extend-deck)`, `Skill(bootstrap)`, or `improve-deck` substring remains anywhere outside `.game-of-cards/deck/` (deck history is allowed to keep historical names)
-  - [ ] Fresh `release.yml` dry-run (`workflow_dispatch` with `dry_run=true`) reaches conclusion `success`, with both Path A and Path B passing on the renamed skill names
-  - [ ] `uv run goc validate` passes
+  - [x] `.github/workflows/release.yml` Path A + Path B prompts reference `Skill(audit-deck)` and `Skill(kickoff)` (not `extend-deck` / `bootstrap`), and the matching `--allowedTools` lists are updated in lockstep
+  - [x] `scripts/smoke_release.sh` Path A + Path B mirror the same rename
+  - [x] `goc.md` autonomous-loop sentence references `audit-deck` (not `extend-deck`)
+  - [x] No `Skill(extend-deck)`, `Skill(bootstrap)`, or `improve-deck` substring remains anywhere outside `.game-of-cards/deck/` (deck history is allowed to keep historical names)
+  - [x] Fresh `release.yml` dry-run (`workflow_dispatch` with `dry_run=true`) reaches conclusion `success`, with both Path A and Path B passing on the renamed skill names — run 25560598958 on commit 5353dc4 (build + smoke green, publish correctly skipped)
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
