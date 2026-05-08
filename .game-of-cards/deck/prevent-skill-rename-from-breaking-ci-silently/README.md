@@ -8,7 +8,8 @@ created: 2026-05-08
 closed_at: 2026-05-08
 human_gate: none
 advances: []
-advanced_by: []
+advanced_by:
+  - extend-skill-parity-tripwire-to-claude-plugin-mirrors
 tags: [bug]
 definition_of_done: |
   - [x] `tests/test_install.SKILL_NAMES` is replaced with a runtime derivation that reads `goc/templates/skills/` directly — no inline name list to drift
