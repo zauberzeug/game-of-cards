@@ -9,6 +9,7 @@ closed_at: 2026-05-08
 human_gate: none
 advances:
   - make-claude-md-and-agents-md-merge-opt-in-via-skill
+  - make-kickoff-idempotent-on-restart
 advanced_by:
   - define-personas-and-use-cases-for-game-of-cards
 tags: [story]

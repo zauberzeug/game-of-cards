@@ -1,24 +1,24 @@
 ---
 title: make-kickoff-idempotent-on-restart
 summary: "Today's kickoff skill writes `.claude/settings.json` mid-flow, instructs the user to fully restart Claude Code, and then expects to 'resume at Stage 5' — but Claude Code sessions are episodic. Restarting without `-r` drops conversation context, and a fresh `Skill(kickoff)` invocation only checks Stage 0 (`.game-of-cards/deck/` exists?). All other stages — intro, persona, three merge questions — are re-asked from scratch. Surfaced today during Rodja's pre-submission smoke test: after the restart prompt, a new session re-asked every kickoff question even though the user had already answered them once. Two design changes are needed in lockstep: (a) make kickoff idempotent via on-disk state detection so a re-run on a partially-set-up repo only asks for the answers not yet captured (preferred over a progress file per Rodja's choice); (b) restructure stage ordering so the restart-required stage — if any — is the LAST stage, with everything else (persona, merges, `goc install`, settings.json write) happening before it. Ideally drop the mandatory mid-flow restart entirely by relying on Claude Code's interactive permission prompt when `goc install` runs without a pre-existing `Bash(goc:*)` allowance."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-08
-closed_at: null
+closed_at: 2026-05-08
 human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
 advanced_by:
   - rename-bootstrap-to-kickoff-as-onboarding-dialog
-tags: [bug, ux, documentation]
+tags: [bug, documentation]
 definition_of_done: |
-  - [ ] `goc/templates/skills/kickoff/SKILL.md` reorders stages so any step that requires a Claude Code session restart sits at the END of the flow — `goc install` runs first, settings.json write follows, and the restart suggestion (if still present) is final and optional. The user must never lose work-in-progress to a mid-flow restart.
-  - [ ] On re-entry into a partially-set-up repo, kickoff detects on-disk state in a single Stage 0 sweep (deck dir, `<!-- BEGIN GOC -->` markers in CLAUDE.md / AGENTS.md / CLAUDE.local.md, `Bash(goc:*)` in `.claude/settings.json` or `~/.claude/settings.json`, `goc` on PATH) and only asks for the answers it cannot derive — no progress file required
-  - [ ] Stage 4's restart instruction is replaced (or moved): kickoff runs `goc install` directly and relies on Claude Code's interactive permission prompt for `Bash(goc:*)` when the allowance is absent. After install, kickoff persists the permission to `.claude/settings.json` so future sessions are silent. No "fully restart now" instruction in the middle of the flow
-  - [ ] If a restart is still genuinely needed (e.g., for a permission to be canonical in new sessions), the instruction appears only AFTER all other stages — including `goc install` — have completed successfully
-  - [ ] `claude-plugin/skills/kickoff/SKILL.md` is updated byte-for-byte to match the template (CI tripwire `validate_skill_dir_parity` enforces this)
-  - [ ] `uv run goc validate` passes
+  - [x] `goc/templates/skills/kickoff/SKILL.md` reorders stages so any step that requires a Claude Code session restart sits at the END of the flow — `goc install` runs first, settings.json write follows, and the restart suggestion (if still present) is final and optional. The user must never lose work-in-progress to a mid-flow restart.
+  - [x] On re-entry into a partially-set-up repo, kickoff detects on-disk state in a single Stage 0 sweep (deck dir, `<!-- BEGIN GOC -->` markers in CLAUDE.md / AGENTS.md / CLAUDE.local.md, `Bash(goc:*)` in `.claude/settings.json` or `~/.claude/settings.json`, `goc` on PATH) and only asks for the answers it cannot derive — no progress file required
+  - [x] Stage 4's restart instruction is replaced (or moved): kickoff runs `goc install` directly and relies on Claude Code's interactive permission prompt for `Bash(goc:*)` when the allowance is absent. After install, kickoff persists the permission to `.claude/settings.json` so future sessions are silent. No "fully restart now" instruction in the middle of the flow
+  - [x] If a restart is still genuinely needed (e.g., for a permission to be canonical in new sessions), the instruction appears only AFTER all other stages — including `goc install` — have completed successfully
+  - [x] `claude-plugin/skills/kickoff/SKILL.md` is updated byte-for-byte to match the template (CI tripwire `validate_skill_dir_parity` enforces this)
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
