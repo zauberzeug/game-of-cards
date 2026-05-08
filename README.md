@@ -10,7 +10,7 @@ It is not the right tool yet if your team has strict commit hygiene — GoC writ
 
 At its core, it's just a to-do manager. Cards are markdown files with a checklist; the CLI wraps them. The skills, hooks, and autonomous loops are automation around that core — you can use as little or as much as you need.
 
-<p align="center"><img src="assets/game-of-cards.png" width="80%" alt="Three-panel comic: an AI creates cards and flags decisions, the human delegates a session while the LLM works the rest in the background, and the LLM surfaces the remaining human-gated card." /></p>
+<p align="center"><img src="assets/game-of-cards.png" width="100%" alt="Three-panel comic: an AI creates cards and flags decisions, the human delegates a session while the LLM works the rest in the background, and the LLM surfaces the remaining human-gated card." /></p>
 
 ## How it works
 
