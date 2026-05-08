@@ -1,7 +1,7 @@
 ---
 title: define-personas-and-use-cases-for-game-of-cards
 summary: "Write a short, concrete persona list naming who Game of Cards is for, who it is NOT for (yet), and what trade-offs each persona accepts. Most disagreement about GoC's positioning is downstream of unspoken persona mismatch — evaluators with strict commit hygiene hit invasive-install pain because libraries are not the target persona today; evaluators looking for a linear feature-planner find the autonomous loop oversized; evaluators with non-code domains miss the to-do-engine framing. The personas are the lens for prioritization and the source of copy for the README audience preamble."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-07
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] Anti-personas explicitly named — "GoC is NOT for X yet" — so first-time readers of README don't try to fit a square peg
   - [ ] Cross-linked from README's audience preamble (per `restructure-comic-as-three-panels-and-add-audience-preamble`)
   - [ ] `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Define personas and use cases for Game of Cards
