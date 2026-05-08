@@ -9,6 +9,7 @@ closed_at: 2026-05-08
 human_gate: none
 advances:
   - add-readme-to-claude-code-plugin
+  - release-smoke-references-renamed-skills-fails-dry-run
 advanced_by: []
 tags: [story]
 definition_of_done: |

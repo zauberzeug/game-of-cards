@@ -10,6 +10,7 @@ human_gate: decision
 advances: []
 advanced_by:
   - add-readme-to-claude-code-plugin
+  - release-smoke-references-renamed-skills-fails-dry-run
 tags: [story, infra, documentation]
 definition_of_done: |
   - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README)
@@ -86,13 +87,28 @@ until Rodja claims it explicitly.
 
 ## Notes
 
-- At submission time, verify Anthropic's current submission policy
-  and the canonical repo name. The README card body references both
-  `anthropics/claude-plugins-community` and
-  `clau.de/plugin-directory-submission` — the policy or naming may
-  have evolved between card creation and pickup.
 - Capture the fresh-machine smoke test as a written reproduction
   (steps + observed output). The submission reviewer is more likely
   to accept a plugin whose first-run experience has been demonstrated
   end-to-end on a clean environment than one that has only been
   tested on the maintainer's dev box.
+
+## Decisions (2026-05-08, Rodja)
+
+- **Submission channel: form at `clau.de/plugin-directory-submission`.**
+  Verified at decision time: `anthropics/claude-plugins-community` is
+  a read-only mirror; its README explicitly directs submitters to the
+  form. The form feeds both community and (separately) the official
+  marketplace — community-first is the lighter gate as already
+  recommended in the body.
+- **Version: stay pre-1.0 (currently 0.0.6).** Pre-1.0 is acceptable
+  for the community marketplace; deferring the 1.0.0 stake-in-the-
+  ground until after the listing has been live for a stretch and the
+  audience has surfaced the rough edges.
+- **Dry-run posture before submitting:** Trigger
+  `release.yml` via `workflow_dispatch` with `dry_run=true` to confirm
+  build + Path A/B smoke against current main; then manually smoke the
+  actual marketplace install path on a clean profile (`/plugin
+  marketplace add zauberzeug/game-of-cards` → `/plugin install` →
+  prompt → card created), since the marketplace path is interactive-
+  only and not headlessly testable in CI.
