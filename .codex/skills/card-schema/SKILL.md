@@ -59,7 +59,7 @@ the promotion rule is "drop the `unverified` tag once a working
 
 `summary` is a free-form one-to-three-sentence description of the
 card. It answers "what is this and why does it matter?" in scannable
-form so triage views (`goc -v`) and the extend-deck / next-card
+form so triage views (`goc -v`) and the audit-deck / next-card
 skills can prioritize without opening every body.
 
 Guidelines:
@@ -133,7 +133,7 @@ Three-value autonomy ladder:
   framework derivation; open architectural choice.
 
 Default for new cards created via `goc new`: `decision`.
-Auto-agents (extend-deck, next-card reclassification) should pick a more
+Auto-agents (audit-deck, next-card reclassification) should pick a more
 specific gate when the body content makes the choice clear (mechanical
 → `none`; research move → `session`).
 
@@ -171,7 +171,7 @@ a `## Decision required` section with:
    dominant pro that drives it. Not binding; the human can override.
 
 Without this section, `goc validate` accepts the card (the body is
-free-form), but the convention is enforced by the extend-deck /
+free-form), but the convention is enforced by the audit-deck /
 next-card skills: a `decision` gate without a `Decision required`
 section is a process bug, not a valid filing.
 
@@ -247,6 +247,19 @@ rather than silent rot.
 contain `A`. The validator reports any half-edge. The `goc advance
 <title> --by <other>` and `goc unadvance <title> --by <other>`
 commands maintain both sides atomically.
+
+**YAML format:** non-empty `advances` and `advanced_by` lists are
+rendered as block-style (one `- item` per line). Empty lists use
+inline `[]`. The `tags` field stays inline. Example:
+
+```yaml
+advances:
+  - parent-epic-slug
+  - another-dependency
+advanced_by:
+  - child-story-slug
+tags: [story, api-contract]
+```
 
 Cycles are forbidden. A card advancing itself transitively is a
 configuration error.
@@ -335,7 +348,7 @@ When the regex fires, the CLI suggests an alternative phrasing
 based on the *observable problem*, e.g. `r88-fix-attempt-3`
 → `csv-export-button-truncates-rows-over-10000`.
 
-The Layer-2 quality pass (Sonnet-batched, in `Skill(improve-deck)
+The Layer-2 quality pass (Sonnet-batched, in `Skill(refine-deck)
 --quality-pass`) checks the same dimensions across the existing deck
 and surfaces engineer-jargon titles for retitling via `goc move`.
 

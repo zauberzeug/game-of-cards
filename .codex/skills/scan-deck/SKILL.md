@@ -183,7 +183,7 @@ the signal — the parked cards are the lit cords, and they go on top.
 - `Skill(next-card)` — auto-pick the highest-leverage card to *work*
   on (`gate=none` only). Use after triage when you want to take
   something off the queue yourself, not just look.
-- `Skill(extend-deck)` — discovery hunt. Use when the queue feels
+- `Skill(audit-deck)` — discovery hunt. Use when the queue feels
   thin or you suspect undocumented defects.
 - `Skill(create-card)` — file a new card. Use when you spotted
   something during scan that isn't in the queue yet.

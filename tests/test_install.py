@@ -12,16 +12,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_NAMES = (
     "advance-card",
+    "audit-deck",
     "card-schema",
     "create-card",
     "decide-card",
     "deck",
-    "extend-deck",
     "finish-card",
-    "improve-deck",
+    "kickoff",
     "next-card",
     "pull-card",
+    "refine-deck",
+    "retrospective",
     "scan-deck",
+    "standup",
 )
 
 

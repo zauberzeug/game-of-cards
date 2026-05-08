@@ -1,16 +1,16 @@
 ---
-name: improve-deck
-description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct file:line references, surface orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surface engineer-jargon titles for retitling, propose new canonical tags. AUTO-INVOKE when user says "tidy up the deck", "check for stale cards", "hygiene pass", "clean up the queue", "archive old", "audit the deck", or invokes /improve-deck. The board itself gets refactored each iteration (XP refactor mercilessly + Kanban continuous improvement).
+name: refine-deck
+description: "Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct file:line references, surface orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surface engineer-jargon titles for retitling, propose new canonical tags. AUTO-INVOKE when user says \"tidy up the deck\", \"check for stale cards\", \"hygiene pass\", \"clean up the queue\", \"archive old\", \"audit the deck\", or invokes /refine-deck. The board itself gets refactored each iteration (XP refactor mercilessly + Kanban continuous improvement)."
 ---
 
 ## Preflight
 
 If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
 
-# Improve the deck
+# Refine the deck
 
-XP's **"refactor mercilessly"** (Beck, 1999) applied to the work
-surface, paired with Kanban's **continuous improvement** (Anderson):
+Scrum's **Backlog Refinement** (Schwaber & Sutherland) applied to the
+work surface, paired with Kanban's **continuous improvement** (Anderson):
 every iteration the BOARD gets better, not just the code on it. A
 deck read by humans and swarms of agents accumulates rot the moment
 filing slows down — stale parks, defunct cites, missing summaries,

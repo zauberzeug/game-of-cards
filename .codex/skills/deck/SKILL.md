@@ -72,7 +72,7 @@ Three operating modes coexist:
 - **Autonomous mode.** No human is steering. `Skill(pull-card)`
   runs on `/loop pull-card 30m` or `/schedule pull-card
   weekday 09:00`, draining the `human_gate: none` queue.
-  `Skill(extend-deck)` runs on a slower cadence to keep the queue
+  `Skill(audit-deck)` runs on a slower cadence to keep the queue
   fed. The deck advances overnight. The human wakes up to commits
   that closed cards they never explicitly claimed.
 - **Andon-cord mode.** A human is unblocking the line. When
@@ -108,7 +108,7 @@ The 1990s agile methodologies optimized for human-team handoffs.
 Game of Cards adds the worldview layer: **you ride the events as
 they occur**. `Skill(next-card)` exists because work is *taken* when
 capacity exists, not *pushed* when work appears (Kanban pull, made
-structural). `Skill(extend-deck)` exists because the deck reflects
+structural). `Skill(audit-deck)` exists because the deck reflects
 emergent reality — new cards surface as agents discover gaps the
 original plan didn't anticipate. The architecture already encoded
 the no-control stance; the name finally gives it words.
@@ -178,12 +178,17 @@ One skill per job; compose, don't bundle.
 - `Skill(card-schema)` — schema reference (read-only): required
   fields, enums, canonical tags with predicates, DoD detection,
   relationship invariants.
-- `Skill(improve-deck)` — hygiene pass: retag stale cards, prune
+- `Skill(refine-deck)` — hygiene pass: retag stale cards, prune
   unverified parks, surface cards citing defunct file:lines, propose
   new canonical tags.
-- `Skill(extend-deck)` — discovery: hunt for one previously-undocumented
+- `Skill(audit-deck)` — discovery: hunt for one previously-undocumented
   defect / derivation gap / doc drift / missing test. Files via
   `Skill(create-card)`.
+- `Skill(standup)` — daily read: active + blocked cards, closures
+  since yesterday, cards waiting on a human decision gate.
+- `Skill(retrospective)` — backwards analysis of the last N closed
+  cards: cluster by tag, surface recurring failure modes, propose
+  generalization candidates.
 
 ## Migration legacy
 
@@ -201,7 +206,7 @@ before `goc done <title>` will accept closure).
 The two skills `find-todo` and `work-todo` were the v1 names. Their
 responsibilities split:
 
-- v1 `/find-todo` → `Skill(extend-deck)` (discovery + filing).
+- v1 `/find-todo` → `Skill(audit-deck)` (discovery + filing).
 - v1 `/work-todo` → `Skill(next-card)` + `Skill(advance-card)` +
   `Skill(finish-card)` (selection, status mutation, closure).
 
