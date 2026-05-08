@@ -10,6 +10,7 @@ human_gate: session
 advances:
   - ship-game-of-cards-as-cross-agent-cli
   - restructure-comic-as-three-panels-and-add-audience-preamble
+  - rename-bootstrap-to-kickoff-as-onboarding-dialog
 advanced_by: []
 tags: [story, documentation]
 definition_of_done: |

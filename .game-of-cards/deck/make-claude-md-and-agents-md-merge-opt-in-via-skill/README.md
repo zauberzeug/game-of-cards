@@ -10,7 +10,8 @@ human_gate: session
 advances:
   - ship-game-of-cards-as-cross-agent-cli
   - support-external-game-of-cards-state-location
-advanced_by: []
+advanced_by:
+  - rename-bootstrap-to-kickoff-as-onboarding-dialog
 tags: [story, infra]
 definition_of_done: |
   - [ ] Default plugin install does NOT touch AGENTS.md / CLAUDE.md / CLAUDE.local.md / pre-commit hooks; it only installs skills + hook scripts the plugin owns
