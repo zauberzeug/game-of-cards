@@ -975,7 +975,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / ".game-of-cards" / "deck" / "renamed-card" / "README.md").is_file())
             parent_readme = (cwd / ".game-of-cards" / "deck" / "parent-card" / "README.md").read_text()
             renamed_readme = (cwd / ".game-of-cards" / "deck" / "renamed-card" / "README.md").read_text()
-            self.assertIn("advances: [renamed-card]", parent_readme)
+            self.assertIn("advances:\n  - renamed-card\n", parent_readme)
             self.assertNotIn("child-card", parent_readme)
             self.assertIn("title: renamed-card", renamed_readme)
             self.assertFalse((cwd / ".game-of-cards" / "deck" / "child-card" / "REDIRECT.md").exists())
