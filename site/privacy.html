@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy — Game of Cards</title>
+  <meta name="description" content="Privacy policy for Game of Cards. The plugin and CLI run fully on your local machine and collect no data. The marketing site uses Plausible, a cookieless analytics service." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+SC:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='%230b1220'/><path d='M12 5 L19 12 L12 19 L5 12 Z' stroke='%23e8dcc1' stroke-width='1.4' fill='none'/><path d='M12 8.5 L15.5 12 L12 15.5 L8.5 12 Z' stroke='%23e8dcc1' stroke-width='1' opacity='0.55' fill='none'/><circle cx='12' cy='12' r='1.5' fill='%23e8dcc1'/></svg>">
+
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa-BeDjiXGZwVeJ1mhrWfx0W.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body>
+  <canvas class="starfield" aria-hidden="true"></canvas>
+
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="brand">
+        <span class="brand-mark">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2 L20 12 L12 22 L4 12 Z" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M12 7 L17 12 L12 17 L7 12 Z" stroke="currentColor" stroke-width="0.8" opacity="0.6"/>
+            <circle cx="12" cy="12" r="1.1" fill="currentColor" opacity="0.9"/>
+          </svg>
+        </span>
+        <span>Game of Cards</span>
+      </a>
+      <nav class="site-nav">
+        <a href="/#who">Who for</a>
+        <a href="/#try">Try it</a>
+        <a href="/#how">How it works</a>
+        <a href="/#more">More</a>
+        <a class="gh-link" href="https://github.com/zauberzeug/game-of-cards">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.22.48-2.69-1.07-2.69-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.88 2.34.67.07-.52.28-.88.51-1.08-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.13 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.11.16 1.93.08 2.13.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.74.54 1.49v2.21c0 .21.15.46.55.38A8 8 0 0 0 8 0z"/>
+          </svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top">
+      <div class="container">
+        <h1 class="wordmark">Privacy</h1>
+        <span class="wordmark-rule" aria-hidden="true"></span>
+        <p class="tagline">last updated 2026-05-08</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container" style="max-width: 720px; padding-bottom: 4rem;">
+        <h2>The Game of Cards plugin and <code>goc</code> CLI</h2>
+        <p>
+          The Game of Cards plugin and command-line tool run entirely on
+          your local machine. They do not collect, transmit, or store any
+          personal data, anywhere.
+        </p>
+        <ul>
+          <li>
+            All cards live as Markdown files under
+            <code>.game-of-cards/deck/</code> in your repository.
+            Nothing leaves your filesystem.
+          </li>
+          <li>
+            The CLI makes no network requests. Its source has no
+            <code>socket</code>, <code>urllib</code>, <code>http</code>,
+            or <code>requests</code> imports — verifiable by reading
+            <a href="https://github.com/zauberzeug/game-of-cards/tree/main/goc">the package source</a>.
+          </li>
+          <li>
+            The plugin's runtime hooks inject text into your AI agent's
+            view (active-card reminders, work-prompt routing,
+            generalization-card prompts). They do not transmit any data
+            outside the local Claude Code session.
+          </li>
+          <li>
+            No telemetry, analytics, error reporting, or usage metrics
+            are collected by the plugin or CLI.
+          </li>
+        </ul>
+        <p>
+          The full source is auditable at
+          <a href="https://github.com/zauberzeug/game-of-cards">github.com/zauberzeug/game-of-cards</a>
+          under the MIT license.
+        </p>
+
+        <h2>This website (game-of-cards.com)</h2>
+        <p>
+          This marketing site uses
+          <a href="https://plausible.io">Plausible Analytics</a>
+          to count page views.
+          Plausible is a privacy-friendly analytics service:
+        </p>
+        <ul>
+          <li>No cookies are set on your browser.</li>
+          <li>
+            No personal information (name, email, persistent
+            identifiers) is collected or stored.
+          </li>
+          <li>
+            IP addresses are processed only briefly to derive
+            country-level aggregate counts and are then discarded —
+            they are not retained.
+          </li>
+          <li>
+            No data is shared with third parties for advertising,
+            re-targeting, or profile-building.
+          </li>
+        </ul>
+        <p>
+          Plausible's own privacy practices:
+          <a href="https://plausible.io/privacy">plausible.io/privacy</a>.
+        </p>
+
+        <h2>Hosting</h2>
+        <p>
+          This site is served by GitHub Pages. GitHub may log standard
+          HTTP request metadata (IP, user agent, timestamp) for
+          security and abuse-prevention purposes; see
+          <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's general privacy statement</a>.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions about this policy?
+          Email <a href="mailto:info@zauberzeug.com">info@zauberzeug.com</a>
+          or open an issue at
+          <a href="https://github.com/zauberzeug/game-of-cards/issues">github.com/zauberzeug/game-of-cards/issues</a>.
+        </p>
+
+        <h2>Updates</h2>
+        <p>
+          This page is versioned in the
+          <a href="https://github.com/zauberzeug/game-of-cards/blob/main/site/privacy.html">repo</a>.
+          Material changes are reflected in its commit history.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="seal">— Zauberzeug GmbH · MMXXVI —</div>
+      <div>MIT licensed · <a href="https://github.com/zauberzeug/game-of-cards/blob/main/LICENSE">LICENSE</a> · <a href="/privacy.html">Privacy</a></div>
+    </div>
+  </footer>
+
+  <script src="stars.js"></script>
+</body>
+</html>

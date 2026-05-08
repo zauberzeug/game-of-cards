@@ -7,7 +7,8 @@ contribution: low
 created: 2026-05-05
 closed_at: 2026-05-05
 human_gate: none
-advances: []
+advances:
+  - add-privacy-policy-page-for-marketplace-submission
 advanced_by: []
 tags: []
 definition_of_done: |
