@@ -49,7 +49,7 @@ jobs:
           uv run python -c "
           from importlib.resources import files
           root = files('goc.templates')
-          skills = ['advance-card', 'card-schema', 'create-card', 'decide-card', 'deck', 'extend-deck', 'finish-card', 'improve-deck', 'next-card', 'pull-card', 'scan-deck']
+          skills = ['advance-card', 'audit-deck', 'card-schema', 'create-card', 'decide-card', 'deck', 'finish-card', 'kickoff', 'next-card', 'pull-card', 'refine-deck', 'retrospective', 'scan-deck', 'standup']
           for s in skills:
               skill_md = root / 'skills' / s / 'SKILL.md'
               assert skill_md.is_file(), f'missing {skill_md}'
@@ -57,7 +57,7 @@ jobs:
           schema = files('goc') / 'schema.yaml'
           assert schema.is_file(), 'missing schema.yaml'
           print('  ✓ schema.yaml')
-          print(f'\nAll 11 skills + schema ship as package data.')
+          print(f'\nAll {len(skills)} skills + schema ship as package data.')
           "
 
       - name: Verify plugin version lockstep
