@@ -1,6 +1,6 @@
 {
   "name": "game-of-cards",
-  "description": "Game of Cards skills and hooks — agile work-card methodology for Claude Code agents. Requires goc CLI (pip install game-of-cards).",
+  "description": "Game of Cards skills and hooks — agile work-card methodology for Claude Code agents. Bundles the goc CLI; requires uv on host PATH.",
   "version": "0.0.6",
   "author": { "name": "Zauberzeug GmbH" },
   "homepage": "https://game-of-cards.com",

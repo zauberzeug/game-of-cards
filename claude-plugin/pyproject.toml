@@ -1,0 +1,22 @@
+[project]
+name = "goc-plugin-engine"
+version = "0.0.0"
+description = "Bundled GoC engine for the Claude Code plugin payload. Mirrors the goc/ package; do not edit directly — the byte-for-byte tripwire in .github/workflows/ci.yml fails on drift."
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+goc = "goc.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["goc"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"goc/schema.yaml" = "goc/schema.yaml"

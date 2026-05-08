@@ -76,21 +76,46 @@ lost on the next upgrade.
 
 ### Plugin assets are duplicated — keep them in lockstep
 
-The Claude Code plugin payload at `claude-plugin/` ships skills + the
-two deck-aware hook scripts. Because Claude Code's marketplace install
-only extracts the `source: ./claude-plugin` subtree, those assets must
-be **real files** (not symlinks pointing outside the subtree, which
-silently disappear on consumer install). They are therefore byte-for-byte
-duplicates of `goc/templates/...`:
+The Claude Code plugin payload at `claude-plugin/` ships skills, hook
+scripts, and (since the engine bundle) a copy of the entire `goc/`
+package plus a `bin/goc` wrapper. Because Claude Code's marketplace
+install only extracts the `source: ./claude-plugin` subtree, those
+assets must be **real files** (not symlinks pointing outside the
+subtree, which silently disappear on consumer install). They are
+therefore byte-for-byte duplicates of the source-of-truth files:
 
-| Plugin path | Source-of-truth template |
+| Plugin path | Source-of-truth |
 |---|---|
 | `claude-plugin/skills/` | `goc/templates/skills/` |
 | `claude-plugin/hooks/deck_prompt_router.py` | `goc/templates/hooks/deck_prompt_router.py` |
 | `claude-plugin/hooks/deck_session_start.py` | `goc/templates/hooks/deck_session_start.py` |
+| `claude-plugin/goc/` | `goc/` (entire package — engine, schema, templates) |
 
-When changing any of these files, update **both copies**. CI fails the
+The flat `claude-plugin/skills/` and `claude-plugin/hooks/` paths exist
+so Claude Code's plugin runtime auto-discovers them at the layout it
+expects. The nested `claude-plugin/goc/templates/...` exists so the
+**bundled engine** can resolve its own templates via
+`importlib.resources` when running under `bin/goc`. Same bytes,
+different consumers.
+
+When changing any of these files, update **all copies**. CI fails the
 "Verify plugin assets match templates byte-for-byte" step on drift.
+The future `generate-plugin-payloads-from-templates-on-release` card
+collapses this to a single source via release-time generation.
+
+### Plugin runs goc from a vendored engine — `uv` is the only host prerequisite
+
+`claude-plugin/bin/goc` is a shell wrapper that resolves the bundled
+package via `uv run --project ${PLUGIN_ROOT}`. Claude Code auto-prepends
+the plugin's `bin/` directory to the Bash tool's PATH while the plugin
+is enabled, so skill bodies keep calling plain `goc <verb>` and the
+wrapper transparently runs the vendored engine. uv builds an isolated
+venv at `claude-plugin/.venv/` (gitignored) on first call and caches it
+afterward.
+
+The wrapper requires `uv` on the host PATH. The traditional
+`pipx install game-of-cards` recipe remains documented as the fallback
+for environments without uv (including CI without plugin support).
 
 ### Marker-bounded merge for AGENTS.md / CLAUDE.md
 

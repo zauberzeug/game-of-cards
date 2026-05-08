@@ -12,7 +12,7 @@
     {
       "name": "game-of-cards",
       "source": "./claude-plugin",
-      "description": "Game of Cards skills and hooks for Claude Code. Requires the goc CLI (uv tool install game-of-cards) on PATH."
+      "description": "Game of Cards skills and hooks for Claude Code. Bundles the goc CLI; requires uv on host PATH."
     }
   ]
 }
