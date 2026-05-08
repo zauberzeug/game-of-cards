@@ -6,7 +6,7 @@ stage: null
 contribution: low
 created: 2026-05-08
 closed_at: null
-human_gate: none
+human_gate: session
 advances: []
 advanced_by:
   - bundle-goc-engine-inside-plugin-payload
@@ -101,3 +101,17 @@ goal that this README is one step toward.
   of the byte-locked paths (only `claude-plugin/skills/` and
   `claude-plugin/hooks/deck_*.py` are), so this file lives only at
   `claude-plugin/README.md` and has no template counterpart.
+
+## Sign-off required
+
+`claude-plugin/README.md` has been written and committed. Before this
+card can close, Rodja needs to read the rendered text and confirm it's
+ready for marketplace-grade use. Gate is raised to `session` pending that
+review.
+
+To close after sign-off:
+
+```bash
+goc decide add-readme-to-claude-code-plugin --decision "approved" --because "Rodja: text is marketplace-ready"
+goc done add-readme-to-claude-code-plugin
+```
