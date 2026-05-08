@@ -564,6 +564,10 @@ def _sync_skill_tree(
     skills_src = templates / "skills"
     skills_dst.mkdir(parents=True, exist_ok=True)
     if replace_skills:
+        template_names = {p.name for p in skills_src.iterdir() if p.is_dir()}
+        for skill_dir in sorted(p for p in skills_dst.iterdir() if p.is_dir()):
+            if skill_dir.name not in template_names and (skill_dir / "SKILL.md").exists():
+                shutil.rmtree(skill_dir)
         for skill_dir in sorted(p for p in skills_src.iterdir() if p.is_dir()):
             target = skills_dst / skill_dir.name
             if target.exists():

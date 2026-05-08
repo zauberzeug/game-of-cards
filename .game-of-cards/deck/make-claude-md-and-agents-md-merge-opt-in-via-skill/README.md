@@ -1,7 +1,7 @@
 ---
 title: make-claude-md-and-agents-md-merge-opt-in-via-skill
 summary: "Today `goc install` (even in its lean plugin-default mode from `claude-install-defaults-to-plugin-path`) writes/merges the GoC blocks into AGENTS.md and CLAUDE.md unconditionally. For evaluators trying GoC on a library or OSS repo, that single behavior is the most invasive thing the tool does. Make the merge opt-in: by default the plugin install ships skills only; the user (or agent on user request) calls a `Skill(game-of-cards)` (rename of today's `Skill(bootstrap)`) to extend AGENTS.md / CLAUDE.md / CLAUDE.local.md. Without that opt-in the user must address skills explicitly — which is fine for evaluation."
-status: open
+status: superseded
 stage: null
 contribution: medium
 created: 2026-05-07
