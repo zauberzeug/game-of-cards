@@ -24,7 +24,7 @@ generic flow.
 | `config.yaml` | `goc attest` | Runtime-neutral closure attestation checks (`layer_2_project_dod`, `layer_3_goc_dod`) plus workflow options. Legacy `.claude/deck-config.yaml` is migrated here on upgrade. |
 | `domain-vocabulary.md` | (reserved for project use) | Glossary of project-specific terms |
 | `domain-examples.md` | (reserved for project use) | Concrete example card bodies for project-specific bug classes |
-| `tooling-conventions.md` | `extend-deck` skill (Phase 2 brief, model-tier guidance) | Project tooling rules (e.g., `uv run` discipline, `model: "opus"` mandate, parallelization rules) |
+| `tooling-conventions.md` | `audit-deck` skill (Phase 2 brief, model-tier guidance) | Project tooling rules (e.g., `uv run` discipline, `model: "opus"` mandate, parallelization rules) |
 | `documentation-conventions.md` | (reserved for project use) | Doc-style rules — STATUS.md vs SPEC.md split, per-doc consistency invariants |
 | `file-path-map.md` | (reserved for project use) | Project filesystem map — where scripts/tests/docs live, what's gitignored |
 
@@ -43,7 +43,7 @@ hook-point in its workflow. Same injection syntax as content stubs:
 | `hooks/decide-card.md` | `decide-card` | Agent-invoked decision contract (citation form for `--because`) |
 | `hooks/finish-card.md` | `finish-card` | Step 2 closure-criteria audit AND Step 7 post-close action (status-dashboard refresh, changelog row, etc.) |
 | `hooks/pull-card.md` | `pull-card` | Lazy-Andon trial: when a parked question can be resolved by a project rubric instead of raising the gate |
-| `hooks/extend-deck.md` | `extend-deck` | Phase 0 priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
+| `hooks/audit-deck.md` | `audit-deck` | Phase 0 priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
 
 ## Authoring guidelines
 
