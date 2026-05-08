@@ -1,7 +1,7 @@
 ---
 title: extend-skill-parity-tripwire-to-claude-plugin-mirrors
 summary: "The skill-parity tripwire (`validate_skill_dir_parity` in `goc/engine.py`) only checks consumer skill copies under `.claude/skills/` and `.codex/skills/`. It does not check the `claude-plugin/` mirrors that ship the bundled engine — `claude-plugin/skills/`, `claude-plugin/hooks/*.py`, and the nested `claude-plugin/goc/` tree. The byte-for-byte CI step does check those, but only after push, so contributors discover drift in the red CI run rather than locally. Two drift incidents in three days (kickoff SKILL.md after `make-kickoff-idempotent-on-restart`; the same file again after `bundle-goc-engine-inside-plugin-payload`) confirm the gap is real. Extend the local tripwire to mirror the CI check so drift is caught pre-push."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-08
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] A regression test deliberately breaks one of the four mirror pairs and asserts the new check fails with a useful message
   - [ ] CI's `Verify plugin assets match templates byte-for-byte` step remains as belt-and-braces, but the local check is now first-line defence
   - [ ] `uv run goc validate` and the full test suite pass under a CI-clean env (`HOME=$(mktemp -d)`)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Extend skill-parity tripwire to claude-plugin mirrors
