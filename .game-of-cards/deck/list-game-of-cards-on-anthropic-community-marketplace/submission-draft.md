@@ -18,8 +18,10 @@ The plugin ships 14 skills (`kickoff`, `scan-deck`, `create-card`,
 `retrospective`, …) and 3 runtime hooks that surface active cards,
 route work-initiating prompts, and prompt the agent to consider
 filing a generalization card after code-mutating turns. Self-contained
-— no separate `pipx install`; the GoC CLI is bundled and runs via
-`uv`.
+— skills invoke plain `goc <verb>` and the engine ships with the
+plugin; no `pipx install` or host-side package step required (the
+plugin's bundled CLI is on PATH automatically while the plugin is
+enabled).
 
 ## Example use-cases
 
