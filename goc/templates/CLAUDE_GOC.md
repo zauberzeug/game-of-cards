@@ -29,7 +29,7 @@ was done with `goc install --local-skills`. Running `goc upgrade`
 on those repos will prompt to migrate to the plugin path, or pass
 `--keep-local-skills` to keep the vendored layout.
 
-### First use: bootstrap a new repo (one-time per repo)
+### First use: kick off a new repo (one-time per repo)
 
 **Before using any GoC skill in a repo for the first time, check whether
 GoC project state is present:**
@@ -38,22 +38,25 @@ GoC project state is present:**
 ls .game-of-cards/deck/ 2>/dev/null || echo "not initialized"
 ```
 
-If `.game-of-cards/deck/` is **missing**, call `Skill(bootstrap)` before
-doing anything else. Bootstrap will:
+If `.game-of-cards/deck/` is **missing**, call `Skill(kickoff)` before
+doing anything else. Kickoff will:
 
-1. Install the `goc` CLI if it's not on PATH (asks for confirmation).
-2. Run `goc install` to create `.game-of-cards/` and merge GoC guidance
-   into `AGENTS.md` / `CLAUDE.md` (asks for confirmation).
+1. Introduce GoC (one-paragraph overview).
+2. Ask which persona fits (solo / team / OSS-eval / agent-runtime).
+3. Ask per-file whether to merge GoC guidance into `CLAUDE.md`, `AGENTS.md`,
+   and/or `CLAUDE.local.md` (three separate yes/no questions).
+4. Run infrastructure preflight (`goc` on PATH + `Bash(goc:*)` permission check).
+5. Run `goc install` with the selected merge flags to create `.game-of-cards/`.
 
-Once bootstrap completes, all other skills work immediately — do not
-re-run bootstrap on subsequent uses.
+Once kickoff completes, all other skills work immediately — do not
+re-run kickoff on subsequent uses.
 
 ### Skill surface (the 12 verbs as `Skill(...)`)
 
 When the plugin is installed, the 12 GoC skills are available as
 Claude Code's `Skill(...)` primitive:
 
-- **First-time setup**: `Skill(bootstrap)` (check + scaffold `.game-of-cards/` + install `goc` CLI if missing).
+- **First-time setup**: `Skill(kickoff)` (onboarding dialog + scaffold `.game-of-cards/` + install `goc` CLI if missing).
 - **Browse**: `Skill(scan-deck)` (triage default + filtered views + decision Q&A); `Skill(next-card)` (auto-pick highest-leverage gate=none card).
 - **File new**: `Skill(create-card)` (scaffold frontmatter + DoD).
 - **Advance**: `Skill(advance-card)` (status flip), `Skill(finish-card)` (close + DoD enforcement + commit).
