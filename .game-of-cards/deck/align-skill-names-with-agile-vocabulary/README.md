@@ -1,7 +1,7 @@
 ---
 title: align-skill-names-with-agile-vocabulary
 summary: "The current 12-skill surface is consistent (`<verb>-card` / `<verb>-deck`) but speaks Jira/CRUD, not the XP+Kanban+Scrum vocabulary that GoC's philosophy actually borrows from. Realign two skill names and add two new skills so the surface advertises the methodology lineage out loud and fills two genuine gaps. Renames: `extend-deck` → `audit-deck` (the skill inspects existing artefacts for defects/inconsistencies — that is an audit / code review, not an XP spike, which would be a learning experiment; the misnomer was a quiet conceptual leak). `improve-deck` → `refine-deck` (Scrum Backlog Refinement is the precise term for what the skill does — retag stale, prune unverified parks, surface defunct file:line references). New skills: `standup` (a quick daily-style read of the deck — what is `active`, what is `blocked` and why, what was closed since yesterday in `log.md`, what is waiting on a decision-gate; today reachable only by combining `scan-deck` + `git log` + manual reading) and `retrospective` (backwards analysis of the last N closed cards: cluster by tag, surface recurring failure modes, propose generalization-card candidates, give a rough velocity feel; today nothing covers this — `extend-deck` hunts NEW defects but never looks at completed work). Renames are full breaks with no aliases — the project is still young and the surface should be clean before plugin downloads grow."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-08
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] All references updated in lockstep: `AGENTS.md` skill table, `CLAUDE.md` GoC marker block (via `goc/templates/AGENTS_GOC.md` and `goc/templates/CLAUDE_GOC.md`), README skill-surface listing, hook scripts (`deck_session_start.py`, `deck_prompt_router.py` — both template and plugin copies), `card-schema` skill cross-references
   - [ ] No backward-compat aliases: old `extend-deck` and `improve-deck` folders removed from templates, plugin, and any installed test fixture; old names removed from documentation
   - [ ] Smoke check: fresh `goc install` in a scratch repo lists exactly the new skill set (`audit-deck`, `refine-deck`, `standup`, `retrospective` present; `extend-deck`, `improve-deck` absent)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # align-skill-names-with-agile-vocabulary
