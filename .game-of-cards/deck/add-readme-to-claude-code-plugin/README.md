@@ -10,6 +10,7 @@ human_gate: none
 advances: []
 advanced_by:
   - bundle-goc-engine-inside-plugin-payload
+  - align-skill-names-with-agile-vocabulary
 tags: [story, infra]
 definition_of_done: |
   - [ ] Plugin is self-contained — installing the plugin is the only opt-in step; no separate `pipx install game-of-cards` / `pip install game-of-cards` is required for `goc` to be callable from skills. Depends on `bundle-goc-engine-inside-plugin-payload`

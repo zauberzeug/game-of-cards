@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-08
 closed_at: null
 human_gate: none
-advances: []
+advances:
+  - add-readme-to-claude-code-plugin
 advanced_by: []
 tags: [story]
 definition_of_done: |
