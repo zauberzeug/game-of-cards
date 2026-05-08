@@ -7,7 +7,8 @@ contribution: low
 created: 2026-05-08
 closed_at: null
 human_gate: none
-advances: []
+advances:
+  - list-game-of-cards-on-anthropic-community-marketplace
 advanced_by:
   - bundle-goc-engine-inside-plugin-payload
   - align-skill-names-with-agile-vocabulary
