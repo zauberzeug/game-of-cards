@@ -1,11 +1,11 @@
 ---
 title: add-plugin-update-instructions-to-marketplace-readme
 summary: "The marketplace listing's README is `claude-plugin/README.md` (added 2026-05-08 in `add-readme-to-claude-code-plugin`). It documents the first install (`/plugin marketplace add`) but not the update path. Claude Code's `/plugin install` reuses the local marketplace clone and does not refresh it automatically — so a user who installed the plugin once and reinstalls after a new commit silently gets the stale bytes (the same UX wall the closed card `plugin-install-doesnt-refresh-stale-marketplace-cache` documented in `site/llms.txt` and the `kickoff` skill body, but never propagated into the new plugin README). Surfaced today during Rodja's pre-submission smoke test: the running plugin still showed the old `bootstrap` skill name even after a reinstall, and only `/plugin marketplace update` recovered the renamed skills. Add an 'Updating an existing install' block to `claude-plugin/README.md` mirroring the wording in `site/llms.txt`. Also clean up `site/llms.txt`'s post-install example which still tells users to type `/bootstrap` (the pre-rename skill name) — should be `/kickoff`."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-08
-closed_at: null
+closed_at: 2026-05-08
 human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
@@ -14,10 +14,10 @@ advanced_by:
   - align-skill-names-with-agile-vocabulary
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] `claude-plugin/README.md` has an "Updating an existing install" section between "Install" and "First use" that explains why `/plugin install` alone is not enough after a new commit, gives the canonical `/plugin marketplace update` + `/plugin install` sequence, and shows the `marketplace remove` + `add` round-trip as a fallback if `update` is not available — wording consistent with the equivalent block in `site/llms.txt`
-  - [ ] `site/llms.txt` post-install example uses the current skill name (`/kickoff`, not `/bootstrap`) so the homepage docs and the marketplace README agree on what to type first
-  - [ ] No `bootstrap` slash-command or `/bootstrap` substring remains in `site/llms.txt` or `claude-plugin/README.md` (other matches outside these two files are out of scope; the prior card already swept the workflow + script callers)
-  - [ ] `uv run goc validate` passes
+  - [x] `claude-plugin/README.md` has an "Updating an existing install" section between "Install" and "First use" that explains why `/plugin install` alone is not enough after a new commit, gives the canonical `/plugin marketplace update` + `/plugin install` sequence, and shows the `marketplace remove` + `add` round-trip as a fallback if `update` is not available — wording consistent with the equivalent block in `site/llms.txt`
+  - [x] `site/llms.txt` post-install example uses the current skill name (`/kickoff`, not `/bootstrap`) so the homepage docs and the marketplace README agree on what to type first
+  - [x] No `bootstrap` slash-command or `/bootstrap` substring remains in `site/llms.txt` or `claude-plugin/README.md` (other matches outside these two files are out of scope; the prior card already swept the workflow + script callers)
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 

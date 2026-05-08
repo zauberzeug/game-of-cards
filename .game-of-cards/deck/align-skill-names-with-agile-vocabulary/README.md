@@ -10,6 +10,7 @@ human_gate: none
 advances:
   - add-readme-to-claude-code-plugin
   - release-smoke-references-renamed-skills-fails-dry-run
+  - add-plugin-update-instructions-to-marketplace-readme
 advanced_by: []
 tags: [story]
 definition_of_done: |

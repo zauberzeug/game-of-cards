@@ -39,12 +39,38 @@ the `uv` tool manager that ships with most developer environments.
 
 ```
 /plugin marketplace add zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
 ```
 
 That's the only step. The plugin is self-contained — no `pip install` or
 `pipx install` is needed. `uv` must be on your `PATH` (it usually is on
 any machine with a modern Python toolchain; install from
 [astral.sh/uv](https://docs.astral.sh/uv/) if it's missing).
+
+## Updating an existing install
+
+Claude Code's `/plugin install` reuses the local marketplace clone
+created by `/plugin marketplace add` and does not refresh it
+automatically. After a new release, run the marketplace update first,
+then reinstall:
+
+```
+/plugin marketplace update zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+If your build of Claude Code does not recognize `marketplace update`,
+the equivalent round-trip is:
+
+```
+/plugin marketplace remove zauberzeug/game-of-cards
+/plugin marketplace add zauberzeug/game-of-cards
+/plugin install game-of-cards@game-of-cards
+```
+
+Skipping the update step silently installs from the cached clone, so a
+plain reinstall after a new commit will keep showing the previous
+version's behavior.
 
 ## First use
 

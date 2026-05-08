@@ -11,6 +11,7 @@ advances: []
 advanced_by:
   - add-readme-to-claude-code-plugin
   - release-smoke-references-renamed-skills-fails-dry-run
+  - add-plugin-update-instructions-to-marketplace-readme
 tags: [story, infra, documentation]
 definition_of_done: |
   - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README)

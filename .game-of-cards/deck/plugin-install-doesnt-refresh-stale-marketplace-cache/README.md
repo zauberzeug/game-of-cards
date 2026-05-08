@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-07
 closed_at: 2026-05-07
 human_gate: none
-advances: []
+advances:
+  - add-plugin-update-instructions-to-marketplace-readme
 advanced_by: []
 tags: [story, bug, documentation]
 definition_of_done: |

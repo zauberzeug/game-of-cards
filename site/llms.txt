@@ -49,10 +49,10 @@ Claude Code's `/plugin install` reuses a local marketplace clone and does not re
 /plugin install game-of-cards@game-of-cards
 ```
 
-Once the plugin is installed, bootstrap any repo with:
+Once the plugin is installed, kick off any repo with:
 
 ```
-/bootstrap
+/kickoff
 ```
 
 or tell your agent: "use game of cards for this repo".
