@@ -11,7 +11,8 @@ advances:
   - ship-game-of-cards-as-cross-agent-cli
   - restructure-comic-as-three-panels-and-add-audience-preamble
   - rename-bootstrap-to-kickoff-as-onboarding-dialog
-advanced_by: []
+advanced_by:
+  - polish-persona-section-headline-and-accepts-alignment
 tags: [story, documentation]
 definition_of_done: |
   - [x] Persona list captured in a tracked doc (e.g. `ABOUT.md` section or a new `PERSONAS.md`); each persona has: short name, one-paragraph description, the workflow shape they accept (mainline vs. branches, OSS vs. internal, code-reading vs. vibe-coding), and the GoC features they need vs. don't need

@@ -419,24 +419,14 @@ nav.site-nav .gh-link {
   box-shadow: 0 12px 30px -16px rgba(0, 0, 0, 0.55);
 }
 
-.persona-badge {
-  font-family: var(--sans-body);
-  font-size: 10px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--gold);
-  font-weight: 600;
-  margin-bottom: 10px;
-  display: inline-block;
-}
-
 .persona h3 {
   font-family: var(--serif-display);
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--silver-1);
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  white-space: nowrap;
 }
 
 .persona-who {

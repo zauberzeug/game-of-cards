@@ -1,23 +1,23 @@
 ---
 title: polish-persona-section-headline-and-accepts-alignment
 summary: "Polish the website's three-persona section after first ship: each card's headline must fit on a single line so all three sit on the same horizontal baseline, the redundant 'PRIMARY AUDIENCE' chip is removed (the gold left-border already differentiates primary from secondary), and the three 'Accepts:' lines should align across cards instead of breaking at three vs two lines."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-08
-closed_at: null
+closed_at: 2026-05-08
 human_gate: none
 advances:
   - define-personas-and-use-cases-for-game-of-cards
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] All three persona-card headlines render on a single line at desktop width (1280px viewport) — currently "The multi-agent coordinator" wraps to two lines because the h3 font-size is too large for the column
-  - [ ] The "PRIMARY AUDIENCE" badge is removed; primary persona is signalled by the existing brighter gold left-border + subtle background lift
-  - [ ] The three "Accepts: …" lines end at roughly the same vertical position across all three cards (rebalance copy length where needed; don't force equal heights with min-height hacks)
-  - [ ] Mobile layout still stacks cleanly (single column at <860px), no regressions
-  - [ ] Playwright capture + Rodja visual sign-off before close (per UI-verification rule)
-  - [ ] `uv run goc validate` passes
+  - [x] All three persona-card headlines render on a single line at desktop width (1280px viewport) — currently "The multi-agent coordinator" wraps to two lines because the h3 font-size is too large for the column
+  - [x] The "PRIMARY AUDIENCE" badge is removed; primary persona is signalled by the existing brighter gold left-border + subtle background lift
+  - [x] The three "Accepts: …" lines end at roughly the same vertical position across all three cards (rebalance copy length where needed; don't force equal heights with min-height hacks)
+  - [x] Mobile layout still stacks cleanly (single column at <860px), no regressions
+  - [x] Playwright capture + Rodja visual sign-off before close (per UI-verification rule)
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
