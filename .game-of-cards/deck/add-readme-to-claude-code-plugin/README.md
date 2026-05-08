@@ -1,20 +1,22 @@
 ---
 title: add-readme-to-claude-code-plugin
 summary: "Add `claude-plugin/README.md` so the plugin payload carries its own marketplace-grade documentation. Required surface for the eventual submission to the Anthropic community plugin directory; today's repo-level `README.md` targets a different audience and is not what the directory will display."
-status: active
+status: blocked
 stage: null
 contribution: low
 created: 2026-05-08
 closed_at: null
 human_gate: none
 advances: []
-advanced_by: []
+advanced_by:
+  - bundle-goc-engine-inside-plugin-payload
 tags: [story, infra]
 definition_of_done: |
+  - [ ] Plugin is self-contained — installing the plugin is the only opt-in step; no separate `pipx install game-of-cards` / `pip install game-of-cards` is required for `goc` to be callable from skills. Depends on `bundle-goc-engine-inside-plugin-payload`
   - [ ] `claude-plugin/README.md` exists and renders cleanly on GitHub
-  - [ ] README states what the plugin provides (the 12 GoC skills + 3 hooks)
-  - [ ] README documents the `goc` CLI prerequisite (`pip install game-of-cards` / `pipx install game-of-cards`) up front, since the plugin is a thin runtime wrapper around the CLI
-  - [ ] README documents the install path users follow today (`zauberzeug/game-of-cards` marketplace), and is forward-compatible with the future community-marketplace listing without prematurely claiming it
+  - [ ] README states what the plugin provides (current GoC skill set + hooks, with counts that match the deck at close-time)
+  - [ ] README documents the install path live at close-time (community marketplace `@claude-community` once listed, otherwise the existing `zauberzeug/game-of-cards` direct path)
+  - [ ] README explains the first-run experience: plugin install + one prompt; **no** instructions to install a separate PyPI package for normal use
   - [ ] README links to the project homepage (game-of-cards.com), the upstream repo, and the MIT license
   - [ ] Rodja reads the rendered text and signs off before close
   - [ ] `uv run goc validate` passes
@@ -44,37 +46,48 @@ This card adds the missing surface so that:
 
 In:
 - A single new file at `claude-plugin/README.md`
-- Wording that holds up regardless of which marketplace listing is live
-  (today: only `zauberzeug/game-of-cards`; eventually: also
-  `claude-plugins-community`)
+- Written *once* against the self-contained plugin shape (no separate
+  PyPI install), not against today's CLI-prerequisite shape
 
 Out:
 - The actual submission to `clau.de/plugin-directory-submission` — that's a
   separate user action, intentionally not tracked here
 - Any change to the repo-level `README.md` (covered by
   `redesign-readme-as-llm-first-marketing-page`)
-- Bumping to 1.0.0 — Rodja's call: stay pre-1.0 for now, project is still
-  early
-- Bundling `goc` inside the plugin payload (covered by
-  `bundle-goc-engine-inside-plugin-payload`); until that ships, the README
-  must continue to document the CLI prerequisite
+- Bumping to 1.0.0 — stay pre-1.0 for now; project is still early
+
+## Depends on
+
+The README cannot be written until the plugin is self-contained, because
+the install story it documents is exactly what changes when bundling
+lands. Drafting it against today's `pipx install game-of-cards`
+prerequisite would produce text that has to be rewritten the day
+`bundle-goc-engine-inside-plugin-payload` closes — wasted churn and a
+window of marketplace-visible documentation drift in between.
+
+Hard dependency:
+
+- `bundle-goc-engine-inside-plugin-payload` (open, session-gated) —
+  eliminate the external CLI install so the plugin works standalone
+  from a single `/plugin install`
 
 ## Background context
 
 Submission to the official curated directory (`claude-plugins-official`)
-is downstream of, and blocked by, several existing cards:
+is downstream of, and blocked by, several existing cards in addition to
+the one above:
 
-- `bundle-goc-engine-inside-plugin-payload` — eliminate the external CLI
-  dependency so the plugin works standalone after install
 - The skill-rename family (`align-skill-names-with-agile-vocabulary`,
   `rename-bootstrap-to-kickoff-as-onboarding-dialog`, …) — surface text
-  that any reviewer will see
+  that any reviewer will see, and that this README will have to name
+  by their final names
 - `redesign-readme-as-llm-first-marketing-page` and
-  `build-game-of-cards-project-website` — the upstream-repo and homepage
-  surfaces a reviewer follows from the plugin description
+  `build-game-of-cards-project-website` — the upstream-repo and
+  homepage surfaces a reviewer follows from the plugin description
 
-This card's only contract is the plugin-level README. Moving the rest is
-out of scope.
+Those are not blockers for *this* card (the plugin README can land
+before they do), but they are blockers for the broader official-listing
+goal that this README is one step toward.
 
 ## Notes
 
