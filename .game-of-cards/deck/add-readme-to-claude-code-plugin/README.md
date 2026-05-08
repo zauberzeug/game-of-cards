@@ -1,11 +1,11 @@
 ---
 title: add-readme-to-claude-code-plugin
 summary: "Add `claude-plugin/README.md` so the plugin payload carries its own marketplace-grade documentation. Required surface for the eventual submission to the Anthropic community plugin directory; today's repo-level `README.md` targets a different audience and is not what the directory will display."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-08
-closed_at: null
+closed_at: 2026-05-08
 human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace

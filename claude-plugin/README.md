@@ -52,7 +52,7 @@ After installing the plugin, start a new Claude Code session in any repo
 and type:
 
 ```
-kickoff
+/kickoff
 ```
 
 Kickoff will introduce GoC, ask which working style fits your project
