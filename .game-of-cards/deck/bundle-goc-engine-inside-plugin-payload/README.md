@@ -10,6 +10,7 @@ human_gate: session
 advances:
   - ship-game-of-cards-as-cross-agent-cli
   - support-external-game-of-cards-state-location
+  - add-readme-to-claude-code-plugin
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
