@@ -37,6 +37,7 @@
         <span>Game of Cards</span>
       </a>
       <nav class="site-nav">
+        <a href="#who">Who for</a>
         <a href="#try">Try it</a>
         <a href="#how">How it works</a>
         <a href="#more">More</a>
@@ -68,6 +69,59 @@
         <figure class="readme-figure">
           <img src="assets/game-of-cards-dark.png" alt="Four-panel comic explaining Game of Cards: setup, card creation, parallel session and background work, and the human-input handoff." />
         </figure>
+
+        <h2 id="who">Who is this for?</h2>
+        <p class="who-intro">
+          Three audiences GoC is built for today. The
+          <a href="https://github.com/zauberzeug/game-of-cards/blob/main/PERSONAS.md">full breakdown</a>
+          covers two more — including where GoC isn't quite ready yet.
+        </p>
+
+        <ul class="persona-grid">
+          <li class="persona persona-primary">
+            <span class="persona-badge">Primary audience</span>
+            <h3>The vibe-coder</h3>
+            <p class="persona-who">You build by describing what you want. You don't read code — you read results.</p>
+            <p class="persona-fit">
+              GoC is the agent's memory between sessions. You stay at the prompt;
+              the agent keeps the deck. Cards are scaffolding it uses, not paperwork
+              you have to learn.
+            </p>
+            <p class="persona-tradeoff">Accepts: partial features in <code>main</code> in exchange for forward motion.</p>
+          </li>
+
+          <li class="persona">
+            <h3>The solo developer</h3>
+            <p class="persona-who">You write code yourself and use AI as a power tool. <code>TODO.md</code> never holds up.</p>
+            <p class="persona-fit">
+              Each card has a Definition of Done the CLI refuses to close until
+              every box is ticked. Open the project tomorrow, the agent scans the
+              deck and knows what's in flight.
+            </p>
+            <p class="persona-tradeoff">Accepts: two minutes of card scaffolding per task in exchange for never re-explaining context.</p>
+          </li>
+
+          <li class="persona">
+            <h3>The multi-agent coordinator</h3>
+            <p class="persona-who">You run multiple agents — local sessions plus background workers — on one codebase.</p>
+            <p class="persona-fit">
+              <code>status: active</code> is the soft lock. Decision gates park work
+              when only a human can answer. Background agents drain the queue and
+              raise a flag only when they need you.
+            </p>
+            <p class="persona-tradeoff">Accepts: card-lifecycle commits in <code>main</code> in exchange for visibility no other tool gives you.</p>
+          </li>
+        </ul>
+
+        <div class="anti-persona">
+          <h3>Not for you (yet) if&hellip;</h3>
+          <p>
+            Your team is deeply invested in Jira, Linear, or a similar tracker. GoC
+            duplicates the tracker function rather than integrating with it today.
+            Tracker integration is on the roadmap — until then, running both in
+            parallel is friction you don't need.
+          </p>
+        </div>
 
         <h2 id="try">Try it</h2>
         <p>In any repo, ask your coding agent:</p>

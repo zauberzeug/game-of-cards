@@ -1,11 +1,11 @@
 ---
 title: define-personas-and-use-cases-for-game-of-cards
 summary: "Write a short, concrete persona list naming who Game of Cards is for, who it is NOT for (yet), and what trade-offs each persona accepts. Most disagreement about GoC's positioning is downstream of unspoken persona mismatch — evaluators with strict commit hygiene hit invasive-install pain because libraries are not the target persona today; evaluators looking for a linear feature-planner find the autonomous loop oversized; evaluators with non-code domains miss the to-do-engine framing. The personas are the lens for prioritization and the source of copy for the README audience preamble."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-08
 human_gate: session
 advances:
   - ship-game-of-cards-as-cross-agent-cli
@@ -14,12 +14,12 @@ advances:
 advanced_by: []
 tags: [story, documentation]
 definition_of_done: |
-  - [ ] Persona list captured in a tracked doc (e.g. `ABOUT.md` section or a new `PERSONAS.md`); each persona has: short name, one-paragraph description, the workflow shape they accept (mainline vs. branches, OSS vs. internal, code-reading vs. vibe-coding), and the GoC features they need vs. don't need
-  - [ ] Initial persona seed list at minimum covers: (a) vibe-coder / non-developer; (b) solo developer using GoC as a personal to-do manager / linear feature-planner; (c) classical-development team with strict commit hygiene; (d) agent runtime using GoC as a generic to-do engine for non-code domains; (e) multi-human + multi-AI coordination on a shared codebase
-  - [ ] Each persona is mapped to a workflow recommendation (which deck-location strategy from `support-multi-branch-and-multi-user-deck-workflows`, whether the CLAUDE.md merge applies, etc.)
-  - [ ] Anti-personas explicitly named — "GoC is NOT for X yet" — so first-time readers of README don't try to fit a square peg
-  - [ ] Cross-linked from README's audience preamble (per `restructure-comic-as-three-panels-and-add-audience-preamble`)
-  - [ ] `uv run goc validate` passes
+  - [x] Persona list captured in a tracked doc (e.g. `ABOUT.md` section or a new `PERSONAS.md`); each persona has: short name, one-paragraph description, the workflow shape they accept (mainline vs. branches, OSS vs. internal, code-reading vs. vibe-coding), and the GoC features they need vs. don't need
+  - [x] Initial persona seed list at minimum covers: (a) vibe-coder / non-developer; (b) solo developer using GoC as a personal to-do manager / linear feature-planner; (c) classical-development team with strict commit hygiene; (d) agent runtime using GoC as a generic to-do engine for non-code domains; (e) multi-human + multi-AI coordination on a shared codebase
+  - [x] Each persona is mapped to a workflow recommendation (which deck-location strategy from `support-multi-branch-and-multi-user-deck-workflows`, whether the CLAUDE.md merge applies, etc.)
+  - [x] Anti-personas explicitly named — "GoC is NOT for X yet" — so first-time readers of README don't try to fit a square peg
+  - [x] Cross-linked from README's audience preamble (per `restructure-comic-as-three-panels-and-add-audience-preamble`)
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 

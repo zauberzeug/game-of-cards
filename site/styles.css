@@ -382,6 +382,129 @@ nav.site-nav .gh-link {
   font-weight: 500;
 }
 
+/* ============================================================
+   Personas — "Who is this for?"
+   ============================================================ */
+
+.who-intro {
+  margin: 0 0 28px;
+  color: var(--silver-3);
+  font-size: 15px;
+}
+
+.persona-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 36px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.persona {
+  position: relative;
+  padding: 22px 22px 20px;
+  background: rgba(232, 220, 193, 0.025);
+  border: 1px solid var(--line);
+  border-left: 2px solid rgba(201, 168, 117, 0.35);
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.persona-primary {
+  background: rgba(232, 220, 193, 0.05);
+  border-color: rgba(201, 168, 117, 0.28);
+  border-left-color: var(--gold);
+  box-shadow: 0 12px 30px -16px rgba(0, 0, 0, 0.55);
+}
+
+.persona-badge {
+  font-family: var(--sans-body);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: inline-block;
+}
+
+.persona h3 {
+  font-family: var(--serif-display);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--silver-1);
+  margin: 0 0 12px;
+}
+
+.persona-who {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--parchment);
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+
+.persona-fit {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--silver-2);
+  margin: 0 0 14px;
+  flex: 1;
+}
+
+.persona-tradeoff {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--silver-3);
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-style: italic;
+}
+
+.persona code,
+.anti-persona code {
+  font-size: 0.85em;
+}
+
+.anti-persona {
+  margin: 0 0 12px;
+  padding: 18px 22px 16px;
+  background: rgba(11, 18, 32, 0.5);
+  border: 1px dashed var(--line-strong);
+  border-radius: 4px;
+}
+
+.anti-persona h3 {
+  font-family: var(--sans-body);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--silver-3);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.anti-persona p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--silver-3);
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .persona-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .persona-primary {
+    box-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.55);
+  }
+}
+
 .more-list {
   list-style: none;
   padding: 0;

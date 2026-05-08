@@ -6,9 +6,11 @@ Agile for the age of agents — turn work into durable, inspectable cards that h
 
 Game of Cards is for **vibe-coders** who want their coding agent to hold context between sessions, **solo developers** using it as a structured replacement for `TODO.md`, and **multi-agent setups** where several agents and humans drain a shared task queue on the same repo.
 
-It is not the right tool yet if your team has strict commit hygiene — GoC writes state files into your repo and that may conflict with branch-per-feature or no-merge-without-review policies. It's also more than you need if you want a simple linear feature planner without an autonomous background loop.
+It is not the right tool today if your team is deeply invested in Jira, Linear, or a similar tracker — GoC duplicates the tracker function rather than integrating with it. Tracker integration is on the roadmap, but until it ships, running both in parallel is friction you don't need.
 
 At its core, it's just a to-do manager. Cards are markdown files with a checklist; the CLI wraps them. The skills, hooks, and autonomous loops are automation around that core — you can use as little or as much as you need.
+
+For the full picture — five personas, anti-personas, and which workflow shape each one accepts — see [`PERSONAS.md`](PERSONAS.md).
 
 <p align="center"><img src="assets/game-of-cards.png" width="100%" alt="Three-panel comic: an AI creates cards and flags decisions, the human delegates a session while the LLM works the rest in the background, and the LLM surfaces the remaining human-gated card." /></p>
 
@@ -40,6 +42,7 @@ Brand new alpha — only a few days of implementation, no external users yet, pl
 
 ## More
 
+- [`PERSONAS.md`](PERSONAS.md) — who GoC is for, who it's not for yet, and which workflow shape each persona accepts.
 - [`goc.md`](goc.md) — CLI reference and manual install recipe.
 - [`ABOUT.md`](ABOUT.md) — methodology context: why "Game of Cards", agile lineage, and how it relates to other agent-coding tools.
 - [`AGENTS.md`](AGENTS.md) — agent operating modes (session / autonomous / Andon-cord).
