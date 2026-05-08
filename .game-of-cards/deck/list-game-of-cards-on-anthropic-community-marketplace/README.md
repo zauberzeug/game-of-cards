@@ -12,7 +12,7 @@ advanced_by:
   - add-readme-to-claude-code-plugin
 tags: [story, infra, documentation]
 definition_of_done: |
-  - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (which itself depends on `bundle-goc-engine-inside-plugin-payload` (done) and `align-skill-names-with-agile-vocabulary`)
+  - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README)
   - [ ] Decision recorded on submission channel: PR to `anthropics/claude-code-plugins` (or current canonical name) vs. form at `clau.de/plugin-directory-submission` vs. both. Capture the URL and current submission policy at decision time, since Anthropic's process may change between when the card was filed and when it's worked.
   - [ ] Fresh-machine smoke test passes: a clean environment with no prior `game-of-cards` install runs `/plugin marketplace add` (community marketplace) → `/plugin install game-of-cards@…` → prompts agent → agent creates a card. Zero global package installs required. Captured as a screen recording or written reproduction so the submission PR can link to it.
   - [ ] Version bumped intentionally if appropriate. Pre-1.0 (`0.0.x`) is acceptable for community marketplace; document the choice. If 1.0.0 is the chosen stake-in-the-ground, bump pyproject.toml + plugin.json + marketplace.json in lockstep (the existing CI tripwire enforces this).
@@ -43,12 +43,12 @@ in their own cards:
 
 - `bundle-goc-engine-inside-plugin-payload` (done) — plugin is now
   self-contained; install no longer requires `pipx install`.
-- `add-readme-to-claude-code-plugin` (blocked) — the
-  marketplace-grade README that the listing will display.
-- `align-skill-names-with-agile-vocabulary` (open, gate=none) — the
-  skill names a reviewer and a fresh installer will see. Renaming
-  *after* a broad-audience listing forces every existing user
-  through a migration; renaming *before* lands clean.
+- `add-readme-to-claude-code-plugin` (active, gate=session) — the
+  marketplace-grade README; text written, awaiting Rodja's sign-off.
+- `align-skill-names-with-agile-vocabulary` (done 2026-05-08) — the
+  skill names a reviewer and a fresh installer will see. Landing the
+  rename *before* a broad-audience listing avoided forcing every
+  early user through a migration.
 
 This card tracks what those other cards don't: the manual submission
 action.
@@ -79,9 +79,10 @@ until Rodja claims it explicitly.
   submission as option A in its decision section ("pursue
   Anthropic-official marketplace later"); this card is that
   deferred half.
-- `add-readme-to-claude-code-plugin` (blocked) — hard prereq.
-- `align-skill-names-with-agile-vocabulary` (open) — hard prereq
-  (transitively, via the README).
+- `add-readme-to-claude-code-plugin` (active, gate=session) — hard
+  prereq; text written, awaits Rodja's sign-off.
+- `align-skill-names-with-agile-vocabulary` (done 2026-05-08) — hard
+  prereq (transitively, via the README), now satisfied.
 
 ## Notes
 
