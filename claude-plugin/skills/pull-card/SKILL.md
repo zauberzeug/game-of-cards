@@ -46,7 +46,7 @@ The card body is the briefing the original filer wrote. Trust it.
 ## When to stop without finishing
 
 - **Queue empty.** No `human_gate: none` open cards. Invoke
-  `Skill(extend-deck)` to file one new card from emergent codebase
+  `Skill(audit-deck)` to file one new card from emergent codebase
   observations, then exit. The next invocation can work it.
 
 - **Decision-class question — try the project-specific consultation
@@ -111,6 +111,6 @@ what happened. The report is the index, not the story.
   another session.
 - `/schedule pull-card weekday 09:00` — opens the day with one card
   closed.
-- `/schedule extend-deck weekly` — keeps the queue fed; the
+- `/schedule audit-deck weekly` — keeps the queue fed; the
   pull-principle requires something to pull.
-- `/schedule improve-deck monthly` — hygiene pass.
+- `/schedule refine-deck monthly` — hygiene pass.

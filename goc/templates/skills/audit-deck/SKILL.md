@@ -1,7 +1,7 @@
 ---
-name: extend-deck
-description: Hunt for one previously-undocumented defect, derivation gap, doc drift, missing test or wrong concept. Also architectural ugliness, code smells and inconsistencies. Files via Skill(create-card). AUTO-INVOKE when user says "find me a bug", "audit X", "check for inconsistencies", "what could be wrong", "hunt for issues", "scan the codebase", "look for gaps", or invokes /extend-deck. Treats nothing as truth — inconsistencies are the primary lead (XP spike + Scrum backlog refinement).
-argument-hint: optional area filter within the project (consuming repo defines its default scope in `.game-of-cards/hooks/extend-deck.md`)
+name: audit-deck
+description: Hunt for one previously-undocumented defect, derivation gap, doc drift, missing test or wrong concept. Also architectural ugliness, code smells and inconsistencies. Files via Skill(create-card). AUTO-INVOKE when user says "find me a bug", "audit X", "check for inconsistencies", "what could be wrong", "hunt for issues", "scan the codebase", "look for gaps", or invokes /audit-deck. Treats nothing as truth — inconsistencies are the primary lead (XP spike + Scrum backlog refinement).
+argument-hint: optional area filter within the project (consuming repo defines its default scope in `.game-of-cards/hooks/audit-deck.md`)
 ---
 
 ## Preflight
@@ -18,9 +18,9 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 !`goc --tag unverified`
 
-!`cat .game-of-cards/hooks/extend-deck.md 2>/dev/null || true`
+!`cat .game-of-cards/hooks/audit-deck.md 2>/dev/null || true`
 
-# Hunt
+# Audit
 
 XP's **spike** (Beck, 1999) plus Scrum's **backlog refinement**: the
 deck only contains what we've already noticed. Every iteration must
@@ -41,7 +41,7 @@ not an acceptable outcome.
 
 User argument: $ARGUMENTS — if non-empty, narrow within the
 default scope (the consuming repo defines this in
-`.game-of-cards/hooks/extend-deck.md`). Out-of-scope arguments are
+`.game-of-cards/hooks/audit-deck.md`). Out-of-scope arguments are
 flagged and ignored.
 
 ## Mindset (compressed)
@@ -78,7 +78,7 @@ touches a substantive design decision (mechanism choice, sign
 convention, default anchored to a project principle) — and
 especially when the right gate for the new card is unclear —
 consult the consuming repo's project-specific rubric (wired in via
-`.game-of-cards/hooks/extend-deck.md`, loaded above). The rubric
+`.game-of-cards/hooks/audit-deck.md`, loaded above). The rubric
 often reveals that what looks like a fresh decision is already
 determined by an existing principle + primary source, in which case
 the card can be filed with `--gate none` and a `## Decision
@@ -95,7 +95,7 @@ doc-quality hunters concurrently; the probe is I/O-bound and the
 doc hunters have no probe dependency.
 
 The consuming repo defines its probe recipe in
-`.game-of-cards/hooks/extend-deck.md` (already loaded above).
+`.game-of-cards/hooks/audit-deck.md` (already loaded above).
 Typical probes:
 
 - **Metrics probe (steady-state):** run the canonical demo / test
@@ -119,7 +119,7 @@ Triage:
 ## Phase 2 — Hunt (parallel agents in a single message)
 
 The consuming repo defines its hunter roster in
-`.game-of-cards/hooks/extend-deck.md` (already loaded above) — which
+`.game-of-cards/hooks/audit-deck.md` (already loaded above) — which
 specialized agents to spawn for which scopes, and which surfaces
 each is briefed against.
 
@@ -201,7 +201,7 @@ schema violations.
 
 ### Canonical commit subject
 
-Every extend-deck commit uses:
+Every audit-deck commit uses:
 
 ```
 new card: <one-line description of the finding(s)>

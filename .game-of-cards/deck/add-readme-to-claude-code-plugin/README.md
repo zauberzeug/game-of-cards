@@ -1,12 +1,12 @@
 ---
 title: add-readme-to-claude-code-plugin
 summary: "Add `claude-plugin/README.md` so the plugin payload carries its own marketplace-grade documentation. Required surface for the eventual submission to the Anthropic community plugin directory; today's repo-level `README.md` targets a different audience and is not what the directory will display."
-status: blocked
+status: active
 stage: null
 contribution: low
 created: 2026-05-08
 closed_at: null
-human_gate: none
+human_gate: session
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
 advanced_by:
@@ -67,18 +67,18 @@ produces text that has to be rewritten when those upstream cards
 close — wasted churn and a window of marketplace-visible
 documentation drift in between.
 
-Hard dependencies:
+Hard dependencies (both satisfied):
 
 - `bundle-goc-engine-inside-plugin-payload` (done) — eliminated the
   external CLI install so the plugin works standalone from a single
   `/plugin install`. Closed 2026-05-08.
-- `align-skill-names-with-agile-vocabulary` (open, gate=none) — the
-  skill names the README will list in the "what's in the plugin"
+- `align-skill-names-with-agile-vocabulary` (done) — the
+  skill names the README lists in the "what's in the plugin"
   section. Promoted from soft to hard prereq because the community
   marketplace is a *broad* audience surface — every additional user
   acquired before a rename is a user who later has to migrate. Better
   to land the rename first and ship clean names than to ship,
-  acquire users, and then force a migration on everyone.
+  acquire users, and then force a migration on everyone. Closed 2026-05-08.
 
 ## Background context
 
@@ -113,3 +113,17 @@ goal that this README is one step toward.
   of the byte-locked paths (only `claude-plugin/skills/` and
   `claude-plugin/hooks/deck_*.py` are), so this file lives only at
   `claude-plugin/README.md` and has no template counterpart.
+
+## Sign-off required
+
+`claude-plugin/README.md` has been written and committed. Before this
+card can close, Rodja needs to read the rendered text and confirm it's
+ready for marketplace-grade use. Gate is raised to `session` pending that
+review.
+
+To close after sign-off:
+
+```bash
+goc decide add-readme-to-claude-code-plugin --decision "approved" --because "Rodja: text is marketplace-ready"
+goc done add-readme-to-claude-code-plugin
+```

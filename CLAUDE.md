@@ -225,7 +225,9 @@ Claude Code's `Skill(...)` primitive:
 - **File new**: `Skill(create-card)` (scaffold frontmatter + DoD).
 - **Advance**: `Skill(advance-card)` (status flip), `Skill(finish-card)` (close + DoD enforcement + commit).
 - **Decide (human handoff)**: `Skill(decide-card)` (lowers gate decision/session → none).
-- **Hygiene**: `Skill(improve-deck)` (retag stale, prune parks); `Skill(extend-deck)` (hunt new defects).
+- **Hygiene**: `Skill(refine-deck)` (retag stale, prune parks); `Skill(audit-deck)` (hunt new defects).
+- **Daily view**: `Skill(standup)` (active + blocked + closures since yesterday + decision gates).
+- **History**: `Skill(retrospective)` (cluster closed cards by tag, surface recurring failure modes).
 - **Reference**: `Skill(card-schema)` (required/optional fields, enums, canonical tags).
 - **Autonomous**: `Skill(pull-card)` (one round of pull → claim → work → close → commit).
 - **Overview**: `Skill(deck)` (methodology front door and shared operating model).
