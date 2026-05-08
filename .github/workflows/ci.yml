@@ -47,17 +47,18 @@ jobs:
       - name: Verify package data ships templates
         run: |
           uv run python -c "
+          import pathlib
           from importlib.resources import files
           root = files('goc.templates')
-          skills = ['advance-card', 'audit-deck', 'card-schema', 'create-card', 'decide-card', 'deck', 'finish-card', 'kickoff', 'next-card', 'pull-card', 'refine-deck', 'retrospective', 'scan-deck', 'standup']
-          for s in skills:
+          source_skills = sorted(p.name for p in pathlib.Path('goc/templates/skills').iterdir() if (p / 'SKILL.md').is_file())
+          for s in source_skills:
               skill_md = root / 'skills' / s / 'SKILL.md'
               assert skill_md.is_file(), f'missing {skill_md}'
               print(f'  ✓ {s}/SKILL.md')
           schema = files('goc') / 'schema.yaml'
           assert schema.is_file(), 'missing schema.yaml'
           print('  ✓ schema.yaml')
-          print(f'\nAll {len(skills)} skills + schema ship as package data.')
+          print(f'\nAll {len(source_skills)} skills + schema ship as package data.')
           "
 
       - name: Verify plugin version lockstep

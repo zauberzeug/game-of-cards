@@ -496,6 +496,32 @@ def validate_deck_directories() -> list[str]:
     return errors
 
 
+def validate_skill_dir_parity() -> list[str]:
+    """Flag consumer skill dirs (.claude/skills, .codex/skills) missing skills the
+    installed goc templates ship. A drift here means the consumer copies were
+    written by an older goc version than the one currently resolving templates;
+    the fix is `goc upgrade --keep-local-skills`. Extras (user-added skills) are
+    allowed and not reported.
+    """
+    template_skills = PACKAGE_DIR / "templates" / "skills"
+    if not template_skills.exists():
+        return []
+    expected = {p.name for p in template_skills.iterdir() if (p / "SKILL.md").is_file()}
+    errors: list[str] = []
+    for relative in (".claude/skills", ".codex/skills"):
+        consumer_dir = REPO_ROOT / relative
+        if not consumer_dir.exists():
+            continue
+        actual = {p.name for p in consumer_dir.iterdir() if (p / "SKILL.md").is_file()}
+        missing = expected - actual
+        if missing:
+            errors.append(
+                f"{relative}: missing skills {sorted(missing)} that goc templates ship; "
+                "run `goc upgrade --keep-local-skills` to resync"
+            )
+    return errors
+
+
 def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     errors: list[str] = []
     fm = t.frontmatter
@@ -1193,6 +1219,9 @@ def validate(quiet):
     all_titles = {t.title for t in cards}
     errors: list[str] = []
     for e in validate_deck_directories():
+        click.echo(f"ERROR: {e}", err=True)
+        errors.append(e)
+    for e in validate_skill_dir_parity():
         click.echo(f"ERROR: {e}", err=True)
         errors.append(e)
     for t in cards:

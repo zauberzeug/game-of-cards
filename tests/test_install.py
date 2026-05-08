@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -10,21 +11,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL_NAMES = (
-    "advance-card",
-    "audit-deck",
-    "card-schema",
-    "create-card",
-    "decide-card",
-    "deck",
-    "finish-card",
-    "kickoff",
-    "next-card",
-    "pull-card",
-    "refine-deck",
-    "retrospective",
-    "scan-deck",
-    "standup",
+SKILL_NAMES = tuple(
+    sorted(p.name for p in (ROOT / "goc" / "templates" / "skills").iterdir() if (p / "SKILL.md").is_file())
 )
 
 
@@ -1004,6 +992,25 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("old-card: stale card directory contains REDIRECT.md but no README.md", result.stderr)
             self.assertIn("stale-card: card directory missing README.md", result.stderr)
             self.assertIn("source-card: advances: references unknown title 'missing-card'", result.stderr)
+
+    def test_validate_flags_consumer_skill_dir_missing_template_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+
+            stale_skill = SKILL_NAMES[0]
+            shutil.rmtree(cwd / ".claude" / "skills" / stale_skill)
+
+            result = self.run_goc(cwd, "validate", "--quiet")
+
+            self.assertNotEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn(".claude/skills: missing skills", result.stderr)
+            self.assertIn(stale_skill, result.stderr)
+            self.assertIn("goc upgrade --keep-local-skills", result.stderr)
+
+            self.assert_goc_ok(self.run_goc(cwd, "upgrade", "--keep-local-skills"))
+            self.assert_goc_ok(self.run_goc(cwd, "validate", "--quiet"))
 
     def test_board_and_open_queue_surface_active_cards(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
