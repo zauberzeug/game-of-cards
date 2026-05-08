@@ -1,7 +1,7 @@
 ---
 title: bundle-goc-engine-inside-plugin-payload
 summary: "Ship the `goc` engine (engine.py + cli.py + schema.yaml + templates) inside the plugin payload itself so the consuming repo never needs `uv tool install game-of-cards` or `pipx install game-of-cards` for the CLI to be available. Today's `plugin-bootstraps-cli-and-project-state-on-first-use` (done) installs goc via `uv tool install` as a fallback. Bundling removes one more 'opt-in to my machine' step for first-time evaluators: no global PyPI install, no PATH pollution, the plugin is fully self-contained."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] AGENTS.md / CLAUDE.md GoC blocks reflect the new invocation form so agents discover it correctly on cold reads
   - [ ] Existing `plugin-bootstraps-cli-and-project-state-on-first-use` flow still works for users who already have `goc` on PATH — the bundled engine is the new default, not a replacement that breaks existing setups
   - [ ] `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Bundle goc engine inside plugin payload
