@@ -60,32 +60,42 @@ Out:
 
 ## Depends on
 
-The README cannot be written until the plugin is self-contained, because
-the install story it documents is exactly what changes when bundling
-lands. Drafting it against today's `pipx install game-of-cards`
-prerequisite would produce text that has to be rewritten the day
-`bundle-goc-engine-inside-plugin-payload` closes — wasted churn and a
-window of marketplace-visible documentation drift in between.
+The README cannot be written until two things settle: the install
+story it documents and the skill names it lists. Drafting against
+either a soon-to-change install recipe or soon-to-change skill names
+produces text that has to be rewritten when those upstream cards
+close — wasted churn and a window of marketplace-visible
+documentation drift in between.
 
-Hard dependency:
+Hard dependencies:
 
-- `bundle-goc-engine-inside-plugin-payload` (open, session-gated) —
-  eliminate the external CLI install so the plugin works standalone
-  from a single `/plugin install`
+- `bundle-goc-engine-inside-plugin-payload` (done) — eliminated the
+  external CLI install so the plugin works standalone from a single
+  `/plugin install`. Closed 2026-05-08.
+- `align-skill-names-with-agile-vocabulary` (open, gate=none) — the
+  skill names the README will list in the "what's in the plugin"
+  section. Promoted from soft to hard prereq because the community
+  marketplace is a *broad* audience surface — every additional user
+  acquired before a rename is a user who later has to migrate. Better
+  to land the rename first and ship clean names than to ship,
+  acquire users, and then force a migration on everyone.
 
 ## Background context
 
-Submission to the official curated directory (`claude-plugins-official`)
-is downstream of, and blocked by, several existing cards in addition to
-the one above:
+The skill-rename dependency above used to be listed here as a soft
+blocker for the *official curated* directory only. It has been
+promoted to a hard prereq for the community marketplace listing too,
+on the grounds that broad-audience releases warrant breaking-change
+conservatism: bigger blast radius means the cost of a post-release
+rename grows faster than the cost of waiting.
 
-- The skill-rename family (`align-skill-names-with-agile-vocabulary`,
-  `rename-bootstrap-to-kickoff-as-onboarding-dialog`, …) — surface text
-  that any reviewer will see, and that this README will have to name
-  by their final names
-- `redesign-readme-as-llm-first-marketing-page` and
-  `build-game-of-cards-project-website` — the upstream-repo and
-  homepage surfaces a reviewer follows from the plugin description
+Other items relevant to the broader official-listing goal (already
+done):
+
+- `redesign-readme-as-llm-first-marketing-page` (done) — the
+  upstream-repo surface a reviewer follows from the plugin description
+- `build-game-of-cards-project-website` (done) — the homepage surface
+  a reviewer follows from the plugin description
 
 Those are not blockers for *this* card (the plugin README can land
 before they do), but they are blockers for the broader official-listing
