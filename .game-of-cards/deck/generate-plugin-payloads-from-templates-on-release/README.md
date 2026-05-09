@@ -10,7 +10,8 @@ human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
   - support-worktrees-and-multi-agent-deck-sync
-advanced_by: []
+advanced_by:
+  - ci-calls-sync-plugin-assets-check-script
 tags: [story, infra]
 definition_of_done: |
   - [x] Release workflow generates each plugin's payload (`claude-plugin/skills/`, `claude-plugin/hooks/*.py`, future `codex-plugin/*`, `openclaw-plugin/*`) from `goc/templates/` rather than maintaining hand-edited duplicates

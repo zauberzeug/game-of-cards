@@ -1,20 +1,20 @@
 ---
 title: ci-calls-sync-plugin-assets-check-script
 summary: "The CI step that detects drift between `goc/templates/` and `claude-plugin/` should call `python scripts/sync_plugin_assets.py --check` directly, instead of duplicating that script's logic in an inline 35-line `filecmp` block in `.github/workflows/ci.yml`. Today the inline block exists because the bot that introduced the script (commit `d9a5a02`) hit a GitHub-App `workflows`-permission wall when pushing the workflow change and partially-reverted itself in `6794c03`, leaving the duplication in place. The closed parent card `generate-plugin-payloads-from-templates-on-release` ticked its 'Generation step runs in CI' DoD bullet despite this revert, so this card finishes what that closure claimed."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - generate-plugin-payloads-from-templates-on-release
 advanced_by: []
 tags: [bug, infra, meta-fix]
 definition_of_done: |
-  - [ ] `.github/workflows/ci.yml` contains a single `Verify plugin assets` step that runs `python scripts/sync_plugin_assets.py --check` (no inline filecmp block)
-  - [ ] CLAUDE.md's claim that "CI runs `python scripts/sync_plugin_assets.py --check`" is once again accurate (no edits required if the workflow lands)
-  - [ ] `uv run goc validate` passes
+  - [x] `.github/workflows/ci.yml` contains a single `Verify plugin assets` step that runs `python scripts/sync_plugin_assets.py --check` (no inline filecmp block)
+  - [x] CLAUDE.md's claim that "CI runs `python scripts/sync_plugin_assets.py --check`" is once again accurate (no edits required if the workflow lands)
+  - [x] `uv run goc validate` passes
 worker: {who: rodja, where: main}
 ---
 
