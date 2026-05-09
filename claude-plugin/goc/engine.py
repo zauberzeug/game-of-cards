@@ -660,8 +660,18 @@ def validate_plugin_mirror_parity() -> list[str]:
     pairs: list[tuple[Path, Path, frozenset[str]]] = []
 
     if claude_plugin_root.exists():
+        # OpenClaw-only host complements (e.g. `openclaw-kickoff`) live in
+        # templates/skills/ as the source of truth but must never ship in
+        # claude-plugin/skills/. Exclude them from the parity walk so the
+        # intentional omission does not register as drift.
+        skills_src = templates_root / "skills"
+        openclaw_only_skills = frozenset(
+            p.name
+            for p in skills_src.iterdir()
+            if p.is_dir() and p.name.startswith("openclaw-")
+        )
         pairs.append(
-            (templates_root / "skills", claude_plugin_root / "skills", frozenset())
+            (templates_root / "skills", claude_plugin_root / "skills", openclaw_only_skills)
         )
         for name in hook_names:
             pairs.append(

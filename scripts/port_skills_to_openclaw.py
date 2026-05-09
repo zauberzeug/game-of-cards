@@ -33,6 +33,8 @@ DST_DIR = ROOT / "openclaw-plugin" / "skills"
 # Host-specific complement skills — every supported agent that GoC ships a
 # harness for. Skills with one of these prefixes are agent-specific and never
 # port to OpenClaw (they belong to the named host's plugin/install instead).
+# `openclaw-` is intentionally absent: openclaw-prefixed skills (e.g.
+# `openclaw-kickoff`) are the OpenClaw host complement and DO get ported.
 HOST_PREFIXES = ("claude-", "codex-")
 
 # Order matters: more specific patterns first.

@@ -49,8 +49,17 @@ def _build_sync_pairs() -> list[tuple[Path, Path, frozenset[str]]]:
     pairs: list[tuple[Path, Path, frozenset[str]]] = []
 
     # --- Claude plugin payload ---
+    # Exclude OpenClaw-only host complements (e.g. `openclaw-kickoff`) from
+    # the Claude plugin's skill set. They live in templates/skills/ as the
+    # source of truth, but the Claude plugin must never ship them.
+    skills_src = templates / "skills"
+    openclaw_only_skills = frozenset(
+        p.name
+        for p in skills_src.iterdir()
+        if p.is_dir() and p.name.startswith("openclaw-")
+    )
     pairs.append(
-        (templates / "skills", ROOT / "claude-plugin" / "skills", frozenset())
+        (templates / "skills", ROOT / "claude-plugin" / "skills", openclaw_only_skills)
     )
     for name in hook_names:
         pairs.append(

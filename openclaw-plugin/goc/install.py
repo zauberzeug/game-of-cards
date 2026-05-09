@@ -29,6 +29,11 @@ GOC_BEGIN_RE = re.compile(r"<!-- BEGIN GOC v[\d.]+ -->")
 GOC_END = "<!-- END GOC -->"
 
 SUPPORTED_AGENTS = ("claude", "codex")
+# Hosts whose skills ship via plugin rather than `goc install --agents`.
+# Listed for skill-prefix filtering only — adding a name here keeps
+# `<host>-foo` skills out of every other host's install tree without
+# making `<host>` a valid `--agents` target.
+PLUGIN_ONLY_AGENTS = ("openclaw",)
 DEFAULT_AGENTS = ("claude",)
 AGENT_SIGNAL_PATHS = {
     "claude": (Path("CLAUDE.md"), Path(".claude"), Path(".mcp.json")),
@@ -610,15 +615,18 @@ def skill_for_agent(
     agent: str,
     *,
     supported_agents: tuple[str, ...] = SUPPORTED_AGENTS,
+    plugin_only_agents: tuple[str, ...] = PLUGIN_ONLY_AGENTS,
 ) -> bool:
     """True if a skill named `skill_name` should be installed for `agent`.
 
     Skills whose directory name starts with `<other_agent>-` are agent-specific
     complements (e.g. `claude-kickoff` only ships under the claude harness).
     Skills with no agent prefix are host-agnostic and apply to every agent.
+    `plugin_only_agents` (e.g. `openclaw`) ship skills via plugin payload, not
+    via `goc install`; their prefixes are filtered out of every local install.
     """
 
-    for other in supported_agents:
+    for other in (*supported_agents, *plugin_only_agents):
         if other != agent and skill_name.startswith(f"{other}-"):
             return False
     return True

@@ -1,22 +1,22 @@
 ---
 title: author-openclaw-kickoff-skill-for-host-specific-onboarding
 summary: "Author the OpenClaw-specific complement to the host-agnostic `kickoff` skill, parallel to the new `claude-kickoff`. The OpenClaw plugin currently ships only the generic `kickoff/` (ported from `goc/templates/skills/kickoff/`) and has no host-specific finishing-touches step — no equivalent of the Claude permission grant, plugin-update cadence note, or `CLAUDE.local.md`-style private notes file. Establish what those touches are on OpenClaw and ship them as a separate `openclaw-kickoff` skill."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - provide-openclaw-plugin-for-skills-and-hooks
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] OpenClaw-specific kickoff finishing touches identified (whether OpenClaw has a permission-grant equivalent, where private/local notes belong, plugin update cadence, etc.)
-  - [ ] If touches exist, author `goc/templates/skills/openclaw-kickoff/SKILL.md` and update `scripts/port_skills_to_openclaw.py` so it ports the generic `kickoff/` and registers `openclaw-kickoff` (or, if the script handles it via the agent-prefix convention, document that no script change is needed)
-  - [ ] OpenClaw plugin payload (`openclaw-plugin/skills/`) includes both `kickoff/` and `openclaw-kickoff/` after re-running the port script
-  - [ ] If OpenClaw has no host-specific kickoff touches, close as superseded with a log entry explaining why no skill is needed
-  - [ ] `uv run goc validate` passes
+  - [x] OpenClaw-specific kickoff finishing touches identified (whether OpenClaw has a permission-grant equivalent, where private/local notes belong, plugin update cadence, etc.)
+  - [x] If touches exist, author `goc/templates/skills/openclaw-kickoff/SKILL.md` and update `scripts/port_skills_to_openclaw.py` so it ports the generic `kickoff/` and registers `openclaw-kickoff` (or, if the script handles it via the agent-prefix convention, document that no script change is needed)
+  - [x] OpenClaw plugin payload (`openclaw-plugin/skills/`) includes both `kickoff/` and `openclaw-kickoff/` after re-running the port script
+  - [x] If OpenClaw has no host-specific kickoff touches, close as superseded with a log entry explaining why no skill is needed
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
