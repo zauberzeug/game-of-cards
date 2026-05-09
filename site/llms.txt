@@ -4,30 +4,9 @@
 
 Game of Cards (GoC) is a repo-local methodology runtime built for swarms, not standups. Work lives in cards under `.game-of-cards/deck/`; agents pull, work, and close them autonomously; humans steer by curating the queue and resolving decision gates.
 
-## Install
+## Install (Claude Code)
 
-Install the `goc` CLI once per machine:
-
-```bash
-uv tool install game-of-cards   # preferred
-# or: pipx install game-of-cards
-```
-
-Initialize a repo (run from the project root):
-
-```bash
-goc install
-```
-
-This creates `.game-of-cards/deck/`, `.game-of-cards/config.yaml`, and merges GoC guidance into `AGENTS.md` / `CLAUDE.md`.
-
-Full CLI reference: https://game-of-cards.com/goc/
-
-## Lean alternative for Claude Code
-
-If the user is on Claude Code, the GoC plugin delivers all skills and hooks without requiring any checked-in files in the consuming repo.
-
-Install the plugin once per machine (run these slash commands inside Claude Code):
+The GoC plugin delivers all skills and hooks without requiring any checked-in files in the consuming repo. Install once per machine (run these slash commands inside Claude Code):
 
 ```
 /plugin marketplace add zauberzeug/game-of-cards
@@ -56,6 +35,25 @@ Once the plugin is installed, kick off any repo with:
 ```
 
 or tell your agent: "use game of cards for this repo".
+
+## Install (other agent runtimes / CI)
+
+Install the `goc` CLI once per machine:
+
+```bash
+uv tool install game-of-cards   # preferred
+# or: pipx install game-of-cards
+```
+
+Initialize a repo (run from the project root):
+
+```bash
+goc install
+```
+
+This creates `.game-of-cards/deck/`, `.game-of-cards/config.yaml`, and merges GoC guidance into `AGENTS.md` / `CLAUDE.md`.
+
+Full CLI reference: https://game-of-cards.com/goc/
 
 ## Key concepts
 
