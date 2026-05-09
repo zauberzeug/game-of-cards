@@ -29,3 +29,15 @@ The remaining DoD item (5) is the tester's rerun. Once they confirm:
 …the card is closeable (modulo the side-finding pointer about `llms.txt`, which lives on its own card and doesn't block close).
 
 The `TODO(verify-shape)` markers on `runCommandWithTimeout` and the three hook contexts will resolve concretely during the smoke retest — that's when the real OpenClaw SDK types confirm or correct our reasonable-guess assumptions.
+
+## 2026-05-09 (PM, follow-up): gate raised `none → session` for tester rerun
+
+Pulled this card during a `pull-card` drain. Verified the implementation is in place:
+`openclaw-plugin/dist/{index.js,index.d.ts,index.js.map}` are committed; `openclaw-plugin/index.ts` uses `api.runtime.system.runCommandWithTimeout` and no longer imports from `node:child_process`.
+
+Of the two unchecked DoD items, neither is agent-actionable from this repo:
+
+- **Item 5 (smoke retest)** is strictly a human action on an OpenClaw runtime — the agent has no path to install a plugin into OpenClaw and observe `openclaw plugins inspect`.
+- **Item 7 (side-finding scope check)** is a coordination judgement about whether `llms-txt-still-recommends-uv-tool-install-as-preferred` should expand its scope. The reviewer is the right decider; expanding that card unilaterally would override the "one-comment edit" rationale in its `Why this is gate=none` body.
+
+Raised `human_gate: none → session` and added an `## Action required` body section that names both pending items and the close path (`goc decide … --decision "…" --because "…"` → tick boxes → `goc done`). Per pull-card guidance, cards that raise their gate during the session leave the drain set naturally — a future pull won't re-claim this until the gate is lowered.

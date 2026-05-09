@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-09
 closed_at: null
-human_gate: none
+human_gate: session
 advances:
   - provide-openclaw-plugin-for-skills-and-hooks
 advanced_by: []
@@ -23,6 +23,21 @@ worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw plugin release-smoke blockers — build pipeline + sanctioned spawn API
+
+## Action required (gate raised 2026-05-09)
+
+Implementation landed in `7cb062c openclaw-plugin: ship compiled JS + sanctioned spawn API` (2026-05-09 PM). DoD items 1–4 and 6 are checked. Two items remain — both need a human:
+
+1. **Smoke retest (DoD item 5).** The original tester needs to rerun the install flow on an OpenClaw runtime and confirm:
+   - `openclaw plugins install <local-path>` succeeds **without** `--dangerously-force-unsafe-install`.
+   - `openclaw plugins inspect game-of-cards --json` shows `toolNames: ["goc"]` populated and `tools` non-empty (proves `register(api)` actually fired).
+   - A subagent invocation can see and call the `goc` tool.
+
+   The `TODO(verify-shape)` comments in `openclaw-plugin/index.ts` around `runCommandWithTimeout` and the three hook contexts can be resolved during this retest — the real OpenClaw SDK types confirm or correct our reasonable-guess assumptions.
+
+2. **Side-finding scope check (DoD item 7).** The reviewer needs to decide whether the existing scope of `llms-txt-still-recommends-uv-tool-install-as-preferred` is enough, or whether a follow-up card is needed. The current `site/llms.txt` has no OpenClaw-specific install section — only a generic "other agent runtimes / CI" section — so the existing one-line comment fix arguably "covers" the OpenClaw path by default. Adding a dedicated `Install (OpenClaw)` section to `site/llms.txt` is a natural follow-up once `publish-openclaw-plugin` lands; that's a separate card if it's filed.
+
+Once the smoke retest confirms (1) and the reviewer resolves (2), call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the two boxes, and `goc done` to close.
 
 ## Background
 
