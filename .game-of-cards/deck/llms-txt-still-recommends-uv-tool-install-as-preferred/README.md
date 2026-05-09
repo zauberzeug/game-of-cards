@@ -1,7 +1,7 @@
 ---
 title: llms-txt-still-recommends-uv-tool-install-as-preferred
 summary: "`site/llms.txt:44` reads `uv tool install game-of-cards   # preferred` with `# or: pipx install game-of-cards` on line 45. The recorded baseline (memory `feedback_runtime_baseline_python3.md`) is to prefer broadly-distributed `python3` / `pipx` over the narrower `uv`. `lead-llms-txt-with-claude-code-plugin` (done 2026-05-09) reordered the file so the Claude Code plugin install is the headline path; the secondary section retained the old `# preferred` comment unchanged. `0967798` dropped 'via uv' from a separate description, but did not touch this comment. As llms.txt is the file LLMs ingest to learn how to recommend GoC, this single word miscalibrates downstream agent recommendations."
-status: active
+status: blocked
 stage: null
 contribution: low
 created: 2026-05-09
@@ -9,12 +9,13 @@ closed_at: null
 human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
-advanced_by: []
+advanced_by:
+  - validate-plugin-mirror-fails-when-openclaw-omits-hooks-dir
 tags: [documentation]
 definition_of_done: |
-  - [ ] `site/llms.txt:44` no longer marks `uv tool install` as `# preferred`
-  - [ ] The two install lines (uv and pipx) read as peer alternatives, with pipx listed first if either is given precedence (per `feedback_runtime_baseline_python3.md`)
-  - [ ] No other content in `site/llms.txt` changes — this is a one-comment edit
+  - [x] `site/llms.txt:44` no longer marks `uv tool install` as `# preferred`
+  - [x] The two install lines (uv and pipx) read as peer alternatives, with pipx listed first if either is given precedence (per `feedback_runtime_baseline_python3.md`)
+  - [x] No other content in `site/llms.txt` changes — this is a one-comment edit
   - [ ] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
