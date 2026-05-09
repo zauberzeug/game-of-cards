@@ -27,3 +27,7 @@ Pivot recorded:
 - `human_gate` stays `none`. Pull-card can drain this card; the PATH-integration spike is the first sub-task.
 
 Net architectural symmetry: Claude and OpenClaw plugins now share the same vendored-engine + wrapper shape. The future `generate-plugin-payloads-from-templates-on-release` card gets one templated emission instead of two divergent shapes.
+
+## 2026-05-09: decision recorded
+
+OpenClaw plugin wrapper invokes python3 -m goc.cli directly, mirroring the Claude plugin after plugin-wrapper-drops-uv. Local implementation (SKILL.md directories, vendored engine, bin/goc python3 wrapper, PATH-integration spike, hook-surface spike) is autonomous-pullable; external publishing stays gated under publish-openclaw-plugin. — python3 (3.10+) is broadly distributed; uv is opt-in tooling. The engine went pure-stdlib via plugin-wrapper-drops-uv, so uv is no longer needed even as a venv provisioner. Matches Rodja's stated runtime-baseline preference (python3 over uv) and keeps the OpenClaw wrapper architecturally identical to the Claude plugin.. Gate session → none.
