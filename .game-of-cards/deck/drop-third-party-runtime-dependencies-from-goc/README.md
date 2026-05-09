@@ -1,7 +1,7 @@
 ---
 title: drop-third-party-runtime-dependencies-from-goc
 summary: "Epic: make the goc runtime pure-python by removing `click` and `pyyaml` from `project.dependencies`, so `claude-plugin/bin/goc` can invoke the bundled engine with system `python3` directly (no `uv`, no venv). Decided 2026-05-09: split into three children — `replace-pyyaml-with-vendored-parser` (smallest, ships first), `replace-click-with-argparse` (mechanical, ~245 call sites), `plugin-wrapper-drops-uv` (the prize, sequenced last). Closes when all three children land and the integrated outcome is verified end-to-end."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-09
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] Unsupported frontmatter syntax produces a clear error naming the file and line; never a silent mis-parse.
   - [ ] `claude-plugin/bin/goc` runs the bundled engine with `python3` directly — no `uv`, no venv materialization — on a host that has Python 3.10+ on PATH.
   - [ ] README / CHANGELOG note the dependency drop and the plugin's new `python3`-only runtime contract.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # drop-third-party-runtime-dependencies-from-goc
