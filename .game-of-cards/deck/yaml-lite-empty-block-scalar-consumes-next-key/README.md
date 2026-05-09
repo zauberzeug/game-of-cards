@@ -1,7 +1,7 @@
 ---
 title: yaml-lite-empty-block-scalar-consumes-next-key
 summary: "goc/_vendor/yaml_lite.py silently mis-parses a block scalar (`|`) with no indented content: the next key-value pair is consumed into the block scalar's value instead of being parsed as a separate key. Result is data corruption with no error — the missing key is silently dropped from the parsed dict."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-09
@@ -17,7 +17,7 @@ definition_of_done: |
   - [ ] `uv run goc validate --quiet` exits 0 against the repo's own deck.
   - [ ] Round-trip parity: every existing card under `.game-of-cards/deck/` survives `parse_frontmatter → emit_frontmatter → parse_frontmatter` with identical result.
   - [ ] New regression test covers: (a) empty block scalar followed by another key, (b) `|-` with no content followed by another key.
-worker: null
+worker: {who: "claude[bot]", where: main}
 ---
 
 # yaml-lite-empty-block-scalar-consumes-next-key
