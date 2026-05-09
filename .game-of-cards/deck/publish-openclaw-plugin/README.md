@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - support-external-game-of-cards-state-location
 advanced_by:
@@ -14,12 +14,12 @@ advanced_by:
 tags: [story, infra]
 definition_of_done: |
   - [ ] Plugin published on ClawHub (<https://clawhub.ai>) such that consumers can install via `openclaw skills install <id>`; chosen package id recorded in this card's log
-  - [ ] If an npm-only mirror is also chosen, npm package name recorded in this card's log
-  - [ ] Versioning policy documented relative to the `game-of-cards` PyPI package
-  - [ ] Release workflow or manual checklist exists for OpenClaw artifacts
-  - [ ] Published artifact installable by a fresh consumer environment with `goc` on PATH
-  - [ ] Docs link users to the OpenClaw install path (ClawHub link primary; npm command secondary if applicable)
-  - [ ] Smoke test or release-verification step covers OpenClaw artifacts
+  - [ ] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09); both channels live
+  - [ ] Versioning policy documented relative to the `game-of-cards` PyPI package (single source of truth — npm and ClawHub track PyPI version)
+  - [ ] Release workflow or manual checklist exists for OpenClaw artifacts (covers ClawHub + npm)
+  - [ ] Published artifact installable by a fresh consumer environment with `goc` on PATH (consumer-side prerequisite is `pipx install game-of-cards`)
+  - [ ] Docs link users to both install paths (ClawHub primary; npm as alternative)
+  - [ ] Smoke test or release-verification step covers both channels
   - [ ] `uv run goc validate` passes
 ---
 
@@ -35,13 +35,13 @@ OpenClaw plugin implementation is tracked under `provide-openclaw-plugin-for-ski
 
 ## Scope
 
-OpenClaw-only. Split out from the previous bundled card `publish-game-of-cards-agent-plugins` so each runtime publishes on its own timeline. Likely targets:
+OpenClaw-only. Split out from the previous bundled card `publish-game-of-cards-agent-plugins` so each runtime publishes on its own timeline. Distribution decided 2026-05-09 on `provide-openclaw-plugin-for-skills-and-hooks`:
 
-- Listing on the ClawHub registry so consumers can `openclaw skills install game-of-cards` (or whatever the chosen package id is)
-- Optionally an npm package mirror so consumers without ClawHub can install directly via `npm`
+- ClawHub registry listing so consumers can `openclaw skills install game-of-cards`
+- npm package `game-of-cards` (name verified available on the npm registry 2026-05-09; `goc` is squatted with a placeholder, so the longer name is the clean choice and also matches the PyPI name)
 
-The final channel mix is set by the discovery output recorded on `provide-openclaw-plugin-for-skills-and-hooks` and locked in here before this card is pulled.
+Both channels publish from the same artifact; npm doubles as a name-claiming step on the registry.
 
 ## Depends on
 
-- `provide-openclaw-plugin-for-skills-and-hooks` (implementation, currently session-gated pending the discovery sitting)
+- `provide-openclaw-plugin-for-skills-and-hooks` (implementation; gate now `none`, pullable when its turn comes)

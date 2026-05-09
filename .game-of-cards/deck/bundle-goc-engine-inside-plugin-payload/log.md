@@ -1,3 +1,3 @@
-## 2026-05-09 — Graph edge added post-close
+## 2026-05-09 — Graph edge added then removed post-close
 
-Added `provide-openclaw-plugin-for-skills-and-hooks` to `advances`. Recorded post-close as a soft prerequisite: the vendored-engine + bin-wrapper pattern proven by this card is the reference shape that the OpenClaw plugin work will adapt to a Node-host runtime.
+Briefly added `provide-openclaw-plugin-for-skills-and-hooks` to `advances` as a soft prerequisite, then removed it later the same day: the OpenClaw card's bundling decision was to *not* vendor the goc engine (consumers `pipx install game-of-cards` instead), so the vendored-engine pattern proven here is no longer informationally relevant to that card. Net effect on this card: returns to the post-close state.
