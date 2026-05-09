@@ -11,6 +11,7 @@ advances:
   - ship-game-of-cards-as-cross-agent-cli
   - support-external-game-of-cards-state-location
   - add-readme-to-claude-code-plugin
+  - provide-openclaw-plugin-for-skills-and-hooks
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

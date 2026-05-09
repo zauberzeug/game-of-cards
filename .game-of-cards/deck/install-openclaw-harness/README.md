@@ -21,6 +21,10 @@ definition_of_done: |
 
 # Install OpenClaw Harness
 
+## What is OpenClaw
+
+OpenClaw is an open-source personal AI assistant (<https://github.com/openclaw/openclaw>, <https://openclaw.ai>) — Node-based, npm-distributed, with skills published on the ClawHub registry (<https://clawhub.ai>). **Not a typo for OpenCode (sst/opencode); they are unrelated products.** Full identity anchor lives on `provide-openclaw-plugin-for-skills-and-hooks`.
+
 ## Superseded
 
 This card is replaced by [provide-openclaw-plugin-for-skills-and-hooks](../provide-openclaw-plugin-for-skills-and-hooks/).
