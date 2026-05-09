@@ -1,7 +1,7 @@
 ---
 title: provide-openclaw-plugin-for-skills-and-hooks
 summary: "Replace the blocked OpenClaw harness direction with a later OpenClaw plugin/runtime package for Game of Cards skills and hooks. This supersedes `install-openclaw-harness` and should wait until the Claude/Codex plugin pattern is clear or an OpenClaw consumer appears."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-05
@@ -27,6 +27,7 @@ definition_of_done: |
   - [ ] Docs list OpenClaw plugin support separately from repo-local harness installation; document the `python3` + `uv` prerequisite explicitly
   - [ ] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Provide an OpenClaw plugin for skills and hooks
