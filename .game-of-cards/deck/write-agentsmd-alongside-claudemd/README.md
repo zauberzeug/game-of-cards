@@ -1,6 +1,6 @@
 ---
 title: write-agentsmd-alongside-claudemd
-summary: "AGENTS.md is the Linux-Foundation-stewarded shared-substrate convention now read by Claude Code, Codex, Cursor, Copilot, OpenCode, and Aider. Spec-Kit, BMAD, Agent OS, and Ruler all write AGENTS.md by default; only Claude-specific extras go into CLAUDE.md. `goc install` should write/merge an `AGENTS.md` block alongside the CLAUDE.md sections so the methodology is visible to all six major agent runtimes, not just Claude. Same marker-bounded merge pattern as CLAUDE.md (so `goc upgrade` can re-sync without clobbering user content). Content is the agent-agnostic GoC briefing — deck-first mode, slash-command surface (skills auto-port to OpenCode; Cursor/Codex use explicit invocations), what `pull-card` / `pipx` mean."
+summary: "AGENTS.md is the Linux-Foundation-stewarded shared-substrate convention read by Codex, Cursor, Copilot's coding agent, OpenCode, and Aider. Claude Code does NOT read AGENTS.md by default — it reads CLAUDE.md, and the official guidance is to either import AGENTS.md into CLAUDE.md via `@AGENTS.md` syntax or symlink CLAUDE.md → AGENTS.md. `goc install` should write/merge an `AGENTS.md` block (so the methodology is visible to the five non-Claude agent runtimes) AND ensure CLAUDE.md actually pulls AGENTS.md content into Claude's context — today's slimmed `CLAUDE_GOC.md` uses a plain markdown link `[AGENTS.md](AGENTS.md)`, which does not import. Same marker-bounded merge pattern as CLAUDE.md (so `goc upgrade` can re-sync without clobbering user content)."
 status: open
 stage: null
 contribution: medium
@@ -9,7 +9,8 @@ closed_at: null
 human_gate: session
 advances:
   - ship-game-of-cards-as-cross-agent-cli
-advanced_by: []
+advanced_by:
+  - claude-md-template-must-import-agents-md-content
 tags: [story, infra, documentation]
 definition_of_done: |
   - [x] `goc install` writes `AGENTS.md` (creates if absent, appends marker-bounded section if present) at the repo root
@@ -26,9 +27,9 @@ definition_of_done: |
 
 Sub-card of `ship-game-of-cards-as-cross-agent-cli`. The methodology framework's reach extends as far as agents read its guidance file — and CLAUDE.md is read by exactly one agent.
 
-AGENTS.md is the convention that won. It's now stewarded by the Agentic AI Foundation under the Linux Foundation. Claude Code, OpenAI Codex, Cursor (rules), GitHub Copilot's coding agent, OpenCode, and Aider all read it. Spec-Kit's `init` writes AGENTS.md as the default; same with BMAD, Agent OS, and Ruler. Any methodology framework shipping in 2026 that writes only CLAUDE.md is voluntarily restricting itself to one runtime.
+AGENTS.md is the convention stewarded by the Agentic AI Foundation under the Linux Foundation. OpenAI Codex, Cursor (rules), GitHub Copilot's coding agent, OpenCode, and Aider all read it directly. **Claude Code does NOT** — its docs say "Claude Code reads `CLAUDE.md`, not `AGENTS.md`" and recommend either an `@AGENTS.md` import in CLAUDE.md or a `ln -s AGENTS.md CLAUDE.md` symlink to bridge the two. Spec-Kit's `init` writes AGENTS.md as the default; same with BMAD, Agent OS, and Ruler. Any methodology framework shipping in 2026 that writes only CLAUDE.md is voluntarily restricting itself to one runtime.
 
-The high-leverage move: write AGENTS.md as the canonical guidance file; treat CLAUDE.md as a Claude-specific delta containing only the things that are genuinely Claude-only (the `UserPromptSubmit` silent-runtime hook, plugin-marketplace integration if any).
+The high-leverage move: write AGENTS.md as the canonical guidance file (read by 5 non-Claude runtimes directly), and ensure CLAUDE.md *actually imports* AGENTS.md content — not just links to it — so Claude Code sees the same briefing without duplication. Today's slimmed `CLAUDE_GOC.md` template misses this: it uses a plain markdown link, which Claude Code does not follow as an import. Bug filed separately.
 
 ## What
 
@@ -38,7 +39,7 @@ Content split:
 
 | File | Audience | What goes in it |
 |---|---|---|
-| `AGENTS.md` | Every agent reading the file (Claude, Codex, Cursor, Copilot, OpenCode, Aider) | Deck-first mode; what `goc new` / `goc kanban` / `goc done` do; how DoD enforcement works; Andon-cord pattern; `pull-card` semantics; cross-link to CLAUDE.md for Claude-specific behaviors |
+| `AGENTS.md` | Codex, Cursor, Copilot, OpenCode, Aider directly; Claude Code via `@AGENTS.md` import in CLAUDE.md | Deck-first mode; what `goc new` / `goc kanban` / `goc done` do; how DoD enforcement works; Andon-cord pattern; `pull-card` semantics; cross-link to CLAUDE.md for Claude-specific behaviors |
 | `CLAUDE.md` GoC section | Claude Code only | Silent runtime via UserPromptSubmit hook; the `Skill(...)` notation pointing at the 11 skills; plugin/marketplace specifics if relevant |
 
 The shared content lives in AGENTS.md; CLAUDE.md becomes a thin "and on Claude Code, additionally:" delta.

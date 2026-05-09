@@ -17,7 +17,7 @@ tags: [story, documentation]
 definition_of_done: |
   - [x] Persona list captured in a tracked doc (e.g. `ABOUT.md` section or a new `PERSONAS.md`); each persona has: short name, one-paragraph description, the workflow shape they accept (mainline vs. branches, OSS vs. internal, code-reading vs. vibe-coding), and the GoC features they need vs. don't need
   - [x] Initial persona seed list at minimum covers: (a) vibe-coder / non-developer; (b) solo developer using GoC as a personal to-do manager / linear feature-planner; (c) classical-development team with strict commit hygiene; (d) agent runtime using GoC as a generic to-do engine for non-code domains; (e) multi-human + multi-AI coordination on a shared codebase
-  - [x] Each persona is mapped to a workflow recommendation (which deck-location strategy from `support-multi-branch-and-multi-user-deck-workflows`, whether the CLAUDE.md merge applies, etc.)
+  - [x] Each persona is mapped to a workflow recommendation (which deck-location strategy from `support-worktrees-and-multi-agent-deck-sync`, whether the CLAUDE.md merge applies, etc.)
   - [x] Anti-personas explicitly named — "GoC is NOT for X yet" — so first-time readers of README don't try to fit a square peg
   - [x] Cross-linked from README's audience preamble (per `restructure-comic-as-three-panels-and-add-audience-preamble`)
   - [x] `uv run goc validate` passes
@@ -66,7 +66,7 @@ prospective users (or async review) sharpens the descriptions.
 
 - `restructure-comic-as-three-panels-and-add-audience-preamble`
   (consumes this card's output)
-- `support-multi-branch-and-multi-user-deck-workflows` (workflow
+- `support-worktrees-and-multi-agent-deck-sync` (workflow
   recommendation per persona)
 - `explore-saas-deck-hosting-with-optional-tracker-sync` (which
   persona that path serves)

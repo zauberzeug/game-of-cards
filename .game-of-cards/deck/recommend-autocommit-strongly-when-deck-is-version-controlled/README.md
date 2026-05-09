@@ -45,15 +45,6 @@ names the trade-off (deferred commits hide state from parallel
 agents). When the deck is untracked, autocommit is forced OFF —
 there's nothing to commit anyway.
 
-## Decision (2026-05-08, Rodja)
-
-**Recommended, not mandatory.** The original "mandatory" framing
-contradicted persona #2 (solo developer wants to review before
-commit). Default ON when deck is tracked, with a prominent warning
-when disabled. Persona #3 (multi-agent coordinator) gets the
-warning so deferred commits never silently break swarm visibility;
-persona #2 keeps the escape hatch.
-
 ## Open implementation questions (no longer session-gated)
 
 These are answerable by an agent in the implementation card:

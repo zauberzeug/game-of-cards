@@ -8,7 +8,7 @@ created: 2026-05-07
 closed_at: 2026-05-07
 human_gate: none
 advances:
-  - support-multi-branch-and-multi-user-deck-workflows
+  - support-worktrees-and-multi-agent-deck-sync
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
@@ -52,6 +52,6 @@ Two changes:
 
 ## Cross-references
 
-- `support-multi-branch-and-multi-user-deck-workflows` (parent epic)
+- `support-worktrees-and-multi-agent-deck-sync` (parent epic)
 - `support-external-game-of-cards-state-location` (active) — already
   exploring deck path resolution; this spike is a focused subset

@@ -1,6 +1,6 @@
 ---
 title: explore-saas-deck-hosting-with-optional-tracker-sync
-summary: "Spike: hosted Game of Cards as a multi-user service. Two motivating use cases keep recurring: (1) the multi-human / multi-AI sync problem (per `support-multi-branch-and-multi-user-deck-workflows`) is naturally solved by a hosted, always-in-sync deck; (2) teams that already use Jira / GitHub Issues want bidirectional sync rather than a parallel deck — that's a service feature, not a CLI feature. This card is research / business-modeling, not implementation. Output: feasibility assessment + decision on whether to pursue."
+summary: "Spike: hosted Game of Cards as a multi-user service. Two motivating use cases keep recurring: (1) the multi-human / multi-AI sync problem (per `support-worktrees-and-multi-agent-deck-sync`) is naturally solved by a hosted, always-in-sync deck; (2) teams that already use Jira / GitHub Issues want bidirectional sync rather than a parallel deck — that's a service feature, not a CLI feature. This card is research / business-modeling, not implementation. Output: feasibility assessment + decision on whether to pursue."
 status: open
 stage: null
 contribution: medium
@@ -58,7 +58,7 @@ Strategic decision, not implementation. Open questions:
 - `integrate-github-issues-discussions-and-pull-requests` (open) —
   in-CLI GitHub integration; this card explores the alternative
   "out of CLI, in a service" path
-- `support-multi-branch-and-multi-user-deck-workflows` (parent epic)
+- `support-worktrees-and-multi-agent-deck-sync` (parent epic)
 - `evaluate-deck-as-separate-repo-or-submodule` (sibling alternative)
 - `define-personas-and-use-cases-for-game-of-cards` (the persona
   this card serves needs to be named first)

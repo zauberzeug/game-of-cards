@@ -1,5 +1,5 @@
 ---
-title: support-multi-branch-and-multi-user-deck-workflows
+title: support-worktrees-and-multi-agent-deck-sync
 summary: "Epic. Today GoC assumes mainline development with the deck checked into the same repo. Three concrete failure modes need a workflow story: (1) one user with multiple worktrees can't reach the deck of the parent repo; (2) multiple humans + AIs need a sync protocol so claims and progress are visible across branches; (3) OSS / library repos cannot mix project-management commits with code history without breaking community workflow. Lemma: `.game-of-cards/` must always be in sync with all participants. This epic frames the children that explore each path."
 status: open
 stage: null
@@ -14,7 +14,7 @@ advanced_by:
   - design-claim-protocol-with-branch-and-author-metadata
   - evaluate-deck-as-separate-repo-or-submodule
   - generate-plugin-payloads-from-templates-on-release
-  - make-autocommit-mandatory-when-deck-is-version-controlled
+  - recommend-autocommit-strongly-when-deck-is-version-controlled
   - emit-advances-and-advanced-by-as-block-style-yaml-lists
 tags: [epic, infra]
 definition_of_done: |

@@ -24,7 +24,7 @@ advanced_by:
   - generate-plugin-payloads-from-templates-on-release
   - bundle-goc-engine-inside-plugin-payload
   - make-claude-md-and-agents-md-merge-opt-in-via-skill
-  - support-multi-branch-and-multi-user-deck-workflows
+  - support-worktrees-and-multi-agent-deck-sync
   - define-personas-and-use-cases-for-game-of-cards
   - explore-saas-deck-hosting-with-optional-tracker-sync
 tags: [epic, infra, meta-fix]

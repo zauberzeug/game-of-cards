@@ -8,7 +8,7 @@ created: 2026-05-07
 closed_at: null
 human_gate: session
 advances:
-  - support-multi-branch-and-multi-user-deck-workflows
+  - support-worktrees-and-multi-agent-deck-sync
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
@@ -47,7 +47,7 @@ main; this card explores the option for shops that cannot.
 
 ## Cross-references
 
-- `support-multi-branch-and-multi-user-deck-workflows` (parent epic)
+- `support-worktrees-and-multi-agent-deck-sync` (parent epic)
 - `explore-saas-deck-hosting-with-optional-tracker-sync` (sibling)
 - `support-external-game-of-cards-state-location` (active) —
   related path-resolution work that may already cover part of this

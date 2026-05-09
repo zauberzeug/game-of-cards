@@ -8,7 +8,7 @@ created: 2026-05-07
 closed_at: null
 human_gate: session
 advances:
-  - support-multi-branch-and-multi-user-deck-workflows
+  - support-worktrees-and-multi-agent-deck-sync
 advanced_by:
   - add-worker-field-and-filter-to-cards
 tags: [story, infra]
@@ -86,7 +86,7 @@ discussion:
 
 ## Cross-references
 
-- `support-multi-branch-and-multi-user-deck-workflows` (parent epic)
+- `support-worktrees-and-multi-agent-deck-sync` (parent epic)
 - `add-worker-field-and-filter-to-cards` (child;
   data carrier for who+where)
 - `Skill(pull-card)` flow (current claim implementation)

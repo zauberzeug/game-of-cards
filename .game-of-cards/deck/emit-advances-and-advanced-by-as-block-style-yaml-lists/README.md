@@ -8,7 +8,7 @@ created: 2026-05-07
 closed_at: 2026-05-07
 human_gate: none
 advances:
-  - support-multi-branch-and-multi-user-deck-workflows
+  - support-worktrees-and-multi-agent-deck-sync
 advanced_by: []
 tags: [story, infra, api-contract]
 definition_of_done: |
@@ -38,7 +38,7 @@ the same parent epic, both edits target the same line — git cannot
 auto-merge "and" semantics on a single line, so a merge conflict is
 guaranteed every time. As the multi-agent / multi-human workflow
 becomes the primary use case (per
-`support-multi-branch-and-multi-user-deck-workflows`), this collision
+`support-worktrees-and-multi-agent-deck-sync`), this collision
 surface scales linearly with the number of active filers.
 
 Block style turns each list element into its own line:
@@ -89,10 +89,10 @@ review at the level of "did the right two fields flip styles".
 
 ## Cross-references
 
-- `support-multi-branch-and-multi-user-deck-workflows` — the
+- `support-worktrees-and-multi-agent-deck-sync` — the
   parent direction this change directly serves
 - `design-claim-protocol-with-branch-and-author-metadata` — also
   reduces concurrent-edit conflicts; complementary
-- `make-autocommit-mandatory-when-deck-is-version-controlled` —
+- `recommend-autocommit-strongly-when-deck-is-version-controlled` —
   raises the commit frequency, raising the conflict surface this
   card mitigates
