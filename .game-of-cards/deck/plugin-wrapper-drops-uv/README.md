@@ -1,7 +1,7 @@
 ---
 title: plugin-wrapper-drops-uv
 summary: "Once `pyyaml` and `click` are gone from the engine, `claude-plugin/bin/goc` no longer needs `uv` to materialize a venv. Switch the wrapper to invoke `python3 -m goc.cli \"$@\"` directly against the bundled `claude-plugin/goc/` package. Remove the `uv run --project ${PLUGIN_ROOT}` shell-out, the `.venv/` cache it creates on first call, and any documentation about `uv` as a plugin runtime requirement. This is the prize the whole `drop-third-party-runtime-dependencies-from-goc` epic is aimed at — `uv` becomes a fallback for older Python only, not a hard prerequisite. Sequenced last: blocked until both child stories close (engine must actually be pure-stdlib)."
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-09
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] `pipx install game-of-cards` remains the documented fallback for environments without Python 3.10+.
   - [ ] CI plugin byte-for-byte parity tripwire still passes.
   - [ ] Manual smoke: install plugin in a fresh Claude Code, invoke a GoC skill, verify no first-call latency and no `uv` invocation.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # plugin-wrapper-drops-uv
