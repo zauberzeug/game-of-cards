@@ -1,7 +1,7 @@
 ---
 title: provide-openclaw-plugin-for-skills-and-hooks
 summary: "Replace the blocked OpenClaw harness direction with a later OpenClaw plugin/runtime package for Game of Cards skills and hooks. This supersedes `install-openclaw-harness` and should wait until the Claude/Codex plugin pattern is clear or an OpenClaw consumer appears."
-status: active
+status: open
 stage: null
 contribution: high
 created: 2026-05-05
@@ -17,17 +17,17 @@ tags: [story, infra]
 definition_of_done: |
   - [x] `install-openclaw-harness` is marked superseded with a log entry pointing here
   - [x] OpenClaw plugin/runtime extension format confirmed from upstream docs (`SKILL.md` directories with YAML frontmatter; five-tier precedence; ClawHub at <https://clawhub.ai>; consumer install verb `openclaw skills install`) — see "## What is OpenClaw" body section
-  - [ ] Plugin supplies GoC skills as `SKILL.md` directories at the **workspace** precedence tier; skill bodies are invocation-neutral (no Claude-specific `Skill(name)` / `Bash tool` references) so they read sensibly under both registered-tool (OpenClaw) and Bash+PATH (Claude Code) primitives
-  - [ ] Plugin vendors the goc engine inside the npm payload (parallel to `claude-plugin/goc/`) and registers `goc` as an OpenClaw tool via `api.registerTool('goc', { params: typed schema, async execute(_, p) { /* spawn python3 -m goc.cli with PYTHONPATH=plugin root */ } })`. Three lifecycle hooks register via `api.on()`: `session_start` (active-card reminder, was `deck_session_start.py`), `before_agent_run` (deck-first prompt injection, was `deck_prompt_router.py`), `agent_end` (pattern-generalization self-assessment, was `pattern_generalization_check.py`). No `bin/goc` PATH wrapper — OpenClaw has no auto-PATH-prepend mechanism (verified via spike, see log)
-  - [ ] Consumer-side prerequisite is `python3` (3.10+) on PATH (matches the Claude plugin after `plugin-wrapper-drops-uv`); no `uv` and no separate `pipx install game-of-cards` step required
+  - [x] Plugin supplies GoC skills as `SKILL.md` directories at the **workspace** precedence tier; skill bodies are invocation-neutral (no Claude-specific `Skill(name)` / `Bash tool` references) so they read sensibly under both registered-tool (OpenClaw) and Bash+PATH (Claude Code) primitives — 13 of 14 ported; `kickoff` deferred to `split-claude-specific-content-out-of-generic-kickoff-skill`
+  - [x] Plugin vendors the goc engine inside the npm payload (parallel to `claude-plugin/goc/`) and registers `goc` as an OpenClaw tool via `api.registerTool('goc', { params: typed schema, async execute(_, p) { /* spawn python3 -m goc.cli with PYTHONPATH=plugin root */ } })`. Three lifecycle hooks register via `api.on()`: `session_start` (active-card reminder, was `deck_session_start.py`), `before_prompt_build` (deck-first prompt injection, was `deck_prompt_router.py` — using `before_prompt_build` not `before_agent_run` because the latter runs after prompt construction), `agent_end` (pattern-generalization self-assessment, was `pattern_generalization_check.py`). No `bin/goc` PATH wrapper — OpenClaw has no auto-PATH-prepend mechanism (verified via spike, see log)
+  - [x] Consumer-side prerequisite is `python3` (3.10+) on PATH (matches the Claude plugin after `plugin-wrapper-drops-uv`); no `uv` and no separate `pipx install game-of-cards` step required
   - [x] OpenClaw plugin-bin PATH integration verified from upstream docs/source: confirm whether OpenClaw auto-prepends a plugin's `bin/` to skill-execution PATH (parallel to Claude Code), or whether a substitute resolution path (post-install symlink, absolute-path invocation in skills, etc.) is needed; outcome recorded in this card's log
-  - [ ] Plugin delegates durable state to `.game-of-cards` and the `goc` CLI
+  - [x] Plugin delegates durable state to `.game-of-cards` and the `goc` CLI
   - [x] OpenClaw hook/event surface investigated and the SessionStart/UserPromptSubmit/Stop equivalence (or gap) documented in this card's log
   - [ ] Plugin published on ClawHub (<https://clawhub.ai>) so consumers can `openclaw skills install <id>`
   - [ ] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09; first publish claims it)
-  - [ ] Docs list OpenClaw plugin support separately from repo-local harness installation; document the `python3` (3.10+) prerequisite explicitly (no `uv` required)
+  - [x] Docs list OpenClaw plugin support separately from repo-local harness installation; document the `python3` (3.10+) prerequisite explicitly (no `uv` required)
   - [ ] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback
-  - [ ] `uv run goc validate` passes
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

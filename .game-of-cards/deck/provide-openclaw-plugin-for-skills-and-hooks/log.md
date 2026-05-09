@@ -101,3 +101,68 @@ Implementation surface for the next pull:
 - **DoD ticks pending implementation**: items 3 (SKILL.md at workspace tier + invocation-neutral), 4 (vendor + registerTool + hooks), 7 (delegate state to .game-of-cards + goc CLI), 11 (docs), 13 (goc validate passes). Items 9 (ClawHub publish), 10 (npm publish), 12 (fresh-repo smoke test) require human credentials and stay unchecked.
 
 Gate lowered `decision → none`. Status `open → active` (claimed by pull-card agent for implementation in this and following commits).
+
+## 2026-05-09 (PM): α implementation landed; 10/13 DoD ticked
+
+Pull-card agent landed the α implementation across four commits:
+
+1. `2285607 deck: openclaw plugin α chosen (tool wrapper); gate decision → none`
+   — decision recorded, DoD revised, body sections cleaned up.
+2. `220da2a openclaw-plugin: scaffold (option α — registered tool + vendored engine)`
+   — package.json, openclaw.plugin.json, index.ts (TypeScript plugin entry with
+   registerTool + 3 lifecycle-hook ports), tsconfig.json, README.md,
+   .gitignore. Sync script extended to mirror `goc → openclaw-plugin/goc`
+   (engine vendored, 27 files). Filed
+   `split-claude-specific-content-out-of-generic-kickoff-skill` as a
+   follow-up advancing this card.
+3. `ffa020e openclaw-plugin: port 13 skill bodies to invocation-neutral form`
+   — `scripts/port_skills_to_openclaw.py` runs the mechanical
+   transformations (Skill(name) → "the `name` skill", Bash tool → shell,
+   Claude Code → "the host", standalone Claude → "the agent", drops
+   `## Preflight` and `!`backtick`` blocks, drops argument-hint /
+   $ARGUMENTS). 2637 LOC of host-neutral skill content under
+   `openclaw-plugin/skills/`. `kickoff` skipped pending the split card.
+4. (this commit) Tests + docs + DoD ticks. Extended
+   `validate_plugin_mirror_parity` to cover `openclaw-plugin/goc/` with
+   its larger exclusion set (`templates/skills/` + all three deck hook
+   templates, since the OpenClaw plugin ports them to TS). Added 3
+   OpenClaw-specific test cases to `tests/test_plugin_mirror_parity.py`
+   (in-sync / drift-detected / excluded-paths-ignored). Updated
+   `AGENTS.md` and `CLAUDE.md` with OpenClaw plugin section.
+
+DoD ticks (10 of 13):
+- [x] 1: `install-openclaw-harness` superseded
+- [x] 2: skills format confirmed from upstream
+- [x] 3: skills at workspace tier + invocation-neutral (13/14, kickoff
+       deferred to split card — explicitly noted in DoD line)
+- [x] 4: vendored engine + registerTool + 3 hook ports via `api.on()`
+- [x] 5: consumer prereq = python3 (3.10+), no uv / no pipx
+- [x] 6: PATH-integration spike (no equivalent — verified)
+- [x] 7: delegate state to .game-of-cards via the registered tool
+- [x] 8: hook-surface spike (rich, maps cleanly)
+- [ ] 9: ClawHub publish (human credentials needed)
+- [ ] 10: npm publish (human credentials needed)
+- [x] 11: docs list OpenClaw plugin support
+- [ ] 12: smoke test in fresh OpenClaw env (needs OpenClaw runtime)
+- [x] 13: `uv run goc validate` passes
+
+Open items 9, 10, 12 are tracked under `publish-openclaw-plugin` (which
+remains parked at `gate: session` until those credentials and
+verification capability are available). Status returned `active → open`;
+worker field preserved as historical marker.
+
+Notes for the human picking this up to close:
+- `index.ts` has `TODO(verify-context-shape)` markers on three handler
+  context fields (`ctx.projectDir`, `ctx.notify`, `ctx.appendSystemContext`,
+  `ctx.toolCalls`). These are reasonable guesses based on what the upstream
+  docs DO say about the SDK, but the precise per-hook signatures aren't
+  documented at <https://docs.openclaw.ai/plugins/hooks.md>. Confirm
+  against the actual `npm install openclaw` types when running the smoke
+  test (item 12).
+- The `openclaw.plugin.json` `_skills_note` field is a pseudo-field
+  flagging the kickoff omission. OpenClaw's manifest doc doesn't promise
+  to ignore unknown fields; if it errors on unknown keys, drop the note
+  and migrate the comment to the README.
+- Both publishing items can publish from the same artifact: `npm
+  publish` claims the registry name; ClawHub publication wraps it for
+  the OpenClaw-native install path.

@@ -524,23 +524,30 @@ def validate_skill_dir_parity() -> list[str]:
 
 
 def validate_plugin_mirror_parity() -> list[str]:
-    """Check that claude-plugin/ mirrors match their source-of-truth trees byte-for-byte.
+    """Check that plugin/ mirrors match their source-of-truth trees byte-for-byte.
 
-    Only runs when claude-plugin/ exists at REPO_ROOT (i.e., inside the goc source repo).
-    Drift means a source-of-truth file was edited without updating the plugin mirror;
-    fix is to copy the changed file(s) into claude-plugin/ and re-run `goc validate`.
+    Covers both `claude-plugin/` and `openclaw-plugin/` when present. Only the
+    pairs whose plugin root actually exists at REPO_ROOT are checked, so this
+    works in both the goc source repo and downstream consumers.
 
-    Mirrors the CI step "Verify plugin assets match templates byte-for-byte" so
-    contributors catch drift locally before push.
+    Drift means a source-of-truth file was edited without updating the plugin
+    mirror; fix is to run `python scripts/sync_plugin_assets.py` and commit
+    the result. CI runs the same script with `--check`.
 
-    The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
+    The Claude plugin's bundled engine refuses `--local-skills` and
     `--keep-local-skills`, so it never reads `templates/skills/` or the
     `deck_prompt_router` / `deck_session_start` hook templates. Those paths
-    are deliberately absent from the plugin payload and excluded from the
-    `goc` ↔ `claude-plugin/goc` comparison below.
+    are excluded from the `goc` ↔ `claude-plugin/goc` comparison.
+
+    The OpenClaw plugin's bundled engine ALSO never reads those paths (skills
+    are hand-ported with invocation-neutral edits to `openclaw-plugin/skills/`,
+    not byte-for-byte mirrored), AND reimplements all three deck hooks in
+    TypeScript inside `openclaw-plugin/index.ts`. So the OpenClaw exclusion
+    set is a superset of the Claude one.
     """
-    plugin_root = REPO_ROOT / "claude-plugin"
-    if not plugin_root.exists():
+    claude_plugin_root = REPO_ROOT / "claude-plugin"
+    openclaw_plugin_root = REPO_ROOT / "openclaw-plugin"
+    if not claude_plugin_root.exists() and not openclaw_plugin_root.exists():
         return []
 
     def _is_inside_exclude(path: str, exclude: frozenset[str]) -> bool:
@@ -579,28 +586,44 @@ def validate_plugin_mirror_parity() -> list[str]:
             out += _walk(sub_cmp, src_rel, dst_rel, prefix=sub_prefix, exclude=exclude)
         return out
 
-    # Subpaths under `goc/` that the plugin payload deliberately omits. Listed
-    # relative to `goc/`. See module docstring comment above.
-    goc_excludes = frozenset({
+    # Subpaths under `goc/` that the Claude plugin payload deliberately omits.
+    claude_goc_excludes = frozenset({
         "templates/skills",
         "templates/hooks/deck_prompt_router.py",
         "templates/hooks/deck_session_start.py",
     })
 
-    pairs: list[tuple[Path, Path, frozenset[str]]] = [
-        (REPO_ROOT / "goc" / "templates" / "skills", plugin_root / "skills", frozenset()),
-        (
-            REPO_ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
-            plugin_root / "hooks" / "deck_prompt_router.py",
-            frozenset(),
-        ),
-        (
-            REPO_ROOT / "goc" / "templates" / "hooks" / "deck_session_start.py",
-            plugin_root / "hooks" / "deck_session_start.py",
-            frozenset(),
-        ),
-        (REPO_ROOT / "goc", plugin_root / "goc", goc_excludes),
-    ]
+    # OpenClaw also omits the pattern-generalization hook (reimplemented in TS).
+    openclaw_goc_excludes = claude_goc_excludes | frozenset({
+        "templates/hooks/pattern_generalization_check.py",
+    })
+
+    pairs: list[tuple[Path, Path, frozenset[str]]] = []
+
+    if claude_plugin_root.exists():
+        pairs += [
+            (REPO_ROOT / "goc" / "templates" / "skills", claude_plugin_root / "skills", frozenset()),
+            (
+                REPO_ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
+                claude_plugin_root / "hooks" / "deck_prompt_router.py",
+                frozenset(),
+            ),
+            (
+                REPO_ROOT / "goc" / "templates" / "hooks" / "deck_session_start.py",
+                claude_plugin_root / "hooks" / "deck_session_start.py",
+                frozenset(),
+            ),
+            (REPO_ROOT / "goc", claude_plugin_root / "goc", claude_goc_excludes),
+        ]
+
+    if openclaw_plugin_root.exists():
+        # Only the engine mirror is parity-tracked. Skills are hand-ported
+        # (invocation-neutral edits) and hooks are TypeScript ports living
+        # in openclaw-plugin/index.ts — neither is a byte-identical copy.
+        pairs += [
+            (REPO_ROOT / "goc", openclaw_plugin_root / "goc", openclaw_goc_excludes),
+        ]
+
     errors: list[str] = []
     for src, dst, exclude in pairs:
         if not src.exists():

@@ -1,4 +1,4 @@
-"""Regression guard: validate_plugin_mirror_parity detects claude-plugin/ drift.
+"""Regression guard: validate_plugin_mirror_parity detects claude-plugin/ and openclaw-plugin/ drift.
 
 Patches goc.engine.REPO_ROOT directly so the test never spawns a subprocess and
 never risks shadowing the real goc package via Python's cwd-first import search.
@@ -125,6 +125,56 @@ class PluginMirrorParityTest(unittest.TestCase):
             (cwd / "claude-plugin" / "goc" / "templates" / "hooks" / "deck_prompt_router.py").write_text("# stale\n")
             (cwd / "claude-plugin" / "goc" / "templates" / "hooks" / "deck_session_start.py").write_text("# stale\n")
 
+            self.assertEqual([], _check(cwd))
+
+
+class OpenClawPluginMirrorTest(unittest.TestCase):
+    """OpenClaw plugin only mirrors the goc/ engine — skills are hand-ported,
+    hooks live in TypeScript inside index.ts. The parity check must cover
+    the engine mirror but ignore everything else.
+    """
+
+    def test_in_sync_openclaw_engine_produces_no_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            package_init = "# goc package\n"
+            for base in (cwd / "goc", cwd / "openclaw-plugin" / "goc"):
+                base.mkdir(parents=True, exist_ok=True)
+                (base / "__init__.py").write_text(package_init)
+            self.assertEqual([], _check(cwd))
+
+    def test_drifted_openclaw_engine_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            for base in (cwd / "goc", cwd / "openclaw-plugin" / "goc"):
+                base.mkdir(parents=True, exist_ok=True)
+                (base / "__init__.py").write_text("# goc package\n")
+            # Drift the openclaw mirror.
+            (cwd / "openclaw-plugin" / "goc" / "__init__.py").write_text("# drifted\n")
+            errors = _check(cwd)
+            self.assertEqual(1, len(errors), msg=f"expected 1 error, got: {errors}")
+            self.assertIn("openclaw-plugin/goc", errors[0])
+            self.assertIn("differs", errors[0])
+
+    def test_pattern_generalization_hook_excluded_from_openclaw_mirror(self) -> None:
+        """OpenClaw reimplements pattern_generalization_check.py in TypeScript,
+        so the source-of-truth file is excluded from the openclaw-plugin/goc
+        comparison. Drift inside that path must NOT be flagged.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            # Mirror a minimal templates/ tree on both sides so the directory
+            # comparison has matching non-excluded structure. Then add the
+            # excluded hook only on the source side.
+            for base in (cwd / "goc", cwd / "openclaw-plugin" / "goc"):
+                base.mkdir(parents=True, exist_ok=True)
+                (base / "__init__.py").write_text("# goc package\n")
+                (base / "templates").mkdir(parents=True, exist_ok=True)
+                (base / "templates" / "AGENTS_GOC.md").write_text("# agents\n")
+                (base / "templates" / "hooks").mkdir(parents=True, exist_ok=True)
+            # Excluded path: present in source, absent from mirror — this is
+            # the canonical openclaw-only exclusion case.
+            (cwd / "goc" / "templates" / "hooks" / "pattern_generalization_check.py").write_text("# real hook\n")
             self.assertEqual([], _check(cwd))
 
 

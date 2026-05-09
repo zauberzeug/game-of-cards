@@ -113,6 +113,45 @@ and fails the build on any drift. Plugin-specific files that are NOT
 auto-synced: `claude-plugin/hooks/hooks.json`, `claude-plugin/bin/goc`,
 `claude-plugin/settings.json`, `claude-plugin/README.md`.
 
+### OpenClaw plugin payload — same engine, different host shape
+
+A second plugin payload lives at `openclaw-plugin/` for [OpenClaw](https://openclaw.ai),
+the Node-based personal AI assistant. OpenClaw plugins have a fundamentally different
+shape from Claude Code's:
+
+- The plugin entry is **TypeScript**, not file-static. `openclaw-plugin/index.ts`
+  exports a `definePluginEntry({ register(api) })` callback that registers
+  capabilities programmatically.
+- OpenClaw has **no auto-PATH-prepend** for plugin `bin/` directories
+  (verified via spike on the
+  `provide-openclaw-plugin-for-skills-and-hooks` card). So `goc` is
+  exposed as a **registered tool** via `api.registerTool('goc', ...)`,
+  not a shell binary on PATH. The tool handler shells out to
+  `python3 -m goc.cli` with `PYTHONPATH` set to the plugin root.
+- The three GoC lifecycle hooks (session-start active-card reminder,
+  deck-first prompt-injection, pattern-generalization self-assessment)
+  are **TypeScript ports** registered via `api.on('session_start' | …)`.
+  Claude Code's Python hook scripts under `goc/templates/hooks/` are
+  used only by the `--local-skills` install path on Claude — the
+  OpenClaw plugin reimplements them in TS inside `index.ts`.
+
+| Plugin path | Source-of-truth |
+|---|---|
+| `openclaw-plugin/goc/` | `goc/` (engine, schema, templates — auto-synced) |
+| `openclaw-plugin/skills/<name>/SKILL.md` | `goc/templates/skills/<name>/SKILL.md` (hand-ported with invocation-neutral edits via `scripts/port_skills_to_openclaw.py`) |
+
+The auto-synced engine pair (`goc → openclaw-plugin/goc`) is enforced
+by the same byte-for-byte tripwire as the Claude one. Skills are NOT
+auto-synced — they go through the porting script once during scaffold
+and are independently maintained from then on. To re-port (e.g., after
+a major rewrite of the source skills), re-run
+`python3 scripts/port_skills_to_openclaw.py` and review the diff.
+
+OpenClaw-plugin-specific files that are NOT auto-synced:
+`openclaw-plugin/index.ts`, `openclaw-plugin/package.json`,
+`openclaw-plugin/openclaw.plugin.json`, `openclaw-plugin/tsconfig.json`,
+`openclaw-plugin/README.md`, `openclaw-plugin/skills/`.
+
 ### Plugin runs goc from a vendored engine — Python 3.10+ is the only host prerequisite
 
 `claude-plugin/bin/goc` is a shell wrapper that invokes the bundled engine
