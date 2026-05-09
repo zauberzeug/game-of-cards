@@ -1,7 +1,7 @@
 ---
 title: list-game-of-cards-on-anthropic-community-marketplace
 summary: "Submit the Game of Cards Claude Code plugin to Anthropic's community marketplace (`anthropics/claude-plugins-community` or the equivalent submission form at `clau.de/plugin-directory-submission`) so a broader audience discovers it without first finding the zauberzeug GitHub repo. The technical work that produces a marketplace-ready plugin lives in other cards (bundle, README, skill renames); this card tracks the manual submission action itself — the PR or form submission Rodja makes, the review back-and-forth, and the post-merge documentation update."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-08
@@ -24,6 +24,7 @@ definition_of_done: |
   - [ ] Submission accepted / merged. Card transitions to `done`.
   - [ ] Post-merge documentation updated: README install path, `llms.txt`, `CLAUDE_GOC.md` template, and homepage all mention the community marketplace as the canonical install path. The existing zauberzeug-claude private marketplace and direct-install fallback remain documented as alternatives.
   - [ ] `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # List Game of Cards on Anthropic's community marketplace
