@@ -1,7 +1,7 @@
 ---
 title: pull-card-self-trigger-blocked-by-claude-action-bot-allowlist
 summary: "Empirical verification (`pull-card-self-trigger-needs-empirical-verification`, done 2026-05-09) confirmed that `pull-card.yml`'s `gh workflow run` self-trigger step succeeds — a new `workflow_dispatch` run is created — but the resulting iteration N+1 run fails immediately on `claude-code-action@v1`'s bot-actor allowlist check (`Workflow initiated by non-human actor: github-actions (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.`). The chain is therefore non-functional in practice; only `event: schedule` runs drain the queue. Decide between (a) adding `allowed_bots: github-actions[bot]` to the workflow's action inputs, (b) dropping the self-trigger and tightening cron, or (c) using a different trigger mechanism. The earlier resolution (`No PAT, no GitHub App`) constrains the option set."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-09
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] If cron-only: self-trigger steps removed from `pull-card.yml`; cron schedule tightened (e.g., `*/10 * * * *` or `*/15`); MAX_ITERATIONS env var dropped
   - [ ] Parent card (`self-trigger-pull-card-workflow-for-fresh-context-per-card`) updated with the decision and final state
   - [ ] `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Pull-card self-trigger blocked by claude-code-action bot allowlist
