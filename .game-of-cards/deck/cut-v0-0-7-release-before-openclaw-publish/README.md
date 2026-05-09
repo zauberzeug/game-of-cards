@@ -1,11 +1,11 @@
 ---
 title: cut-v0-0-7-release-before-openclaw-publish
 summary: "Cut PyPI release v0.0.7 before publishing the OpenClaw plugin to ClawHub and npm so the bundled engine in `game-of-cards@0.0.7` on npm matches `game-of-cards==0.0.7` on PyPI. ~30 commits have landed since v0.0.6 — the entire OpenClaw plugin, worktree/multi-agent claim protocol, skill-parity tripwire, hook-manifest derivation, and kickoff split. Publishing the plugin at the stale 0.0.6 version on npm would create a permanent 'lying version' situation where npm 0.0.6 ships engine code that 'pip install game-of-cards==0.0.6' does not."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - publish-openclaw-plugin
@@ -14,13 +14,13 @@ advances:
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] `pyproject.toml` version bumped from 0.0.6 to 0.0.7
-  - [ ] `openclaw-plugin/package.json` version bumped from 0.0.6 to 0.0.7
-  - [ ] `claude-plugin/` and `openclaw-plugin/` engine mirrors regenerated via `python scripts/sync_plugin_assets.py` and pass `python scripts/sync_plugin_assets.py --check`
-  - [ ] `uv run goc validate` passes
-  - [ ] Version bumps committed
-  - [ ] Tag `v0.0.7` pushed; CI's `verify-version-matches-tag` job passes and OIDC-publishes to PyPI
-  - [ ] PyPI listing for v0.0.7 visible at <https://pypi.org/project/game-of-cards/0.0.7/>
+  - [x] `pyproject.toml` version bumped from 0.0.6 to 0.0.7
+  - [x] `openclaw-plugin/package.json` version bumped from 0.0.6 to 0.0.7
+  - [x] `claude-plugin/` and `openclaw-plugin/` engine mirrors regenerated via `python scripts/sync_plugin_assets.py` and pass `python scripts/sync_plugin_assets.py --check`
+  - [x] `uv run goc validate` passes
+  - [x] Version bumps committed
+  - [x] Tag `v0.0.7` pushed; CI's `verify-version-matches-tag` job passes and OIDC-publishes to PyPI
+  - [x] PyPI listing for v0.0.7 visible at <https://pypi.org/project/game-of-cards/0.0.7/>
 worker: {who: Rodja Trappe, where: main}
 ---
 
