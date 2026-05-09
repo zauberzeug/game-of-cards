@@ -10,20 +10,9 @@
       "source": "bootstrap/_goc-bootstrap.sh",
       "target": ".claude/skills/_goc-bootstrap.sh",
       "mode": "executable"
-    },
-    {
-      "source": "hooks/deck_prompt_router.py",
-      "target": ".claude/hooks/deck_prompt_router.py"
-    },
-    {
-      "source": "hooks/deck_session_start.py",
-      "target": ".claude/hooks/deck_session_start.py"
-    },
-    {
-      "source": "hooks/pattern_generalization_check.py",
-      "target": ".claude/hooks/pattern_generalization_check.py"
     }
   ],
+  "_files_note": "Hook entries are derived from goc/templates/hooks/*.py at install time (see deck_hook_scripts in goc/install.py); do not list them here.",
   "settings_json": ".claude/settings.json",
   "guidance": [
     {

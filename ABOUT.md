@@ -71,7 +71,7 @@ That means it can sit underneath other tools. It does not choose your planning m
 
 Harness selection controls which runtime affordances are installed:
 
-- `--agents claude` writes `.claude/skills/`, `.claude/hooks/user-prompt-submit-goc.py`, and `CLAUDE.md`.
+- `--agents claude` writes `.claude/skills/`, `.claude/hooks/` (one script per file under `goc/templates/hooks/`), and `CLAUDE.md`.
 - `--agents codex` writes Codex-readable skills under `.codex/skills/`, without Claude-only hooks.
 - `--no-harness` installs project state and guidance only — no skills, no hooks, no agent-specific files.
 

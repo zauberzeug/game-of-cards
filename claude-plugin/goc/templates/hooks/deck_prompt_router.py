@@ -15,13 +15,13 @@ import re
 import sys
 
 WORK_INITIATING = [
-    r"\blet'?s\s+(do|build|implement|make|add|create|fix|introduce|write|refactor|rename|update|change|delete|remove|move)\b",
+    r"\blet'?s\s+(do|build|implement|make|add|create|fix|introduce|write|refactor)\b",
     r"\b(implement|build|introduce|refactor)\s+\w",
-    r"\b(fix|add|create|write|rename|update|change|delete|remove|move)\s+(a|an|the|this|that|some)\b",
+    r"\b(fix|add|create|write)\s+(a|an|the|this|that|some)\b",
     r"\bi\s+(want|need)\s+(to|a|an|the|this)\b",
     r"\bwe\s+(need|should|want)\s+to\b",
-    r"\bcan\s+you\s+(add|fix|build|create|implement|introduce|write|rename|update|change|delete|remove|move)\b",
-    r"\bplease\s+(add|fix|build|create|implement|introduce|write|rename|update|change|delete|remove|move)\b",
+    r"\bcan\s+you\s+(add|fix|build|create|implement|introduce|write)\b",
+    r"\bplease\s+(add|fix|build|create|implement|introduce|write)\b",
     r"\bmake\s+it\s+(work|do|so|happen)\b",
     r"\bship\s+(it|this|the)\b",
 ]

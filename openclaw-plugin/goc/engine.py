@@ -530,6 +530,54 @@ def validate_skill_dir_parity() -> list[str]:
     return errors
 
 
+def validate_hook_registration() -> list[str]:
+    """Check `templates/hooks/*.py` and `GOC_CLAUDE_HOOKS` are in sync.
+
+    The hook copy list and parity pairs are derived from `templates/hooks/`,
+    but the event-to-script mapping in `GOC_CLAUDE_HOOKS` stays explicit so
+    `'what fires on Stop?'` is answerable from one source-readable file.
+    This validator is the tripwire that the explicit mapping requires: it
+    catches the silent-failure mode where a hook script lands in
+    `templates/hooks/` without an event registration (file copied but never
+    invoked), and the inverse where a registration points at a file that
+    no longer exists.
+    """
+    from goc.install import GOC_CLAUDE_HOOKS, _HOOK_FILE_RE, deck_hook_scripts
+
+    templates = PACKAGE_DIR / "templates"
+    if not (templates / "hooks").exists():
+        return []
+
+    errors: list[str] = []
+    scripts = set(deck_hook_scripts(templates))
+
+    registered: set[str] = set()
+    for event, command in GOC_CLAUDE_HOOKS.items():
+        m = _HOOK_FILE_RE.search(command)
+        if not m:
+            errors.append(
+                f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] command has no "
+                f"recognizable script path: {command!r}"
+            )
+            continue
+        name = Path(m.group(1)).name
+        registered.add(name)
+        if name not in scripts:
+            errors.append(
+                f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] points to "
+                f"templates/hooks/{name} which does not exist"
+            )
+
+    for name in sorted(scripts - registered):
+        errors.append(
+            f"hook registration: templates/hooks/{name} has no event entry in "
+            "GOC_CLAUDE_HOOKS — file would be copied to .claude/hooks/ but never "
+            "invoked. Add a mapping in goc/install.py."
+        )
+
+    return errors
+
+
 def validate_plugin_mirror_parity() -> list[str]:
     """Check that plugin/ mirrors match their source-of-truth trees byte-for-byte.
 
@@ -541,17 +589,18 @@ def validate_plugin_mirror_parity() -> list[str]:
     mirror; fix is to run `python scripts/sync_plugin_assets.py` and commit
     the result. CI runs the same script with `--check`.
 
-    The Claude plugin's bundled engine refuses `--local-skills` and
-    `--keep-local-skills`, so it never reads `templates/skills/` or the
-    `deck_prompt_router` / `deck_session_start` hook templates. Those paths
-    are excluded from the `goc` ↔ `claude-plugin/goc` comparison.
+    The hook pairs (flat `<plugin>/hooks/<name>.py` ↔ source
+    `goc/templates/hooks/<name>.py`) are enumerated from
+    `goc/templates/hooks/*.py` so adding a hook updates the parity check
+    automatically. Skills are excluded from the deep `goc/` mirror because
+    plugin install paths refuse `--local-skills`, so the bundled engine
+    never reads `templates/skills/`.
 
-    The OpenClaw plugin's bundled engine ALSO never reads those paths (skills
-    are hand-ported with invocation-neutral edits to `openclaw-plugin/skills/`,
-    not byte-for-byte mirrored), AND reimplements all three deck hooks in
-    TypeScript inside `openclaw-plugin/index.ts`. So the OpenClaw exclusion
-    set is a superset of the Claude one.
+    The OpenClaw plugin's bundled engine reimplements all three deck hooks
+    in TypeScript inside `openclaw-plugin/index.ts`, so its deep mirror also
+    omits `templates/hooks/*.py`.
     """
+    from goc.install import deck_hook_scripts
     claude_plugin_root = REPO_ROOT / "claude-plugin"
     openclaw_plugin_root = REPO_ROOT / "openclaw-plugin"
     if not claude_plugin_root.exists() and not openclaw_plugin_root.exists():
@@ -593,48 +642,44 @@ def validate_plugin_mirror_parity() -> list[str]:
             out += _walk(sub_cmp, src_rel, dst_rel, prefix=sub_prefix, exclude=exclude)
         return out
 
-    # Subpaths under `goc/` that the Claude plugin payload deliberately omits.
-    claude_goc_excludes = frozenset({
-        "templates/skills",
-        "templates/hooks/deck_prompt_router.py",
-        "templates/hooks/deck_session_start.py",
-    })
+    templates_root = REPO_ROOT / "goc" / "templates"
+    hook_names = deck_hook_scripts(templates_root)
 
-    # OpenClaw also omits the pattern-generalization hook (reimplemented in TS).
-    openclaw_goc_excludes = claude_goc_excludes | frozenset({
-        "templates/hooks/pattern_generalization_check.py",
-    })
+    # Skills live flat at `<plugin>/skills/`; the deep `goc/` copy never
+    # reads them, so they are excluded from the `goc` ↔ `<plugin>/goc` mirror.
+    claude_goc_excludes = frozenset({"templates/skills"})
+
+    # OpenClaw reimplements every deck hook in TypeScript, so its deep mirror
+    # also omits the Python hook scripts.
+    openclaw_goc_excludes = claude_goc_excludes | frozenset(
+        f"templates/hooks/{name}" for name in hook_names
+    )
 
     pairs: list[tuple[Path, Path, frozenset[str]]] = []
 
     if claude_plugin_root.exists():
-        pairs += [
-            (REPO_ROOT / "goc" / "templates" / "skills", claude_plugin_root / "skills", frozenset()),
-            (
-                REPO_ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
-                claude_plugin_root / "hooks" / "deck_prompt_router.py",
-                frozenset(),
-            ),
-            (
-                REPO_ROOT / "goc" / "templates" / "hooks" / "deck_session_start.py",
-                claude_plugin_root / "hooks" / "deck_session_start.py",
-                frozenset(),
-            ),
-            (
-                REPO_ROOT / "goc" / "templates" / "hooks" / "pattern_generalization_check.py",
-                claude_plugin_root / "hooks" / "pattern_generalization_check.py",
-                frozenset(),
-            ),
-            (REPO_ROOT / "goc", claude_plugin_root / "goc", claude_goc_excludes),
-        ]
+        pairs.append(
+            (templates_root / "skills", claude_plugin_root / "skills", frozenset())
+        )
+        for name in hook_names:
+            pairs.append(
+                (
+                    templates_root / "hooks" / name,
+                    claude_plugin_root / "hooks" / name,
+                    frozenset(),
+                )
+            )
+        pairs.append(
+            (REPO_ROOT / "goc", claude_plugin_root / "goc", claude_goc_excludes)
+        )
 
     if openclaw_plugin_root.exists():
         # Only the engine mirror is parity-tracked. Skills are hand-ported
         # (invocation-neutral edits) and hooks are TypeScript ports living
         # in openclaw-plugin/index.ts — neither is a byte-identical copy.
-        pairs += [
-            (REPO_ROOT / "goc", openclaw_plugin_root / "goc", openclaw_goc_excludes),
-        ]
+        pairs.append(
+            (REPO_ROOT / "goc", openclaw_plugin_root / "goc", openclaw_goc_excludes)
+        )
 
     errors: list[str] = []
     for src, dst, exclude in pairs:
@@ -1537,6 +1582,9 @@ def _cmd_validate(args):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for e in validate_plugin_mirror_parity():
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
+    for e in validate_hook_registration():
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for t in cards:
