@@ -1,0 +1,3 @@
+## 2026-05-09: decision recorded
+
+keep markdown for README.md; rich artifacts (HTML, SVG, interactive forms) ship as sibling files in the card directory referenced from the README — same bundle shape as reproduce.py; close as disproved — article's strongest cases (interactive decision-gate forms, colored option matrices, state diagrams) genuinely transfer for ~10–20% of cards but are best served by per-card artifact bundling, not a body_format dispatch field; pattern documented in card-skills-document-html-as-sibling-artifact-pattern; preserves GitHub inline rendering of READMEs and avoids coupling to the split-frontmatter decision. Gate decision → none.

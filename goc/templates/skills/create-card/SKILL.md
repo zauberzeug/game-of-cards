@@ -207,6 +207,49 @@ For plausible-but-unreproduced hypotheses, add `--tag unverified`
 and document the falsifying-test recipe in the body. The promotion
 rule: drop the `unverified` tag once a working `reproduce.py` lands.
 
+## Step 7 — ship rich artifact files (optional, any card class)
+
+When the body benefits from content markdown can't express — colored
+option grids, state-machine diagrams, side-by-side visual
+comparisons, interactive answer forms for `human_gate: decision`
+cards — ship the artifact as a sibling file in the card directory
+and reference it from the body. Same bundle shape as `reproduce.py`
+for bug cards; the engine treats sibling files as opaque and never
+parses them.
+
+```
+deck/<title>/
+  README.md                       # narrative + links to artifacts below
+  log.md
+  reproduce.py                    # OPTIONAL — bug-class executable proof
+  comparison-matrix.html          # OPTIONAL — colored option grid
+  state-diagram.svg               # OPTIONAL — vector diagram
+  decision-form.html              # OPTIONAL — interactive answer form for a decision gate
+  before-after-screenshot.png     # OPTIONAL — visual regression evidence
+```
+
+The README links artifacts as `[See the comparison
+matrix](comparison-matrix.html)`. GitHub renders the README inline;
+clicking a `.html` link shows source on github.com but opens as a
+working page when viewed locally — identical UX github.com gives
+any binary asset.
+
+Use this pattern when:
+
+- A decision card carries a colored options matrix that degrades to
+  a wall of text in markdown.
+- A `human_gate: decision` card ships an interactive form the human
+  fills in (open the `.html` in a browser, fill it, paste the
+  result back into the README's decision section).
+- The card carries a state diagram, an `advances`-graph snapshot,
+  or any visual that needs spatial layout markdown can't give.
+
+Skip this pattern when prose alone communicates the content. The
+default card stays single-file (`README.md` + `log.md`); rich
+artifacts are an opt-in escape hatch, not a requirement. There is
+no `body_format:` schema field and no engine dispatch — every
+artifact is just another file in the card directory.
+
 ## Cross-references
 
 - `Skill(card-schema)` — field semantics, enum values, canonical

@@ -1,13 +1,15 @@
 ---
 title: split-card-frontmatter-from-body
 summary: "Today every card lives at `.game-of-cards/deck/<title>/README.md` with YAML frontmatter fenced by `---` markers and a markdown body below. Proposal: move the frontmatter to its own file (e.g. `card.yaml`), leaving `README.md` as pure markdown. Trade-offs: smaller parser scope (no fence detection), GitHub renders the body cleanly without metadata noise, simpler grep for metadata across the deck — but it's a breaking change for every consumer repo's existing cards (one-shot mechanical migration), doubles per-card file count, and `goc show` UX needs to merge two files. Decision-gated because the answer reshapes work in `replace-pyyaml-with-vendored-parser`."
-status: open
+status: disproved
 stage: null
 contribution: medium
 created: 2026-05-09
 closed_at: null
-human_gate: decision
-advances: []
+human_gate: none
+advances:
+  - replace-pyyaml-with-vendored-parser
+  - decide-card-body-format-readme-vs-html-vs-flexible
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
@@ -126,3 +128,9 @@ work is unaffected.
 
 Split or stay. If split, also confirm the migration verb name and
 the transition-window length (one release? two?).
+
+## Decision
+
+*Resolved 2026-05-09:* stay monolithic — keep YAML frontmatter fenced inside README.md; close as disproved
+
+*Reasoning:* 13-system survey: 11 use in-file frontmatter only, Jekyll explicitly rejected sidecars in #1082; quantified parser savings ~5 LOC out of ~250 in planned yaml_lite parser; body-format flexibility (the strongest pro) handled separately via card-skills-document-html-as-sibling-artifact-pattern, no engine change needed

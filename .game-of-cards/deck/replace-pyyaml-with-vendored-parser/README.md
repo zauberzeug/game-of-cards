@@ -9,7 +9,8 @@ closed_at: null
 human_gate: none
 advances:
   - drop-third-party-runtime-dependencies-from-goc
-advanced_by: []
+advanced_by:
+  - split-card-frontmatter-from-body
 tags: [story, infra]
 definition_of_done: |
   - [ ] `goc/_vendor/yaml_lite.py` exists with a `safe_load(text: str) -> Any` entry point.

@@ -1,14 +1,15 @@
 ---
 title: decide-card-body-format-readme-vs-html-vs-flexible
 summary: "Today every card body is markdown (`README.md`). A linked argument (https://x.com/i/status/2052809885763747935, screencap captured in this card's body) makes the case that HTML beats markdown for *Claude-generated artifacts that humans consume* — information density, visual clarity, ease of sharing, two-way interactive forms, and aesthetic richness. The framing question for the deck: do cards count as 'artifacts for humans' or as 'work tickets for agents'? Three candidate answers: (a) keep enforcing markdown — cards are work tickets that agents read and edit, markdown is universal; (b) switch to HTML — adopt the article's case wholesale; (c) leave the body format open via file-extension dispatch, with markdown as the default and HTML as an opt-in for projects that want it. Decision-gated; pairs with `split-card-frontmatter-from-body` because format flexibility becomes much cheaper if metadata lives in its own file."
-status: open
+status: disproved
 stage: null
 contribution: medium
 created: 2026-05-09
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
-advanced_by: []
+advanced_by:
+  - split-card-frontmatter-from-body
 tags: [story, infra, documentation]
 definition_of_done: |
   - [ ] Decision recorded on this card: keep markdown / switch to HTML / leave format flexible.
@@ -185,3 +186,9 @@ Capture the X-post argument in your own words first (so a future
 reader doesn't depend on the paywalled link), then choose:
 markdown / HTML / flexible. If flexible, also confirm the
 supported extensions and the per-project config knob.
+
+## Decision
+
+*Resolved 2026-05-09:* keep markdown for README.md; rich artifacts (HTML, SVG, interactive forms) ship as sibling files in the card directory referenced from the README — same bundle shape as reproduce.py; close as disproved
+
+*Reasoning:* article's strongest cases (interactive decision-gate forms, colored option matrices, state diagrams) genuinely transfer for ~10–20% of cards but are best served by per-card artifact bundling, not a body_format dispatch field; pattern documented in card-skills-document-html-as-sibling-artifact-pattern; preserves GitHub inline rendering of READMEs and avoids coupling to the split-frontmatter decision
