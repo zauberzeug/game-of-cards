@@ -17,9 +17,12 @@
  * binaries (verified via the PATH-integration spike on
  * `provide-openclaw-plugin-for-skills-and-hooks`). So the plugin exposes
  * goc as a registered tool rather than a shell binary on PATH. Subprocess
- * invocations use `api.runtime.system.runCommandWithTimeout` (the sanctioned
- * spawn API per OpenClaw's plugin-sandbox policy) — NOT direct
- * `node:child_process` imports, which the safe-install policy blocks.
+ * invocations route through `api.runtime.system.runCommandWithTimeout`
+ * (the sanctioned spawn API per OpenClaw's plugin-sandbox policy) instead
+ * of direct stdlib subprocess imports, which the safe-install policy
+ * blocks. (The blocked-import name is intentionally not spelled out here:
+ * OpenClaw's safe-install scanner pattern-matches on raw source bytes and
+ * trips on the literal token even when it appears only in a comment.)
  *
  * After compilation, this file lives at `<plugin-root>/dist/index.js`, so
  * the vendored engine path is computed as `dirname(__file) + "/../"`
@@ -208,8 +211,8 @@ export default definePluginEntry({
         // api.runtime.system.runCommandWithTimeout API (per
         // https://docs.openclaw.ai/plugins/sdk-runtime.md). Defined inside
         // register so it captures the runtime helper in its closure;
-        // OpenClaw's safe-install policy blocks plugins that import
-        // node:child_process directly.
+        // OpenClaw's safe-install policy blocks plugins that directly
+        // import the Node stdlib subprocess module.
         //
         // TODO(verify-shape): the precise signature of runCommandWithTimeout
         // is not documented at the URL above (only the call shape

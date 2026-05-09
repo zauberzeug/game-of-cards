@@ -41,3 +41,48 @@ Of the two unchecked DoD items, neither is agent-actionable from this repo:
 - **Item 7 (side-finding scope check)** is a coordination judgement about whether `llms-txt-still-recommends-uv-tool-install-as-preferred` should expand its scope. The reviewer is the right decider; expanding that card unilaterally would override the "one-comment edit" rationale in its `Why this is gate=none` body.
 
 Raised `human_gate: none → session` and added an `## Action required` body section that names both pending items and the close path (`goc decide … --decision "…" --because "…"` → tick boxes → `goc done`). Per pull-card guidance, cards that raise their gate during the session leave the drain set naturally — a future pull won't re-claim this until the gate is lowered.
+
+## 2026-05-09 (PM, retest #2): scanner pattern-matches the comment, not the import
+
+Tester reran the smoke. Result: still red. Two observations from the report:
+
+- `openclaw plugins install <local-path>` (without `--dangerously-force-unsafe-install`) is rejected by **dangerous-code detection on `child_process`**. The install was forced through with `--force` so the next observation could be made anyway.
+- `openclaw plugins inspect game-of-cards --json` shows `status: loaded`, `contracts.tools: ['goc']`, `toolNames: []`, `tools: []`, `imported: False`. The static manifest's `contracts.tools` is read from `openclaw.plugin.json`; the empty dynamic surface (`toolNames`, `tools`) and `imported: False` are coherent: the scanner blocked module import, so `register(api)` never ran, so `api.registerTool` never registered the `goc` tool.
+
+### Root cause
+
+OpenClaw's safe-install scanner pattern-matches on **raw source bytes** — it does not parse the JS/TS as an AST, so a literal `child_process` token in a *comment* trips the same heuristic as an actual subprocess-module import line. The α implementation removed the import, but the architectural-rationale comments still spelled out the blocked-import name verbatim:
+
+- `openclaw-plugin/index.ts:22` (top doc-block) — `` * `node:child_process` imports, which the safe-install policy blocks.``
+- `openclaw-plugin/index.ts:236` (inline comment inside `register(api)`) — `// node:child_process directly.`
+- Carry-over into `openclaw-plugin/dist/index.js` (lines 22, 212) and `openclaw-plugin/dist/index.d.ts` (line 22), since `tsc` preserves comments by default.
+
+The scanner saw those substrings and refused to import the module — exactly the behavior `imported: False` reports.
+
+### Fix
+
+Rephrased both source comments so the architectural intent stays clear without spelling the trigger token:
+
+- Top doc-block: "direct stdlib subprocess imports, which the safe-install policy blocks. (The blocked-import name is intentionally not spelled out here: OpenClaw's safe-install scanner pattern-matches on raw source bytes and trips on the literal token even when it appears only in a comment.)"
+- Inline comment: "blocks plugins that directly import the Node stdlib subprocess module."
+
+Rebuilt via `(cd openclaw-plugin && npm run build)`; `tsc` regenerated `dist/index.js`, `dist/index.js.map`, and `dist/index.d.ts`. Verified post-build:
+
+```
+$ grep -rn "child_process" openclaw-plugin/index.ts openclaw-plugin/dist/ openclaw-plugin/openclaw.plugin.json openclaw-plugin/package.json
+(no matches; exit 1)
+```
+
+### Next
+
+Same acceptance bar as before — but now with corrected `imported: False` expectation:
+
+- `openclaw plugins install <local-path>` succeeds **without** `--dangerously-force-unsafe-install` (no dangerous-code rejection).
+- `openclaw plugins inspect game-of-cards --json` shows `imported: True`, `toolNames: ["goc"]`, `tools` non-empty.
+- A subagent can see and invoke the `goc` tool.
+
+Gate stays `session` — DoD item 5 still requires the tester action; this commit only addresses *why* the previous retest failed. The `TODO(verify-shape)` markers on `runCommandWithTimeout` and the three hook contexts can still resolve during this retest.
+
+### Side-finding (DoD item 7) — answered
+
+Reviewer's call: **expand scope.** `site/llms.txt` should grow an OpenClaw-specific install section. That's a feature add (additive content), distinct from `llms-txt-still-recommends-uv-tool-install-as-preferred`'s narrow one-comment uv→pipx correction. Filed as a separate card so the existing card's gate-none "one-comment edit" rationale stays intact. Cross-reference: see `add-openclaw-install-section-to-llms-txt`.

@@ -18,26 +18,28 @@ definition_of_done: |
   - [x] Build artifact: `cd openclaw-plugin && npm install && npm run build` produces a `dist/index.js` that's committed to the repo.
   - [ ] Smoke retest by the original tester confirms: (a) `openclaw plugins install <local-path>` no longer fails for missing JS; (b) install no longer requires `--dangerously-force-unsafe-install`; (c) `openclaw plugins inspect game-of-cards --json` shows `toolNames: ["goc"]` populated; (d) a subagent invocation can see and call the `goc` tool.
   - [x] `uv run goc validate` passes.
-  - [ ] Side finding (out of this card's scope): website / `llms.txt` still recommends `uv tool install` as the install path. Tracked under `llms-txt-still-recommends-uv-tool-install-as-preferred` (filed earlier in Rodja's review batch); ensure that card's scope covers the OpenClaw plugin path too.
+  - [x] Side finding (out of this card's scope): website / `llms.txt` still recommends `uv tool install` as the install path. Reviewer (2026-05-09) decided the scope expansion is large enough to warrant a separate card rather than stretching `llms-txt-still-recommends-uv-tool-install-as-preferred`'s narrow uv→pipx fix. Resolved by filing `add-openclaw-install-section-to-llms-txt`.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw plugin release-smoke blockers — build pipeline + sanctioned spawn API
 
-## Action required (gate raised 2026-05-09)
+## Action required (gate still session as of retest #2)
 
-Implementation landed in `7cb062c openclaw-plugin: ship compiled JS + sanctioned spawn API` (2026-05-09 PM). DoD items 1–4 and 6 are checked. Two items remain — both need a human:
+Implementation history:
+- `7cb062c openclaw-plugin: ship compiled JS + sanctioned spawn API` (2026-05-09 PM) — α implementation, DoD items 1–4 and 6 checked.
+- Retest #2 (2026-05-09 PM) — still red: scanner pattern-matches `child_process` token in source comments, not just imports. See log.md "retest #2" entry for root-cause walk.
+- Comment-rephrase commit (this session) — both source comments rewritten to drop the trigger token; `dist/` rebuilt; `grep` confirms repo tree is clean.
+- DoD item 7 ticked: side-finding (`add-openclaw-install-section-to-llms-txt`) filed as a separate card per reviewer's scope decision.
 
-1. **Smoke retest (DoD item 5).** The original tester needs to rerun the install flow on an OpenClaw runtime and confirm:
-   - `openclaw plugins install <local-path>` succeeds **without** `--dangerously-force-unsafe-install`.
-   - `openclaw plugins inspect game-of-cards --json` shows `toolNames: ["goc"]` populated and `tools` non-empty (proves `register(api)` actually fired).
-   - A subagent invocation can see and call the `goc` tool.
+**One DoD item remains: item 5 (smoke retest #3).** Tester needs to rerun the install flow on an OpenClaw runtime and confirm:
+- `openclaw plugins install <local-path>` succeeds **without** `--dangerously-force-unsafe-install` (no dangerous-code rejection).
+- `openclaw plugins inspect game-of-cards --json` shows `imported: True`, `toolNames: ["goc"]`, `tools` non-empty.
+- A subagent can see and invoke the `goc` tool.
 
-   The `TODO(verify-shape)` comments in `openclaw-plugin/index.ts` around `runCommandWithTimeout` and the three hook contexts can be resolved during this retest — the real OpenClaw SDK types confirm or correct our reasonable-guess assumptions.
+The `TODO(verify-shape)` comments in `openclaw-plugin/index.ts` around `runCommandWithTimeout` and the three hook contexts can be resolved during this retest — the real OpenClaw SDK types confirm or correct our reasonable-guess assumptions.
 
-2. **Side-finding scope check (DoD item 7).** The reviewer needs to decide whether the existing scope of `llms-txt-still-recommends-uv-tool-install-as-preferred` is enough, or whether a follow-up card is needed. The current `site/llms.txt` has no OpenClaw-specific install section — only a generic "other agent runtimes / CI" section — so the existing one-line comment fix arguably "covers" the OpenClaw path by default. Adding a dedicated `Install (OpenClaw)` section to `site/llms.txt` is a natural follow-up once `publish-openclaw-plugin` lands; that's a separate card if it's filed.
-
-Once the smoke retest confirms (1) and the reviewer resolves (2), call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the two boxes, and `goc done` to close.
+Once retest #3 passes, call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the last box, and `goc done` to close.
 
 ## Background
 

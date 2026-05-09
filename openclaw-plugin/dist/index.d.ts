@@ -17,9 +17,12 @@
  * binaries (verified via the PATH-integration spike on
  * `provide-openclaw-plugin-for-skills-and-hooks`). So the plugin exposes
  * goc as a registered tool rather than a shell binary on PATH. Subprocess
- * invocations use `api.runtime.system.runCommandWithTimeout` (the sanctioned
- * spawn API per OpenClaw's plugin-sandbox policy) — NOT direct
- * `node:child_process` imports, which the safe-install policy blocks.
+ * invocations route through `api.runtime.system.runCommandWithTimeout`
+ * (the sanctioned spawn API per OpenClaw's plugin-sandbox policy) instead
+ * of direct stdlib subprocess imports, which the safe-install policy
+ * blocks. (The blocked-import name is intentionally not spelled out here:
+ * OpenClaw's safe-install scanner pattern-matches on raw source bytes and
+ * trips on the literal token even when it appears only in a comment.)
  *
  * After compilation, this file lives at `<plugin-root>/dist/index.js`, so
  * the vendored engine path is computed as `dirname(__file) + "/../"`
