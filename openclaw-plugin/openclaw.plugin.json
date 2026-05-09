@@ -5,8 +5,8 @@
   "contracts": {
     "tools": ["goc"]
   },
+  "_skills_note": "kickoff is omitted pending split-claude-specific-content-out-of-generic-kickoff-skill (the current goc/templates/skills/kickoff body is heavily Claude Code-specific; the host-agnostic kickoff lands in that card and gets added here).",
   "skills": [
-    "skills/kickoff",
     "skills/deck",
     "skills/scan-deck",
     "skills/next-card",
