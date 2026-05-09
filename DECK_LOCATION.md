@@ -87,13 +87,59 @@ If your situation demands one of the rejected configurations:
 
 If you wire one of these up and it works for you, file a card describing the setup. Adoption signal is what would move one of these from "unsupported" to "shipped".
 
-## Why not just gitignore the deck
+## The gitignored-deck recipe (solo OSS maintainers)
 
-A simpler path for OSS maintainers: keep the deck inside the repo, but add `.game-of-cards/` to `.gitignore`. The recorded decision on [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) explicitly allows this.
+A simpler path than sibling-repo or submodule for OSS maintainers who want their commit history clean: keep the deck inside the repo, but `.gitignore` it. The recorded decision on [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) explicitly allows this — the deck is checked-in by default, gitignore is opt-in.
 
-The trade-off: a gitignored deck is purely local. Collaborators don't see your cards. Multi-agent setups that span machines stop working. For a solo OSS maintainer keeping personal task state, this is fine; for an OSS project with multiple maintainers, it is not.
+**This recipe serves the solo OSS maintainer.** It does *not* serve OSS projects with multiple maintainers — see "What stops working" below and skip ahead to "When the recipe is wrong for you".
 
-This path is partially documented today and would benefit from a more concrete recipe — see the follow-up card [`document-gitignored-deck-workflow-for-oss-maintainers`](.game-of-cards/deck/document-gitignored-deck-workflow-for-oss-maintainers).
+### The recipe
+
+1. Add `.game-of-cards/` to your repo's `.gitignore` (do this *before* `goc install`, so the install's first commit doesn't accidentally track the deck):
+
+   ```gitignore
+   # Personal task state — local-only, see https://github.com/zauberzeug/game-of-cards
+   .game-of-cards/
+   ```
+
+2. Run `goc install` as usual. The CLI does not touch `.gitignore` and does not check whether the deck path is ignored at install time — it just writes the files. Because the path is ignored, git won't track them.
+
+3. That's it. There is no separate config flag. `goc` detects on every command whether the deck is git-tracked (via `git check-ignore`) and adapts automatically.
+
+### What `goc install` does when the deck is gitignored
+
+- Writes `.game-of-cards/config.yaml` and creates `.game-of-cards/deck/` exactly as it would otherwise.
+- Writes the `<!-- BEGIN GOC -->` block into `AGENTS.md` (and `CLAUDE.md` if you opt in). These files *are* tracked — that's intentional, because the marker is the canonical signal to agent runtimes that GoC is in use, even when the deck itself is local.
+- Does not modify `.gitignore`. You added the line in step 1; the install respects it implicitly by writing files git already ignores.
+
+### What stops working
+
+- **Collaborator visibility.** Other contributors cloning the repo see no cards. They cannot review what work you have queued, claimed, or closed. They cannot pick up a card you started.
+- **Cross-machine sync.** Switching from your laptop to a CI runner, a workstation, or a fresh clone gives you an empty deck. There is no automatic sync — `git push` skips ignored files.
+- **CI-scheduled `pull-card`.** GitHub Actions / scheduled runners that clone the repo afresh have no deck to operate on. Background autonomous loops cannot run from CI.
+- **Autocommit.** `goc` detects the deck is not git-tracked and silently disables autocommit (`auto_commit_enabled()` returns `False` whenever `_deck_is_git_tracked()` is false). Status flips, claims, and closures still happen — they just don't generate commits. You don't need to set `workflow.auto_commit: false` yourself.
+- **`closure_on_integration` enforcement.** The opt-in "card cannot close until HEAD is on `origin/main`" check skips when the deck is not git-tracked. There's nothing to enforce against.
+
+### What still works
+
+- **Solo task state.** Cards, DoD enforcement, status flips, and the `goc done` closure check all work locally. The CLI's per-card semantics are unchanged.
+- **Cross-session memory on the same machine.** The agent re-reads the deck on every session, so picking up where you left off tomorrow works exactly as in the same-repo default.
+- **The local `goc` queue and Definition-of-Done enforcement.** `goc` (open queue), `goc --board`, `goc validate`, `goc done <title>` — all unchanged.
+- **The `<!-- BEGIN GOC -->` marker in `AGENTS.md`.** Agent plugins still discover GoC is in use. Skill availability is independent of whether the deck itself is tracked.
+
+### When the recipe is wrong for you
+
+If any of the following apply, the gitignored-deck path will silently bite:
+
+- **Multiple maintainers on the OSS project.** Your collaborators cannot see or contribute to the deck. Wait for [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) to ship a real external-state path, or for [`explore-saas-deck-hosting-with-optional-tracker-sync`](.game-of-cards/deck/explore-saas-deck-hosting-with-optional-tracker-sync) to land hosted-deck support.
+- **You run scheduled background agents in CI.** A fresh CI clone has no deck. The autonomous loop cannot operate against state that isn't there.
+- **You work from multiple machines.** There is no sync mechanism. The two decks diverge silently.
+
+The recipe is honest about being local-only. It is the right answer when you are one person, on one machine, who happens to maintain an OSS library and does not want to publish your task list to every contributor reviewing your PRs.
+
+### Why this is documented but not the default
+
+Making `.gitignore` the default would reverse the multi-agent coordinator's primary use case (deck visible across machines and CI runners), which is the persona GoC is most validated for today. The decision to keep checked-in as the default and gitignore as opt-in lives on [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location); this section is the recipe for picking the opt-in.
 
 ## Where to read more
 

@@ -1,11 +1,11 @@
 ---
 title: document-gitignored-deck-workflow-for-oss-maintainers
 summary: "OSS-library maintainers face a tension that the deck-location decision (`evaluate-deck-as-separate-repo-or-submodule`) does not fully resolve: same-repo + checked-in pollutes PR diffs with card-state churn; same-repo + gitignored loses collaborative visibility. The recorded decision allows gitignore but does not guide the user through it. Document a concrete OSS-friendly recipe in PERSONAS.md (or a section of `DECK_LOCATION.md`) so a maintainer reading the docs can adopt the gitignore path with eyes open."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - evaluate-deck-as-separate-repo-or-submodule
@@ -13,10 +13,10 @@ advances:
 advanced_by: []
 tags: [story, documentation]
 definition_of_done: |
-  - [ ] PERSONAS.md (classical-development team section) or DECK_LOCATION.md gains a concrete recipe for the gitignore path: which line to add to `.gitignore`, what `goc install` does when the deck is gitignored, what stops working (multi-machine sync, collaborator visibility), what still works (solo personal task state).
-  - [ ] Trade-off explicit: solo-OSS-maintainer use case is served; multi-maintainer OSS use case is NOT served by this path — those maintainers should wait for `support-external-game-of-cards-state-location` to finish or for `explore-saas-deck-hosting-with-optional-tracker-sync` to ship.
-  - [ ] Cross-link from the new doc back to `support-external-game-of-cards-state-location` (the active epic that recorded the gitignore decision).
-  - [ ] `uv run goc validate` passes
+  - [x] PERSONAS.md (classical-development team section) or DECK_LOCATION.md gains a concrete recipe for the gitignore path: which line to add to `.gitignore`, what `goc install` does when the deck is gitignored, what stops working (multi-machine sync, collaborator visibility), what still works (solo personal task state).
+  - [x] Trade-off explicit: solo-OSS-maintainer use case is served; multi-maintainer OSS use case is NOT served by this path — those maintainers should wait for `support-external-game-of-cards-state-location` to finish or for `explore-saas-deck-hosting-with-optional-tracker-sync` to ship.
+  - [x] Cross-link from the new doc back to `support-external-game-of-cards-state-location` (the active epic that recorded the gitignore decision).
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

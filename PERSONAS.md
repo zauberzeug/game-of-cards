@@ -75,7 +75,7 @@ The website features three of these personas prominently. The full list is here 
 - The CLAUDE.md / AGENTS.md merge to be opt-in, not default.
 - A way to review the deck without reviewing it as part of every feature PR.
 
-**Status today.** Partially served. The deck has moved under `.game-of-cards/deck/` (less noise than top-level `deck/`), the CLAUDE.md merge is opt-in via the kickoff flow, and [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) is the active epic finishing the rest. If you live here, the website's "not for you yet" warning is honest — try GoC on a side project first.
+**Status today.** Partially served. The deck has moved under `.game-of-cards/deck/` (less noise than top-level `deck/`), the CLAUDE.md merge is opt-in via the kickoff flow, and [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) is the active epic finishing the rest. If you live here, the website's "not for you yet" warning is honest — try GoC on a side project first. **Solo OSS maintainers** willing to keep their deck local-only have a working recipe today: see "The gitignored-deck recipe" in [`DECK_LOCATION.md`](DECK_LOCATION.md). Multi-maintainer OSS projects need to wait for the active epic.
 
 **Workflow shape (when the epic ships).** External deck (sibling directory or separate repo). No CLAUDE.md merge. Skills and hooks installed via plugin, not committed.
 
@@ -104,7 +104,7 @@ The integration story exists ([`integrate-github-issues-discussions-and-pull-req
 
 ### OSS library maintainers with strict commit hygiene
 
-Until [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) ships fully, the deck lives inside the repo and shows up in every PR diff. For libraries where every commit is reviewed by external contributors, that's noise you don't want. Try GoC on internal services first, or wait for the external-deck path.
+Until [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) ships fully, the deck lives inside the repo and shows up in every PR diff. For libraries where every commit is reviewed by external contributors, that's noise you don't want. **Solo OSS maintainers** can adopt the gitignored-deck recipe in [`DECK_LOCATION.md`](DECK_LOCATION.md) — local-only task state, no PR noise. **Multi-maintainer OSS projects** are not served by that recipe (collaborators don't see your cards); try GoC on internal services first, or wait for the external-deck path.
 
 ### Anyone wanting a feature planner without an autonomous loop
 
