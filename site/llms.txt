@@ -36,6 +36,20 @@ Once the plugin is installed, kick off any repo with:
 
 or tell your agent: "use game of cards for this repo".
 
+## Install (OpenClaw)
+
+The GoC [OpenClaw](https://openclaw.ai) plugin bundles the goc engine inside its npm payload — the only host prerequisite is `python3` (3.10+). `goc` is exposed as a **registered OpenClaw tool** (not a shell-PATH binary), so the agent invokes it like any typed function.
+
+Once the plugin is published, install via ClawHub:
+
+```sh
+openclaw skills install game-of-cards
+```
+
+The same artifact is published to npm as `game-of-cards`; consumers that prefer npm can add it via OpenClaw's plugin loading mechanism (see <https://docs.openclaw.ai/plugins>).
+
+Until publish lands (tracked under `publish-openclaw-plugin`), build from source against this repo's plugin payload at <https://github.com/zauberzeug/game-of-cards/tree/main/openclaw-plugin>.
+
 ## Install (other agent runtimes / CI)
 
 Install the `goc` CLI once per machine:
