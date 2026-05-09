@@ -81,3 +81,23 @@ Skills installed via `openclaw skills install <id>` go into the active workspace
 ### Architectural implication
 
 Three real options now sit on the body of this card under "## Decision required (2026-05-09, second pass)". The pull-card agent recommends β (BYO goc — pipx install) but parks the call. Gate raised `none → decision`; status returned to `open`. The python3-baseline preference still holds; only the wrapper-on-PATH half of the prior decision is up for revision.
+
+## 2026-05-09 (PM): α chosen — tool wrapper, gate lowered
+
+Rodja decided: **option α — register `goc` as an OpenClaw tool**. Reasoning: "openclaw is perfect environment to demonstrate and use game of cards." Shipping a courtesy SKILL.md drop (β) under-uses the platform; tool registration is the OpenClaw-idiomatic way for plugins to expose capabilities (per <https://docs.openclaw.ai/tools/index.md>).
+
+Implementation surface for the next pull:
+
+- **Plugin scaffold**: `openclaw-plugin/` directory at repo root, paralleling `claude-plugin/`. Files:
+  - `package.json` — npm metadata + `openclaw` block (extensions, compat versions)
+  - `openclaw.plugin.json` — plugin manifest (`id`, `name`, `description`, `contracts.tools=["goc"]`, `skills` array)
+  - `index.ts` — TypeScript plugin entry, default-export from `definePluginEntry()`. Registers `goc` tool via `api.registerTool({ name, description, parameters: typebox schema { verb, args, cwd? }, async execute() { spawn python3 } })`. Registers three hooks via `api.on('session_start' | 'before_agent_run' | 'agent_end', handler)`.
+  - `tsconfig.json` — TypeScript config (target ES2022, module ESNext, moduleResolution Bundler)
+  - `README.md` — consumer-facing docs
+  - `goc/` — vendored engine, byte-identical to top-level `goc/` (auto-synced via `scripts/sync_plugin_assets.py`)
+  - `skills/` — 14 ported SKILL.md directories at workspace tier
+- **Sync script extension**: add `goc → openclaw-plugin/goc` and `goc/templates/skills → openclaw-plugin/skills` (with skill-body porting layer) to `SYNC_PAIRS`. Note: skill bodies aren't byte-identical to `goc/templates/skills/`; they go through an invocation-neutralizer pass. Decide: deterministic transform script or hand-port? Probably hand-port for the first cut and revisit if the diff is mechanical enough to script.
+- **Hook ports**: TypeScript handlers shell out to `python3 -m goc.cli` for shared logic (e.g., reminder text), or reimplement directly in TS. The Claude versions are short Python scripts (~30-80 LOC each); reimplementing in TS is straightforward.
+- **DoD ticks pending implementation**: items 3 (SKILL.md at workspace tier + invocation-neutral), 4 (vendor + registerTool + hooks), 7 (delegate state to .game-of-cards + goc CLI), 11 (docs), 13 (goc validate passes). Items 9 (ClawHub publish), 10 (npm publish), 12 (fresh-repo smoke test) require human credentials and stay unchecked.
+
+Gate lowered `decision → none`. Status `open → active` (claimed by pull-card agent for implementation in this and following commits).

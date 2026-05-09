@@ -1,12 +1,12 @@
 ---
 title: provide-openclaw-plugin-for-skills-and-hooks
 summary: "Replace the blocked OpenClaw harness direction with a later OpenClaw plugin/runtime package for Game of Cards skills and hooks. This supersedes `install-openclaw-harness` and should wait until the Claude/Codex plugin pattern is clear or an OpenClaw consumer appears."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-05
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - support-external-game-of-cards-state-location
   - publish-openclaw-plugin
@@ -16,8 +16,8 @@ tags: [story, infra]
 definition_of_done: |
   - [x] `install-openclaw-harness` is marked superseded with a log entry pointing here
   - [x] OpenClaw plugin/runtime extension format confirmed from upstream docs (`SKILL.md` directories with YAML frontmatter; five-tier precedence; ClawHub at <https://clawhub.ai>; consumer install verb `openclaw skills install`) — see "## What is OpenClaw" body section
-  - [ ] Plugin supplies GoC skills as `SKILL.md` directories at the **workspace** precedence tier
-  - [ ] Plugin vendors the goc engine inside the npm payload (parallel to `claude-plugin/goc/`) with a `bin/goc` wrapper that invokes `python3 -m goc.cli "$@"` directly — symmetric to the Claude plugin pattern from `bundle-goc-engine-inside-plugin-payload` and `plugin-wrapper-drops-uv`
+  - [ ] Plugin supplies GoC skills as `SKILL.md` directories at the **workspace** precedence tier; skill bodies are invocation-neutral (no Claude-specific `Skill(name)` / `Bash tool` references) so they read sensibly under both registered-tool (OpenClaw) and Bash+PATH (Claude Code) primitives
+  - [ ] Plugin vendors the goc engine inside the npm payload (parallel to `claude-plugin/goc/`) and registers `goc` as an OpenClaw tool via `api.registerTool('goc', { params: typed schema, async execute(_, p) { /* spawn python3 -m goc.cli with PYTHONPATH=plugin root */ } })`. Three lifecycle hooks register via `api.on()`: `session_start` (active-card reminder, was `deck_session_start.py`), `before_agent_run` (deck-first prompt injection, was `deck_prompt_router.py`), `agent_end` (pattern-generalization self-assessment, was `pattern_generalization_check.py`). No `bin/goc` PATH wrapper — OpenClaw has no auto-PATH-prepend mechanism (verified via spike, see log)
   - [ ] Consumer-side prerequisite is `python3` (3.10+) on PATH (matches the Claude plugin after `plugin-wrapper-drops-uv`); no `uv` and no separate `pipx install game-of-cards` step required
   - [x] OpenClaw plugin-bin PATH integration verified from upstream docs/source: confirm whether OpenClaw auto-prepends a plugin's `bin/` to skill-execution PATH (parallel to Claude Code), or whether a substitute resolution path (post-install symlink, absolute-path invocation in skills, etc.) is needed; outcome recorded in this card's log
   - [ ] Plugin delegates durable state to `.game-of-cards` and the `goc` CLI
@@ -72,30 +72,22 @@ Three architectural decisions resolved 2026-05-09; gate lowered from `session` t
 - **Plugin scaffold**: an npm package containing `goc/` (vendored Python source) + `bin/goc` (python3 shell wrapper, mirroring `claude-plugin/bin/goc` after `plugin-wrapper-drops-uv`) + `SKILL.md` directories. Reference shape: `claude-plugin/` (mirror layout: `claude-plugin/goc/`, `claude-plugin/bin/goc`, `claude-plugin/skills/`).
 - **Smoke test target**: a fresh repo with `python3` (3.10+) + `npm install -g openclaw`, plugin installed via ClawHub, then exercise `goc new`/`goc done` through OpenClaw — no `uv` and no `pipx` step required.
 
-## Decision required (2026-05-09, second pass — PATH-integration spike result)
+## Decision (α — tool wrapper, 2026-05-09)
 
-The PATH-integration spike (DoD item 6) and hook-surface spike (DoD item 8) ran against upstream OpenClaw docs. Full findings are in `log.md`. **The first spike's result invalidates part of the wrapper-pattern decision below**: OpenClaw has no `bin` field in its plugin manifest, no `registerBin`/`providePathEntry` SDK API, and no documented mechanism for adding plugin executables to the skill-execution PATH. Plugin CLI commands register via `api.registerCli()` from TypeScript, which makes them OpenClaw-native verbs (`openclaw <verb>`) rather than entries on the user's shell PATH. So the "drop a `bin/goc` wrapper, let the runtime auto-prepend" model from `claude-plugin/` does not transfer.
+*Resolved 2026-05-09 (PM):* Implement **option α**. Register `goc` as a first-class OpenClaw tool via `api.registerTool('goc', { params: { verb, args[], cwd? }, async execute(_, p) { /* spawn python3 -m goc.cli with PYTHONPATH set to the plugin root */ } })`. Plugin vendors the goc engine inside the npm payload (parallel to `claude-plugin/goc/`). Three GoC lifecycle hooks register via `api.on()`:
 
-Three real options remain:
+- `session_start` (was Claude's `deck_session_start.py` — active-card reminder at session boot)
+- `before_agent_run` (was Claude's `deck_prompt_router.py` — deck-first reminder injected on work-initiating prompts)
+- `agent_end` (was Claude's `pattern_generalization_check.py` — post-mutation self-assessment)
 
-- **α — Tool wrapper.** Register goc as an OpenClaw tool via `api.registerTool('goc', { params: {...}, async execute(...) { /* shell out to bundled python3 -m goc.cli */ } })`. Skills instruct the model to use the registered tool rather than bash-exec'ing `goc` directly. Plugin is self-contained; no PATH magic. Cost: the ~13 SKILL.md bodies fork from the Claude versions (different invocation style), and the plugin entry is real TypeScript code, not just a vendored-payload mirror.
-- **β — Bring your own goc.** Plugin only ships SKILL.md + hook registrations. No bundled engine. Consumer runs `pipx install game-of-cards` (or system equivalent) so `goc` is on the OS PATH. Skills are byte-identical to Claude versions. Cost: reintroduces the `pipx` step we just removed for the Claude path; consumer experience is asymmetric.
-- **γ — Hybrid.** Bundle engine + register tool (idiomatic in-OpenClaw flow), AND document `pipx install game-of-cards` as a fallback for consumers who want shell access. Cost: two code paths, doubled docs surface.
+SKILL.md bodies are ported with invocation-neutral edits (`Skill(name)` → "the `name` skill"; `Bash tool` → registered goc tool or generic shell; `Claude Code` → "OpenClaw" where host-specific, dropped where the brand reference was generic). Skill content stays portable across both hosts; the per-host invocation primitive (registered tool in OpenClaw, Bash + PATH'd binary in Claude Code) is decided by the LLM based on what tools are exposed in its environment.
 
-**Recommendation: β.** Lowest implementation cost; byte-identical skill content; the `pipx` friction is asymmetric only with the auto-PATH-prepend feature OpenClaw doesn't have. The "no pipx" promise on the Claude side rested on a feature unique to Claude Code — it was never a portable promise. Accepting one extra consumer install command on the OpenClaw side seems the right balance against forking 13 skill bodies (α) or shipping two stacks (γ).
+*Reasoning:* OpenClaw is positioned as a flagship environment for demonstrating Game of Cards as a methodology. Shipping a courtesy SKILL.md drop (option β) under-uses the platform. Tool registration is the OpenClaw-idiomatic way per upstream docs (<https://docs.openclaw.ai/tools/index.md>: *"Plugin tools are still authored with `api.registerTool(...)` and declared in the plugin manifest's `contracts.tools` list"*). The marginal cost of α over β is ~70 lines of TypeScript plus mechanical skill-body edits — proportional to the architectural payoff (idiomatic plugin citizenship + bundled engine + no `pipx` step for consumers).
 
-That said, **α has a real architectural payoff**: it makes GoC a "real" OpenClaw plugin (registered tool, programmatic hooks) rather than a thin SKILL.md drop. If GoC is positioned as a flagship OpenClaw plugin rather than a courtesy port, α earns its weight.
+The python3-baseline preference (`feedback_runtime_baseline_python3.md`) is preserved: tool handler shells out to `python3 -m goc.cli` from the bundled package; consumer prerequisite remains python3 (3.10+) only.
 
-If **β** chosen: next pull-card iteration scaffolds an npm package listing SKILL.md directories under workspace tier and a thin TypeScript shim mapping the three current hooks to OpenClaw's `session_start` / `before_agent_run` / `agent_end`. DoD items 4 (vendor engine) and 5 (no pipx prereq) need rewriting before that pull.
+Gate lowered `decision → none`; status `open → active`. Pull-card resumes implementation.
 
-If **α** chosen: next iteration writes `index.ts` registering `goc` as a tool plus seven hooks identified in the surface map, with `python3 -m goc.cli` shell-out from the tool handler. DoD items 3 (SKILL.md format) and 4 (wrapper pattern) need rewriting; the SKILL.md fork is a separate child card.
+## Decision (prior — partially invalidated, kept as historical record)
 
-Status returned to `open`; gate raised `none → decision`. Worker field retained as historical marker of who ran the spikes.
-
-## Decision (prior — partially invalidated by spike findings)
-
-*Resolved 2026-05-09:* OpenClaw plugin wrapper invokes python3 -m goc.cli directly, mirroring the Claude plugin after plugin-wrapper-drops-uv. Local implementation (SKILL.md directories, vendored engine, bin/goc python3 wrapper, PATH-integration spike, hook-surface spike) is autonomous-pullable; external publishing stays gated under publish-openclaw-plugin.
-
-*Reasoning:* python3 (3.10+) is broadly distributed; uv is opt-in tooling. The engine went pure-stdlib via plugin-wrapper-drops-uv, so uv is no longer needed even as a venv provisioner. Matches Rodja's stated runtime-baseline preference (python3 over uv) and keeps the OpenClaw wrapper architecturally identical to the Claude plugin.
-
-*Status after spike:* The python3-baseline part still holds — Rodja's preference is unambiguous (`feedback_runtime_baseline_python3.md`). The wrapper-on-PATH part is the half that broke; PATH-integration assumption is FALSE. Resolution depends on the option chosen above.
+The earlier decision (2026-05-09 AM): "OpenClaw plugin wrapper invokes python3 -m goc.cli directly, mirroring the Claude plugin after plugin-wrapper-drops-uv" rested on the assumption that OpenClaw mirrors Claude Code's auto-PATH-prepend behavior. The PATH-integration spike (DoD item 6, completed 2026-05-09 PM) verified this assumption FALSE: OpenClaw has no `bin` field in its plugin manifest, no `registerBin`/`providePathEntry` SDK API. The python3-baseline portion of that decision still holds; the wrapper-on-PATH portion was replaced by α above. Three options (α/β/γ) were surfaced under "Decision required (second pass)" before α was chosen.
