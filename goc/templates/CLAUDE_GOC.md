@@ -24,10 +24,14 @@ Plugin installs persist across repos and Claude Code sessions — this
 is a one-time step per machine.
 
 For repos that need skills and hooks checked into source control (CI
-without plugin support, repos that fork or template GoC), the install
-was done with `goc install --local-skills`. Running `goc upgrade`
-on those repos will prompt to migrate to the plugin path, or pass
-`--keep-local-skills` to keep the vendored layout.
+without plugin support, repos that fork or template GoC), install GoC
+via pipx (`pipx install game-of-cards`) and run `goc install
+--local-skills`. The plugin-bundled `goc` refuses both `--local-skills`
+and `--keep-local-skills` because skills are already provided by
+`claude-plugin/skills/`; pipx is the only path that can write a
+vendored `.claude/skills/` tree. Existing vendored installs continue to
+work — `goc upgrade` on those repos prompts to migrate to the plugin
+path, or pass `--keep-local-skills` (under pipx) to keep the layout.
 
 ### First use: kick off a new repo (one-time per repo)
 

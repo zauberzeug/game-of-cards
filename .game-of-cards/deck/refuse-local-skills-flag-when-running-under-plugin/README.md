@@ -1,29 +1,29 @@
 ---
 title: refuse-local-skills-flag-when-running-under-plugin
 summary: "When the bundled `goc/` engine inside `claude-plugin/` is invoked (via `claude-plugin/bin/goc`), refuse `--local-skills` (on `goc install`) and `--keep-local-skills` (on `goc upgrade`) with a clear error directing the user to install via pipx instead. Once those flags can never reach the bundled engine, the engine no longer reads `templates/skills/` or `templates/hooks/`, so drop `claude-plugin/goc/templates/skills/` and `claude-plugin/goc/templates/hooks/{deck_prompt_router,deck_session_start}.py` from the plugin payload entirely. Eliminates ~half the surface area of the `validate_plugin_mirror_parity` tripwire and removes one drift bug class for good."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra, api-contract]
 definition_of_done: |
-  - [ ] Bundled engine (`claude-plugin/goc/`) detects plugin context, e.g. `PACKAGE_DIR.parent.name == "claude-plugin"` or equivalent — pick whichever is robust against `uv run --project` and direct `python -m goc` invocations
-  - [ ] `goc install --local-skills` invoked from plugin context exits non-zero with a clear message: `--local-skills is not supported when running under the plugin (skills are already provided by claude-plugin/skills/). To use vendored skills, install goc via pipx instead: pipx install game-of-cards`
-  - [ ] `goc upgrade --keep-local-skills` invoked from plugin context exits non-zero with the same shape of message
-  - [ ] `goc install` and `goc upgrade` without those flags continue to work unchanged from plugin context (the common path: scaffold `.game-of-cards/`, merge `AGENTS.md` / `CLAUDE.md` blocks, no skill writes)
-  - [ ] `claude-plugin/goc/templates/skills/` directory is removed from the plugin payload
-  - [ ] `claude-plugin/goc/templates/hooks/{deck_prompt_router,deck_session_start}.py` are removed from the plugin payload (the flat `claude-plugin/hooks/` copies remain — those serve the plugin runtime, not the bundled engine)
-  - [ ] `validate_plugin_mirror_parity` (`goc/engine.py`) is updated to no longer compare the now-removed nested directories; comments updated to reflect the narrower invariant
-  - [ ] Pipx-installed `goc` (the non-plugin path) continues to honor `--local-skills` and `--keep-local-skills` exactly as today — the change is gated on plugin-context detection only
-  - [ ] Regression test in `tests/test_install.py` (or a new file) covers: plugin-context-detected install rejects `--local-skills`, plugin-context-detected upgrade rejects `--keep-local-skills`, pipx-context install/upgrade still accept them
-  - [ ] Regression test in `tests/test_plugin_mirror_parity.py` is updated to reflect the smaller mirror surface; the existing `test_real_repo_passes` still passes
-  - [ ] CLAUDE.md "Plugin assets are duplicated" section is updated to remove the rows for `claude-plugin/goc/templates/skills/` and `claude-plugin/goc/templates/hooks/`, leaving only the rows that still apply
-  - [ ] AGENTS.md / install-help docs note the plugin/pipx split for vendored-skills users
-  - [ ] `uv run goc validate` passes
+  - [x] Bundled engine (`claude-plugin/goc/`) detects plugin context, e.g. `PACKAGE_DIR.parent.name == "claude-plugin"` or equivalent — pick whichever is robust against `uv run --project` and direct `python -m goc` invocations
+  - [x] `goc install --local-skills` invoked from plugin context exits non-zero with a clear message: `--local-skills is not supported when running under the plugin (skills are already provided by claude-plugin/skills/). To use vendored skills, install goc via pipx instead: pipx install game-of-cards`
+  - [x] `goc upgrade --keep-local-skills` invoked from plugin context exits non-zero with the same shape of message
+  - [x] `goc install` and `goc upgrade` without those flags continue to work unchanged from plugin context (the common path: scaffold `.game-of-cards/`, merge `AGENTS.md` / `CLAUDE.md` blocks, no skill writes)
+  - [x] `claude-plugin/goc/templates/skills/` directory is removed from the plugin payload
+  - [x] `claude-plugin/goc/templates/hooks/{deck_prompt_router,deck_session_start}.py` are removed from the plugin payload (the flat `claude-plugin/hooks/` copies remain — those serve the plugin runtime, not the bundled engine)
+  - [x] `validate_plugin_mirror_parity` (`goc/engine.py`) is updated to no longer compare the now-removed nested directories; comments updated to reflect the narrower invariant
+  - [x] Pipx-installed `goc` (the non-plugin path) continues to honor `--local-skills` and `--keep-local-skills` exactly as today — the change is gated on plugin-context detection only
+  - [x] Regression test in `tests/test_install.py` (or a new file) covers: plugin-context-detected install rejects `--local-skills`, plugin-context-detected upgrade rejects `--keep-local-skills`, pipx-context install/upgrade still accept them
+  - [x] Regression test in `tests/test_plugin_mirror_parity.py` is updated to reflect the smaller mirror surface; the existing `test_real_repo_passes` still passes
+  - [x] CLAUDE.md "Plugin assets are duplicated" section is updated to remove the rows for `claude-plugin/goc/templates/skills/` and `claude-plugin/goc/templates/hooks/`, leaving only the rows that still apply
+  - [x] AGENTS.md / install-help docs note the plugin/pipx split for vendored-skills users
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

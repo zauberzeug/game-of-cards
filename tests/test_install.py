@@ -1048,5 +1048,82 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         return importlib.metadata.version("game-of-cards")
 
 
+class PluginContextRefusalTest(unittest.TestCase):
+    """When the bundled engine runs from inside `claude-plugin/`, it must refuse
+    `--local-skills` and `--keep-local-skills` so users don't end up with a
+    duplicated source of truth (plugin skills + vendored .claude/skills/).
+    """
+
+    def _run_under_plugin_context(
+        self, cwd: Path, *args: str
+    ) -> subprocess.CompletedProcess[str]:
+        """Run goc.cli with PYTHONPATH pointing at a fake `claude-plugin/` dir
+        that bundles a copy of the goc package, mimicking the plugin layout.
+        """
+        plugin_root = cwd / "_plugin" / "claude-plugin"
+        if not (plugin_root / "goc").exists():
+            shutil.copytree(ROOT / "goc", plugin_root / "goc")
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(plugin_root)
+        return subprocess.run(
+            [sys.executable, "-m", "goc.cli", *args],
+            cwd=cwd,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    def _run_under_pipx_context(
+        self, cwd: Path, *args: str
+    ) -> subprocess.CompletedProcess[str]:
+        """Run goc.cli with PYTHONPATH pointing at the source tree (the parent
+        directory of `goc/` is the repo root, not `claude-plugin/`)."""
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(ROOT)
+        return subprocess.run(
+            [sys.executable, "-m", "goc.cli", *args],
+            cwd=cwd,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    def test_plugin_context_install_rejects_local_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = self._run_under_plugin_context(cwd, "install", "--local-skills", "--dry-run")
+            self.assertEqual(2, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("--local-skills is not supported when running under the plugin", result.stderr)
+            self.assertIn("pipx install game-of-cards", result.stderr)
+            self.assertFalse((cwd / ".game-of-cards").exists(), msg="install should not have run")
+
+    def test_plugin_context_upgrade_rejects_keep_local_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = self._run_under_plugin_context(cwd, "upgrade", "--keep-local-skills")
+            self.assertEqual(2, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("--keep-local-skills is not supported when running under the plugin", result.stderr)
+            self.assertIn("pipx install game-of-cards", result.stderr)
+
+    def test_plugin_context_install_without_flag_still_works(self) -> None:
+        """The refusal must be flag-gated: default install (no --local-skills)
+        is the common path under the plugin and must continue to work."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = self._run_under_plugin_context(cwd, "install", "--dry-run")
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("agents: claude", result.stdout)
+            self.assertNotIn(".claude/skills/", result.stdout)
+
+    def test_pipx_context_install_still_accepts_local_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = self._run_under_pipx_context(cwd, "install", "--local-skills", "--dry-run")
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn(".claude/skills/", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

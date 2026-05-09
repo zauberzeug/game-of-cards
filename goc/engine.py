@@ -532,34 +532,77 @@ def validate_plugin_mirror_parity() -> list[str]:
 
     Mirrors the CI step "Verify plugin assets match templates byte-for-byte" so
     contributors catch drift locally before push.
+
+    The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
+    `--keep-local-skills`, so it never reads `templates/skills/` or the
+    `deck_prompt_router` / `deck_session_start` hook templates. Those paths
+    are deliberately absent from the plugin payload and excluded from the
+    `goc` ↔ `claude-plugin/goc` comparison below.
     """
     plugin_root = REPO_ROOT / "claude-plugin"
     if not plugin_root.exists():
         return []
 
-    def _walk(cmp: filecmp.dircmp, src_rel: str, dst_rel: str, prefix: str = "") -> list[str]:
+    def _is_inside_exclude(path: str, exclude: frozenset[str]) -> bool:
+        """True if `path` is, or sits under, one of the excluded subpaths."""
+        if path in exclude:
+            return True
+        return any(path.startswith(ex + "/") for ex in exclude)
+
+    def _walk(
+        cmp: filecmp.dircmp,
+        src_rel: str,
+        dst_rel: str,
+        prefix: str = "",
+        exclude: frozenset[str] = frozenset(),
+    ) -> list[str]:
         out: list[str] = []
-        out += [f"{prefix}{n} (only in {src_rel})" for n in cmp.left_only]
-        out += [f"{prefix}{n} (only in {dst_rel})" for n in cmp.right_only]
-        out += [f"{prefix}{n} (differs)" for n in cmp.diff_files]
+        out += [
+            f"{prefix}{n} (only in {src_rel})"
+            for n in cmp.left_only
+            if not _is_inside_exclude(prefix + n, exclude)
+        ]
+        out += [
+            f"{prefix}{n} (only in {dst_rel})"
+            for n in cmp.right_only
+            if not _is_inside_exclude(prefix + n, exclude)
+        ]
+        out += [
+            f"{prefix}{n} (differs)"
+            for n in cmp.diff_files
+            if (prefix + n) not in exclude
+        ]
         for sub_name, sub_cmp in cmp.subdirs.items():
-            out += _walk(sub_cmp, src_rel, dst_rel, prefix=prefix + sub_name + "/")
+            sub_prefix = prefix + sub_name + "/"
+            if sub_prefix.rstrip("/") in exclude:
+                continue
+            out += _walk(sub_cmp, src_rel, dst_rel, prefix=sub_prefix, exclude=exclude)
         return out
 
-    pairs = [
-        (REPO_ROOT / "goc" / "templates" / "skills", plugin_root / "skills"),
+    # Subpaths under `goc/` that the plugin payload deliberately omits. Listed
+    # relative to `goc/`. See module docstring comment above.
+    goc_excludes = frozenset({
+        "templates/skills",
+        "templates/hooks/deck_prompt_router.py",
+        "templates/hooks/deck_session_start.py",
+    })
+
+    pairs: list[tuple[Path, Path, frozenset[str]]] = [
+        (REPO_ROOT / "goc" / "templates" / "skills", plugin_root / "skills", frozenset()),
         (
             REPO_ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
             plugin_root / "hooks" / "deck_prompt_router.py",
+            frozenset(),
         ),
         (
             REPO_ROOT / "goc" / "templates" / "hooks" / "deck_session_start.py",
             plugin_root / "hooks" / "deck_session_start.py",
+            frozenset(),
         ),
-        (REPO_ROOT / "goc", plugin_root / "goc"),
+        (REPO_ROOT / "goc", plugin_root / "goc", goc_excludes),
     ]
     errors: list[str] = []
-    for src, dst in pairs:
+    for src, dst, exclude in pairs:
         if not src.exists():
             continue
         src_rel = str(src.relative_to(REPO_ROOT))
@@ -568,7 +611,7 @@ def validate_plugin_mirror_parity() -> list[str]:
             if not dst.exists():
                 errors.append(f"plugin mirror: {dst_rel} missing; copy from {src_rel}")
                 continue
-            diffs = _walk(filecmp.dircmp(src, dst), src_rel, dst_rel)
+            diffs = _walk(filecmp.dircmp(src, dst), src_rel, dst_rel, exclude=exclude)
             if diffs:
                 errors.append(
                     f"plugin mirror drift: {src_rel} vs {dst_rel}: " + ", ".join(diffs)

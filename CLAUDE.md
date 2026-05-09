@@ -95,10 +95,15 @@ files:
 
 The flat `claude-plugin/skills/` and `claude-plugin/hooks/` paths exist
 so Claude Code's plugin runtime auto-discovers them at the layout it
-expects. The nested `claude-plugin/goc/templates/...` exists so the
-**bundled engine** can resolve its own templates via
-`importlib.resources` when running under `bin/goc`. Same bytes,
-different consumers.
+expects. The nested `claude-plugin/goc/templates/...` mirrors the rest
+of the package (engine, schema, agents, game_of_cards templates, etc.)
+but **deliberately omits** `templates/skills/` and the
+`deck_prompt_router` / `deck_session_start` hook templates: the bundled
+engine refuses `--local-skills` on `goc install` and `--keep-local-skills`
+on `goc upgrade` (see `_is_plugin_context` in `goc/install.py`), so
+those templates are never read from inside the plugin payload. To
+vendor skills into source control, install via `pipx install
+game-of-cards` instead — that path keeps the full template tree.
 
 **Do not edit `claude-plugin/` directly.** The `sync-plugin-assets`
 pre-commit hook (`scripts/sync_plugin_assets.py`) auto-regenerates those
@@ -192,10 +197,14 @@ Plugin installs persist across repos and Claude Code sessions — this
 is a one-time step per machine.
 
 For repos that need skills and hooks checked into source control (CI
-without plugin support, repos that fork or template GoC), the install
-was done with `goc install --local-skills`. Running `goc upgrade`
-on those repos will prompt to migrate to the plugin path, or pass
-`--keep-local-skills` to keep the vendored layout.
+without plugin support, repos that fork or template GoC), install GoC
+via pipx (`pipx install game-of-cards`) and run `goc install
+--local-skills`. The plugin-bundled `goc` refuses both `--local-skills`
+and `--keep-local-skills` because skills are already provided by
+`claude-plugin/skills/`; pipx is the only path that can write a
+vendored `.claude/skills/` tree. Existing vendored installs continue to
+work — `goc upgrade` on those repos prompts to migrate to the plugin
+path, or pass `--keep-local-skills` (under pipx) to keep the layout.
 
 ### First use: kick off a new repo (one-time per repo)
 

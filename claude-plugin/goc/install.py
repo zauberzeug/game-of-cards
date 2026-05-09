@@ -265,6 +265,49 @@ def _detect_claude_code() -> bool:
     )
 
 
+_PACKAGE_DIR = Path(__file__).resolve().parent  # this goc/ package on disk
+
+
+def _is_plugin_context() -> bool:
+    """True when this engine is running from a copy bundled inside `claude-plugin/`.
+
+    The plugin extracts `goc/` to `<plugin_root>/goc/` and the wrapper sets
+    PYTHONPATH so `python -m goc.cli` resolves to that nested copy. In every
+    other layout (pipx, editable install, `uv run --project .`) the parent of
+    the package directory is the project root or a site-packages dir.
+    """
+    return _PACKAGE_DIR.parent.name == "claude-plugin"
+
+
+_LOCAL_SKILLS_PLUGIN_REFUSAL = (
+    "ERROR: --local-skills is not supported when running under the plugin.\n"
+    "       Skills are already provided by claude-plugin/skills/ and\n"
+    "       registered with Claude Code.\n"
+    "\n"
+    "       To use vendored skills (e.g. for CI without plugin support, or a\n"
+    "       repo that forks/templates GoC), install goc via pipx instead:\n"
+    "\n"
+    "           pipx install game-of-cards\n"
+    "           goc install --local-skills\n"
+    "\n"
+    "       Or omit --local-skills here to use the plugin path."
+)
+_KEEP_LOCAL_SKILLS_PLUGIN_REFUSAL = (
+    "ERROR: --keep-local-skills is not supported when running under the plugin.\n"
+    "       Skills are already provided by claude-plugin/skills/ and\n"
+    "       registered with Claude Code; there is no vendored layout for the\n"
+    "       plugin engine to preserve.\n"
+    "\n"
+    "       If you need to keep a vendored .claude/skills/ tree (e.g. for CI\n"
+    "       without plugin support), upgrade via pipx instead:\n"
+    "\n"
+    "           pipx install game-of-cards\n"
+    "           goc upgrade --keep-local-skills\n"
+    "\n"
+    "       Or omit --keep-local-skills here to migrate to the plugin path."
+)
+
+
 def _should_use_local_skills(agent: str, *, local_skills: bool) -> bool:
     """True if this agent should use the vendored skills layout (vs the plugin path).
 
@@ -673,12 +716,14 @@ UPGRADE_AGENTS_HELP = (
 LOCAL_SKILLS_HELP = (
     "Vendor skills, hooks, and settings entries into source control. "
     "Default for Codex (no plugin yet); opt-in for Claude. "
-    "Use for CI environments without plugin support, or repos that fork/template GoC."
+    "Use for CI environments without plugin support, or repos that fork/template GoC. "
+    "Requires a pipx install of game-of-cards — refused when running under the GoC plugin."
 )
 KEEP_LOCAL_SKILLS_HELP = (
     "Preserve the existing vendored skills layout and refresh templates in place. "
     "Skips the migration to the plugin path. "
-    "Use in scripted contexts (CI cron, etc.) to opt out of migration."
+    "Use in scripted contexts (CI cron, etc.) to opt out of migration. "
+    "Requires a pipx install of game-of-cards — refused when running under the GoC plugin."
 )
 
 _PLUGIN_INSTALL_CMDS = (
@@ -708,6 +753,10 @@ def install(
     local_skills: bool = False,
 ) -> None:
     """Scaffold a fresh repo with the shared GoC files and selected harnesses."""
+
+    if local_skills and _is_plugin_context():
+        print(_LOCAL_SKILLS_PLUGIN_REFUSAL, file=sys.stderr)
+        sys.exit(2)
 
     target = Path.cwd().resolve()
     deck_dir = target / ".game-of-cards" / "deck"
@@ -789,6 +838,10 @@ def upgrade(
     keep_local_skills: bool = False,
 ) -> None:
     """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
+
+    if keep_local_skills and _is_plugin_context():
+        print(_KEEP_LOCAL_SKILLS_PLUGIN_REFUSAL, file=sys.stderr)
+        sys.exit(2)
 
     target = Path.cwd().resolve()
     templates = _templates_root()

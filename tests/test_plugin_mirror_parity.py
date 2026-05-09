@@ -25,25 +25,46 @@ def _check(cwd: Path) -> list[str]:
 
 
 def _sync_tree(cwd: Path, skill_content: str = "# test skill\n", hook_content: str = "# hook\n") -> None:
-    """Populate a minimal in-sync plugin mirror structure under cwd."""
+    """Populate a minimal in-sync plugin mirror structure under cwd.
+
+    Source-of-truth lives under `goc/templates/`. The plugin payload mirrors
+    skills to the *flat* `claude-plugin/skills/` and the deck hooks to the
+    flat `claude-plugin/hooks/`. The bundled engine in `claude-plugin/goc/`
+    deliberately omits `templates/skills/` and the `deck_prompt_router` /
+    `deck_session_start` hook templates — see `_is_plugin_context` in
+    goc/install.py — so this helper does NOT populate them.
+
+    The bundled engine still mirrors the *rest* of `goc/`, so this helper
+    sets up a minimal matching shell (`goc/__init__.py` ↔
+    `claude-plugin/goc/__init__.py`) to exercise pair 4's directory
+    comparison without producing false-positive drift.
+    """
     # pair 1: goc/templates/skills ↔ claude-plugin/skills
     for base in (
         cwd / "goc" / "templates" / "skills" / "foo-skill",
         cwd / "claude-plugin" / "skills" / "foo-skill",
-        cwd / "claude-plugin" / "goc" / "templates" / "skills" / "foo-skill",
     ):
         base.mkdir(parents=True, exist_ok=True)
         (base / "SKILL.md").write_text(skill_content)
 
-    # pairs 2+3: hook files
+    # pairs 2+3: deck hook files mirrored to flat claude-plugin/hooks/
     for hook in ("deck_prompt_router.py", "deck_session_start.py"):
         for base in (
             cwd / "goc" / "templates" / "hooks",
             cwd / "claude-plugin" / "hooks",
-            cwd / "claude-plugin" / "goc" / "templates" / "hooks",
         ):
             base.mkdir(parents=True, exist_ok=True)
             (base / hook).write_text(hook_content)
+
+    # pair 4: minimal goc/ ↔ claude-plugin/goc/ shell so the directory
+    # comparison has matching non-excluded structure on both sides.
+    package_init = "# goc package\n"
+    for base in (cwd / "goc", cwd / "claude-plugin" / "goc"):
+        base.mkdir(parents=True, exist_ok=True)
+        (base / "__init__.py").write_text(package_init)
+    # `templates/` exists on both sides too, holding only excluded content
+    # in this fixture.
+    (cwd / "claude-plugin" / "goc" / "templates" / "hooks").mkdir(parents=True, exist_ok=True)
 
 
 class PluginMirrorParityTest(unittest.TestCase):
@@ -87,6 +108,24 @@ class PluginMirrorParityTest(unittest.TestCase):
     def test_real_repo_passes(self) -> None:
         errors = _check(ROOT)
         self.assertEqual([], errors, msg=f"plugin mirror drift in the repo itself: {errors}")
+
+    def test_drift_inside_excluded_subpaths_is_ignored(self) -> None:
+        """Even if the bundled engine's mirror grows back the excluded paths
+        with arbitrary content, validate must not flag them — those paths
+        are deliberately outside the mirror contract.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _sync_tree(cwd)
+
+            # Re-introduce content in the excluded paths inside the bundled
+            # engine's mirror. None of these should be reported.
+            (cwd / "claude-plugin" / "goc" / "templates" / "skills" / "stale-skill").mkdir(parents=True)
+            (cwd / "claude-plugin" / "goc" / "templates" / "skills" / "stale-skill" / "SKILL.md").write_text("# stale\n")
+            (cwd / "claude-plugin" / "goc" / "templates" / "hooks" / "deck_prompt_router.py").write_text("# stale\n")
+            (cwd / "claude-plugin" / "goc" / "templates" / "hooks" / "deck_session_start.py").write_text("# stale\n")
+
+            self.assertEqual([], _check(cwd))
 
 
 if __name__ == "__main__":

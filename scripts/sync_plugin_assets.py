@@ -21,24 +21,51 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# (src, dst) pairs — src is the source of truth, dst is the generated copy.
+# (src, dst, excludes) — src is the source of truth, dst is the generated copy,
+# excludes is a set of subpaths (relative to src) to omit from the mirror.
 # Directory pairs sync the full subtree; file pairs sync a single file.
 # Files NOT listed here (claude-plugin/hooks/hooks.json, claude-plugin/bin/,
 # claude-plugin/pyproject.toml, etc.) are plugin-specific and never touched.
-SYNC_PAIRS: list[tuple[Path, Path]] = [
+#
+# The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
+# `--keep-local-skills` (see `_is_plugin_context` in goc/install.py), so it
+# never reads `templates/skills/` or the `deck_prompt_router` /
+# `deck_session_start` hook templates. Those paths are excluded from the
+# `goc → claude-plugin/goc` mirror.
+SYNC_PAIRS: list[tuple[Path, Path, frozenset[str]]] = [
     (ROOT / "goc" / "templates" / "skills",
-     ROOT / "claude-plugin" / "skills"),
+     ROOT / "claude-plugin" / "skills",
+     frozenset()),
     (ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
-     ROOT / "claude-plugin" / "hooks" / "deck_prompt_router.py"),
+     ROOT / "claude-plugin" / "hooks" / "deck_prompt_router.py",
+     frozenset()),
     (ROOT / "goc" / "templates" / "hooks" / "deck_session_start.py",
-     ROOT / "claude-plugin" / "hooks" / "deck_session_start.py"),
+     ROOT / "claude-plugin" / "hooks" / "deck_session_start.py",
+     frozenset()),
     (ROOT / "goc" / "templates" / "hooks" / "pattern_generalization_check.py",
-     ROOT / "claude-plugin" / "hooks" / "pattern_generalization_check.py"),
+     ROOT / "claude-plugin" / "hooks" / "pattern_generalization_check.py",
+     frozenset()),
     (ROOT / "goc",
-     ROOT / "claude-plugin" / "goc"),
+     ROOT / "claude-plugin" / "goc",
+     frozenset({
+         "templates/skills",
+         "templates/hooks/deck_prompt_router.py",
+         "templates/hooks/deck_session_start.py",
+     })),
 ]
 
 _SKIP_FRAGMENTS = ("__pycache__", ".pyc")
+
+
+def _excluded(rel: Path, excludes: frozenset[str]) -> bool:
+    """True if `rel` is, or lives under, any excluded subpath."""
+    if not excludes:
+        return False
+    parts = rel.as_posix()
+    for ex in excludes:
+        if parts == ex or parts.startswith(ex + "/"):
+            return True
+    return False
 
 
 def _skip(path: Path) -> bool:
@@ -46,25 +73,39 @@ def _skip(path: Path) -> bool:
     return any(frag in s for frag in _SKIP_FRAGMENTS)
 
 
-def _sync_dir(src: Path, dst: Path) -> list[Path]:
-    """Copy src → dst, remove dst-only files. Return changed dst paths."""
+def _sync_dir(src: Path, dst: Path, excludes: frozenset[str] = frozenset()) -> list[Path]:
+    """Copy src → dst, remove dst-only files. Return changed dst paths.
+
+    Subpaths listed in `excludes` (relative to src) are skipped in both
+    directions: they are never copied from src and never removed from dst —
+    so an excluded path that exists in dst (but not src) is left alone, and
+    an excluded path that exists in src (but not dst) is not mirrored.
+    Excluded paths in dst that are *files* (e.g. stale leftovers) are removed
+    so the dst tree can shrink as the exclusion list grows.
+    """
     changed: list[Path] = []
 
-    # Remove files in dst that no longer exist in src.
+    # Remove files in dst that no longer exist in src OR are now excluded.
     if dst.exists():
         for item in sorted(dst.rglob("*")):
             if _skip(item) or item.is_dir():
                 continue
             rel = item.relative_to(dst)
+            if _excluded(rel, excludes):
+                item.unlink()
+                changed.append(item)
+                continue
             if not (src / rel).exists():
                 item.unlink()
                 changed.append(item)
 
-    # Copy src → dst (new or changed files only).
+    # Copy src → dst (new or changed files only), respecting excludes.
     for src_item in sorted(src.rglob("*")):
         if _skip(src_item):
             continue
         rel = src_item.relative_to(src)
+        if _excluded(rel, excludes):
+            continue
         dst_item = dst / rel
         if src_item.is_dir():
             dst_item.mkdir(parents=True, exist_ok=True)
@@ -73,6 +114,26 @@ def _sync_dir(src: Path, dst: Path) -> list[Path]:
             if not dst_item.exists() or not filecmp.cmp(src_item, dst_item, shallow=False):
                 shutil.copy2(src_item, dst_item)
                 changed.append(dst_item)
+
+    # Prune empty excluded directories so they don't linger in the payload.
+    if dst.exists():
+        for ex in excludes:
+            ex_dir = dst / ex
+            if ex_dir.is_dir():
+                # Walk depth-first and remove anything left.
+                for item in sorted(ex_dir.rglob("*"), reverse=True):
+                    if item.is_file():
+                        item.unlink()
+                        changed.append(item)
+                    elif item.is_dir():
+                        try:
+                            item.rmdir()
+                        except OSError:
+                            pass
+                try:
+                    ex_dir.rmdir()
+                except OSError:
+                    pass
 
     return changed
 
@@ -87,9 +148,9 @@ def _sync_file(src: Path, dst: Path) -> list[Path]:
 
 def _compute_changes() -> list[Path]:
     changed: list[Path] = []
-    for src, dst in SYNC_PAIRS:
+    for src, dst, excludes in SYNC_PAIRS:
         if src.is_dir():
-            changed.extend(_sync_dir(src, dst))
+            changed.extend(_sync_dir(src, dst, excludes))
         else:
             changed.extend(_sync_file(src, dst))
     return changed
@@ -98,12 +159,14 @@ def _compute_changes() -> list[Path]:
 def _check_changes() -> list[Path]:
     """Return list of dst paths that differ from src, without modifying anything."""
     out: list[Path] = []
-    for src, dst in SYNC_PAIRS:
+    for src, dst, excludes in SYNC_PAIRS:
         if src.is_dir():
             for src_item in sorted(src.rglob("*")):
                 if _skip(src_item) or src_item.is_dir():
                     continue
                 rel = src_item.relative_to(src)
+                if _excluded(rel, excludes):
+                    continue
                 dst_item = dst / rel
                 if not dst_item.exists() or not filecmp.cmp(src_item, dst_item, shallow=False):
                     out.append(dst_item)
@@ -112,6 +175,11 @@ def _check_changes() -> list[Path]:
                     if _skip(dst_item) or dst_item.is_dir():
                         continue
                     rel = dst_item.relative_to(dst)
+                    if _excluded(rel, excludes):
+                        # An excluded path lingering in dst means the payload
+                        # is stale — flag it so CI can fail until it is pruned.
+                        out.append(dst_item)
+                        continue
                     if not (src / rel).exists():
                         out.append(dst_item)
         else:
