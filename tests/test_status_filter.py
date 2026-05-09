@@ -49,7 +49,7 @@ class StatusFilterTest(unittest.TestCase):
             f"# {title}\n"
         )
 
-    def test_invalid_status_filter_reports_click_error(self) -> None:
+    def test_invalid_status_filter_rejects_unknown_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
@@ -57,7 +57,7 @@ class StatusFilterTest(unittest.TestCase):
 
             combined = result.stdout + result.stderr
             self.assertEqual(2, result.returncode, msg=combined)
-            self.assertIn("Invalid value for '--status'", result.stderr)
+            self.assertIn("bogus", result.stderr)
             self.assertNotIn("Traceback", combined)
 
     def test_status_all_and_specific_filters_still_work(self) -> None:

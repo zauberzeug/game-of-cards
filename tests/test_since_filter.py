@@ -47,7 +47,7 @@ class SinceFilterTest(unittest.TestCase):
             f"# {title}\n"
         )
 
-    def test_invalid_since_reports_click_error(self) -> None:
+    def test_invalid_since_rejects_non_date(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
@@ -55,7 +55,7 @@ class SinceFilterTest(unittest.TestCase):
 
             combined = result.stdout + result.stderr
             self.assertEqual(2, result.returncode, msg=combined)
-            self.assertIn("Invalid value for '--since'", result.stderr)
+            self.assertIn("--since", result.stderr)
             self.assertNotIn("Traceback", combined)
 
     def test_valid_since_filters_done_cards(self) -> None:

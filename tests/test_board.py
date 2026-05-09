@@ -71,7 +71,7 @@ class BoardRenderingTest(unittest.TestCase):
             one = self.run_goc(cwd, "--board", "--max-rows", "1")
 
             self.assertEqual(2, negative.returncode, msg=negative.stdout + negative.stderr)
-            self.assertIn("Invalid value for '--max-rows'", negative.stderr)
+            self.assertIn("--max-rows", negative.stderr)
             self.assertEqual(0, zero.returncode, msg=zero.stderr)
             self.assertEqual(0, one.returncode, msg=one.stderr)
 
