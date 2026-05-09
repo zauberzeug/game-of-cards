@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: null
-human_gate: none
+human_gate: session
 advances:
   - support-external-game-of-cards-state-location
 advanced_by:
