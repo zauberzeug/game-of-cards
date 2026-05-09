@@ -69,3 +69,13 @@ drain — useful diagnostic, not a runaway.
 
 - [`secrets.GITHUB_TOKEN` triggering workflows](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow) — `workflow_dispatch` and `repository_dispatch` are the documented exceptions to the no-cascade rule.
 - Sibling card: `pin-opus-on-autonomous-github-workflows` (closed 2026-05-09) pinned the model; this card pins the *shape* of how that model is invoked.
+
+## Empirical verification (2026-05-09)
+
+Verified live in runs `25598906055` and `25597987648` (both `event: workflow_dispatch`, `triggering_actor: github-actions[bot]`):
+
+- **`gh workflow run` self-trigger step succeeds** — the chain DOES fire. `permissions.actions: write` + default `GITHUB_TOKEN` is sufficient. The originally-disputed permission concern is resolved.
+- **The resulting iteration=N+1 run fails downstream** at `claude-code-action@v1`'s bot-actor allowlist check (`Workflow initiated by non-human actor: github-actions (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.`). This input defaults to empty (no bots permitted).
+- **Net effect**: only `event: schedule` (cron) runs drain the queue today; self-triggered iterations create dead runs. The fresh-context-per-card benefit is realized at cron-tick boundaries only, not within a single drain burst.
+
+Follow-up card: `pull-card-self-trigger-blocked-by-claude-action-bot-allowlist` surfaces the three real options (`allowed_bots: github-actions[bot]`, cron-only with tighter cadence, or another mechanism) and is parked at `gate: decision`. Detailed evidence in `pull-card-self-trigger-needs-empirical-verification` (closed 2026-05-09).
