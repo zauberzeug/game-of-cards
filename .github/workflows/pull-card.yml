@@ -88,3 +88,4 @@ jobs:
           claude_args: |
             --max-turns 500
             --permission-mode bypassPermissions
+            --model claude-opus-4-7

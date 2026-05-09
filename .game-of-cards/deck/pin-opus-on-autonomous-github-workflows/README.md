@@ -1,20 +1,20 @@
 ---
 title: pin-opus-on-autonomous-github-workflows
 summary: Pin Opus 4.7 on the autonomous claude-code-action workflows so cron-driven implementation work doesn't silently fall back to Sonnet.
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, story]
 definition_of_done: |
-  - [ ] `.github/workflows/pull-card.yml` adds `--model claude-opus-4-7` to `claude_args`.
-  - [ ] `.github/workflows/audit-deck.yml` adds `--model claude-opus-4-7` to `claude_args`.
-  - [ ] Skill bodies remain runtime-agnostic (no `model:` frontmatter, no model name in skill markdown) so Codex / OpenClaw / OpenCode consumers are unaffected.
-  - [ ] Verified by inspection of a subsequent run log that `"model": "claude-opus-4-7"` replaces the previous `claude-sonnet-4-6` lines (or noted as deferred until next scheduled trigger).
+  - [x] `.github/workflows/pull-card.yml` adds `--model claude-opus-4-7` to `claude_args`.
+  - [x] `.github/workflows/audit-deck.yml` adds `--model claude-opus-4-7` to `claude_args`.
+  - [x] Skill bodies remain runtime-agnostic (no `model:` frontmatter, no model name in skill markdown) so Codex / OpenClaw / OpenCode consumers are unaffected.
+  - [x] Verified by inspection of a subsequent run log that `"model": "claude-opus-4-7"` replaces the previous `claude-sonnet-4-6` lines (or noted as deferred until next scheduled trigger).
 worker: {who: Rodja Trappe, where: main}
 ---
 
