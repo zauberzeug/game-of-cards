@@ -31,3 +31,53 @@ Net architectural symmetry: Claude and OpenClaw plugins now share the same vendo
 ## 2026-05-09: decision recorded
 
 OpenClaw plugin wrapper invokes python3 -m goc.cli directly, mirroring the Claude plugin after plugin-wrapper-drops-uv. Local implementation (SKILL.md directories, vendored engine, bin/goc python3 wrapper, PATH-integration spike, hook-surface spike) is autonomous-pullable; external publishing stays gated under publish-openclaw-plugin. — python3 (3.10+) is broadly distributed; uv is opt-in tooling. The engine went pure-stdlib via plugin-wrapper-drops-uv, so uv is no longer needed even as a venv provisioner. Matches Rodja's stated runtime-baseline preference (python3 over uv) and keeps the OpenClaw wrapper architecturally identical to the Claude plugin.. Gate session → none.
+
+## 2026-05-09 — PATH-integration + hook-surface spikes resolved; gate raised
+
+Pull-card claimed this card and ran the two outstanding research spikes against upstream OpenClaw documentation.
+
+### PATH integration (DoD item 6): NO equivalent to Claude Code's auto-prepend
+
+Verified by reading three upstream docs pages:
+
+- <https://docs.openclaw.ai/plugins/manifest.md> — manifest schema lists `id`, `name`, `description`, `contracts`, `activation`, `commandAliases`, `skills`, `cliBackends`. **No `bin` field, no PATH-related field.**
+- <https://docs.openclaw.ai/plugins/sdk-overview.md> — `register(api)` surface lists `registerProvider`, `registerChannel`, `registerTool`, `registerCommand`, `registerHook`, `registerHttpRoute`, `registerCli`, `registerService`, `registerMemoryPromptSupplement`, `registerSessionExtension`, `registerTrustedToolPolicy`, `registerRuntimeLifecycle`, `enqueueNextTurnInjection`. **No `registerBin` / `providePathEntry` / equivalent.**
+- <https://docs.openclaw.ai/plugins/sdk-entrypoints.md> — entry-point doc covers TypeScript registration modes; no shell-PATH integration documented.
+
+Plugins ship CLI subcommands by registering them in TypeScript via `api.registerCli(({ program }) => { program.command("foo")... })`. That makes them OpenClaw-native verbs (invoked as `openclaw foo`) — NOT entries on the OS shell PATH. When a SKILL.md body says "run `goc new`", the LLM resolves `goc` against the user's existing OS PATH, not against any plugin-provided binary.
+
+This invalidates the "vendor engine + `bin/goc` python3 wrapper" plan. That plan rested on the assumption that OpenClaw mirrors Claude Code's auto-PATH-prepend behavior. Assumption is FALSE; the DoD already flagged this as a research item, now resolved.
+
+### Hook surface (DoD item 8): rich and maps cleanly
+
+Verified at <https://docs.openclaw.ai/plugins/hooks.md>. Hooks register from the plugin entry's `register(api)` function via `api.on(name, handler, opts?)`. Mapping:
+
+| Claude Code hook | OpenClaw equivalent | Notes |
+|---|---|---|
+| SessionStart | `session_start` | "track session lifecycle boundaries" |
+| UserPromptSubmit | `before_agent_run` | "inspect the final prompt … before model submission" |
+| Stop | `agent_end` | "observe final messages, success state, and run duration" |
+| SubagentStop | `subagent_ended` | part of subagent_* family |
+| PreToolUse | `before_tool_call` | "rewrite tool params, block execution, or require approval" |
+| PostToolUse | `after_tool_call` | "observe tool results, errors, and duration" |
+| PreCompact | `before_compaction` | rich `before_compaction`/`after_compaction` pair |
+
+GoC's three current hooks (`deck_session_start`, `deck_prompt_router`, `pattern_generalization_check`) all have natural OpenClaw analogs. Caveat: handlers are TypeScript (registered via `api.on()`), not Python scripts that OpenClaw invokes by reading a `hooks.json`. So we either (a) port the hook bodies to TypeScript or (b) shell out to the existing Python hook scripts from a thin TypeScript shim.
+
+### SKILL.md format (DoD item 2 cross-check): compatible
+
+Verified at <https://docs.openclaw.ai/tools/skills.md>:
+
+- Required frontmatter: `name`, `description`. Optional: `homepage`, `user-invocable`, `disable-model-invocation`, `command-dispatch`, `command-tool`, `command-arg-mode`, `metadata`.
+- Single-line frontmatter only.
+- Body is LLM-interpreted instructions (same model as Claude Code).
+
+Claude Code's existing SKILL.md frontmatter (`name`, `description`) maps directly. Bodies could be reused with minor edits (drop Claude-specific `Skill(...)` jargon; reword "Bash tool" references generically).
+
+### Workspace tier (DoD item 3 cross-check): filesystem-determined
+
+Skills installed via `openclaw skills install <id>` go into the active workspace's `skills/` directory (default `~/.openclaw/workspace/skills/`). Workspace tier = "lives in `<workspace>/skills/`". Plugins ship skills via `openclaw.plugin.json`'s `skills` array (relative paths to skill dirs in the package).
+
+### Architectural implication
+
+Three real options now sit on the body of this card under "## Decision required (2026-05-09, second pass)". The pull-card agent recommends β (BYO goc — pipx install) but parks the call. Gate raised `none → decision`; status returned to `open`. The python3-baseline preference still holds; only the wrapper-on-PATH half of the prior decision is up for revision.
