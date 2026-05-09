@@ -24,22 +24,26 @@ worker: {who: "claude[bot]", where: main}
 
 # OpenClaw plugin release-smoke blockers — build pipeline + sanctioned spawn API
 
-## Action required (gate still session as of retest #2)
+## Action required (gate still session as of retest #3)
 
 Implementation history:
 - `7cb062c openclaw-plugin: ship compiled JS + sanctioned spawn API` (2026-05-09 PM) — α implementation, DoD items 1–4 and 6 checked.
-- Retest #2 (2026-05-09 PM) — still red: scanner pattern-matches `child_process` token in source comments, not just imports. See log.md "retest #2" entry for root-cause walk.
-- Comment-rephrase commit (this session) — both source comments rewritten to drop the trigger token; `dist/` rebuilt; `grep` confirms repo tree is clean.
+- Retest #2 (2026-05-09 PM) — still red: scanner pattern-matches `child_process` token in source comments, not just imports.
+- `7fe3d66 openclaw-plugin: rephrase comments so safe-install scanner stops tripping on child_process substring` — both source comments rewritten; `dist/` rebuilt; `grep` confirms tree is clean.
 - DoD item 7 ticked: side-finding (`add-openclaw-install-section-to-llms-txt`) filed as a separate card per reviewer's scope decision.
+- Retest #3 (2026-05-09 PM, vs `8277962`) — better, still red. Scanner block cleared ✓ but install fails with `Cannot find module '@sinclair/typebox'`. After manual typebox install, `inspect` still shows `imported: false`. See log.md "retest #3" entry for the full walk.
+- Typebox-dep-fix commit (this session) — moved `@sinclair/typebox: ^0.32.0` from `devDependencies` to `dependencies` in `openclaw-plugin/package.json`. The `prepare` script auto-rebuilt `dist/`. Lockfile refreshed.
 
-**One DoD item remains: item 5 (smoke retest #3).** Tester needs to rerun the install flow on an OpenClaw runtime and confirm:
-- `openclaw plugins install <local-path>` succeeds **without** `--dangerously-force-unsafe-install` (no dangerous-code rejection).
+**One DoD item remains: item 5 (smoke retest #4).** Tester needs to rerun the install flow on an OpenClaw runtime and confirm:
+- `openclaw plugins install <local-path>` succeeds **without** `--dangerously-force-unsafe-install` AND without any manual `npm install @sinclair/typebox` afterward.
 - `openclaw plugins inspect game-of-cards --json` shows `imported: True`, `toolNames: ["goc"]`, `tools` non-empty.
 - A subagent can see and invoke the `goc` tool.
 
+If `imported: false` persists even after the typebox-dep fix, the next debug pass should run `inspect` with verbose / debug logging to see which `pushPluginLoadError` path fires in `node_modules/openclaw/dist/loader-B-GXgDrk.js`. The likely candidates if it persists: (a) the loader caches a prior failed-load state across inspect calls, (b) OpenClaw's installed-plugin location differs from where typebox was manually installed, so the runtime resolver still can't find it.
+
 The `TODO(verify-shape)` comments in `openclaw-plugin/index.ts` around `runCommandWithTimeout` and the three hook contexts can be resolved during this retest — the real OpenClaw SDK types confirm or correct our reasonable-guess assumptions.
 
-Once retest #3 passes, call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the last box, and `goc done` to close.
+Once retest #4 passes, call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the last box, and `goc done` to close.
 
 ## Background
 

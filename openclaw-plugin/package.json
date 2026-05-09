@@ -52,11 +52,13 @@
   "engines": {
     "node": ">=22.16"
   },
+  "dependencies": {
+    "@sinclair/typebox": "^0.32.0"
+  },
   "peerDependencies": {
     "openclaw": ">=2026.3.24-beta.2"
   },
   "devDependencies": {
-    "@sinclair/typebox": "^0.32.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   }

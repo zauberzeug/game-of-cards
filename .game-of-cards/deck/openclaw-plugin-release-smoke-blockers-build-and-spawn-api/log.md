@@ -86,3 +86,37 @@ Gate stays `session` — DoD item 5 still requires the tester action; this commi
 ### Side-finding (DoD item 7) — answered
 
 Reviewer's call: **expand scope.** `site/llms.txt` should grow an OpenClaw-specific install section. That's a feature add (additive content), distinct from `llms-txt-still-recommends-uv-tool-install-as-preferred`'s narrow one-comment uv→pipx correction. Filed as a separate card so the existing card's gate-none "one-comment edit" rationale stays intact. Cross-reference: see `add-openclaw-install-section-to-llms-txt`.
+
+## 2026-05-09 (PM, retest #3): scanner clear, but typebox is a runtime dep in the wrong section
+
+Tester reran against `main` HEAD `8277962`. Result: better, still red.
+
+### What's better
+
+- `openclaw plugins install <local-path> --force` now runs **without** `--dangerously-force-unsafe-install`. Dangerous-code scanner is no longer tripping. Comment-rephrase from retest #2 worked.
+
+### What's still red
+
+- Install fails with: `Cannot find module '@sinclair/typebox'`.
+- Root cause: `@sinclair/typebox` was declared in `devDependencies` of `openclaw-plugin/package.json`, but the compiled `dist/index.js` imports it at runtime (`import { Type, type Static } from "@sinclair/typebox"` in `index.ts:30`). When OpenClaw runs the plugin's prod-only dep install, devDependencies are skipped and the runtime import fails.
+
+After tester manually installed typebox, the install proceeds further but `openclaw plugins inspect game-of-cards --json` still shows `imported: false`, `toolNames: []`, `tools: []`. Tester verified that direct Node import of `dist/index.js` with a mock API DOES call `api.registerTool({ name: "goc" })` — so the registration code is correct end-to-end; the gap is somewhere in OpenClaw's loader between "module file resolved" and "register(api) executed".
+
+### Fix
+
+Moved `@sinclair/typebox: ^0.32.0` from `devDependencies` to a new `dependencies` block in `openclaw-plugin/package.json`. Ran `npm install` to refresh the lockfile (`prepare` script auto-rebuilt `dist/`).
+
+After this lands, the next plugin install should pull typebox automatically — the tester won't need to manual-install. If `imported: false` persists post-fix, the next debugging pass should look at OpenClaw's plugin install/load logs (verbose mode) for the explicit failure, since the plugin entry shape (`export default definePluginEntry({...})`) matches the canonical example in `node_modules/openclaw/docs/plugins/building-plugins.md`. Likely candidate causes if it persists: (a) OpenClaw caches the prior load failure across the inspect call even after the dep is satisfied, (b) OpenClaw's installed-plugin location differs from where the tester manually installed typebox, so the runtime resolver still can't find it.
+
+### Hypothesis for `imported: false` even with typebox available
+
+Reading `node_modules/openclaw/dist/loader-B-GXgDrk.js` and `status-DEJL5ql6.js`: the `imported` flag in `inspect --json` becomes `true` when the loader reaches `recordImportedPluginId(record.id)` immediately before `loadPluginModule(safeSource)`. If `loadPluginModule` throws (e.g., `Cannot find module '@sinclair/typebox'`), the id is recorded as imported BUT the registration never fires, leaving `tools: []` / `toolNames: []`. The tester's report shows `imported: false`, which suggests we never reached `recordImportedPluginId` — i.e., we bailed earlier (manifest validation, configSchema check, or `openBoundaryFileSync` rejecting the entry path with `rejectHardlinks: true` for external plugins). Once typebox lands as a real dep, retest with verbose logging (`OPENCLAW_LOG_LEVEL=debug` or equivalent) to see which `pushPluginLoadError` path fires.
+
+### Next
+
+Same acceptance bar as retest #2:
+- `openclaw plugins install <local-path>` succeeds without `--dangerously-force-unsafe-install` AND without manual `npm install @sinclair/typebox` afterward.
+- `openclaw plugins inspect game-of-cards --json` shows `imported: True`, `toolNames: ["goc"]`, `tools` non-empty.
+- A subagent can see and invoke the `goc` tool.
+
+DoD item 5 stays unchecked.
