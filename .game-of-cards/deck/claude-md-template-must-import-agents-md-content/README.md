@@ -1,7 +1,7 @@
 ---
 title: claude-md-template-must-import-agents-md-content
 summary: "`goc/templates/CLAUDE_GOC.md` (and the deployed `CLAUDE.md` in this repo) currently uses a plain markdown link `[AGENTS.md](AGENTS.md)` to point readers at the shared GoC briefing. Claude Code does not follow markdown links as imports — its docs explicitly say `Claude Code reads CLAUDE.md, not AGENTS.md` and recommend either the `@AGENTS.md` import syntax (which Claude Code resolves at load time) or a `ln -s AGENTS.md CLAUDE.md` symlink. Today's template silently gives Claude *less* GoC context than before the slim-down, because Claude never sees the AGENTS.md content at all. Fix by switching the template to `@AGENTS.md` import (or, if that proves brittle, inlining the briefing back into CLAUDE_GOC.md for Claude only)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-09
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] Smoke test: open a Claude Code session in a fresh `goc install`-ed tmpdir; confirm Claude has loaded both the AGENTS.md briefing and the CLAUDE_GOC.md delta (e.g. by asking it about deck-first mode and verifying it cites content that lives only in AGENTS.md)
   - [ ] If `@AGENTS.md` import is brittle (e.g. relative-path resolution fails when CLAUDE.md is in a subdir), fall back to inlining the briefing in CLAUDE_GOC.md and document the duplication in CLAUDE.md
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Claude is not loading the AGENTS.md briefing
