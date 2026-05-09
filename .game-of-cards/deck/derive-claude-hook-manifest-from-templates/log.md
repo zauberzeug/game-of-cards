@@ -1,0 +1,3 @@
+## 2026-05-09: decision recorded
+
+Hybrid: derive the manifest copy list and validator pairs from goc/templates/hooks/*.py at runtime. Keep GOC_CLAUDE_HOOKS dict explicit (the event-to-script mapping has semantic content worth seeing in source). Add validate_hook_registration that asserts every script under templates/hooks has an entry in the dict and every dict entry points at a real file. — Mirrors the skill-rename precedent (derive what is pure data, tripwire what has semantic content). Dropping a file in templates/hooks/ self-updates the manifest and parity pairs; forgetting the GOC_CLAUDE_HOOKS entry is caught at validate time. Event mapping stays legible in one place, which matters when introspecting 'what fires on Stop?'.. Gate decision → none.

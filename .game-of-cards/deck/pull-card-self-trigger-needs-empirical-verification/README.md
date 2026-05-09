@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-09
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by:
   - self-trigger-pull-card-workflow-for-fresh-context-per-card
@@ -68,21 +68,11 @@ the first self-trigger. Without an empirical run, we cannot tell.
      (PAT secret, GitHub App with `workflows` scope, or remove
      self-trigger and rely on tighter cron).
 
-## Decision required
+## Decision
 
-Before doing the verification, confirm the test setup:
+*Resolved 2026-05-09:* Run the verification by triggering pull-card.yml via workflow_dispatch with iteration=1; observe whether the self-trigger chain fires iteration=2 successfully. If the chain fails (gh workflow run returns 403 or similar), fall back to cron-only with a tighter schedule (e.g., */10 minutes) and one card per tick. No PAT, no GitHub App.
 
-- Are there safe-to-pull cards in the queue today, or do we need to
-  file a couple of trivial ones first?
-- Acceptable to run on `main`, or should this be run on a throwaway
-  branch first?
-- If the chain fails, is the preferred fallback the cron-only path
-  (simpler, slower drain) or a PAT-based self-trigger (faster drain,
-  one more secret to manage)?
-
-These don't block filing the card but should be answered before
-running the verification step.
-
+*Reasoning:* Cron-only with tighter schedule preserves fresh-context-per-card (the architectural goal of the parent card) without new secrets or permission changes. Aligns with the drop-third-party-runtime-dependencies-from-goc epic energy and keeps the autonomous loop simple. Slower drain is acceptable for low-urgency work; queue can be tightened further if it grows faster than drain.
 ## Cross-references
 
 - `self-trigger-pull-card-workflow-for-fresh-context-per-card` (done) —

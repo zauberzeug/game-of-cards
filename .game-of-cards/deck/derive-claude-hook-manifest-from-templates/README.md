@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-09
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by:
   - prevent-skill-rename-from-breaking-ci-silently
@@ -58,35 +58,11 @@ list replaces the hand-maintained one) and
 `extend-skill-parity-tripwire-to-claude-plugin-mirrors` (a tripwire
 catches drift between source-of-truth and consumer copies).
 
-## Decision required
+## Decision
 
-**A. Pure derivation.** Walk `goc/templates/hooks/*.py`, infer the
-event from a header comment or filename convention (e.g., a
-`# event: Stop` line in each script), and compute the three lists at
-runtime. Manifest, `GOC_CLAUDE_HOOKS`, and the validator pairs all
-read from the same in-process derivation. Pro: zero drift possible.
-Con: introduces a header-comment convention, which is itself a
-source of drift if a script is added without the convention.
+*Resolved 2026-05-09:* Hybrid: derive the manifest copy list and validator pairs from goc/templates/hooks/*.py at runtime. Keep GOC_CLAUDE_HOOKS dict explicit (the event-to-script mapping has semantic content worth seeing in source). Add validate_hook_registration that asserts every script under templates/hooks has an entry in the dict and every dict entry points at a real file.
 
-**B. Hybrid (header convention + tripwire).** Same derivation as A
-for the manifest and validator pairs, but `GOC_CLAUDE_HOOKS` keeps
-the explicit dict (event mapping is genuinely informative and worth
-seeing in source). Add a `validate_hook_registration` check that
-asserts every script under `goc/templates/hooks/` has an entry in
-the dict, and every dict entry points at a real file. Pro: keeps the
-event-mapping legible; tripwire catches the case A's convention
-misses. Con: two mechanisms instead of one.
-
-**C. Pure tripwire (no derivation).** Keep all three lists
-hand-maintained but add `validate_hook_registration` that fails
-when the three lists' set of script names disagrees. Pro: smallest
-change; preserves explicit lists. Con: doesn't prevent the
-"contributor edits two of three lists, tripwire catches it on
-validate" friction — one fewer step in the recovery loop than B.
-
-A is the most robust but introduces a new convention. C is the
-smallest change but keeps the redundancy. B is the natural compromise.
-
+*Reasoning:* Mirrors the skill-rename precedent (derive what is pure data, tripwire what has semantic content). Dropping a file in templates/hooks/ self-updates the manifest and parity pairs; forgetting the GOC_CLAUDE_HOOKS entry is caught at validate time. Event mapping stays legible in one place, which matters when introspecting 'what fires on Stop?'.
 ## Why decision gate
 
 The "right" amount of derivation here depends on how often hooks are

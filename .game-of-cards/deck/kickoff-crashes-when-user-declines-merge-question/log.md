@@ -1,0 +1,3 @@
+## 2026-05-09: decision recorded
+
+Drive the per-file merge from the kickoff skill body. Stage 4 calls plain 'goc install' (no negative flags) and then conditionally strips the marker-bounded GoC block from CLAUDE.md and/or AGENTS.md based on the user's Stage 3 answers, using sed or equivalent inside the skill body. — Per-file UX is a UX concern that belongs in the kickoff skill, not the install primitive. Keeping the CLI minimal means no future drift between '--claude' (agent toggle) and '--no-claude-md' (file toggle), and the install command stays a simple primitive that callers compose against.. Gate decision → none.

@@ -1,0 +1,3 @@
+## 2026-05-09: decision recorded
+
+Run the verification by triggering pull-card.yml via workflow_dispatch with iteration=1; observe whether the self-trigger chain fires iteration=2 successfully. If the chain fails (gh workflow run returns 403 or similar), fall back to cron-only with a tighter schedule (e.g., */10 minutes) and one card per tick. No PAT, no GitHub App. — Cron-only with tighter schedule preserves fresh-context-per-card (the architectural goal of the parent card) without new secrets or permission changes. Aligns with the drop-third-party-runtime-dependencies-from-goc epic energy and keeps the autonomous loop simple. Slower drain is acceptable for low-urgency work; queue can be tightened further if it grows faster than drain.. Gate decision → none.

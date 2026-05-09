@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-09
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
 advanced_by: []
@@ -45,32 +45,11 @@ So a kickoff run where the user declines either merge crashes at the
 exact moment it's supposed to scaffold project state. The user is
 left with a half-initialized repo and a confusing CLI error.
 
-## Decision required
+## Decision
 
-Two fix paths, roughly equal in cost; pick one.
+*Resolved 2026-05-09:* Drive the per-file merge from the kickoff skill body. Stage 4 calls plain 'goc install' (no negative flags) and then conditionally strips the marker-bounded GoC block from CLAUDE.md and/or AGENTS.md based on the user's Stage 3 answers, using sed or equivalent inside the skill body.
 
-**A. Add the flags to the install subcommand.** Extend `install_parser`
-in `goc/cli.py` with `--no-claude-md` and `--no-agents-md` as
-boolean toggles, thread them through `install()` in `goc/install.py`
-to skip the corresponding `_append_marker_block` call. Pro: matches
-what kickoff already documents; minimal skill-body churn. Con:
-expands the CLI surface and adds another pair of flags users can
-accidentally combine with the positive forms (`--claude --no-claude-md`
-should mean what?).
-
-**B. Drive the per-file merge from the kickoff skill itself.** Stage 4
-runs `goc install` (no negative flags) and then conditionally
-strips/skips the GoC marker blocks from CLAUDE.md / AGENTS.md based
-on the user's answers, using shell or `sed` inside the skill body.
-Pro: keeps the CLI minimal; the per-file choice is a UX concern that
-belongs in the onboarding skill, not the install primitive. Con:
-moves logic into prose-driven skill instructions, which are harder
-to test than CLI flags.
-
-A third option — **C. Make `goc install` default to no-merge** —
-would conflict with `make-claude-md-and-agents-md-merge-opt-in-via-skill`
-(superseded), which already settled this design question. Skip.
-
+*Reasoning:* Per-file UX is a UX concern that belongs in the kickoff skill, not the install primitive. Keeping the CLI minimal means no future drift between '--claude' (agent toggle) and '--no-claude-md' (file toggle), and the install command stays a simple primitive that callers compose against.
 ## Notes
 
 - This is a regression introduced by either
