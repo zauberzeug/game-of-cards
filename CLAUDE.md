@@ -19,7 +19,8 @@ uv pip install --system -e .       # editable install (what CI does)
 uv run goc --help                  # exercise the CLI from source
 uv run goc validate                # check every card's frontmatter
 uv build                           # produce wheel + sdist in dist/
-pre-commit run --all-files         # runs `goc validate` (the only hook)
+pre-commit run --all-files         # sync plugin assets + goc validate
+python scripts/sync_plugin_assets.py --check  # verify claude-plugin/ is in sync
 ```
 
 No pytest suite exists yet. `.github/workflows/ci.yml` is a
@@ -74,21 +75,22 @@ edit `goc/templates/...` and re-run `goc upgrade`** (or edit both
 copies in lockstep). Editing only `.claude/skills/...` is silently
 lost on the next upgrade.
 
-### Plugin assets are duplicated — keep them in lockstep
+### Plugin assets are auto-synced — edit only the template
 
 The Claude Code plugin payload at `claude-plugin/` ships skills, hook
-scripts, and (since the engine bundle) a copy of the entire `goc/`
-package plus a `bin/goc` wrapper. Because Claude Code's marketplace
-install only extracts the `source: ./claude-plugin` subtree, those
-assets must be **real files** (not symlinks pointing outside the
-subtree, which silently disappear on consumer install). They are
-therefore byte-for-byte duplicates of the source-of-truth files:
+scripts, and a copy of the entire `goc/` package plus a `bin/goc`
+wrapper. Because Claude Code's marketplace install only extracts the
+`source: ./claude-plugin` subtree, those assets must be **real files**
+(not symlinks pointing outside the subtree, which silently disappear on
+consumer install). They are byte-for-byte copies of the source-of-truth
+files:
 
 | Plugin path | Source-of-truth |
 |---|---|
 | `claude-plugin/skills/` | `goc/templates/skills/` |
 | `claude-plugin/hooks/deck_prompt_router.py` | `goc/templates/hooks/deck_prompt_router.py` |
 | `claude-plugin/hooks/deck_session_start.py` | `goc/templates/hooks/deck_session_start.py` |
+| `claude-plugin/hooks/pattern_generalization_check.py` | `goc/templates/hooks/pattern_generalization_check.py` |
 | `claude-plugin/goc/` | `goc/` (entire package — engine, schema, templates) |
 
 The flat `claude-plugin/skills/` and `claude-plugin/hooks/` paths exist
@@ -98,10 +100,14 @@ expects. The nested `claude-plugin/goc/templates/...` exists so the
 `importlib.resources` when running under `bin/goc`. Same bytes,
 different consumers.
 
-When changing any of these files, update **all copies**. CI fails the
-"Verify plugin assets match templates byte-for-byte" step on drift.
-The future `generate-plugin-payloads-from-templates-on-release` card
-collapses this to a single source via release-time generation.
+**Do not edit `claude-plugin/` directly.** The `sync-plugin-assets`
+pre-commit hook (`scripts/sync_plugin_assets.py`) auto-regenerates those
+files from the source-of-truth on every commit and stages the changes
+automatically. CI runs `python scripts/sync_plugin_assets.py --check`
+and fails the build on any drift. Plugin-specific files that are NOT
+auto-synced: `claude-plugin/hooks/hooks.json`, `claude-plugin/bin/goc`,
+`claude-plugin/pyproject.toml`, `claude-plugin/uv.lock`,
+`claude-plugin/settings.json`, `claude-plugin/README.md`.
 
 ### Plugin runs goc from a vendored engine — `uv` is the only host prerequisite
 

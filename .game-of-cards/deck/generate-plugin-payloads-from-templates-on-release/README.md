@@ -1,11 +1,11 @@
 ---
 title: generate-plugin-payloads-from-templates-on-release
 summary: "Eliminate the byte-for-byte duplication between `goc/templates/` and the various agent plugin payloads (`claude-plugin/`, future `codex-plugin/`, `openclaw-plugin/`) by generating each plugin's bundle from the templates as part of the release process. Today the duplication is enforced via a CI byte-equality check, which catches drift after the fact rather than preventing it. As Codex and OpenClaw plugins land, the duplication multiplies — three plugin trees instead of one. The right fix is generation: `goc/templates/` is the source of truth; plugin payloads are build artefacts."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
@@ -13,13 +13,13 @@ advances:
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Release workflow generates each plugin's payload (`claude-plugin/skills/`, `claude-plugin/hooks/*.py`, future `codex-plugin/*`, `openclaw-plugin/*`) from `goc/templates/` rather than maintaining hand-edited duplicates
-  - [ ] Generation step runs in CI on every tag and on every PR that touches `goc/templates/` or `claude-plugin/`, so drift fails the build at the source rather than in a downstream byte-check
-  - [ ] Existing CI byte-equality assertion ('Verify plugin assets match templates byte-for-byte') is either removed or repurposed as a sanity check on the generation output
-  - [ ] CLAUDE.md / AGENTS.md guidance updated: contributors edit `goc/templates/` only; plugin directories are build artefacts and may be `.gitignore`d or kept committed depending on what plugin install requires
-  - [ ] Decision recorded (in this card or a child) on whether plugin directories remain checked-in (consumer install needs the bytes present in the subtree the marketplace pulls from) or move to a separate publish-only branch
-  - [ ] All currently-shipping plugins (Claude today; Codex / OpenClaw when they land) consume the generator
-  - [ ] `uv run goc validate` passes
+  - [x] Release workflow generates each plugin's payload (`claude-plugin/skills/`, `claude-plugin/hooks/*.py`, future `codex-plugin/*`, `openclaw-plugin/*`) from `goc/templates/` rather than maintaining hand-edited duplicates
+  - [x] Generation step runs in CI on every tag and on every PR that touches `goc/templates/` or `claude-plugin/`, so drift fails the build at the source rather than in a downstream byte-check
+  - [x] Existing CI byte-equality assertion ('Verify plugin assets match templates byte-for-byte') is either removed or repurposed as a sanity check on the generation output
+  - [x] CLAUDE.md / AGENTS.md guidance updated: contributors edit `goc/templates/` only; plugin directories are build artefacts and may be `.gitignore`d or kept committed depending on what plugin install requires
+  - [x] Decision recorded (in this card or a child) on whether plugin directories remain checked-in (consumer install needs the bytes present in the subtree the marketplace pulls from) or move to a separate publish-only branch
+  - [x] All currently-shipping plugins (Claude today; Codex / OpenClaw when they land) consume the generator
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
