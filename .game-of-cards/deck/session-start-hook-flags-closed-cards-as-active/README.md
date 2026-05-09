@@ -1,22 +1,22 @@
 ---
 title: session-start-hook-flags-closed-cards-as-active
 summary: "SessionStart hook (`deck_session_start.py`) flags closed cards as active because it substring-matches `status: active` against the full README body, not just frontmatter. Any card whose body discusses status semantics (code quote, code block, or prose) gets falsely reported. Replace the substring scan with a proper YAML-frontmatter parse."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, meta-fix]
 definition_of_done: |
-  - [ ] `deck_session_start.py` no longer flags a card as active unless the YAML frontmatter's `status` field is literally `active`. References to the string `status: active` inside the card body (code quotes, code blocks, prose) MUST NOT trigger the active-card reminder.
-  - [ ] A regression case is added: a card whose frontmatter says `status: done` but whose body contains a backtick-wrapped or fenced-code reference to `status: active` is correctly excluded from the SessionStart reminder. Demonstrate via a unit test, a script invocation, or — at minimum — a `.game-of-cards/deck/<fixture>/README.md` fixture exercised in CI.
-  - [ ] All four file copies updated in lockstep: `goc/templates/hooks/deck_session_start.py` (source of truth), `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `claude-plugin/goc/templates/hooks/deck_session_start.py`. The byte-for-byte CI tripwire (introduced in `bf40f68`) will fail the build if the four diverge.
-  - [ ] The hook's behavior matches `goc --status active` exactly on the current repo's deck (no false positives, no false negatives).
-  - [ ] `uv run goc validate` passes.
-  - [ ] Manual verification: `python3 .claude/hooks/deck_session_start.py` prints the same active-card list as `goc --status active` returns titles for.
+  - [x] `deck_session_start.py` no longer flags a card as active unless the YAML frontmatter's `status` field is literally `active`. References to the string `status: active` inside the card body (code quotes, code blocks, prose) MUST NOT trigger the active-card reminder.
+  - [x] A regression case is added: a card whose frontmatter says `status: done` but whose body contains a backtick-wrapped or fenced-code reference to `status: active` is correctly excluded from the SessionStart reminder. Demonstrate via a unit test, a script invocation, or — at minimum — a `.game-of-cards/deck/<fixture>/README.md` fixture exercised in CI.
+  - [x] All four file copies updated in lockstep: `goc/templates/hooks/deck_session_start.py` (source of truth), `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `claude-plugin/goc/templates/hooks/deck_session_start.py`. The byte-for-byte CI tripwire (introduced in `bf40f68`) will fail the build if the four diverge.
+  - [x] The hook's behavior matches `goc --status active` exactly on the current repo's deck (no false positives, no false negatives).
+  - [x] `uv run goc validate` passes.
+  - [x] Manual verification: `python3 .claude/hooks/deck_session_start.py` prints the same active-card list as `goc --status active` returns titles for.
 worker: {who: "claude[bot]", where: main}
 ---
 

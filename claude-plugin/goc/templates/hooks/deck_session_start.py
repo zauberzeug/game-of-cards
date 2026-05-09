@@ -8,8 +8,25 @@ Silent when no cards are in-flight.
 from __future__ import annotations
 
 import os
-import sys
+import re
 from pathlib import Path
+
+_FRONTMATTER_RE = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
+
+
+def _card_status(readme: Path) -> str | None:
+    """Return the frontmatter `status` value, or None if unreadable."""
+    try:
+        text = readme.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    m = _FRONTMATTER_RE.match(text)
+    if not m:
+        return None
+    for line in m.group(1).splitlines():
+        if line.startswith("status:"):
+            return line.split(":", 1)[1].strip()
+    return None
 
 
 def main() -> int:
@@ -29,7 +46,7 @@ def main() -> int:
         readme = card_dir / "README.md"
         if not readme.is_file():
             continue
-        if "status: active" in readme.read_text():
+        if _card_status(readme) == "active":
             active_cards.append(card_dir.name)
 
     if active_cards:
