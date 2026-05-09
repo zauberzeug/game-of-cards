@@ -1,7 +1,7 @@
 ---
 title: refuse-local-skills-flag-when-running-under-plugin
 summary: "When the bundled `goc/` engine inside `claude-plugin/` is invoked (via `claude-plugin/bin/goc`), refuse `--local-skills` (on `goc install`) and `--keep-local-skills` (on `goc upgrade`) with a clear error directing the user to install via pipx instead. Once those flags can never reach the bundled engine, the engine no longer reads `templates/skills/` or `templates/hooks/`, so drop `claude-plugin/goc/templates/skills/` and `claude-plugin/goc/templates/hooks/{deck_prompt_router,deck_session_start}.py` from the plugin payload entirely. Eliminates ~half the surface area of the `validate_plugin_mirror_parity` tripwire and removes one drift bug class for good."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-09
@@ -24,6 +24,7 @@ definition_of_done: |
   - [ ] CLAUDE.md "Plugin assets are duplicated" section is updated to remove the rows for `claude-plugin/goc/templates/skills/` and `claude-plugin/goc/templates/hooks/`, leaving only the rows that still apply
   - [ ] AGENTS.md / install-help docs note the plugin/pipx split for vendored-skills users
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Refuse `--local-skills` flag when running under plugin
