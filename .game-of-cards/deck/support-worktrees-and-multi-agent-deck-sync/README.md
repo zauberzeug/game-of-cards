@@ -1,7 +1,7 @@
 ---
 title: support-worktrees-and-multi-agent-deck-sync
 summary: "Epic. Today GoC assumes mainline development with the deck checked into the same repo. Three concrete failure modes need a workflow story: (1) one user with multiple worktrees can't reach the deck of the parent repo; (2) multiple humans + AIs need a sync protocol so claims and progress are visible across branches; (3) OSS / library repos cannot mix project-management commits with code history without breaking community workflow. Lemma: `.game-of-cards/` must always be in sync with all participants. This epic frames the children that explore each path."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-07
@@ -24,6 +24,7 @@ definition_of_done: |
   - [ ] README's audience preamble (per closed `restructure-comic-as-three-panels-and-add-audience-preamble`) names which workflow each persona should pick — verify wording is in place; edit if missing
   - [ ] Personas card (closed `define-personas-and-use-cases-for-game-of-cards`) names the workflow expectations per persona — verify wording is in place; edit if missing
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Support multi-branch and multi-user deck workflows
