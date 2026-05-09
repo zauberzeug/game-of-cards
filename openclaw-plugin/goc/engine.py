@@ -650,8 +650,10 @@ def validate_plugin_mirror_parity() -> list[str]:
     claude_goc_excludes = frozenset({"templates/skills"})
 
     # OpenClaw reimplements every deck hook in TypeScript, so its deep mirror
-    # also omits the Python hook scripts.
-    openclaw_goc_excludes = claude_goc_excludes | frozenset(
+    # also omits the Python hook scripts. Exclude both the directory itself
+    # (when missing entirely from the mirror) and each hook file inside it
+    # (so partial overlap still surfaces unexpected files as drift).
+    openclaw_goc_excludes = claude_goc_excludes | {"templates/hooks"} | frozenset(
         f"templates/hooks/{name}" for name in hook_names
     )
 
