@@ -1,11 +1,11 @@
 ---
 title: design-claim-protocol-with-branch-and-author-metadata
 summary: "Design a claim protocol for multi-human + multi-AI work that keeps the deck-on-main invariant intact. A claim must always land on main (so all participants see it). The data carrier — a `worker` frontmatter field with `who` and `where` — is being implemented separately as `add-worker-field-and-filter-to-cards`. This card now focuses on the remaining policy questions: identity model, conflict semantics on concurrent claims, and closure-on-integration enforcement (a card cannot transition to `done` until the work is integrated to main, not just locally DoD-complete)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - support-worktrees-and-multi-agent-deck-sync
@@ -15,10 +15,10 @@ tags: [story, infra]
 definition_of_done: |
   - [x] Identity model decided: `worker.who` is a free-form string. Decision + rationale recorded in the `## Decision` section.
   - [x] Conflict semantics specified: last-writer-wins on git push with re-fetch + retry. Documented in the `## Decision` section.
-  - [ ] Closure-on-integration rule implemented: opt-in via `workflow.closure_on_integration: true` in `.game-of-cards/config.yaml`; when enabled, `goc done` runs `git merge-base --is-ancestor HEAD origin/main` and refuses to close otherwise. Decision recorded; implementation pending.
-  - [ ] `Skill(pull-card)` / `goc advance --status active` extends its push step with re-fetch + retry on push conflict (per the conflict-semantics decision)
-  - [ ] Audience preamble (in README, per closed `restructure-comic-as-three-panels-and-add-audience-preamble`) names this protocol as FOR multi-human teams vs. NOT-FOR solo workflows. Verify wording is in place; edit if missing.
-  - [ ] `uv run goc validate` passes
+  - [x] Closure-on-integration rule implemented: opt-in via `workflow.closure_on_integration: true` in `.game-of-cards/config.yaml`; when enabled, `goc done` runs `git merge-base --is-ancestor HEAD origin/main` and refuses to close otherwise. (`_enforce_closure_on_integration_or_exit` in `goc/engine.py`, called from `_cmd_done`.)
+  - [x] `Skill(pull-card)` / `goc advance --status active` extends its push step with re-fetch + retry on push conflict (per the conflict-semantics decision). Opt-in via `workflow.claim_push: true`; on non-fast-forward push, fetches and rebases, aborts with the racing worker's identity if a rebase conflict reveals a concurrent claim. (`_git_claim_push_with_retry` in `goc/engine.py`, wired into `_cmd_status` for the `active` transition.)
+  - [x] Audience preamble (in README, per closed `restructure-comic-as-three-panels-and-add-audience-preamble`) names this protocol as FOR multi-human teams vs. NOT-FOR solo workflows. README's "Who this is for" paragraph differentiates "vibe-coders" / "solo developers" / "multi-agent setups where several agents and humans drain a shared task queue"; PERSONAS.md persona 3 (multi-agent coordinator) cross-links this card explicitly, persona 2 (solo developer) explicitly excludes "multi-agent coordination — they're alone".
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

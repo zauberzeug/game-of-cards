@@ -130,5 +130,14 @@ same project and wants a single queue. When auto-commit is on, deck mutations
 from a worktree commit to the primary working tree's branch, not the
 worktree's branch.
 
+**Multi-team coordination opt-ins** — both default off; turn on for setups
+where several humans and agents work the same deck across branches:
+- `workflow.claim_push: true` — `goc status <title> active` pushes the claim
+  commit and retries once on non-fast-forward; aborts with the racing worker's
+  identity when a rebase conflict reveals a concurrent claim.
+- `workflow.closure_on_integration: true` — `goc done` refuses to close unless
+  HEAD is reachable from `origin/main`, so `done` means visible to every
+  participant rather than locally DoD-complete.
+
 **Discovery marker** — the `<!-- BEGIN GOC -->` block in `AGENTS.md` is the canonical repo-visible signal that GoC is in use. Agent plugins discover GoC through this marker without requiring skills or hooks to be checked in.
 <!-- END GOC -->

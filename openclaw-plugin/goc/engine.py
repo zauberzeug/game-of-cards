@@ -1918,6 +1918,7 @@ def _cmd_done(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    _enforce_closure_on_integration_or_exit(title)
     today = date.today().isoformat()
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", "done")
@@ -2057,6 +2058,166 @@ def auto_commit_enabled(override: bool | None = None) -> bool:
             file=sys.stderr,
         )
     return enabled
+
+
+def _enforce_closure_on_integration_or_exit(title: str) -> None:
+    """When workflow.closure_on_integration is enabled, refuse closure unless
+    HEAD is reachable from origin/main.
+
+    Multi-team policy: a card cannot transition to `done` until its work is
+    integrated to the canonical branch — `done` must mean "visible to every
+    participant", not just "locally DoD-complete". Opt-in; default off.
+    """
+    config = load_deck_config()
+    workflow = config.get("workflow") or {}
+    if not _coerce_config_bool(workflow.get("closure_on_integration"), default=False):
+        return
+    if not _deck_is_git_tracked():
+        return
+    git_cwd = str(DECK_ROOT)
+    fetch = subprocess.run(
+        ["git", "fetch", "--quiet", "origin", "main"],
+        capture_output=True,
+        text=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    if fetch.returncode != 0:
+        print(
+            "  Warning: closure_on_integration is enabled but `git fetch origin main` failed; skipping check",
+            file=sys.stderr,
+        )
+        return
+    check = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],
+        capture_output=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    if check.returncode != 0:
+        print(
+            f"ERROR: {title}: closure_on_integration is enabled and HEAD is not"
+            " reachable from origin/main. Integrate the work (merge or push)"
+            " before closing — `done` must be visible to every participant.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
+def claim_push_enabled() -> bool:
+    """Return True when workflow.claim_push is set; default off.
+
+    When enabled, `goc status <title> active` pushes the claim commit to the
+    remote tracking branch and retries once on non-fast-forward, aborting if a
+    rebase conflict reveals a concurrent claim. Off by default to preserve the
+    solo workflow where pushes are user-driven.
+    """
+    if not _deck_is_git_tracked():
+        return False
+    config = load_deck_config()
+    workflow = config.get("workflow") or {}
+    return _coerce_config_bool(workflow.get("claim_push"), default=False)
+
+
+def _git_claim_push_with_retry(card_dir: Path, title: str) -> bool:
+    """Push the just-committed claim and retry once on non-fast-forward.
+
+    Conflict semantics (per the design-claim-protocol decision): re-fetch and
+    rebase on top of the remote. If the rebase fails — meaning another worker
+    modified the same card concurrently — abort cleanly with the racing
+    worker's identity so the caller knows the claim did not stick.
+
+    Returns True on a clean push; False when the claim could not be published
+    (the local commit is preserved either way; the caller decides what to do).
+    """
+    git_cwd = str(DECK_ROOT)
+    branch_proc = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    branch = branch_proc.stdout.strip()
+    if not branch or branch == "HEAD":
+        print("  Warning: detached HEAD; claim was committed locally but not pushed", file=sys.stderr)
+        return False
+
+    push = subprocess.run(
+        ["git", "push", "origin", branch],
+        capture_output=True,
+        text=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    if push.returncode == 0:
+        print("  pushed")
+        return True
+
+    fetch = subprocess.run(
+        ["git", "fetch", "--quiet", "origin", branch],
+        capture_output=True,
+        text=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    if fetch.returncode != 0:
+        print(
+            f"  push failed and fetch failed: {(push.stderr or push.stdout).strip()}",
+            file=sys.stderr,
+        )
+        return False
+
+    rebase = subprocess.run(
+        ["git", "rebase", f"origin/{branch}"],
+        capture_output=True,
+        text=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    if rebase.returncode != 0:
+        subprocess.run(["git", "rebase", "--abort"], cwd=git_cwd, check=False, capture_output=True)
+        other = "<unknown>"
+        try:
+            rel = card_dir.relative_to(DECK_ROOT)
+            remote_readme = subprocess.run(
+                ["git", "show", f"origin/{branch}:{rel.as_posix()}/README.md"],
+                capture_output=True,
+                text=True,
+                cwd=git_cwd,
+                check=False,
+            )
+            if remote_readme.returncode == 0:
+                fm, _body = parse_frontmatter(remote_readme.stdout)
+                worker = fm.get("worker")
+                if isinstance(worker, dict):
+                    other = str(worker.get("who") or "<unknown>")
+                elif isinstance(worker, str) and worker:
+                    other = worker
+        except Exception:
+            pass
+        print(
+            f"ERROR: {title}: claim race — already claimed by {other!r} on origin/{branch}."
+            f" Your local claim commit is unpushed; reset to origin/{branch} and pull a different card.",
+            file=sys.stderr,
+        )
+        return False
+
+    push2 = subprocess.run(
+        ["git", "push", "origin", branch],
+        capture_output=True,
+        text=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    if push2.returncode == 0:
+        print("  pushed (after rebase)")
+        return True
+    print(
+        f"  push failed after rebase: {(push2.stderr or push2.stdout).strip()}",
+        file=sys.stderr,
+    )
+    return False
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -2319,6 +2480,9 @@ def _cmd_status(args):
     if auto_commit_enabled(commit_policy):
         if _git_auto_commit([card_dir], f"deck: {title} {prior} → {new_status}"):
             print("  committed")
+            if new_status == "active" and claim_push_enabled():
+                if not _git_claim_push_with_retry(card_dir, title):
+                    sys.exit(2)
 
 
 TITLE_ANTIPATTERNS = [

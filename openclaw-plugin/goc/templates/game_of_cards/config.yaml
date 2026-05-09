@@ -19,6 +19,23 @@ workflow:
   # mutations in the working tree unless a command is run with `--commit`.
   auto_commit: true
 
+  # claim_push: true        # uncomment for multi-human / multi-agent setups.
+  #                         # When set, `goc status <title> active` pushes the
+  #                         # claim commit to the remote tracking branch and
+  #                         # retries once on non-fast-forward; if a rebase
+  #                         # conflict reveals a concurrent claim, the command
+  #                         # aborts with the racing worker's identity. Off by
+  #                         # default to preserve solo workflows where pushes
+  #                         # are user-driven.
+
+  # closure_on_integration: true  # uncomment for multi-team setups that need
+  #                               # `done` to mean "visible to every
+  #                               # participant", not just locally
+  #                               # DoD-complete. When set, `goc done` runs
+  #                               # `git merge-base --is-ancestor HEAD
+  #                               # origin/main` and refuses to close if HEAD
+  #                               # has not been integrated to origin/main.
+
   # worktree_deck: shared   # uncomment to share a single deck across all git
   #                         # worktrees of this repo. When set, `goc` running
   #                         # in any linked worktree resolves .game-of-cards/
