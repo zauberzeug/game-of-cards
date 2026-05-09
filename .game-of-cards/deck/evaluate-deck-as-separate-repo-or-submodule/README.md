@@ -1,7 +1,7 @@
 ---
 title: evaluate-deck-as-separate-repo-or-submodule
 summary: "Evaluate hosting `.game-of-cards/` outside the code repository — either as a sibling repo everyone clones alongside the code, as a git submodule pointed to by the code repo, or as a separately-managed remote. This addresses the OSS / library case where mixing project-management commits with the code commit history is a non-starter. Output: a recommendation with trade-offs, not necessarily an implementation."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] Connection to SaaS path noted: hosted multi-user GoC (per `explore-saas-deck-hosting-with-optional-tracker-sync`) is the natural extension of "deck lives elsewhere"; cross-link the two.
   - [ ] OSS-contributor commit-history concern surfaced into a follow-up card (or explicitly rolled into `explore-saas-deck-hosting-with-optional-tracker-sync` / `support-external-game-of-cards-state-location`) so the rejected concern is not lost.
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Evaluate deck as separate repo or submodule
