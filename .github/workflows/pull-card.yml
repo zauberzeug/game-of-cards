@@ -1,4 +1,7 @@
-# Run one Game of Cards autonomous worker pass from GitHub Actions.
+# Drain the Game of Cards autonomous queue from GitHub Actions.
+#
+# Each run pulls cards repeatedly until no `human_gate: none` open
+# cards remain (or the agent can no longer make progress).
 #
 # Required repository secret:
 #   CLAUDE_CODE_OAUTH_TOKEN  (provisioned by the Claude GitHub App)
@@ -7,8 +10,8 @@ name: Pull Card
 
 on:
   schedule:
-    # Run one autonomous worker pass every 30 minutes.
-    - cron: '*/30 * * * *'
+    # Drain the autonomous queue once an hour.
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -23,7 +26,7 @@ concurrency:
 
 jobs:
   pull-card:
-    name: Run pull-card skill
+    name: Drain pull-card queue
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -51,7 +54,7 @@ jobs:
             echo "::notice::Queue is empty — skipping the LLM agent step to save tokens."
           fi
 
-      - name: Pull one GoC card
+      - name: Drain GoC queue
         if: steps.queue.outputs.count != '0'
         uses: anthropics/claude-code-action@v1
         with:
@@ -59,13 +62,29 @@ jobs:
           github_token: ${{ github.token }}
           show_full_output: true
           prompt: |
-            Run Skill(pull-card) once in this repository.
+            Drain the autonomous queue in this repository.
 
-            This repository is the source tree for the `goc` package. Translate every bare `goc ...` command in the skill guidance to `uv run goc ...` while working here.
+            Run Skill(pull-card). When it returns, re-check the queue:
 
-            Work only the highest-leverage open card with `human_gate: none`. If the queue is empty, follow the skill's queue-empty behavior.
+                uv run goc --status open --human-gate none --json | jq 'length'
 
-            Follow CLAUDE.md and AGENTS.md. Commit and push only the files needed for the card you complete or park.
+            If the count is non-zero, run Skill(pull-card) again. Repeat
+            until the count is zero, or until you can no longer make
+            progress on any remaining card (e.g. every remaining card
+            raised its own gate to `decision`/`session`, a fix failed
+            verification, or pre-commit refuses).
+
+            This repository is the source tree for the `goc` package.
+            Translate every bare `goc ...` command in skill guidance to
+            `uv run goc ...` while working here.
+
+            Pull only `human_gate: none` open cards — cards that raise
+            their gate during their own session leave the drain set
+            naturally.
+
+            Follow CLAUDE.md and AGENTS.md. Commit and push the files
+            for each card as you complete or park it; do not batch
+            commits across cards.
           claude_args: |
-            --max-turns 200
+            --max-turns 500
             --permission-mode bypassPermissions
