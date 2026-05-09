@@ -1,7 +1,7 @@
 ---
 title: lead-llms-txt-with-claude-code-plugin
 summary: Reorder site/llms.txt so the Claude Code plugin install is the headline path and the Python uv/pipx CLI install becomes the secondary path for non-Claude-Code agent runtimes and CI.
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-09
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] The `goc install` repo-init step appears in the Python / CI section so non-plugin users still see how to bootstrap a repo.
   - [ ] No other content in `site/llms.txt` is dropped (the headline blurb, "Key concepts", "Daily commands", and "More" link list remain).
   - [ ] `uv run goc validate` passes after the edit.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # lead-llms-txt-with-claude-code-plugin
