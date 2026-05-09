@@ -24,26 +24,28 @@ worker: {who: "claude[bot]", where: main}
 
 # OpenClaw plugin release-smoke blockers — build pipeline + sanctioned spawn API
 
-## Action required (gate still session as of retest #3)
+## Action required (gate still session as of retest #4)
 
 Implementation history:
 - `7cb062c openclaw-plugin: ship compiled JS + sanctioned spawn API` (2026-05-09 PM) — α implementation, DoD items 1–4 and 6 checked.
 - Retest #2 (2026-05-09 PM) — still red: scanner pattern-matches `child_process` token in source comments, not just imports.
 - `7fe3d66 openclaw-plugin: rephrase comments so safe-install scanner stops tripping on child_process substring` — both source comments rewritten; `dist/` rebuilt; `grep` confirms tree is clean.
 - DoD item 7 ticked: side-finding (`add-openclaw-install-section-to-llms-txt`) filed as a separate card per reviewer's scope decision.
-- Retest #3 (2026-05-09 PM, vs `8277962`) — better, still red. Scanner block cleared ✓ but install fails with `Cannot find module '@sinclair/typebox'`. After manual typebox install, `inspect` still shows `imported: false`. See log.md "retest #3" entry for the full walk.
-- Typebox-dep-fix commit (this session) — moved `@sinclair/typebox: ^0.32.0` from `devDependencies` to `dependencies` in `openclaw-plugin/package.json`. The `prepare` script auto-rebuilt `dist/`. Lockfile refreshed.
+- Retest #3 (2026-05-09 PM, vs `8277962`) — better, still red. Scanner block cleared ✓ but install fails with `Cannot find module '@sinclair/typebox'`. After manual typebox install, `inspect` still shows `imported: false`.
+- `98146e7 openclaw-plugin: declare @sinclair/typebox as runtime dep so plugin install can resolve it` — moved typebox from devDependencies to dependencies. **Insufficient.**
+- Retest #4 (2026-05-09 PM, vs `9b6ee22`) — same module-not-found error. Diagnostic clue: tester report shows `Require stack: - /home/rodja/.openclaw/extensions/game-of-cards/dist/index.js`. OpenClaw's `plugins install <local-path>` copies the source tree but does **not** run `npm install` afterward, so declaring typebox as a runtime dep doesn't matter — there is no `node_modules/` adjacent to the installed plugin for Node's resolver to find.
+- Bundle commit (this session) — added `esbuild` as a devDep; build script now runs `tsc --emitDeclarationOnly` (for `.d.ts`) followed by `esbuild index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:openclaw --external:openclaw/* --sourcemap`. Result: `dist/index.js` is now self-contained (104 kB) with typebox inlined; the only external imports remaining are `openclaw/plugin-sdk/plugin-entry` (resolved by OpenClaw's jiti alias map at load time, see `node_modules/openclaw/dist/sdk-alias-DiiCKlea.js`) and Node builtins (`node:url`, `node:path`, `node:fs/promises`). Typebox moved back to devDependencies — bundling makes it a build-time dep only.
 
-**One DoD item remains: item 5 (smoke retest #4).** Tester needs to rerun the install flow on an OpenClaw runtime and confirm:
-- `openclaw plugins install <local-path>` succeeds **without** `--dangerously-force-unsafe-install` AND without any manual `npm install @sinclair/typebox` afterward.
+**One DoD item remains: item 5 (smoke retest #5).** Tester needs to rerun the install flow on an OpenClaw runtime and confirm:
+- `openclaw plugins install <local-path>` succeeds **without** any flag override AND without any manual `npm install`.
 - `openclaw plugins inspect game-of-cards --json` shows `imported: True`, `toolNames: ["goc"]`, `tools` non-empty.
 - A subagent can see and invoke the `goc` tool.
 
-If `imported: false` persists even after the typebox-dep fix, the next debug pass should run `inspect` with verbose / debug logging to see which `pushPluginLoadError` path fires in `node_modules/openclaw/dist/loader-B-GXgDrk.js`. The likely candidates if it persists: (a) the loader caches a prior failed-load state across inspect calls, (b) OpenClaw's installed-plugin location differs from where typebox was manually installed, so the runtime resolver still can't find it.
-
 The `TODO(verify-shape)` comments in `openclaw-plugin/index.ts` around `runCommandWithTimeout` and the three hook contexts can be resolved during this retest — the real OpenClaw SDK types confirm or correct our reasonable-guess assumptions.
 
-Once retest #4 passes, call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the last box, and `goc done` to close.
+If retest #5 still fails on `imported: false`: the bundle is verified self-contained (`node --check dist/index.js` passes; default export shape matches `DefinedPluginEntry` per the SDK type), so the residual cause would be in OpenClaw's loader path. The next debug pass should run `openclaw plugins inspect` with verbose logging to capture the explicit `pushPluginLoadError` line from `node_modules/openclaw/dist/loader-B-GXgDrk.js`.
+
+Once retest #5 passes, call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the last box, and `goc done` to close.
 
 ## Background
 

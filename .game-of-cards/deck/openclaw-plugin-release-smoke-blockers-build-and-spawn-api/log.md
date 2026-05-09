@@ -120,3 +120,43 @@ Same acceptance bar as retest #2:
 - A subagent can see and invoke the `goc` tool.
 
 DoD item 5 stays unchecked.
+
+## 2026-05-09 (PM, retest #4): typebox-as-dep was insufficient → bundle the dist
+
+Tester reran against `9b6ee22` (which includes the typebox-as-dep fix). Result: same module-not-found error, with this diagnostic line:
+
+```
+[plugins] game-of-cards failed to load from /home/rodja/.openclaw/extensions/game-of-cards/dist/index.js: Error: Cannot find module '@sinclair/typebox'
+Require stack:
+- /home/rodja/.openclaw/extensions/game-of-cards/dist/index.js
+```
+
+### Root cause (now confirmed)
+
+`Require stack` ends at `dist/index.js` with no `node_modules/...` line above it. Node's CommonJS-style resolver searches `node_modules/` directories upward from the requiring file. From `/home/rodja/.openclaw/extensions/game-of-cards/dist/index.js`, the candidate paths are `~/.openclaw/extensions/game-of-cards/dist/node_modules/`, `~/.openclaw/extensions/game-of-cards/node_modules/`, `~/.openclaw/extensions/node_modules/`, `~/.openclaw/node_modules/`, `~/node_modules/`, etc. None contain `@sinclair/typebox`.
+
+Cross-referenced with the inspect of OpenClaw's bundled plugins:
+- `openclaw-plugin/node_modules/openclaw/dist/extensions/firecrawl/index.js` imports `import { Type } from "typebox"` and resolves it via OpenClaw's hoisted `node_modules/typebox/` (typebox is a transitive dep of the openclaw npm package itself). That works because bundled plugins live INSIDE OpenClaw's monorepo.
+- External plugins — installed via `openclaw plugins install <path>` — land at `~/.openclaw/extensions/<id>/`. OpenClaw copies the files declared in `package.json#files` but does **not** run `npm install` afterward (no `executePmInstall` / `npm install` reference anywhere in `node_modules/openclaw/dist/*.js`). So `dependencies` declarations don't translate into installed deps.
+
+This is the symmetric breakage to the bundled-plugin success case: bundled plugins inherit the monorepo's hoisted deps; external plugins must be **self-contained**.
+
+### Fix: bundle dist with esbuild
+
+- `openclaw-plugin/package.json#scripts.build`: `tsc` → `tsc --emitDeclarationOnly && esbuild index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:openclaw --external:openclaw/* --sourcemap`. The first step preserves type-checking and emits `.d.ts`; the second produces the self-contained runtime bundle.
+- `openclaw-plugin/package.json#devDependencies`: added `esbuild ^0.28.0`.
+- `openclaw-plugin/package.json`: dropped the top-level `dependencies` block. typebox moved back to `devDependencies` (build-time only after bundling).
+- `openclaw-plugin/dist/index.js`: 104 kB self-contained bundle. Verified with `grep`: only external imports remaining are `openclaw/plugin-sdk/plugin-entry` (resolved by OpenClaw's jiti alias map per `node_modules/openclaw/dist/sdk-alias-DiiCKlea.js`) and Node builtins (`node:url`, `node:path`, `node:fs/promises`). Verified with `node --check`: passes. Verified with direct import: `m.default` has the canonical `DefinedPluginEntry` shape (`id`, `name`, `description`, `configSchema`, `register`).
+- No `child_process` substring leaks into the bundled output.
+
+### Why this should resolve `imported: false`
+
+Retest #3/#4's `imported: false` came from the loader catching a thrown `Cannot find module '@sinclair/typebox'` inside `loadPluginModule`. With typebox inlined into the bundle, that error path no longer fires; the loader should reach `recordImportedPluginId(record.id)` and run `register(api)` synchronously. If the register call succeeds (verified locally — `api.registerTool` fires), `toolNames` should populate and `imported` should be true.
+
+### Same acceptance bar for retest #5
+
+- `openclaw plugins install <local-path>` succeeds without any flag override or manual npm install.
+- `openclaw plugins inspect game-of-cards --json` shows `imported: True`, `toolNames: ["goc"]`, `tools` non-empty.
+- A subagent can see and invoke the `goc` tool.
+
+If retest #5 still fails on `imported: false` despite the bundle being verified self-contained, the next debug pass should capture verbose plugin-load logs to see which loader exit path fires.

@@ -34,12 +34,14 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --emitDeclarationOnly && esbuild index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:openclaw --external:openclaw/* --sourcemap",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
   "openclaw": {
-    "extensions": ["./dist/index.js"],
+    "extensions": [
+      "./dist/index.js"
+    ],
     "compat": {
       "pluginApi": ">=2026.3.24-beta.2",
       "minGatewayVersion": "2026.3.24-beta.2"
@@ -52,14 +54,13 @@
   "engines": {
     "node": ">=22.16"
   },
-  "dependencies": {
-    "@sinclair/typebox": "^0.32.0"
-  },
   "peerDependencies": {
     "openclaw": ">=2026.3.24-beta.2"
   },
   "devDependencies": {
+    "@sinclair/typebox": "^0.32.0",
     "@types/node": "^22.0.0",
+    "esbuild": "^0.28.0",
     "typescript": "^5.5.0"
   }
 }
