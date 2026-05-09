@@ -1,7 +1,7 @@
 ---
 title: release-yml-smoke-job-fails-on-tag-push-events
 summary: "The smoke job in `.github/workflows/release.yml` uses `anthropics/claude-code-action@v1`, which rejects `push` event types with `Action failed with error: Unsupported event type: push`. On a tag push (the documented release trigger), build runs, smoke errors, and publish is silently skipped because of `needs: [build, smoke]`. A human watching the Actions tab sees a red smoke job and has to know the workaround: re-trigger via `gh workflow run release.yml --ref vX.Y.Z` so the dispatch event fires the supported workflow_dispatch path through the action while github.ref still resolves to refs/tags/v… so publish's tag-ref guard fires."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-09
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] Delete the throw-away tag from origin
   - [ ] `release.yml` comment header updated to reflect the new release flow
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `release.yml` smoke job fails on tag push events
