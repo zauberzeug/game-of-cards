@@ -1732,12 +1732,49 @@ def _commit_override(commit: bool, no_commit: bool) -> bool | None:
     return None
 
 
+def _deck_is_git_tracked() -> bool:
+    """Return True if DECK_DIR sits inside a git repo and is not gitignored."""
+    try:
+        repo_check = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            capture_output=True,
+            cwd=str(DECK_ROOT),
+            check=False,
+        )
+        if repo_check.returncode != 0:
+            return False
+        # git check-ignore exits 0 if the path IS ignored, 1 if NOT ignored.
+        ignore_check = subprocess.run(
+            ["git", "check-ignore", "-q", str(DECK_DIR)],
+            capture_output=True,
+            cwd=str(DECK_ROOT),
+            check=False,
+        )
+        return ignore_check.returncode != 0
+    except FileNotFoundError:
+        return False
+
+
+_autocommit_warning_emitted: bool = False
+
+
 def auto_commit_enabled(override: bool | None = None) -> bool:
+    global _autocommit_warning_emitted
     if override is not None:
         return override
+    if not _deck_is_git_tracked():
+        return False
     config = load_deck_config()
     workflow = config.get("workflow") or {}
-    return _coerce_config_bool(workflow.get("auto_commit"), default=True)
+    enabled = _coerce_config_bool(workflow.get("auto_commit"), default=True)
+    if not enabled and not _autocommit_warning_emitted:
+        _autocommit_warning_emitted = True
+        click.echo(
+            "  Warning: auto_commit is disabled but the deck is version-controlled."
+            " Parallel agents will not see claim/progress state until you commit manually.",
+            err=True,
+        )
+    return enabled
 
 
 # ────────────────────────────────────────────────────────────────────────────

@@ -1,25 +1,25 @@
 ---
 title: recommend-autocommit-strongly-when-deck-is-version-controlled
 summary: "Tie the autocommit default to whether `.game-of-cards/` is under version control. If the deck is gitignored or lives outside any git repo, autocommit is OFF (nothing to commit to anyway). If the deck is tracked, autocommit is ON by default — strongly recommended but user-configurable, because forcing it would break persona #2 (solo developer, who often wants to review the agent's work before committing). When a tracked-deck user disables autocommit, surface a prominent warning so the trade-off is visible to multi-agent personas where deferred commits cause invisible-deck-state hazards."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - support-worktrees-and-multi-agent-deck-sync
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] `goc` detects whether `.game-of-cards/deck/` is tracked (i.e. inside a git repo AND not gitignored)
-  - [ ] When deck is tracked: autocommit defaults to ON; existing `auto_commit: false` in `config.yaml` is honored but emits a one-time warning per session naming the trade-off (deferred commits hide claim/progress state from parallel agents)
-  - [ ] When deck is untracked (no enclosing git repo, or `.game-of-cards/` is gitignored): autocommit is forced OFF (nothing to commit anyway); no warning needed
-  - [ ] The `auto_commit` config key remains user-configurable — the change is the default and the warning when disabled on a tracked deck, not removing the knob
-  - [ ] Documented persona trade-off: persona #2 (solo developer) keeps the escape hatch to review before committing; persona #3 (multi-agent coordinator) gets a loud warning if anyone disables autocommit because deferred commits silently break swarm visibility
-  - [ ] Interaction with `design-claim-protocol-with-branch-and-author-metadata` clarified: claim metadata commits follow the same default + warning pattern
-  - [ ] Interaction with `evaluate-deck-as-separate-repo-or-submodule` clarified: deck-as-separate-repo still defaults to autocommit ON because the deck IS a tracked repo
-  - [ ] `uv run goc validate` passes
+  - [x] `goc` detects whether `.game-of-cards/deck/` is tracked (i.e. inside a git repo AND not gitignored)
+  - [x] When deck is tracked: autocommit defaults to ON; existing `auto_commit: false` in `config.yaml` is honored but emits a one-time warning per session naming the trade-off (deferred commits hide claim/progress state from parallel agents)
+  - [x] When deck is untracked (no enclosing git repo, or `.game-of-cards/` is gitignored): autocommit is forced OFF (nothing to commit anyway); no warning needed
+  - [x] The `auto_commit` config key remains user-configurable — the change is the default and the warning when disabled on a tracked deck, not removing the knob
+  - [x] Documented persona trade-off: persona #2 (solo developer) keeps the escape hatch to review before committing; persona #3 (multi-agent coordinator) gets a loud warning if anyone disables autocommit because deferred commits silently break swarm visibility
+  - [x] Interaction with `design-claim-protocol-with-branch-and-author-metadata` clarified: claim metadata commits follow the same default + warning pattern
+  - [x] Interaction with `evaluate-deck-as-separate-repo-or-submodule` clarified: deck-as-separate-repo still defaults to autocommit ON because the deck IS a tracked repo
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
