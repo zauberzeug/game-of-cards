@@ -1,7 +1,7 @@
 ---
 title: validate-plugin-mirror-fails-when-openclaw-omits-hooks-dir
 summary: "`uv run goc validate` reports `plugin mirror drift: goc vs openclaw-plugin/goc: templates/hooks (only in goc)` at HEAD. Commit `8277962` (\"Derive Claude hook manifest from templates/hooks/*.py\") added new hook scripts under `goc/templates/hooks/` and `claude-plugin/goc/templates/hooks/`, but did not create a corresponding `openclaw-plugin/goc/templates/hooks/` directory. The OpenClaw plugin intentionally omits the Python hooks (it reimplements them in TS in `index.ts`), and `validate_plugin_mirror_parity()` builds an exclude set of individual hook *files* (`templates/hooks/<name>.py`). Because the entire `templates/hooks/` directory is missing on the OpenClaw side, the comparison reports the parent dir as left-only before recursing into the per-file excludes, so validate fails."
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-09
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] `uv run goc validate` exits 0 on a clean checkout of `main`
   - [ ] The fix preserves the documented intent (OpenClaw plugin's bundled engine omits `templates/hooks/*.py` because hooks are reimplemented in TS) — i.e. no Python hook scripts are added to `openclaw-plugin/goc/templates/hooks/`
   - [ ] `python scripts/sync_plugin_assets.py --check` continues to pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc validate` fails when OpenClaw plugin omits hooks dir
