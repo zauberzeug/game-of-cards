@@ -55,8 +55,8 @@ Until publish lands (tracked under `publish-openclaw-plugin`), build from source
 Install the `goc` CLI once per machine:
 
 ```bash
-uv tool install game-of-cards   # preferred
-# or: pipx install game-of-cards
+pipx install game-of-cards
+# or: uv tool install game-of-cards
 ```
 
 Initialize a repo (run from the project root):
