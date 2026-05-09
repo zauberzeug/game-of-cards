@@ -29,11 +29,25 @@ deck/
   README.md                 # navigation + conventions
   deck.py                   # CLI; computes filtered views from frontmatter
   <title>/                   # one dir per card; never moves on state change
-    README.md               # frontmatter + body
+    README.md               # frontmatter + markdown body
     log.md                  # append-only round/phase narrative
-    reproduce.py            # OPTIONAL — declared in DoD when present
+    reproduce.py            # OPTIONAL — bug-class executable proof
+    *.html / *.svg / *.png  # OPTIONAL — rich artifacts referenced from README.md
+                            # (decision matrices, state diagrams, interactive
+                            # answer forms, visual evidence — opaque to the engine)
     [other validation scripts]
 ```
+
+The card directory is a **bundle of files**, not just `README.md`.
+The README is the narrative; sibling files are concrete artifacts
+the README references — `reproduce.py` for executable proof on bug
+cards, `*.html` / `*.svg` / `*.png` for visuals markdown can't
+express on decision cards, visual-evidence cards, or interactive
+decision-gate forms. The bundle pattern is the canonical extension
+point for richness without introducing a new schema field, a body-
+format dispatch, or any change to the engine; sibling files are
+opaque to `parse_frontmatter`, `goc validate`, and `goc show`. See
+`Skill(create-card)` Step 7 for the authoring contract.
 
 Status changes mutate frontmatter, never directories. Cross-references
 to `deck/<title>/` continue to work whether the card is open, active,
