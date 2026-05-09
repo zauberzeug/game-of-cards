@@ -1,7 +1,7 @@
 ---
 title: document-gitignored-deck-workflow-for-oss-maintainers
 summary: "OSS-library maintainers face a tension that the deck-location decision (`evaluate-deck-as-separate-repo-or-submodule`) does not fully resolve: same-repo + checked-in pollutes PR diffs with card-state churn; same-repo + gitignored loses collaborative visibility. The recorded decision allows gitignore but does not guide the user through it. Document a concrete OSS-friendly recipe in PERSONAS.md (or a section of `DECK_LOCATION.md`) so a maintainer reading the docs can adopt the gitignore path with eyes open."
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-09
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] Trade-off explicit: solo-OSS-maintainer use case is served; multi-maintainer OSS use case is NOT served by this path — those maintainers should wait for `support-external-game-of-cards-state-location` to finish or for `explore-saas-deck-hosting-with-optional-tracker-sync` to ship.
   - [ ] Cross-link from the new doc back to `support-external-game-of-cards-state-location` (the active epic that recorded the gitignore decision).
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Document the gitignored-deck workflow for OSS maintainers
