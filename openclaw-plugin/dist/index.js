@@ -2555,7 +2555,18 @@ var index_default = definePluginEntry({
   description: "Agile work-card methodology for AI-agent collaborators. Files, advances, and closes cards in `.game-of-cards/deck/` via the bundled goc engine.",
   register(api) {
     gocDebugLog(
-      `register() entered; api type=${typeof api}; api keys=[${Object.keys(api ?? {}).slice(0, 25).join(",")}]; registerTool=${typeof api?.registerTool}; on=${typeof api?.on}; runtime=${typeof api?.runtime}; registrationMode=${api?.registrationMode}`
+      `register() entered; api type=${typeof api}; api keys=[${Object.keys(api ?? {}).slice(0, 25).join(",")}]; registerTool=${typeof api?.registerTool}; on=${typeof api?.on}; runtime=${typeof api?.runtime}; registrationMode=${api?.registrationMode}; api.id=${JSON.stringify(api?.id)}; api.name=${JSON.stringify(api?.name)}; api.rootDir=${JSON.stringify(api?.rootDir)}`
+    );
+    try {
+      api.registerTool({ name: "goc-noop-probe" });
+      gocDebugLog("noop-probe: api.registerTool({name:'goc-noop-probe'}) returned without throwing");
+    } catch (err) {
+      gocDebugLog(
+        `noop-probe: api.registerTool({name:'goc-noop-probe'}) THREW: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+    gocDebugLog(
+      `noop-probe: registerTool.toString().slice(0,250)=${String(api?.registerTool ?? "").toString().slice(0, 250)}`
     );
     async function runGoc(args, cwd) {
       const env = {

@@ -257,7 +257,29 @@ export default definePluginEntry({
         `api keys=[${Object.keys(api ?? {}).slice(0, 25).join(",")}]; ` +
         `registerTool=${typeof api?.registerTool}; on=${typeof api?.on}; ` +
         `runtime=${typeof api?.runtime}; ` +
-        `registrationMode=${api?.registrationMode}`,
+        `registrationMode=${api?.registrationMode}; ` +
+        `api.id=${JSON.stringify(api?.id)}; api.name=${JSON.stringify(api?.name)}; ` +
+        `api.rootDir=${JSON.stringify(api?.rootDir)}`,
+    );
+    // Probe: is api.registerTool the real function or a noop?
+    // The real function emits a diagnostic when called with an undeclared
+    // tool name. If after retest the inspect's diagnostics array contains
+    // "plugin must declare contracts.tools for: goc-noop-probe", then the
+    // real function is wired and we have a different problem (registry
+    // scope mismatch). If diagnostics stays empty after this provocation,
+    // api.registerTool is a noop fallback despite registrationMode=discovery.
+    try {
+      api.registerTool({ name: "goc-noop-probe" });
+      gocDebugLog("noop-probe: api.registerTool({name:'goc-noop-probe'}) returned without throwing");
+    } catch (err) {
+      gocDebugLog(
+        `noop-probe: api.registerTool({name:'goc-noop-probe'}) THREW: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    gocDebugLog(
+      `noop-probe: registerTool.toString().slice(0,250)=${
+        String(api?.registerTool ?? "").toString().slice(0, 250)
+      }`,
     );
     // === goc tool ===
     // Subprocess invocation routes through the sanctioned
