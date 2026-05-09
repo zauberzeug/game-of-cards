@@ -1,7 +1,7 @@
 ---
 title: kickoff-crashes-when-user-declines-merge-question
 summary: "Stage 4 of the kickoff onboarding skill instructs the model to invoke `goc install --no-claude-md` or `goc install --no-agents-md` based on the user's per-file merge answers. Neither flag exists in `goc/cli.py` or `goc/install.py` — the parser only knows `--dry-run`, `--agents`, `--claude`, `--codex`, and `--local-skills`. Any user who answers \"No\" to either merge question crashes Stage 4 with `goc install: error: unrecognized arguments: --no-claude-md` and leaves the repo un-initialized. Found during a 2026-05-09 review of the `make-kickoff-idempotent-on-restart` and `rename-bootstrap-to-kickoff-as-onboarding-dialog` work."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-09
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] Regression test exercises the per-file-decline path end-to-end
   - [ ] `uv run goc validate` passes
   - [ ] Manual verification: kickoff completes cleanly when the user answers "No" to both CLAUDE.md and AGENTS.md merge questions
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Kickoff crashes when user declines a merge question
