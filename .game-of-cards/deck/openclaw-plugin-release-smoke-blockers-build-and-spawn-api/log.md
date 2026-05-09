@@ -160,3 +160,52 @@ Retest #3/#4's `imported: false` came from the loader catching a thrown `Cannot 
 - A subagent can see and invoke the `goc` tool.
 
 If retest #5 still fails on `imported: false` despite the bundle being verified self-contained, the next debug pass should capture verbose plugin-load logs to see which loader exit path fires.
+
+## 2026-05-09 (PM, retest #5 + #6): inspect view was the trap; remainder is operator config
+
+Retest #5 against the bundled `a352f09`: install succeeds without any flag override and without manual `npm install`, no `Cannot find module` errors, loader logs `loaded 1 plugin(s)`. But `inspect --json` still showed `imported: false`, `toolNames: []`, `tools: []`, with empty `diagnostics`. Plus loader log confirms one register attempt completed.
+
+### What we did wrong: read the wrong inspect view
+
+Default `openclaw plugins inspect game-of-cards --json` returns the **static-snapshot view** — manifest contracts plus loader status, no runtime registrations. The tester's pivot: `openclaw plugins inspect game-of-cards --runtime --json` returns the runtime view, which shows:
+
+```
+status: loaded
+imported: True
+toolNames: ["goc"]
+tools: [{names: ["goc"], optional: false}]
+```
+
+So `register()` and `api.registerTool()` were working all along — retests #2 through #5 were chasing a phantom "registry scope mismatch" because we kept reading the snapshot view. The DoD item 5(c) is now ticked with the `--runtime` clarification.
+
+### What we did to confirm: temporary debug instrumentation (now removed)
+
+Commits `0b93d7e` and `6f62e3a` added timestamped logging to `/tmp/goc-plugin-debug.log` from inside `register()` (entry, registerTool call, each `api.on()` call, return) plus a "noop-probe" `api.registerTool({name: "goc-noop-probe"})` whose presence in `diagnostics` would prove the real `registerTool` is wired. The log from retest #5 confirmed:
+
+```
+register() entered; api type=object; ...; registerTool=function; on=function; ...; registrationMode=discovery
+about to call api.registerTool({name:'goc',...})
+api.registerTool returned: undefined undefined
+about to call api.on('session_start', ...)
+api.on('session_start') returned
+... [all hooks register cleanly] ...
+register() returning normally
+```
+
+The tester then ran `inspect --runtime --json` and found the registry view. Debug instrumentation removed in this commit; the bundle returns to 103.7 kB.
+
+### What's left: operator-config nudges, not code
+
+DoD item 5(d) — "subagent invocation can see and call the `goc` tool" — fails because the tester's OpenClaw config has a tool-policy filter that drops plugin tools. Per `node_modules/openclaw/docs/tools/subagents.md`: "With no restrictive `tools.profile`, sub-agents get all tools except session tools." So a profile like `coding` excludes plugin tools by default; operator must add `goc` to `tools.alsoAllow` (or a less restrictive profile).
+
+Plus retest #5 surfaced this warning in `inspect --runtime --json`:
+```
+typed hook "agent_end" blocked because non-bundled plugins must set
+plugins.entries.game-of-cards.hooks.allowConversationAccess=true
+```
+
+`agent_end` is in OpenClaw's `CONVERSATION_HOOK_NAMES` list. Without the opt-in, our pattern-generalization-check hook is dropped (the other two hooks register normally). I've added a doc-comment in `index.ts` near the `api.on("agent_end", ...)` call describing the opt-in config; both nudges are documented in the card body's "Subagent tool exposure" and "Conversation-hook opt-in" sections.
+
+### Closure path
+
+When the tester confirms a subagent invocation works after applying `tools.alsoAllow: ["goc"]` (or equivalent), the card closes via `goc decide` with the operator-config decision recorded → tick item 5 → `goc done`.

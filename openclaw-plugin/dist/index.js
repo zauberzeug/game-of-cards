@@ -875,14 +875,14 @@ function Number(options = {}) {
 }
 
 // node_modules/@sinclair/typebox/build/esm/type/string/string.mjs
-function String2(options = {}) {
+function String(options = {}) {
   return { ...options, [Kind]: "String", type: "string" };
 }
 
 // node_modules/@sinclair/typebox/build/esm/type/template-literal/syntax.mjs
 function* FromUnion(syntax) {
   const trim = syntax.trim().replace(/"|'/g, "");
-  return trim === "boolean" ? yield Boolean() : trim === "number" ? yield Number() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String2() : yield (() => {
+  return trim === "boolean" ? yield Boolean() : trim === "number" ? yield Number() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String() : yield (() => {
     const literals = trim.split("|").map((literal) => Literal(literal.trim()));
     return literals.length === 0 ? Never() : literals.length === 1 ? literals[0] : UnionEvaluated(literals);
   })();
@@ -1660,7 +1660,7 @@ function FromPromise3(left, right) {
   return IsStructuralRight(right) ? StructuralRight(left, right) : type_exports.IsObject(right) && IsObjectPromiseLike(right) ? ExtendsResult.True : !type_exports.IsPromise(right) ? ExtendsResult.False : IntoBooleanResult(Visit3(left.item, right.item));
 }
 function RecordKey(schema) {
-  return PatternNumberExact in schema.patternProperties ? Number() : PatternStringExact in schema.patternProperties ? String2() : Throw("Unknown record key pattern");
+  return PatternNumberExact in schema.patternProperties ? Number() : PatternStringExact in schema.patternProperties ? String() : Throw("Unknown record key pattern");
 }
 function RecordValue(schema) {
   return PatternNumberExact in schema.patternProperties ? schema.patternProperties[PatternNumberExact] : PatternStringExact in schema.patternProperties ? schema.patternProperties[PatternStringExact] : Throw("Unable to get record value schema");
@@ -1680,8 +1680,8 @@ function FromRecord(left, right) {
   return IsStructuralRight(right) ? StructuralRight(left, right) : type_exports.IsObject(right) ? FromObjectRight(left, right) : !type_exports.IsRecord(right) ? ExtendsResult.False : Visit3(RecordValue(left), RecordValue(right));
 }
 function FromRegExp(left, right) {
-  const L = type_exports.IsRegExp(left) ? String2() : left;
-  const R = type_exports.IsRegExp(right) ? String2() : right;
+  const L = type_exports.IsRegExp(left) ? String() : left;
+  const R = type_exports.IsRegExp(right) ? String() : right;
   return Visit3(L, R);
 }
 function FromStringRight(left, right) {
@@ -2358,7 +2358,7 @@ __export(type_exports3, {
   Rest: () => Rest,
   ReturnType: () => ReturnType,
   Strict: () => Strict,
-  String: () => String2,
+  String: () => String,
   Symbol: () => Symbol2,
   TemplateLiteral: () => TemplateLiteral,
   Transform: () => Transform,
@@ -2380,22 +2380,6 @@ var Type = type_exports3;
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
-import { appendFileSync } from "node:fs";
-function gocDebugLog(message) {
-  try {
-    appendFileSync(
-      "/tmp/goc-plugin-debug.log",
-      `${(/* @__PURE__ */ new Date()).toISOString()} ${message}
-`
-    );
-  } catch {
-  }
-  try {
-    process.stderr.write(`[goc-plugin-debug] ${message}
-`);
-  } catch {
-  }
-}
 var COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 var PLUGIN_ROOT = resolve(COMPILED_DIR, "..");
 var VENDORED_GOC_PATH = PLUGIN_ROOT;
@@ -2554,20 +2538,6 @@ var index_default = definePluginEntry({
   name: "Game of Cards",
   description: "Agile work-card methodology for AI-agent collaborators. Files, advances, and closes cards in `.game-of-cards/deck/` via the bundled goc engine.",
   register(api) {
-    gocDebugLog(
-      `register() entered; api type=${typeof api}; api keys=[${Object.keys(api ?? {}).slice(0, 25).join(",")}]; registerTool=${typeof api?.registerTool}; on=${typeof api?.on}; runtime=${typeof api?.runtime}; registrationMode=${api?.registrationMode}; api.id=${JSON.stringify(api?.id)}; api.name=${JSON.stringify(api?.name)}; api.rootDir=${JSON.stringify(api?.rootDir)}`
-    );
-    try {
-      api.registerTool({ name: "goc-noop-probe" });
-      gocDebugLog("noop-probe: api.registerTool({name:'goc-noop-probe'}) returned without throwing");
-    } catch (err) {
-      gocDebugLog(
-        `noop-probe: api.registerTool({name:'goc-noop-probe'}) THREW: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-    gocDebugLog(
-      `noop-probe: registerTool.toString().slice(0,250)=${String(api?.registerTool ?? "").toString().slice(0, 250)}`
-    );
     async function runGoc(args, cwd) {
       const env = {
         ...process.env,
@@ -2588,104 +2558,69 @@ var index_default = definePluginEntry({
         stderr: result?.stderr ?? ""
       };
     }
-    gocDebugLog("about to call api.registerTool({name:'goc',...})");
-    try {
-      const registerToolResult = api.registerTool({
-        name: "goc",
-        description: "Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
-        parameters: GocToolParams,
-        async execute(_id, params) {
-          const cwd = params.cwd ?? process.cwd();
-          const argv = buildArgs(params);
-          const result = await runGoc(argv, cwd);
-          const text = (result.stdout + (result.stderr ? `
+    api.registerTool({
+      name: "goc",
+      description: "Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
+      parameters: GocToolParams,
+      async execute(_id, params) {
+        const cwd = params.cwd ?? process.cwd();
+        const argv = buildArgs(params);
+        const result = await runGoc(argv, cwd);
+        const text = (result.stdout + (result.stderr ? `
 ${result.stderr}` : "")).trim() || `goc ${params.verb} returned exit ${result.exitCode}`;
-          return {
-            content: [{ type: "text", text }],
-            isError: result.exitCode !== 0
-          };
-        }
-      });
-      gocDebugLog(
-        `api.registerTool returned: ${typeof registerToolResult} ${registerToolResult === void 0 ? "undefined" : "non-undefined"}`
-      );
-    } catch (err) {
-      gocDebugLog(
-        `api.registerTool THREW: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-    gocDebugLog("about to call api.on('session_start', ...)");
-    try {
-      api.on("session_start", async (ctx) => {
-        const projectDir = ctx?.projectDir ?? process.cwd();
-        const deckDir = await resolveDeckDir(projectDir);
-        const active = await findActiveCards(deckDir);
-        if (active.length > 0) {
-          const message = `[GoC] Active card(s): ${active.join(", ")} \u2014 resume or close before starting new work.`;
-          if (typeof ctx?.notify === "function") {
-            ctx.notify(message);
-          } else if (typeof ctx?.appendSystemContext === "function") {
-            ctx.appendSystemContext(message);
-          }
-        }
-      });
-      gocDebugLog("api.on('session_start') returned");
-    } catch (err) {
-      gocDebugLog(
-        `api.on('session_start') THREW: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-    gocDebugLog("about to call api.on('before_prompt_build', ...)");
-    try {
-      api.on("before_prompt_build", async (ctx) => {
-        const prompt = (ctx?.userPrompt ?? "").toLowerCase();
-        if (!prompt) return;
-        const hasWork = WORK_INITIATING.some((re) => re.test(prompt));
-        const hasExploration = EXPLORATION.some((re) => re.test(prompt));
-        const hasTooling = TOOLING.some((re) => re.test(prompt));
-        if ((hasExploration || hasTooling) && !hasWork) return;
-        if (!hasWork) return;
-        if (typeof ctx?.appendSystemContext === "function") {
-          ctx.appendSystemContext(DECK_REMINDER);
-        } else if (typeof ctx?.prependSystemContext === "function") {
-          ctx.prependSystemContext(DECK_REMINDER);
-        }
-      });
-      gocDebugLog("api.on('before_prompt_build') returned");
-    } catch (err) {
-      gocDebugLog(
-        `api.on('before_prompt_build') THREW: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-    gocDebugLog("about to call api.on('agent_end', ...)");
-    try {
-      api.on("agent_end", async (ctx) => {
-        const projectDir = ctx?.projectDir ?? process.cwd();
-        if (await isOptedOut(projectDir)) return;
-        if (ctx?.config?.pattern_generalization_check === false) return;
-        const toolCalls = ctx?.toolCalls ?? ctx?.events?.toolCalls ?? [];
-        const mutating = toolCalls.some((tc) => {
-          if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;
-          if (tc?.name === "exec" || tc?.name === "Bash") {
-            const cmd = tc?.params?.command ?? tc?.params?.cmd ?? "";
-            return BASH_COMMIT_PATTERNS.some((re) => re.test(cmd));
-          }
-          return false;
-        });
-        if (!mutating) return;
+        return {
+          content: [{ type: "text", text }],
+          isError: result.exitCode !== 0
+        };
+      }
+    });
+    api.on("session_start", async (ctx) => {
+      const projectDir = ctx?.projectDir ?? process.cwd();
+      const deckDir = await resolveDeckDir(projectDir);
+      const active = await findActiveCards(deckDir);
+      if (active.length > 0) {
+        const message = `[GoC] Active card(s): ${active.join(", ")} \u2014 resume or close before starting new work.`;
         if (typeof ctx?.notify === "function") {
-          ctx.notify(PATTERN_REMINDER);
+          ctx.notify(message);
         } else if (typeof ctx?.appendSystemContext === "function") {
-          ctx.appendSystemContext(PATTERN_REMINDER);
+          ctx.appendSystemContext(message);
         }
+      }
+    });
+    api.on("before_prompt_build", async (ctx) => {
+      const prompt = (ctx?.userPrompt ?? "").toLowerCase();
+      if (!prompt) return;
+      const hasWork = WORK_INITIATING.some((re) => re.test(prompt));
+      const hasExploration = EXPLORATION.some((re) => re.test(prompt));
+      const hasTooling = TOOLING.some((re) => re.test(prompt));
+      if ((hasExploration || hasTooling) && !hasWork) return;
+      if (!hasWork) return;
+      if (typeof ctx?.appendSystemContext === "function") {
+        ctx.appendSystemContext(DECK_REMINDER);
+      } else if (typeof ctx?.prependSystemContext === "function") {
+        ctx.prependSystemContext(DECK_REMINDER);
+      }
+    });
+    api.on("agent_end", async (ctx) => {
+      const projectDir = ctx?.projectDir ?? process.cwd();
+      if (await isOptedOut(projectDir)) return;
+      if (ctx?.config?.pattern_generalization_check === false) return;
+      const toolCalls = ctx?.toolCalls ?? ctx?.events?.toolCalls ?? [];
+      const mutating = toolCalls.some((tc) => {
+        if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;
+        if (tc?.name === "exec" || tc?.name === "Bash") {
+          const cmd = tc?.params?.command ?? tc?.params?.cmd ?? "";
+          return BASH_COMMIT_PATTERNS.some((re) => re.test(cmd));
+        }
+        return false;
       });
-      gocDebugLog("api.on('agent_end') returned");
-    } catch (err) {
-      gocDebugLog(
-        `api.on('agent_end') THREW: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-    gocDebugLog("register() returning normally");
+      if (!mutating) return;
+      if (typeof ctx?.notify === "function") {
+        ctx.notify(PATTERN_REMINDER);
+      } else if (typeof ctx?.appendSystemContext === "function") {
+        ctx.appendSystemContext(PATTERN_REMINDER);
+      }
+    });
   }
 });
 export {

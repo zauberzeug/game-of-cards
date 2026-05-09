@@ -16,7 +16,7 @@ definition_of_done: |
   - [x] `openclaw-plugin/package.json` declares `main: "./dist/index.js"`, `openclaw.extensions: ["./dist/index.js"]`, and scripts: `build`, `prepare` (auto-build after npm install), `prepublishOnly` (auto-build before npm publish)
   - [x] `openclaw-plugin/index.ts` no longer imports from `node:child_process`; subprocess invocations use `api.runtime.system.runCommandWithTimeout(cmd, args, opts)` per <https://docs.openclaw.ai/plugins/sdk-runtime.md>. `runGoc` helper is moved inside `register(api)` so it can capture `api.runtime` in its closure.
   - [x] Build artifact: `cd openclaw-plugin && npm install && npm run build` produces a `dist/index.js` that's committed to the repo.
-  - [ ] Smoke retest by the original tester confirms: (a) `openclaw plugins install <local-path>` no longer fails for missing JS; (b) install no longer requires `--dangerously-force-unsafe-install`; (c) `openclaw plugins inspect game-of-cards --json` shows `toolNames: ["goc"]` populated; (d) a subagent invocation can see and call the `goc` tool.
+  - [ ] Smoke retest by the original tester confirms: (a) `openclaw plugins install <local-path>` no longer fails for missing JS — ✅; (b) install no longer requires `--dangerously-force-unsafe-install` — ✅; (c) `openclaw plugins inspect game-of-cards --runtime --json` shows `imported: True`, `toolNames: ["goc"]`, `tools: [{names: ["goc"], ...}]` — ✅ (note: default `inspect --json` is the static-snapshot view; `--runtime` is required to see the runtime registry); (d) a subagent invocation can see and call the `goc` tool — ⏳ pending tester's OpenClaw config tweak (see body's "Subagent tool exposure" section); not a code-side defect of this plugin.
   - [x] `uv run goc validate` passes.
   - [x] Side finding (out of this card's scope): website / `llms.txt` still recommends `uv tool install` as the install path. Reviewer (2026-05-09) decided the scope expansion is large enough to warrant a separate card rather than stretching `llms-txt-still-recommends-uv-tool-install-as-preferred`'s narrow uv→pipx fix. Resolved by filing `add-openclaw-install-section-to-llms-txt`.
 worker: {who: "claude[bot]", where: main}
@@ -24,28 +24,60 @@ worker: {who: "claude[bot]", where: main}
 
 # OpenClaw plugin release-smoke blockers — build pipeline + sanctioned spawn API
 
-## Action required (gate still session as of retest #4)
+## Action required (gate still session as of retest #5)
 
-Implementation history:
-- `7cb062c openclaw-plugin: ship compiled JS + sanctioned spawn API` (2026-05-09 PM) — α implementation, DoD items 1–4 and 6 checked.
-- Retest #2 (2026-05-09 PM) — still red: scanner pattern-matches `child_process` token in source comments, not just imports.
-- `7fe3d66 openclaw-plugin: rephrase comments so safe-install scanner stops tripping on child_process substring` — both source comments rewritten; `dist/` rebuilt; `grep` confirms tree is clean.
-- DoD item 7 ticked: side-finding (`add-openclaw-install-section-to-llms-txt`) filed as a separate card per reviewer's scope decision.
-- Retest #3 (2026-05-09 PM, vs `8277962`) — better, still red. Scanner block cleared ✓ but install fails with `Cannot find module '@sinclair/typebox'`. After manual typebox install, `inspect` still shows `imported: false`.
-- `98146e7 openclaw-plugin: declare @sinclair/typebox as runtime dep so plugin install can resolve it` — moved typebox from devDependencies to dependencies. **Insufficient.**
-- Retest #4 (2026-05-09 PM, vs `9b6ee22`) — same module-not-found error. Diagnostic clue: tester report shows `Require stack: - /home/rodja/.openclaw/extensions/game-of-cards/dist/index.js`. OpenClaw's `plugins install <local-path>` copies the source tree but does **not** run `npm install` afterward, so declaring typebox as a runtime dep doesn't matter — there is no `node_modules/` adjacent to the installed plugin for Node's resolver to find.
-- Bundle commit (this session) — added `esbuild` as a devDep; build script now runs `tsc --emitDeclarationOnly` (for `.d.ts`) followed by `esbuild index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:openclaw --external:openclaw/* --sourcemap`. Result: `dist/index.js` is now self-contained (104 kB) with typebox inlined; the only external imports remaining are `openclaw/plugin-sdk/plugin-entry` (resolved by OpenClaw's jiti alias map at load time, see `node_modules/openclaw/dist/sdk-alias-DiiCKlea.js`) and Node builtins (`node:url`, `node:path`, `node:fs/promises`). Typebox moved back to devDependencies — bundling makes it a build-time dep only.
+Implementation history (compressed):
+- `7cb062c` (α) — compiled JS + sanctioned spawn API.
+- Retest #2 → `7fe3d66` — rephrase comments so safe-install scanner stops tripping on `child_process` substring; DoD item 7 (llms.txt scope) ticked, follow-up `add-openclaw-install-section-to-llms-txt` filed.
+- Retest #3 → `98146e7` — declared `@sinclair/typebox` as runtime dep. **Insufficient** because `openclaw plugins install <local-path>` copies the tree without running `npm install`.
+- Retest #4 → `a352f09` — bundled with esbuild; `dist/index.js` is now self-contained (104 kB) with typebox inlined and only `openclaw/plugin-sdk/*` + Node builtins external (the former resolves via OpenClaw's jiti alias map per `node_modules/openclaw/dist/sdk-alias-DiiCKlea.js`).
+- Retest #5 — debug instrumentation (since removed) confirmed `register(api)` runs to completion and `api.registerTool({name: "goc"})` returns. **Plugin code is correct.**
+- **Diagnostic: default `inspect --json` is the static-snapshot view** — it does not show runtime registrations. `openclaw plugins inspect game-of-cards --runtime --json` shows `imported: True`, `toolNames: ["goc"]`, `tools: [{names: ["goc"], optional: false}]`. The "phantom" tools=[]/imported=false readings of retests #2–#5 were a false-negative caused by reading the wrong inspect view.
 
-**One DoD item remains: item 5 (smoke retest #5).** Tester needs to rerun the install flow on an OpenClaw runtime and confirm:
-- `openclaw plugins install <local-path>` succeeds **without** any flag override AND without any manual `npm install`.
-- `openclaw plugins inspect game-of-cards --json` shows `imported: True`, `toolNames: ["goc"]`, `tools` non-empty.
-- A subagent can see and invoke the `goc` tool.
+**Remaining: subagent tool exposure (DoD item 5d).** Tester reports the runtime registry has the tool but a subagent invocation says "goc tool not available". This is OpenClaw's tool-policy / agent-harness layer, not the plugin's `register()`. Per `node_modules/openclaw/docs/tools/subagents.md`:
 
-The `TODO(verify-shape)` comments in `openclaw-plugin/index.ts` around `runCommandWithTimeout` and the three hook contexts can be resolved during this retest — the real OpenClaw SDK types confirm or correct our reasonable-guess assumptions.
+> With no restrictive `tools.profile`, sub-agents get **all tools except session tools** and system tools.
 
-If retest #5 still fails on `imported: false`: the bundle is verified self-contained (`node --check dist/index.js` passes; default export shape matches `DefinedPluginEntry` per the SDK type), so the residual cause would be in OpenClaw's loader path. The next debug pass should run `openclaw plugins inspect` with verbose logging to capture the explicit `pushPluginLoadError` line from `node_modules/openclaw/dist/loader-B-GXgDrk.js`.
+So if the operator's config sets a `tools.profile` (e.g., `coding`), plugin tools are filtered out. The fix is operator-side; see "Subagent tool exposure" below.
 
-Once retest #5 passes, call `goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api --decision "..." --because "..."` to lower the gate to `none`, tick the last box, and `goc done` to close.
+## Subagent tool exposure (operator config)
+
+`goc` is registered as a required tool (`api.registerTool({name: "goc", ...})` — single-arg form, `optional: false`). The runtime registry contains it (verified by `inspect --runtime --json`). The remaining gap is OpenClaw's tool-policy filter. Options for the operator (from least to most surgical):
+
+1. **Profile-only with `alsoAllow`** — keep the existing profile; add `goc` to the agent's `tools.alsoAllow`:
+   ```json5
+   { agents: { defaults: { tools: { alsoAllow: ["goc"] } } } }
+   ```
+2. **Subagent-specific allow** — narrow the lever further to subagent runs only:
+   ```json5
+   { tools: { subagents: { tools: { alsoAllow: ["goc"] } } } }
+   ```
+3. **Drop the restrictive profile** — if the agent's intended scope includes plugin tools generally, set `tools.profile: "full"` (or remove the profile entirely).
+
+The tester's setup will tell us which lever fits; this card does not need to make the choice unilaterally.
+
+## Conversation-hook opt-in (operator config)
+
+`agent_end` is an OpenClaw `CONVERSATION_HOOK_NAMES` entry (`node_modules/openclaw/dist/types-CdFhLeaX.js`). Non-bundled plugins have conversation-hook registrations silently dropped unless the operator opts in:
+
+```json5
+{ plugins: { entries: { "game-of-cards": { hooks: { allowConversationAccess: true } } } } }
+```
+
+Without this, the GoC pattern-generalization-check hook (`agent_end` consumer) is registered as a no-op. The plugin still works for tool calls and the other two hooks (`session_start`, `before_prompt_build`) — only the post-turn pattern reminder is suppressed.
+
+## Closure path
+
+Once the operator confirms (with `alsoAllow` / profile change in place) that a subagent can see and call `goc`:
+
+```
+goc decide openclaw-plugin-release-smoke-blockers-build-and-spawn-api \
+  --decision "subagent invocation acceptance verified after operator-side tools.alsoAllow" \
+  --because "OpenClaw's default tool policy filters plugin tools out of restrictive profiles; user config knob is documented in this card's body"
+goc done openclaw-plugin-release-smoke-blockers-build-and-spawn-api
+```
+
+Side-finding (`add-openclaw-install-section-to-llms-txt`) is already closed (`fa5cbb1`). The two operator-config notes above belong in the OpenClaw-section of `site/llms.txt` and the plugin's eventual README — both follow-up cards if not already filed.
 
 ## Background
 
