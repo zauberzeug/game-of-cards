@@ -9,12 +9,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true,
+    "sourceMap": true,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "isolatedModules": true
   },
   "include": ["index.ts"],
-  "exclude": ["node_modules", "goc", "skills"]
+  "exclude": ["node_modules", "dist", "goc", "skills"]
 }

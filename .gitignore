@@ -9,6 +9,10 @@ __pycache__/
 build/
 dist/
 .eggs/
+# Re-include the openclaw-plugin's compiled JS — it's a tracked build artifact
+# (committed for tester convenience; rebuilt via `cd openclaw-plugin && npm run build`).
+!openclaw-plugin/dist/
+!openclaw-plugin/dist/**
 
 # Virtual envs
 .venv/

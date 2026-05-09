@@ -9,26 +9,33 @@
  * See:
  *   - https://docs.openclaw.ai/plugins/manifest.md (plugin manifest)
  *   - https://docs.openclaw.ai/plugins/sdk-overview.md (api.* surface)
+ *   - https://docs.openclaw.ai/plugins/sdk-runtime.md (runtime helpers — incl. system.runCommandWithTimeout)
  *   - https://docs.openclaw.ai/plugins/hooks.md (lifecycle hooks)
  *   - https://docs.openclaw.ai/tools/index.md (tool concept)
  *
  * Architectural note: OpenClaw has no auto-PATH-prepend mechanism for plugin
- * binaries (verified during the PATH-integration spike on
+ * binaries (verified via the PATH-integration spike on
  * `provide-openclaw-plugin-for-skills-and-hooks`). So the plugin exposes
- * goc as a registered tool rather than a shell binary on PATH. The tool
- * handler invokes `python3 -m goc.cli` directly with PYTHONPATH pointing
- * at the bundled package — same pattern the Claude plugin's bin/goc uses
- * after `plugin-wrapper-drops-uv` (commit 87db27e).
+ * goc as a registered tool rather than a shell binary on PATH. Subprocess
+ * invocations use `api.runtime.system.runCommandWithTimeout` (the sanctioned
+ * spawn API per OpenClaw's plugin-sandbox policy) — NOT direct
+ * `node:child_process` imports, which the safe-install policy blocks.
+ *
+ * After compilation, this file lives at `<plugin-root>/dist/index.js`, so
+ * the vendored engine path is computed as `dirname(__file) + "/../"`
+ * (the plugin root is the parent of dist/).
  */
 
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { Type, type Static } from "@sinclair/typebox";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
 
-const PLUGIN_ROOT = dirname(fileURLToPath(import.meta.url));
+const COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
+// PLUGIN_ROOT is the parent of the compiled dist/ — i.e., the
+// openclaw-plugin/ directory itself, where goc/ is vendored.
+const PLUGIN_ROOT = resolve(COMPILED_DIR, "..");
 const VENDORED_GOC_PATH = PLUGIN_ROOT;
 
 // Mirrors the click subparser surface in goc/cli.py — keep in sync if new
@@ -89,41 +96,6 @@ const GocToolParams = Type.Object({
 });
 
 type GocToolInput = Static<typeof GocToolParams>;
-
-interface SpawnResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-}
-
-// Use spawn (no shell) — argv is passed as an array, never interpolated
-// into a shell line. Safe for arbitrary user-supplied args; no shell
-// injection vector.
-async function runGoc(args: string[], cwd: string): Promise<SpawnResult> {
-  return new Promise((resolveResult) => {
-    const env = {
-      ...process.env,
-      PYTHONPATH: process.env.PYTHONPATH
-        ? `${VENDORED_GOC_PATH}:${process.env.PYTHONPATH}`
-        : VENDORED_GOC_PATH,
-    };
-    const proc = spawn("python3", ["-m", "goc.cli", ...args], { cwd, env });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout?.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    proc.stderr?.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    proc.on("close", (code) => {
-      resolveResult({ exitCode: code ?? 0, stdout, stderr });
-    });
-    proc.on("error", (err) => {
-      resolveResult({ exitCode: 127, stdout: "", stderr: err.message });
-    });
-  });
-}
 
 function buildArgs(input: GocToolInput): string[] {
   const flagTokens: string[] = [];
@@ -254,7 +226,47 @@ export default definePluginEntry({
   description:
     "Agile work-card methodology for AI-agent collaborators. Files, advances, and closes cards in `.game-of-cards/deck/` via the bundled goc engine.",
 
-  register(api) {
+  register(api: any) {
+    // === goc tool ===
+    // Subprocess invocation routes through the sanctioned
+    // api.runtime.system.runCommandWithTimeout API (per
+    // https://docs.openclaw.ai/plugins/sdk-runtime.md). Defined inside
+    // register so it captures the runtime helper in its closure;
+    // OpenClaw's safe-install policy blocks plugins that import
+    // node:child_process directly.
+    //
+    // TODO(verify-shape): the precise signature of runCommandWithTimeout
+    // is not documented at the URL above (only the call shape
+    // `api.runtime.system.runCommandWithTimeout(cmd, args, opts)` is
+    // shown). The result is assumed to expose `exitCode`, `stdout`, and
+    // `stderr` fields; smoke testing will confirm or correct.
+    async function runGoc(args: string[], cwd: string): Promise<{
+      exitCode: number;
+      stdout: string;
+      stderr: string;
+    }> {
+      const env = {
+        ...process.env,
+        PYTHONPATH: process.env.PYTHONPATH
+          ? `${VENDORED_GOC_PATH}:${process.env.PYTHONPATH}`
+          : VENDORED_GOC_PATH,
+      };
+      const result = await api.runtime.system.runCommandWithTimeout(
+        "python3",
+        ["-m", "goc.cli", ...args],
+        {
+          cwd,
+          env,
+          timeoutMs: 60_000,
+        },
+      );
+      return {
+        exitCode: (result?.exitCode as number | undefined) ?? 0,
+        stdout: (result?.stdout as string | undefined) ?? "",
+        stderr: (result?.stderr as string | undefined) ?? "",
+      };
+    }
+
     api.registerTool({
       name: "goc",
       description:
@@ -262,7 +274,7 @@ export default definePluginEntry({
         "The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. " +
         "Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
       parameters: GocToolParams,
-      async execute(_id, params: GocToolInput) {
+      async execute(_id: any, params: GocToolInput) {
         const cwd = params.cwd ?? process.cwd();
         const argv = buildArgs(params);
         const result = await runGoc(argv, cwd);

@@ -1,3 +1,5 @@
 node_modules/
 *.tsbuildinfo
-dist/
+# `dist/` is committed (built from index.ts via `npm run build`) so testers
+# can install from a checkout without a Node toolchain. Keep in sync with
+# index.ts via `npm run build` before committing changes.
