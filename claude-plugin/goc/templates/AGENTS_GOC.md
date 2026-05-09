@@ -110,6 +110,7 @@ runtime affordances, not separate methodology state.
 **Runtime affordances** — optional, not required in source control:
 - Claude Code skills and hooks — install via `goc install --agents claude` or the Claude Code plugin
 - Codex skills — install via `goc install --agents codex`
+- OpenClaw skills, tool, and hooks — install via the OpenClaw plugin (ClawHub: `openclaw skills install game-of-cards`; npm: `game-of-cards`). Bundles the goc engine; only `python3` (3.10+) is required on the host. The OpenClaw plugin exposes `goc` as a registered tool (rather than a shell-PATH binary) — model invokes it as it would any typed function.
 
 **Worktrees** — by default each git worktree sees its own checkout's deck. Set
 `workflow.worktree_deck: shared` in `.game-of-cards/config.yaml` (or export

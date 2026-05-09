@@ -747,13 +747,17 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         # Skills shell out to `goc` directly (not via a bootstrap shim) so
         # plugin-installed skills don't trip Claude Code's bash-policy ban
         # on executing scripts shipped from a plugin cache directory.
+        from goc.install import skill_for_agent
+
         roots = [
-            ROOT / "goc" / "templates" / "skills",
-            ROOT / ".claude" / "skills",
-            ROOT / ".codex" / "skills",
+            (ROOT / "goc" / "templates" / "skills", None),
+            (ROOT / ".claude" / "skills", "claude"),
+            (ROOT / ".codex" / "skills", "codex"),
         ]
-        for root in roots:
+        for root, agent in roots:
             for skill_name in SKILL_NAMES:
+                if agent is not None and not skill_for_agent(skill_name, agent):
+                    continue
                 skill = root / skill_name / "SKILL.md"
                 text = skill.read_text()
                 self.assertNotIn("_goc-bootstrap.sh", text, msg=str(skill))
@@ -1283,8 +1287,18 @@ class KickoffStage4StripSnippetTest(unittest.TestCase):
 
     def test_skill_body_no_longer_references_removed_flags(self) -> None:
         """The two flags that never existed must not appear anywhere in the
-        skill body — they were the original crash trigger."""
-        for path in (self.SKILL_PATH, self.PLUGIN_SKILL_PATH):
+        skill body — they were the original crash trigger. Also covers the
+        Claude-specific complement `claude-kickoff`, which inherits the same
+        contract for the CLAUDE.md / CLAUDE.local.md prompts it owns."""
+        paths = [
+            self.SKILL_PATH,
+            self.PLUGIN_SKILL_PATH,
+            ROOT / "goc" / "templates" / "skills" / "claude-kickoff" / "SKILL.md",
+            ROOT / "claude-plugin" / "skills" / "claude-kickoff" / "SKILL.md",
+        ]
+        for path in paths:
+            if not path.is_file():
+                continue
             with self.subTest(path=path):
                 text = path.read_text()
                 self.assertNotIn("--no-claude-md", text)
