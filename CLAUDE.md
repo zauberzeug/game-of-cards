@@ -170,11 +170,11 @@ When filing GoC cards in this repo:
 <!-- BEGIN GOC v0.0.6 -->
 ## Game of Cards — Claude Code specifics
 
-The shared briefing is in [AGENTS.md](AGENTS.md) — three operating
-modes (session / autonomous / Andon-cord), the `goc` CLI verb table,
-and the deck philosophy apply to every runtime.
+@AGENTS.md
 
-What's **Claude-specific** and lives only here:
+What's **Claude-specific** and lives only here (the `@AGENTS.md` import
+above loads the shared GoC briefing — deck-first mode, verb table,
+Andon-cord, pull semantics — at session start):
 
 ### Plugin install (one-time per machine)
 
