@@ -11,6 +11,7 @@ advances:
   - publish-openclaw-plugin
   - provide-openclaw-plugin-for-skills-and-hooks
   - list-game-of-cards-on-anthropic-community-marketplace
+  - release-yml-smoke-job-fails-on-tag-push-events
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |

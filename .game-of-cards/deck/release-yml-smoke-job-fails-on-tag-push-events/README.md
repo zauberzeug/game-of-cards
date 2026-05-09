@@ -6,14 +6,14 @@ stage: null
 contribution: medium
 created: 2026-05-09
 closed_at: null
-human_gate: none
+human_gate: session
 advances: []
 advanced_by:
   - cut-v0-0-7-release-before-openclaw-publish
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Reproduce: verify the failure mode by inspecting CI run `25608246745` (the v0.0.7 tag-push attempt) — build OK, smoke errored on `Unsupported event type: push`, publish skipped
-  - [ ] Decide on a fix shape (skip-smoke-on-push / split-smoke-into-separate-workflow / replace-action / inline-script-replacement) and record the choice in this card's body
+  - [x] Reproduce: verify the failure mode by inspecting CI run `25608246745` (the v0.0.7 tag-push attempt) — build OK, smoke errored on `Unsupported event type: push`, publish skipped
+  - [x] Decide on a fix shape (skip-smoke-on-push / split-smoke-into-separate-workflow / replace-action / inline-script-replacement) and record the choice in this card's body
   - [ ] Implement the chosen fix and verify by tag-pushing a throw-away pre-release tag (e.g., `v0.0.7-test`) — build, smoke, and publish all run end-to-end without manual workflow_dispatch follow-up
   - [ ] Delete the throw-away tag from origin
   - [ ] `release.yml` comment header updated to reflect the new release flow
@@ -51,3 +51,83 @@ v0.0.6 was released via workflow_dispatch on `main` (run `25570760155`), apparen
 ## Reproduction pointer
 
 CI run `25608246745` (failed tag-push attempt). The error string `Unsupported event type: push` is the smoking gun.
+
+## Decision (2026-05-09)
+
+Chose fix shape **(1) skip-smoke-on-push**, with one refinement to preserve smoke as a workflow_dispatch gate:
+
+- Narrow `smoke.if` to `${{ github.event_name == 'workflow_dispatch' }}` — smoke no longer attempts to run on tag push, so the `anthropics/claude-code-action@v1` event-type rejection cannot block publish.
+- Keep `publish.needs: [build, smoke]` but rewrite `publish.if` to `${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}`. The `always()` plus explicit `result == 'skipped'` branch stops the skipped-smoke job from auto-skipping publish on the tag-push path while still requiring smoke success on the workflow_dispatch+tag path that v0.0.7 was rescued through.
+- Refresh the header comment in `release.yml` to document both release paths.
+
+Fix shape (3) (replace the action) was rejected as out of scope for this card — it is the right answer if smoke gating becomes non-negotiable, but the smallest viable fix is what unblocks the next release. Fix shape (2) (split workflow) was rejected because it does not separate concerns any better than the in-place narrowing — both end up with smoke as a workflow_dispatch-only check; the split adds a second file without adding a guarantee.
+
+The proposed patch was prepared and actionlint-clean (no new lint warnings beyond a pre-existing SC2086 at line 106 of the original file), but **could not be auto-committed**: `claude[bot]`'s GitHub App identity lacks the `workflows` permission, and `git push` on a workflow change is rejected with `refusing to allow a GitHub App to create or update workflow .github/workflows/release.yml without 'workflows' permission`. The patch therefore lives in this card body for a human to apply.
+
+## Proposed patch
+
+```diff
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -14,6 +14,18 @@
+ #
+ # Tag convention: `v0.1.0`, `v0.2.3`, `v1.0.0`, etc. The tag must
+ # match the version in pyproject.toml — the build step verifies this.
++#
++# Release flow:
++#   - `git push origin vX.Y.Z` — fires the `push` event; build runs,
++#     smoke is skipped (the action backing it does not accept `push`
++#     events), publish runs after build. Smoke does not gate this path.
++#   - `gh workflow run release.yml --ref vX.Y.Z` — fires
++#     `workflow_dispatch` with `github.ref` resolving to the tag;
++#     build and smoke both run; publish waits for smoke to succeed.
++#     Use this path before high-risk releases to gate publish on the
++#     end-to-end auto-bootstrap smoke check.
++#   - `gh workflow run release.yml --ref main` (or any tag with
++#     `dry_run=true`) — exercises build + smoke without publishing.
+
+ name: Release to PyPI
+
+@@ -74,9 +86,13 @@ jobs:
+     name: End-to-end auto-bootstrap smoke
+     needs: build
+     runs-on: ubuntu-latest
+-    # Run on real tag pushes AND on workflow_dispatch (so dry_run can exercise
+-    # the smoke without publishing). Only skip when nothing else triggers it.
+-    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
++    # `anthropics/claude-code-action@v1` rejects the `push` event family
++    # ("Unsupported event type: push"), so smoke can only run under
++    # workflow_dispatch. Tag-push releases skip smoke; `publish` below
++    # tolerates that via an explicit `needs.smoke.result == 'skipped'`
++    # branch in its `if`. To exercise smoke against a tag, use
++    # `gh workflow run release.yml --ref vX.Y.Z`.
++    if: ${{ github.event_name == 'workflow_dispatch' }}
+     timeout-minutes: 30
+     steps:
+       - uses: actions/checkout@v4
+@@ -187,7 +203,11 @@ jobs:
+     name: Publish to PyPI
+     needs: [build, smoke]
+     runs-on: ubuntu-latest
+-    if: ${{ startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
++    # `always()` keeps this from being auto-skipped when `smoke` is
++    # skipped (the tag-push path). The explicit result checks then
++    # require build to succeed and smoke to either succeed or be
++    # skipped — never to have failed.
++    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+     environment:
+       name: pypi
+       url: https://pypi.org/project/game-of-cards/
+```
+
+## Decision required
+
+A human with `workflows` permission needs to apply the patch above (paste it into a branch, push, open a PR, merge), then verify end-to-end:
+
+- **Apply the patch**: paste the diff into `.github/workflows/release.yml`, commit, push, merge to `main`. After merge, also tick DoD item 5 ("comment header updated").
+- **Verify**: either wait for the next real release (v0.0.8) to exercise the natural tag-push path (build → publish, smoke skipped), or push a throw-away `.devN` pre-release tag (bump `pyproject.toml` to `0.0.8.dev0`, tag `v0.0.8.dev0`, push, watch the run, then delete tag from origin). Note that PyPI accepts `.devN` releases, so the throw-away tag WILL publish.
+- After verification, tick DoD items 3 and 4 and run `goc done release-yml-smoke-job-fails-on-tag-push-events`.
+
+## Validate-pass status
+
+`uv run goc validate` reports three half-edge errors against `cut-v0-0-7-release-before-openclaw-publish` that are pre-existing (introduced by commit `4306d10`, the same commit that filed this card). They concern edges from `cut-v0-0-7` to `publish-openclaw-plugin`, `provide-openclaw-plugin-for-skills-and-hooks`, and `list-game-of-cards-on-anthropic-community-marketplace` whose inverse `advanced_by` entries on the targets were never recorded. They are out of scope for this card. The half-edge that involved this card (cut-v0-0-7 missing `release-yml-smoke-job-fails-on-tag-push-events` in its `advances`) was fixed inline so this card's own frontmatter is consistent. DoD item 6 stays unchecked until those three unrelated half-edges are resolved (likely through a deck-hygiene pass).
