@@ -209,3 +209,7 @@ plugins.entries.game-of-cards.hooks.allowConversationAccess=true
 ### Closure path
 
 When the tester confirms a subagent invocation works after applying `tools.alsoAllow: ["goc"]` (or equivalent), the card closes via `goc decide` with the operator-config decision recorded → tick item 5 → `goc done`.
+
+## 2026-05-09: decision recorded
+
+Close the card with item 5(d) delegated to follow-up openclaw-subagent-spawn-doesnt-project-plugin-tools. — All plugin-side defects (build pipeline, sanctioned spawn API, scanner-comment trip, runtime-dep bundle) are fixed; runtime inspect (--runtime --json) confirms the goc tool is registered. Subagent tool exposure failed even with the most-permissive operator config (tools.profile=full + subagents.tools.alsoAllow=[goc] + allowConversationAccess=true), so the residual is upstream of this card's plugin-side scope. Closing here keeps the smoke umbrella from staying open indefinitely on a non-plugin issue and gives the subagent-projection finding its own briefing.. Gate session → none.

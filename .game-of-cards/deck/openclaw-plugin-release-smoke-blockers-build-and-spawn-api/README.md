@@ -6,9 +6,10 @@ stage: null
 contribution: high
 created: 2026-05-09
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - provide-openclaw-plugin-for-skills-and-hooks
+  - openclaw-subagent-spawn-doesnt-project-plugin-tools
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
@@ -16,7 +17,7 @@ definition_of_done: |
   - [x] `openclaw-plugin/package.json` declares `main: "./dist/index.js"`, `openclaw.extensions: ["./dist/index.js"]`, and scripts: `build`, `prepare` (auto-build after npm install), `prepublishOnly` (auto-build before npm publish)
   - [x] `openclaw-plugin/index.ts` no longer imports from `node:child_process`; subprocess invocations use `api.runtime.system.runCommandWithTimeout(cmd, args, opts)` per <https://docs.openclaw.ai/plugins/sdk-runtime.md>. `runGoc` helper is moved inside `register(api)` so it can capture `api.runtime` in its closure.
   - [x] Build artifact: `cd openclaw-plugin && npm install && npm run build` produces a `dist/index.js` that's committed to the repo.
-  - [ ] Smoke retest by the original tester confirms: (a) `openclaw plugins install <local-path>` no longer fails for missing JS — ✅; (b) install no longer requires `--dangerously-force-unsafe-install` — ✅; (c) `openclaw plugins inspect game-of-cards --runtime --json` shows `imported: True`, `toolNames: ["goc"]`, `tools: [{names: ["goc"], ...}]` — ✅ (note: default `inspect --json` is the static-snapshot view; `--runtime` is required to see the runtime registry); (d) a subagent invocation can see and call the `goc` tool — ⏳ pending tester's OpenClaw config tweak (see body's "Subagent tool exposure" section); not a code-side defect of this plugin.
+  - [x] Smoke retest by the original tester confirms: (a) `openclaw plugins install <local-path>` no longer fails for missing JS — ✅; (b) install no longer requires `--dangerously-force-unsafe-install` — ✅; (c) `openclaw plugins inspect game-of-cards --runtime --json` shows `imported: True`, `toolNames: ["goc"]`, `tools: [{names: ["goc"], ...}]` — ✅ (note: default `inspect --json` is the static-snapshot view; `--runtime` is required to see the runtime registry); (d) a subagent invocation can see and call the `goc` tool — delegated to follow-up `openclaw-subagent-spawn-doesnt-project-plugin-tools` after the tester verified that even the most-permissive operator config (`tools.profile: "full"` + `subagents.tools.alsoAllow: ["goc"]` + `allowConversationAccess: true`) doesn't surface plugin tools in subagents. Plugin code is verified correct via `inspect --runtime --json`; the projection layer is upstream of this card's scope.
   - [x] `uv run goc validate` passes.
   - [x] Side finding (out of this card's scope): website / `llms.txt` still recommends `uv tool install` as the install path. Reviewer (2026-05-09) decided the scope expansion is large enough to warrant a separate card rather than stretching `llms-txt-still-recommends-uv-tool-install-as-preferred`'s narrow uv→pipx fix. Resolved by filing `add-openclaw-install-section-to-llms-txt`.
 worker: {who: "claude[bot]", where: main}
@@ -147,3 +148,9 @@ Item 4 is a separate fix: **swap to the sanctioned subprocess API.**
 - `publish-openclaw-plugin` — release-blocker #1 (npm publish, separate card)
 - `llms-txt-still-recommends-uv-tool-install-as-preferred` — side finding
 - `split-claude-specific-content-out-of-generic-kickoff-skill` — sibling advance edge on the same parent
+
+## Decision
+
+*Resolved 2026-05-09:* Close the card with item 5(d) delegated to follow-up openclaw-subagent-spawn-doesnt-project-plugin-tools.
+
+*Reasoning:* All plugin-side defects (build pipeline, sanctioned spawn API, scanner-comment trip, runtime-dep bundle) are fixed; runtime inspect (--runtime --json) confirms the goc tool is registered. Subagent tool exposure failed even with the most-permissive operator config (tools.profile=full + subagents.tools.alsoAllow=[goc] + allowConversationAccess=true), so the residual is upstream of this card's plugin-side scope. Closing here keeps the smoke umbrella from staying open indefinitely on a non-plugin issue and gives the subagent-projection finding its own briefing.
