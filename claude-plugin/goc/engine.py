@@ -25,7 +25,7 @@ from datetime import date
 from pathlib import Path
 
 import click
-import yaml
+from goc._vendor import yaml_lite as yaml
 
 # ────────────────────────────────────────────────────────────────────────────
 # Paths

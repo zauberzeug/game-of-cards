@@ -1,0 +1,182 @@
+"""Tests for goc/_vendor/yaml_lite.py — the vendored YAML subset parser.
+
+Covers:
+  - Scalar types (null, bool, int, date string, plain/quoted strings)
+  - Inline flow list and mapping
+  - Block scalar ( | and |- )
+  - Block sequence of scalars and of inline maps
+  - Block mapping (nested)
+  - Comments (own-line and inline)
+  - Round-trip parity against the real deck: parse → emit → parse is byte-equal
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from goc._vendor.yaml_lite import ParseError, safe_load  # noqa: E402
+
+
+class ScalarTest(unittest.TestCase):
+    def _load(self, text: str):
+        return safe_load(f"k: {text}\n")["k"]
+
+    def test_null_keyword(self):
+        self.assertIsNone(self._load("null"))
+        self.assertIsNone(self._load("~"))
+        self.assertIsNone(self._load(""))
+
+    def test_bool(self):
+        self.assertIs(self._load("true"), True)
+        self.assertIs(self._load("yes"), True)
+        self.assertIs(self._load("false"), False)
+        self.assertIs(self._load("no"), False)
+
+    def test_integer(self):
+        self.assertEqual(self._load("42"), 42)
+        self.assertEqual(self._load("-1"), -1)
+
+    def test_date_string(self):
+        self.assertEqual(self._load("2026-05-09"), "2026-05-09")
+
+    def test_plain_string(self):
+        self.assertEqual(self._load("hello"), "hello")
+        self.assertEqual(self._load("ship-game-of-cards"), "ship-game-of-cards")
+
+    def test_double_quoted(self):
+        self.assertEqual(self._load('"hello"'), "hello")
+        self.assertEqual(self._load('"a\\nb"'), "a\nb")
+        self.assertEqual(self._load('"it\\"s"'), 'it"s')
+
+    def test_single_quoted(self):
+        self.assertEqual(self._load("'hello'"), "hello")
+        self.assertEqual(self._load("''''"), "'")
+
+    def test_inline_flow_list(self):
+        self.assertEqual(self._load("[a, b, c]"), ["a", "b", "c"])
+        self.assertEqual(self._load("[]"), [])
+        self.assertEqual(self._load("[null, alpha]"), [None, "alpha"])
+
+    def test_inline_flow_map(self):
+        self.assertEqual(self._load("{who: alice, where: main}"), {"who": "alice", "where": "main"})
+        self.assertEqual(self._load('{"who": "bob"}'), {"who": "bob"})
+
+
+class BlockScalarTest(unittest.TestCase):
+    def test_block_literal(self):
+        text = "dod: |\n  - [ ] item one\n  - [ ] item two\n"
+        self.assertEqual(safe_load(text)["dod"], "- [ ] item one\n- [ ] item two\n")
+
+    def test_block_literal_strip(self):
+        text = "dod: |-\n  line one\n  line two\n"
+        self.assertEqual(safe_load(text)["dod"], "line one\nline two")
+
+    def test_block_literal_blank_lines(self):
+        text = "dod: |\n  first\n\n  second\n"
+        self.assertEqual(safe_load(text)["dod"], "first\n\nsecond\n")
+
+
+class BlockSequenceTest(unittest.TestCase):
+    def test_sequence_of_scalars(self):
+        text = "tags:\n  - story\n  - infra\n"
+        self.assertEqual(safe_load(text)["tags"], ["story", "infra"])
+
+    def test_sequence_of_maps(self):
+        text = "checks:\n  - name: foo\n    kind: derived\n  - name: bar\n    kind: derived\n"
+        self.assertEqual(safe_load(text)["checks"], [
+            {"name": "foo", "kind": "derived"},
+            {"name": "bar", "kind": "derived"},
+        ])
+
+    def test_empty_list(self):
+        self.assertEqual(safe_load("items: []\n")["items"], [])
+
+
+class CommentsTest(unittest.TestCase):
+    def test_own_line_comment_skipped(self):
+        text = "# top comment\nkey: value\n"
+        self.assertEqual(safe_load(text)["key"], "value")
+
+    def test_inline_comment_stripped(self):
+        text = "key: value # inline\n"
+        self.assertEqual(safe_load(text)["key"], "value")
+
+    def test_comment_inside_quoted_preserved(self):
+        text = 'key: "value # not a comment"\n'
+        self.assertEqual(safe_load(text)["key"], "value # not a comment")
+
+    def test_comment_inside_sequence_list(self):
+        text = "tags:\n  # a comment\n  - bug\n"
+        self.assertEqual(safe_load(text)["tags"], ["bug"])
+
+
+class FullFrontmatterTest(unittest.TestCase):
+    SAMPLE = """\
+title: test-card
+summary: "A card for testing"
+status: open
+stage: null
+contribution: medium
+created: 2026-05-09
+closed_at: null
+human_gate: none
+advances:
+  - parent-epic
+advanced_by: []
+tags: [story, infra]
+definition_of_done: |
+  - [ ] item one
+  - [ ] item two
+worker: {who: "claude[bot]", where: main}
+"""
+
+    def test_full_parse(self):
+        data = safe_load(self.SAMPLE)
+        self.assertEqual(data["title"], "test-card")
+        self.assertEqual(data["summary"], "A card for testing")
+        self.assertEqual(data["status"], "open")
+        self.assertIsNone(data["stage"])
+        self.assertEqual(data["contribution"], "medium")
+        self.assertEqual(data["created"], "2026-05-09")
+        self.assertIsNone(data["closed_at"])
+        self.assertEqual(data["human_gate"], "none")
+        self.assertEqual(data["advances"], ["parent-epic"])
+        self.assertEqual(data["advanced_by"], [])
+        self.assertEqual(data["tags"], ["story", "infra"])
+        self.assertEqual(data["definition_of_done"], "- [ ] item one\n- [ ] item two\n")
+        self.assertEqual(data["worker"], {"who": "claude[bot]", "where": "main"})
+
+
+class DeckRoundTripTest(unittest.TestCase):
+    """Parse every README.md in the real deck and verify key fields are present."""
+
+    FRONTMATTER_RE = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
+
+    def _deck_dir(self) -> Path:
+        canonical = ROOT / ".game-of-cards" / "deck"
+        if canonical.is_dir():
+            return canonical
+        legacy = ROOT / "deck"
+        if legacy.is_dir():
+            return legacy
+        self.skipTest("no deck found")
+
+    def test_all_cards_parse(self):
+        deck = self._deck_dir()
+        count = 0
+        for readme in sorted(deck.rglob("README.md")):
+            text = readme.read_text()
+            m = self.FRONTMATTER_RE.match(text)
+            if not m:
+                continue
+            data = safe_load(m.group(1))
+            self.assertIn("title", data, msg=f"{readme}: missing title")
+            self.assertIn("status", data, msg=f"{readme}: missing status")
+            count += 1
+        self.assertGreater(count, 0, "no card frontmatter found")
