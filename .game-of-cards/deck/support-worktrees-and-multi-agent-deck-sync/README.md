@@ -1,11 +1,11 @@
 ---
 title: support-worktrees-and-multi-agent-deck-sync
 summary: "Epic. Today GoC assumes mainline development with the deck checked into the same repo. Three concrete failure modes need a workflow story: (1) one user with multiple worktrees can't reach the deck of the parent repo; (2) multiple humans + AIs need a sync protocol so claims and progress are visible across branches; (3) OSS / library repos cannot mix project-management commits with code history without breaking community workflow. Lemma: `.game-of-cards/` must always be in sync with all participants. This epic frames the children that explore each path."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
@@ -19,11 +19,11 @@ advanced_by:
 tags: [epic, infra]
 definition_of_done: |
   - [x] Worktree case (one user, multiple branches) has a documented and tested workflow — covered by closed `spike-worktree-auto-resolves-deck-from-main-repo`
-  - [ ] Multi-human / multi-AI claim protocol on shared mainline has a documented design and ships its implementation — covered by `design-claim-protocol-with-branch-and-author-metadata` (decision recorded; implementation pending)
-  - [ ] Separate-repo / submodule path is evaluated and either adopted, rejected with reasons, or kept as an alternative for OSS-style projects — covered by `evaluate-deck-as-separate-repo-or-submodule` (decision recorded: same-repo only; trade-off write-up pending)
-  - [ ] README's audience preamble (per closed `restructure-comic-as-three-panels-and-add-audience-preamble`) names which workflow each persona should pick — verify wording is in place; edit if missing
-  - [ ] Personas card (closed `define-personas-and-use-cases-for-game-of-cards`) names the workflow expectations per persona — verify wording is in place; edit if missing
-  - [ ] `uv run goc validate` passes
+  - [x] Multi-human / multi-AI claim protocol on shared mainline has a documented design and ships its implementation — closed `design-claim-protocol-with-branch-and-author-metadata` ships `workflow.claim_push` (push-retry on claim) and `workflow.closure_on_integration` (refuses `done` when HEAD isn't reachable from `origin/main`) in `goc/engine.py`
+  - [x] Separate-repo / submodule path is evaluated and either adopted, rejected with reasons, or kept as an alternative for OSS-style projects — closed `evaluate-deck-as-separate-repo-or-submodule` records same-repo as the only supported configuration; sibling-repo, submodule, and hosted SaaS are documented as 'possible but unsupported' in `DECK_LOCATION.md`
+  - [x] README's audience preamble (per closed `restructure-comic-as-three-panels-and-add-audience-preamble`) names which workflow each persona should pick — README "Who this is for" names the three primary personas and links to `PERSONAS.md` for "which workflow shape each one accepts"
+  - [x] Personas card (closed `define-personas-and-use-cases-for-game-of-cards`) names the workflow expectations per persona — `PERSONAS.md` has a "Workflow shape" subsection for each of the five personas (mainline-only, mainline-or-branch, mainline-primary with claim protocol, external deck, not-yet-served)
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
