@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-09
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by:
   - pull-card-self-trigger-needs-empirical-verification
@@ -71,10 +71,11 @@ PAT or GitHub App with workflow scope, or `repository_dispatch`. Pre-rejected by
 
 Option (a) is the lowest-cost path that preserves the parent card's design intent. It's a one-line YAML change with bounded security delta (specific bot, not `*`). If Rodja prefers to honor the original "no new permissions/credentials" posture strictly, option (b) is the clean cron-only fallback.
 
-## Decision required
+## Decision
 
-Pick (a), (b), or another path. Then a pull-card session can implement it directly.
+*Resolved 2026-05-09:* Add allowed_bots: github-actions[bot] to claude-code-action step in pull-card.yml
 
+*Reasoning:* Lowest-cost path that preserves the parent card's self-trigger design intent. One-line YAML change with bounded security delta (specific bot, not '*'). claude_args: --permission-mode bypassPermissions already trusts the workflow's prompt regardless of trigger origin, so marginal security exposure is small.
 ## Cross-references
 
 - `pull-card-self-trigger-needs-empirical-verification` (done 2026-05-09) — the empirical finding feeding this card
