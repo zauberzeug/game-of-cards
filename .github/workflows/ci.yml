@@ -79,8 +79,43 @@ jobs:
           print(f'OK — all version surfaces report {pyproject}')
           "
 
-      - name: Verify plugin assets match goc/ byte-for-byte
-        run: python scripts/sync_plugin_assets.py --check
+      - name: Verify plugin assets match templates byte-for-byte
+        run: |
+          uv run python -c "
+          import filecmp, pathlib, sys
+          pairs = [
+              ('goc/templates/skills', 'claude-plugin/skills'),
+              ('goc/templates/hooks/deck_prompt_router.py', 'claude-plugin/hooks/deck_prompt_router.py'),
+              ('goc/templates/hooks/deck_session_start.py', 'claude-plugin/hooks/deck_session_start.py'),
+              ('goc', 'claude-plugin/goc'),
+          ]
+          drift = []
+          for src, dst in pairs:
+              s, d = pathlib.Path(src), pathlib.Path(dst)
+              if s.is_dir():
+                  cmp = filecmp.dircmp(s, d)
+                  def walk(c, prefix=''):
+                      out = []
+                      out += [f'{prefix}{n} (only in {src})' for n in c.left_only]
+                      out += [f'{prefix}{n} (only in {dst})' for n in c.right_only]
+                      out += [f'{prefix}{n} (differs)' for n in c.diff_files]
+                      for sub_name, sub in c.subdirs.items():
+                          out += walk(sub, prefix + sub_name + '/')
+                      return out
+                  diffs = walk(cmp)
+                  if diffs:
+                      drift.append((src, dst, diffs))
+              else:
+                  if not filecmp.cmp(s, d, shallow=False):
+                      drift.append((src, dst, ['contents differ']))
+          if drift:
+              for src, dst, diffs in drift:
+                  print(f'DRIFT: {src} vs {dst}')
+                  for d in diffs:
+                      print(f'  - {d}')
+              sys.exit('ERROR: claude-plugin assets diverged from goc/templates. Re-sync the duplicated files.')
+          print('OK — claude-plugin assets match goc/templates byte-for-byte.')
+          "
 
       - name: Validate deck (if exists)
         run: |
