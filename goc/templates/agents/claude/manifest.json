@@ -18,6 +18,10 @@
     {
       "source": "hooks/deck_session_start.py",
       "target": ".claude/hooks/deck_session_start.py"
+    },
+    {
+      "source": "hooks/pattern_generalization_check.py",
+      "target": ".claude/hooks/pattern_generalization_check.py"
     }
   ],
   "settings_json": ".claude/settings.json",

@@ -613,6 +613,11 @@ def validate_plugin_mirror_parity() -> list[str]:
                 claude_plugin_root / "hooks" / "deck_session_start.py",
                 frozenset(),
             ),
+            (
+                REPO_ROOT / "goc" / "templates" / "hooks" / "pattern_generalization_check.py",
+                claude_plugin_root / "hooks" / "pattern_generalization_check.py",
+                frozenset(),
+            ),
             (REPO_ROOT / "goc", claude_plugin_root / "goc", claude_goc_excludes),
         ]
 

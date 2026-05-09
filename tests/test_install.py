@@ -142,8 +142,34 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / ".claude" / "skills" / "pull-card" / "SKILL.md").is_file())
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_prompt_router.py").is_file())
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_session_start.py").is_file())
+            self.assertTrue((cwd / ".claude" / "hooks" / "pattern_generalization_check.py").is_file())
             self.assertTrue((cwd / ".claude" / "settings.json").is_file())
             self.assertFalse((cwd / ".codex").exists())
+
+    def test_local_skills_install_pattern_generalization_hook_is_registered_and_present(self) -> None:
+        """Regression: --local-skills must copy pattern_generalization_check.py
+        to .claude/hooks/ alongside registering its Stop hook in settings.json.
+        Previously the manifest's files array stopped at deck_session_start.py,
+        so every code-mutating turn ended with a FileNotFoundError on the Stop
+        hook command."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+
+            hook_path = cwd / ".claude" / "hooks" / "pattern_generalization_check.py"
+            self.assertTrue(hook_path.is_file(),
+                            "manifest must copy pattern_generalization_check.py to .claude/hooks/")
+            settings = json.loads((cwd / ".claude" / "settings.json").read_text())
+            stop_cmds = [
+                h.get("command")
+                for group in settings.get("hooks", {}).get("Stop", [])
+                for h in group.get("hooks", [])
+            ]
+            self.assertIn(
+                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py",
+                stop_cmds,
+            )
 
     def test_local_skills_dry_run_lists_all_three_categories(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -364,6 +390,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         self.assertIn(".claude/skills/_goc-bootstrap.sh", [file["target"] for file in claude["files"]])
         self.assertIn(".claude/hooks/deck_prompt_router.py", [file["target"] for file in claude["files"]])
         self.assertIn(".claude/hooks/deck_session_start.py", [file["target"] for file in claude["files"]])
+        self.assertIn(".claude/hooks/pattern_generalization_check.py", [file["target"] for file in claude["files"]])
         self.assertEqual(".claude/settings.json", claude.get("settings_json"))
 
     # ── Upgrade: migration (vendored → plugin path) ───────────────────────────
