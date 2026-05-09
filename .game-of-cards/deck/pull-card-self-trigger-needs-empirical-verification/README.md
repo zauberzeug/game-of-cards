@@ -1,7 +1,7 @@
 ---
 title: pull-card-self-trigger-needs-empirical-verification
 summary: "`self-trigger-pull-card-workflow-for-fresh-context-per-card` (closed 2026-05-09) restructured `pull-card.yml` so each iteration is its own GitHub Actions run, chained via `gh workflow run` self-trigger using the default `GITHUB_TOKEN` and `permissions.actions: write`. The closed card cites GitHub docs that exempt `workflow_dispatch` from the no-cascade rule. A 2026-05-09 review flagged this as likely-broken because a sibling commit (`6794c03`, 'app lacks workflows permission') reverted a different change for the same-named permission. The two are not the same — `6794c03` failed because the bot tried to MUTATE `.github/workflows/*.yml` content; this design only DISPATCHES via `gh workflow run`. The empirical question is whether the chain actually self-triggers on a real cron tick. Verify before any redesign."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-09
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] If the chain works: append a "Verified" note to `self-trigger-pull-card-workflow-for-fresh-context-per-card`'s README and close this card
   - [ ] If `gh workflow run` returns 403 / lacks permission: file a follow-up redesign card (PAT secret, GitHub App with `workflows` scope, or pure-cron alternative), link it via `advances`, and close this card
   - [ ] Decision recorded either way so the next reader doesn't re-litigate the question
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Pull-card self-trigger needs empirical verification
