@@ -81,6 +81,31 @@ class BlockScalarTest(unittest.TestCase):
         text = "dod: |\n  first\n\n  second\n"
         self.assertEqual(safe_load(text)["dod"], "first\n\nsecond\n")
 
+    def test_empty_block_literal_followed_by_sibling_key(self):
+        text = "title: x\ndefinition_of_done: |\nworker: alice\n"
+        self.assertEqual(
+            safe_load(text),
+            {"title": "x", "definition_of_done": "", "worker": "alice"},
+        )
+
+    def test_empty_block_literal_strip_followed_by_sibling_key(self):
+        text = "title: x\nfoo: |-\nbar: baz\n"
+        self.assertEqual(
+            safe_load(text),
+            {"title": "x", "foo": "", "bar": "baz"},
+        )
+
+    def test_empty_block_literal_at_end_of_document(self):
+        text = "title: x\ndod: |\n"
+        self.assertEqual(safe_load(text), {"title": "x", "dod": ""})
+
+    def test_empty_block_literal_inside_nested_mapping(self):
+        text = "outer:\n  dod: |\n  next: value\n"
+        self.assertEqual(
+            safe_load(text),
+            {"outer": {"dod": "", "next": "value"}},
+        )
+
 
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):

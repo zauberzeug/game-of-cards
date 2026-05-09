@@ -143,8 +143,17 @@ class _Parser:
 
     # ── Block scalar ( | and |- ) ─────────────────────────────────────────────
 
-    def _parse_block_scalar(self, indent: int, strip: bool) -> str:
+    def _parse_block_scalar(self, declaration_indent: int, strip: bool) -> str:
+        """Parse a `|` block scalar.
+
+        `declaration_indent` is the indent of the line bearing the `|` indicator;
+        block content must be indented strictly more than that. If the first
+        non-blank line is at indent <= declaration_indent, the block scalar is
+        empty and that line is left for the parent parser to consume.
+        """
         chunks: list[str] = []
+        block_indent: int | None = None
+        saved_pos = self._pos
         while self._pos < len(self._lines):
             raw = self._lines[self._pos]
             rstripped = raw.rstrip()
@@ -153,10 +162,18 @@ class _Parser:
                 self._pos += 1
                 continue
             curr = self._indent(rstripped)
-            if curr < indent:
+            if curr <= declaration_indent:
                 break
-            chunks.append(raw[indent:].rstrip())
+            if block_indent is None:
+                block_indent = curr
+            chunks.append(raw[block_indent:].rstrip())
             self._pos += 1
+        if block_indent is None:
+            # No indented content followed `|`. Rewind so the parent loop sees
+            # the next sibling key (or blank line) instead of having it silently
+            # consumed.
+            self._pos = saved_pos
+            return ""
         text = "\n".join(chunks)
         return text if strip else text + "\n"
 
@@ -166,10 +183,7 @@ class _Parser:
         rest = rest.rstrip()
         if rest in ("|", "|-", "|+"):
             strip = rest == "|-"
-            next_line = self._peek()
-            if next_line is None:
-                return ""
-            return self._parse_block_scalar(self._indent(next_line), strip)
+            return self._parse_block_scalar(parent_indent, strip)
         if rest == ">":
             raise ParseError(f"line {self._pos + 1}: folded scalars (>) not supported")
         if rest in ("&", "*") or rest.startswith("&") or rest.startswith("*"):
