@@ -1,11 +1,11 @@
 ---
 title: derive-claude-hook-manifest-from-templates
 summary: "The hook list is hand-maintained in three places: `goc/templates/agents/claude/manifest.json` (drives `--local-skills` file copy), `goc/install.py:278-280` (`GOC_CLAUDE_HOOKS` mapping that writes settings.json), and `validate_plugin_mirror_parity` in `goc/engine.py:549-560` (pre-push tripwire). When the three lists drift, the registered hook fails at runtime. The 2026-05-09 review found exactly this drift for `pattern_generalization_check.py`. This is the same shape as `prevent-skill-rename-from-breaking-ci-silently` (done) and `extend-skill-parity-tripwire-to-claude-plugin-mirrors` (done) — a 'derived list' that wasn't actually derived. Apply the same generalization here: derive the hook list mechanically from `goc/templates/hooks/*.py`, or add a tripwire that asserts every script under that directory appears in all three lists."
-status: open
+status: done
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances: []
 advanced_by:
@@ -13,11 +13,12 @@ advanced_by:
   - extend-skill-parity-tripwire-to-claude-plugin-mirrors
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Approach chosen (see Decision required) and implemented
-  - [ ] If derivation: `goc install --local-skills` no longer reads a hand-maintained manifest list of hooks; it iterates `goc/templates/hooks/*.py` directly. `GOC_CLAUDE_HOOKS` and the `validate_plugin_mirror_parity` pairs are computed from the same source
-  - [ ] If tripwire: `goc validate` fails with a clear message when a script under `goc/templates/hooks/` is missing from any of the three registration sites; CI parity check unchanged
-  - [ ] Regression test: add a placeholder `goc/templates/hooks/_test_hook.py` and assert the chosen mechanism either picks it up automatically (derivation) or rejects the missing registration (tripwire); remove the placeholder before merge
-  - [ ] `uv run goc validate` and the full test suite pass under a CI-clean env (`HOME=$(mktemp -d)`)
+  - [x] Approach chosen (see Decision required) and implemented
+  - [x] If derivation: `goc install --local-skills` no longer reads a hand-maintained manifest list of hooks; it iterates `goc/templates/hooks/*.py` directly. `GOC_CLAUDE_HOOKS` and the `validate_plugin_mirror_parity` pairs are computed from the same source
+  - [x] If tripwire: `goc validate` fails with a clear message when a script under `goc/templates/hooks/` is missing from any of the three registration sites; CI parity check unchanged
+  - [x] Regression test: add a placeholder `goc/templates/hooks/_test_hook.py` and assert the chosen mechanism either picks it up automatically (derivation) or rejects the missing registration (tripwire); remove the placeholder before merge
+  - [x] `uv run goc validate` and the full test suite pass under a CI-clean env (`HOME=$(mktemp -d)`)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Derive Claude hook manifest from templates

@@ -107,6 +107,24 @@ def _registered_agents(templates: Path) -> tuple[str, ...]:
     return tuple(ordered) or SUPPORTED_AGENTS
 
 
+def deck_hook_scripts(templates: Path) -> list[str]:
+    """Return sorted basenames of deck hook scripts under templates/hooks/.
+
+    Each `.py` file in that directory is a Claude Code hook: copied into a
+    consuming repo's `.claude/hooks/` by the local-skills install path,
+    mirrored byte-for-byte to `claude-plugin/hooks/` for plugin distribution,
+    and registered with an event in `GOC_CLAUDE_HOOKS`. Treating the
+    directory as the source of truth means dropping a new `.py` file there
+    wires it into the install copy and the parity mirrors automatically;
+    `validate_hook_registration` then catches the only remaining hand-edit
+    (the event-to-script mapping in `GOC_CLAUDE_HOOKS`).
+    """
+    hooks_dir = templates / "hooks"
+    if not hooks_dir.exists():
+        return []
+    return sorted(p.name for p in hooks_dir.iterdir() if p.is_file() and p.suffix == ".py")
+
+
 def _load_agent_shim(templates: Path, agent: str) -> AgentShim:
     """Load the path/format convention for one agent harness."""
 
@@ -134,6 +152,14 @@ def _load_agent_shim(templates: Path, agent: str) -> AgentShim:
         )
         for file_spec in raw.get("files", [])
     )
+    if agent == "claude":
+        files = files + tuple(
+            ShimFile(
+                source=Path("hooks") / name,
+                target=Path(".claude/hooks") / name,
+            )
+            for name in deck_hook_scripts(templates)
+        )
     guidance = tuple(
         GuidanceBlock(
             path=guidance_spec["target"],

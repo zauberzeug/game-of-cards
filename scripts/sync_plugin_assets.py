@@ -20,62 +20,70 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
-# (src, dst, excludes) — src is the source of truth, dst is the generated copy,
-# excludes is a set of subpaths (relative to src) to omit from the mirror.
-# Directory pairs sync the full subtree; file pairs sync a single file.
-# Files NOT listed here (claude-plugin/hooks/hooks.json, claude-plugin/bin/,
-# claude-plugin/pyproject.toml, openclaw-plugin/index.ts,
-# openclaw-plugin/package.json, openclaw-plugin/skills/, etc.) are
-# plugin-specific and never touched.
-#
-# The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
-# `--keep-local-skills` (see `_is_plugin_context` in goc/install.py), so it
-# never reads `templates/skills/` or the `deck_prompt_router` /
-# `deck_session_start` hook templates. Those paths are excluded from the
-# `goc → claude-plugin/goc` mirror.
-#
-# The OpenClaw plugin (`openclaw-plugin/`) ships a TypeScript entry that
-# imports the bundled engine via `python3 -m goc.cli` with PYTHONPATH set
-# to the plugin root. It does NOT use Python hook scripts (those concepts
-# are reimplemented in TypeScript inside `openclaw-plugin/index.ts`) and
-# does NOT use the `templates/skills/` Markdown bodies (those are
-# hand-ported with invocation-neutral edits to `openclaw-plugin/skills/`).
-# So the engine mirror excludes the same paths as the Claude one, plus
-# the local-skills install paths that Claude actively refuses.
-SYNC_PAIRS: list[tuple[Path, Path, frozenset[str]]] = [
+from goc.install import deck_hook_scripts  # noqa: E402
+
+
+def _build_sync_pairs() -> list[tuple[Path, Path, frozenset[str]]]:
+    """Compute (src, dst, excludes) pairs by deriving the hook list from templates/hooks/.
+
+    Plugin-specific files NOT touched by this sync (`claude-plugin/hooks/hooks.json`,
+    `claude-plugin/bin/`, `claude-plugin/pyproject.toml`, `openclaw-plugin/index.ts`,
+    `openclaw-plugin/package.json`, `openclaw-plugin/skills/`, etc.) are not in
+    the pair list and stay untouched.
+
+    The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
+    `--keep-local-skills` (see `_is_plugin_context` in goc/install.py), so it
+    never reads `templates/skills/`. That path is excluded from the
+    `goc → claude-plugin/goc` deep mirror; hook scripts are NOT excluded so
+    the bundled engine can derive its hook list from `templates/hooks/`.
+
+    The OpenClaw plugin reimplements every deck hook in TypeScript inside
+    `openclaw-plugin/index.ts`, so its deep mirror also excludes
+    `templates/hooks/*.py` (in addition to `templates/skills/`).
+    """
+    templates = ROOT / "goc" / "templates"
+    hook_names = deck_hook_scripts(templates)
+
+    pairs: list[tuple[Path, Path, frozenset[str]]] = []
+
     # --- Claude plugin payload ---
-    (ROOT / "goc" / "templates" / "skills",
-     ROOT / "claude-plugin" / "skills",
-     frozenset()),
-    (ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
-     ROOT / "claude-plugin" / "hooks" / "deck_prompt_router.py",
-     frozenset()),
-    (ROOT / "goc" / "templates" / "hooks" / "deck_session_start.py",
-     ROOT / "claude-plugin" / "hooks" / "deck_session_start.py",
-     frozenset()),
-    (ROOT / "goc" / "templates" / "hooks" / "pattern_generalization_check.py",
-     ROOT / "claude-plugin" / "hooks" / "pattern_generalization_check.py",
-     frozenset()),
-    (ROOT / "goc",
-     ROOT / "claude-plugin" / "goc",
-     frozenset({
-         "templates/skills",
-         "templates/hooks/deck_prompt_router.py",
-         "templates/hooks/deck_session_start.py",
-     })),
+    pairs.append(
+        (templates / "skills", ROOT / "claude-plugin" / "skills", frozenset())
+    )
+    for name in hook_names:
+        pairs.append(
+            (
+                templates / "hooks" / name,
+                ROOT / "claude-plugin" / "hooks" / name,
+                frozenset(),
+            )
+        )
+    pairs.append(
+        (
+            ROOT / "goc",
+            ROOT / "claude-plugin" / "goc",
+            frozenset({"templates/skills"}),
+        )
+    )
+
     # --- OpenClaw plugin payload ---
     # Engine only — skills are hand-ported, hooks are TypeScript ports
     # in openclaw-plugin/index.ts.
-    (ROOT / "goc",
-     ROOT / "openclaw-plugin" / "goc",
-     frozenset({
-         "templates/skills",
-         "templates/hooks/deck_prompt_router.py",
-         "templates/hooks/deck_session_start.py",
-         "templates/hooks/pattern_generalization_check.py",
-     })),
-]
+    pairs.append(
+        (
+            ROOT / "goc",
+            ROOT / "openclaw-plugin" / "goc",
+            frozenset({"templates/skills"})
+            | frozenset(f"templates/hooks/{name}" for name in hook_names),
+        )
+    )
+
+    return pairs
+
+
+SYNC_PAIRS: list[tuple[Path, Path, frozenset[str]]] = _build_sync_pairs()
 
 _SKIP_FRAGMENTS = ("__pycache__", ".pyc")
 

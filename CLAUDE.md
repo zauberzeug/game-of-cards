@@ -60,14 +60,22 @@ for everything `goc install` writes into a consuming repo:
 | Template path | Installed to |
 |---|---|
 | `templates/skills/<verb>/` | `<repo>/.claude/skills/<verb>/` |
-| `templates/hooks/user-prompt-submit.py` | `<repo>/.claude/hooks/user-prompt-submit-goc.py` |
+| `templates/hooks/<name>.py` | `<repo>/.claude/hooks/<name>.py` |
 | `templates/game_of_cards/` | `<repo>/.game-of-cards/` |
 | `templates/AGENTS_GOC.md`, `templates/CLAUDE_GOC.md` | merged into AGENTS.md / CLAUDE.md |
+
+The hook list is derived from `templates/hooks/*.py` at install time
+(see `deck_hook_scripts` in `goc/install.py`); dropping a new `.py`
+file in that directory wires it into the install copy and the parity
+mirrors automatically. The event mapping (`SessionStart`, `Stop`, etc.)
+stays explicit in `GOC_CLAUDE_HOOKS`, and `goc validate` enforces that
+every script has a registration and every registration points at a
+real file.
 
 ### Skill and config files have two copies — edit the template
 
 Because this repo dogfoods itself, every file under `.claude/skills/`,
-`.claude/hooks/user-prompt-submit-goc.py`, and `.game-of-cards/` is a
+`.claude/hooks/`, and `.game-of-cards/` is a
 *consumer copy* of the corresponding file under `goc/templates/`. The
 next `goc upgrade` overwrites the consumer copy from the template.
 **When editing skill bodies, hook scripts, or per-repo config stubs,

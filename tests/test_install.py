@@ -388,10 +388,17 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         self.assertEqual(".codex/skills", codex["skills"]["target"])
         self.assertEqual("codex", codex["skills"]["frontmatter"])
         self.assertIn(".claude/skills/_goc-bootstrap.sh", [file["target"] for file in claude["files"]])
-        self.assertIn(".claude/hooks/deck_prompt_router.py", [file["target"] for file in claude["files"]])
-        self.assertIn(".claude/hooks/deck_session_start.py", [file["target"] for file in claude["files"]])
-        self.assertIn(".claude/hooks/pattern_generalization_check.py", [file["target"] for file in claude["files"]])
         self.assertEqual(".claude/settings.json", claude.get("settings_json"))
+
+        # Hook entries are derived from goc/templates/hooks/*.py, not listed
+        # in the manifest — verify the loaded shim still surfaces them.
+        from goc.install import _load_agent_shim, _templates_root
+        shim = _load_agent_shim(_templates_root(), "claude")
+        targets = {str(f.target) for f in shim.files}
+        self.assertIn(".claude/skills/_goc-bootstrap.sh", targets)
+        self.assertIn(".claude/hooks/deck_prompt_router.py", targets)
+        self.assertIn(".claude/hooks/deck_session_start.py", targets)
+        self.assertIn(".claude/hooks/pattern_generalization_check.py", targets)
 
     # ── Upgrade: migration (vendored → plugin path) ───────────────────────────
 

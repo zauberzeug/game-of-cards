@@ -21,7 +21,6 @@ _STALE_PATTERN = re.compile(r"close \+ commit", re.IGNORECASE)
 # Files that ship guidance read by agents (templates + generated consumer copies).
 _GUIDANCE_FILES = [
     ROOT / "goc" / "templates" / "AGENTS_GOC.md",
-    ROOT / "goc" / "templates" / "hooks" / "user-prompt-submit.py",
     ROOT / "goc" / "templates" / "hooks" / "deck_prompt_router.py",
     ROOT / "goc" / "templates" / "skills" / "pull-card" / "SKILL.md",
     ROOT / "AGENTS.md",
