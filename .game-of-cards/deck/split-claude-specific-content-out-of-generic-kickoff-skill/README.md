@@ -1,7 +1,7 @@
 ---
 title: split-claude-specific-content-out-of-generic-kickoff-skill
 summary: "Refactor the kickoff skill: keep `goc/templates/skills/kickoff/` host-agnostic (intro, persona dialog, scaffold `.game-of-cards/`, run goc install) and move Claude Code-specific UX flow (Bash permission grant, `/plugin install` cadence, `CLAUDE.local.md` merge prompts) into a separate `claude-kickoff` skill that the Claude plugin ships as a complement. Establishes the pattern for per-host kickoff complements (`openclaw-kickoff` later)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-09
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] Claude plugin payload (`claude-plugin/skills/`) includes both `kickoff/` and `claude-kickoff/` after pre-commit sync.
   - [ ] OpenClaw plugin payload (`openclaw-plugin/skills/`) includes only the generic `kickoff/` (or its invocation-neutral port). Lists the missing OpenClaw-specific kickoff complement as a follow-up card if not authored in this work.
   - [ ] `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Split Claude-specific content out of the generic kickoff skill
