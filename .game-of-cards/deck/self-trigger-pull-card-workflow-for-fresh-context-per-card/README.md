@@ -79,3 +79,7 @@ Verified live in runs `25598906055` and `25597987648` (both `event: workflow_dis
 - **Net effect**: only `event: schedule` (cron) runs drain the queue today; self-triggered iterations create dead runs. The fresh-context-per-card benefit is realized at cron-tick boundaries only, not within a single drain burst.
 
 Follow-up card: `pull-card-self-trigger-blocked-by-claude-action-bot-allowlist` surfaces the three real options (`allowed_bots: github-actions[bot]`, cron-only with tighter cadence, or another mechanism) and is parked at `gate: decision`. Detailed evidence in `pull-card-self-trigger-needs-empirical-verification` (closed 2026-05-09).
+
+## Resolution (2026-05-09)
+
+`pull-card-self-trigger-blocked-by-claude-action-bot-allowlist` resolved with **option (a)**: `allowed_bots: 'github-actions[bot]'` added to the `claude-code-action@v1` `with:` block in `.github/workflows/pull-card.yml`. Restricted to the exact bot identity rather than `'*'` so external Apps stay rejected. The chain is now functional end-to-end: cron tick → iteration 1 (human-or-system actor) → self-trigger → iteration 2 (`github-actions[bot]` actor, now allowlisted) → … up to `MAX_ITERATIONS=8`.

@@ -73,6 +73,12 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
+          # Self-triggered iterations (gh workflow run from inside this
+          # workflow) authenticate as github-actions[bot]. Without this
+          # allowlist, claude-code-action@v1 rejects them with
+          # "Workflow initiated by non-human actor". Restrict to the
+          # exact bot rather than '*' so external Apps stay rejected.
+          allowed_bots: 'github-actions[bot]'
           show_full_output: true
           prompt: |
             Run Skill(pull-card) exactly once in this repository, then
