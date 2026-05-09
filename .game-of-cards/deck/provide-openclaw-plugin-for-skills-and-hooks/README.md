@@ -1,7 +1,7 @@
 ---
 title: provide-openclaw-plugin-for-skills-and-hooks
 summary: "Replace the blocked OpenClaw harness direction with a later OpenClaw plugin/runtime package for Game of Cards skills and hooks. This supersedes `install-openclaw-harness` and should wait until the Claude/Codex plugin pattern is clear or an OpenClaw consumer appears."
-status: active
+status: open
 stage: null
 contribution: high
 created: 2026-05-05
@@ -70,3 +70,13 @@ Three architectural decisions resolved 2026-05-09; gate lowered from `session` t
 - **Hook surface**: investigate OpenClaw's session/lifecycle events (`docs.openclaw.ai/concepts/session`, `docs.openclaw.ai/concepts/agent`, plus the `/new`/`/reset`/`/compact` chat commands) and determine which carry GoC's SessionStart / UserPromptSubmit / Stop semantics. If hooks don't translate, document the gap in this card's log rather than ship a half-working analogue.
 - **Plugin scaffold**: an npm package containing `goc/` (vendored Python source) + `bin/goc` (uv-run shell wrapper) + `SKILL.md` directories. Reference shape: `claude-plugin/` (mirror layout: `claude-plugin/goc/`, `claude-plugin/bin/goc`, `claude-plugin/skills/`).
 - **Smoke test target**: a fresh repo with `python3` + `uv` + `npm install -g openclaw`, plugin installed via ClawHub, then exercise `goc new`/`goc done` through OpenClaw — no `pipx` step required.
+
+## Decision required (2026-05-09)
+
+Two blockers prevent autonomous completion:
+
+1. **DoD is outdated**: Items 4 and 5 reference the old `uv run --project` wrapper pattern that was just removed in `plugin-wrapper-drops-uv`. The Claude plugin now uses `python3 -m goc.cli` directly (no uv). Decide: should the OpenClaw wrapper follow the same pattern (python3 only), or keep uv for the npm/Node context where uv is less common?
+
+2. **External publishing requires human accounts**: DoD items 9 (ClawHub) and 10 (npm) require accounts and publishing rights that are not available to autonomous agents. These need human action regardless of the implementation decision.
+
+Suggested next step: Rodja (or another human) resolves (1) above, then either delegates the implementation to the agent queue (gate → none) or executes the publish steps directly. The local implementation (SKILL.md directories, engine vendor, bin/goc wrapper) can be done autonomously once the wrapper pattern is confirmed.
