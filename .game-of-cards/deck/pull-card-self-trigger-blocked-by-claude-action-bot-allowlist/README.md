@@ -12,11 +12,11 @@ advanced_by:
   - pull-card-self-trigger-needs-empirical-verification
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Decision recorded: `allowed_bots: github-actions[bot]`, cron-only with tighter cadence, or another mechanism
-  - [ ] If `allowed_bots`: workflow updated; one iteration=N+1 run observed completing successfully (agent step runs, drains a card)
-  - [ ] If cron-only: self-trigger steps removed from `pull-card.yml`; cron schedule tightened (e.g., `*/10 * * * *` or `*/15`); MAX_ITERATIONS env var dropped
-  - [ ] Parent card (`self-trigger-pull-card-workflow-for-fresh-context-per-card`) updated with the decision and final state
-  - [ ] `uv run goc validate` passes
+  - [x] Decision recorded: `allowed_bots: github-actions[bot]`, cron-only with tighter cadence, or another mechanism
+  - [ ] If `allowed_bots`: workflow updated; one iteration=N+1 run observed completing successfully (agent step runs, drains a card). Workflow update landed; pending the empirical N+1 observation from a real cron run or manual `workflow_dispatch`.
+  - [ ] If cron-only: self-trigger steps removed from `pull-card.yml`; cron schedule tightened (e.g., `*/10 * * * *` or `*/15`); MAX_ITERATIONS env var dropped — N/A; option (a) chosen.
+  - [x] Parent card (`self-trigger-pull-card-workflow-for-fresh-context-per-card`) updated with the decision and final state
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
