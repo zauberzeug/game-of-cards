@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-09
 closed_at: 2026-05-09
 human_gate: none
-advances: []
+advances:
+  - list-game-of-cards-on-anthropic-community-marketplace
 advanced_by: []
 tags: [documentation]
 definition_of_done: |
