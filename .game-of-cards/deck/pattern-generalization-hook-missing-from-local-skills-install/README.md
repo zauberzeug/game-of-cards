@@ -1,7 +1,7 @@
 ---
 title: pattern-generalization-hook-missing-from-local-skills-install
 summary: "`goc/install.py` registers the Stop hook `pattern_generalization_check.py` in `.claude/settings.json` for every `--local-skills` install (via `GOC_CLAUDE_HOOKS` and `_merge_claude_settings`), but the hook script itself is never copied to `.claude/hooks/`. The claude manifest's `files` array at `goc/templates/agents/claude/manifest.json` only lists `deck_prompt_router.py` and `deck_session_start.py`. Result: every code-mutating turn ends with the Stop hook firing and immediately failing with `python: can't open file '.../pattern_generalization_check.py': [Errno 2] No such file or directory`. Plugin-path users are unaffected because `claude-plugin/hooks/pattern_generalization_check.py` is a real file and is auto-discovered. Found during a 2026-05-09 review."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-09
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] Regression test: `goc install --local-skills` in a tmpdir produces `.claude/hooks/pattern_generalization_check.py` and `.claude/settings.json` references it; the regression test runs in CI alongside the existing install tests
   - [ ] Manual verification: run `goc install --local-skills` in a throwaway repo, end a code-mutating turn, observe the Stop hook executes without "file not found"
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Pattern-generalization hook missing from --local-skills install
