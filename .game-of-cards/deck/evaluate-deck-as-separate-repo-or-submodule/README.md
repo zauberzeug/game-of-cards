@@ -1,23 +1,24 @@
 ---
 title: evaluate-deck-as-separate-repo-or-submodule
 summary: "Evaluate hosting `.game-of-cards/` outside the code repository — either as a sibling repo everyone clones alongside the code, as a git submodule pointed to by the code repo, or as a separately-managed remote. This addresses the OSS / library case where mixing project-management commits with the code commit history is a non-starter. Output: a recommendation with trade-offs, not necessarily an implementation."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-07
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - support-worktrees-and-multi-agent-deck-sync
-advanced_by: []
+advanced_by:
+  - document-gitignored-deck-workflow-for-oss-maintainers
 tags: [story, infra]
 definition_of_done: |
   - [x] Decision recorded: only same-repo ships as supported; sibling-repo, submodule, and hosted SaaS are 'possible but unsupported'. See `## Decision` section.
-  - [ ] Trade-off write-up added to README (or a docs page linked from it): same-repo (today), sibling-repo, submodule, hosted SaaS — covering setup cost, OSS commit-history cleanliness, claim/sync semantics, offline behavior. Conclude with "we ship same-repo; the others are documented unsupported configurations".
-  - [ ] For each rejected option, name which persona (per closed `define-personas-and-use-cases-for-game-of-cards`) it would have served and explain why that persona is being deferred (not abandoned).
-  - [ ] Connection to SaaS path noted: hosted multi-user GoC (per `explore-saas-deck-hosting-with-optional-tracker-sync`) is the natural extension of "deck lives elsewhere"; cross-link the two.
-  - [ ] OSS-contributor commit-history concern surfaced into a follow-up card (or explicitly rolled into `explore-saas-deck-hosting-with-optional-tracker-sync` / `support-external-game-of-cards-state-location`) so the rejected concern is not lost.
-  - [ ] `uv run goc validate` passes
+  - [x] Trade-off write-up added to README (or a docs page linked from it): same-repo (today), sibling-repo, submodule, hosted SaaS — covering setup cost, OSS commit-history cleanliness, claim/sync semantics, offline behavior. Conclude with "we ship same-repo; the others are documented unsupported configurations".
+  - [x] For each rejected option, name which persona (per closed `define-personas-and-use-cases-for-game-of-cards`) it would have served and explain why that persona is being deferred (not abandoned).
+  - [x] Connection to SaaS path noted: hosted multi-user GoC (per `explore-saas-deck-hosting-with-optional-tracker-sync`) is the natural extension of "deck lives elsewhere"; cross-link the two.
+  - [x] OSS-contributor commit-history concern surfaced into a follow-up card (or explicitly rolled into `explore-saas-deck-hosting-with-optional-tracker-sync` / `support-external-game-of-cards-state-location`) so the rejected concern is not lost.
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

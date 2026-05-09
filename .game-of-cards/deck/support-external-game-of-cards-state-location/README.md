@@ -22,6 +22,7 @@ advanced_by:
   - plugin-bootstraps-cli-and-project-state-on-first-use
   - bundle-goc-engine-inside-plugin-payload
   - make-claude-md-and-agents-md-merge-opt-in-via-skill
+  - document-gitignored-deck-workflow-for-oss-maintainers
 tags: [epic, story, infra, api-contract]
 worker: {who: "claude[bot]", where: main}
 definition_of_done: |

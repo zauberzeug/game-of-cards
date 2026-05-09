@@ -43,6 +43,7 @@ Brand new alpha — only a few days of implementation, no external users yet, pl
 ## More
 
 - [`PERSONAS.md`](PERSONAS.md) — who GoC is for, who it's not for yet, and which workflow shape each persona accepts.
+- [`DECK_LOCATION.md`](DECK_LOCATION.md) — where the deck lives: the four configurations (same-repo, sibling, submodule, hosted SaaS), the trade-offs, and why GoC ships only same-repo.
 - [`goc.md`](goc.md) — CLI reference and manual install recipe.
 - [`ABOUT.md`](ABOUT.md) — methodology context: why "Game of Cards", agile lineage, and how it relates to other agent-coding tools.
 - [`AGENTS.md`](AGENTS.md) — agent operating modes (session / autonomous / Andon-cord).
