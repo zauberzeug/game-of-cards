@@ -47,7 +47,7 @@ class StageFilterTest(unittest.TestCase):
             f"# {title}\n"
         )
 
-    def test_invalid_stage_range_reports_click_error_without_traceback(self) -> None:
+    def test_invalid_stage_range_rejects_unknown_stages_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
@@ -55,7 +55,7 @@ class StageFilterTest(unittest.TestCase):
 
             combined = f"{result.stdout}\n{result.stderr}"
             self.assertEqual(2, result.returncode, msg=combined)
-            self.assertIn("Invalid value for --stage", result.stderr)
+            self.assertIn("--stage", result.stderr)
             self.assertNotIn("Traceback", combined)
             self.assertNotIn("ValueError", combined)
 

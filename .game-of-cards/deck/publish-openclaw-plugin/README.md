@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: null
-human_gate: none
+human_gate: session
 advances:
   - support-external-game-of-cards-state-location
 advanced_by:
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] Docs link users to both install paths (ClawHub primary; npm as alternative)
   - [ ] Smoke test or release-verification step covers both channels
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Publish the OpenClaw plugin
@@ -45,3 +46,9 @@ Both channels publish from the same artifact; npm doubles as a name-claiming ste
 ## Depends on
 
 - `provide-openclaw-plugin-for-skills-and-hooks` (implementation; gate now `none`, pullable when its turn comes)
+
+## Decision required (2026-05-09)
+
+Blocked by `provide-openclaw-plugin-for-skills-and-hooks` which is parked at gate:session pending human decisions about the wrapper pattern and external publishing accounts.
+
+This card requires: (1) the parent card to land, (2) ClawHub and npm publishing credentials available to the executor, (3) human-verified smoke test. All three items require human action. Raising gate to session until the parent is resolved.

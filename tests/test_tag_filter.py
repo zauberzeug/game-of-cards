@@ -47,7 +47,7 @@ class TagFilterTest(unittest.TestCase):
             f"# {title}\n"
         )
 
-    def test_invalid_tag_filter_reports_click_error(self) -> None:
+    def test_invalid_tag_filter_rejects_unknown_tag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
@@ -55,7 +55,6 @@ class TagFilterTest(unittest.TestCase):
 
             combined = result.stdout + result.stderr
             self.assertEqual(2, result.returncode, msg=combined)
-            self.assertIn("Invalid value for --tag", result.stderr)
             self.assertIn("unknown tag 'not-a-real-tag'", result.stderr)
             self.assertNotIn("Traceback", combined)
 

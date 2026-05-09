@@ -3,22 +3,23 @@
 #
 # Claude Code auto-prepends ${plugin}/bin to the Bash tool's PATH while the
 # plugin is enabled, so skill bodies can keep calling plain `goc <verb>`.
-# This wrapper resolves the bundled engine via `uv run --project ${PLUGIN_ROOT}`,
-# which builds an isolated venv with click + pyyaml on first call (cached
-# afterward at ${PLUGIN_ROOT}/.venv).
-#
-# Requires `uv` on PATH. The fallback path `pipx install game-of-cards`
-# remains documented for environments without uv.
+# This wrapper invokes the bundled engine directly via `python3 -m goc.cli`,
+# with PYTHONPATH pointing at the plugin root so the bundled package is found.
+# No venv, no uv, no first-call latency.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 PLUGIN_ROOT="$(dirname -- "$SCRIPT_DIR")"
 
-if ! command -v uv > /dev/null 2>&1; then
-    echo "goc: 'uv' not found on PATH. Install from https://docs.astral.sh/uv/" >&2
-    echo "Alternative: 'pipx install game-of-cards' for a global install." >&2
+# Prefer python3; fall back to python for environments where only `python` exists.
+if command -v python3 > /dev/null 2>&1; then
+    PYTHON=python3
+elif command -v python > /dev/null 2>&1; then
+    PYTHON=python
+else
+    echo "goc: 'python3' not found on PATH. Install Python 3.10+ from python.org." >&2
     exit 127
 fi
 
-exec uv run --quiet --project "$PLUGIN_ROOT" goc "$@"
+exec env PYTHONPATH="${PLUGIN_ROOT}:${PYTHONPATH:-}" "$PYTHON" -m goc.cli "$@"

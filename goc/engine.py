@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-import click
+import argparse
 from goc._vendor import yaml_lite as yaml
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -294,7 +294,7 @@ class Schema:
 
 def load_schema() -> Schema:
     if not SCHEMA_FILE.exists():
-        click.echo(f"FATAL: {SCHEMA_FILE} missing", err=True)
+        print(f"FATAL: {SCHEMA_FILE} missing", file=sys.stderr)
         sys.exit(3)
     fm = yaml.safe_load(SCHEMA_FILE.read_text()) or {}
     canonical_tags = set(fm.get("canonical_tags") or [])
@@ -312,7 +312,7 @@ def load_schema() -> Schema:
             canonical_tags=canonical_tags,
         )
     except KeyError as e:
-        click.echo(f"FATAL: schema.yaml missing field {e}", err=True)
+        print(f"FATAL: schema.yaml missing field {e}", file=sys.stderr)
         sys.exit(3)
 
 
@@ -862,39 +862,38 @@ def parse_stage_filter(stage_flag: str | None) -> list[str] | None:
     if "-" in stage_flag:
         a, b = stage_flag.split("-", 1)
         if a not in STAGE_ORDER or b not in STAGE_ORDER:
-            raise click.BadParameter(
-                f"expected one of {valid}, or a range like alpha-stable",
-                param_hint="--stage",
-            )
+            print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
+            sys.exit(2)
         ai, bi = STAGE_ORDER.index(a), STAGE_ORDER.index(b)
         return STAGE_ORDER[min(ai, bi) : max(ai, bi) + 1]
     if stage_flag not in STAGE_ORDER:
-        raise click.BadParameter(
-            f"expected one of {valid}, or a range like alpha-stable",
-            param_hint="--stage",
-        )
+        print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
+        sys.exit(2)
     return [stage_flag]
 
 
-def parse_since_filter(_ctx, _param, value: str | None) -> str | None:
+def parse_since_filter(value: str | None) -> str | None:
     if value is None:
         return None
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
-        raise click.BadParameter("expected YYYY-MM-DD")
+        print("goc: error: --since: expected YYYY-MM-DD", file=sys.stderr)
+        sys.exit(2)
     try:
         date.fromisoformat(value)
-    except ValueError as e:
-        raise click.BadParameter("expected YYYY-MM-DD") from e
+    except ValueError:
+        print("goc: error: --since: expected YYYY-MM-DD", file=sys.stderr)
+        sys.exit(2)
     return value
 
 
-def validate_tag_filters(tags: tuple[str, ...]) -> list[str] | None:
+def validate_tag_filters(tags: list[str]) -> list[str] | None:
     if not tags:
         return None
     schema = load_schema()
     unknown = [tag for tag in tags if tag not in schema.canonical_tags]
     if unknown:
-        raise click.BadParameter(f"unknown tag '{unknown[0]}'", param_hint="--tag")
+        print(f"goc: error: --tag: unknown tag '{unknown[0]}'", file=sys.stderr)
+        sys.exit(2)
     return list(tags)
 
 
@@ -1154,152 +1153,325 @@ def render_active_notice(
 
 
 # ────────────────────────────────────────────────────────────────────────────
-# Click app
+# argparse app
 
 
-@click.group(invoke_without_command=True)
-@click.option("--tag", "tags", multiple=True, help="Filter by tag (repeatable; AND).")
-@click.option("--contribution", type=click.Choice(["high", "medium", "low"]))
-@click.option(
-    "--status",
-    "status_flag",
-    type=click.Choice(STATUS_FILTER_VALUES),
-    default=None,
-    help="One status, or 'all'. Default: open.",
-)
-@click.option("--stage", "stage_flag", default=None, help="Stage filter; supports range like 'alpha-beta'.")
-@click.option("--human-gate", type=click.Choice(["none", "decision", "session"]))
-@click.option("--done", "done_flag", is_flag=True, help="Shortcut for --status done.")
-@click.option("--since", default=None, callback=parse_since_filter, help="With --done: filter on closed_at >= YYYY-MM-DD.")
-@click.option("--advances", default=None, help="Filter to cards that advance this title.")
-@click.option("--advanced-by", default=None, help="Filter to cards advanced by this title.")
-@click.option(
-    "--worker",
-    default=None,
-    envvar="GOC_WORKER",
-    help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.",
-)
-@click.option(
-    "-v",
-    "verbose",
-    count=True,
-    help="-v adds STAGE/CREATED columns + summary line; -vv inlines DoD checklist + cross-refs.",
-)
-@click.option("--json", "as_json", is_flag=True, help="Machine-readable JSON.")
-@click.option("--no-color", is_flag=True)
-@click.option("--board", is_flag=True, help="ASCII multi-column kanban board.")
-@click.option("--max-rows", type=click.IntRange(min=0), default=20, help="Cap rows per column in --board.")
-@click.pass_context
-def cli(
-    ctx,
-    tags,
-    contribution,
-    status_flag,
-    stage_flag,
-    human_gate,
-    done_flag,
-    since,
-    advances,
-    advanced_by,
-    worker,
-    verbose,
-    as_json,
-    no_color,
-    board,
-    max_rows,
-):
-    if _DUAL_TREE_CONFLICT and ctx.invoked_subcommand != "migrate":
+def confirm(prompt: str, *, default: bool = False) -> bool:
+    if sys.stdin.isatty():
+        ans = input(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").strip().lower()
+    else:
+        try:
+            ans = sys.stdin.readline().strip().lower()
+        except (EOFError, OSError):
+            return default
+    if not ans:
+        return default
+    return ans.startswith("y")
+
+
+def _non_negative_int(value: str) -> int:
+    n = int(value)
+    if n < 0:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a non-negative integer")
+    return n
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="goc",
+        description="Game of Cards deck CLI",
+    )
+
+    # Global options (used when no subcommand is given)
+    parser.add_argument("--tag", dest="tags", action="append", default=[], metavar="TAG",
+                        help="Filter by tag (repeatable; AND).")
+    parser.add_argument("--contribution", choices=["high", "medium", "low"],
+                        help="Filter by contribution level.")
+    parser.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES), default=None,
+                        help="One status, or 'all'. Default: open.")
+    parser.add_argument("--stage", dest="stage_flag", default=None,
+                        help="Stage filter; supports range like 'alpha-beta'.")
+    parser.add_argument("--human-gate", choices=["none", "decision", "session"],
+                        help="Filter by human gate value.")
+    parser.add_argument("--done", dest="done_flag", action="store_true",
+                        help="Shortcut for --status done.")
+    parser.add_argument("--since", default=None,
+                        help="With --done: filter on closed_at >= YYYY-MM-DD.")
+    parser.add_argument("--advances", default=None,
+                        help="Filter to cards that advance this title.")
+    parser.add_argument("--advanced-by", dest="advanced_by", default=None,
+                        help="Filter to cards advanced by this title.")
+    parser.add_argument("--worker", default=os.environ.get("GOC_WORKER"),
+                        help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.")
+    parser.add_argument("-v", dest="verbose", action="count", default=0,
+                        help="-v adds STAGE/CREATED columns + summary line; -vv inlines DoD checklist + cross-refs.")
+    parser.add_argument("--json", dest="as_json", action="store_true",
+                        help="Machine-readable JSON.")
+    parser.add_argument("--no-color", action="store_true")
+    parser.add_argument("--board", action="store_true",
+                        help="ASCII multi-column kanban board.")
+    parser.add_argument("--max-rows", type=_non_negative_int, default=20,
+                        help="Cap rows per column in --board.")
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    # validate
+    p_validate = subparsers.add_parser("validate", help="Walk all cards and check schema conformance.")
+    p_validate.add_argument("--quiet", action="store_true",
+                            help="Only print errors; suppress per-todo OK lines.")
+
+    # quality-pass
+    p_qp = subparsers.add_parser("quality-pass", help="Surface engineer-jargon titles + missing summaries.")
+    p_qp.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES), default="open",
+                      help="Filter by status (default: open).")
+    p_qp.add_argument("--llm", action="store_true", default=False,
+                      help="Also run a Sonnet-batched summary+DoD audit.")
+    p_qp.add_argument("--no-llm", dest="llm", action="store_false",
+                      help="Disable LLM audit.")
+    p_qp.add_argument("--limit", type=int, default=None,
+                      help="With --llm: cap card count (testing/sampling).")
+    p_qp.add_argument("--dry-run", action="store_true",
+                      help="With --llm: print verdicts; skip the interactive accept/reject walk.")
+    p_qp.add_argument("--yes", dest="auto_yes", action="store_true",
+                      help="With --llm: auto-accept every proposed rewrite (use with care).")
+
+    # done
+    p_done = subparsers.add_parser("done", help="Flip status → done; set closed_at; enforce DoD-checkbox rule.")
+    p_done.add_argument("title")
+    p_done.add_argument("--force", action="store_true",
+                        help="Bypass DoD enforcement (free-form prose DoDs).")
+
+    # attest
+    p_attest = subparsers.add_parser("attest", help="Run layer-2 + layer-3 closure checks.")
+    p_attest.add_argument("title")
+    p_attest.add_argument("--skip", dest="skips", action="append", default=[],
+                          help="Skip a check by name; recorded as SKIPPED in log.")
+    p_attest.add_argument("--non-interactive", action="store_true",
+                          help="Fail manual/agent checks instead of prompting.")
+
+    # status
+    p_status = subparsers.add_parser("status", help="Mutate any status except `done`.")
+    p_status.add_argument("title")
+    p_status.add_argument("new_status", choices=list(MUTABLE_STATUS_VALUES))
+    p_status.add_argument("--commit", action="store_true",
+                          help="Force auto-commit for this status flip.")
+    p_status.add_argument("--no-commit", action="store_true",
+                          help="Skip auto-commit for this status flip.")
+    p_status.add_argument("--worker-who", default=None,
+                          help="Override worker.who identity.")
+    p_status.add_argument("--worker-where", default=None,
+                          help="Override worker.where branch or path for this claim.")
+
+    # new
+    p_new = subparsers.add_parser("new", help="Scaffold a new card dir with valid frontmatter and empty log.md.")
+    p_new.add_argument("title")
+    p_new.add_argument("--contribution", choices=["high", "medium", "low"], default="medium")
+    p_new.add_argument("--gate", choices=["none", "decision", "session"], default="decision")
+    p_new.add_argument("--tag", dest="tags", action="append", default=[])
+    p_new.add_argument("--worker", default=None,
+                       help="Worker designation — person, machine, or capability tag.")
+    p_new.add_argument("--allow-jargon", action="store_true",
+                       help="Bypass the title-antipattern check (rare; used by migration tools).")
+
+    # advance
+    p_advance = subparsers.add_parser("advance", help="Add bidirectional value-flow edge.")
+    p_advance.add_argument("title")
+    p_advance.add_argument("--by", dest="advancer", required=True,
+                           help="Slug of the card that advances <title>.")
+    p_advance.add_argument("--commit", action="store_true",
+                           help="Force auto-commit for this edge mutation.")
+    p_advance.add_argument("--no-commit", action="store_true",
+                           help="Skip auto-commit for this edge mutation.")
+
+    # unadvance
+    p_unadvance = subparsers.add_parser("unadvance", help="Remove bidirectional value-flow edge.")
+    p_unadvance.add_argument("title")
+    p_unadvance.add_argument("--by", dest="advancer", required=True)
+    p_unadvance.add_argument("--commit", action="store_true",
+                             help="Force auto-commit for this edge mutation.")
+    p_unadvance.add_argument("--no-commit", action="store_true",
+                             help="Skip auto-commit for this edge mutation.")
+
+    # move
+    p_move = subparsers.add_parser("move", help="Rename a title and rewrite known cross-references.")
+    p_move.add_argument("old_title")
+    p_move.add_argument("new_title")
+    p_move.add_argument("--allow-jargon", action="store_true",
+                        help="Bypass the title-antipattern check (rare; used by migration tools).")
+    p_move.add_argument("--dry-run", action="store_true",
+                        help="Print sites that would be rewritten without making changes.")
+
+    # decide
+    p_decide = subparsers.add_parser("decide", help="Record a decision in the body + log; lower the human gate to `none`.")
+    p_decide.add_argument("title")
+    p_decide.add_argument("--decision", required=True,
+                          help="One-line decision (the WHAT).")
+    p_decide.add_argument("--because", dest="reasoning", required=True,
+                          help="One-line reasoning (the WHY).")
+    p_decide.add_argument("--commit", action="store_true",
+                          help="Force auto-commit for this decision record.")
+    p_decide.add_argument("--no-commit", action="store_true",
+                          help="Skip auto-commit for this decision record.")
+
+    # triage
+    p_triage = subparsers.add_parser("triage", help="List parked cards (gate ≠ none), grouped by gate, oldest-first.")
+    p_triage.add_argument("--json", dest="as_json", action="store_true",
+                          help="Emit JSON for Q&A consumers.")
+    p_triage.add_argument("--worker", default=os.environ.get("GOC_WORKER"),
+                          help="Filter parked cards by worker.who (substring match).")
+
+    # show
+    p_show = subparsers.add_parser("show", help="Print full README.md to stdout.")
+    p_show.add_argument("title")
+
+    # migrate
+    p_migrate = subparsers.add_parser("migrate", help="Merge legacy deck/ into .game-of-cards/deck/.")
+    p_migrate.add_argument("--dry-run", action="store_true",
+                           help="Show what would happen without making changes.")
+    p_migrate.add_argument("--yes", dest="auto_yes", action="store_true",
+                           help="Skip confirmation prompt.")
+
+    # migrate-list-style
+    p_mls = subparsers.add_parser("migrate-list-style",
+                                  help="Re-emit every card to convert advances/advanced_by to block-style lists.")
+    p_mls.add_argument("--dry-run", action="store_true",
+                       help="Show which cards would change without writing files.")
+
+    return parser
+
+
+def cli(argv=None):
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    if _DUAL_TREE_CONFLICT and args.command != "migrate":
         _canonical = DECK_ROOT / ".game-of-cards" / "deck"
         _legacy = DECK_ROOT / "deck"
-        click.echo(
+        print(
             f"ERROR: two deck trees found — cannot operate safely:\n"
             f"  canonical: {_canonical}\n"
             f"  legacy:    {_legacy}\n"
             f"\nRun `goc migrate` to merge legacy → canonical and remove the stale tree.",
-            err=True,
+            file=sys.stderr,
         )
         sys.exit(1)
-    if _LEGACY_ONLY and ctx.invoked_subcommand not in ("migrate", "install", "upgrade"):
-        click.echo(
+    if _LEGACY_ONLY and args.command not in ("migrate", "install", "upgrade", None):
+        print(
             "WARNING: using legacy deck/ location. Run `goc upgrade` to migrate to .game-of-cards/deck/.",
-            err=True,
+            file=sys.stderr,
         )
-    if ctx.invoked_subcommand is not None:
-        return
+
+    if args.command is None:
+        _cmd_default(args)
+    elif args.command == "validate":
+        _cmd_validate(args)
+    elif args.command == "quality-pass":
+        _cmd_quality_pass(args)
+    elif args.command == "done":
+        _cmd_done(args)
+    elif args.command == "attest":
+        _cmd_attest(args)
+    elif args.command == "status":
+        _cmd_status(args)
+    elif args.command == "new":
+        _cmd_new(args)
+    elif args.command == "advance":
+        _cmd_advance(args)
+    elif args.command == "unadvance":
+        _cmd_unadvance(args)
+    elif args.command == "move":
+        _cmd_move(args)
+    elif args.command == "decide":
+        _cmd_decide(args)
+    elif args.command == "triage":
+        _cmd_triage(args)
+    elif args.command == "show":
+        _cmd_show(args)
+    elif args.command == "migrate":
+        _cmd_migrate(args)
+    elif args.command == "migrate-list-style":
+        _cmd_migrate_list_style(args)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+def _cmd_default(args):
     cards = load_all_cards()
-    if done_flag and status_flag is not None:
-        raise click.UsageError("pass only one of --done / --status")
-    if done_flag:
+    if args.done_flag and args.status_flag is not None:
+        print("goc: error: pass only one of --done / --status", file=sys.stderr)
+        sys.exit(2)
+    if args.done_flag:
         status = "done"
-    elif status_flag is None:
+    elif args.status_flag is None:
         status = "open"
     else:
-        status = status_flag
-    status_filter_explicit = bool(done_flag or status_flag is not None)
+        status = args.status_flag
+    status_filter_explicit = bool(args.done_flag or args.status_flag is not None)
+    since = parse_since_filter(args.since)
     if since and status != "done":
-        raise click.UsageError("--since requires --done (or --status done)")
-    stages = parse_stage_filter(stage_flag)
-    tag_filters = validate_tag_filters(tags)
+        print("goc: error: --since requires --done (or --status done)", file=sys.stderr)
+        sys.exit(2)
+    stages = parse_stage_filter(args.stage_flag)
+    tag_filters = validate_tag_filters(args.tags)
     filtered = filter_cards(
         cards,
         status=status,
         stages=stages,
-        contribution=contribution,
-        human_gate=human_gate,
+        contribution=args.contribution,
+        human_gate=args.human_gate,
         tags=tag_filters,
         since=since,
-        advances=advances,
-        advanced_by=advanced_by,
-        worker=worker,
+        advances=args.advances,
+        advanced_by=args.advanced_by,
+        worker=args.worker,
     )
     full_values = compute_values(cards)
     full_by_title = {t.title: t for t in cards}
     filtered = sort_default(filtered, values=full_values)
-    if board:
-        board_cards = filtered if (status_filter_explicit or worker) else cards
-        click.echo(
+    if args.board:
+        board_cards = filtered if (status_filter_explicit or args.worker) else cards
+        print(
             render_board(
-                board_cards, max_rows=max_rows, no_color=no_color, values=full_values
+                board_cards, max_rows=args.max_rows, no_color=args.no_color, values=full_values
             )
         )
-    elif as_json:
-        click.echo(render_json(filtered, values=full_values))
+    elif args.as_json:
+        print(render_json(filtered, values=full_values))
     else:
-        out = render_table(filtered, verbose=verbose, no_color=no_color, values=full_values, by_title=full_by_title)
+        out = render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
         active_notice = render_active_notice(cards, values=full_values) if status == "open" else ""
         lines = [part for part in (active_notice, out) if part]
         if lines:
-            click.echo("\n".join(lines))
+            print("\n".join(lines))
 
 
-@cli.command()
-@click.option("--quiet", is_flag=True, help="Only print errors; suppress per-todo OK lines.")
-def validate(quiet):
+def _cmd_validate(args):
     """Walk all cards, parse YAML, check schema conformance. Exit 1 on violations."""
     schema = load_schema()
     cards = load_all_cards()
     all_titles = {t.title for t in cards}
     errors: list[str] = []
     for e in validate_deck_directories():
-        click.echo(f"ERROR: {e}", err=True)
+        print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for e in validate_skill_dir_parity():
-        click.echo(f"ERROR: {e}", err=True)
+        print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for e in validate_plugin_mirror_parity():
-        click.echo(f"ERROR: {e}", err=True)
+        print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for t in cards:
         per = validate_card(t, schema, all_titles)
         errors.extend(per)
-        if not per and not quiet:
-            click.echo(f"OK  {t.title}")
+        if not per and not args.quiet:
+            print(f"OK  {t.title}")
         else:
             for e in per:
-                click.echo(f"ERROR: {e}", err=True)
+                print(f"ERROR: {e}", file=sys.stderr)
     for checker in (detect_advance_cycles, validate_bidirectional_edges):
         for e in checker(cards):
-            click.echo(f"ERROR: {e}", err=True)
+            print(f"ERROR: {e}", file=sys.stderr)
             errors.append(e)
     if errors:
         sys.exit(1)
@@ -1401,30 +1573,30 @@ def _render_verdict(verdict: dict) -> bool:
     """Print one verdict block to terminal. Returns True if any rewrite proposed."""
     has_rewrite = False
     title = verdict.get("title", "<unknown>")
-    click.echo(f"\n=== {title} ===")
+    print(f"\n=== {title} ===")
     tv = verdict.get("title_verdict") or {}
     if tv.get("ok"):
-        click.echo("title:   OK")
+        print("title:   OK")
     else:
         has_rewrite = True
-        click.echo(f"title:   REWRITE — {tv.get('reason', '?')}")
-        click.echo(f"  proposed: {tv.get('rewrite', '?')}")
+        print(f"title:   REWRITE — {tv.get('reason', '?')}")
+        print(f"  proposed: {tv.get('rewrite', '?')}")
     sv = verdict.get("summary_verdict") or {}
     if sv.get("ok"):
-        click.echo("summary: OK")
+        print("summary: OK")
     else:
         has_rewrite = True
-        click.echo(f"summary: REWRITE — {sv.get('reason', '?')}")
-        click.echo(f"  proposed: {sv.get('rewrite', '?')}")
+        print(f"summary: REWRITE — {sv.get('reason', '?')}")
+        print(f"  proposed: {sv.get('rewrite', '?')}")
     dod_issues = verdict.get("dod_issues") or []
     if dod_issues:
         has_rewrite = True
-        click.echo(f"dod:     {len(dod_issues)} issue(s)")
+        print(f"dod:     {len(dod_issues)} issue(s)")
         for issue in dod_issues:
-            click.echo(f"  [{issue.get('idx', '?')}] {issue.get('issue', '?')}")
-            click.echo(f"      fix: {issue.get('fix', '?')}")
+            print(f"  [{issue.get('idx', '?')}] {issue.get('issue', '?')}")
+            print(f"      fix: {issue.get('fix', '?')}")
     else:
-        click.echo("dod:     OK")
+        print("dod:     OK")
     return has_rewrite
 
 
@@ -1463,7 +1635,7 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
     def ask(prompt: str) -> bool:
         if auto_yes:
             return True
-        return click.confirm(prompt, default=False)
+        return confirm(prompt, default=False)
 
     tv = verdict.get("title_verdict") or {}
     if not tv.get("ok") and tv.get("rewrite"):
@@ -1479,9 +1651,9 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
             r = subprocess.run(move_cmd, capture_output=True, text=True, check=False)
             if r.returncode == 0:
                 applied["title"] = True
-                click.echo(f"    moved → {tv['rewrite']}")
+                print(f"    moved → {tv['rewrite']}")
             else:
-                click.echo(f"    move failed: {r.stderr.strip()}", err=True)
+                print(f"    move failed: {r.stderr.strip()}", file=sys.stderr)
 
     sv = verdict.get("summary_verdict") or {}
     if not sv.get("ok") and sv.get("rewrite"):
@@ -1491,7 +1663,7 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
                 target_card = load_card(DECK_DIR / tv["rewrite"]) or card
             _apply_summary_rewrite(target_card, sv["rewrite"])
             applied["summary"] = True
-            click.echo("    summary rewritten")
+            print("    summary rewritten")
 
     dod_issues = verdict.get("dod_issues") or []
     accepted_issues: list[dict] = []
@@ -1504,36 +1676,19 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
             target_card = load_card(DECK_DIR / tv["rewrite"]) or card
         _apply_dod_rewrite(target_card, accepted_issues)
         applied["dod"] = len(accepted_issues)
-        click.echo(f"    DoD: {len(accepted_issues)} item(s) rewritten")
+        print(f"    DoD: {len(accepted_issues)} item(s) rewritten")
 
     return applied
 
 
-@cli.command("quality-pass")
-@click.option(
-    "--status",
-    "status_flag",
-    type=click.Choice(STATUS_FILTER_VALUES),
-    default="open",
-    help="Filter by status (default: open).",
-)
-@click.option("--llm/--no-llm", default=False, help="Also run a Sonnet-batched summary+DoD audit (cost ~$0.40/pass).")
-@click.option("--limit", type=int, default=None, help="With --llm: cap card count (testing/sampling).")
-@click.option("--dry-run", is_flag=True, help="With --llm: print verdicts; skip the interactive accept/reject walk.")
-@click.option("--yes", "auto_yes", is_flag=True, help="With --llm: auto-accept every proposed rewrite (use with care).")
-def quality_pass(status_flag, llm, limit, dry_run, auto_yes):
-    """Surface engineer-jargon titles + missing summaries across the existing deck.
+def _cmd_quality_pass(args):
+    """Surface engineer-jargon titles + missing summaries across the existing deck."""
+    status_flag = args.status_flag
+    llm = args.llm
+    limit = args.limit
+    dry_run = args.dry_run
+    auto_yes = args.auto_yes
 
-    Layer 1 (always-on): regex check against TITLE_ANTIPATTERNS — same predicates
-    that `deck.py new` rejects at filing time. Catches legacy cards filed before
-    the antipattern guard was wired.
-
-    Layer 2 (--llm): batched call to `claude --bare --model sonnet -p ...` over a
-    slim cards JSON dump (title + summary + definition_of_done). The LLM returns
-    per-card verdicts on all three dimensions; a triage walk prompts accept/reject
-    per dimension and applies via `deck.py move` (titles) or in-place YAML edits
-    (summary, DoD items). Cost: ~$0.40 per ~120-card pass.
-    """
     cards = load_all_cards()
     if status_flag != "all":
         cards = [c for c in cards if c.status == status_flag]
@@ -1548,41 +1703,41 @@ def quality_pass(status_flag, llm, limit, dry_run, auto_yes):
         if not summary:
             missing_summary.append(c.title)
 
-    click.echo(f"\nQuality pass over {len(cards)} cards (status={status_flag}):\n")
+    print(f"\nQuality pass over {len(cards)} cards (status={status_flag}):\n")
 
     if title_hits:
-        click.echo(f"Title antipatterns ({len(title_hits)} cards):")
+        print(f"Title antipatterns ({len(title_hits)} cards):")
         for title, reasons in title_hits:
-            click.echo(f"  - {title}")
+            print(f"  - {title}")
             for r in reasons:
-                click.echo(f"      → {r}")
-        click.echo("")
+                print(f"      → {r}")
+        print("")
     else:
-        click.echo("Title antipatterns: clean.\n")
+        print("Title antipatterns: clean.\n")
 
     if missing_summary:
-        click.echo(f"Missing summary ({len(missing_summary)} cards):")
+        print(f"Missing summary ({len(missing_summary)} cards):")
         for title in missing_summary[:20]:
-            click.echo(f"  - {title}")
+            print(f"  - {title}")
         if len(missing_summary) > 20:
-            click.echo(f"  ... and {len(missing_summary) - 20} more")
-        click.echo("")
+            print(f"  ... and {len(missing_summary) - 20} more")
+        print("")
     else:
-        click.echo("Missing summary: clean.\n")
+        print("Missing summary: clean.\n")
 
     if not llm:
         return
 
     sample = cards if limit is None else cards[:limit]
-    click.echo(f"Layer-2 (Sonnet pass): auditing {len(sample)} cards via `claude --model sonnet -p`…")
+    print(f"Layer-2 (Sonnet pass): auditing {len(sample)} cards via `claude --model sonnet -p`…")
     prompt = _build_quality_prompt(sample)
     try:
         verdicts = _run_sonnet_quality_pass(prompt)
     except subprocess.CalledProcessError as e:
-        click.echo(f"ERROR: claude CLI failed (exit {e.returncode}): {e.stderr[:500] or e.stdout[:500]}", err=True)
+        print(f"ERROR: claude CLI failed (exit {e.returncode}): {e.stderr[:500] or e.stdout[:500]}", file=sys.stderr)
         sys.exit(1)
     except (ValueError, json.JSONDecodeError, RuntimeError) as e:
-        click.echo(f"ERROR: could not parse Sonnet response: {e}", err=True)
+        print(f"ERROR: could not parse Sonnet response: {e}", file=sys.stderr)
         sys.exit(1)
 
     by_title = {c.title: c for c in sample}
@@ -1594,46 +1749,45 @@ def quality_pass(status_flag, llm, limit, dry_run, auto_yes):
             if not dry_run:
                 card = by_title.get(verdict.get("title", ""))
                 if card is None:
-                    click.echo("    (card not found in sample; skipping apply)", err=True)
+                    print("    (card not found in sample; skipping apply)", file=sys.stderr)
                     continue
                 applied = _apply_verdict_interactive(card, verdict, auto_yes=auto_yes)
                 applied_count["title"] += int(applied["title"])
                 applied_count["summary"] += int(applied["summary"])
                 applied_count["dod"] += applied["dod"]
 
-    click.echo(f"\nSonnet pass: {len(verdicts)} cards audited, {rewrite_count} with proposed rewrites.")
+    print(f"\nSonnet pass: {len(verdicts)} cards audited, {rewrite_count} with proposed rewrites.")
     if not dry_run:
-        click.echo(
+        print(
             f"Applied: {applied_count['title']} titles, {applied_count['summary']} summaries, {applied_count['dod']} DoD items."
         )
 
 
-@cli.command()
-@click.argument("title")
-@click.option("--force", is_flag=True, help="Bypass DoD enforcement (free-form prose DoDs).")
-def done(title, force):
+def _cmd_done(args):
     """Flip status → done; set closed_at; enforce DoD-checkbox rule."""
+    title = args.title
+    force = args.force
     card_dir = DECK_DIR / title
     t = load_card(card_dir)
     if t is None:
-        click.echo(f"ERROR: {title}: not found at {card_dir}", err=True)
+        print(f"ERROR: {title}: not found at {card_dir}", file=sys.stderr)
         sys.exit(2)
     if t.dod_freeform and not force:
-        click.echo(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", err=True)
+        print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
         sys.exit(2)
     if t.dod_open > 0:
-        click.echo(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", err=True)
+        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
         sys.exit(2)
     prior = t.status
     if prior == "done":
-        click.echo(f"{title}: already done; closed_at unchanged")
+        print(f"{title}: already done; closed_at unchanged")
         return
     _TERMINAL_NON_DONE = frozenset({"disproved", "superseded"})
     if prior in _TERMINAL_NON_DONE:
-        click.echo(
+        print(
             f"ERROR: {title}: status is {prior!r} (terminal); "
             f"use the supersede/disprove workflow — 'done' cannot overwrite terminal states",
-            err=True,
+            file=sys.stderr,
         )
         sys.exit(2)
     today = date.today().isoformat()
@@ -1641,8 +1795,8 @@ def done(title, force):
     text = mutate_frontmatter_field(text, "status", "done")
     text = mutate_frontmatter_field(text, "closed_at", today)
     (card_dir / "README.md").write_text(text)
-    click.echo(f"{title}: {prior} → done")
-    click.echo("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
+    print(f"{title}: {prior} → done")
+    print("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -1680,7 +1834,7 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         if not git_dir.is_absolute():
             git_dir = DECK_ROOT / git_dir
         if any((git_dir / sf).exists() for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD")):
-            click.echo("  (auto-commit skipped: merge/rebase/cherry-pick in progress)", err=True)
+            print("  (auto-commit skipped: merge/rebase/cherry-pick in progress)", file=sys.stderr)
             return False
         paths: list[str] = [
             str(p.relative_to(DECK_ROOT))
@@ -1701,7 +1855,7 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         subprocess.run(["git", "commit", "-m", message], check=True, cwd=git_cwd)
         return True
     except subprocess.CalledProcessError as e:
-        click.echo(f"  (auto-commit failed: {e})", err=True)
+        print(f"  (auto-commit failed: {e})", file=sys.stderr)
         return False
     except FileNotFoundError:
         return False
@@ -1723,7 +1877,7 @@ def _coerce_config_bool(value, *, default: bool) -> bool:
 
 def _commit_override(commit: bool, no_commit: bool) -> bool | None:
     if commit and no_commit:
-        click.echo("ERROR: pass only one of --commit / --no-commit", err=True)
+        print("ERROR: pass only one of --commit / --no-commit", file=sys.stderr)
         sys.exit(2)
     if commit:
         return True
@@ -1769,10 +1923,10 @@ def auto_commit_enabled(override: bool | None = None) -> bool:
     enabled = _coerce_config_bool(workflow.get("auto_commit"), default=True)
     if not enabled and not _autocommit_warning_emitted:
         _autocommit_warning_emitted = True
-        click.echo(
+        print(
             "  Warning: auto_commit is disabled but the deck is version-controlled."
             " Parallel agents will not see claim/progress state until you commit manually.",
-            err=True,
+            file=sys.stderr,
         )
     return enabled
 
@@ -1871,16 +2025,15 @@ def _format_attestation_block(today: str, results: list[dict]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-@cli.command()
-@click.argument("title")
-@click.option("--skip", "skips", multiple=True, help="Skip a check by name; recorded as SKIPPED in log.")
-@click.option("--non-interactive", is_flag=True, help="Fail manual/agent checks instead of prompting.")
-def attest(title, skips, non_interactive):
+def _cmd_attest(args):
     """Run layer-2 + layer-3 closure checks; append "Closure verification" block to log.md."""
+    title = args.title
+    skips = args.skips
+    non_interactive = args.non_interactive
     card_dir = DECK_DIR / title
     card = load_card(card_dir)
     if card is None:
-        click.echo(f"ERROR: {title}: not found at {card_dir}", err=True)
+        print(f"ERROR: {title}: not found at {card_dir}", file=sys.stderr)
         sys.exit(2)
     config = load_deck_config()
     all_cards = load_all_cards()
@@ -1893,7 +2046,7 @@ def attest(title, skips, non_interactive):
         layer_checks = config.get(layer_key) or []
         if not layer_checks:
             continue
-        click.echo(f"\nLayer-{layer_num} ({'project' if layer_num == 2 else 'GoC'}) checks:")
+        print(f"\nLayer-{layer_num} ({'project' if layer_num == 2 else 'GoC'}) checks:")
         for check in layer_checks:
             name = check["name"]
             if name in skips_set:
@@ -1906,12 +2059,12 @@ def attest(title, skips, non_interactive):
                         "summary": f"SKIPPED ({check.get('description', '')[:60]})",
                     }
                 )
-                click.echo(f"  [~] {name} — SKIPPED")
+                print(f"  [~] {name} — SKIPPED")
                 continue
             kind = check["kind"]
             try:
                 if kind == "automated":
-                    click.echo(f"  ... running {name}")
+                    print(f"  ... running {name}")
                     passed, summary = _run_automated_check(check)
                 elif kind == "derived":
                     passed, summary = _run_derived_check(check, card, all_cards, today)
@@ -1928,11 +2081,11 @@ def attest(title, skips, non_interactive):
                 else:
                     passed, summary = False, f"unknown check kind '{kind}'"
             except KeyboardInterrupt:
-                click.echo(f"\nABORTED on {name}", err=True)
+                print(f"\nABORTED on {name}", file=sys.stderr)
                 sys.exit(130)
             results.append({"layer": layer_num, "name": name, "passed": passed, "summary": summary})
             mark = "[x]" if passed else "[ ]"
-            click.echo(f"  {mark} {name} — {summary}")
+            print(f"  {mark} {name} — {summary}")
             if not passed:
                 any_failed = True
 
@@ -1940,13 +2093,13 @@ def attest(title, skips, non_interactive):
     block = _format_attestation_block(today, results)
     existing = log_path.read_text() if log_path.exists() else ""
     log_path.write_text((existing.rstrip() + "\n\n" + block) if existing.strip() else block)
-    click.echo(f"\nWrote attestation to {log_path}")
+    print(f"\nWrote attestation to {log_path}")
 
     if any_failed:
-        click.echo("\nERROR: attestation has failures; finish-card will block closure.", err=True)
+        print("\nERROR: attestation has failures; finish-card will block closure.", file=sys.stderr)
         sys.exit(2)
-    click.echo("\nAttestation OK.")
-    click.echo(f"Next: goc done {title} to close once all DoD items are ticked.")
+    print("\nAttestation OK.")
+    print(f"Next: goc done {title} to close once all DoD items are ticked.")
 
 
 def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worker_where: str | None) -> str:
@@ -1994,43 +2147,36 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     return mutate_frontmatter_field(text, "worker", worker_yaml)
 
 
-@cli.command()
-@click.argument("title")
-@click.argument("new_status", type=click.Choice(MUTABLE_STATUS_VALUES))
-@click.option("--commit", is_flag=True, help="Force auto-commit for this status flip.")
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this status flip.")
-@click.option("--worker-who", default=None, help="Override worker.who identity (person, machine, or capability tag).")
-@click.option("--worker-where", default=None, help="Override worker.where branch or path for this claim.")
-def status(title, new_status, commit, no_commit, worker_who, worker_where):
-    """Mutate any status except `done` (which has its own enforcement gate).
-
-    The state flip follows `.game-of-cards/config.yaml` `workflow.auto_commit`.
-    `--commit` and `--no-commit` override that policy for one invocation.
-    When flipping to `active`, auto-populates `worker.who` from `git config
-    user.name` and `worker.where` from the current branch unless already set.
-    """
+def _cmd_status(args):
+    """Mutate any status except `done` (which has its own enforcement gate)."""
+    title = args.title
+    new_status = args.new_status
+    commit = args.commit
+    no_commit = args.no_commit
+    worker_who = args.worker_who
+    worker_where = args.worker_where
     card_dir = DECK_DIR / title
     t = load_card(card_dir)
     if t is None:
-        click.echo(f"ERROR: {title}: not found", err=True)
+        print(f"ERROR: {title}: not found", file=sys.stderr)
         sys.exit(2)
     prior = t.status
     if prior == new_status:
         if new_status == "active":
-            click.echo(
+            print(
                 f"WARNING: {title}: already active — possible racing claim;"
                 f" check `goc --status active` before proceeding",
-                err=True,
+                file=sys.stderr,
             )
         else:
-            click.echo(f"{title}: already {new_status}; nothing to do")
+            print(f"{title}: already {new_status}; nothing to do")
         return
     _TERMINAL = frozenset({"done", "disproved", "superseded"})
     if prior in _TERMINAL:
-        click.echo(
+        print(
             f"ERROR: {title}: status is {prior!r} (terminal);"
             f" terminal cards cannot be moved backward through `goc status`",
-            err=True,
+            file=sys.stderr,
         )
         sys.exit(2)
     text = (card_dir / "README.md").read_text()
@@ -2038,13 +2184,13 @@ def status(title, new_status, commit, no_commit, worker_who, worker_where):
     if new_status == "active":
         text = _auto_populate_worker(text, t, worker_who, worker_where)
     (card_dir / "README.md").write_text(text)
-    click.echo(f"{title}: {prior} → {new_status}")
+    print(f"{title}: {prior} → {new_status}")
     if new_status == "active":
-        click.echo(f"Next: implement the card; tick DoD items as you go; then goc done {title}.")
+        print(f"Next: implement the card; tick DoD items as you go; then goc done {title}.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         if _git_auto_commit([card_dir], f"deck: {title} {prior} → {new_status}"):
-            click.echo("  committed")
+            print("  committed")
 
 
 TITLE_ANTIPATTERNS = [
@@ -2062,41 +2208,38 @@ def _check_title_antipatterns(title: str) -> list[str]:
     return [reason for pat, reason in TITLE_ANTIPATTERNS if pat.search(title)]
 
 
-@cli.command()
-@click.argument("title")
-@click.option("--contribution", type=click.Choice(["high", "medium", "low"]), default="medium")
-@click.option("--gate", type=click.Choice(["none", "decision", "session"]), default="decision")
-@click.option("--tag", "tags", multiple=True)
-@click.option("--worker", default=None, help="Worker designation — person, machine, or capability tag.")
-@click.option(
-    "--allow-jargon", is_flag=True, help="Bypass the title-antipattern check (rare; used by migration tools)."
-)
-def new(title, contribution, gate, tags, worker, allow_jargon):
+def _cmd_new(args):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
+    title = args.title
+    contribution = args.contribution
+    gate = args.gate
+    tags = args.tags
+    worker = args.worker
+    allow_jargon = args.allow_jargon
     schema = load_schema()
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(title)
         if antipatterns_hit:
-            click.echo(f"ERROR: title {title!r} contains engineer-jargon antipattern(s):", err=True)
+            print(f"ERROR: title {title!r} contains engineer-jargon antipattern(s):", file=sys.stderr)
             for reason in antipatterns_hit:
-                click.echo(f"  - {reason}", err=True)
-            click.echo(
-                "\n  Titles are kanban labels; a non-engineer must understand the card from the title alone.", err=True
+                print(f"  - {reason}", file=sys.stderr)
+            print(
+                "\n  Titles are kanban labels; a non-engineer must understand the card from the title alone.", file=sys.stderr
             )
-            click.echo("  Rephrase to describe the *observable problem* (e.g.", err=True)
-            click.echo("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", err=True)
-            click.echo("  Pass --allow-jargon to bypass (rare; for migration tools).", err=True)
+            print("  Rephrase to describe the *observable problem* (e.g.", file=sys.stderr)
+            print("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", file=sys.stderr)
+            print("  Pass --allow-jargon to bypass (rare; for migration tools).", file=sys.stderr)
             sys.exit(2)
     if not re.match(schema.title_pattern, title):
-        click.echo(f"ERROR: title {title!r} does not match {schema.title_pattern!r}", err=True)
+        print(f"ERROR: title {title!r} does not match {schema.title_pattern!r}", file=sys.stderr)
         sys.exit(2)
     card_dir = DECK_DIR / title
     if card_dir.exists():
-        click.echo(f"ERROR: {card_dir} already exists", err=True)
+        print(f"ERROR: {card_dir} already exists", file=sys.stderr)
         sys.exit(2)
     for tag in tags:
         if tag not in schema.canonical_tags:
-            click.echo(f"ERROR: unknown tag '{tag}' (not in SCHEMA.md canonical_tags)", err=True)
+            print(f"ERROR: unknown tag '{tag}' (not in SCHEMA.md canonical_tags)", file=sys.stderr)
             sys.exit(2)
     card_dir.mkdir(parents=True)
     today = date.today().isoformat()
@@ -2119,8 +2262,8 @@ def new(title, contribution, gate, tags, worker, allow_jargon):
     body = f"\n# {title}\n\n(write the design doc here)\n"
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     (card_dir / "log.md").write_text("")
-    click.echo(f"created {card_dir.relative_to(REPO_ROOT)}/")
-    click.echo(f"Next: edit deck/{title}/README.md to fill the body and DoD; then ask your agent to implement the card.")
+    print(f"created {card_dir.relative_to(REPO_ROOT)}/")
+    print(f"Next: edit deck/{title}/README.md to fill the body and DoD; then ask your agent to implement the card.")
 
 
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
@@ -2150,10 +2293,10 @@ def _mutate_pair(child_title: str, parent_title: str, field_on_child: str, field
     child_dir = DECK_DIR / child_title
     parent_dir = DECK_DIR / parent_title
     if not (child_dir / "README.md").exists():
-        click.echo(f"ERROR: {child_title}: not found", err=True)
+        print(f"ERROR: {child_title}: not found", file=sys.stderr)
         sys.exit(2)
     if not (parent_dir / "README.md").exists():
-        click.echo(f"ERROR: {parent_title}: not found", err=True)
+        print(f"ERROR: {parent_title}: not found", file=sys.stderr)
         sys.exit(2)
     op = _add_to_list_field if add else _remove_from_list_field
     child_text = (child_dir / "README.md").read_text()
@@ -2162,41 +2305,39 @@ def _mutate_pair(child_title: str, parent_title: str, field_on_child: str, field
     (parent_dir / "README.md").write_text(op(parent_text, field_on_parent, child_title))
 
 
-@cli.command()
-@click.argument("title")
-@click.option("--by", "advancer", required=True, help="Slug of the card that advances <title>.")
-@click.option("--commit", is_flag=True, help="Force auto-commit for this edge mutation.")
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this edge mutation.")
-def advance(title, advancer, commit, no_commit):
+def _cmd_advance(args):
     """Add bidirectional value-flow edge: title.advanced_by += advancer, advancer.advances += title."""
+    title = args.title
+    advancer = args.advancer
+    commit = args.commit
+    no_commit = args.no_commit
     if title == advancer:
-        click.echo("ERROR: cannot advance a card with itself", err=True)
+        print("ERROR: cannot advance a card with itself", file=sys.stderr)
         sys.exit(2)
     cards = load_all_cards()
     if _would_create_advance_cycle(cards, title, advancer):
-        click.echo(f"ERROR: adding {advancer} → {title} would create a cycle in the advances graph", err=True)
+        print(f"ERROR: adding {advancer} → {title} would create a cycle in the advances graph", file=sys.stderr)
         sys.exit(2)
     _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
-    click.echo(f"advance: {title}.advanced_by += {advancer}; {advancer}.advances += {title}")
+    print(f"advance: {title}.advanced_by += {advancer}; {advancer}.advances += {title}")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         if _git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], f"deck: {advancer} advances {title}"):
-            click.echo("  committed")
+            print("  committed")
 
 
-@cli.command()
-@click.argument("title")
-@click.option("--by", "advancer", required=True)
-@click.option("--commit", is_flag=True, help="Force auto-commit for this edge mutation.")
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this edge mutation.")
-def unadvance(title, advancer, commit, no_commit):
+def _cmd_unadvance(args):
     """Remove bidirectional value-flow edge."""
+    title = args.title
+    advancer = args.advancer
+    commit = args.commit
+    no_commit = args.no_commit
     _mutate_pair(title, advancer, "advanced_by", "advances", add=False)
-    click.echo(f"unadvance: {title}.advanced_by -= {advancer}; {advancer}.advances -= {title}")
+    print(f"unadvance: {title}.advanced_by -= {advancer}; {advancer}.advances -= {title}")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         if _git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], f"deck: {advancer} no longer advances {title}"):
-            click.echo("  committed")
+            print("  committed")
 
 
 def _move_text_rewrite(text: str, old: str, new: str) -> str:
@@ -2269,61 +2410,46 @@ def _move_preview_sites(old: str, new: str) -> list[str]:
     return sites
 
 
-@cli.command()
-@click.argument("old_title")
-@click.argument("new_title")
-@click.option(
-    "--allow-jargon", is_flag=True, help="Bypass the title-antipattern check (rare; used by migration tools)."
-)
-@click.option("--dry-run", is_flag=True, help="Print sites that would be rewritten without making changes.")
-def move(old_title, new_title, allow_jargon, dry_run):
-    """Rename a title and rewrite known cross-references.
-
-    Rewrites references in tracked text files (via ``git ls-files``):
-
-    \b
-    - ``# {old}`` H1 headings
-    - ``[{old}](../{old}/)`` markdown cross-link form
-    - ``deck/{old}/`` and ``.game-of-cards/deck/{old}/`` path forms
-    - bare slug with slug-boundary anchoring (not preceded/followed by ``[-\\w]``)
-
-    Appends a dated rename entry to the moved card's log.md.
-    Outside-repo references (commit messages, GitHub PRs, external docs) are out of scope.
-    """
+def _cmd_move(args):
+    """Rename a title and rewrite known cross-references."""
+    old_title = args.old_title
+    new_title = args.new_title
+    allow_jargon = args.allow_jargon
+    dry_run = args.dry_run
     schema = load_schema()
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(new_title)
         if antipatterns_hit:
-            click.echo(f"ERROR: title {new_title!r} contains engineer-jargon antipattern(s):", err=True)
+            print(f"ERROR: title {new_title!r} contains engineer-jargon antipattern(s):", file=sys.stderr)
             for reason in antipatterns_hit:
-                click.echo(f"  - {reason}", err=True)
-            click.echo(
-                "\n  Titles are kanban labels; a non-engineer must understand the card from the title alone.", err=True
+                print(f"  - {reason}", file=sys.stderr)
+            print(
+                "\n  Titles are kanban labels; a non-engineer must understand the card from the title alone.", file=sys.stderr
             )
-            click.echo("  Rephrase to describe the *observable problem* (e.g.", err=True)
-            click.echo("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", err=True)
-            click.echo("  Pass --allow-jargon to bypass (rare; for migration tools).", err=True)
+            print("  Rephrase to describe the *observable problem* (e.g.", file=sys.stderr)
+            print("    `r88-csubstrate-replication` → `pong-cannot-recover-prior-task-performance`).", file=sys.stderr)
+            print("  Pass --allow-jargon to bypass (rare; for migration tools).", file=sys.stderr)
             sys.exit(2)
     if not re.match(schema.title_pattern, new_title):
-        click.echo(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", err=True)
+        print(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", file=sys.stderr)
         sys.exit(2)
     src = DECK_DIR / old_title
     dst = DECK_DIR / new_title
     if not src.exists():
-        click.echo(f"ERROR: {src} does not exist", err=True)
+        print(f"ERROR: {src} does not exist", file=sys.stderr)
         sys.exit(2)
     if dst.exists():
-        click.echo(f"ERROR: {dst} already exists", err=True)
+        print(f"ERROR: {dst} already exists", file=sys.stderr)
         sys.exit(2)
 
     if dry_run:
         sites = _move_preview_sites(old_title, new_title)
         if sites:
             for site in sites:
-                click.echo(site)
+                print(site)
         else:
-            click.echo("(no tracked text files would be modified)")
-        click.echo(f"(directory move: {src} → {dst})")
+            print("(no tracked text files would be modified)")
+        print(f"(directory move: {src} → {dst})")
         return
 
     try:
@@ -2342,32 +2468,25 @@ def move(old_title, new_title, allow_jargon, dry_run):
     sep = "\n\n" if existing.strip() else ""
     log_path.write_text(existing.rstrip("\n") + sep + f"## {today}: renamed from {old_title}\n")
 
-    click.echo(f"{old_title} → {new_title}")
+    print(f"{old_title} → {new_title}")
 
 
-@cli.command()
-@click.argument("title")
-@click.option("--decision", required=True, help="One-line decision (the WHAT).")
-@click.option("--because", "reasoning", required=True, help="One-line reasoning (the WHY).")
-@click.option("--commit", is_flag=True, help="Force auto-commit for this decision record.")
-@click.option("--no-commit", is_flag=True, help="Skip auto-commit for this decision record.")
-def decide(title, decision, reasoning, commit, no_commit):
-    """Record a decision in the body + log; lower the human gate to `none`.
-
-    The Andon-cord lowering action: pull-card raises the gate when it can't
-    decide; this command captures the human's resolution (what + why) and
-    re-enables autonomous claiming. Status is unchanged (stays `open`); the
-    next pull-card claims and implements per the recorded decision.
-    """
+def _cmd_decide(args):
+    """Record a decision in the body + log; lower the human gate to `none`."""
+    title = args.title
+    decision = args.decision
+    reasoning = args.reasoning
+    commit = args.commit
+    no_commit = args.no_commit
     card_dir = DECK_DIR / title
     t = load_card(card_dir)
     if t is None:
-        click.echo(f"ERROR: {title}: not found", err=True)
+        print(f"ERROR: {title}: not found", file=sys.stderr)
         sys.exit(2)
     if t.human_gate == "none":
-        click.echo(
+        print(
             f"ERROR: {title}: gate already 'none' (no decision pending)",
-            err=True,
+            file=sys.stderr,
         )
         sys.exit(2)
     prior_gate = t.human_gate
@@ -2387,32 +2506,19 @@ def decide(title, decision, reasoning, commit, no_commit):
         + f"## {today}: decision recorded\n\n"
         + f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
     )
-    click.echo(f"{title}: decision recorded; gate {prior_gate} → none")
-    click.echo("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
+    print(f"{title}: decision recorded; gate {prior_gate} → none")
+    print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         decision_short = decision[:60] + ("…" if len(decision) > 60 else "")
         if _git_auto_commit([card_dir], f"decide: {title} — {decision_short}"):
-            click.echo("  committed")
+            print("  committed")
 
 
-@cli.command()
-@click.option("--json", "as_json", is_flag=True, help="Emit JSON for Q&A consumers.")
-@click.option(
-    "--worker",
-    default=None,
-    envvar="GOC_WORKER",
-    help="Filter parked cards by worker.who (substring match). Also read from GOC_WORKER env var.",
-)
-def triage(as_json, worker):
-    """List parked cards (gate ≠ none), grouped by gate, oldest-first.
-
-    The supportive default for `Skill(scan-deck)` when the user asks
-    "what's up?" / "where do you need me?" — surfaces what's blocking
-    progress before the open queue. Each entry includes age and the
-    `## Decision required` body section preview. With `--json`, returns
-    structured payload for the AskUserQuestion-driven Q&A flow.
-    """
+def _cmd_triage(args):
+    """List parked cards (gate ≠ none), grouped by gate, oldest-first."""
+    as_json = args.as_json
+    worker = args.worker
     all_cards = [t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"]
     if worker:
         needle = worker.lower()
@@ -2442,11 +2548,11 @@ def triage(as_json, worker):
         )
 
     if as_json:
-        click.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
         return
 
     if not payload:
-        click.echo("No parked cards (gate ≠ none).")
+        print("No parked cards (gate ≠ none).")
         return
 
     by_gate: dict[str, list[dict]] = {}
@@ -2471,42 +2577,35 @@ def triage(as_json, worker):
                 lines.append(f"  > {first}")
             lines.append("")
     lines.append("Next: ask your agent \"decisions to make\" (Skill(scan-deck)) to walk each card and record decisions via Skill(decide-card).")
-    click.echo("\n".join(lines))
+    print("\n".join(lines))
 
 
-@cli.command()
-@click.argument("title")
-def show(title):
+def _cmd_show(args):
     """Print full README.md to stdout."""
+    title = args.title
     p = DECK_DIR / title / "README.md"
     if not p.exists():
-        click.echo(f"ERROR: {p} not found", err=True)
+        print(f"ERROR: {p} not found", file=sys.stderr)
         sys.exit(2)
-    click.echo(p.read_text())
+    print(p.read_text())
 
 
-@cli.command()
-@click.option("--dry-run", is_flag=True, help="Show what would happen without making changes.")
-@click.option("--yes", "auto_yes", is_flag=True, help="Skip confirmation prompt.")
-def migrate(dry_run, auto_yes):
-    """Merge legacy deck/ into .game-of-cards/deck/ and remove the stale tree.
-
-    Refuses if any card exists in both trees with differing content — resolve
-    the drift manually first, then re-run.  Safe to run against a single-tree
-    repo (it reports nothing to do and exits cleanly).
-    """
+def _cmd_migrate(args):
+    """Merge legacy deck/ into .game-of-cards/deck/ and remove the stale tree."""
+    dry_run = args.dry_run
+    auto_yes = args.auto_yes
     canonical = REPO_ROOT / ".game-of-cards" / "deck"
     legacy = REPO_ROOT / "deck"
 
     if not legacy.exists():
-        click.echo("No legacy deck/ found; nothing to migrate.")
+        print("No legacy deck/ found; nothing to migrate.")
         return
 
     if not canonical.exists():
-        click.echo(
+        print(
             f"ERROR: canonical deck location {canonical} does not exist.\n"
             "Run `goc install` first to set up the canonical deck location.",
-            err=True,
+            file=sys.stderr,
         )
         sys.exit(1)
 
@@ -2535,66 +2634,57 @@ def migrate(dry_run, auto_yes):
             identical.append(name)
 
     if conflicts:
-        click.echo(
+        print(
             "ERROR: cards with content drift — cannot merge safely:",
-            err=True,
+            file=sys.stderr,
         )
         for c in conflicts:
-            click.echo(c, err=True)
-        click.echo(
+            print(c, file=sys.stderr)
+        print(
             "\nResolve the drifted cards manually (pick the authoritative version),\n"
             "then re-run `goc migrate`.",
-            err=True,
+            file=sys.stderr,
         )
         sys.exit(1)
 
     if to_copy:
-        click.echo("Cards to migrate (legacy-only):")
+        print("Cards to migrate (legacy-only):")
         for name in to_copy:
-            click.echo(f"  deck/{name}/  →  .game-of-cards/deck/{name}/")
+            print(f"  deck/{name}/  →  .game-of-cards/deck/{name}/")
     if identical:
-        click.echo(f"Cards already in canonical tree (identical, will skip): {len(identical)}")
+        print(f"Cards already in canonical tree (identical, will skip): {len(identical)}")
 
     if not to_copy and not identical:
-        click.echo("Legacy deck/ contains no card directories; nothing to migrate.")
+        print("Legacy deck/ contains no card directories; nothing to migrate.")
         if not dry_run and not _DUAL_TREE_CONFLICT:
             return
 
     if dry_run:
         if to_copy or not legacy_dirs:
-            click.echo(f"Would remove legacy tree: {legacy}")
-        click.echo("Dry run — no changes made.")
+            print(f"Would remove legacy tree: {legacy}")
+        print("Dry run — no changes made.")
         return
 
     if to_copy or identical:
         if not auto_yes:
-            click.confirm(
-                f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?",
-                abort=True,
-            )
+            if not confirm(f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?"):
+                sys.exit(1)
 
     for name in to_copy:
         shutil.copytree(str(legacy_dirs[name]), str(canonical / name))
-        click.echo(f"  migrated: {name}")
+        print(f"  migrated: {name}")
 
     shutil.rmtree(legacy)
-    click.echo(f"\nRemoved legacy tree: {legacy}")
-    click.echo("Migration complete. Run `goc validate` to confirm.")
-    click.echo("Next: `goc validate` to verify card integrity after migration.")
+    print(f"\nRemoved legacy tree: {legacy}")
+    print("Migration complete. Run `goc validate` to confirm.")
+    print("Next: `goc validate` to verify card integrity after migration.")
 
 
-@cli.command("migrate-list-style")
-@click.option("--dry-run", is_flag=True, help="Show which cards would change without writing files.")
-def migrate_list_style(dry_run):
-    """Re-emit every card to convert advances/advanced_by to block-style lists.
-
-    One-time migration: after running this, all cards will use block-style
-    for `advances` and `advanced_by` (one `- item` per line) instead of
-    inline flow style (`[a, b, c]`). Empty lists remain as `[]`.
-    The diff is whitespace-equivalent for all fields except these two.
-    """
+def _cmd_migrate_list_style(args):
+    """Re-emit every card to convert advances/advanced_by to block-style lists."""
+    dry_run = args.dry_run
     if not DECK_DIR.exists():
-        click.echo(f"ERROR: {DECK_DIR} does not exist", err=True)
+        print(f"ERROR: {DECK_DIR} does not exist", file=sys.stderr)
         sys.exit(1)
 
     changed: list[str] = []
@@ -2613,19 +2703,19 @@ def migrate_list_style(dry_run):
                 readme.write_text(rewritten)
 
     if not changed:
-        click.echo("All cards already use block-style for advances/advanced_by — nothing to do.")
+        print("All cards already use block-style for advances/advanced_by — nothing to do.")
         return
 
     if dry_run:
-        click.echo(f"Would rewrite {len(changed)} card(s):")
+        print(f"Would rewrite {len(changed)} card(s):")
         for name in changed:
-            click.echo(f"  {name}")
-        click.echo("Dry run — no changes made.")
+            print(f"  {name}")
+        print("Dry run — no changes made.")
     else:
-        click.echo(f"Rewrote {len(changed)} card(s):")
+        print(f"Rewrote {len(changed)} card(s):")
         for name in changed:
-            click.echo(f"  {name}")
-        click.echo("Done. Run `goc validate` to confirm.")
+            print(f"  {name}")
+        print("Done. Run `goc validate` to confirm.")
 
 
 if __name__ == "__main__":

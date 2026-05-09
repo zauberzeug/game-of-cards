@@ -22,8 +22,6 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
-import click
-
 from goc import __version__
 
 GOC_BEGIN = f"<!-- BEGIN GOC v{__version__} -->"
@@ -115,17 +113,17 @@ def _load_agent_shim(templates: Path, agent: str) -> AgentShim:
     manifest_path = templates / "agents" / agent / "manifest.json"
     try:
         raw = json.loads(manifest_path.read_text())
-    except FileNotFoundError as exc:
-        raise click.ClickException(f"agent {agent!r} has no template manifest at {manifest_path}") from exc
+    except FileNotFoundError:
+        print(f"goc: error: agent {agent!r} has no template manifest at {manifest_path}", file=sys.stderr)
+        sys.exit(1)
 
     skills = None
     if raw.get("skills"):
         skill_spec = raw["skills"]
         frontmatter = skill_spec.get("frontmatter", "native")
         if frontmatter not in {"native", "codex"}:
-            raise click.ClickException(
-                f"agent {agent!r} uses unsupported skill frontmatter mode {frontmatter!r}"
-            )
+            print(f"goc: error: agent {agent!r} uses unsupported skill frontmatter mode {frontmatter!r}", file=sys.stderr)
+            sys.exit(1)
         skills = SkillShim(target=Path(skill_spec["target"]), frontmatter=frontmatter)
 
     files = tuple(
@@ -177,10 +175,8 @@ def _parse_agents(
     unknown = sorted(set(tokens) - set(supported_agents))
     if unknown:
         supported = ", ".join(supported_agents)
-        raise click.BadParameter(
-            f"unknown agent(s): {', '.join(unknown)}; supported: {supported}",
-            param_hint="--agents",
-        )
+        print(f"goc: error: --agents: unknown agent(s): {', '.join(unknown)}; supported: {supported}", file=sys.stderr)
+        sys.exit(2)
 
     requested = set(tokens)
     return tuple(agent for agent in supported_agents if agent in requested)
@@ -224,7 +220,7 @@ def _detect_installed_surfaces(
     for agent in supported_agents:
         try:
             shim = _load_agent_shim(templates, agent)
-        except click.ClickException:
+        except SystemExit:
             continue
         if shim.skills and (target / shim.skills.target).is_dir():
             detected.append(agent)
@@ -460,14 +456,14 @@ def _print_plan(command: str, target: Path, writes: list[PlannedWrite], agents: 
     """Render a dry-run write plan grouped by category."""
 
     agents_str = ",".join(agents) if agents else "none"
-    click.echo(f"goc {command} (dry-run) — agents: {agents_str} — {len(writes)} writes planned")
+    print(f"goc {command} (dry-run) — agents: {agents_str} — {len(writes)} writes planned")
     for cat_key, cat_label in _CATEGORY_LABELS:
         cat_writes = [w for w in writes if w.category == cat_key]
         if not cat_writes:
             continue
-        click.echo(f"\n{cat_label}:")
+        print(f"\n{cat_label}:")
         for write in cat_writes:
-            click.echo(f"  {write.owner:6s} {write.action:6s} {write.path.relative_to(target)}")
+            print(f"  {write.owner:6s} {write.action:6s} {write.path.relative_to(target)}")
 
 
 def _copy_tree(src: Path, dst: Path, *, skip_existing: set[Path] | None = None) -> None:
@@ -691,18 +687,25 @@ _PLUGIN_INSTALL_CMDS = (
 )
 
 
-@click.command()
-@click.option("--dry-run", is_flag=True, help="Print planned writes; do not touch the filesystem.")
-@click.option("--agents", "agent_specs", multiple=True, help=INSTALL_AGENTS_HELP)
-@click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
-@click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
-@click.option("--local-skills", "local_skills", is_flag=True, help=LOCAL_SKILLS_HELP)
+def _confirm(prompt: str, *, default: bool = False) -> bool:
+    if sys.stdin.isatty():
+        ans = input(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").strip().lower()
+    else:
+        try:
+            ans = sys.stdin.readline().strip().lower()
+        except (EOFError, OSError):
+            return default
+    if not ans:
+        return default
+    return ans.startswith("y")
+
+
 def install(
-    dry_run: bool,
-    agent_specs: tuple[str, ...],
-    claude_flag: bool,
-    codex_flag: bool,
-    local_skills: bool,
+    dry_run: bool = False,
+    agent_specs: tuple[str, ...] = (),
+    claude_flag: bool = False,
+    codex_flag: bool = False,
+    local_skills: bool = False,
 ) -> None:
     """Scaffold a fresh repo with the shared GoC files and selected harnesses."""
 
@@ -733,8 +736,8 @@ def install(
     if existing_dir is not None:
         existing = _detect_existing(existing_dir)
         rel = existing_dir.relative_to(target)
-        click.echo(f"already installed ({rel}/.goc-version → {existing})", err=True)
-        click.echo("Run `goc upgrade` to re-sync templates.", err=True)
+        print(f"already installed ({rel}/.goc-version → {existing})", file=sys.stderr)
+        print("Run `goc upgrade` to re-sync templates.", file=sys.stderr)
         sys.exit(1)
 
     for agent in agents:
@@ -754,42 +757,36 @@ def install(
     source = ""
     if not explicit_agents:
         source = " (auto-detected)" if detected_agents else " (default)"
-    click.echo(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
-    click.echo(
+    print(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
+    print(
         'Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. '
         'Or "create a card for X" if you already know the first change you want to make.'
     )
 
     if "claude" in agents and "claude" not in local_skills_agents:
         if _detect_claude_code():
-            click.echo(
+            print(
                 "GoC plugin: to enable skills and hooks, ask the user to confirm then run:\n"
                 + _PLUGIN_INSTALL_CMDS
             )
         else:
-            click.echo(
+            print(
                 "Next steps for Claude Code users — install the GoC plugin (one-time per machine):\n"
                 + _PLUGIN_INSTALL_CMDS
             )
 
-    click.echo(
+    print(
         "Engine/debug: `goc` shows the queue; `goc validate` checks cards. "
         "Run `goc upgrade` later to sync template updates."
     )
 
 
-@click.command()
-@click.option("--dry-run", is_flag=True, help="Print planned writes; do not touch the filesystem.")
-@click.option("--agents", "agent_specs", multiple=True, help=UPGRADE_AGENTS_HELP)
-@click.option("--claude", "claude_flag", is_flag=True, help="Shortcut for --agents claude.")
-@click.option("--codex", "codex_flag", is_flag=True, help="Shortcut for --agents codex.")
-@click.option("--keep-local-skills", "keep_local_skills", is_flag=True, help=KEEP_LOCAL_SKILLS_HELP)
 def upgrade(
-    dry_run: bool,
-    agent_specs: tuple[str, ...],
-    claude_flag: bool,
-    codex_flag: bool,
-    keep_local_skills: bool,
+    dry_run: bool = False,
+    agent_specs: tuple[str, ...] = (),
+    claude_flag: bool = False,
+    codex_flag: bool = False,
+    keep_local_skills: bool = False,
 ) -> None:
     """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
 
@@ -813,7 +810,7 @@ def upgrade(
 
     deck_dir = _find_installed_deck_dir(target)
     if deck_dir is None:
-        click.echo("no existing install detected — run `goc install` first.", err=True)
+        print("no existing install detected — run `goc install` first.", file=sys.stderr)
         sys.exit(1)
     existing = _detect_existing(deck_dir)
 
@@ -839,12 +836,12 @@ def upgrade(
     pending_migration = do_migrate_claude and not dry_run
 
     if existing == __version__ and not dry_run and not agents_explicit and not pending_migration and not keep_local_skills:
-        click.echo(f"already at goc {__version__} — nothing to do.")
+        print(f"already at goc {__version__} — nothing to do.")
         return
 
     if dry_run:
         migration_note = " (will migrate vendored .claude/skills/ → plugin path)" if do_migrate_claude else ""
-        click.echo(f"goc upgrade would sync {existing} → {__version__}{migration_note}")
+        print(f"goc upgrade would sync {existing} → {__version__}{migration_note}")
         _print_plan(
             "upgrade",
             target,
@@ -855,12 +852,12 @@ def upgrade(
 
     # Interactive migration prompt for Claude vendored → plugin path
     if do_migrate_claude:
-        click.echo(
+        print(
             "This repo has vendored GoC skills. goc upgrade now defaults to the plugin path —\n"
             "this will remove .claude/skills/, .claude/hooks/ (GoC-managed), and GoC\n"
             "entries from .claude/settings.json. Pass --keep-local-skills to skip."
         )
-        confirmed = click.confirm("Migrate to plugin path?", default=True)
+        confirmed = _confirm("Migrate to plugin path?", default=False)
         if not confirmed:
             agents_to_migrate = frozenset()
             local_skills_agents = local_skills_agents | frozenset(["claude"])
@@ -880,8 +877,8 @@ def upgrade(
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
-    click.echo(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
-    click.echo("Next: re-run goc validate to confirm cards parse against the new schema.")
+    print(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    print("Next: re-run goc validate to confirm cards parse against the new schema.")
 
 
 if __name__ == "__main__":
