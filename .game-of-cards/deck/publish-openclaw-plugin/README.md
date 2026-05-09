@@ -1,7 +1,7 @@
 ---
 title: publish-openclaw-plugin
 summary: "Publish the Game of Cards OpenClaw plugin/runtime package once `provide-openclaw-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to OpenClaw."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-06
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] Docs link users to both install paths (ClawHub primary; npm as alternative)
   - [ ] Smoke test or release-verification step covers both channels
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Publish the OpenClaw plugin
