@@ -1,7 +1,7 @@
 ---
 title: add-openclaw-install-section-to-llms-txt
 summary: "`site/llms.txt` is the file LLMs ingest to learn how to recommend GoC. Today it covers the Claude Code plugin install path and a generic `Install (other agent runtimes / CI)` section that recommends `uv tool install game-of-cards` / `pipx install game-of-cards`. There is no OpenClaw-specific install path, even though the OpenClaw plugin is a first-class delivery channel (ClawHub: `openclaw skills install game-of-cards`; npm: `game-of-cards`) that bundles the engine and only needs `python3` (3.10+) on the host. Without a dedicated section, LLMs that read llms.txt will recommend the wrong install path to OpenClaw users — telling them to `pipx install` an extra package when the plugin already vendors the engine. Add a peer-shaped `Install (OpenClaw)` section."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-09
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] No regression: the existing `## Install (Claude Code)` and `## Install (other agent runtimes / CI)` sections are unchanged in content (only relative ordering shifts if needed for the new section's placement).
   - [ ] Cross-link: at least one of the GoC-on-OpenClaw entry points (e.g., `https://github.com/zauberzeug/game-of-cards#openclaw` or the published ClawHub URL once known) is referenced.
   - [ ] `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Add OpenClaw install section to llms.txt
