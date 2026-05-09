@@ -15,6 +15,9 @@ advanced_by:
   - make-kickoff-idempotent-on-restart
   - add-privacy-policy-page-for-marketplace-submission
   - lead-llms-txt-with-claude-code-plugin
+  - kickoff-crashes-when-user-declines-merge-question
+  - pattern-generalization-hook-missing-from-local-skills-install
+  - llms-txt-still-recommends-uv-tool-install-as-preferred
 tags: [story, infra, documentation]
 definition_of_done: |
   - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README)

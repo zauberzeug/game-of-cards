@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-08
 closed_at: 2026-05-08
 human_gate: none
-advances: []
+advances:
+  - derive-claude-hook-manifest-from-templates
 advanced_by:
   - extend-skill-parity-tripwire-to-claude-plugin-mirrors
 tags: [bug]

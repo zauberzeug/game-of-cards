@@ -9,6 +9,7 @@ closed_at: 2026-05-08
 human_gate: none
 advances:
   - prevent-skill-rename-from-breaking-ci-silently
+  - derive-claude-hook-manifest-from-templates
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |

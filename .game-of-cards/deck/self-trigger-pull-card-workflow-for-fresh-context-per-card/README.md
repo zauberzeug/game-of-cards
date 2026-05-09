@@ -1,13 +1,14 @@
 ---
 title: self-trigger-pull-card-workflow-for-fresh-context-per-card
-summary: Restructure pull-card.yml so each iteration is its own GitHub Actions run with a fresh context, chained via gh workflow run self-trigger.
+summary: "Restructure pull-card.yml so each iteration is its own GitHub Actions run with a fresh context, chained via gh workflow run self-trigger."
 status: done
 stage: null
 contribution: medium
 created: 2026-05-09
 closed_at: 2026-05-09
 human_gate: none
-advances: []
+advances:
+  - pull-card-self-trigger-needs-empirical-verification
 advanced_by: []
 tags: [infra, story]
 definition_of_done: |
