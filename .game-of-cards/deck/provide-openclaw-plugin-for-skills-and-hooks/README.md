@@ -12,6 +12,7 @@ advances:
   - publish-openclaw-plugin
 advanced_by:
   - bundle-goc-engine-inside-plugin-payload
+  - split-claude-specific-content-out-of-generic-kickoff-skill
 tags: [story, infra]
 definition_of_done: |
   - [x] `install-openclaw-harness` is marked superseded with a log entry pointing here

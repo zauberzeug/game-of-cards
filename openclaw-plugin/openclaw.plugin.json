@@ -1,0 +1,42 @@
+{
+  "id": "game-of-cards",
+  "name": "Game of Cards",
+  "description": "Agile work-card methodology for AI-agent collaborators. Adds a `goc` tool, three lifecycle hooks, and 14 deck skills at workspace tier.",
+  "contracts": {
+    "tools": ["goc"]
+  },
+  "skills": [
+    "skills/kickoff",
+    "skills/deck",
+    "skills/scan-deck",
+    "skills/next-card",
+    "skills/create-card",
+    "skills/advance-card",
+    "skills/finish-card",
+    "skills/decide-card",
+    "skills/pull-card",
+    "skills/refine-deck",
+    "skills/audit-deck",
+    "skills/standup",
+    "skills/retrospective",
+    "skills/card-schema"
+  ],
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "deck_path": {
+        "type": "string",
+        "description": "Override the per-workspace deck location. Defaults to <workspace>/.game-of-cards/deck/."
+      },
+      "pattern_generalization_check": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether the agent_end hook reminds the model to consider filing generalization cards after code-mutating turns."
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "claude",
+  "description": "Claude Code reference harness with native skills, prompt hook, and CLAUDE.md guidance.",
+  "skills": {
+    "target": ".claude/skills",
+    "frontmatter": "native"
+  },
+  "files": [
+    {
+      "source": "bootstrap/_goc-bootstrap.sh",
+      "target": ".claude/skills/_goc-bootstrap.sh",
+      "mode": "executable"
+    },
+    {
+      "source": "hooks/deck_prompt_router.py",
+      "target": ".claude/hooks/deck_prompt_router.py"
+    },
+    {
+      "source": "hooks/deck_session_start.py",
+      "target": ".claude/hooks/deck_session_start.py"
+    }
+  ],
+  "settings_json": ".claude/settings.json",
+  "guidance": [
+    {
+      "source": "CLAUDE_GOC.md",
+      "target": "CLAUDE.md",
+      "header": "# Claude Code Guidelines"
+    }
+  ]
+}

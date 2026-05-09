@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sync plugin payloads from goc/ and goc/templates/ to claude-plugin/.
+"""Sync plugin payloads from goc/ and goc/templates/ to claude-plugin/ and openclaw-plugin/.
 
 Run by pre-commit before every commit. When goc/ changes, this script
 regenerates the plugin payload files and stages them so they're included
@@ -25,14 +25,26 @@ ROOT = Path(__file__).resolve().parent.parent
 # excludes is a set of subpaths (relative to src) to omit from the mirror.
 # Directory pairs sync the full subtree; file pairs sync a single file.
 # Files NOT listed here (claude-plugin/hooks/hooks.json, claude-plugin/bin/,
-# claude-plugin/pyproject.toml, etc.) are plugin-specific and never touched.
+# claude-plugin/pyproject.toml, openclaw-plugin/index.ts,
+# openclaw-plugin/package.json, openclaw-plugin/skills/, etc.) are
+# plugin-specific and never touched.
 #
 # The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
 # `--keep-local-skills` (see `_is_plugin_context` in goc/install.py), so it
 # never reads `templates/skills/` or the `deck_prompt_router` /
 # `deck_session_start` hook templates. Those paths are excluded from the
 # `goc → claude-plugin/goc` mirror.
+#
+# The OpenClaw plugin (`openclaw-plugin/`) ships a TypeScript entry that
+# imports the bundled engine via `python3 -m goc.cli` with PYTHONPATH set
+# to the plugin root. It does NOT use Python hook scripts (those concepts
+# are reimplemented in TypeScript inside `openclaw-plugin/index.ts`) and
+# does NOT use the `templates/skills/` Markdown bodies (those are
+# hand-ported with invocation-neutral edits to `openclaw-plugin/skills/`).
+# So the engine mirror excludes the same paths as the Claude one, plus
+# the local-skills install paths that Claude actively refuses.
 SYNC_PAIRS: list[tuple[Path, Path, frozenset[str]]] = [
+    # --- Claude plugin payload ---
     (ROOT / "goc" / "templates" / "skills",
      ROOT / "claude-plugin" / "skills",
      frozenset()),
@@ -51,6 +63,17 @@ SYNC_PAIRS: list[tuple[Path, Path, frozenset[str]]] = [
          "templates/skills",
          "templates/hooks/deck_prompt_router.py",
          "templates/hooks/deck_session_start.py",
+     })),
+    # --- OpenClaw plugin payload ---
+    # Engine only — skills are hand-ported, hooks are TypeScript ports
+    # in openclaw-plugin/index.ts.
+    (ROOT / "goc",
+     ROOT / "openclaw-plugin" / "goc",
+     frozenset({
+         "templates/skills",
+         "templates/hooks/deck_prompt_router.py",
+         "templates/hooks/deck_session_start.py",
+         "templates/hooks/pattern_generalization_check.py",
      })),
 ]
 
