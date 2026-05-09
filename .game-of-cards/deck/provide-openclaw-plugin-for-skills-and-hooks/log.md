@@ -166,3 +166,15 @@ Notes for the human picking this up to close:
 - Both publishing items can publish from the same artifact: `npm
   publish` claims the registry name; ClawHub publication wraps it for
   the OpenClaw-native install path.
+
+## 2026-05-09 — Pulled by autonomous pull-card; gate raised back to session
+
+Autonomous `pull-card` claimed this card off the open queue, audited the remaining DoD, and parked it with `human_gate: session`. Reasoning recorded in the new `## Decision required (2026-05-09 PM — agent park)` body section.
+
+The three unchecked DoD items:
+
+- ClawHub publish — needs Rodja's ClawHub credentials.
+- npm publish (`game-of-cards`) — needs Rodja's npm credentials.
+- Smoke test in fresh repo — propagates from the parked sibling `openclaw-plugin-release-smoke-blockers-build-and-spawn-api` (gate=session, awaiting tester retest #5 on commit `a352f09`).
+
+No agent-side preparatory work remains; the plugin tree (including bundled `dist/index.js`) is shippable. Park is on multi-stakeholder alignment + blocked external evidence, not a technical decision.

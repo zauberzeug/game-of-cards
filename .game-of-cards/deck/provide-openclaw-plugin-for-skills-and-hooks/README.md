@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-05
 closed_at: null
-human_gate: none
+human_gate: session
 advances:
   - support-external-game-of-cards-state-location
   - publish-openclaw-plugin
@@ -34,6 +34,24 @@ worker: {who: "claude[bot]", where: main}
 ---
 
 # Provide an OpenClaw plugin for skills and hooks
+
+## Decision required (2026-05-09 PM — agent park)
+
+Pulled by autonomous pull-card 2026-05-09 to drain the queue. Implementation is complete (10/13 DoD checked); the three remaining DoD items are all gated on action this agent cannot perform on its own. Gate raised `none → session` until a human can either complete or delegate them.
+
+The unchecked items and what they need:
+
+1. **Plugin published on ClawHub.** Requires Rodja's ClawHub account credentials and submission flow at <https://clawhub.ai>. No agent-side preparatory work remains — the plugin tree is shippable as-is (see commit `a352f09 openclaw-plugin: bundle dist with esbuild` and the ported `dist/index.js` checked in).
+2. **Plugin published as npm package `game-of-cards`.** Requires Rodja's npm credentials. Name verified available 2026-05-09; first publish claims it. The `package.json`, `prepublishOnly` build script, and bundled `dist/` are already in place.
+3. **Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback.** This propagates up from the parked sibling `openclaw-plugin-release-smoke-blockers-build-and-spawn-api` (gate=session, awaiting tester retest #5 on commit `a352f09`). When that retest passes and that card closes, this DoD item ticks; until then there is nothing for an agent to do.
+
+**Human action menu** (any one resumes progress):
+
+- Run the publish flows (ClawHub + npm) under Rodja's credentials, then tick items 1 and 2.
+- Delegate the publish flows by lowering this card's gate to `none` with a `--decision` that authorizes another worker (e.g., a CI job with stored secrets) to publish.
+- Acknowledge that DoD item 3 is now mechanically dependent on the sibling smoke-blockers card and either (a) keep this card parked until the sibling closes, or (b) split the smoke-test DoD item out into a separate card and close this one immediately on items 1 and 2.
+
+Recommended path: defer this card until the sibling smoke-blockers retest #5 passes (likely soon — the bundle commit appears to address the residual `imported: false` failure mode), then publish in one batch and close.
 
 ## What is OpenClaw
 
