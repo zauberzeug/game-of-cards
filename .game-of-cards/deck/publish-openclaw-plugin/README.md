@@ -1,7 +1,7 @@
 ---
 title: publish-openclaw-plugin
 summary: "Publish the Game of Cards OpenClaw plugin/runtime package once `provide-openclaw-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to OpenClaw."
-status: active
+status: open
 stage: null
 contribution: medium
 created: 2026-05-06
@@ -46,3 +46,9 @@ Both channels publish from the same artifact; npm doubles as a name-claiming ste
 ## Depends on
 
 - `provide-openclaw-plugin-for-skills-and-hooks` (implementation; gate now `none`, pullable when its turn comes)
+
+## Decision required (2026-05-09)
+
+Blocked by `provide-openclaw-plugin-for-skills-and-hooks` which is parked at gate:session pending human decisions about the wrapper pattern and external publishing accounts.
+
+This card requires: (1) the parent card to land, (2) ClawHub and npm publishing credentials available to the executor, (3) human-verified smoke test. All three items require human action. Raising gate to session until the parent is resolved.
