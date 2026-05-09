@@ -1,7 +1,7 @@
 ---
 title: generate-plugin-payloads-from-templates-on-release
 summary: "Eliminate the byte-for-byte duplication between `goc/templates/` and the various agent plugin payloads (`claude-plugin/`, future `codex-plugin/`, `openclaw-plugin/`) by generating each plugin's bundle from the templates as part of the release process. Today the duplication is enforced via a CI byte-equality check, which catches drift after the fact rather than preventing it. As Codex and OpenClaw plugins land, the duplication multiplies — three plugin trees instead of one. The right fix is generation: `goc/templates/` is the source of truth; plugin payloads are build artefacts."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-07
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] Decision recorded (in this card or a child) on whether plugin directories remain checked-in (consumer install needs the bytes present in the subtree the marketplace pulls from) or move to a separate publish-only branch
   - [ ] All currently-shipping plugins (Claude today; Codex / OpenClaw when they land) consume the generator
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Generate plugin payloads from templates on release
