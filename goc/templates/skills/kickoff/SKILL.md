@@ -161,13 +161,9 @@ Summarise the three merge answers collected in Stage 3, then ask:
 > Ready to scaffold? This will create `.game-of-cards/` and the files you
 > selected above. Confirm? [yes/no]
 
-On confirmation, build the `goc install` invocation from the Stage 3 answers:
-
-- If the user said **Yes** to CLAUDE.md and AGENTS.md: `goc install` (defaults merge both)
-- If the user said **No** to CLAUDE.md only: `goc install --no-claude-md`
-- If the user said **No** to AGENTS.md only: `goc install --no-agents-md`
-- If the user said **No** to both: `goc install --no-claude-md --no-agents-md`
-- If CLAUDE.local.md was requested: create a minimal stub after `goc install` runs
+On confirmation, run plain `goc install` (no per-file flags — the install
+primitive always writes both guidance blocks; the per-file opt-out is
+applied below by stripping the block back out).
 
 > **Note for this repo (game-of-cards source tree):** Translate bare `goc`
 > commands to `uv run goc` when working in the goc package source tree itself.
@@ -179,12 +175,49 @@ project's `.claude/settings.json` automatically, and the install
 proceeds. **No restart is required.** If the grant is refused, halt
 and report; do not attempt to bypass.
 
-`goc install` writes project state and merges GoC guidance blocks into the
-requested files, but does NOT install `.claude/skills/` or `.claude/hooks/`
-— those come from the plugin.
+`goc install` writes project state and merges GoC guidance blocks into
+both `CLAUDE.md` and `AGENTS.md` (creating either file if absent), but
+does NOT install `.claude/skills/` or `.claude/hooks/` — those come from
+the plugin.
 
 After `goc install` returns, verify `.game-of-cards/deck/` exists before
 continuing.
+
+If the user said **No** to CLAUDE.md or AGENTS.md in Stage 3, strip the
+GoC block back out of that file. Run the snippet below once per declined
+file (substitute `CLAUDE.md` or `AGENTS.md` for `<file>`):
+
+```bash
+python3 - <<'PY' <file>
+import re, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+if not path.exists():
+    sys.exit(0)
+text = path.read_text()
+pattern = re.compile(r"\n*<!-- BEGIN GOC v[\d.]+ -->.*?<!-- END GOC -->\n*", re.DOTALL)
+new = pattern.sub("\n", text).strip()
+header_only = re.fullmatch(r"# (Agent Guidelines|Claude Code Guidelines)\s*", new)
+if not new or header_only:
+    path.unlink()
+else:
+    path.write_text(new + "\n")
+PY
+```
+
+The snippet is idempotent: it removes the marker-bounded GoC section,
+deletes the file when `goc install` created it from scratch (header +
+GoC block only), and otherwise preserves any pre-existing user content
+above or below the block.
+
+If CLAUDE.local.md was requested in Stage 3 and Stage 0 did not detect
+`CLAUDE_LOCAL_MD_EXISTS`, create a minimal stub:
+
+```bash
+test -f CLAUDE.local.md || cat > CLAUDE.local.md <<'EOF'
+# Local notes for Claude Code (not checked in)
+EOF
+```
 
 ---
 
