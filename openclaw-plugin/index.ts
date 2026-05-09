@@ -34,6 +34,28 @@ import { Type, type Static } from "@sinclair/typebox";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
+import { appendFileSync } from "node:fs";
+
+// TEMPORARY DEBUG INSTRUMENTATION: writes to /tmp/goc-plugin-debug.log
+// during plugin register() so we can see whether the SDK is actually
+// invoking our registration calls. Remove once retest #5 passes.
+function gocDebugLog(message: string): void {
+  try {
+    appendFileSync(
+      "/tmp/goc-plugin-debug.log",
+      `${new Date().toISOString()} ${message}\n`,
+    );
+  } catch {
+    // best-effort; if /tmp isn't writable just swallow.
+  }
+  try {
+    // also try the host's logger channel; OpenClaw may route this
+    // somewhere visible in `openclaw plugins inspect --json`.
+    process.stderr.write(`[goc-plugin-debug] ${message}\n`);
+  } catch {
+    // best-effort.
+  }
+}
 
 const COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 // PLUGIN_ROOT is the parent of the compiled dist/ — i.e., the
@@ -230,6 +252,13 @@ export default definePluginEntry({
     "Agile work-card methodology for AI-agent collaborators. Files, advances, and closes cards in `.game-of-cards/deck/` via the bundled goc engine.",
 
   register(api: any) {
+    gocDebugLog(
+      `register() entered; api type=${typeof api}; ` +
+        `api keys=[${Object.keys(api ?? {}).slice(0, 25).join(",")}]; ` +
+        `registerTool=${typeof api?.registerTool}; on=${typeof api?.on}; ` +
+        `runtime=${typeof api?.runtime}; ` +
+        `registrationMode=${api?.registrationMode}`,
+    );
     // === goc tool ===
     // Subprocess invocation routes through the sanctioned
     // api.runtime.system.runCommandWithTimeout API (per
@@ -270,26 +299,38 @@ export default definePluginEntry({
       };
     }
 
-    api.registerTool({
-      name: "goc",
-      description:
-        "Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. " +
-        "The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. " +
-        "Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
-      parameters: GocToolParams,
-      async execute(_id: any, params: GocToolInput) {
-        const cwd = params.cwd ?? process.cwd();
-        const argv = buildArgs(params);
-        const result = await runGoc(argv, cwd);
-        const text =
-          (result.stdout + (result.stderr ? `\n${result.stderr}` : "")).trim() ||
-          `goc ${params.verb} returned exit ${result.exitCode}`;
-        return {
-          content: [{ type: "text", text }],
-          isError: result.exitCode !== 0,
-        };
-      },
-    });
+    gocDebugLog("about to call api.registerTool({name:'goc',...})");
+    try {
+      const registerToolResult = api.registerTool({
+        name: "goc",
+        description:
+          "Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. " +
+          "The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. " +
+          "Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
+        parameters: GocToolParams,
+        async execute(_id: any, params: GocToolInput) {
+          const cwd = params.cwd ?? process.cwd();
+          const argv = buildArgs(params);
+          const result = await runGoc(argv, cwd);
+          const text =
+            (result.stdout + (result.stderr ? `\n${result.stderr}` : "")).trim() ||
+            `goc ${params.verb} returned exit ${result.exitCode}`;
+          return {
+            content: [{ type: "text", text }],
+            isError: result.exitCode !== 0,
+          };
+        },
+      });
+      gocDebugLog(
+        `api.registerTool returned: ${typeof registerToolResult} ${
+          registerToolResult === undefined ? "undefined" : "non-undefined"
+        }`,
+      );
+    } catch (err) {
+      gocDebugLog(
+        `api.registerTool THREW: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     // --- session_start: active-card reminder (was deck_session_start.py) ---
     // TODO(verify-context-shape): the session_start handler context is not
@@ -298,39 +339,55 @@ export default definePluginEntry({
     // (ctx.projectDir, ctx.notify) are reasonable guesses based on the
     // SDK overview — confirm against the actual SDK types when running
     // npm install openclaw.
-    api.on("session_start", async (ctx: any) => {
-      const projectDir = (ctx?.projectDir as string | undefined) ?? process.cwd();
-      const deckDir = await resolveDeckDir(projectDir);
-      const active = await findActiveCards(deckDir);
-      if (active.length > 0) {
-        const message = `[GoC] Active card(s): ${active.join(", ")} — resume or close before starting new work.`;
-        if (typeof ctx?.notify === "function") {
-          ctx.notify(message);
-        } else if (typeof ctx?.appendSystemContext === "function") {
-          ctx.appendSystemContext(message);
+    gocDebugLog("about to call api.on('session_start', ...)");
+    try {
+      api.on("session_start", async (ctx: any) => {
+        const projectDir = (ctx?.projectDir as string | undefined) ?? process.cwd();
+        const deckDir = await resolveDeckDir(projectDir);
+        const active = await findActiveCards(deckDir);
+        if (active.length > 0) {
+          const message = `[GoC] Active card(s): ${active.join(", ")} — resume or close before starting new work.`;
+          if (typeof ctx?.notify === "function") {
+            ctx.notify(message);
+          } else if (typeof ctx?.appendSystemContext === "function") {
+            ctx.appendSystemContext(message);
+          }
         }
-      }
-    });
+      });
+      gocDebugLog("api.on('session_start') returned");
+    } catch (err) {
+      gocDebugLog(
+        `api.on('session_start') THREW: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     // --- before_prompt_build: deck-first reminder (was deck_prompt_router.py) ---
     // Per https://docs.openclaw.ai/plugins/hooks.md, before_agent_run runs
     // AFTER prompt construction, so it cannot inject system context. The
     // right hook is before_prompt_build, which exposes
     // appendSystemContext / prependSystemContext / systemPrompt.
-    api.on("before_prompt_build", async (ctx: any) => {
-      const prompt = ((ctx?.userPrompt as string | undefined) ?? "").toLowerCase();
-      if (!prompt) return;
-      const hasWork = WORK_INITIATING.some((re) => re.test(prompt));
-      const hasExploration = EXPLORATION.some((re) => re.test(prompt));
-      const hasTooling = TOOLING.some((re) => re.test(prompt));
-      if ((hasExploration || hasTooling) && !hasWork) return;
-      if (!hasWork) return;
-      if (typeof ctx?.appendSystemContext === "function") {
-        ctx.appendSystemContext(DECK_REMINDER);
-      } else if (typeof ctx?.prependSystemContext === "function") {
-        ctx.prependSystemContext(DECK_REMINDER);
-      }
-    });
+    gocDebugLog("about to call api.on('before_prompt_build', ...)");
+    try {
+      api.on("before_prompt_build", async (ctx: any) => {
+        const prompt = ((ctx?.userPrompt as string | undefined) ?? "").toLowerCase();
+        if (!prompt) return;
+        const hasWork = WORK_INITIATING.some((re) => re.test(prompt));
+        const hasExploration = EXPLORATION.some((re) => re.test(prompt));
+        const hasTooling = TOOLING.some((re) => re.test(prompt));
+        if ((hasExploration || hasTooling) && !hasWork) return;
+        if (!hasWork) return;
+        if (typeof ctx?.appendSystemContext === "function") {
+          ctx.appendSystemContext(DECK_REMINDER);
+        } else if (typeof ctx?.prependSystemContext === "function") {
+          ctx.prependSystemContext(DECK_REMINDER);
+        }
+      });
+      gocDebugLog("api.on('before_prompt_build') returned");
+    } catch (err) {
+      gocDebugLog(
+        `api.on('before_prompt_build') THREW: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     // --- agent_end: pattern-generalization self-assessment ---
     // (was pattern_generalization_check.py)
@@ -338,30 +395,40 @@ export default definePluginEntry({
     //   hooks:
     //     pattern_generalization_check: false
     // Or via plugin config (see configSchema in openclaw.plugin.json).
-    api.on("agent_end", async (ctx: any) => {
-      const projectDir = (ctx?.projectDir as string | undefined) ?? process.cwd();
-      if (await isOptedOut(projectDir)) return;
-      if (ctx?.config?.pattern_generalization_check === false) return;
+    gocDebugLog("about to call api.on('agent_end', ...)");
+    try {
+      api.on("agent_end", async (ctx: any) => {
+        const projectDir = (ctx?.projectDir as string | undefined) ?? process.cwd();
+        if (await isOptedOut(projectDir)) return;
+        if (ctx?.config?.pattern_generalization_check === false) return;
 
-      // TODO(verify-context-shape): agent_end is documented as observing
-      // "final messages, success state, and run duration" but the precise
-      // shape of tool-call metadata is not on the hooks page. Try
-      // ctx.toolCalls then ctx.events.toolCalls.
-      const toolCalls: any[] = ctx?.toolCalls ?? ctx?.events?.toolCalls ?? [];
-      const mutating = toolCalls.some((tc: any) => {
-        if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;
-        if (tc?.name === "exec" || tc?.name === "Bash") {
-          const cmd = (tc?.params?.command ?? tc?.params?.cmd ?? "") as string;
-          return BASH_COMMIT_PATTERNS.some((re) => re.test(cmd));
+        // TODO(verify-context-shape): agent_end is documented as observing
+        // "final messages, success state, and run duration" but the precise
+        // shape of tool-call metadata is not on the hooks page. Try
+        // ctx.toolCalls then ctx.events.toolCalls.
+        const toolCalls: any[] = ctx?.toolCalls ?? ctx?.events?.toolCalls ?? [];
+        const mutating = toolCalls.some((tc: any) => {
+          if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;
+          if (tc?.name === "exec" || tc?.name === "Bash") {
+            const cmd = (tc?.params?.command ?? tc?.params?.cmd ?? "") as string;
+            return BASH_COMMIT_PATTERNS.some((re) => re.test(cmd));
+          }
+          return false;
+        });
+        if (!mutating) return;
+        if (typeof ctx?.notify === "function") {
+          ctx.notify(PATTERN_REMINDER);
+        } else if (typeof ctx?.appendSystemContext === "function") {
+          ctx.appendSystemContext(PATTERN_REMINDER);
         }
-        return false;
       });
-      if (!mutating) return;
-      if (typeof ctx?.notify === "function") {
-        ctx.notify(PATTERN_REMINDER);
-      } else if (typeof ctx?.appendSystemContext === "function") {
-        ctx.appendSystemContext(PATTERN_REMINDER);
-      }
-    });
+      gocDebugLog("api.on('agent_end') returned");
+    } catch (err) {
+      gocDebugLog(
+        `api.on('agent_end') THREW: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    gocDebugLog("register() returning normally");
   },
 });
