@@ -1,7 +1,7 @@
 ---
 title: session-start-hook-flags-closed-cards-as-active
 summary: "SessionStart hook (`deck_session_start.py`) flags closed cards as active because it substring-matches `status: active` against the full README body, not just frontmatter. Any card whose body discusses status semantics (code quote, code block, or prose) gets falsely reported. Replace the substring scan with a proper YAML-frontmatter parse."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-09
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] The hook's behavior matches `goc --status active` exactly on the current repo's deck (no false positives, no false negatives).
   - [ ] `uv run goc validate` passes.
   - [ ] Manual verification: `python3 .claude/hooks/deck_session_start.py` prints the same active-card list as `goc --status active` returns titles for.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # session-start-hook-flags-closed-cards-as-active
