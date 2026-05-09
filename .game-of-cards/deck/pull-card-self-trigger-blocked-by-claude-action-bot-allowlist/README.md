@@ -1,11 +1,11 @@
 ---
 title: pull-card-self-trigger-blocked-by-claude-action-bot-allowlist
 summary: "Empirical verification (`pull-card-self-trigger-needs-empirical-verification`, done 2026-05-09) confirmed that `pull-card.yml`'s `gh workflow run` self-trigger step succeeds — a new `workflow_dispatch` run is created — but the resulting iteration N+1 run fails immediately on `claude-code-action@v1`'s bot-actor allowlist check (`Workflow initiated by non-human actor: github-actions (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.`). The chain is therefore non-functional in practice; only `event: schedule` runs drain the queue. Decide between (a) adding `allowed_bots: github-actions[bot]` to the workflow's action inputs, (b) dropping the self-trigger and tightening cron, or (c) using a different trigger mechanism. The earlier resolution (`No PAT, no GitHub App`) constrains the option set."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances: []
 advanced_by:
@@ -13,8 +13,8 @@ advanced_by:
 tags: [bug, infra]
 definition_of_done: |
   - [x] Decision recorded: `allowed_bots: github-actions[bot]`, cron-only with tighter cadence, or another mechanism
-  - [ ] If `allowed_bots`: workflow updated; one iteration=N+1 run observed completing successfully (agent step runs, drains a card). Workflow update landed; pending the empirical N+1 observation from a real cron run or manual `workflow_dispatch`.
-  - [ ] If cron-only: self-trigger steps removed from `pull-card.yml`; cron schedule tightened (e.g., `*/10 * * * *` or `*/15`); MAX_ITERATIONS env var dropped — N/A; option (a) chosen.
+  - [x] If `allowed_bots`: workflow updated; one iteration=N+1 run observed completing successfully. Verified 2026-05-09 via run `25602174782` (self-triggered iter 2 by `github-actions[bot]`): `Pull one card` step conclusion=success, full run conclusion=success, `Re-trigger workflow if cards remain` also succeeded (chain extended to iter 3).
+  - [x] If cron-only: N/A — option (a) chosen, self-trigger retained.
   - [x] Parent card (`self-trigger-pull-card-workflow-for-fresh-context-per-card`) updated with the decision and final state
   - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}

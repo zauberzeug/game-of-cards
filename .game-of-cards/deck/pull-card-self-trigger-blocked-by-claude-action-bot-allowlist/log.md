@@ -9,3 +9,9 @@ Add allowed_bots: github-actions[bot] to claude-code-action step in pull-card.ym
 DoD item 1 (decision recorded) ticked. Item 2 (workflow updated AND iteration=N+1 observed completing successfully) is partially satisfied — workflow side is done, observation side waits on the next cron run or a manual `workflow_dispatch` trigger. The `if: steps.queue.outputs.count != '0'` guard on the agent step means the observation needs a non-empty pullable queue at the moment the next iteration fires; the current queue contains `provide-openclaw-plugin-for-skills-and-hooks` and `split-claude-specific-content-out-of-generic-kickoff-skill` as gate-none cards so a cron tick should drain at least one and produce the iteration-2 run we need to observe.
 
 Item 3 (cron-only path) annotated N/A. Item 4 (parent card update) handled via a log entry on `self-trigger-pull-card-workflow-for-fresh-context-per-card`. Card stays `active` until item 2's observation half lands; close from there.
+
+## 2026-05-09: closed — empirical N+1 observation landed
+
+Manual `workflow_dispatch` of `pull-card.yml` (run `25601890607`, iter 1, actor=Rodja Trappe → conclusion=success) self-triggered run `25602174782` (iter 2, actor=`github-actions[bot]`). Iter 2 completed with `conclusion=success`; the `Pull one card` step itself reported `conclusion=success` (agent step ran past the bot-actor allowlist gate that was previously failing in run `25601162153`). The `Re-trigger workflow if cards remain` step also succeeded, extending the chain to iter 3 — confirming the loop is now functional end-to-end, not just iter-2 specifically.
+
+DoD item 2's observation half ticked. Card closed. Parent card (`self-trigger-pull-card-workflow-for-fresh-context-per-card`) already has a `## Resolution (2026-05-09)` block recording the option-(a) outcome.
