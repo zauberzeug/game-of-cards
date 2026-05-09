@@ -21,10 +21,10 @@ advanced_by:
 tags: [story, infra, documentation]
 definition_of_done: |
   - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README)
-  - [ ] Decision recorded on submission channel: PR to `anthropics/claude-code-plugins` (or current canonical name) vs. form at `clau.de/plugin-directory-submission` vs. both. Capture the URL and current submission policy at decision time, since Anthropic's process may change between when the card was filed and when it's worked.
+  - [x] Decision recorded on submission channel: PR to `anthropics/claude-code-plugins` (or current canonical name) vs. form at `clau.de/plugin-directory-submission` vs. both. Capture the URL and current submission policy at decision time, since Anthropic's process may change between when the card was filed and when it's worked.
   - [ ] Fresh-machine smoke test passes: a clean environment with no prior `game-of-cards` install runs `/plugin marketplace add` (community marketplace) → `/plugin install game-of-cards@…` → prompts agent → agent creates a card. Zero global package installs required. Captured as a screen recording or written reproduction so the submission PR can link to it.
-  - [ ] Version bumped intentionally if appropriate. Pre-1.0 (`0.0.x`) is acceptable for community marketplace; document the choice. If 1.0.0 is the chosen stake-in-the-ground, bump pyproject.toml + plugin.json + marketplace.json in lockstep (the existing CI tripwire enforces this).
-  - [ ] Submission opened (PR or form). Card transitions to `active` at this point; the worker field captures the URL of the submission.
+  - [x] Version bumped intentionally if appropriate. Pre-1.0 (`0.0.x`) is acceptable for community marketplace; document the choice. If 1.0.0 is the chosen stake-in-the-ground, bump pyproject.toml + plugin.json + marketplace.json in lockstep (the existing CI tripwire enforces this).
+  - [x] Submission opened (PR or form). Card transitions to `active` at this point; the worker field captures the URL of the submission.
   - [ ] Submission accepted / merged. Card transitions to `done`.
   - [ ] Post-merge documentation updated: README install path, `llms.txt`, `CLAUDE_GOC.md` template, and homepage all mention the community marketplace as the canonical install path. The existing zauberzeug-claude private marketplace and direct-install fallback remain documented as alternatives.
   - [ ] `uv run goc validate` passes
