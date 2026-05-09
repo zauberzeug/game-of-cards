@@ -17,7 +17,7 @@ definition_of_done: |
   - [ ] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09); both channels live
   - [ ] Versioning policy documented relative to the `game-of-cards` PyPI package (single source of truth — npm and ClawHub track PyPI version)
   - [ ] Release workflow or manual checklist exists for OpenClaw artifacts (covers ClawHub + npm)
-  - [ ] Published artifact installable by a fresh consumer environment with `goc` on PATH (consumer-side prerequisite is `pipx install game-of-cards`)
+  - [ ] Published artifact installable by a fresh consumer environment with `python3` + `uv` on PATH (no `pipx` step required; the plugin vendors the goc engine and uses a `bin/goc` wrapper, parallel to the Claude plugin)
   - [ ] Docs link users to both install paths (ClawHub primary; npm as alternative)
   - [ ] Smoke test or release-verification step covers both channels
   - [ ] `uv run goc validate` passes

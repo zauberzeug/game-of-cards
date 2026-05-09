@@ -10,19 +10,22 @@ human_gate: none
 advances:
   - support-external-game-of-cards-state-location
   - publish-openclaw-plugin
-advanced_by: []
+advanced_by:
+  - bundle-goc-engine-inside-plugin-payload
 tags: [story, infra]
 definition_of_done: |
   - [x] `install-openclaw-harness` is marked superseded with a log entry pointing here
   - [x] OpenClaw plugin/runtime extension format confirmed from upstream docs (`SKILL.md` directories with YAML frontmatter; five-tier precedence; ClawHub at <https://clawhub.ai>; consumer install verb `openclaw skills install`) — see "## What is OpenClaw" body section
   - [ ] Plugin supplies GoC skills as `SKILL.md` directories at the **workspace** precedence tier
-  - [ ] Plugin shells out to host-installed `goc` CLI; consumer-side prerequisite is `pipx install game-of-cards` (no Python runtime vendored in the npm package)
+  - [ ] Plugin vendors the goc engine inside the npm payload (parallel to `claude-plugin/goc/`) with a `bin/goc` wrapper that invokes `uv run --project ${OPENCLAW_PLUGIN_ROOT}` — symmetric to the Claude plugin pattern from `bundle-goc-engine-inside-plugin-payload`
+  - [ ] Consumer-side prerequisite is `python3` + `uv` on PATH (matches Claude plugin); no separate `pipx install game-of-cards` step required
+  - [ ] OpenClaw plugin-bin PATH integration verified from upstream docs/source: confirm whether OpenClaw auto-prepends a plugin's `bin/` to skill-execution PATH (parallel to Claude Code), or whether a substitute resolution path (post-install symlink, absolute-path invocation in skills, etc.) is needed; outcome recorded in this card's log
   - [ ] Plugin delegates durable state to `.game-of-cards` and the `goc` CLI
   - [ ] OpenClaw hook/event surface investigated and the SessionStart/UserPromptSubmit/Stop equivalence (or gap) documented in this card's log
   - [ ] Plugin published on ClawHub (<https://clawhub.ai>) so consumers can `openclaw skills install <id>`
   - [ ] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09; first publish claims it)
-  - [ ] Docs list OpenClaw plugin support separately from repo-local harness installation
-  - [ ] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo
+  - [ ] Docs list OpenClaw plugin support separately from repo-local harness installation; document the `python3` + `uv` prerequisite explicitly
+  - [ ] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback
   - [ ] `uv run goc validate` passes
 ---
 
@@ -51,14 +54,18 @@ The previous OpenClaw work was framed as another `goc install --agents openclaw`
 
 ## Decisions recorded
 
-Three architectural decisions resolved 2026-05-09; gate lowered from `session` to `none`.
+Three architectural decisions resolved 2026-05-09; gate lowered from `session` to `none`. The bundling decision was pivoted later the same day after re-examining prerequisites.
 
-- **Bundling**: shell out to host-installed `goc` (consumers run `pipx install game-of-cards` first). Why: smallest plugin to ship and matches the Claude plugin's pre-bundling state; vendoring a Python runtime inside an npm package is unusually complex; the friction of a one-time `pipx install` is acceptable "for now" and the decision is revisitable if it proves too high. The Claude plugin's vendored-engine pattern (`bundle-goc-engine-inside-plugin-payload`) was deliberately not adopted here — different host, different tradeoffs. The `advanced_by` edge to that card was removed accordingly.
+- **Bundling** (pivoted 2026-05-09): vendor the goc engine inside the npm payload, **symmetric to the Claude plugin** (`bundle-goc-engine-inside-plugin-payload`). The plugin ships `goc/` source plus a `bin/goc` shell wrapper that resolves the package via `uv run --project ${OPENCLAW_PLUGIN_ROOT}`. Consumer-side prerequisite is `python3` + `uv` (same as the Claude plugin), not `pipx`.
+  - Why pivoted: the original "shell out + `pipx install game-of-cards`" decision underestimated how rare `pipx` is on developer machines in 2026 relative to `uv`. If the user already needs a Python toolchain we don't ship, requiring `uv` (consistent with Claude) is lower friction than requiring `pipx` (a different less-fashionable tool). Symmetric architecture also simplifies the future `generate-plugin-payloads-from-templates-on-release` work — one templated emission instead of two divergent shapes.
+  - The `advanced_by: bundle-goc-engine-inside-plugin-payload` edge was removed under the original decision, then **restored** under the pivot. The Claude plugin's vendored-engine + `bin/goc` wrapper is now the direct reference shape, not a contrast.
+  - **Critical assumption flagged for verification during implementation**: OpenClaw must auto-prepend a plugin's `bin/` to the skill-execution PATH the way Claude Code does, OR provide an alternative path-resolution mechanism. If neither is available, the fallback is to invoke `goc` via an absolute path discovered at runtime in each `SKILL.md`. The DoD now contains an explicit research item to land this answer.
 - **Skill tier**: `workspace`. Why: GoC is inherently per-repo (each repo has its own `.game-of-cards/deck`), so workspace-scoped skills match the model. `bundled` would imply universal skills with no specific deck to operate against; `managed/local` is closer but workspace is the cleanest semantic match for "skills that come alive when you `cd` into a GoC repo."
 - **Distribution**: publish on ClawHub **and** npm. Why: ClawHub is the OpenClaw-native install path; npm both serves as an alternative install path for non-ClawHub consumers and claims the `game-of-cards` name on the registry (verified available 2026-05-09 — `goc` is squatted with a placeholder, but `game-of-cards` is clean for first-publish, matching the PyPI name).
 
 ## Implementation anchors (still open for the executor)
 
-- **Hook surface**: investigate OpenClaw's session/lifecycle events (`docs.openclaw.ai/concepts/session`, `docs.openclaw.ai/concepts/agent`, plus the `/new`/`/reset`/`/compact` chat commands) and determine which carry GoC's SessionStart / UserPromptSubmit / Stop semantics. If hooks don't translate, document the gap in this card's log rather than ship a half-working analogue. This is research that produces a documented finding, not a decision the human needs to weigh in on.
-- **Plugin scaffold**: a thin npm package whose `SKILL.md` files invoke `goc <verb>` directly (since `goc` is host-installed via pipx). Reference shape: the existing Claude plugin's skill bodies under `claude-plugin/skills/` — most logic stays in `goc`, the plugin is mostly format-translation glue.
-- **Smoke test target**: a fresh repo with `pipx install game-of-cards`, `npm install -g openclaw`, plugin installed via ClawHub, then exercise `goc new`/`goc done` through OpenClaw.
+- **PATH integration spike** (the highest-leverage research): read OpenClaw's plugin/skill-execution docs and source to determine whether a plugin's `bin/` is auto-added to the shell PATH when its `SKILL.md` invokes commands. Three plausible outcomes: (a) it does — implementation proceeds as a near-clone of the Claude plugin shape; (b) it doesn't, but there's an install-time PATH-shim mechanism — adopt that; (c) it doesn't and there's no equivalent — fall back to absolute-path invocations in each `SKILL.md` (uglier but functional). Record the finding in this card's log before proceeding.
+- **Hook surface**: investigate OpenClaw's session/lifecycle events (`docs.openclaw.ai/concepts/session`, `docs.openclaw.ai/concepts/agent`, plus the `/new`/`/reset`/`/compact` chat commands) and determine which carry GoC's SessionStart / UserPromptSubmit / Stop semantics. If hooks don't translate, document the gap in this card's log rather than ship a half-working analogue.
+- **Plugin scaffold**: an npm package containing `goc/` (vendored Python source) + `bin/goc` (uv-run shell wrapper) + `SKILL.md` directories. Reference shape: `claude-plugin/` (mirror layout: `claude-plugin/goc/`, `claude-plugin/bin/goc`, `claude-plugin/skills/`).
+- **Smoke test target**: a fresh repo with `python3` + `uv` + `npm install -g openclaw`, plugin installed via ClawHub, then exercise `goc new`/`goc done` through OpenClaw — no `pipx` step required.

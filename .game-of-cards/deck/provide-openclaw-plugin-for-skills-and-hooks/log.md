@@ -12,3 +12,18 @@
 - **Distribution**: ClawHub + npm. ClawHub is the OpenClaw-native install path; npm publication serves as both an alternative install channel and a name-claiming step on the registry. Name verified available 2026-05-09: `game-of-cards` is clean for first-publish on npm (matching the PyPI name); `goc` is squatted with a 0.0.0 placeholder.
 - DoD updated to reflect all three decisions: SKILL.md at workspace tier, shell-to-host `goc`, ClawHub + npm publication. The "extension format confirmed" item is checked off (resolved during grooming via upstream-docs read).
 - `human_gate: session → none`. Remaining work is research (hook-surface investigation) and implementation (plugin scaffold, smoke test, docs) — no further architectural judgment required from the human; pull-card can proceed and re-park if a genuinely ambiguous decision arises mid-build.
+
+## 2026-05-09 — Bundling decision pivoted: vendor symmetric to Claude plugin
+
+Reopened the bundling decision after Rodja flagged that the original "shell out + `pipx install game-of-cards`" path leaned on a more-fragile assumption (`pipx` available on the host) than the Claude plugin's path (`uv` available on the host). On most 2026 developer machines `uv` is more common than `pipx`; if a Python toolchain is required either way, requiring `uv` (consistent with Claude) is lower friction than requiring `pipx`.
+
+Pivot recorded:
+
+- Plugin now **vendors the goc engine** inside the npm payload, mirror of `claude-plugin/goc/` + `claude-plugin/bin/goc`. The wrapper resolves the package via `uv run --project ${OPENCLAW_PLUGIN_ROOT}`.
+- Consumer-side prerequisite changes from `python3` + `pipx` + `pipx install game-of-cards` to **just `python3` + `uv`** (matching the Claude plugin).
+- Restored the `advanced_by: bundle-goc-engine-inside-plugin-payload` edge (and the inverse edge on the bundle card). The bundle card's vendored-engine + `bin/goc` wrapper pattern is now the direct reference, not a contrast.
+- Added a new DoD item to verify the critical hidden assumption during implementation: **OpenClaw must auto-prepend a plugin's `bin/` to skill-execution PATH** (or provide an equivalent), or skill bodies will need absolute-path invocations as a fallback. This is a concrete research deliverable, not a human decision — pull-card proceeds.
+- Skill tier (`workspace`) and distribution (ClawHub + npm) decisions are unaffected by the pivot.
+- `human_gate` stays `none`. Pull-card can drain this card; the PATH-integration spike is the first sub-task.
+
+Net architectural symmetry: Claude and OpenClaw plugins now share the same vendored-engine + wrapper shape. The future `generate-plugin-payloads-from-templates-on-release` card gets one templated emission instead of two divergent shapes.
