@@ -1,7 +1,7 @@
 ---
 title: author-openclaw-kickoff-skill-for-host-specific-onboarding
 summary: "Author the OpenClaw-specific complement to the host-agnostic `kickoff` skill, parallel to the new `claude-kickoff`. The OpenClaw plugin currently ships only the generic `kickoff/` (ported from `goc/templates/skills/kickoff/`) and has no host-specific finishing-touches step — no equivalent of the Claude permission grant, plugin-update cadence note, or `CLAUDE.local.md`-style private notes file. Establish what those touches are on OpenClaw and ship them as a separate `openclaw-kickoff` skill."
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-09
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] OpenClaw plugin payload (`openclaw-plugin/skills/`) includes both `kickoff/` and `openclaw-kickoff/` after re-running the port script
   - [ ] If OpenClaw has no host-specific kickoff touches, close as superseded with a log entry explaining why no skill is needed
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Author the OpenClaw-specific kickoff complement
