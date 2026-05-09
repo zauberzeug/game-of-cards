@@ -1,7 +1,7 @@
 ---
 title: design-claim-protocol-with-branch-and-author-metadata
 summary: "Design a claim protocol for multi-human + multi-AI work that keeps the deck-on-main invariant intact. A claim must always land on main (so all participants see it). The data carrier — a `worker` frontmatter field with `who` and `where` — is being implemented separately as `add-worker-field-and-filter-to-cards`. This card now focuses on the remaining policy questions: identity model, conflict semantics on concurrent claims, and closure-on-integration enforcement (a card cannot transition to `done` until the work is integrated to main, not just locally DoD-complete)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] `Skill(pull-card)` / `goc advance --status active` extends its push step with re-fetch + retry on push conflict (per the conflict-semantics decision)
   - [ ] Audience preamble (in README, per closed `restructure-comic-as-three-panels-and-add-audience-preamble`) names this protocol as FOR multi-human teams vs. NOT-FOR solo workflows. Verify wording is in place; edit if missing.
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Design claim protocol with branch and author metadata
