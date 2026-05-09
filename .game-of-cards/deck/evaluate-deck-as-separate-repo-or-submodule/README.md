@@ -6,18 +6,17 @@ stage: null
 contribution: medium
 created: 2026-05-07
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - support-worktrees-and-multi-agent-deck-sync
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Trade-off matrix written: same-repo (today), sibling-repo, submodule, hosted SaaS — covering: setup cost per consumer, OSS commit-history cleanliness, claim/sync semantics, multi-agent coordination, offline behavior
-  - [ ] For each option, identify which persona (per `define-personas-and-use-cases-for-game-of-cards`) it serves
-  - [ ] Decision recorded: which options ship as supported configurations and which are documented as "possible but unsupported"
-  - [ ] If submodule is recommended for any persona: prototype that the worktree spike (`spike-worktree-auto-resolves-deck-from-main-repo`) generalizes — i.e. `goc` finds the deck regardless of whether it's in-tree, in a submodule, or at a sibling path
-  - [ ] If sibling-repo is recommended: document the discovery mechanism (config file at `.game-of-cards.toml` in the code repo pointing to the deck repo path or remote)
-  - [ ] Connection to SaaS path explored: hosted multi-user GoC (per `explore-saas-deck-hosting-with-optional-tracker-sync`) is the natural extension of "deck lives elsewhere"
+  - [x] Decision recorded: only same-repo ships as supported; sibling-repo, submodule, and hosted SaaS are 'possible but unsupported'. See `## Decision` section.
+  - [ ] Trade-off write-up added to README (or a docs page linked from it): same-repo (today), sibling-repo, submodule, hosted SaaS — covering setup cost, OSS commit-history cleanliness, claim/sync semantics, offline behavior. Conclude with "we ship same-repo; the others are documented unsupported configurations".
+  - [ ] For each rejected option, name which persona (per closed `define-personas-and-use-cases-for-game-of-cards`) it would have served and explain why that persona is being deferred (not abandoned).
+  - [ ] Connection to SaaS path noted: hosted multi-user GoC (per `explore-saas-deck-hosting-with-optional-tracker-sync`) is the natural extension of "deck lives elsewhere"; cross-link the two.
+  - [ ] OSS-contributor commit-history concern surfaced into a follow-up card (or explicitly rolled into `explore-saas-deck-hosting-with-optional-tracker-sync` / `support-external-game-of-cards-state-location`) so the rejected concern is not lost.
   - [ ] `uv run goc validate` passes
 ---
 
@@ -51,3 +50,9 @@ main; this card explores the option for shops that cannot.
 - `explore-saas-deck-hosting-with-optional-tracker-sync` (sibling)
 - `support-external-game-of-cards-state-location` (active) —
   related path-resolution work that may already cover part of this
+
+## Decision
+
+*Resolved 2026-05-09:* Same-repo (deck on mainline of the code repo) is the only configuration that ships as supported. Sibling-repo, submodule, and hosted SaaS are documented as 'possible but unsupported' — users can wire them up themselves, but GoC commits to the same-repo experience.
+
+*Reasoning:* Each alternative adds substantial path-resolution and discovery code for a persona (OSS contributor base) that is not yet validated. The active epic `support-external-game-of-cards-state-location` already explores deck-path indirection; better to let that mature than ship a half-supported sibling-repo discovery now. Submodule (UX friction) and hosted SaaS (own epic — `explore-saas-deck-hosting-with-optional-tracker-sync`) are deferred. Reconsider when an OSS user actually asks.

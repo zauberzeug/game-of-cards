@@ -6,18 +6,18 @@ stage: null
 contribution: medium
 created: 2026-05-07
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - support-worktrees-and-multi-agent-deck-sync
 advanced_by:
   - add-worker-field-and-filter-to-cards
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Identity model decided: is `worker.who` free-form, git-config-derived, or resolved against an explicit registry under `.game-of-cards/`? Decision recorded with rationale
-  - [ ] Conflict semantics specified: when two agents try to claim the same card concurrently, the protocol is documented (last-writer-wins on git push with explicit re-fetch + retry loop, or stronger lease-style locking, or something else)
-  - [ ] Closure-on-integration rule decided: a card cannot transition to `done` until the work has been integrated to main. Verification mechanism specified — e.g. "the closing commit must be reachable from `origin/main` HEAD at close time" — and implemented in `Skill(finish-card)` / `goc done`
-  - [ ] How `Skill(pull-card)` integrates: pull-card already commits + pushes the active transition; this card extends the policy enforced around that
-  - [ ] Documented in the audience preamble (per `restructure-comic-as-three-panels-and-add-audience-preamble`) which personas this protocol is FOR (multi-human teams) vs. NOT FOR (solo workflows). Solo workflows can populate `worker` via the child card without needing the closure-on-integration enforcement
+  - [x] Identity model decided: `worker.who` is a free-form string. Decision + rationale recorded in the `## Decision` section.
+  - [x] Conflict semantics specified: last-writer-wins on git push with re-fetch + retry. Documented in the `## Decision` section.
+  - [ ] Closure-on-integration rule implemented: opt-in via `workflow.closure_on_integration: true` in `.game-of-cards/config.yaml`; when enabled, `goc done` runs `git merge-base --is-ancestor HEAD origin/main` and refuses to close otherwise. Decision recorded; implementation pending.
+  - [ ] `Skill(pull-card)` / `goc advance --status active` extends its push step with re-fetch + retry on push conflict (per the conflict-semantics decision)
+  - [ ] Audience preamble (in README, per closed `restructure-comic-as-three-panels-and-add-audience-preamble`) names this protocol as FOR multi-human teams vs. NOT-FOR solo workflows. Verify wording is in place; edit if missing.
   - [ ] `uv run goc validate` passes
 ---
 
@@ -65,24 +65,28 @@ sits on top.
 These are now in the child card's DoD. This card no longer
 re-litigates them.
 
-## Why still session-gated
+## Implementation pointers
 
-Three policy questions remain that benefit from real-time
-discussion:
+With the policy decided (see the `## Decision` section below), the
+remaining DoD items are concrete code/doc edits:
 
-1. **Identity model.** Is `worker.who` a free-form string, the
-   git config user, or resolved against an explicit registry under
-   `.game-of-cards/`? Each has trade-offs for trust, friction, and
-   server-side-agent identification.
-2. **Concurrent-claim conflict semantics.** Two agents call
-   `goc advance --status active` on the same card seconds apart.
-   Last-writer-wins on git push is the cheapest answer; lease-style
-   locking is stronger but heavier. Pick.
-3. **Closure-on-integration enforcement.** How does `goc done`
-   verify that the work is actually merged to main, without
-   building a bespoke git introspection layer? Candidate: "the
-   closing commit must be reachable from `origin/main` HEAD at
-   close time", checked via `git merge-base --is-ancestor`.
+- **Closure-on-integration check.** Read `workflow.closure_on_integration`
+  from `.game-of-cards/config.yaml` (default `false`). When `true`, the
+  `goc done` path (`_cmd_done` in `goc/engine.py`) runs
+  `git merge-base --is-ancestor HEAD origin/main` and aborts with a
+  clear error if the closing commit is not reachable from
+  `origin/main`. Add a config-file knob to the schema documentation.
+- **Push retry on claim.** The `active`-transition push in
+  `goc advance --status active` (and the `_git_auto_commit` flow
+  that backs it) re-fetches and re-applies on push conflict, then
+  re-reads the card; if status is now `active` (someone else
+  claimed first) abort with "already claimed by &lt;worker.who&gt;"
+  and exit non-zero. Bound retries (e.g. one re-fetch).
+- **Audience preamble verification.** Open the README's audience
+  preamble — the three-panel comic + persona descriptions added by
+  `restructure-comic-as-three-panels-and-add-audience-preamble`. Confirm
+  the multi-human-team panel calls out this protocol; if not, add a
+  sentence pointing at it.
 
 ## Cross-references
 
@@ -92,3 +96,9 @@ discussion:
 - `Skill(pull-card)` flow (current claim implementation)
 - `surface-active-cards-in-board` (active) — visibility of current
   claims; benefits from the metadata
+
+## Decision
+
+*Resolved 2026-05-09:* Free-form `worker.who` (deck-as-text consistency); last-writer-wins on claim push with re-fetch+retry; closure-on-integration check is opt-in via `workflow.closure_on_integration: true` in config.yaml, implemented as `git merge-base --is-ancestor HEAD origin/main` at `goc done` time.
+
+*Reasoning:* All three favor the existing lightweight philosophy: free-form identity preserves AI/human symmetry without git-config or registry friction; last-writer-wins is bounded by network round-trip and matches the soft-lock model already in use (lease locking is YAGNI until a real race appears); opt-in integration keeps solo workflows fast-pathed while giving multi-team a single-line opt-in.

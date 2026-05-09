@@ -1,0 +1,3 @@
+## 2026-05-09: decision recorded
+
+Free-form `worker.who` (deck-as-text consistency); last-writer-wins on claim push with re-fetch+retry; closure-on-integration check is opt-in via `workflow.closure_on_integration: true` in config.yaml, implemented as `git merge-base --is-ancestor HEAD origin/main` at `goc done` time. — All three favor the existing lightweight philosophy: free-form identity preserves AI/human symmetry without git-config or registry friction; last-writer-wins is bounded by network round-trip and matches the soft-lock model already in use (lease locking is YAGNI until a real race appears); opt-in integration keeps solo workflows fast-pathed while giving multi-team a single-line opt-in.. Gate session → none.
