@@ -1,7 +1,7 @@
 ---
 title: recommend-autocommit-strongly-when-deck-is-version-controlled
 summary: "Tie the autocommit default to whether `.game-of-cards/` is under version control. If the deck is gitignored or lives outside any git repo, autocommit is OFF (nothing to commit to anyway). If the deck is tracked, autocommit is ON by default — strongly recommended but user-configurable, because forcing it would break persona #2 (solo developer, who often wants to review the agent's work before committing). When a tracked-deck user disables autocommit, surface a prominent warning so the trade-off is visible to multi-agent personas where deferred commits cause invisible-deck-state hazards."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-07
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] Interaction with `design-claim-protocol-with-branch-and-author-metadata` clarified: claim metadata commits follow the same default + warning pattern
   - [ ] Interaction with `evaluate-deck-as-separate-repo-or-submodule` clarified: deck-as-separate-repo still defaults to autocommit ON because the deck IS a tracked repo
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Recommend autocommit strongly when deck is version-controlled
