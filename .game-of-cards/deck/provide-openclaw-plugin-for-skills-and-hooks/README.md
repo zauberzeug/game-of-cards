@@ -14,6 +14,7 @@ advanced_by:
   - bundle-goc-engine-inside-plugin-payload
   - split-claude-specific-content-out-of-generic-kickoff-skill
   - openclaw-plugin-release-smoke-blockers-build-and-spawn-api
+  - author-openclaw-kickoff-skill-for-host-specific-onboarding
 tags: [story, infra]
 definition_of_done: |
   - [x] `install-openclaw-harness` is marked superseded with a log entry pointing here

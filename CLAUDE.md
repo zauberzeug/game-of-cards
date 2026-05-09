@@ -255,24 +255,36 @@ ls .game-of-cards/deck/ 2>/dev/null || echo "not initialized"
 ```
 
 If `.game-of-cards/deck/` is **missing**, call `Skill(kickoff)` before
-doing anything else. Kickoff will:
+doing anything else. Kickoff is a two-step dialog: the host-agnostic
+`kickoff` skill introduces GoC and scaffolds the deck; the
+Claude Code-specific complement `claude-kickoff` handles the permission
+grant, plugin cadence, and per-file merge prompts.
+
+`Skill(kickoff)` will:
 
 1. Introduce GoC (one-paragraph overview).
 2. Ask which persona fits (solo / team / OSS-eval / agent-runtime).
-3. Ask per-file whether to merge GoC guidance into `CLAUDE.md`, `AGENTS.md`,
-   and/or `CLAUDE.local.md` (three separate yes/no questions).
-4. Run infrastructure preflight (`goc` on PATH + `Bash(goc:*)` permission check).
-5. Run `goc install` with the selected merge flags to create `.game-of-cards/`.
+3. Ask whether to merge GoC guidance into `AGENTS.md` (host-agnostic).
+4. Run `goc install` to create `.game-of-cards/`.
+5. Hand off to `Skill(claude-kickoff)` for the Claude Code-specific
+   finishing touches.
 
-Once kickoff completes, all other skills work immediately — do not
-re-run kickoff on subsequent uses.
+`Skill(claude-kickoff)` then:
+
+1. Notes the `/plugin install` cadence (and `/plugin marketplace update`).
+2. Asks per-file whether to merge GoC guidance into `CLAUDE.md` and
+   `CLAUDE.local.md`.
+3. Persists the `Bash(goc:*)` permission grant in `.claude/settings.json`.
+
+Once both kickoffs complete, all other skills work immediately — do
+not re-run kickoff on subsequent uses.
 
 ### Skill surface (the 12 verbs as `Skill(...)`)
 
-When the plugin is installed, the 12 GoC skills are available as
+When the plugin is installed, the GoC skills are available as
 Claude Code's `Skill(...)` primitive:
 
-- **First-time setup**: `Skill(kickoff)` (onboarding dialog + scaffold `.game-of-cards/` + install `goc` CLI if missing).
+- **First-time setup**: `Skill(kickoff)` (host-agnostic onboarding dialog + scaffold `.game-of-cards/`); `Skill(claude-kickoff)` (Claude Code-specific complement: permission grant, `/plugin install` cadence, CLAUDE.md/CLAUDE.local.md merge prompts).
 - **Browse**: `Skill(scan-deck)` (triage default + filtered views + decision Q&A); `Skill(next-card)` (auto-pick highest-leverage gate=none card).
 - **File new**: `Skill(create-card)` (scaffold frontmatter + DoD).
 - **Advance**: `Skill(advance-card)` (status flip), `Skill(finish-card)` (close + DoD enforcement + commit).

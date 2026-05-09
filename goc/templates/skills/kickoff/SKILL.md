@@ -1,23 +1,20 @@
 ---
 name: kickoff
-description: Kick off GoC in a fresh repo — introduce GoC, ask which persona fits, confirm per-file AGENTS.md / CLAUDE.md / CLAUDE.local.md merges, run infrastructure preflight, then scaffold project state. AUTO-INVOKE when the user says "kickoff", "use GoC here", "set up game of cards", "initialize GoC", or when any GoC skill is first used in a repo with no `.game-of-cards/deck/` directory.
+description: Kick off GoC in a fresh repo — introduce GoC, ask which persona fits, confirm AGENTS.md merge, scaffold project state via `goc install`. AUTO-INVOKE when the user says "kickoff", "use GoC here", "set up game of cards", "initialize GoC", or when any GoC skill is first used in a repo with no `.game-of-cards/deck/` directory. Host-agnostic: per-host complements (`claude-kickoff`, future `openclaw-kickoff`) handle host-specific UX.
 ---
 
 # Kick off GoC in this repo
 
-This skill is the **project onboarding dialog**: it introduces GoC, asks a
-few focused questions, checks that the infrastructure is ready, then runs
-`goc install` with the flags that match the user's answers. It runs
-**idempotently** — every stage detects on-disk state before asking, so a
-re-run on a partially set-up repo only asks for the answers it cannot
-already derive. There is no mid-flow restart: the `goc install` step
-relies on Claude Code's interactive permission prompt when
-`Bash(goc:*)` is not pre-allowed, and any settings.json write happens
-LAST so a context-losing restart never destroys work-in-progress.
+This skill is the **host-agnostic onboarding dialog**: it introduces GoC,
+asks a few focused questions, then runs `goc install` to scaffold project
+state. It runs **idempotently** — every stage detects on-disk state before
+asking, so a re-run on a partially set-up repo only asks for the answers
+it cannot already derive.
 
-> **Updating the plugin?** Run `/plugin marketplace update zauberzeug/game-of-cards`
-> before `/plugin install` — Claude Code reuses its local marketplace clone and does
-> not refresh it automatically. Skipping this step silently installs the old bytes.
+The body covers what every host needs. Host-specific UX (permission
+prompts, plugin install cadence, private-notes file) lives in a
+complementary per-host skill that runs after this one — for example,
+`claude-kickoff` on Claude Code.
 
 ## Stage 0 — state detection sweep
 
@@ -27,14 +24,8 @@ its question(s) when the corresponding signal is already present.
 ```bash
 ls .game-of-cards/deck/ 2>/dev/null && echo "DECK_EXISTS" || echo "deck_missing"
 which goc 2>/dev/null && echo "GOC_ON_PATH" || echo "goc_missing"
-grep -l '<!-- BEGIN GOC' CLAUDE.md 2>/dev/null && echo "CLAUDE_MD_MERGED" || true
 grep -l '<!-- BEGIN GOC' AGENTS.md 2>/dev/null && echo "AGENTS_MD_MERGED" || true
-test -f CLAUDE.local.md && echo "CLAUDE_LOCAL_MD_EXISTS" || true
 ```
-
-Read the project's `.claude/settings.json` and `~/.claude/settings.json`
-with the Read tool. Note whether `"Bash(goc:*)"` appears in either
-`permissions.allow` array.
 
 Route on the results:
 
@@ -42,10 +33,9 @@ Route on the results:
   deck is live." and **stop**. Do not continue. This is the silent-exit
   branch the skill description promises.
 - **`goc_missing`** → halt at this stage. Tell the user: "`goc` CLI is
-  not installed. The plugin's bundled `goc` should resolve via
-  `${CLAUDE_PLUGIN_ROOT}/bin/goc` on `PATH`. If that's not happening,
-  install via `uv tool install game-of-cards` (or `pipx install
-  game-of-cards`) and re-run kickoff." Do not proceed without `goc`.
+  not installed. Install it (e.g. `pipx install game-of-cards`, or use
+  whatever plugin/runtime ships goc for your host) and re-run kickoff."
+  Do not proceed without `goc`.
 - **Otherwise** → continue. Hold the detected flags in mind through the
   rest of the flow.
 
@@ -53,10 +43,9 @@ Route on the results:
 
 ## Stage 1 — introduce GoC
 
-Skip this stage if **any** of these signals were detected in Stage 0:
-`CLAUDE_MD_MERGED`, `AGENTS_MD_MERGED`, `CLAUDE_LOCAL_MD_EXISTS`, or
-`Bash(goc:*)` is in either settings.json. Their presence means the user
-has engaged with kickoff before; replaying the intro is noise.
+Skip this stage if `AGENTS_MD_MERGED` was detected in Stage 0 — it means
+the user has engaged with kickoff before, and replaying the intro is
+noise.
 
 Otherwise, deliver this paragraph verbatim (no edits, no summarising):
 
@@ -78,11 +67,8 @@ responds.
 
 ## Stage 2 — persona question
 
-Skip this stage if **all three** of CLAUDE.md, AGENTS.md, and
-CLAUDE.local.md already have their final state on disk (i.e., the
-detection signals from Stage 0 already determine every Stage 3 answer).
-The persona question only drives Stage 3 defaults; if Stage 3 has
-nothing left to ask, persona is moot.
+Skip this stage if `AGENTS_MD_MERGED` was already detected (Stage 3 has
+nothing left to ask, so persona is moot).
 
 Otherwise, ask the user **one question**:
 
@@ -93,99 +79,70 @@ Otherwise, ask the user **one question**:
 > 2. **Classical team** — We have a shared repo, multiple humans, and want
 >    the deck as a shared source of truth alongside PRs and reviews.
 > 3. **OSS / library evaluator** — I'm exploring GoC before deciding whether
->    to adopt it; I'd prefer not to merge anything into AGENTS.md or CLAUDE.md
->    yet.
+>    to adopt it; I'd prefer not to merge anything into AGENTS.md yet.
 > 4. **Agent-runtime / CI** — This repo is driven primarily by AI agents;
->    I want hooks and the CLI but minimal checked-in documentation overhead.
+>    I want the CLI but minimal checked-in documentation overhead.
 
-Record the user's answer. It drives routing in Stage 3.
+Record the user's answer. It drives the AGENTS.md default in Stage 3.
 
-| Persona | Stage 3 default |
+| Persona | AGENTS.md default |
 |---|---|
-| Solo / vibe-coder | Skip CLAUDE.md merge; offer AGENTS.md only |
-| Classical team | Offer all three files; surface the external-deck-location guidance |
-| OSS / library evaluator | Default all three to **No** — user must opt in explicitly |
-| Agent-runtime / CI | Default CLAUDE.md and AGENTS.md to **No**; offer CLAUDE.local.md only |
+| Solo / vibe-coder | Offer (yes default) |
+| Classical team | Offer (yes default) — surface the external-deck-location guidance |
+| OSS / library evaluator | Default **No** — user must opt in explicitly |
+| Agent-runtime / CI | Default **No** |
 
 ---
 
-## Stage 3 — per-file merge opt-in
+## Stage 3 — AGENTS.md merge opt-in
 
-For each of the three files, skip the question if Stage 0 detected its
-final state on disk. Use the persona defaults from Stage 2 for any
-question that still needs asking.
-
-**Question A — CLAUDE.md** (skip if `CLAUDE_MD_MERGED` was detected)
-
-> Merge GoC guidance into `CLAUDE.md`? This adds a `<!-- BEGIN GOC -->` block
-> with Claude Code-specific instructions (skill surface, hook descriptions,
-> first-use setup). The block is marker-bounded and survives future `goc upgrade`
-> runs. Your existing content above and below the markers is untouched.
->
-> Add to CLAUDE.md? [yes/no]
-
-**Question B — AGENTS.md** (skip if `AGENTS_MD_MERGED` was detected)
+Skip this question if Stage 0 detected `AGENTS_MD_MERGED`. Otherwise use
+the persona default from Stage 2.
 
 > Merge GoC guidance into `AGENTS.md`? This adds a `<!-- BEGIN GOC -->` block
 > with agent-neutral instructions (deck philosophy, CLI verb table, operating
-> modes). Suitable for Codex, OpenAI Code, and any runtime that reads AGENTS.md.
+> modes). Suitable for any agent runtime that reads AGENTS.md. The block is
+> marker-bounded and survives future `goc upgrade` runs; your existing content
+> above and below the markers is untouched.
 >
 > Add to AGENTS.md? [yes/no]
 
-**Question C — CLAUDE.local.md** (skip if `CLAUDE_LOCAL_MD_EXISTS` was
-detected; otherwise prompt only if the user answered No to both A and B,
-or if persona is agent-runtime)
-
-> Add a minimal `CLAUDE.local.md` stub? This gives Claude Code a private,
-> untracked file to record project-local notes without touching checked-in
-> docs.
->
-> Create CLAUDE.local.md stub? [yes/no]
-
-If the persona is **Classical team**, add after all three questions:
+If the persona is **Classical team**, add after the question:
 
 > **Team tip:** For teams that keep the deck outside the repo (e.g., a shared
 > network drive or separate Git repo), see the card
 > `support-external-game-of-cards-state-location` — it tracks the design work
 > for configurable deck paths.
 
-Record the three answers (or, for skipped questions, record the detected
-state as the answer). Pass them to Stage 4 as flags for `goc install`.
+Record the answer (or, if the question was skipped, record the detected
+state). Pass it to Stage 4.
 
 ---
 
 ## Stage 4 — scaffold project state
 
-Summarise the three merge answers collected in Stage 3, then ask:
+Summarise the AGENTS.md answer collected in Stage 3, then ask:
 
-> Ready to scaffold? This will create `.game-of-cards/` and the files you
-> selected above. Confirm? [yes/no]
+> Ready to scaffold? This will create `.game-of-cards/` and (if you said
+> yes) merge GoC guidance into `AGENTS.md`. Confirm? [yes/no]
 
 On confirmation, run plain `goc install` (no per-file flags — the install
-primitive always writes both guidance blocks; the per-file opt-out is
-applied below by stripping the block back out).
+primitive always writes the AGENTS.md guidance block; the per-file opt-out
+is applied below by stripping the block back out).
 
 > **Note for this repo (game-of-cards source tree):** Translate bare `goc`
 > commands to `uv run goc` when working in the goc package source tree itself.
 
-Run `goc install` directly. If `Bash(goc:*)` is not pre-allowed, Claude
-Code's interactive permission prompt fires — that is expected. The user
-clicks "yes (always allow)" once, Claude Code records the grant in the
-project's `.claude/settings.json` automatically, and the install
-proceeds. **No restart is required.** If the grant is refused, halt
-and report; do not attempt to bypass.
-
-`goc install` writes project state and merges GoC guidance blocks into
-both `CLAUDE.md` and `AGENTS.md` (creating either file if absent), but
-does NOT install `.claude/skills/` or `.claude/hooks/` — those come from
-the plugin.
+`goc install` writes project state and merges the agent-neutral guidance
+block into `AGENTS.md` (creating the file if absent). Host-specific files
+like `.claude/skills/` are not written by this skill — host-specific
+complement skills handle those.
 
 After `goc install` returns, verify `.game-of-cards/deck/` exists before
 continuing.
 
-If the user said **No** to CLAUDE.md or AGENTS.md in Stage 3, strip the
-GoC block back out of that file. Run the snippet below once per declined
-file (substitute `CLAUDE.md` or `AGENTS.md` for `<file>`):
+If the user said **No** to AGENTS.md in Stage 3, strip the GoC block back
+out of the file:
 
 ```bash
 python3 - <<'PY' <file>
@@ -208,53 +165,29 @@ PY
 The snippet is idempotent: it removes the marker-bounded GoC section,
 deletes the file when `goc install` created it from scratch (header +
 GoC block only), and otherwise preserves any pre-existing user content
-above or below the block.
-
-If CLAUDE.local.md was requested in Stage 3 and Stage 0 did not detect
-`CLAUDE_LOCAL_MD_EXISTS`, create a minimal stub:
-
-```bash
-test -f CLAUDE.local.md || cat > CLAUDE.local.md <<'EOF'
-# Local notes for Claude Code (not checked in)
-EOF
-```
+above or below the block. The same snippet is reused by host-specific
+complement skills (e.g. `claude-kickoff`) to strip declined host-specific
+guidance files.
 
 ---
 
-## Stage 5 — persist permission for future sessions
-
-If Stage 0 detected `Bash(goc:*)` already in either settings.json (or
-the interactive grant in Stage 4 wrote it), this stage is a no-op.
-
-Otherwise, write the project's `.claude/settings.json` with:
-
-```json
-{
-  "permissions": {
-    "allow": ["Bash(goc:*)"]
-  }
-}
-```
-
-Merge with any existing `.claude/settings.json` content rather than
-overwriting it. After the file is written, tell the user:
-
-> `Bash(goc:*)` is now permitted for this project's future Claude Code
-> sessions. The current session continues to work without a restart.
-
-This is the LAST mutation kickoff makes. If a future enhancement ever
-needs a session restart, it must remain after this point so a context-
-losing restart never destroys work that has already been done.
-
----
-
-## Stage 6 — confirm ready and suggest next step
+## Stage 5 — confirm ready and hand off to host complement
 
 Report to the user:
 
 ```
-GoC is set up. All skills are live. What should the first card be?
+GoC is set up. The deck is live; `goc` and `goc validate` work.
 ```
 
-The deck is now live. `Skill(create-card)`, `Skill(scan-deck)`, and all
-other GoC skills work immediately — no further kickoff needed.
+If the host has its own kickoff complement (Claude Code ships
+`claude-kickoff`, OpenClaw ships its own equivalent when present), invite
+the user to run it for host-specific finishing touches (permission
+grants, agent-runtime hook registration, private notes files). Otherwise
+recommend the next step:
+
+```
+What should the first card be?
+```
+
+The deck is now live. All other GoC skills work immediately — no further
+generic kickoff needed.

@@ -14,7 +14,7 @@ it cannot already derive.
 The body covers what every host needs. Host-specific UX (permission
 prompts, plugin install cadence, private-notes file) lives in a
 complementary per-host skill that runs after this one — for example,
-`claude-kickoff` on Claude Code.
+`claude-kickoff` on the host.
 
 ## Stage 0 — state detection sweep
 
@@ -154,7 +154,7 @@ if not path.exists():
 text = path.read_text()
 pattern = re.compile(r"\n*<!-- BEGIN GOC v[\d.]+ -->.*?<!-- END GOC -->\n*", re.DOTALL)
 new = pattern.sub("\n", text).strip()
-header_only = re.fullmatch(r"# (Agent Guidelines|Claude Code Guidelines)\s*", new)
+header_only = re.fullmatch(r"# (Agent Guidelines|the host Guidelines)\s*", new)
 if not new or header_only:
     path.unlink()
 else:
@@ -179,7 +179,7 @@ Report to the user:
 GoC is set up. The deck is live; `goc` and `goc validate` work.
 ```
 
-If the host has its own kickoff complement (Claude Code ships
+If the host has its own kickoff complement (the host ships
 `claude-kickoff`, OpenClaw ships its own equivalent when present), invite
 the user to run it for host-specific finishing touches (permission
 grants, agent-runtime hook registration, private notes files). Otherwise

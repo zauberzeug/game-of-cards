@@ -503,16 +503,23 @@ def validate_skill_dir_parity() -> list[str]:
     written by an older goc version than the one currently resolving templates;
     the fix is `goc upgrade --keep-local-skills`. Extras (user-added skills) are
     allowed and not reported.
+
+    Per-agent filter: skills with another agent's prefix (e.g. `claude-*` for
+    the codex tree) are excluded — they are agent-specific complements that
+    only ship under their own harness.
     """
+    from goc.install import skill_for_agent
+
     template_skills = PACKAGE_DIR / "templates" / "skills"
     if not template_skills.exists():
         return []
-    expected = {p.name for p in template_skills.iterdir() if (p / "SKILL.md").is_file()}
+    all_template = {p.name for p in template_skills.iterdir() if (p / "SKILL.md").is_file()}
     errors: list[str] = []
-    for relative in (".claude/skills", ".codex/skills"):
+    for relative, agent in ((".claude/skills", "claude"), (".codex/skills", "codex")):
         consumer_dir = REPO_ROOT / relative
         if not consumer_dir.exists():
             continue
+        expected = {s for s in all_template if skill_for_agent(s, agent)}
         actual = {p.name for p in consumer_dir.iterdir() if (p / "SKILL.md").is_file()}
         missing = expected - actual
         if missing:

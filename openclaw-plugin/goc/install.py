@@ -457,7 +457,7 @@ def _plan_writes(
         shim = _load_agent_shim(templates, agent)
         is_local = agent in local_skills_agents
         if is_local and shim.skills:
-            for rel in _iter_skill_assets(templates / "skills"):
+            for rel in _iter_skill_assets(templates / "skills", agent):
                 writes.append(PlannedWrite(agent, "write", target / shim.skills.target / rel, "harness"))
         if is_local:
             for file in shim.files:
@@ -579,11 +579,32 @@ def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
     dst.write_text(codex_frontmatter + body)
 
 
-def _iter_skill_assets(skills_src: Path) -> list[Path]:
-    """Return bundled skill assets relative to the skill tree root."""
+def skill_for_agent(
+    skill_name: str,
+    agent: str,
+    *,
+    supported_agents: tuple[str, ...] = SUPPORTED_AGENTS,
+) -> bool:
+    """True if a skill named `skill_name` should be installed for `agent`.
+
+    Skills whose directory name starts with `<other_agent>-` are agent-specific
+    complements (e.g. `claude-kickoff` only ships under the claude harness).
+    Skills with no agent prefix are host-agnostic and apply to every agent.
+    """
+
+    for other in supported_agents:
+        if other != agent and skill_name.startswith(f"{other}-"):
+            return False
+    return True
+
+
+def _iter_skill_assets(skills_src: Path, agent: str) -> list[Path]:
+    """Return bundled skill assets relative to the skill tree root, filtered for `agent`."""
 
     paths: list[Path] = []
     for skill_dir in sorted(p for p in skills_src.iterdir() if p.is_dir()):
+        if not skill_for_agent(skill_dir.name, agent):
+            continue
         for asset in skill_dir.rglob("*"):
             if asset.is_dir() or "__pycache__" in asset.parts:
                 continue
@@ -594,27 +615,32 @@ def _iter_skill_assets(skills_src: Path) -> list[Path]:
 def _sync_skill_tree(
     templates: Path,
     skills_dst: Path,
+    agent: str,
     *,
     replace_skills: bool = False,
     codex_frontmatter: bool = False,
 ) -> None:
-    """Copy GoC skills into a runtime-specific skill root."""
+    """Copy GoC skills into a runtime-specific skill root, filtered for `agent`."""
 
     skills_src = templates / "skills"
     skills_dst.mkdir(parents=True, exist_ok=True)
+    eligible = {
+        p.name for p in skills_src.iterdir() if p.is_dir() and skill_for_agent(p.name, agent)
+    }
     if replace_skills:
-        template_names = {p.name for p in skills_src.iterdir() if p.is_dir()}
         for skill_dir in sorted(p for p in skills_dst.iterdir() if p.is_dir()):
-            if skill_dir.name not in template_names and (skill_dir / "SKILL.md").exists():
+            if skill_dir.name not in eligible and (skill_dir / "SKILL.md").exists():
                 shutil.rmtree(skill_dir)
-        for skill_dir in sorted(p for p in skills_src.iterdir() if p.is_dir()):
-            target = skills_dst / skill_dir.name
+        for name in sorted(eligible):
+            target = skills_dst / name
             if target.exists():
                 shutil.rmtree(target)
     for asset in skills_src.rglob("*"):
         if asset.is_dir() or "__pycache__" in asset.parts:
             continue
         rel = asset.relative_to(skills_src)
+        if rel.parts[0] not in eligible:
+            continue
         target = skills_dst / rel
         if codex_frontmatter and asset.name == "SKILL.md":
             _write_codex_skill(asset, target, skill_name=rel.parts[0])
@@ -684,6 +710,7 @@ def _sync_agent_harness(
             _sync_skill_tree(
                 templates,
                 target / shim.skills.target,
+                agent,
                 replace_skills=replace_skills,
                 codex_frontmatter=shim.skills.frontmatter == "codex",
             )

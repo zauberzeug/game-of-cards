@@ -30,8 +30,10 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "goc" / "templates" / "skills"
 DST_DIR = ROOT / "openclaw-plugin" / "skills"
 
-# Skills to skip (need separate authoring per `split-claude-specific-content...` card).
-SKIP = frozenset({"kickoff"})
+# Host-specific complement skills — every supported agent that GoC ships a
+# harness for. Skills with one of these prefixes are agent-specific and never
+# port to OpenClaw (they belong to the named host's plugin/install instead).
+HOST_PREFIXES = ("claude-", "codex-")
 
 # Order matters: more specific patterns first.
 SUBSTITUTIONS: list[tuple[re.Pattern[str], str]] = [
@@ -137,7 +139,7 @@ def main() -> int:
     for skill_dir in sorted(SRC_DIR.iterdir()):
         if not skill_dir.is_dir():
             continue
-        if skill_dir.name in SKIP:
+        if any(skill_dir.name.startswith(prefix) for prefix in HOST_PREFIXES):
             skipped.append(skill_dir.name)
             continue
         src = skill_dir / "SKILL.md"
@@ -149,7 +151,7 @@ def main() -> int:
 
     print(f"ported {ported} skills to {DST_DIR.relative_to(ROOT)}")
     if skipped:
-        print(f"skipped (Claude-specific, see split-claude-... card): {', '.join(skipped)}")
+        print(f"skipped (host-specific complements): {', '.join(skipped)}")
     return 0
 
 
