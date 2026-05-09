@@ -6,10 +6,10 @@ stage: null
 contribution: high
 created: 2026-05-07
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
-  - support-multi-branch-and-multi-user-deck-workflows
+  - support-worktrees-and-multi-agent-deck-sync
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
@@ -60,3 +60,9 @@ Open questions for the design session:
 - Existing CI byte-check in `.github/workflows/ci.yml`
 - `claude-plugin/` (current Claude payload)
 - `goc/templates/` (current source of truth)
+
+## Decision
+
+*Resolved 2026-05-09:* Lower gate to none. The implementing agent should empirically resolve Q2 (does Claude Code's marketplace install require plugin subtree to live in the same git ref as templates? — yes today, but verifiable) and Q3 (smoke-test plugin auto-bootstrap interaction). For Q1, default proposal: pre-commit hook regenerates plugin payloads from goc/templates/ and commits them, so consumer install bytes stay in same git ref while removing the manual edit-both-copies burden. Push back if this default is wrong.
+
+*Reasoning:* Q2 and Q3 are testable by an agent, not session-only. Q1 has a reasonable default that preserves the marketplace install path. Original session gate reflected my uncertainty at filing time, not a real human-only question — agent should research and propose, human only intervenes if the proposal is wrong.
