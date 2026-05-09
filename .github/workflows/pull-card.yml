@@ -1,7 +1,9 @@
 # Drain the Game of Cards autonomous queue from GitHub Actions.
 #
-# Each run pulls cards repeatedly until no `human_gate: none` open
-# cards remain (or the agent can no longer make progress).
+# Each workflow run pulls exactly one card. If cards remain after the
+# pull, the workflow self-triggers a follow-up run (clean process,
+# fresh context) until either the queue empties or MAX_ITERATIONS is
+# reached. Cron picks up next tick if the cap is hit with cards left.
 #
 # Required repository secret:
 #   CLAUDE_CODE_OAUTH_TOKEN  (provisioned by the Claude GitHub App)
@@ -13,22 +15,33 @@ on:
     # Drain the autonomous queue once an hour.
     - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      iteration:
+        description: 'Iteration counter (set automatically by self-triggered runs; defaults to 1 for cron and manual dispatch).'
+        required: false
+        default: '1'
 
 permissions:
   contents: write
   id-token: write
   pull-requests: write
   issues: write
+  actions: write          # required for `gh workflow run` to self-trigger
 
 concurrency:
+  # All runs on this ref serialize. Self-triggered follow-ups queue
+  # behind the current run rather than running in parallel.
   group: pull-card-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  MAX_ITERATIONS: '8'
+
 jobs:
   pull-card:
-    name: Drain pull-card queue
+    name: Pull one card (iteration ${{ github.event.inputs.iteration || '1' }})
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -51,10 +64,10 @@ jobs:
           echo "count=$count" >> "$GITHUB_OUTPUT"
           echo "Pullable cards (status=open, human_gate=none): $count"
           if [ "$count" -eq 0 ]; then
-            echo "::notice::Queue is empty — skipping the LLM agent step to save tokens."
+            echo "::notice::Queue is empty — skipping the LLM agent step."
           fi
 
-      - name: Drain GoC queue
+      - name: Pull one card
         if: steps.queue.outputs.count != '0'
         uses: anthropics/claude-code-action@v1
         with:
@@ -62,17 +75,9 @@ jobs:
           github_token: ${{ github.token }}
           show_full_output: true
           prompt: |
-            Drain the autonomous queue in this repository.
-
-            Run Skill(pull-card). When it returns, re-check the queue:
-
-                uv run goc --status open --human-gate none --json | jq 'length'
-
-            If the count is non-zero, run Skill(pull-card) again. Repeat
-            until the count is zero, or until you can no longer make
-            progress on any remaining card (e.g. every remaining card
-            raised its own gate to `decision`/`session`, a fix failed
-            verification, or pre-commit refuses).
+            Run Skill(pull-card) exactly once in this repository, then
+            exit. Do NOT loop — the workflow harness re-triggers itself
+            for the next card so each pull gets a fresh context.
 
             This repository is the source tree for the `goc` package.
             Translate every bare `goc ...` command in skill guidance to
@@ -83,9 +88,34 @@ jobs:
             naturally.
 
             Follow CLAUDE.md and AGENTS.md. Commit and push the files
-            for each card as you complete or park it; do not batch
-            commits across cards.
+            for the card you close or park before exiting.
           claude_args: |
-            --max-turns 500
+            --max-turns 120
             --permission-mode bypassPermissions
             --model claude-opus-4-7
+
+      - name: Re-check queue
+        id: post
+        run: |
+          count="$(uv run goc --status open --human-gate none --json | jq 'length')"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Remaining pullable cards: $count"
+
+      - name: Re-trigger workflow if cards remain
+        if: |
+          steps.post.outputs.count != '0' &&
+          fromJSON(github.event.inputs.iteration || '1') < fromJSON(env.MAX_ITERATIONS)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ITER: ${{ github.event.inputs.iteration || '1' }}
+        run: |
+          next=$((ITER + 1))
+          echo "Re-triggering pull-card.yml (iteration $next of $MAX_ITERATIONS)"
+          gh workflow run pull-card.yml -f iteration="$next"
+
+      - name: Note when iteration cap is hit with cards remaining
+        if: |
+          steps.post.outputs.count != '0' &&
+          fromJSON(github.event.inputs.iteration || '1') >= fromJSON(env.MAX_ITERATIONS)
+        run: |
+          echo "::notice::Reached MAX_ITERATIONS=$MAX_ITERATIONS with ${{ steps.post.outputs.count }} cards still pullable. Cron will resume next tick."

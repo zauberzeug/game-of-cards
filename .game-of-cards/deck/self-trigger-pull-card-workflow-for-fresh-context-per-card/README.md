@@ -1,23 +1,23 @@
 ---
 title: self-trigger-pull-card-workflow-for-fresh-context-per-card
 summary: Restructure pull-card.yml so each iteration is its own GitHub Actions run with a fresh context, chained via gh workflow run self-trigger.
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, story]
 definition_of_done: |
-  - [ ] `pull-card.yml` invokes `claude-code-action@v1` exactly once per workflow run (no in-prompt loop).
-  - [ ] After the action step, the workflow re-checks the queue and self-triggers via `gh workflow run pull-card.yml -f iteration=<n+1>` if cards remain and `iteration < MAX_ITERATIONS`.
-  - [ ] `MAX_ITERATIONS=8` env var caps the chain length per cron tick.
-  - [ ] `permissions.actions: write` added so the default `GITHUB_TOKEN` can dispatch the next run.
-  - [ ] `--max-turns` per iteration set to 120 (down from 500 for the whole drain — still generous for one card).
-  - [ ] `concurrency.group + cancel-in-progress: false` retained so chains serialize and parallel cron firings queue safely.
-  - [ ] Workflow prompt rewritten: the action runs `Skill(pull-card)` exactly once and exits; the harness handles iteration.
+  - [x] `pull-card.yml` invokes `claude-code-action@v1` exactly once per workflow run (no in-prompt loop).
+  - [x] After the action step, the workflow re-checks the queue and self-triggers via `gh workflow run pull-card.yml -f iteration=<n+1>` if cards remain and `iteration < MAX_ITERATIONS`.
+  - [x] `MAX_ITERATIONS=8` env var caps the chain length per cron tick.
+  - [x] `permissions.actions: write` added so the default `GITHUB_TOKEN` can dispatch the next run.
+  - [x] `--max-turns` per iteration set to 120 (down from 500 for the whole drain — still generous for one card).
+  - [x] `concurrency.group + cancel-in-progress: false` retained so chains serialize and parallel cron firings queue safely.
+  - [x] Workflow prompt rewritten: the action runs `Skill(pull-card)` exactly once and exits; the harness handles iteration.
 worker: {who: Rodja Trappe, where: main}
 ---
 
