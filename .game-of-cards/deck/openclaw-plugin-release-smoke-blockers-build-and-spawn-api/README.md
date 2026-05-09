@@ -1,7 +1,7 @@
 ---
 title: openclaw-plugin-release-smoke-blockers-build-and-spawn-api
 summary: "Two release-blocking defects surfaced by a 2026-05-09 PM tester smoke run on the OpenClaw plugin: (a) plugin ships only `index.ts`, not compiled `dist/index.js`, so the runtime never executes `register(api)` and the `goc` tool never registers (visible as `contracts.tools: ['goc']` but `toolNames: []` in `openclaw plugins inspect`); (b) plugin imports `node:child_process` for `spawn`, which OpenClaw's safe-install policy blocks (currently only installs with `--dangerously-force-unsafe-install`). Replace with `api.runtime.system.runCommandWithTimeout` (the sanctioned subprocess API per docs)."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-09
