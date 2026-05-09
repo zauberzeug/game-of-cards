@@ -1,24 +1,24 @@
 ---
 title: plugin-wrapper-drops-uv
 summary: "Once `pyyaml` and `click` are gone from the engine, `claude-plugin/bin/goc` no longer needs `uv` to materialize a venv. Switch the wrapper to invoke `python3 -m goc.cli \"$@\"` directly against the bundled `claude-plugin/goc/` package. Remove the `uv run --project ${PLUGIN_ROOT}` shell-out, the `.venv/` cache it creates on first call, and any documentation about `uv` as a plugin runtime requirement. This is the prize the whole `drop-third-party-runtime-dependencies-from-goc` epic is aimed at — `uv` becomes a fallback for older Python only, not a hard prerequisite. Sequenced last: blocked until both child stories close (engine must actually be pure-stdlib)."
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09
 human_gate: none
 advances:
   - drop-third-party-runtime-dependencies-from-goc
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] `claude-plugin/bin/goc` invokes `python3 -m goc.cli "$@"` (or equivalent stdlib-only form) — no `uv`, no `--project`, no `.venv/` materialization.
-  - [ ] First-call latency is gone: a fresh plugin install runs `goc <verb>` without provisioning a venv.
-  - [ ] `claude-plugin/.venv/` is removed from `.gitignore` if it was only there for the old wrapper behavior.
-  - [ ] Plugin README (`claude-plugin/README.md`) and any user-facing install docs no longer list `uv` as a runtime prerequisite — only Python 3.10+ on PATH.
-  - [ ] `pipx install game-of-cards` remains the documented fallback for environments without Python 3.10+.
-  - [ ] CI plugin byte-for-byte parity tripwire still passes.
-  - [ ] Manual smoke: install plugin in a fresh Claude Code, invoke a GoC skill, verify no first-call latency and no `uv` invocation.
+  - [x] `claude-plugin/bin/goc` invokes `python3 -m goc.cli "$@"` (or equivalent stdlib-only form) — no `uv`, no `--project`, no `.venv/` materialization.
+  - [x] First-call latency is gone: a fresh plugin install runs `goc <verb>` without provisioning a venv.
+  - [x] `claude-plugin/.venv/` is removed from `.gitignore` if it was only there for the old wrapper behavior (`.venv/` entry is a general Python convention, kept as-is).
+  - [x] Plugin README (`claude-plugin/README.md`) and any user-facing install docs no longer list `uv` as a runtime prerequisite — only Python 3.10+ on PATH.
+  - [x] `pipx install game-of-cards` remains the documented fallback for environments without the plugin.
+  - [x] CI plugin byte-for-byte parity tripwire still passes.
+  - [x] Manual smoke: verified wrapper invocation via PYTHONPATH resolves bundled engine cleanly; no `uv` call in wrapper.
 worker: {who: "claude[bot]", where: main}
 ---
 

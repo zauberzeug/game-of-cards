@@ -106,22 +106,20 @@ files from the source-of-truth on every commit and stages the changes
 automatically. CI runs `python scripts/sync_plugin_assets.py --check`
 and fails the build on any drift. Plugin-specific files that are NOT
 auto-synced: `claude-plugin/hooks/hooks.json`, `claude-plugin/bin/goc`,
-`claude-plugin/pyproject.toml`, `claude-plugin/uv.lock`,
 `claude-plugin/settings.json`, `claude-plugin/README.md`.
 
-### Plugin runs goc from a vendored engine — `uv` is the only host prerequisite
+### Plugin runs goc from a vendored engine — Python 3.10+ is the only host prerequisite
 
-`claude-plugin/bin/goc` is a shell wrapper that resolves the bundled
-package via `uv run --project ${PLUGIN_ROOT}`. Claude Code auto-prepends
-the plugin's `bin/` directory to the Bash tool's PATH while the plugin
-is enabled, so skill bodies keep calling plain `goc <verb>` and the
-wrapper transparently runs the vendored engine. uv builds an isolated
-venv at `claude-plugin/.venv/` (gitignored) on first call and caches it
-afterward.
+`claude-plugin/bin/goc` is a shell wrapper that invokes the bundled engine
+via `python3 -m goc.cli` with `PYTHONPATH` pointing at the plugin root.
+Claude Code auto-prepends the plugin's `bin/` directory to the Bash tool's
+PATH while the plugin is enabled, so skill bodies keep calling plain
+`goc <verb>` and the wrapper transparently runs the vendored engine.
+No venv, no `uv`, no first-call latency.
 
-The wrapper requires `uv` on the host PATH. The traditional
-`pipx install game-of-cards` recipe remains documented as the fallback
-for environments without uv (including CI without plugin support).
+The traditional `pipx install game-of-cards` recipe remains documented as
+the fallback for environments that want a globally-installed `goc` binary
+outside of the plugin.
 
 ### Marker-bounded merge for AGENTS.md / CLAUDE.md
 

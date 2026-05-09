@@ -42,10 +42,9 @@ the `uv` tool manager that ships with most developer environments.
 /plugin install game-of-cards@game-of-cards
 ```
 
-That's the only step. The plugin is self-contained — no `pip install` or
-`pipx install` is needed. `uv` must be on your `PATH` (it usually is on
-any machine with a modern Python toolchain; install from
-[astral.sh/uv](https://docs.astral.sh/uv/) if it's missing).
+That's the only step. The plugin is self-contained — no `pip install`,
+`pipx install`, or `uv` required. The bundled engine is pure-stdlib Python
+and runs via the `python3` already on your PATH.
 
 ## Updating an existing install
 
@@ -92,7 +91,7 @@ active-card reminder at session start if work is already in flight.
 ## Requirements
 
 - Claude Code (desktop app, web app, or IDE extension)
-- `uv` on host `PATH`
+- Python 3.10+ on host `PATH` (as `python3` or `python`)
 
 ## Links
 
