@@ -52,10 +52,6 @@ on:
         description: 'Build + smoke only; do not publish'
         type: boolean
         default: false
-      diag_only:
-        description: 'Skip everything except the ClawHub OIDC handshake diagnostic (debug aid)'
-        type: boolean
-        default: false
 
 jobs:
   build:
@@ -221,54 +217,6 @@ jobs:
             || { echo "FAIL Path B: result.txt missing or wrong"; cat /tmp/smoke-B/result.txt 2>/dev/null; exit 1; }
           echo "::notice::Path B passed"
 
-  clawhub-diag:
-    # Debug-only: workflow_dispatch with diag_only=true. Runs the OIDC
-    # handshake against ClawHub from inside release.yml (so workflow_ref
-    # claim matches the trusted-publisher entry), prints the server
-    # response. Does NOT publish. Delete once auto-publish verifies.
-    name: Diagnose ClawHub OIDC (release.yml workflow_ref)
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.diag_only }}
-    environment:
-      name: clawhub
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Get OIDC token + decode claims
-        id: get_token
-        run: |
-          set +e
-          oidc_response=$(curl -sS \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=clawhub")
-          oidc_token=$(echo "$oidc_response" | node -e 'let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{ try { console.log(JSON.parse(s).value); } catch(e) { console.log("PARSE_ERROR"); } });')
-          if [ "$oidc_token" = "PARSE_ERROR" ] || [ -z "$oidc_token" ]; then
-            echo "Failed to fetch OIDC token"
-            exit 1
-          fi
-          echo "Decoded claims:"
-          echo "$oidc_token" | cut -d. -f2 | base64 -d 2>/dev/null | python3 -m json.tool 2>/dev/null || true
-          echo "::add-mask::$oidc_token"
-          echo "token=$oidc_token" >> "$GITHUB_OUTPUT"
-
-      - name: POST to ClawHub mint endpoint
-        env:
-          OIDC_TOKEN: ${{ steps.get_token.outputs.token }}
-        run: |
-          set +e
-          payload=$(jq -nc \
-            --arg pkg "game-of-cards" \
-            --arg ver "0.0.0-diag" \
-            --arg tok "$OIDC_TOKEN" \
-            '{packageName:$pkg, version:$ver, githubOidcToken:$tok}')
-          echo "Response:"
-          curl -sS -i \
-            -X POST \
-            -H "Content-Type: application/json" \
-            -d "$payload" \
-            "https://clawhub.ai/api/v1/publish/token/mint" 2>&1 | head -60
-
   publish-pypi:
     name: Publish to PyPI
     needs: [build, smoke]
@@ -334,37 +282,25 @@ jobs:
         run: npm publish --provenance --access public
 
   publish-clawhub:
-    name: Publish to ClawHub
+    # ClawHub trusted publishing requires invoking the official reusable
+    # workflow at openclaw/clawhub/.github/workflows/package-publish.yml.
+    # Inline `clawhub package publish` calls fail server-side validation
+    # with: "Only the official ClawHub reusable workflow is supported for
+    # trusted publishing".
+    #
+    # Note: reusable workflow calls cannot set `environment:` or `name:`
+    # at the job level — only `if`, `permissions`, `secrets`, `with`,
+    # `concurrency`, `strategy`, `needs`, and `uses`. The OIDC token
+    # therefore won't carry an `environment` claim, so the ClawHub
+    # trusted publisher entry must be configured WITHOUT a required
+    # environment (or with `environment: ` left blank).
     needs: [build, smoke]
-    runs-on: ubuntu-latest
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
-    environment:
-      name: clawhub
-      url: https://clawhub.ai/packages/game-of-cards
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     permissions:
-      id-token: write  # OIDC for ClawHub trusted publishing
+      id-token: write
       contents: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Install ClawHub CLI
-        run: npm install -g clawhub
-
-      - name: Build plugin dist
-        working-directory: openclaw-plugin
-        run: |
-          npm ci
-          npm run build
-
-      - name: Publish to ClawHub
-        run: |
-          version="${GITHUB_REF#refs/tags/v}"
-          clawhub package publish ./openclaw-plugin \
-            --version "$version" \
-            --changelog "Automated release for v$version" \
-            --json
+    uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3
+    with:
+      source: ./openclaw-plugin
+      owner: zauberzeug
+      dry_run: ${{ inputs.dry_run == true }}
