@@ -232,17 +232,16 @@ export default definePluginEntry({
   register(api: any) {
     // === goc tool ===
     // Subprocess invocation routes through the sanctioned
-    // api.runtime.system.runCommandWithTimeout API (per
-    // https://docs.openclaw.ai/plugins/sdk-runtime.md). Defined inside
+    // api.runtime.system.runCommandWithTimeout API. Defined inside
     // register so it captures the runtime helper in its closure;
     // OpenClaw's safe-install policy blocks plugins that directly
     // import the Node stdlib subprocess module.
     //
-    // TODO(verify-shape): the precise signature of runCommandWithTimeout
-    // is not documented at the URL above (only the call shape
-    // `api.runtime.system.runCommandWithTimeout(cmd, args, opts)` is
-    // shown). The result is assumed to expose `exitCode`, `stdout`, and
-    // `stderr` fields; smoke testing will confirm or correct.
+    // SDK contract (verified against openclaw/dist/exec-Kfr6njO_.js):
+    //   - signature: runCommandWithTimeout(argv, optionsOrTimeout) at :165
+    //     (single argv array; argv[0] is the binary, rest are args)
+    //   - result schema: { code, signal, stdout, stderr, ... } at :306
+    //     (exit code field is `code`, not `exitCode`)
     async function runGoc(args: string[], cwd: string): Promise<{
       exitCode: number;
       stdout: string;
@@ -255,16 +254,14 @@ export default definePluginEntry({
           : VENDORED_GOC_PATH,
       };
       const result = await api.runtime.system.runCommandWithTimeout(
-        "python3",
-        ["-m", "goc.cli", ...args],
-        {
-          cwd,
-          env,
-          timeoutMs: 60_000,
-        },
+        ["python3", "-m", "goc.cli", ...args],
+        { cwd, env, timeoutMs: 60_000 },
       );
       return {
-        exitCode: (result?.exitCode as number | undefined) ?? 0,
+        exitCode:
+          (result?.code as number | undefined) ??
+          (result?.exitCode as number | undefined) ??
+          0,
         stdout: (result?.stdout as string | undefined) ?? "",
         stderr: (result?.stderr as string | undefined) ?? "",
       };

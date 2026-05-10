@@ -2544,16 +2544,11 @@ var index_default = definePluginEntry({
         PYTHONPATH: process.env.PYTHONPATH ? `${VENDORED_GOC_PATH}:${process.env.PYTHONPATH}` : VENDORED_GOC_PATH
       };
       const result = await api.runtime.system.runCommandWithTimeout(
-        "python3",
-        ["-m", "goc.cli", ...args],
-        {
-          cwd,
-          env,
-          timeoutMs: 6e4
-        }
+        ["python3", "-m", "goc.cli", ...args],
+        { cwd, env, timeoutMs: 6e4 }
       );
       return {
-        exitCode: result?.exitCode ?? 0,
+        exitCode: result?.code ?? result?.exitCode ?? 0,
         stdout: result?.stdout ?? "",
         stderr: result?.stderr ?? ""
       };

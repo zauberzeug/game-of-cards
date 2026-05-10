@@ -1,24 +1,24 @@
 ---
 title: openclaw-plugin-goc-tool-fails-at-runtime-with-spawn-argv-error
 summary: "OpenClaw plugin v0.0.7 ships a `goc` tool whose `runCommandWithTimeout` invocation uses an outdated 3-arg signature `(cmd, argv, opts)` instead of the unified 2-arg `(argv, opts)` the SDK has used since at least 2026.5.7. Calling the tool fails at runtime with `The 'args' argument must be of type object. Received type string ('ython3')`. A second latent defect: the result-field reader uses `result.exitCode` but OpenClaw exposes the field as `result.code`, so any non-zero exit silently coerces to 0 (success). Both defects survived release smoke because retests #1–#5 only inspected registration shape via `openclaw plugins inspect --runtime --json`, never invoking the tool."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: none
 advances:
   - provide-openclaw-plugin-for-skills-and-hooks
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `openclaw-plugin/index.ts` `runGoc()` calls `api.runtime.system.runCommandWithTimeout(["python3", "-m", "goc.cli", ...args], { cwd, env, timeoutMs: 60_000 })` — single argv array as first positional arg, options as second arg. Old `(cmd, argv, opts)` 3-arg form removed.
-  - [ ] `openclaw-plugin/index.ts` `runGoc()` reads exit code as `result.code ?? result.exitCode ?? 0` so the real field name (`code`, per `node_modules/openclaw/dist/exec-Kfr6njO_.js:306`) is preferred and `exitCode` remains a defensive fallback for forward compatibility.
-  - [ ] The `// TODO(verify-shape)` comment block above `runGoc()` is replaced with a one-line note pointing at the verified contract location (`exec-Kfr6njO_.js:165` for the signature, `:306` for the result schema).
-  - [ ] `cd openclaw-plugin && npm install && npm run build` regenerates `dist/index.js` with the fix; the bundle is committed.
-  - [ ] `python3 scripts/sync_plugin_assets.py` is a no-op (this fix only edits source files that are not auto-mirrored); `python3 scripts/sync_plugin_assets.py --check` passes.
-  - [ ] `uv run goc validate` passes.
-  - [ ] Card body documents the why-it-survived-smoke gap (registration introspection vs. invocation execution) so future smoke tests cover both code paths.
+  - [x] `openclaw-plugin/index.ts` `runGoc()` calls `api.runtime.system.runCommandWithTimeout(["python3", "-m", "goc.cli", ...args], { cwd, env, timeoutMs: 60_000 })` — single argv array as first positional arg, options as second arg. Old `(cmd, argv, opts)` 3-arg form removed.
+  - [x] `openclaw-plugin/index.ts` `runGoc()` reads exit code as `result.code ?? result.exitCode ?? 0` so the real field name (`code`, per `node_modules/openclaw/dist/exec-Kfr6njO_.js:306`) is preferred and `exitCode` remains a defensive fallback for forward compatibility.
+  - [x] The `// TODO(verify-shape)` comment block above `runGoc()` is replaced with a one-line note pointing at the verified contract location (`exec-Kfr6njO_.js:165` for the signature, `:306` for the result schema).
+  - [x] `cd openclaw-plugin && npm install && npm run build` regenerates `dist/index.js` with the fix; the bundle is committed.
+  - [x] `python3 scripts/sync_plugin_assets.py` is a no-op (this fix only edits source files that are not auto-mirrored); `python3 scripts/sync_plugin_assets.py --check` passes.
+  - [x] `uv run goc validate` passes.
+  - [x] Card body documents the why-it-survived-smoke gap (registration introspection vs. invocation execution) so future smoke tests cover both code paths.
 worker: {who: Rodja Trappe, where: main}
 ---
 
