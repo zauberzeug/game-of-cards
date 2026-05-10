@@ -11,9 +11,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from goc.install import skill_for_agent  # noqa: E402
+
 SKILL_NAMES = tuple(
     sorted(p.name for p in (ROOT / "goc" / "templates" / "skills").iterdir() if (p / "SKILL.md").is_file())
 )
+CLAUDE_SHIPPED_SKILLS = tuple(name for name in SKILL_NAMES if skill_for_agent(name, "claude"))
 
 
 class ClaudeHarnessInstallTest(unittest.TestCase):
@@ -53,7 +57,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertNotIn(".claude/hooks/", result.stdout)
             self.assertNotIn("settings.json", result.stdout)
             self.assertIn("shared write  .game-of-cards/config.yaml", result.stdout)
-            self.assertIn("claude append CLAUDE.md", result.stdout)
+            self.assertIn("shared append AGENTS.md", result.stdout)
 
     def test_default_install_creates_project_state_and_guidance_but_no_harness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -65,7 +69,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn(f"goc {self._goc_version()} installed for agents: claude (default).", result.stdout)
             self.assertTrue((cwd / ".game-of-cards" / "deck" / ".goc-version").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
-            self.assertTrue((cwd / "CLAUDE.md").is_file())
+            self.assertFalse((cwd / "CLAUDE.md").is_file())
             self.assertFalse((cwd / ".claude" / "skills").exists())
             self.assertFalse((cwd / ".claude" / "hooks").exists())
             self.assertFalse((cwd / ".claude" / "settings.json").exists())
@@ -210,12 +214,10 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_prompt_router.py").is_file())
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_session_start.py").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
-            self.assertTrue((cwd / "CLAUDE.md").is_file())
+            self.assertFalse((cwd / "CLAUDE.md").is_file())
 
-            claude_text = (cwd / "CLAUDE.md").read_text()
-            for skill_name in SKILL_NAMES:
+            for skill_name in CLAUDE_SHIPPED_SKILLS:
                 self.assertTrue((cwd / ".claude" / "skills" / skill_name / "SKILL.md").is_file())
-                self.assertIn(f"Skill({skill_name})", claude_text)
 
             self.assert_goc_ok(
                 self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
@@ -279,9 +281,10 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             # Claude: plugin path (no checked-in skills/hooks)
             self.assertFalse((cwd / ".claude" / "skills").exists())
             self.assertFalse((cwd / ".claude" / "hooks").exists())
-            # Guidance written for both
+            # Guidance written to the default briefing target only (AGENTS.md);
+            # CLAUDE.md is opt-in via --briefing-target after the briefing-target unification.
             self.assertTrue((cwd / "AGENTS.md").is_file())
-            self.assertTrue((cwd / "CLAUDE.md").is_file())
+            self.assertFalse((cwd / "CLAUDE.md").is_file())
 
     def test_mixed_dry_run_shows_codex_harness_not_claude_harness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -296,8 +299,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertNotIn(".claude/skills/", planned)
             self.assertNotIn(".claude/hooks/", planned)
             self.assertNotIn("settings.json", planned)
-            # Claude guidance still appears
-            self.assertIn("claude append CLAUDE.md", planned)
+            # Briefing block lands in the default briefing target (AGENTS.md).
+            self.assertIn("shared append AGENTS.md", planned)
 
     def test_mixed_with_local_skills_vendors_both(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -374,7 +377,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertNotIn(".claude/skills/", planned)
             self.assertNotIn(".claude/hooks/", planned)
             self.assertIn("shared write  .game-of-cards/config.yaml", planned)
-            self.assertIn("claude append CLAUDE.md", planned)
+            self.assertIn("shared append AGENTS.md", planned)
 
     # ── Manifest integrity ────────────────────────────────────────────────────
 
@@ -1166,45 +1169,20 @@ class PluginContextRefusalTest(unittest.TestCase):
 class KickoffStage4StripSnippetTest(unittest.TestCase):
     """Regression coverage for `kickoff-crashes-when-user-declines-merge-question`.
 
-    Stage 4 of the kickoff skill must scaffold cleanly when the user answered
-    "No" to either the CLAUDE.md or AGENTS.md merge question. The contract is:
+    The original bug was that the kickoff skill body told the model to pass
+    `--no-claude-md` / `--no-agents-md` flags that never existed in the
+    parser. After the briefing-target unification (`--briefing-target`),
+    install writes the briefing block to exactly one home; the per-file
+    strip snippet that used to live in Stage 4 of the kickoff skill is no
+    longer needed. The remaining contract:
 
-      1. `goc install` runs without per-file flags (the previous design used
-         `--no-claude-md` / `--no-agents-md`, which never existed in the parser).
-      2. For each declined file, the skill body documents a Python snippet that
-         strips the marker-bounded GoC block back out of the file.
-      3. The snippet deletes the file when `goc install` created it from
-         scratch (header + GoC block only) and otherwise preserves the user's
-         pre-install content.
-
-    These tests run the exact snippet text from the skill body so the test and
-    the skill body cannot drift.
+      1. `goc install` runs without per-file flags.
+      2. The kickoff skill body (and its claude-kickoff complement) must
+         not reference the two flags that never existed.
     """
 
     SKILL_PATH = ROOT / "goc" / "templates" / "skills" / "kickoff" / "SKILL.md"
     PLUGIN_SKILL_PATH = ROOT / "claude-plugin" / "skills" / "kickoff" / "SKILL.md"
-
-    def _strip_snippet(self) -> str:
-        """Extract the heredoc body of Stage 4's per-file strip command."""
-
-        text = self.SKILL_PATH.read_text()
-        marker = "python3 - <<'PY' <file>\n"
-        start = text.find(marker)
-        self.assertNotEqual(start, -1, "Stage 4 strip snippet heredoc missing from skill body")
-        body_start = start + len(marker)
-        body_end = text.find("\nPY\n", body_start)
-        self.assertNotEqual(body_end, -1, "Stage 4 strip snippet heredoc never closes")
-        return text[body_start:body_end] + "\n"
-
-    def _apply_strip(self, target_dir: Path, filename: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["python3", "-", filename],
-            cwd=target_dir,
-            input=self._strip_snippet(),
-            text=True,
-            capture_output=True,
-            check=False,
-        )
 
     def _install(self, cwd: Path) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
@@ -1235,62 +1213,6 @@ class KickoffStage4StripSnippetTest(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unrecognized arguments: --no-claude-md", result.stderr)
-
-    def test_strip_deletes_install_only_claude_md(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            cwd = Path(tmp)
-            install_result = self._install(cwd)
-            self.assertEqual(install_result.returncode, 0, msg=install_result.stderr)
-            self.assertTrue((cwd / "CLAUDE.md").is_file())
-
-            strip_result = self._apply_strip(cwd, "CLAUDE.md")
-            self.assertEqual(strip_result.returncode, 0, msg=strip_result.stderr)
-            self.assertFalse(
-                (cwd / "CLAUDE.md").exists(),
-                msg="install-only CLAUDE.md (header + GoC block only) should be removed",
-            )
-            # AGENTS.md untouched (the user only declined CLAUDE.md)
-            self.assertTrue((cwd / "AGENTS.md").is_file())
-            self.assertIn("<!-- BEGIN GOC", (cwd / "AGENTS.md").read_text())
-
-    def test_strip_deletes_install_only_agents_md(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            cwd = Path(tmp)
-            self.assertEqual(self._install(cwd).returncode, 0)
-            self.assertTrue((cwd / "AGENTS.md").is_file())
-
-            self.assertEqual(self._apply_strip(cwd, "AGENTS.md").returncode, 0)
-            self.assertFalse((cwd / "AGENTS.md").exists())
-            self.assertTrue((cwd / "CLAUDE.md").is_file())
-
-    def test_strip_preserves_preexisting_content_around_block(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            cwd = Path(tmp)
-            preexisting = "# Project Notes\n\nKeep this paragraph.\n"
-            (cwd / "CLAUDE.md").write_text(preexisting)
-            (cwd / "AGENTS.md").write_text(preexisting)
-
-            self.assertEqual(self._install(cwd).returncode, 0)
-            self.assertIn("<!-- BEGIN GOC", (cwd / "CLAUDE.md").read_text())
-            self.assertIn("<!-- BEGIN GOC", (cwd / "AGENTS.md").read_text())
-
-            for filename in ("CLAUDE.md", "AGENTS.md"):
-                with self.subTest(filename=filename):
-                    self.assertEqual(self._apply_strip(cwd, filename).returncode, 0)
-                    text = (cwd / filename).read_text()
-                    self.assertNotIn("<!-- BEGIN GOC", text)
-                    self.assertNotIn("<!-- END GOC", text)
-                    self.assertIn("Keep this paragraph.", text)
-                    self.assertIn("# Project Notes", text)
-
-    def test_strip_is_idempotent_on_missing_file(self) -> None:
-        """Snippet must be safe to run a second time, or against a path the
-        previous run already deleted."""
-        with tempfile.TemporaryDirectory() as tmp:
-            cwd = Path(tmp)
-            result = self._apply_strip(cwd, "CLAUDE.md")
-            self.assertEqual(result.returncode, 0, msg=result.stderr)
-            self.assertFalse((cwd / "CLAUDE.md").exists())
 
     def test_skill_body_no_longer_references_removed_flags(self) -> None:
         """The two flags that never existed must not appear anywhere in the

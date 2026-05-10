@@ -2,19 +2,30 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
 
-import goc  # noqa: E402
+
+def _static_version() -> str:
+    """Return the `__version__` literal from `goc/__init__.py` source.
+
+    `goc.__version__` resolves dynamically at runtime via importlib.metadata
+    (hatch-vcs derives it from `git describe --tags`); between releases that
+    value drifts from the static literals in plugin manifests. This helper
+    reads the literal directly so version-surface checks compare like-for-like
+    against the value `release_rewrite_versions.py` rewrites at release time.
+    """
+    text = (ROOT / "goc" / "__init__.py").read_text()
+    match = re.search(r'^__version__\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    assert match, "goc/__init__.py: __version__ literal not found"
+    return match.group(1)
 
 
 class VersionSurfaceTest(unittest.TestCase):
-    """All static version literals must agree with `goc.__version__`.
+    """All static version literals must agree with the literal in `goc/__init__.py`.
 
     `pyproject.toml` is no longer in this set — it carries `dynamic = ["version"]`
     and hatch-vcs computes the wheel version from the git tag at build time.
@@ -24,7 +35,7 @@ class VersionSurfaceTest(unittest.TestCase):
     """
 
     def test_plugin_manifests_match_package_version(self) -> None:
-        expected = goc.__version__
+        expected = _static_version()
 
         # (relative path, key path inside the JSON)
         manifests: list[tuple[str, tuple[str, ...]]] = [
@@ -42,7 +53,7 @@ class VersionSurfaceTest(unittest.TestCase):
             self.assertEqual(expected, value, msg=f"{relpath} {locator}")
 
     def test_self_hosted_generated_surfaces_match_package_version(self) -> None:
-        expected = goc.__version__
+        expected = _static_version()
         self.assertEqual(
             expected,
             (ROOT / ".game-of-cards" / "deck" / ".goc-version").read_text().strip(),
