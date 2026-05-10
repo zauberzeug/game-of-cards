@@ -1,11 +1,11 @@
 ---
 title: auto-publish-npm-and-clawhub-on-tag-push
 summary: "Extend `.github/workflows/release.yml` to auto-publish the OpenClaw plugin to npm AND ClawHub on every tag push, mirroring the existing PyPI OIDC trusted-publisher flow. Today PyPI is automated but npm + ClawHub are manual (`npm login` + interactive 2FA OTP + `clawhub login` + `clawhub package publish`). The 2FA wall hit during the v0.0.7 release proves the manual flow doesn't scale: every release demands the maintainer be at their authenticator. Both registries support OIDC-style trusted publishing — npm via id-token + provenance attestation; ClawHub via `clawhub package trusted-publisher` configured in the web UI — so we can ship token-free CI publishing on tag push."
-status: blocked
+status: done
 stage: null
 contribution: high
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: session
 advances:
   - publish-openclaw-plugin
@@ -16,9 +16,9 @@ definition_of_done: |
   - [x] `.github/workflows/release.yml` extended with a `publish-npm` job that runs on tag push, has `id-token: write` permission, runs `npm publish --provenance --access public` from `openclaw-plugin/`, and is gated on `build` + (where applicable) `smoke`
   - [x] `.github/workflows/release.yml` extended with a `publish-clawhub` job that runs on tag push, calls `clawhub package publish ./openclaw-plugin --version <tag> --json` using the trusted-publisher OIDC flow (no `CLAWHUB_TOKEN` secret needed once the trusted-publisher is configured)
   - [x] `release.yml` header comment documents the two new jobs and the trusted-publisher setup steps required on the npm side and ClawHub side
-  - [ ] npm trusted publisher configured for `game-of-cards` at <https://www.npmjs.com/package/game-of-cards/access> — GitHub repo `zauberzeug/game-of-cards`, workflow `release.yml`, environment `npm` — recorded in this card's log when done
-  - [ ] ClawHub trusted publisher configured for the `game-of-cards` package via the ClawHub web UI — same GitHub repo + workflow path, environment `clawhub` — recorded in this card's log when done
-  - [ ] First end-to-end auto-publish proven by tagging `v0.0.8` (or a `v0.0.7-test` pre-release) and observing all three registries (PyPI, npm, ClawHub) updated by CI alone
+  - [x] npm trusted publisher configured for `game-of-cards` at <https://www.npmjs.com/package/game-of-cards/access> — Owner=zauberzeug, Repo=game-of-cards, Workflow=release.yml, Environment=npm
+  - [x] ClawHub trusted publisher configured via `clawhub package trusted-publisher set game-of-cards --repository zauberzeug/game-of-cards --workflow-filename release.yml` (no environment — see below for why)
+  - [x] First end-to-end auto-publish proven on v0.0.12 (PyPI + npm via tag-push, ClawHub via workflow_dispatch — see implementation history below for why two events)
   - [x] CLAUDE.md / AGENTS.md release-flow guidance updated: maintainers run `<bump versions> && git tag vX.Y.Z && git push origin vX.Y.Z` and that's it
   - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}

@@ -1,11 +1,11 @@
 ---
 title: publish-npm-package-under-zauberzeug-org-not-personal
 summary: "Publish the `game-of-cards` npm package under Zauberzeug org ownership, not under the maintainer's personal npm account. Decision (2026-05-10): keep the unscoped name `game-of-cards` for parity with PyPI + ClawHub; org ownership is established via npm's owner/access controls rather than the package name. Bootstrap path: first-publish from the maintainer's personal account (npm requires the package to exist before owner transfers can happen), then `npm access grant` zauberzeug org as owner, then optionally remove personal account from owners. Trusted publisher entry is then configured by a zauberzeug org owner."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: session
 advances:
   - publish-openclaw-plugin
@@ -17,10 +17,10 @@ definition_of_done: |
   - [x] First publish of `game-of-cards@0.0.7` to npm completed under personal account `rodja` (verified live at <https://www.npmjs.com/package/game-of-cards>; sha256 matches local tarball)
   - [x] Org team granted write access: `npm access grant read-write zauberzeug:developers game-of-cards` (verified via `npm access list packages zauberzeug:developers` → `game-of-cards: read-write`). Note: for **unscoped** npm packages, this team grant — not the maintainer list — IS the org-level write-access mechanism. Orgs cannot appear in the `Maintainers:` list of an unscoped package; that's an npm-side limitation specific to unscoped naming. The team grant gives every member of `zauberzeug:developers` (including CI via OIDC if configured at the org level) publish rights.
   - [x] Personal account stays as the listed maintainer because npm refuses to remove the last maintainer of an unscoped package and orgs cannot be added as maintainers for unscoped names. The team-write grant is what gives the org publish ability; the visible-maintainer field remains a personal handle. Trade-off accepted: package-page metadata shows `rodja` as maintainer, while functional access control is org-level.
-  - [ ] npm trusted publisher entry configured at <https://www.npmjs.com/package/game-of-cards/access> — claim values: owner=`zauberzeug`, repo=`game-of-cards`, workflow=`release.yml`, environment=`npm`. Configurable by any user with write access (the team-grant suffices)
-  - [ ] ClawHub equivalent: package `game-of-cards` published under zauberzeug org/handle (not personal `@rodja`) on ClawHub, and trusted publisher entry configured for the same GitHub workflow with environment=`clawhub`
-  - [ ] First end-to-end auto-publish proven by tagging `v0.0.8` and observing CI publish to all three registries (PyPI, npm, ClawHub) under org ownership
-  - [ ] `uv run goc validate` passes
+  - [x] npm trusted publisher entry configured at <https://www.npmjs.com/package/game-of-cards/access> — Owner=zauberzeug, Repo=game-of-cards, Workflow=release.yml, Environment=npm
+  - [x] ClawHub equivalent: package `game-of-cards` is owned by `zauberzeug` ClawHub org (created via account settings on 2026-05-10); trusted publisher entry configured via `clawhub package trusted-publisher set` with no environment (the reusable workflow can't set job-level environment, so TP entry must not require one — see `auto-publish-npm-and-clawhub-on-tag-push` log for the full constraint stack)
+  - [x] First end-to-end auto-publish proven on v0.0.12 — all three registries (PyPI, npm, ClawHub) published under zauberzeug org ownership via OIDC trusted publishing. PyPI + npm via tag-push; ClawHub via `gh workflow run release.yml --ref v0.0.12` (workflow_dispatch step required for ClawHub OIDC). Confirmed live on 2026-05-10: `npm view game-of-cards version` → 0.0.12, `pypi.org/.../json` → 0.0.12, `clawhub package inspect game-of-cards` → Latest: 0.0.12, Owner: zauberzeug
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
