@@ -299,7 +299,11 @@ jobs:
     # CLAWHUB_TOKEN`. Compromise = revoke via `clawhub auth logout` (which
     # invalidates the token server-side) then re-login + re-set the secret.
     needs: [build, smoke]
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    # Run on real tag push (publish), or workflow_dispatch with
+    # dry_run=true (dry-run preview). Skip workflow_dispatch with
+    # dry_run=false on a non-tag ref — that would publish from main
+    # HEAD which is rarely what you want.
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && ((startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run) || (github.event_name == 'workflow_dispatch' && inputs.dry_run == true)) }}
     permissions:
       contents: read
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3
@@ -311,6 +315,6 @@ jobs:
       # claim. (Less critical when authenticating via token, but kept
       # for symmetry with the OIDC-mode fallback.)
       source_path: openclaw-plugin
-      dry_run: false
+      dry_run: ${{ inputs.dry_run == true }}
     secrets:
       clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
