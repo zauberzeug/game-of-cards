@@ -1,23 +1,23 @@
 ---
 title: regression-tests-fail-on-stale-install-behavior-assertions
 summary: "Every push and pull-request CI run since 2026-05-09 has been red on `tests/test_install.py`. Three closed cards that landed today changed install-time behavior but did not update the test suite: (a) `kickoff-asks-where-goc-briefing-lives` unified the briefing target so install appends only to one of `AGENTS.md`/`CLAUDE.md`/`CLAUDE.local.md` (default AGENTS.md), but assertions for `claude append CLAUDE.md` still expect the old per-agent guidance write; (b) the in-flight `automate-version-bumping-from-git-tag-at-release-time` work made the git tag the source of truth via a build-time literal rewrite, but `goc.__version__` is still the unrewritten static literal `0.0.12` at HEAD while `_goc_version()` test helper resolves dynamically via `importlib.metadata`, producing a mismatch; (c) Stage 4 strip-snippet contract drift after kickoff edits dropped the `python3 - <<'PY' <file>` heredoc the test reads. Ten test methods fail across the 3.10/3.11/3.12/3.13 matrix, blocking every CI signal."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `goc.__version__` derives at runtime via `importlib.metadata.version("game-of-cards")` with the static literal as fallback, so editable-install + CI test runs see the same value `_goc_version()` resolves to (release builds remain correct because `release_rewrite_versions.py` rewrites the literal AND metadata agrees)
-  - [ ] `tests/test_install.py` `claude append CLAUDE.md` assertions (lines 56, 300, 377) updated to match the new briefing-target output (`shared append AGENTS.md`)
-  - [ ] `tests/test_install.py` `assertTrue((cwd / "CLAUDE.md").is_file())` and related dual-briefing-file assertions updated to match the new single-briefing-target default (CLAUDE.md is no longer auto-created when the default target is AGENTS.md)
-  - [ ] `KickoffStage4StripSnippetTest` strip-snippet heredoc reference updated to match the current kickoff skill body (or the dependent tests are skipped/removed with a log entry if the snippet has been retired)
-  - [ ] `uv run python -m unittest discover -s tests` passes locally with 0 failures (verify on at least 3.12 locally)
-  - [ ] CI green on the next push to main (`gh run list --workflow=ci.yml --limit 1` shows `success`)
-  - [ ] `uv run goc validate` passes
+  - [x] `goc.__version__` derives at runtime via `importlib.metadata.version("game-of-cards")` with the static literal as fallback (commit `c38f728`); editable installs and CI now see the same value `_goc_version()` resolves to. Side effect on `tests/test_version_surfaces.py`: switched from `goc.__version__` to a `_static_version()` helper that reads the literal directly, so the cross-manifest equality check still compares static-to-static.
+  - [x] `tests/test_install.py` `claude append CLAUDE.md` assertions (lines 56, 300, 377) updated to match the new briefing-target output (`shared append AGENTS.md`).
+  - [x] `tests/test_install.py` `assertTrue((cwd / "CLAUDE.md").is_file())` assertions inverted to `assertFalse` for the default-briefing-target paths; the local-skills smoke also drops the `Skill(...)` substring check that depended on CLAUDE.md briefing.
+  - [x] `KickoffStage4StripSnippetTest` strip-* tests deleted (the heredoc was retired in `78db285` when the briefing-target was unified). Kept the regression-prevention tests (`test_install_no_longer_accepts_no_claude_md_flag`, `test_skill_body_no_longer_references_removed_flags`).
+  - [x] `uv run python -m unittest discover -s tests` passes locally with 0 failures except `test_board_and_open_queue_surface_active_cards`, which is git-config-dependent (fails when `git config user.name` is long enough to truncate the title in board view) and was passing in CI before this card too.
+  - [x] CI green on the next push to main: run `25633873149` ✓ all 4 Python matrix jobs pass (3.10, 3.11, 3.12, 3.13).
+  - [x] `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
