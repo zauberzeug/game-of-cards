@@ -13,12 +13,12 @@ advances:
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Reproduce the publisher mismatch locally with `clawhub package publish ./openclaw-plugin --version v0.0.13-test --dry-run` (or equivalent) and confirm whether the failure originates client-side (CLI) or server-side (Convex registry)
-  - [ ] Identify the publisher identity ClawHub records for the existing `game-of-cards` package (CLI: `clawhub package show game-of-cards --json` or web UI) and the publisher identity the failing run presented (from the trusted-publisher entry / job identity)
-  - [ ] Document the ownership-transfer or identity-realign path that ClawHub supports (CLI-driven, web UI, or support contact) and pick the one that requires the least manual intervention on future releases
-  - [ ] Apply the fix: either transfer ownership in the ClawHub registry, re-register the trusted-publisher with the corrected identity, or rotate `CLAWHUB_TOKEN` to a token issued under the current owning account
-  - [ ] Re-run the v0.0.13 ClawHub publish job (`gh workflow run release.yml --ref v0.0.13` or targeted job re-run) and confirm `clawhub package show game-of-cards --json` reports `0.0.13` as the latest version
-  - [ ] Update CLAUDE.md release-flow guidance with the recovery procedure so the next maintainer who hits this knows the recipe
+  - [x] Reproduce: failure traced to the `--manual-override-reason` (token-path) branch of the reusable workflow at `openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3`; v0.12.3 of the local CLI exposes only `package {explore,inspect,download,verify,delete,report,appeal}`, so a real local dry-run is not possible without using the reusable workflow itself — investigation moved server-side via run-log diff (see log.md)
+  - [x] Identify identities: package `owner.handle = zauberzeug` (set when 0.0.12 was published via the OIDC publisher = the GitHub repo identity in run `25623831354` at 08:16Z); failing run authenticates via `CLAWHUB_TOKEN` (last rotated 2026-05-10T08:34:09Z, after the OIDC publish)
+  - [x] Document the realign path: drop `clawhub_token` from the `publish-clawhub` job's `secrets:` block; the reusable workflow's default fall-through is OIDC trusted publishing using the same audience that registered the package
+  - [x] Workflow change applied: dropped `secrets: clawhub_token: …` from the `publish-clawhub` job in `.github/workflows/release.yml` and rewrote the surrounding header + per-job comment block to document the OIDC-only path. Still pending (requires user authorization): delete the `CLAWHUB_TOKEN` repo secret via `gh secret delete CLAWHUB_TOKEN`
+  - [ ] Re-run the v0.0.13 ClawHub publish job (`gh workflow run release.yml --ref v0.0.13`) and confirm `clawhub package inspect game-of-cards` reports `0.0.13` as the latest version
+  - [x] CLAUDE.md release-flow guidance updated: removed the stored-token paragraphs, documented the two-step canonical flow (`git push origin vX.Y.Z` for PyPI+npm, `gh workflow run release.yml --ref vX.Y.Z` for ClawHub), added a "do NOT add a CLAWHUB_TOKEN" cautionary note
   - [ ] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---

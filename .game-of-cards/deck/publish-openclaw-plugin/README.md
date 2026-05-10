@@ -16,6 +16,7 @@ advanced_by:
   - cut-v0-0-7-release-before-openclaw-publish
   - auto-publish-npm-and-clawhub-on-tag-push
   - publish-npm-package-under-zauberzeug-org-not-personal
+  - clawhub-publish-fails-with-package-belongs-to-another-publisher
 tags: [story, infra]
 definition_of_done: |
   - [ ] Plugin published on ClawHub (<https://clawhub.ai>) such that consumers can install via `openclaw skills install <id>`; chosen package id recorded in this card's log

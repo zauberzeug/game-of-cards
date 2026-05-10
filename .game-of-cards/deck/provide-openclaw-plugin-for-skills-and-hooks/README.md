@@ -19,6 +19,7 @@ advanced_by:
   - cut-v0-0-7-release-before-openclaw-publish
   - auto-publish-npm-and-clawhub-on-tag-push
   - openclaw-plugin-goc-tool-fails-at-runtime-with-spawn-argv-error
+  - clawhub-publish-fails-with-package-belongs-to-another-publisher
 tags: [story, infra]
 definition_of_done: |
   - [x] `install-openclaw-harness` is marked superseded with a log entry pointing here

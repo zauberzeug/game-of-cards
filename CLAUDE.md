@@ -27,11 +27,11 @@ No pytest suite exists yet. `.github/workflows/ci.yml` is a
 build + console-script + `goc validate` smoke matrix on Python
 3.10–3.13; the validation step is what gates card-frontmatter drift.
 
-Releases publish to three registries — PyPI, npm, ClawHub — on a
-single tag push. PyPI + npm authenticate via OIDC trusted publishing
-(no token); ClawHub authenticates via a stored `CLAWHUB_TOKEN` repo
-secret (a personal `clawhub login` token that lives in repo settings,
-not in the codebase).
+Releases publish to three registries — PyPI, npm, ClawHub — all via
+OIDC trusted publishing. No long-lived tokens in repo secrets; each
+publish target is a one-time configuration (web UI for PyPI/npm,
+`clawhub package trusted-publisher set …` for ClawHub) that authorizes
+this workflow to mint short-lived publish credentials at run time.
 
 **The git tag IS the version** — `pyproject.toml` declares
 `dynamic = ["version"]` and hatch-vcs reads `git describe --tags` at
@@ -47,20 +47,21 @@ Canonical flow:
 
 ```
 git tag vX.Y.Z && git push origin vX.Y.Z
+gh workflow run release.yml --ref vX.Y.Z   # ClawHub leg only
 ```
 
-That's it. The tag-push triggers PyPI + npm + ClawHub publishes in
-parallel.
-
-Why ClawHub uses a token instead of OIDC: their official reusable
-workflow refuses OIDC handshakes on `push` events. Without a token,
-each release would need a manual `gh workflow run release.yml --ref
-vX.Y.Z` follow-up. The token avoids that two-step. Rotate by
-re-running `clawhub login` then `jq -r .token "$HOME/Library/Application
-Support/clawhub/config.json" | gh secret set CLAWHUB_TOKEN`.
+The tag-push triggers the PyPI + npm publishes (both accept OIDC over
+push events). ClawHub's OIDC trusted publisher refuses `push` events
+and accepts only `workflow_dispatch`, so the second command fires the
+ClawHub leg from the same tag commit. There is no `CLAWHUB_TOKEN`
+secret — adding one to "fix" the push case actively breaks subsequent
+releases, because the reusable workflow's token-override path
+authenticates as a different publisher than the OIDC path that
+registered the package and ClawHub's Convex store rejects publishes
+with `Package already exists and belongs to another publisher`.
 
 See `.github/workflows/release.yml` header comment for trusted
-publisher + secret configuration details.
+publisher configuration details.
 
 ## Code architecture
 
