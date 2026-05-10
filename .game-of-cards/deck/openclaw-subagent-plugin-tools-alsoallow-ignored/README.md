@@ -1,7 +1,7 @@
 ---
 title: openclaw-subagent-plugin-tools-alsoallow-ignored
 summary: "OpenClaw 2026.5.6 ignores `tools.subagents.tools.alsoAllow` while building plugin tool allowlists for subagents. The GoC plugin registers `goc` correctly and main sessions can call it, but spawned subagents still cannot see the `goc` first-class tool. This matches upstream issue openclaw/openclaw#23359 and open PR #51388."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] Once an OpenClaw release contains the fix, retest: main session sees `goc`, spawned subagent sees `goc`, and subagent can run `goc validate`
   - [ ] Remove or revise workaround notes after the fixed OpenClaw version is the minimum supported version
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw subagent plugin tools `alsoAllow` ignored
