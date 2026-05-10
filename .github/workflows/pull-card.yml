@@ -27,6 +27,9 @@ permissions:
   pull-requests: write
   issues: write
   actions: write          # required for `gh workflow run` to self-trigger
+  workflows: write        # let agent runs push edits under .github/workflows/
+                          # — without this, App-level "Workflows" scope is unused
+                          # and workflow-touching cards stall on a patch handoff.
 
 concurrency:
   # All runs on this ref serialize. Self-triggered follow-ups queue
