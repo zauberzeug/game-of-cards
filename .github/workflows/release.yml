@@ -301,10 +301,16 @@ jobs:
       contents: read
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3
     with:
-      source: ./openclaw-plugin
-      # Note: do NOT pass `owner: zauberzeug` here — ClawHub trusted
-      # publishing rejects manual owner overrides ("Trusted publishes
-      # must not override the package owner"). The package's existing
-      # ownership stands; the trusted publisher entry locks the
-      # workflow→package relationship server-side.
+      # `source_path` (not `source`) — local-folder publishes set
+      # source = ./openclaw-plugin which doesn't include a ref, so
+      # ClawHub's server-side check "Trusted publish source ref must
+      # match the verified GitHub ref" fails. Leaving source empty
+      # defaults it to GITHUB_REPOSITORY (zauberzeug/game-of-cards),
+      # which then gets the github.sha appended automatically; the
+      # source_path narrows it to the openclaw-plugin subdir.
+      source_path: openclaw-plugin
+      # Do NOT pass `owner: zauberzeug` — ClawHub trusted publishing
+      # rejects manual owner overrides ("Trusted publishes must not
+      # override the package owner"). The trusted-publisher entry +
+      # package's owned-by-zauberzeug metadata are authoritative.
       dry_run: ${{ inputs.dry_run == true }}
