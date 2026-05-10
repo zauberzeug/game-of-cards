@@ -103,15 +103,15 @@ import re, sys
 from pathlib import Path
 claude_md, target_file = Path(sys.argv[1]), sys.argv[2]
 block = (
-    "<!-- BEGIN GOC -->\n"
+    "<!-- BEGIN GOC IMPORT -->\n"
     f"@{target_file}\n"
-    "<!-- END GOC -->\n"
+    "<!-- END GOC IMPORT -->\n"
 )
 if not claude_md.exists():
     claude_md.write_text("# Claude Code Guidelines\n\n" + block)
     sys.exit(0)
 text = claude_md.read_text()
-pattern = re.compile(r"<!-- BEGIN GOC v?[\d.]*-->.*?<!-- END GOC -->\n?", re.DOTALL)
+pattern = re.compile(r"<!-- BEGIN GOC IMPORT -->.*?<!-- END GOC IMPORT -->\n?", re.DOTALL)
 if pattern.search(text):
     claude_md.write_text(pattern.sub(block, text))
 else:
@@ -120,8 +120,11 @@ PY
 ```
 
 (Replace the `AGENTS.md` argument with `CLAUDE.local.md` when that is
-the briefing target.) The snippet preserves any pre-existing user
-content in CLAUDE.md above and below the marker block.
+the briefing target.) The snippet uses the `<!-- BEGIN GOC IMPORT -->`
+marker — distinct from the briefing's `<!-- BEGIN GOC v… -->` — so
+`goc upgrade`'s briefing-detection logic does not mistake the import
+for a competing briefing home. The snippet preserves any pre-existing
+user content in CLAUDE.md above and below the marker block.
 
 If the briefing target is `CLAUDE.local.md` and the file does not yet
 exist (the generic kickoff already created it as the briefing home, so
