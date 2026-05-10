@@ -27,15 +27,26 @@ No pytest suite exists yet. `.github/workflows/ci.yml` is a
 build + console-script + `goc validate` smoke matrix on Python
 3.10–3.13; the validation step is what gates card-frontmatter drift.
 
-Releases: push tag `vX.Y.Z` whose value matches both
-`pyproject.toml`'s `version` and `openclaw-plugin/package.json`'s
-`version` (the workflow verifies both before any publish runs).
-A single tag push triggers OIDC trusted publishing to **three**
-registries — PyPI (`game-of-cards`), npm (`game-of-cards`), and
-ClawHub (`game-of-cards`) — no tokens in the repo. Trusted
-publisher entries are configured one-time per registry; see the
-header comment in `.github/workflows/release.yml` for the URLs and
-required claim values.
+Releases use OIDC trusted publishing on three registries — PyPI
+(`game-of-cards`), npm (`game-of-cards`), and ClawHub
+(`game-of-cards`) — no tokens in the repo. Two-step canonical flow:
+
+1. Bump versions in `pyproject.toml`, `goc/__init__.py`,
+   `openclaw-plugin/package.json` + `package-lock.json`,
+   `claude-plugin/.claude-plugin/plugin.json`,
+   `.claude-plugin/marketplace.json`. Run
+   `python3 scripts/sync_plugin_assets.py && uv sync`. Commit and
+   push main.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z` — tag-push triggers
+   PyPI + npm publish.
+3. `gh workflow run release.yml --ref vX.Y.Z` — workflow_dispatch
+   on the tag triggers ClawHub publish.
+
+Step 3 is required because ClawHub's official reusable workflow
+refuses OIDC on `push` events; it only accepts `workflow_dispatch`.
+PyPI and npm work via tag-push directly. See
+`.github/workflows/release.yml` header comment for trusted publisher
+configuration details.
 
 ## Code architecture
 

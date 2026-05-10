@@ -1,44 +1,55 @@
 # Release workflow — publishes `game-of-cards` to PyPI, npm, and ClawHub
-# on tag push.
+# via OIDC trusted publishing.
 #
 # Authentication: OIDC trusted publishing on every channel — no long-lived
-# tokens stored as repo secrets. Each publish target is a one-time web-UI
+# tokens in repo secrets. Each publish target is a one-time web-UI/CLI
 # configuration that authorizes this workflow to mint short-lived publish
 # tokens via the GitHub Actions id-token.
 #
-# Trusted publisher entries to configure (one per package, one-time):
+# Trusted publisher entries (configured once):
 #
 #   PyPI:    https://pypi.org/manage/project/game-of-cards/settings/publishing/
-#            Owner: zauberzeug · Repository: game-of-cards
-#            Workflow: release.yml · Environment: pypi
+#            Owner: zauberzeug · Repo: game-of-cards · Workflow: release.yml · Env: pypi
 #
 #   npm:     https://www.npmjs.com/package/game-of-cards/access
-#            (Add a "Trusted Publisher" entry)
-#            Owner: zauberzeug · Repository: game-of-cards
-#            Workflow filename: release.yml · Environment: npm
+#            Owner: zauberzeug · Repo: game-of-cards · Workflow: release.yml · Env: npm
 #
-#   ClawHub: ClawHub web UI for the `game-of-cards` package — Trusted
-#            Publishers section. Mirror the npm config (same repo +
-#            workflow filename, environment: clawhub). Once configured,
-#            manual publishes from a maintainer machine require
-#            `--manual-override-reason`.
+#   ClawHub: `clawhub package trusted-publisher set game-of-cards \
+#               --repository zauberzeug/game-of-cards --workflow-filename release.yml`
+#            (NOTE: do NOT pass --environment — ClawHub uses the official
+#            reusable workflow which can't set a job-level environment, so
+#            the OIDC token won't carry an environment claim. The trusted
+#            publisher entry must therefore not require one.)
 #
-# Tag convention: `v0.1.0`, `v0.2.3`, `v1.0.0`, etc. The tag must
-# match the version in pyproject.toml AND openclaw-plugin/package.json
-# (the build step verifies both before any publish runs).
+# Tag convention: `v0.1.0`, `v0.2.3`, `v1.0.0`, etc. The tag must match
+# the version in pyproject.toml AND openclaw-plugin/package.json (build
+# step verifies both before any publish runs).
 #
-# Release flow:
-#   - `git push origin vX.Y.Z` — fires the `push` event; build runs,
-#     smoke is skipped (the action backing it does not accept `push`
-#     events), then publish-pypi, publish-npm, and publish-clawhub all
-#     run in parallel after build. Smoke does not gate this path.
-#   - `gh workflow run release.yml --ref vX.Y.Z` — fires
-#     `workflow_dispatch` with `github.ref` resolving to the tag;
-#     build and smoke both run; publish jobs wait for smoke success.
-#     Use this path before high-risk releases to gate publishes on
-#     the end-to-end auto-bootstrap smoke check.
-#   - `gh workflow run release.yml --ref main` (or any tag with
-#     `dry_run=true`) — exercises build + smoke without publishing.
+# Canonical release flow:
+#
+#   1. Bump versions across pyproject.toml, goc/__init__.py,
+#      openclaw-plugin/package.json + package-lock.json,
+#      claude-plugin/.claude-plugin/plugin.json, and
+#      .claude-plugin/marketplace.json. Run `python3 scripts/sync_plugin_assets.py`
+#      then `uv sync`. Commit and push main.
+#   2. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+#      → tag-push triggers build → publish-pypi + publish-npm.
+#   3. `gh workflow run release.yml --ref vX.Y.Z`.
+#      → workflow_dispatch on the tag triggers publish-clawhub.
+#      (PyPI and npm jobs run again but no-op against duplicate versions.)
+#
+# Why two triggers? ClawHub's official reusable workflow refuses OIDC on
+# `push` events ("Real publishes need ... GitHub OIDC on workflow_dispatch
+# runs"). It only mints publish tokens when the trigger is workflow_dispatch.
+# PyPI + npm work fine on tag-push, so we keep that path active for them.
+#
+# Other dispatch modes:
+#   - `gh workflow run release.yml --ref main --field dry_run=true` —
+#     exercises build + smoke + a clawhub dry-run publish without uploading.
+#   - `gh workflow run release.yml --ref main` (no dry_run) —
+#     publishes to ClawHub from main HEAD (skips PyPI + npm because the
+#     tag-ref guard fails). Useful for re-trying ClawHub if its publish
+#     failed during the initial release.
 
 name: Release
 
