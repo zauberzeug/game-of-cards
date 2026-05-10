@@ -1,6 +1,6 @@
 ---
 title: kickoff-offers-autonomy-setup-options
-summary: |
+summary: |-
   `Skill(kickoff)` ends after Stage 5 with "deck is live" and a hand-off
   to host complements. It never surfaces the autonomy options
   (`/loop` + `pull-card`, cron, GitHub Action, manual session) that are
@@ -12,7 +12,7 @@ stage: null
 contribution: medium
 created: 2026-05-10
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, story]
@@ -73,68 +73,11 @@ configures Claude Code permissions, what they put in CLAUDE.md, and
 whether they configure GitHub Actions. Better to ask once at kickoff
 than discover the gap weeks later.
 
-## Decision required
+## Decision
 
-Two coupled questions.
+*Resolved 2026-05-10:* Q1: Stage 6 covers four modes (loop, cron, GitHub Action, manual) with an explicit 'skip for now' option. Q2: Implement Stage 6 in the generic kickoff skill; host complements provide host-specific recipes.
 
-### Q1 — which modes does Stage 6 cover?
-
-#### Option A — three modes (loop, cron, manual)
-
-Skip GitHub Action. Cron and `/loop` together cover both unattended
-local and supervised local. Manual is the no-config baseline.
-
-- **Pro**: simple; covers the personas kickoff already asks about.
-- **Con**: distributed teams may want CI-driven drains.
-
-#### Option B — four modes (loop, cron, GH Action, manual)
-
-Adds GitHub Action explicitly. Recommend it for the "Classical team"
-persona collected in Stage 2.
-
-- **Pro**: surfaces every reasonable option.
-- **Con**: GH Action setup is the most fiddly (workflow file, secrets,
-  goc-on-CI installation) — kickoff might just point at a doc rather
-  than walk through it.
-
-#### Option C — two modes (autonomous vs supervised) with examples per mode
-
-Present a binary first ("do you want unattended drain?"), then offer
-recipes inside each branch (loop / cron / GH Action under
-"unattended"; manual / `/loop /next-card` under "supervised").
-
-- **Pro**: maps to user mental model better than a four-way menu.
-- **Con**: more dialog steps; harder to skip when re-running kickoff.
-
-**Recommendation**: Option B with a "skip for now" escape so users who
-have not picked yet can leave the question open. The four modes are
-each one bullet to describe; the cost is one extra prompt at kickoff.
-
-### Q2 — host-agnostic stage or delegated to host complements?
-
-#### Option I — implement Stage 6 in the generic `kickoff` skill
-
-The host-agnostic body lists the four modes generically; the host
-complement (`claude-kickoff`, `openclaw-kickoff`) provides the
-host-specific recipes (Claude Code uses `/loop`, OpenClaw has its own
-loop primitive).
-
-- **Pro**: every host's kickoff covers autonomy uniformly.
-- **Con**: host complements have to thread the answer to Q1 through
-  to their own stage(s).
-
-#### Option II — delegate to host complements entirely
-
-Generic kickoff stays at five stages; host complements add their own
-"autonomy mode" stage with host-specific examples.
-
-- **Pro**: host-agnostic skill stays small.
-- **Con**: copy duplicated across hosts; risk of drift.
-
-**Recommendation**: Option I. Autonomy is a methodology concept, not a
-host concept. The dialog belongs in the generic skill; recipes are
-hand-offs to the host complement.
-
+*Reasoning:* Q1: each mode is one bullet to describe and skip-for-now keeps friction low. Q2: autonomy is a methodology concept, not a host concept.
 ## Sketch of Stage 6 body (if Option B + I)
 
 ```markdown

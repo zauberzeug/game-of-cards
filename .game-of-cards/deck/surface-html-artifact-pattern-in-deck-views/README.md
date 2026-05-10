@@ -1,6 +1,6 @@
 ---
 title: surface-html-artifact-pattern-in-deck-views
-summary: |
+summary: |-
   GoC already supports sibling-file artifacts (`*.html`, `*.svg`, `*.png`)
   next to a card's README — see `Skill(create-card)` Step 7 and
   `Skill(card-schema)` lines 35-45. The pattern is documented but
@@ -11,7 +11,7 @@ stage: null
 contribution: low
 created: 2026-05-10
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation]
@@ -54,48 +54,11 @@ discoverability gap, not a missing feature. The cost of a one-line nudge
 in the right surface is tiny; the upside is broader use of a pattern
 that already shipped.
 
-## Decision required
+## Decision
 
-Multiple surfaces could carry the hint; pick one to land first.
+*Resolved 2026-05-10:* List sibling artifacts in 'goc show' as a ## Artifacts section (Option A) AND add a hint to the create-card skill body for decision/session cards (Option C); skip queue/board view markers.
 
-### Option A — list sibling files in `goc show <title>`
-
-After printing frontmatter and body, append a `## Artifacts` section
-listing any `*.html`, `*.svg`, `*.png`, `*.pdf` siblings. Zero output
-when none exist.
-
-- **Pro**: zero cost when no artifacts; only adds noise where it helps.
-- **Con**: only triggers on explicit `show`. Casual `goc` queue users
-  never see it.
-
-### Option B — column or marker in queue / board view
-
-Add a small `📎` or `[A]` marker in the rendered table when a card has
-sibling artifacts. Costs one line per card to scan a directory.
-
-- **Pro**: visible at a glance.
-- **Con**: per-card filesystem stat on every render; emoji/ASCII
-  styling churn.
-
-### Option C — hint emitted by `Skill(create-card)` for decision-class cards
-
-When the card's gate is `decision` or `session`, the skill body adds a
-prompt: "Consider attaching a `decision-form.html` if the alternatives
-benefit from side-by-side comparison."
-
-- **Pro**: hint reaches the author at the moment of authoring.
-- **Con**: skill-body change only — won't help anyone editing an
-  already-filed card.
-
-### Option D — combination
-
-Option A + Option C: queue view stays clean, but both `show` and
-`create-card` surface the pattern.
-
-**Recommendation**: Option D. Queue view should stay information-dense
-without ornamental columns; surfacing in `show` and at filing time
-catches the two moments the pattern is most actionable.
-
+*Reasoning:* the queue view stays clean while the two most actionable moments (filing and reading) carry the cue.
 ## Notes
 
 - Existing artifacts on disk: a quick scan would confirm whether

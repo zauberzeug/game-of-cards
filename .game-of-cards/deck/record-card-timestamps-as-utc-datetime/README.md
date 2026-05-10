@@ -1,6 +1,6 @@
 ---
 title: record-card-timestamps-as-utc-datetime
-summary: |
+summary: |-
   Card frontmatter currently stores `created` and `closed_at` as date-only
   strings (`YYYY-MM-DD`). Fast-moving projects close several cards per day,
   so date-only timestamps tie on sort order and prevent meaningful velocity
@@ -12,7 +12,7 @@ stage: null
 contribution: medium
 created: 2026-05-10
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [meta-fix, documentation]
@@ -63,49 +63,11 @@ sortable: `"2026-05-10"` < `"2026-05-10T14:00:00Z"` < `"2026-05-11"` orders
 correctly under string compare. So the validator can be widened without a
 backfill rewrite.
 
-## Decision required
+## Decision
 
-Three credible migration paths; only one should land.
+*Resolved 2026-05-10:* Accept both date and datetime shapes in created/closed_at; write datetime going forward; no backfill of existing date-only cards.
 
-### Option A — accept both shapes, write datetime going forward
-
-- Validator accepts `YYYY-MM-DD` OR `YYYY-MM-DDTHH:MM:SSZ`.
-- `goc new` and `goc done` write datetime.
-- Old cards keep their date-only fields; sorts and filters keep working
-  via lexicographic order.
-- **Cost**: minimal — one validator change, two emit sites change.
-- **Trade-off**: deck has mixed shapes forever. Anyone reading a card
-  notices the inconsistency. Velocity computation is undefined for
-  pre-migration cards.
-
-### Option B — accept both shapes, backfill old cards once
-
-- Same as A, plus a one-shot `scripts/backfill_card_times.py` that
-  rewrites every existing `created` and `closed_at` to a synthetic
-  midnight-UTC datetime (`T00:00:00Z`).
-- **Cost**: writes every card directory in one commit; merge conflict
-  risk for any in-flight branches.
-- **Trade-off**: synthetic times are misleading — they look precise but
-  are not. Confuses anyone analyzing pre-migration velocity.
-
-### Option C — add separate `created_at` / `closed_at_utc` fields
-
-- Leave `created` and `closed_at` as date-only (compatibility forever).
-- Add `created_at` and `closed_at_utc` as new optional fields holding the
-  full datetime.
-- New cards write both; old cards have only the legacy fields.
-- **Cost**: schema gets two new fields; downstream readers need to know
-  which to prefer.
-- **Trade-off**: dual-source-of-truth problem; field bloat. Every code
-  path that reads `created` now has to decide whether to prefer
-  `created_at` if present.
-
-**Recommendation**: Option A. Lexicographic sort is the lever that makes
-mixed shapes work without backfill. Velocity computation becomes accurate
-for new cards immediately and degrades gracefully for old ones (date-only
-sorts to start of day). Option B's synthetic times are misleading;
-Option C's dual fields are schema bloat for marginal gain.
-
+*Reasoning:* lexicographic sort handles mixed formats and synthetic midnight-UTC backfill would be misleading precision.
 ## Fix sketch (if Option A)
 
 ```python
