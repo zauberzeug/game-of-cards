@@ -1,9 +1,7 @@
 ## Game of Cards — Claude Code specifics
 
-@AGENTS.md
-
-The shared briefing is in AGENTS.md (imported above). On Claude Code,
-GoC ships as a plugin bundling skills, hooks, and the `goc` CLI:
+GoC ships as a Claude Code plugin bundling skills, hooks, and the
+`goc` CLI:
 
 ```
 /plugin marketplace add zauberzeug/game-of-cards
@@ -12,4 +10,4 @@ GoC ships as a plugin bundling skills, hooks, and the `goc` CLI:
 
 In a fresh repo, invoke `Skill(kickoff)` — it scaffolds `.game-of-cards/`
 then hands off to `Skill(claude-kickoff)` for the permission grant and
-CLAUDE.md / CLAUDE.local.md merge prompts.
+the briefing-target prompt.

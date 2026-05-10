@@ -12,6 +12,8 @@ import sys
 from goc import __version__
 from goc.engine import _build_parser, cli as engine_cli
 from goc.install import (
+    BRIEFING_TARGET_HELP,
+    BRIEFING_TARGETS,
     INSTALL_AGENTS_HELP,
     KEEP_LOCAL_SKILLS_HELP,
     LOCAL_SKILLS_HELP,
@@ -49,6 +51,8 @@ def main() -> None:
                 help="Shortcut for --agents codex.")
             p.add_argument("--local-skills", dest="local_skills", action="store_true",
                 help=LOCAL_SKILLS_HELP)
+            p.add_argument("--briefing-target", dest="briefing_target", default="AGENTS.md",
+                choices=list(BRIEFING_TARGETS), help=BRIEFING_TARGET_HELP)
             args = p.parse_args(rest)
             _install(
                 dry_run=args.dry_run,
@@ -56,6 +60,7 @@ def main() -> None:
                 claude_flag=args.claude_flag,
                 codex_flag=args.codex_flag,
                 local_skills=args.local_skills,
+                briefing_target=args.briefing_target,
             )
         else:
             p = argparse.ArgumentParser(prog="goc upgrade",
@@ -70,6 +75,8 @@ def main() -> None:
                 help="Shortcut for --agents codex.")
             p.add_argument("--keep-local-skills", dest="keep_local_skills", action="store_true",
                 help=KEEP_LOCAL_SKILLS_HELP)
+            p.add_argument("--briefing-target", dest="briefing_target", default=None,
+                choices=list(BRIEFING_TARGETS), help=BRIEFING_TARGET_HELP)
             args = p.parse_args(rest)
             _upgrade(
                 dry_run=args.dry_run,
@@ -77,6 +84,7 @@ def main() -> None:
                 claude_flag=args.claude_flag,
                 codex_flag=args.codex_flag,
                 keep_local_skills=args.keep_local_skills,
+                briefing_target=args.briefing_target,
             )
         return
 

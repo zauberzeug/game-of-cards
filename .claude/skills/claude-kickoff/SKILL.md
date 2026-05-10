@@ -5,14 +5,17 @@ description: Claude Code-specific complement to the generic kickoff skill — ha
 
 # Finish kickoff on Claude Code
 
-The generic `kickoff` skill is host-agnostic: it introduces GoC, runs the
-persona dialog, asks about the AGENTS.md merge, and runs `goc install` to
-scaffold `.game-of-cards/`. This complement handles everything Claude
-Code-specific that the generic kickoff intentionally leaves alone:
+The generic `kickoff` skill is host-agnostic: it introduces GoC, runs
+the persona dialog, asks where the briefing should live (`AGENTS.md`,
+`CLAUDE.md`, or `CLAUDE.local.md`), and runs `goc install
+--briefing-target <choice>` to scaffold `.game-of-cards/`. This
+complement handles everything Claude Code-specific that the generic
+kickoff intentionally leaves alone:
 
 - the `Bash(goc:*)` permission grant for future sessions,
 - the `/plugin install` (and `/plugin marketplace update`) cadence,
-- the per-file `CLAUDE.md` / `CLAUDE.local.md` merge prompts,
+- the minimal `CLAUDE.md` `@<chosen-file>` pointer when the briefing
+  lives in `AGENTS.md` or `CLAUDE.local.md`,
 - writing GoC-managed entries into `.claude/settings.json`.
 
 Run this skill **after** the generic kickoff returns. Re-running is safe:
@@ -27,9 +30,12 @@ every stage detects existing on-disk state before asking.
 Read the on-disk signals that determine which stages still have work to do:
 
 ```bash
-grep -l '<!-- BEGIN GOC' CLAUDE.md 2>/dev/null && echo "CLAUDE_MD_MERGED" || true
-test -f CLAUDE.local.md && echo "CLAUDE_LOCAL_MD_EXISTS" || true
+grep -l '<!-- BEGIN GOC' AGENTS.md CLAUDE.md CLAUDE.local.md 2>/dev/null
 ```
+
+The first matching file (or the only matching file) is the **briefing
+target** — the home the generic kickoff chose. Hold that path; Stage 2
+needs it.
 
 Read the project's `.claude/settings.json` and `~/.claude/settings.json`
 with the Read tool. Note whether `"Bash(goc:*)"` appears in either
@@ -39,8 +45,8 @@ absent the user is on the vendored path).
 
 Hold all of these flags in mind through the rest of the flow. The
 generic kickoff has already run, so `.game-of-cards/deck/` exists, `goc`
-is on PATH, and AGENTS.md has been handled — this skill does not re-check
-those.
+is on PATH, and the briefing lives in exactly one of the three
+candidates — this skill does not re-check those.
 
 ---
 
@@ -74,58 +80,52 @@ plugin support, repos that fork or template GoC), add:
 
 ---
 
-## Stage 2 — per-file merge opt-in (CLAUDE.md / CLAUDE.local.md)
+## Stage 2 — wire CLAUDE.md to the briefing
 
-For each file, skip the question if Stage 0 detected its final state on
-disk.
+Claude Code only auto-loads `CLAUDE.md` (and `CLAUDE.local.md` next to
+it). When the briefing lives elsewhere, Claude needs a one-line
+`@<file>` import in `CLAUDE.md` to transitively load it.
 
-**Question A — CLAUDE.md** (skip if `CLAUDE_MD_MERGED` was detected)
+Use the **briefing target** path detected in Stage 0:
 
-> Merge GoC guidance into `CLAUDE.md`? This adds a `<!-- BEGIN GOC -->` block
-> with Claude Code-specific instructions (skill surface, hook descriptions,
-> first-use setup). The block is marker-bounded and survives future `goc upgrade`
-> runs. Your existing content above and below the markers is untouched.
->
-> Add to CLAUDE.md? [yes/no]
+- **target = `CLAUDE.md`** — Claude already sees the full briefing
+  inline. Skip this stage entirely; do not write a separate import.
+- **target = `AGENTS.md`** — write a minimal `CLAUDE.md` containing
+  only `@AGENTS.md` inside a marker block.
+- **target = `CLAUDE.local.md`** — write a minimal `CLAUDE.md`
+  containing only `@CLAUDE.local.md` inside a marker block.
 
-If the user said **No**, strip the block back out — `goc install` from
-the generic kickoff already wrote it. Use the strip snippet from the
-generic kickoff (Stage 4 of `kickoff`):
+When a write is required, use this snippet (substitute `<target>`):
 
 ```bash
-python3 - <<'PY' CLAUDE.md
+python3 - <<'PY' CLAUDE.md AGENTS.md
 import re, sys
 from pathlib import Path
-path = Path(sys.argv[1])
-if not path.exists():
+claude_md, target_file = Path(sys.argv[1]), sys.argv[2]
+block = (
+    "<!-- BEGIN GOC -->\n"
+    f"@{target_file}\n"
+    "<!-- END GOC -->\n"
+)
+if not claude_md.exists():
+    claude_md.write_text("# Claude Code Guidelines\n\n" + block)
     sys.exit(0)
-text = path.read_text()
-pattern = re.compile(r"\n*<!-- BEGIN GOC v[\d.]+ -->.*?<!-- END GOC -->\n*", re.DOTALL)
-new = pattern.sub("\n", text).strip()
-header_only = re.fullmatch(r"# (Agent Guidelines|Claude Code Guidelines)\s*", new)
-if not new or header_only:
-    path.unlink()
+text = claude_md.read_text()
+pattern = re.compile(r"<!-- BEGIN GOC v?[\d.]*-->.*?<!-- END GOC -->\n?", re.DOTALL)
+if pattern.search(text):
+    claude_md.write_text(pattern.sub(block, text))
 else:
-    path.write_text(new + "\n")
+    claude_md.write_text(text.rstrip() + "\n\n" + block)
 PY
 ```
 
-**Question B — CLAUDE.local.md** (skip if `CLAUDE_LOCAL_MD_EXISTS` was
-detected)
+(Replace the `AGENTS.md` argument with `CLAUDE.local.md` when that is
+the briefing target.) The snippet preserves any pre-existing user
+content in CLAUDE.md above and below the marker block.
 
-> Add a minimal `CLAUDE.local.md` stub? This gives Claude Code a private,
-> untracked file to record project-local notes without touching checked-in
-> docs.
->
-> Create CLAUDE.local.md stub? [yes/no]
-
-If yes:
-
-```bash
-test -f CLAUDE.local.md || cat > CLAUDE.local.md <<'EOF'
-# Local notes for Claude Code (not checked in)
-EOF
-```
+If the briefing target is `CLAUDE.local.md` and the file does not yet
+exist (the generic kickoff already created it as the briefing home, so
+this is rare), no extra stub is needed — the file holds the briefing.
 
 ---
 

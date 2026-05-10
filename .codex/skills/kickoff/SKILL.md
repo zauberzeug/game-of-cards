@@ -24,7 +24,8 @@ its question(s) when the corresponding signal is already present.
 ```bash
 ls .game-of-cards/deck/ 2>/dev/null && echo "DECK_EXISTS" || echo "deck_missing"
 which goc 2>/dev/null && echo "GOC_ON_PATH" || echo "goc_missing"
-grep -l '<!-- BEGIN GOC' AGENTS.md 2>/dev/null && echo "AGENTS_MD_MERGED" || true
+grep -l '<!-- BEGIN GOC' AGENTS.md CLAUDE.md CLAUDE.local.md 2>/dev/null && echo "BRIEFING_MERGED" || true
+[ -d .git ] && echo "GIT_REPO" || echo "git_missing"
 ```
 
 Route on the results:
@@ -36,6 +37,11 @@ Route on the results:
   not installed. Install it (e.g. `pipx install game-of-cards`, or use
   whatever plugin/runtime ships goc for your host) and re-run kickoff."
   Do not proceed without `goc`.
+- **`git_missing`** → surface this one-line notice once, then continue:
+  "No git repository here — version control is not set up. The deck
+  assumes git (auto_commit, claim history, closure logs); run `git init`
+  if you want the deck tracked." Do not explain further; the user
+  decides whether to `git init` before or after kickoff completes.
 - **Otherwise** → continue. Hold the detected flags in mind through the
   rest of the flow.
 
@@ -43,7 +49,7 @@ Route on the results:
 
 ## Stage 1 — introduce GoC
 
-Skip this stage if `AGENTS_MD_MERGED` was detected in Stage 0 — it means
+Skip this stage if `BRIEFING_MERGED` was detected in Stage 0 — it means
 the user has engaged with kickoff before, and replaying the intro is
 noise.
 
@@ -67,7 +73,7 @@ responds.
 
 ## Stage 2 — persona question
 
-Skip this stage if `AGENTS_MD_MERGED` was already detected (Stage 3 has
+Skip this stage if `BRIEFING_MERGED` was already detected (Stage 3 has
 nothing left to ask, so persona is moot).
 
 Otherwise, ask the user **one question**:
@@ -79,33 +85,52 @@ Otherwise, ask the user **one question**:
 > 2. **Classical team** — We have a shared repo, multiple humans, and want
 >    the deck as a shared source of truth alongside PRs and reviews.
 > 3. **OSS / library evaluator** — I'm exploring GoC before deciding whether
->    to adopt it; I'd prefer not to merge anything into AGENTS.md yet.
+>    to adopt it; I'd prefer to keep the repo footprint minimal.
 > 4. **Agent-runtime / CI** — This repo is driven primarily by AI agents;
->    I want the CLI but minimal checked-in documentation overhead.
+>    I want the CLI plus a runtime briefing that any agent can read.
 
-Record the user's answer. It drives the AGENTS.md default in Stage 3.
+Record the user's answer. It drives the briefing-target recommendation
+in Stage 3.
 
-| Persona | AGENTS.md default |
+| Persona | Recommended briefing target |
 |---|---|
-| Solo / vibe-coder | Offer (yes default) |
-| Classical team | Offer (yes default) — surface the external-deck-location guidance |
-| OSS / library evaluator | Default **No** — user must opt in explicitly |
-| Agent-runtime / CI | Default **No** |
+| Solo / vibe-coder | `CLAUDE.local.md` — gitignored, no commit footprint |
+| Classical team | `CLAUDE.md` — checked-in Claude Code guidance (or `AGENTS.md` if cross-runtime visibility matters) |
+| OSS / library evaluator | `AGENTS.md` — cross-runtime visible, minimal Claude assumption |
+| Agent-runtime / CI | `AGENTS.md` — read by every modern agent runtime |
 
 ---
 
-## Stage 3 — AGENTS.md merge opt-in
+## Stage 3 — pick a briefing home
 
-Skip this question if Stage 0 detected `AGENTS_MD_MERGED`. Otherwise use
-the persona default from Stage 2.
+Skip this question if Stage 0 detected `BRIEFING_MERGED` — read the
+existing target off disk (`grep -l '<!-- BEGIN GOC' AGENTS.md CLAUDE.md
+CLAUDE.local.md`) and pass that file to Stage 4.
 
-> Merge GoC guidance into `AGENTS.md`? This adds a `<!-- BEGIN GOC -->` block
-> with agent-neutral instructions (deck philosophy, CLI verb table, operating
-> modes). Suitable for any agent runtime that reads AGENTS.md. The block is
-> marker-bounded and survives future `goc upgrade` runs; your existing content
-> above and below the markers is untouched.
+Otherwise, ask the user **one question**, ordering the options by
+persona but always offering all three:
+
+> Where should the GoC briefing live in this repo? The briefing is one
+> marker-bounded `<!-- BEGIN GOC -->` block — agent-neutral runtime
+> instructions plus, when CLAUDE.md is the home, the Claude-specific
+> setup notes inline. Future `goc upgrade` re-syncs only the chosen
+> file.
 >
-> Add to AGENTS.md? [yes/no]
+> 1. **AGENTS.md** — read by Codex, Cursor, Copilot, OpenCode, Aider, and
+>    Claude Code (via `@AGENTS.md` import that `claude-kickoff` writes
+>    into a minimal CLAUDE.md). Recommended for cross-runtime,
+>    agent-runtime, and OSS-eval personas.
+> 2. **CLAUDE.md** — read only by Claude Code; the host-agnostic body
+>    plus the Claude-specific extras live inline. **Cross-runtime
+>    visibility is given up** (Codex/Cursor/etc. won't see the
+>    briefing). Recommended for Claude-only teams.
+> 3. **CLAUDE.local.md** — read only by Claude Code, gitignored by
+>    default. Recommended for solo/personal use where the deck is
+>    private and you don't want a checked-in briefing.
+
+Lead with the persona's recommended option but show all three. Record
+the answer (one of `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`) for
+Stage 4.
 
 If the persona is **Classical team**, add after the question:
 
@@ -114,60 +139,31 @@ If the persona is **Classical team**, add after the question:
 > `support-external-game-of-cards-state-location` — it tracks the design work
 > for configurable deck paths.
 
-Record the answer (or, if the question was skipped, record the detected
-state). Pass it to Stage 4.
-
 ---
 
 ## Stage 4 — scaffold project state
 
-Summarise the AGENTS.md answer collected in Stage 3, then ask:
+Summarise the briefing-target answer collected in Stage 3, then ask:
 
-> Ready to scaffold? This will create `.game-of-cards/` and (if you said
-> yes) merge GoC guidance into `AGENTS.md`. Confirm? [yes/no]
+> Ready to scaffold? This will create `.game-of-cards/` and merge the GoC
+> briefing into `<chosen file>`. Confirm? [yes/no]
 
-On confirmation, run plain `goc install` (no per-file flags — the install
-primitive always writes the AGENTS.md guidance block; the per-file opt-out
-is applied below by stripping the block back out).
+On confirmation, run `goc install --briefing-target <chosen file>` (the
+flag tells the install primitive which file holds the briefing block;
+omit it only when the user wants the default `AGENTS.md`).
 
 > **Note for this repo (game-of-cards source tree):** Translate bare `goc`
 > commands to `uv run goc` when working in the goc package source tree itself.
 
-`goc install` writes project state and merges the agent-neutral guidance
-block into `AGENTS.md` (creating the file if absent). Host-specific files
-like `.claude/skills/` are not written by this skill — host-specific
+`goc install --briefing-target <file>` writes project state and merges
+the briefing block into the chosen file (creating it if absent). The
+other two candidate files are not touched. Host-specific files like
+`.claude/skills/` are not written by this skill — host-specific
 complement skills handle those.
 
-After `goc install` returns, verify `.game-of-cards/deck/` exists before
+After `goc install` returns, verify `.game-of-cards/deck/` exists and
+the chosen file contains a `<!-- BEGIN GOC -->` block before
 continuing.
-
-If the user said **No** to AGENTS.md in Stage 3, strip the GoC block back
-out of the file:
-
-```bash
-python3 - <<'PY' <file>
-import re, sys
-from pathlib import Path
-path = Path(sys.argv[1])
-if not path.exists():
-    sys.exit(0)
-text = path.read_text()
-pattern = re.compile(r"\n*<!-- BEGIN GOC v[\d.]+ -->.*?<!-- END GOC -->\n*", re.DOTALL)
-new = pattern.sub("\n", text).strip()
-header_only = re.fullmatch(r"# (Agent Guidelines|Claude Code Guidelines)\s*", new)
-if not new or header_only:
-    path.unlink()
-else:
-    path.write_text(new + "\n")
-PY
-```
-
-The snippet is idempotent: it removes the marker-bounded GoC section,
-deletes the file when `goc install` created it from scratch (header +
-GoC block only), and otherwise preserves any pre-existing user content
-above or below the block. The same snippet is reused by host-specific
-complement skills (e.g. `claude-kickoff`) to strip declined host-specific
-guidance files.
 
 ---
 
@@ -196,13 +192,16 @@ generic kickoff needed.
 
 ## Reference: what gets installed
 
-`goc install` writes:
+`goc install --briefing-target <file>` writes:
 
 - `.game-of-cards/deck/` — the card deck (planning history; check this in).
 - `.game-of-cards/config.yaml` — closure checks and workflow config
   (check this in).
-- `<!-- BEGIN GOC -->` block in `AGENTS.md` — discovery marker plus the
-  thin agent-neutral pointer (check this in).
+- `<!-- BEGIN GOC -->` block in the chosen briefing file (`AGENTS.md`,
+  `CLAUDE.md`, or `CLAUDE.local.md`) — discovery marker plus the
+  agent-neutral runtime briefing (CLAUDE.md additionally inlines
+  Claude-specific setup notes). Check the chosen file in unless it is
+  `CLAUDE.local.md`, which is gitignored by default.
 
 Host-specific runtime affordances are **optional** and not strictly
 required in source control:

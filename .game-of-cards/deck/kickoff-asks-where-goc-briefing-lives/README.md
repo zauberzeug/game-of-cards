@@ -1,26 +1,26 @@
 ---
 title: kickoff-asks-where-goc-briefing-lives
 summary: "Today `goc install` writes the GoC briefing block into BOTH `AGENTS.md` (full body) AND `CLAUDE.md` (Claude-specific delta + `@AGENTS.md` import). Even though the second file imports the first rather than duplicating it, having two root-level files with overlapping concerns reads as duplication to a fresh user. Replace the silent dual-write with a kickoff dialog that asks the user where the briefing should live — `AGENTS.md`, `CLAUDE.md`, or `CLAUDE.local.md` — defaulting based on persona. claude-kickoff then ensures Claude Code can find it: if the briefing is in AGENTS.md or CLAUDE.local.md, write a one-line `@<file>` import into CLAUDE.md (or skip CLAUDE.md entirely if the user wants a single-file install)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: none
 advances:
   - write-agentsmd-alongside-claudemd
 advanced_by: []
 tags: [story, infra, documentation]
 definition_of_done: |
-  - [ ] `kickoff` skill asks the user a single question after the persona step: "Where should the GoC briefing live?" — options: `AGENTS.md` (recommended for cross-runtime / agent-runtime persona), `CLAUDE.md` (recommended for Claude-only / team), `CLAUDE.local.md` (recommended for solo personal use, not checked in)
-  - [ ] Persona drives the recommendation order but does NOT lock the choice — user sees all three options every time
-  - [ ] `goc install` accepts a target file from the kickoff (env var, CLI flag, or config) and writes the marker-bounded block ONLY into the chosen file; other candidates are not touched
-  - [ ] When the chosen file is NOT `CLAUDE.md`, `claude-kickoff` writes/merges a minimal `CLAUDE.md` that contains only `@<chosen-file>` (so Claude Code transitively loads the briefing)
-  - [ ] When the chosen file IS `CLAUDE.md`, no AGENTS.md is written by GoC (user can still create one manually); document this trade-off (cross-runtime visibility lost)
-  - [ ] `goc upgrade` re-syncs only the chosen file's marker block; existing installs (which have blocks in both AGENTS.md and CLAUDE.md) are migrated forward — prompt user to pick one home, then strip the block from the others
-  - [ ] CLAUDE.md and AGENTS.md templates updated so the chosen-home file carries the FULL briefing (currently CLAUDE.md is a "Claude-specific delta" assuming AGENTS.md is co-present); when user chooses CLAUDE.md as sole home, the Claude-specific extras still belong but the delta-style cross-link to AGENTS.md must collapse
-  - [ ] Smoke test: kickoff three fresh repos, one per choice; verify Claude Code sees the briefing in all three (via `@AGENTS.md` import for the AGENTS.md and CLAUDE.local.md paths)
-  - [ ] Plugin payload re-synced via `python scripts/sync_plugin_assets.py` and the OpenClaw skill port re-run if skill bodies changed
+  - [x] `kickoff` skill asks the user a single question after the persona step: "Where should the GoC briefing live?" — options: `AGENTS.md` (recommended for cross-runtime / agent-runtime persona), `CLAUDE.md` (recommended for Claude-only / team), `CLAUDE.local.md` (recommended for solo personal use, not checked in)
+  - [x] Persona drives the recommendation order but does NOT lock the choice — user sees all three options every time
+  - [x] `goc install` accepts a target file from the kickoff (env var, CLI flag, or config) and writes the marker-bounded block ONLY into the chosen file; other candidates are not touched
+  - [x] When the chosen file is NOT `CLAUDE.md`, `claude-kickoff` writes/merges a minimal `CLAUDE.md` that contains only `@<chosen-file>` (so Claude Code transitively loads the briefing)
+  - [x] When the chosen file IS `CLAUDE.md`, no AGENTS.md is written by GoC (user can still create one manually); document this trade-off (cross-runtime visibility lost)
+  - [x] `goc upgrade` re-syncs only the chosen file's marker block; existing installs (which have blocks in both AGENTS.md and CLAUDE.md) are migrated forward — prompt user to pick one home, then strip the block from the others
+  - [x] CLAUDE.md and AGENTS.md templates updated so the chosen-home file carries the FULL briefing (currently CLAUDE.md is a "Claude-specific delta" assuming AGENTS.md is co-present); when user chooses CLAUDE.md as sole home, the Claude-specific extras still belong but the delta-style cross-link to AGENTS.md must collapse
+  - [x] Smoke test: kickoff three fresh repos, one per choice; verify Claude Code sees the briefing in all three (via `@AGENTS.md` import for the AGENTS.md and CLAUDE.local.md paths)
+  - [x] Plugin payload re-synced via `python scripts/sync_plugin_assets.py` and the OpenClaw skill port re-run if skill bodies changed
 worker: {who: "claude[bot]", where: main}
 ---
 

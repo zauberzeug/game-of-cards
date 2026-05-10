@@ -40,6 +40,14 @@ AGENT_SIGNAL_PATHS = {
     "codex": (Path("AGENTS.md"), Path(".codex")),
 }
 
+BRIEFING_TARGETS = ("AGENTS.md", "CLAUDE.md", "CLAUDE.local.md")
+DEFAULT_BRIEFING_TARGET = "AGENTS.md"
+BRIEFING_HEADERS = {
+    "AGENTS.md": "# Agent Guidelines",
+    "CLAUDE.md": "# Claude Code Guidelines",
+    "CLAUDE.local.md": "# Local notes for Claude Code (not checked in)",
+}
+
 PRE_COMMIT_HOOK = """\
   - repo: local
     hooks:
@@ -91,6 +99,69 @@ class AgentShim:
 
 AGENTS_GUIDANCE = GuidanceBlock("AGENTS.md", "AGENTS_GOC.md", "# Agent Guidelines")
 CLAUDE_GUIDANCE = GuidanceBlock("CLAUDE.md", "CLAUDE_GOC.md", "# Claude Code Guidelines")
+
+
+def _validate_briefing_target(briefing_target: str) -> None:
+    """Exit with a clear error if the briefing target is not one of the supported homes."""
+
+    if briefing_target not in BRIEFING_TARGETS:
+        supported = ", ".join(BRIEFING_TARGETS)
+        print(
+            f"goc: error: --briefing-target: unknown target {briefing_target!r}; supported: {supported}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
+def _briefing_body(templates: Path, briefing_target: str) -> str:
+    """Return the full briefing body for `briefing_target`.
+
+    AGENTS.md and CLAUDE.local.md receive the host-agnostic body verbatim.
+    CLAUDE.md (sole-home mode) gets the host-agnostic body plus the
+    Claude-specific extras appended — option (a) from the card body
+    (merge inline rather than maintain a unified template).
+    """
+
+    agents_body = (templates / AGENTS_GUIDANCE.template).read_text().rstrip()
+    if briefing_target == "CLAUDE.md":
+        claude_body = (templates / CLAUDE_GUIDANCE.template).read_text().rstrip()
+        return f"{agents_body}\n\n{claude_body}\n"
+    return agents_body + "\n"
+
+
+def _detect_briefing_targets_on_disk(target: Path) -> tuple[str, ...]:
+    """Return briefing-target candidates that already carry a GoC marker block."""
+
+    found: list[str] = []
+    for candidate in BRIEFING_TARGETS:
+        path = target / candidate
+        if not path.exists():
+            continue
+        try:
+            text = path.read_text()
+        except OSError:
+            continue
+        if GOC_BEGIN_RE.search(text):
+            found.append(candidate)
+    return tuple(found)
+
+
+def _strip_goc_block(path: Path) -> None:
+    """Remove the GoC marker-bounded block from a markdown file (no-op if absent).
+
+    If the file becomes empty or holds nothing but a stock header, delete it.
+    """
+
+    if not path.exists():
+        return
+    text = path.read_text()
+    pattern = re.compile(rf"\n*{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n*", re.DOTALL)
+    new = pattern.sub("\n", text).strip()
+    header_only = re.fullmatch(r"# (Agent Guidelines|Claude Code Guidelines|Local notes for Claude Code \(not checked in\))\s*", new)
+    if not new or header_only:
+        path.unlink()
+    else:
+        path.write_text(new + "\n")
 
 
 def _templates_root() -> Path:
@@ -466,11 +537,13 @@ def _plan_writes(
     agents: tuple[str, ...],
     *,
     local_skills_agents: frozenset[str] = frozenset(),
+    briefing_target: str = DEFAULT_BRIEFING_TARGET,
 ) -> list[PlannedWrite]:
     """Compute the list of writes the installer will perform.
 
     Agents in `local_skills_agents` get the full vendored layout (skills +
     hooks + settings). Other agents get guidance only (plugin path model).
+    The briefing block lands in `briefing_target` only.
     """
 
     deck_dir = target / ".game-of-cards" / "deck"
@@ -483,7 +556,7 @@ def _plan_writes(
             continue
         rel = asset.relative_to(config_src)
         writes.append(PlannedWrite("shared", "write", target / ".game-of-cards" / rel, "project-state"))
-    writes.append(PlannedWrite("shared", "append", target / AGENTS_GUIDANCE.path, "guidance"))
+    writes.append(PlannedWrite("shared", "append", target / briefing_target, "guidance"))
     for agent in agents:
         shim = _load_agent_shim(templates, agent)
         is_local = agent in local_skills_agents
@@ -493,8 +566,6 @@ def _plan_writes(
         if is_local:
             for file in shim.files:
                 writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
-        for guidance in shim.guidance:
-            writes.append(PlannedWrite(agent, "append", target / guidance.path, "guidance"))
         if is_local and shim.settings_json:
             writes.append(PlannedWrite(agent, "merge", target / shim.settings_json, "harness"))
     writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
@@ -507,11 +578,18 @@ def _plan_upgrade_writes(
     agents: tuple[str, ...],
     *,
     local_skills_agents: frozenset[str] = frozenset(),
+    briefing_target: str = DEFAULT_BRIEFING_TARGET,
 ) -> list[PlannedWrite]:
     """Compute the list of writes the upgrader will perform."""
 
     writes: list[PlannedWrite] = []
-    for write in _plan_writes(target, templates, agents, local_skills_agents=local_skills_agents):
+    for write in _plan_writes(
+        target,
+        templates,
+        agents,
+        local_skills_agents=local_skills_agents,
+        briefing_target=briefing_target,
+    ):
         if write.path.name == "log.md":
             continue
         action = "sync" if write.action == "write" else write.action
@@ -718,11 +796,20 @@ def _append_precommit_hook(target: Path) -> None:
     target.write_text(text + PRE_COMMIT_HOOK)
 
 
-def _sync_methodology_blocks(target: Path, templates: Path) -> None:
-    """Write the shared marker-bounded methodology block."""
+def _sync_methodology_blocks(target: Path, templates: Path, briefing_target: str) -> None:
+    """Write the marker-bounded briefing block into the chosen home file only.
 
-    agents_body = (templates / AGENTS_GUIDANCE.template).read_text()
-    _append_marker_block(target / AGENTS_GUIDANCE.path, agents_body, header=AGENTS_GUIDANCE.header)
+    The briefing has exactly one home — AGENTS.md, CLAUDE.md, or CLAUDE.local.md
+    — set by the caller (`goc install --briefing-target …`, default AGENTS.md).
+    Other candidates are not touched.
+    """
+
+    body = _briefing_body(templates, briefing_target)
+    _append_marker_block(
+        target / briefing_target,
+        body,
+        header=BRIEFING_HEADERS[briefing_target],
+    )
 
 
 def _sync_agent_harness(
@@ -735,35 +822,34 @@ def _sync_agent_harness(
 ) -> None:
     """Copy and render one agent's shim from its template manifest.
 
-    When `guidance_only=True`, only the agent's guidance block (e.g. CLAUDE.md)
-    is written. Skills, hook files, and settings.json are skipped — the plugin
-    path model.
+    Skills, hook files, and settings.json are written when `guidance_only=False`;
+    the plugin path model uses `guidance_only=True` to skip them. The briefing
+    block (AGENTS.md / CLAUDE.md / CLAUDE.local.md) is NOT written here — it
+    flows through `_sync_methodology_blocks` so a single chosen home is honored
+    regardless of which agents are installed.
     """
 
     shim = _load_agent_shim(templates, agent)
-    if not guidance_only:
-        if shim.skills:
-            _sync_skill_tree(
-                templates,
-                target / shim.skills.target,
-                agent,
-                replace_skills=replace_skills,
-                codex_frontmatter=shim.skills.frontmatter == "codex",
-            )
+    if guidance_only:
+        return
+    if shim.skills:
+        _sync_skill_tree(
+            templates,
+            target / shim.skills.target,
+            agent,
+            replace_skills=replace_skills,
+            codex_frontmatter=shim.skills.frontmatter == "codex",
+        )
 
-        for file in shim.files:
-            destination = target / file.target
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(templates / file.source, destination)
-            if file.mode == "executable":
-                destination.chmod(destination.stat().st_mode | 0o755)
+    for file in shim.files:
+        destination = target / file.target
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(templates / file.source, destination)
+        if file.mode == "executable":
+            destination.chmod(destination.stat().st_mode | 0o755)
 
-        if shim.settings_json:
-            _merge_claude_settings(target / shim.settings_json)
-
-    for guidance in shim.guidance:
-        body = (templates / guidance.template).read_text()
-        _append_marker_block(target / guidance.path, body, header=guidance.header)
+    if shim.settings_json:
+        _merge_claude_settings(target / shim.settings_json)
 
 
 INSTALL_AGENTS_HELP = (
@@ -787,6 +873,11 @@ KEEP_LOCAL_SKILLS_HELP = (
     "Skips the migration to the plugin path. "
     "Use in scripted contexts (CI cron, etc.) to opt out of migration. "
     "Requires a pipx install of game-of-cards — refused when running under the GoC plugin."
+)
+BRIEFING_TARGET_HELP = (
+    "File where the GoC briefing block lives. One of: AGENTS.md (default; cross-runtime visible), "
+    "CLAUDE.md (Claude-only; cross-runtime visibility lost), CLAUDE.local.md (gitignored). "
+    "On upgrade, omit to detect from the existing install; supplying it migrates the briefing home."
 )
 
 _PLUGIN_INSTALL_CMDS = (
@@ -814,9 +905,11 @@ def install(
     claude_flag: bool = False,
     codex_flag: bool = False,
     local_skills: bool = False,
+    briefing_target: str = DEFAULT_BRIEFING_TARGET,
 ) -> None:
     """Scaffold a fresh repo with the shared GoC files and selected harnesses."""
 
+    _validate_briefing_target(briefing_target)
     if local_skills and _is_plugin_context():
         print(_LOCAL_SKILLS_PLUGIN_REFUSAL, file=sys.stderr)
         sys.exit(2)
@@ -839,7 +932,13 @@ def install(
 
     local_skills_agents = frozenset(a for a in agents if _should_use_local_skills(a, local_skills=local_skills))
 
-    writes = _plan_writes(target, templates, agents, local_skills_agents=local_skills_agents)
+    writes = _plan_writes(
+        target,
+        templates,
+        agents,
+        local_skills_agents=local_skills_agents,
+        briefing_target=briefing_target,
+    )
     if dry_run:
         _print_plan("install", target, writes, agents)
         return
@@ -862,7 +961,7 @@ def install(
 
     _sync_game_of_cards_config(target, templates)
 
-    _sync_methodology_blocks(target, templates)
+    _sync_methodology_blocks(target, templates, briefing_target)
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
@@ -893,12 +992,67 @@ def install(
     )
 
 
+def _resolve_upgrade_briefing_target(
+    target: Path,
+    *,
+    explicit_target: str | None,
+    dry_run: bool,
+) -> str:
+    """Decide which file should hold the briefing block on upgrade.
+
+    Resolution order:
+      1. `explicit_target` (from --briefing-target on the upgrade command).
+      2. The single existing GoC marker block on disk, if exactly one is found.
+      3. A multi-block legacy install — prompt the user to pick one, strip the
+         others; in dry-run, default to AGENTS.md without prompting.
+      4. No marker blocks at all — fall back to AGENTS.md.
+    """
+
+    if explicit_target is not None:
+        _validate_briefing_target(explicit_target)
+        return explicit_target
+
+    found = _detect_briefing_targets_on_disk(target)
+    if len(found) == 1:
+        return found[0]
+    if len(found) == 0:
+        return DEFAULT_BRIEFING_TARGET
+    # len(found) >= 2: legacy dual-write install — pick one home, strip others.
+    if dry_run:
+        return found[0]
+    print(
+        f"This repo has GoC marker blocks in multiple files: {', '.join(found)}. "
+        "GoC now keeps the briefing in exactly one home — pick one and the rest will be stripped."
+    )
+    print("Briefing-target options:")
+    for idx, candidate in enumerate(found, start=1):
+        print(f"  {idx}) {candidate}")
+    if sys.stdin.isatty():
+        raw = input(f"Pick [1-{len(found)}, default 1]: ").strip()
+    else:
+        try:
+            raw = sys.stdin.readline().strip()
+        except (EOFError, OSError):
+            raw = ""
+    if not raw:
+        choice = found[0]
+    else:
+        try:
+            choice = found[int(raw) - 1]
+        except (ValueError, IndexError):
+            print(f"goc: error: invalid selection {raw!r}; aborting upgrade.", file=sys.stderr)
+            sys.exit(2)
+    print(f"Briefing target set to {choice}; stripping GoC blocks from the others.")
+    return choice
+
+
 def upgrade(
     dry_run: bool = False,
     agent_specs: tuple[str, ...] = (),
     claude_flag: bool = False,
     codex_flag: bool = False,
     keep_local_skills: bool = False,
+    briefing_target: str | None = None,
 ) -> None:
     """Re-sync skill templates, AGENTS.md, and CLAUDE.md sections from the installed package version."""
 
@@ -930,6 +1084,15 @@ def upgrade(
         sys.exit(1)
     existing = _detect_existing(deck_dir)
 
+    resolved_briefing = _resolve_upgrade_briefing_target(
+        target,
+        explicit_target=briefing_target,
+        dry_run=dry_run,
+    )
+    legacy_briefings_to_strip = tuple(
+        candidate for candidate in _detect_briefing_targets_on_disk(target) if candidate != resolved_briefing
+    )
+
     # Determine migration status for Claude: vendored → plugin path
     claude_has_vendored = False
     if "claude" in agents:
@@ -950,18 +1113,35 @@ def upgrade(
         local_skills_agents = frozenset(a for a in agents if a != "claude")
 
     pending_migration = do_migrate_claude and not dry_run
+    pending_briefing_migration = bool(legacy_briefings_to_strip) and not dry_run
 
-    if existing == __version__ and not dry_run and not agents_explicit and not pending_migration and not keep_local_skills:
+    if (
+        existing == __version__
+        and not dry_run
+        and not agents_explicit
+        and not pending_migration
+        and not keep_local_skills
+        and not pending_briefing_migration
+        and briefing_target is None
+    ):
         print(f"already at goc {__version__} — nothing to do.")
         return
 
     if dry_run:
         migration_note = " (will migrate vendored .claude/skills/ → plugin path)" if do_migrate_claude else ""
+        if legacy_briefings_to_strip:
+            migration_note += f" (briefing target → {resolved_briefing}; will strip blocks from {', '.join(legacy_briefings_to_strip)})"
         print(f"goc upgrade would sync {existing} → {__version__}{migration_note}")
         _print_plan(
             "upgrade",
             target,
-            _plan_upgrade_writes(target, templates, agents, local_skills_agents=local_skills_agents),
+            _plan_upgrade_writes(
+                target,
+                templates,
+                agents,
+                local_skills_agents=local_skills_agents,
+                briefing_target=resolved_briefing,
+            ),
             agents,
         )
         return
@@ -989,11 +1169,15 @@ def upgrade(
 
     _sync_game_of_cards_config(target, templates, migrate_legacy=True)
 
-    _sync_methodology_blocks(target, templates)
+    for stale in legacy_briefings_to_strip:
+        _strip_goc_block(target / stale)
+    _sync_methodology_blocks(target, templates, resolved_briefing)
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
     print(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    if legacy_briefings_to_strip:
+        print(f"Briefing target is now {resolved_briefing}; stripped GoC blocks from {', '.join(legacy_briefings_to_strip)}.")
     print("Next: re-run goc validate to confirm cards parse against the new schema.")
 
 
