@@ -50,6 +50,8 @@ The same artifact is published to npm as `game-of-cards`; consumers that prefer 
 
 Until publish lands (tracked under `publish-openclaw-plugin`), build from source against this repo's plugin payload at <https://github.com/zauberzeug/game-of-cards/tree/main/openclaw-plugin>.
 
+> **Known limitation (OpenClaw ≤ 2026.5.6):** spawned subagents do not see the `goc` tool because OpenClaw's plugin-tool allowlist for subagents ignores `tools.subagents.tools.alsoAllow`. Main sessions are unaffected. Upstream tracker: <https://github.com/openclaw/openclaw/pull/51388>. See the plugin README for workaround guidance.
+
 ## Install (other agent runtimes / CI)
 
 Install the `goc` CLI once per machine:

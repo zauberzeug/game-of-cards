@@ -65,6 +65,36 @@ is bundled inside the npm payload — the only host prerequisite is
 `python3 -m goc.cli` from the tool handler — no `uv`, no `pipx`, no
 separate `pipx install game-of-cards` step.
 
+## Known limitations
+
+### Subagents do not see the `goc` tool (OpenClaw ≤ 2026.5.6)
+
+Spawned subagents cannot call the `goc` tool even when explicitly listed
+in `tools.subagents.tools.alsoAllow`. The plugin loads, the runtime
+registry shows the tool (`openclaw plugins inspect game-of-cards
+--runtime --json` reports `toolNames: ["goc"]`), and main sessions can
+call `goc` — but spawned subagents report `goc tool not available`.
+
+This is an upstream OpenClaw bug: the plugin tool allowlist for
+subagents reads `policy.allow` but does not include `policy.alsoAllow`.
+Tracked at:
+
+- <https://github.com/openclaw/openclaw/issues/23359> — closed in
+  2026-02 as completed, but the `alsoAllow` projection bug surfaced
+  in this report still ships in 2026.5.6.
+- <https://github.com/openclaw/openclaw/pull/51388> — proposed
+  upstream fix; open as of 2026-05-10.
+
+**Workaround:** until OpenClaw includes the upstream fix, prefer
+documenting the limitation rather than restricting subagents'
+toolset. Setting `tools.subagents.tools.allow: ["goc", ...]` is a
+final allow-only filter that can accidentally remove standard
+subagent tools — only use it as a temporary workaround in narrow
+smoke environments where you control the full subagent toolset.
+
+After OpenClaw releases the fix, subagents will see plugin tools
+through the documented `alsoAllow` path with no plugin-side change.
+
 ## How GoC fits OpenClaw
 
 OpenClaw's plugin architecture is a strong match for the deck pattern:

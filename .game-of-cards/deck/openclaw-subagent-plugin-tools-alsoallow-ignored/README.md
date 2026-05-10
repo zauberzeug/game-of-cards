@@ -1,7 +1,7 @@
 ---
 title: openclaw-subagent-plugin-tools-alsoallow-ignored
 summary: "OpenClaw 2026.5.6 ignores `tools.subagents.tools.alsoAllow` while building plugin tool allowlists for subagents. The GoC plugin registers `goc` correctly and main sessions can call it, but spawned subagents still cannot see the `goc` first-class tool. This matches upstream issue openclaw/openclaw#23359 and open PR #51388."
-status: active
+status: blocked
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -11,12 +11,12 @@ advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Track upstream OpenClaw issue/PR state: issue #23359 and PR #51388, or their successor if superseded
-  - [ ] Document the exact affected OpenClaw version observed locally (`openclaw --version`)
-  - [ ] Add/update GoC OpenClaw install notes with the current limitation and safe workaround guidance
+  - [x] Track upstream OpenClaw issue/PR state: issue #23359 and PR #51388, or their successor if superseded
+  - [x] Document the exact affected OpenClaw version observed locally (`openclaw --version`)
+  - [x] Add/update GoC OpenClaw install notes with the current limitation and safe workaround guidance
   - [ ] Once an OpenClaw release contains the fix, retest: main session sees `goc`, spawned subagent sees `goc`, and subagent can run `goc validate`
   - [ ] Remove or revise workaround notes after the fixed OpenClaw version is the minimum supported version
-  - [ ] `uv run goc validate` passes
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -80,9 +80,14 @@ This matches known upstream OpenClaw behavior:
 
 - Issue: <https://github.com/openclaw/openclaw/issues/23359>
   - `tools.subagents.tools.alsoAllow is accepted by schema but ignored at runtime`
+  - State observed 2026-05-10: closed `COMPLETED` 2026-02-22, but the
+    `alsoAllow`-projection bug surfaced in the report still ships in
+    the engine through 2026.5.6 — i.e. the issue was closed before a
+    fix was merged.
 - PR: <https://github.com/openclaw/openclaw/pull/51388>
   - `fix(tool-policy): include alsoAllow entries in plugin tool allowlist …`
-  - Status observed 2026-05-10: open
+  - State observed 2026-05-10: OPEN, last updated 2026-05-04, head is
+    a fork of `main`, no review decision yet.
 
 Root cause described upstream: plugin tool allowlist collection reads `policy.allow` but does not include `policy.alsoAllow`. Therefore plugin tools can be registered and visible in the runtime registry, while still failing to appear in subagent sessions.
 
@@ -108,3 +113,22 @@ goc validate
 
 4. Spawn a clean subagent and ask it to call first-class `goc validate` without shell fallback.
 5. Close this card when both calls succeed and docs/workarounds are updated.
+
+## Partial close 2026-05-10
+
+DoD items 1, 2, 3, and 6 closed in this pass. Card moved to `blocked`
+pending the upstream PR landing in a tagged OpenClaw release.
+
+- DoD 1 (track upstream): issue/PR states verified — see "Online
+  finding" above.
+- DoD 2 (document affected version): captured as `2026.5.6 (c97b9f7)`
+  under "Problem".
+- DoD 3 (install notes): added a "Known limitations" section to
+  `openclaw-plugin/README.md` and a brief reference in the
+  OpenClaw install section of `site/llms.txt`. Both link to
+  upstream PR #51388 and the in-card workaround guidance.
+- DoD 6 (`uv run goc validate`): passes.
+
+Items 4 and 5 unblock once an OpenClaw release ships the fix from
+PR #51388 (or its successor). Re-pull then to retest the subagent
+projection and revise the workaround notes.
