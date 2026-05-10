@@ -1,7 +1,7 @@
 ---
 title: kickoff-asks-where-goc-briefing-lives
 summary: "Today `goc install` writes the GoC briefing block into BOTH `AGENTS.md` (full body) AND `CLAUDE.md` (Claude-specific delta + `@AGENTS.md` import). Even though the second file imports the first rather than duplicating it, having two root-level files with overlapping concerns reads as duplication to a fresh user. Replace the silent dual-write with a kickoff dialog that asks the user where the briefing should live — `AGENTS.md`, `CLAUDE.md`, or `CLAUDE.local.md` — defaulting based on persona. claude-kickoff then ensures Claude Code can find it: if the briefing is in AGENTS.md or CLAUDE.local.md, write a one-line `@<file>` import into CLAUDE.md (or skip CLAUDE.md entirely if the user wants a single-file install)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] CLAUDE.md and AGENTS.md templates updated so the chosen-home file carries the FULL briefing (currently CLAUDE.md is a "Claude-specific delta" assuming AGENTS.md is co-present); when user chooses CLAUDE.md as sole home, the Claude-specific extras still belong but the delta-style cross-link to AGENTS.md must collapse
   - [ ] Smoke test: kickoff three fresh repos, one per choice; verify Claude Code sees the briefing in all three (via `@AGENTS.md` import for the AGENTS.md and CLAUDE.local.md paths)
   - [ ] Plugin payload re-synced via `python scripts/sync_plugin_assets.py` and the OpenClaw skill port re-run if skill bodies changed
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Kickoff asks where the GoC briefing lives
