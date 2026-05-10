@@ -13,11 +13,11 @@ advances:
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] zauberzeug npm org exists at <https://www.npmjs.com/org/zauberzeug>; create at <https://www.npmjs.com/org/create> if missing (free for public packages); recorded in this card's log
-  - [ ] First publish of `game-of-cards@0.0.7` to npm completed (under personal account, since the package must exist before org transfer is possible). Either via `npm publish --access public --otp=XXXXXX` from authenticator, or via a granular-access-token with bypass-2fa enabled
-  - [ ] Ownership transferred: `npm access grant read-write zauberzeug:owners game-of-cards` so the zauberzeug org has read-write rights on the package
-  - [ ] Personal account removed from owners (`npm owner rm <personal-handle> game-of-cards`) so only the org maintains the package; or kept as one of the owners alongside the org if mixed-ownership is desired (recorded in this card's log)
-  - [ ] npm trusted publisher entry configured at <https://www.npmjs.com/package/game-of-cards/access> by an org owner — claim values: owner=`zauberzeug`, repo=`game-of-cards`, workflow=`release.yml`, environment=`npm`
+  - [x] zauberzeug npm org exists; current user is an org member (verified 2026-05-10 via `npm access list packages zauberzeug` returning the package)
+  - [x] First publish of `game-of-cards@0.0.7` to npm completed under personal account `rodja` (verified live at <https://www.npmjs.com/package/game-of-cards>; sha256 matches local tarball)
+  - [x] Org team granted write access: `npm access grant read-write zauberzeug:developers game-of-cards` (verified via `npm access list packages zauberzeug:developers` → `game-of-cards: read-write`). Note: for **unscoped** npm packages, this team grant — not the maintainer list — IS the org-level write-access mechanism. Orgs cannot appear in the `Maintainers:` list of an unscoped package; that's an npm-side limitation specific to unscoped naming. The team grant gives every member of `zauberzeug:developers` (including CI via OIDC if configured at the org level) publish rights.
+  - [x] Personal account stays as the listed maintainer because npm refuses to remove the last maintainer of an unscoped package and orgs cannot be added as maintainers for unscoped names. The team-write grant is what gives the org publish ability; the visible-maintainer field remains a personal handle. Trade-off accepted: package-page metadata shows `rodja` as maintainer, while functional access control is org-level.
+  - [ ] npm trusted publisher entry configured at <https://www.npmjs.com/package/game-of-cards/access> — claim values: owner=`zauberzeug`, repo=`game-of-cards`, workflow=`release.yml`, environment=`npm`. Configurable by any user with write access (the team-grant suffices)
   - [ ] ClawHub equivalent: package `game-of-cards` published under zauberzeug org/handle (not personal `@rodja`) on ClawHub, and trusted publisher entry configured for the same GitHub workflow with environment=`clawhub`
   - [ ] First end-to-end auto-publish proven by tagging `v0.0.8` and observing CI publish to all three registries (PyPI, npm, ClawHub) under org ownership
   - [ ] `uv run goc validate` passes
@@ -58,11 +58,19 @@ npm publish --access public --otp=<6-digit code>
 #   npm publish --access public
 #   npm config delete //registry.npmjs.org/:_authToken
 
-# Step 3: Grant the zauberzeug org read-write on the package.
-npm access grant read-write zauberzeug:owners game-of-cards
+# Step 3: Grant the zauberzeug org's developers team read-write on the package.
+# (The 'developers' team must already exist in the org; npm orgs ship with
+# 'developers' by default. Substitute another team name if your org's structure
+# differs.)
+npm access grant read-write zauberzeug:developers game-of-cards
 
-# Step 4 (optional, recommended): remove the personal account from owners.
-npm owner rm <personal-handle> game-of-cards
+# Step 4: REMOVED — `npm owner add <orgname>` does NOT work for unscoped packages
+# (npm treats orgs as non-users and the request 404s). The team-write grant in
+# step 3 is the org-access mechanism; the maintainer list will continue to show
+# the personal handle, which is an npm-side limitation specific to unscoped
+# names. To get a singular org-as-owner display, the package must be scoped
+# (`@zauberzeug/game-of-cards`) — see the naming-decision section above for
+# why we chose unscoped despite this trade-off.
 
 # Step 5: configure trusted publisher in the npm web UI (now visible because
 # the package exists). Sign in as a zauberzeug org owner; navigate to
