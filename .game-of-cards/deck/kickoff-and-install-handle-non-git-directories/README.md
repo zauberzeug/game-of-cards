@@ -1,7 +1,7 @@
 ---
 title: kickoff-and-install-handle-non-git-directories
 summary: "Running `goc install` (and the `kickoff` skill on top of it) in a directory without a `.git/` produces dead-weight artifacts and offers no notice to the user. `_append_precommit_hook` writes `.pre-commit-config.yaml` unconditionally even when no git repo is present, leaving a config no hook can act on. The `kickoff` skill never checks for git either, so the methodology — which assumes git for auto_commit, claim records, and history — silently runs half-armed. Fix: skip the pre-commit write when `.git/` is absent, and have `kickoff` flag the absence to the user (one-line notice, no education) so they can decide whether to `git init` before continuing."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] Verified: `goc install` in a fresh non-git tmpdir does NOT create `.pre-commit-config.yaml`; `.game-of-cards/`, `AGENTS.md`, `CLAUDE.md`, and the marker block still land normally
   - [ ] Verified: `kickoff` in a fresh non-git tmpdir prints the notice once before scaffolding, then proceeds
   - [ ] Both Claude-plugin and pipx-installed engine paths re-synced via `pre-commit run sync-plugin-assets --all-files`
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Kickoff and install handle non-git directories
