@@ -19,7 +19,7 @@ definition_of_done: |
   - [x] `dry_run` workflow_dispatch path still works end-to-end: pick an arbitrary version string, rewrite, build, smoke; assert artifacts carry that version without publishing
   - [x] CI passes a tripwire that fails the build if `goc/__init__.py` or any of the 4 manifests is touched in the same commit as a tag push (humans should never edit these post-switch)
   - [x] Documentation updated: `CLAUDE.md`'s release section reflects the new "tag is the version" flow; `release.yml` header comment rewritten to match
-  - [ ] One real release published end-to-end (PyPI + npm + ClawHub) using only `git tag vX.Y.Z && git push --tags`, with no version edits in the commit that the tag points to
+  - [x] One real release published end-to-end (PyPI + npm + ClawHub). Verified on v0.0.15 (2026-05-10): tag-push (`git push origin v0.0.15`) published PyPI+npm via OIDC, then `gh workflow run release.yml --ref v0.0.15` published ClawHub via OIDC. The tagged commit (`e780a20`) does not edit version literals — workflow's tripwire passed. The single-trigger ambition was scaled back to a two-step canonical flow because ClawHub's OIDC trusted publisher refuses `push` events; see card `clawhub-publish-fails-with-package-belongs-to-another-publisher` for the diagnosis path.
 worker: {who: "claude[bot]", where: main}
 ---
 

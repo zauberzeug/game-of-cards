@@ -14,10 +14,10 @@ tags: [bug, infra]
 definition_of_done: |
   - [x] Reproduce: verify the failure mode by inspecting CI run `25608246745` (the v0.0.7 tag-push attempt) — build OK, smoke errored on `Unsupported event type: push`, publish skipped
   - [x] Decide on a fix shape (skip-smoke-on-push / split-smoke-into-separate-workflow / replace-action / inline-script-replacement) and record the choice in this card's body
-  - [ ] Implement the chosen fix and verify by tag-pushing a throw-away pre-release tag (e.g., `v0.0.7-test`) — build, smoke, and publish all run end-to-end without manual workflow_dispatch follow-up
-  - [ ] Delete the throw-away tag from origin
-  - [ ] `release.yml` comment header updated to reflect the new release flow
-  - [ ] `uv run goc validate` passes
+  - [x] Implement the chosen fix (smoke-skipped-on-push + `(success || skipped)` gate on PyPI/npm publishes) — landed in `000708e`. Verified on v0.0.13 tag-push (run `25628067568` after lockfile-validation fix in `dacd7ee`): build OK, smoke skipped, PyPI+npm publishes both ✅. The original DoD wording asked for "build, smoke, and publish all run end-to-end" but the chosen fix design explicitly skips smoke on push (it only runs under workflow_dispatch); real releases v0.0.13 / v0.0.15 served as verification.
+  - [x] No throw-away tag was used. Real release v0.0.13 served as the in-anger verification of the smoke-skip-on-push fix; the test-tag-and-delete approach was unnecessary. (Note: ClawHub stayed unpublished on v0.0.13 / v0.0.14 due to two unrelated bugs in separate cards; those were resolved on v0.0.15.)
+  - [x] `release.yml` comment header updated to reflect the new release flow — through several iterations: `0bb0709` (drop CLAWHUB_TOKEN), `23c89e7` (rewrite canonical flow as two-step OIDC), `e780a20` (document `version` input passthrough).
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
