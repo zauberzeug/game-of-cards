@@ -33,7 +33,7 @@ import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { Type, type Static } from "@sinclair/typebox";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 
 const COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 // PLUGIN_ROOT is the parent of the compiled dist/ — i.e., the
@@ -211,6 +211,15 @@ const PATTERN_REMINDER =
 const CODE_MUTATING_TOOLS = new Set(["Edit", "Write"]);
 const BASH_COMMIT_PATTERNS = [/\bgit\s+commit\b/, /\bgit\s+add\s+[-.]/];
 
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function isOptedOut(projectDir: string): Promise<boolean> {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
@@ -230,6 +239,14 @@ export default definePluginEntry({
     "Agile work-card methodology for AI-agent collaborators. Files, advances, and closes cards in `.game-of-cards/deck/` via the bundled goc engine.",
 
   register(api: any) {
+    // session_start captures the host-side project root here so the goc
+    // tool handler can fall back to it when the agent-supplied cwd is a
+    // sandbox-internal path that does not exist on the host (e.g. a
+    // Slack-bridged subagent passing "/workspace"). Without this, Node
+    // raises `spawn python3 ENOENT` for the missing cwd, which reads
+    // misleadingly as "python3 is not installed".
+    let sessionProjectDir: string | undefined;
+
     // === goc tool ===
     // Subprocess invocation routes through the sanctioned
     // api.runtime.system.runCommandWithTimeout API. Defined inside
@@ -275,11 +292,25 @@ export default definePluginEntry({
         "Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
       parameters: GocToolParams,
       async execute(_id: any, params: GocToolInput) {
-        const cwd = params.cwd ?? process.cwd();
+        const requestedCwd = params.cwd ?? sessionProjectDir ?? process.cwd();
+        let cwd = requestedCwd;
+        let cwdNotice = "";
+        if (!(await pathExists(cwd))) {
+          for (const candidate of [sessionProjectDir, process.cwd()]) {
+            if (!candidate || candidate === cwd) continue;
+            if (await pathExists(candidate)) {
+              cwdNotice = `[goc plugin] requested cwd "${requestedCwd}" does not exist on host; using "${candidate}" instead.`;
+              cwd = candidate;
+              break;
+            }
+          }
+        }
         const argv = buildArgs(params);
         const result = await runGoc(argv, cwd);
+        const stderrPieces = [cwdNotice, result.stderr].filter(Boolean);
+        const stderrJoined = stderrPieces.join("\n");
         const text =
-          (result.stdout + (result.stderr ? `\n${result.stderr}` : "")).trim() ||
+          (result.stdout + (stderrJoined ? `\n${stderrJoined}` : "")).trim() ||
           `goc ${params.verb} returned exit ${result.exitCode}`;
         return {
           content: [{ type: "text", text }],
@@ -297,6 +328,7 @@ export default definePluginEntry({
     // npm install openclaw.
     api.on("session_start", async (ctx: any) => {
       const projectDir = (ctx?.projectDir as string | undefined) ?? process.cwd();
+      sessionProjectDir = projectDir;
       const deckDir = await resolveDeckDir(projectDir);
       const active = await findActiveCards(deckDir);
       if (active.length > 0) {

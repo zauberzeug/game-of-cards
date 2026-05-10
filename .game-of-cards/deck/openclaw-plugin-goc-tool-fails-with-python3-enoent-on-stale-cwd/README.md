@@ -1,21 +1,21 @@
 ---
 title: openclaw-plugin-goc-tool-fails-with-python3-enoent-on-stale-cwd
 summary: "OpenClaw plugin's goc tool spawns python3 with the agent-supplied cwd. In sandboxed sessions the agent passes a sandbox-internal path such as `/workspace` that does not exist on the host, so Node reports `spawn python3 ENOENT` even though python3 is installed. Validate the requested cwd and fall back to the project directory captured at session_start before spawning."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Capture `ctx.projectDir` at the `session_start` hook into a closure-scoped variable usable by the tool handler
-  - [ ] Tool `execute` validates that the resolved cwd exists; if not, falls back in order: captured session projectDir, then `process.cwd()`
-  - [ ] Fallback emits a diagnostic line on the stderr channel returned to the caller naming both the requested cwd and the chosen fallback, so future sandbox-bridge breakage is self-explaining instead of being attributed to a missing python3 binary
-  - [ ] `npm run build` in `openclaw-plugin/` succeeds and `dist/index.js` reflects the change
-  - [ ] `uv run goc validate` passes
+  - [x] Capture `ctx.projectDir` at the `session_start` hook into a closure-scoped variable usable by the tool handler
+  - [x] Tool `execute` validates that the resolved cwd exists; if not, falls back in order: captured session projectDir, then `process.cwd()`
+  - [x] Fallback emits a diagnostic line on the stderr channel returned to the caller naming both the requested cwd and the chosen fallback, so future sandbox-bridge breakage is self-explaining instead of being attributed to a missing python3 binary
+  - [x] `npm run build` in `openclaw-plugin/` succeeds and `dist/index.js` reflects the change
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 

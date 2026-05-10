@@ -848,7 +848,7 @@ function Literal(value, options = {}) {
 }
 
 // node_modules/@sinclair/typebox/build/esm/type/boolean/boolean.mjs
-function Boolean(options = {}) {
+function Boolean2(options = {}) {
   return {
     ...options,
     [Kind]: "Boolean",
@@ -882,7 +882,7 @@ function String(options = {}) {
 // node_modules/@sinclair/typebox/build/esm/type/template-literal/syntax.mjs
 function* FromUnion(syntax) {
   const trim = syntax.trim().replace(/"|'/g, "");
-  return trim === "boolean" ? yield Boolean() : trim === "number" ? yield Number() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String() : yield (() => {
+  return trim === "boolean" ? yield Boolean2() : trim === "number" ? yield Number() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String() : yield (() => {
     const literals = trim.split("|").map((literal) => Literal(literal.trim()));
     return literals.length === 0 ? Never() : literals.length === 1 ? literals[0] : UnionEvaluated(literals);
   })();
@@ -2315,7 +2315,7 @@ __export(type_exports3, {
   AsyncIterator: () => AsyncIterator,
   Awaited: () => Awaited,
   BigInt: () => BigInt,
-  Boolean: () => Boolean,
+  Boolean: () => Boolean2,
   Capitalize: () => Capitalize,
   Composite: () => Composite,
   Const: () => Const,
@@ -2379,7 +2379,7 @@ var Type = type_exports3;
 // index.ts
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 var COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 var PLUGIN_ROOT = resolve(COMPILED_DIR, "..");
 var VENDORED_GOC_PATH = PLUGIN_ROOT;
@@ -2524,6 +2524,14 @@ var DECK_REMINDER = [
 var PATTERN_REMINDER = `[GoC | pattern-check] Before yielding: did your recent change touch a pattern with broader applicability? If yes, file a generalization card via goc verb='new' before stopping. If no generalization is warranted, respond "no generalization needed" and stop.`;
 var CODE_MUTATING_TOOLS = /* @__PURE__ */ new Set(["Edit", "Write"]);
 var BASH_COMMIT_PATTERNS = [/\bgit\s+commit\b/, /\bgit\s+add\s+[-.]/];
+async function pathExists(p) {
+  try {
+    await access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
 async function isOptedOut(projectDir) {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
@@ -2538,6 +2546,7 @@ var index_default = definePluginEntry({
   name: "Game of Cards",
   description: "Agile work-card methodology for AI-agent collaborators. Files, advances, and closes cards in `.game-of-cards/deck/` via the bundled goc engine.",
   register(api) {
+    let sessionProjectDir;
     async function runGoc(args, cwd) {
       const env = {
         ...process.env,
@@ -2558,11 +2567,25 @@ var index_default = definePluginEntry({
       description: "Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
       parameters: GocToolParams,
       async execute(_id, params) {
-        const cwd = params.cwd ?? process.cwd();
+        const requestedCwd = params.cwd ?? sessionProjectDir ?? process.cwd();
+        let cwd = requestedCwd;
+        let cwdNotice = "";
+        if (!await pathExists(cwd)) {
+          for (const candidate of [sessionProjectDir, process.cwd()]) {
+            if (!candidate || candidate === cwd) continue;
+            if (await pathExists(candidate)) {
+              cwdNotice = `[goc plugin] requested cwd "${requestedCwd}" does not exist on host; using "${candidate}" instead.`;
+              cwd = candidate;
+              break;
+            }
+          }
+        }
         const argv = buildArgs(params);
         const result = await runGoc(argv, cwd);
-        const text = (result.stdout + (result.stderr ? `
-${result.stderr}` : "")).trim() || `goc ${params.verb} returned exit ${result.exitCode}`;
+        const stderrPieces = [cwdNotice, result.stderr].filter(Boolean);
+        const stderrJoined = stderrPieces.join("\n");
+        const text = (result.stdout + (stderrJoined ? `
+${stderrJoined}` : "")).trim() || `goc ${params.verb} returned exit ${result.exitCode}`;
         return {
           content: [{ type: "text", text }],
           isError: result.exitCode !== 0
@@ -2571,6 +2594,7 @@ ${result.stderr}` : "")).trim() || `goc ${params.verb} returned exit ${result.ex
     });
     api.on("session_start", async (ctx) => {
       const projectDir = ctx?.projectDir ?? process.cwd();
+      sessionProjectDir = projectDir;
       const deckDir = await resolveDeckDir(projectDir);
       const active = await findActiveCards(deckDir);
       if (active.length > 0) {
