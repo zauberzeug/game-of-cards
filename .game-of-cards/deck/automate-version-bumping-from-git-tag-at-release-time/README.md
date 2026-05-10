@@ -6,19 +6,19 @@ stage: null
 contribution: medium
 created: 2026-05-10
 closed_at: null
-human_gate: none
+human_gate: session
 advances: []
 advanced_by: []
 tags: [infra]
 definition_of_done: |
-  - [ ] `pyproject.toml` declares `dynamic = ["version"]` and `[tool.hatch.version] source = "vcs"`; the literal `version = "X.Y.Z"` line is removed
-  - [ ] `uv build` from a checkout at a tagged commit produces a wheel whose version matches the tag (verified locally for at least one dry-run tag)
-  - [ ] `release.yml` build job parses `${GITHUB_REF#refs/tags/v}` and rewrites `__version__` in `goc/__init__.py` plus the `version` field in `openclaw-plugin/package.json`, `openclaw-plugin/package-lock.json` (both occurrences), `claude-plugin/.claude-plugin/plugin.json`, and `.claude-plugin/marketplace.json` before the publish steps run
-  - [ ] `scripts/sync_plugin_assets.py` runs after the rewrite (or its byte-mirror still produces `claude-plugin/goc/__init__.py` and `openclaw-plugin/goc/__init__.py` with the new literal)
-  - [ ] The existing `Verify tag matches pyproject + package.json versions` step in `release.yml` is removed (no longer meaningful — the workflow IS the version writer)
-  - [ ] `dry_run` workflow_dispatch path still works end-to-end: pick an arbitrary version string, rewrite, build, smoke; assert artifacts carry that version without publishing
-  - [ ] CI passes a tripwire that fails the build if `goc/__init__.py` or any of the 4 manifests is touched in the same commit as a tag push (humans should never edit these post-switch)
-  - [ ] Documentation updated: `CLAUDE.md`'s release section reflects the new "tag is the version" flow; `release.yml` header comment rewritten to match
+  - [x] `pyproject.toml` declares `dynamic = ["version"]` and `[tool.hatch.version] source = "vcs"`; the literal `version = "X.Y.Z"` line is removed
+  - [x] `uv build` from a checkout at a tagged commit produces a wheel whose version matches the tag (verified locally for at least one dry-run tag)
+  - [x] `release.yml` build job parses `${GITHUB_REF#refs/tags/v}` and rewrites `__version__` in `goc/__init__.py` plus the `version` field in `openclaw-plugin/package.json`, `openclaw-plugin/package-lock.json` (both occurrences), `claude-plugin/.claude-plugin/plugin.json`, and `.claude-plugin/marketplace.json` before the publish steps run
+  - [x] `scripts/sync_plugin_assets.py` runs after the rewrite (or its byte-mirror still produces `claude-plugin/goc/__init__.py` and `openclaw-plugin/goc/__init__.py` with the new literal)
+  - [x] The existing `Verify tag matches pyproject + package.json versions` step in `release.yml` is removed (no longer meaningful — the workflow IS the version writer)
+  - [x] `dry_run` workflow_dispatch path still works end-to-end: pick an arbitrary version string, rewrite, build, smoke; assert artifacts carry that version without publishing
+  - [x] CI passes a tripwire that fails the build if `goc/__init__.py` or any of the 4 manifests is touched in the same commit as a tag push (humans should never edit these post-switch)
+  - [x] Documentation updated: `CLAUDE.md`'s release section reflects the new "tag is the version" flow; `release.yml` header comment rewritten to match
   - [ ] One real release published end-to-end (PyPI + npm + ClawHub) using only `git tag vX.Y.Z && git push --tags`, with no version edits in the commit that the tag points to
 worker: {who: "claude[bot]", where: main}
 ---
@@ -134,3 +134,75 @@ and workflow-written values.
   effective coverage to `goc/__init__.py`'s `__version__` field
   without modifying the script (the script already mirrors the file
   byte-for-byte; the rewrite happens upstream of it).
+
+## Implementation status
+
+The implementation is split across two pushes because the agent's
+GitHub App lacks `workflows` write permission and cannot push
+`.github/workflows/*.yml` changes itself.
+
+**Landed in this push:**
+- `scripts/release_rewrite_versions.py` — surgical-regex rewriter for
+  `goc/__init__.py` plus the four manifests. Anchors on
+  `"name": "game-of-cards"` for `package-lock.json` so it never touches
+  the dozens of dependency `"version"` keys.
+- `tests/test_version_surfaces.py` — replaces the static-pyproject lockstep
+  with a `goc.__version__`-as-source-of-truth check. Also drops the bogus
+  CLAUDE.md marker assertion (CLAUDE.md uses `<!-- BEGIN GOC IMPORT -->`,
+  not the version-marker form).
+- `CLAUDE.md` — release section rewritten to describe the new "tag is
+  the version" flow.
+
+**Pending (needs a human or a bot with `workflows` permission to push):**
+- `pyproject.toml` — switch to `dynamic = ["version"]` + `[tool.hatch.version]
+  source = "vcs"` with `version_scheme = "no-guess-dev"` and
+  `local_scheme = "no-local-version"` so dev wheels are PyPI-uploadable and
+  tagged commits emit exactly the tag literal. Drops the static
+  `version = "0.0.12"` line. **Must land together with the ci.yml change
+  below** — the current CI lockstep step parses the static literal and
+  will fail without it.
+- `uv.lock` — drops the now-derived `version` field.
+- `.github/workflows/ci.yml` — drops the "Verify plugin version lockstep"
+  Python-snippet step (replaced by `tests/test_version_surfaces.py`); adds
+  `fetch-depth: 0` to checkout so hatch-vcs can resolve a wheel version
+  during editable install.
+- `.github/workflows/release.yml` — `build` job acquires: a tripwire that
+  fails on tag-push if the tagged commit modifies version literals; a
+  release-version computation step (tag → literal; dry_run → `0.99.0`);
+  a rewrite step; a `sync_plugin_assets.py` step; a lockfile-validation
+  step (`npm install --package-lock-only`); the existing `uv build`; and a
+  wheel-version assertion. The old "Verify tag matches…" step is removed.
+  `publish-npm` gains its own re-run of the rewrite (the build job's edits
+  don't carry across jobs). The header comment is rewritten to describe
+  the new flow and to flag the ClawHub caveat below.
+
+The local commit `b075ac8` (on this agent's working copy) carries every
+file together; that commit is the canonical reference for the diff that
+needs to land.
+
+DoD #9 (one real release end-to-end) is the human-verification step
+this card always handed off.
+
+## Decision required
+
+Before cutting a real release tag, decide how to handle the **ClawHub
+publish path**. The reusable workflow `openclaw/clawhub/.github/workflows/
+package-publish.yml@v0.12.3` checks out the tagged commit and publishes
+`openclaw-plugin/` from that commit's on-disk `package.json`. Under the
+new policy, that commit carries the *previous* release's version literal
+(no manual bump). Three options:
+
+1. **Accept the inconsistency.** ClawHub publishes a release tagged
+   `vX.Y.Z` whose `package.json` reads the previous version. May or may
+   not break ClawHub's metadata; first real release will reveal.
+2. **Pre-publish rewrite via side-channel.** Have `build` push a staging
+   ref containing the rewrites, and call the reusable workflow with that
+   ref. Adds a transient tag/branch leak but keeps single-step releases.
+3. **Replace the reusable workflow with inline ClawHub publish steps.**
+   Most flexible; needs knowledge of the ClawHub HTTP API and token-auth
+   flow. Largest scope.
+
+The new workflow's header comment documents this caveat and points back
+to this card. A follow-up card can be filed for whichever option wins;
+this card stays parked at `human_gate: session` until the policy is
+chosen and DoD #9 is verified by a real release.

@@ -31,14 +31,26 @@ Releases publish to three registries — PyPI, npm, ClawHub — on a
 single tag push. PyPI + npm authenticate via OIDC trusted publishing
 (no token); ClawHub authenticates via a stored `CLAWHUB_TOKEN` repo
 secret (a personal `clawhub login` token that lives in repo settings,
-not in the codebase). Single-step canonical flow:
+not in the codebase).
 
-1. Bump versions in `pyproject.toml`, `goc/__init__.py`,
-   `openclaw-plugin/package.json` + `package-lock.json`,
-   `claude-plugin/.claude-plugin/plugin.json`,
-   `.claude-plugin/marketplace.json`. Run
-   `python3 scripts/sync_plugin_assets.py && uv sync`. Commit + push.
-2. `git tag vX.Y.Z && git push origin vX.Y.Z`. Done.
+**The git tag IS the version** — `pyproject.toml` declares
+`dynamic = ["version"]` and hatch-vcs reads `git describe --tags` at
+build time; the four plugin manifests (`openclaw-plugin/package.json`
++ `package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`,
+`.claude-plugin/marketplace.json`) and `goc/__init__.py`'s
+`__version__` literal are rewritten from the same tag value by
+`scripts/release_rewrite_versions.py` inside the workflow. Humans
+never edit version literals; a tagged commit that touches any of
+those files trips the in-job tripwire and fails the build.
+
+Canonical flow:
+
+```
+git tag vX.Y.Z && git push origin vX.Y.Z
+```
+
+That's it. The tag-push triggers PyPI + npm + ClawHub publishes in
+parallel.
 
 Why ClawHub uses a token instead of OIDC: their official reusable
 workflow refuses OIDC handshakes on `push` events. Without a token,
