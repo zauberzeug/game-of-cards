@@ -302,5 +302,9 @@ jobs:
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3
     with:
       source: ./openclaw-plugin
-      owner: zauberzeug
+      # Note: do NOT pass `owner: zauberzeug` here — ClawHub trusted
+      # publishing rejects manual owner overrides ("Trusted publishes
+      # must not override the package owner"). The package's existing
+      # ownership stands; the trusted publisher entry locks the
+      # workflow→package relationship server-side.
       dry_run: ${{ inputs.dry_run == true }}
