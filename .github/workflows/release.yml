@@ -309,32 +309,6 @@ jobs:
           npm ci
           npm run build
 
-      - name: Diagnose ClawHub OIDC handshake
-        run: |
-          set +e
-          echo "=== Step 1: Request GitHub Actions OIDC token (audience=clawhub) ==="
-          oidc_response=$(curl -sS \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=clawhub")
-          echo "GitHub OIDC response status: $?"
-          echo "$oidc_response" | head -c 200
-          echo ""
-          oidc_token=$(echo "$oidc_response" | node -e 'let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{ try { console.log(JSON.parse(s).value); } catch(e) { console.log("PARSE_ERROR"); } });')
-          if [ "$oidc_token" = "PARSE_ERROR" ] || [ -z "$oidc_token" ]; then
-            echo "Failed to extract OIDC token from response"
-            exit 0
-          fi
-          echo "OIDC token claims (decoded):"
-          echo "$oidc_token" | cut -d. -f2 | base64 -d 2>/dev/null | python3 -m json.tool 2>/dev/null || true
-          echo ""
-          echo "=== Step 2: POST OIDC token to ClawHub mint endpoint ==="
-          curl -sS -i \
-            -X POST \
-            -H "Authorization: bearer $oidc_token" \
-            -H "Content-Type: application/json" \
-            -d "{\"githubOidcToken\":\"$oidc_token\"}" \
-            "https://clawhub.ai/api/v1/packages/game-of-cards/publish-token" 2>&1 | head -40
-
       - name: Publish to ClawHub
         run: |
           version="${GITHUB_REF#refs/tags/v}"
