@@ -309,17 +309,13 @@ jobs:
           npm ci
           npm run build
 
-      - name: Diagnose OIDC env (debugging clawhub OIDC handshake)
-        run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL set: ${ACTIONS_ID_TOKEN_REQUEST_URL:+YES}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN set: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+YES}"
-          echo "Visible in node subprocess:"
-          node -e 'console.log("URL:", process.env.ACTIONS_ID_TOKEN_REQUEST_URL ? "SET" : "MISSING"); console.log("TOKEN:", process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN ? "SET" : "MISSING");'
-
       - name: Publish to ClawHub
-        env:
-          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
-          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+        # No `env:` block — runner-injected ACTIONS_ID_TOKEN_REQUEST_{URL,TOKEN}
+        # vars must be inherited, not forwarded via `${{ env.X }}`. The
+        # ${{ env.X }} expression context does NOT see runner-auto-injected
+        # OIDC vars; an explicit env passthrough block resolves to empty
+        # string and silently overwrites the inherited values, breaking the
+        # OIDC handshake. Diagnosed on v0.0.9 (run 25622156893).
         run: |
           version="${GITHUB_REF#refs/tags/v}"
           clawhub package publish ./openclaw-plugin \
