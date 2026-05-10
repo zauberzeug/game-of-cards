@@ -121,6 +121,29 @@ If the configured/forced auto-commit is skipped (no git repo, mid-merge /
 mid-rebase, no diff), the CLI prints a one-line note. The on-disk state
 still mutated; only the visibility-to-other-branches step deferred.
 
+## Worker field — populated at claim time
+
+`goc status <title> active` auto-populates the card's `worker` field
+with the current identity. The field is optional and free-form; it
+matters when multiple humans or agents share a deck and you want a
+runner-scoped queue view.
+
+**Format:**
+
+- Flat string for a single identifier: `worker: rodja`. Sugar for
+  `{who: rodja}`.
+- Mapping with branch context: `worker: {who: rodja, where: feature/foo}`.
+
+The value is unregistered — pick a person slug, machine name, or
+capability tag (`gpu-required`, `human`, `rendering-expert`). The
+field persists after close as a historical record.
+
+**Filter the queue by worker:**
+
+- `goc --worker <X>` — limit listings to cards owned by `X`.
+- Set `GOC_WORKER` env var so a runner sees only its own queue without
+  typing the flag every time.
+
 ## Cross-references
 
 - `Skill(finish-card)` — for `done` transitions (DoD-gated).

@@ -191,3 +191,56 @@ What should the first card be?
 
 The deck is now live. All other GoC skills work immediately — no further
 generic kickoff needed.
+
+---
+
+## Reference: what gets installed
+
+`goc install` writes:
+
+- `.game-of-cards/deck/` — the card deck (planning history; check this in).
+- `.game-of-cards/config.yaml` — closure checks and workflow config
+  (check this in).
+- `<!-- BEGIN GOC -->` block in `AGENTS.md` — discovery marker plus the
+  thin agent-neutral pointer (check this in).
+
+Host-specific runtime affordances are **optional** and not strictly
+required in source control:
+
+- Claude Code skills, hooks, and `goc` CLI — install via the GoC Claude
+  Code plugin (recommended) or `goc install --agents claude
+  --local-skills` to vendor them.
+- Codex skills — install via `goc install --agents codex`.
+- OpenClaw skills, tool, and hooks — install via the OpenClaw plugin
+  (ClawHub: `openclaw skills install game-of-cards`; npm:
+  `game-of-cards`). Bundles the goc engine; only `python3` (3.10+) is
+  required on the host. The OpenClaw plugin exposes `goc` as a
+  registered tool rather than a shell-PATH binary — the model invokes
+  it as it would any typed function.
+
+The `<!-- BEGIN GOC -->` block is the canonical repo-visible signal
+that GoC is in use. Agent plugins discover GoC through this marker
+without requiring skills or hooks to be checked in.
+
+## Reference: worktrees
+
+By default each git worktree sees its own checkout's deck. Set
+`workflow.worktree_deck: shared` in `.game-of-cards/config.yaml` (or
+export `GOC_WORKTREE_DECK=shared`) to make all linked worktrees share
+the deck in the primary working tree. Useful when one person juggles
+multiple branches on the same project and wants a single queue. When
+auto-commit is on, deck mutations from a worktree commit to the
+primary working tree's branch, not the worktree's branch.
+
+## Reference: multi-team coordination opt-ins
+
+Both default off; turn on for setups where several humans and agents
+work the same deck across branches:
+
+- `workflow.claim_push: true` — `goc status <title> active` pushes the
+  claim commit and retries once on non-fast-forward; aborts with the
+  racing worker's identity when a rebase conflict reveals a concurrent
+  claim.
+- `workflow.closure_on_integration: true` — `goc done` refuses to close
+  unless HEAD is reachable from `origin/main`, so `done` means visible
+  to every participant rather than locally DoD-complete.

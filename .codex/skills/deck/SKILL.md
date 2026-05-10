@@ -93,6 +93,53 @@ the rare race when two sessions claim the same card simultaneously
 going while M scheduled agents work the deck — they ride the events
 as they occur, present or absent as resources allow.
 
+## What this looks like in practice
+
+**Session mode (silent runtime).** When the user asks for persistent
+work — "rename the button to Export", "add a CSV export", "fix the
+auth bug" — run the GoC pipeline silently:
+
+1. Check the deck — does a card already cover this? (`goc --tag <topic>`)
+2. If not, file a card: `goc new <kebab-title>` and edit the body.
+3. Claim it: `goc status <title> active`.
+4. Implement.
+5. Close: `goc done <title>`, then commit the work and closure.
+
+Card operations are NEVER announced — the user sees the code, not the
+bookkeeping. **No-card exceptions** (zero work, no card): exploration
+("explain X", "why is Y this way?"), one-shot tooling ("git status",
+"rebase this"), course-corrections inside an active card.
+
+**Autonomous mode.** Before recommending or claiming new work, agents
+check `goc --status active` and treat listed cards as already-claimed
+soft locks. The pull principle is what makes this safe: work isn't
+pushed at agents on a timer; agents pull on their own terms, filtered
+to gate=none. The human steers by curating WHAT'S in the queue and
+at what gate.
+
+**Andon-cord path.** When a human asks "what's up?" / "where do you
+need me?", surface parked cards (oldest-first, with `## Decision
+required` body section preview). Decision recorded → gate lowered with
+`goc decide <title> --decision "..." --because "..."` → next pull-card
+claims and implements per the recorded decision.
+
+## Daily CLI verbs
+
+| Verb | What it does |
+|---|---|
+| `goc` | Show the open queue (impact-sorted). |
+| `goc --board` | Multi-column kanban view. |
+| `goc --status done --since YYYY-MM-DD` | Recently closed cards. |
+| `goc new <title>` | Scaffold a new card under `.game-of-cards/deck/<title>/`. |
+| `goc status <title> <state>` | Flip status (open/active/blocked/disproved/superseded). |
+| `goc done <title>` | Close + DoD enforcement (no auto-commit). |
+| `goc decide <title> --decision X --because Y` | Lower gate from decision/session → none. |
+| `goc validate` | Validate every card's frontmatter (pre-commit-friendly). |
+
+Run `goc --help` for the full verb list. Schema and enum constraints
+surface in `goc validate` error messages. Project-local tag extensions
+live in `.game-of-cards/canonical-tags.md`.
+
 ## The worldview: Game of Cards
 
 The methodology has a name: **Game of Cards** — the *Game of Thrones*

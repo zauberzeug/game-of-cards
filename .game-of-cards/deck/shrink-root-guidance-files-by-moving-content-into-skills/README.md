@@ -1,27 +1,27 @@
 ---
 title: shrink-root-guidance-files-by-moving-content-into-skills
 summary: "AGENTS.md (132 lines / ~6.9 KB) and CLAUDE.md (105 lines / ~5.2 KB) are loaded into baseline session context for every GoC repo — every prompt pays the token cost. Most of that content (deck-mode flowchart, verb table, YAML format rules, worker-field semantics, multi-team coordination opt-ins, marker-block explanation) is reference material the agent only needs at the moment of acting. Move that content into the relevant skill bodies (`Skill(deck)`, `Skill(card-schema)`, `Skill(create-card)`, etc.) where it loads on-demand. The root files shrink to a thin pointer: 'this repo uses Game of Cards; the methodology lives in skills, run `Skill(deck)` for an overview' plus the discovery marker. Goal: cut baseline context tokens by ~80% while preserving discoverability."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: none
 advances:
   - write-agentsmd-alongside-claudemd
 advanced_by: []
 tags: [story, infra, documentation]
 definition_of_done: |
-  - [ ] Audit the current `AGENTS_GOC.md` and `CLAUDE_GOC.md` templates section-by-section; classify each section as KEEP-AT-ROOT (discovery + thin pointer) or MOVE-TO-SKILL (reference material consulted at action time)
-  - [ ] Map MOVE-TO-SKILL sections to specific skill targets — verb table → `card-schema` skill, deck-mode flowchart → `deck` skill, YAML format / worker-field rules → `card-schema` skill, multi-team coordination opt-ins → `kickoff` skill, marker-block explanation → install/upgrade docs (not a skill)
-  - [ ] New `AGENTS_GOC.md` is ≤ 25 lines: discovery marker + one-paragraph orientation + `goc --help` pointer + skill-invocation pointer (host-agnostic phrasing: "ask the agent to invoke its `deck` / `card-schema` / `create-card` capability")
-  - [ ] New `CLAUDE_GOC.md` is ≤ 15 lines: `@AGENTS.md` import + minimal Claude-only deltas (plugin install link if not already covered by `Skill(kickoff)`)
-  - [ ] Skill bodies updated to absorb their share of the moved content; each skill stays focused on one verb (don't dump the full briefing into one skill)
-  - [ ] Token-cost A/B: measure baseline session context before/after on a representative GoC repo; document the savings in the closure log entry
-  - [ ] No information lost — every piece of MOVE-TO-SKILL content has a documented home in a skill, not just deleted
-  - [ ] `goc upgrade` migrates existing repos: re-syncs the slimmer marker block, leaves user content above/below untouched
-  - [ ] Plugin payload re-synced via `python scripts/sync_plugin_assets.py` and OpenClaw skill port re-run
-  - [ ] Smoke test on a fresh repo: kickoff completes; agent can file/advance/finish a card using only the skills (no need to grep root files for verb syntax or YAML rules)
+  - [x] Audit the current `AGENTS_GOC.md` and `CLAUDE_GOC.md` templates section-by-section; classify each section as KEEP-AT-ROOT (discovery + thin pointer) or MOVE-TO-SKILL (reference material consulted at action time)
+  - [x] Map MOVE-TO-SKILL sections to specific skill targets — verb table → `card-schema` skill, deck-mode flowchart → `deck` skill, YAML format / worker-field rules → `card-schema` skill, multi-team coordination opt-ins → `kickoff` skill, marker-block explanation → install/upgrade docs (not a skill)
+  - [x] New `AGENTS_GOC.md` is ≤ 25 lines: discovery marker + one-paragraph orientation + `goc --help` pointer + skill-invocation pointer (host-agnostic phrasing: "ask the agent to invoke its `deck` / `card-schema` / `create-card` capability")
+  - [x] New `CLAUDE_GOC.md` is ≤ 15 lines: `@AGENTS.md` import + minimal Claude-only deltas (plugin install link if not already covered by `Skill(kickoff)`)
+  - [x] Skill bodies updated to absorb their share of the moved content; each skill stays focused on one verb (don't dump the full briefing into one skill)
+  - [x] Token-cost A/B: measure baseline session context before/after on a representative GoC repo; document the savings in the closure log entry
+  - [x] No information lost — every piece of MOVE-TO-SKILL content has a documented home in a skill, not just deleted
+  - [x] `goc upgrade` migrates existing repos: re-syncs the slimmer marker block, leaves user content above/below untouched
+  - [x] Plugin payload re-synced via `python scripts/sync_plugin_assets.py` and OpenClaw skill port re-run
+  - [x] Smoke test on a fresh repo: kickoff completes; agent can file/advance/finish a card using only the skills (no need to grep root files for verb syntax or YAML rules)
 worker: {who: "claude[bot]", where: main}
 ---
 

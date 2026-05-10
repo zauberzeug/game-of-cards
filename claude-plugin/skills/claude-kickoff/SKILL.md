@@ -169,3 +169,20 @@ What should the first card be?
 
 The deck is now live. `Skill(create-card)`, `Skill(scan-deck)`, and all
 other GoC skills work immediately — no further kickoff needed.
+
+---
+
+## Reference: runtime hooks
+
+When the GoC plugin is installed, three hooks fire automatically:
+
+| Hook event | Script | Purpose |
+|---|---|---|
+| `SessionStart` | `deck_session_start` | Prints active-card reminder at session start; silent when no cards are in-flight. |
+| `UserPromptSubmit` | `deck_prompt_router` | Detects work-initiating prompts; injects a deck-first reminder into Claude's view. |
+| `Stop` | `pattern_generalization_check` | After code-mutating turns, asks the agent to self-assess whether the change warrants a generalization card. Opt-out: set `hooks.pattern_generalization_check: false` in `.game-of-cards/config.yaml`. |
+
+The hooks are optional. Repos without the plugin still get full GoC
+functionality through the `goc` CLI and AGENTS.md guidance. Other
+agent runtimes (Codex, OpenCode, Cursor) use their own hook systems
+and do not share this registration.

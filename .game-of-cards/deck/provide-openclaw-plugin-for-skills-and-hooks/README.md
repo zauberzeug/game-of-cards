@@ -17,6 +17,7 @@ advanced_by:
   - author-openclaw-kickoff-skill-for-host-specific-onboarding
   - openclaw-subagent-spawn-doesnt-project-plugin-tools
   - cut-v0-0-7-release-before-openclaw-publish
+  - auto-publish-npm-and-clawhub-on-tag-push
 tags: [story, infra]
 definition_of_done: |
   - [x] `install-openclaw-harness` is marked superseded with a log entry pointing here
