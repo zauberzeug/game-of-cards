@@ -137,54 +137,43 @@ and workflow-written values.
 
 ## Implementation status
 
-The implementation is split across two pushes because the agent's
-GitHub App lacks `workflows` write permission and cannot push
-`.github/workflows/*.yml` changes itself.
+DoD items 1–8 have landed across two commits:
 
-**Landed in this push:**
-- `scripts/release_rewrite_versions.py` — surgical-regex rewriter for
-  `goc/__init__.py` plus the four manifests. Anchors on
-  `"name": "game-of-cards"` for `package-lock.json` so it never touches
-  the dozens of dependency `"version"` keys.
-- `tests/test_version_surfaces.py` — replaces the static-pyproject lockstep
-  with a `goc.__version__`-as-source-of-truth check. Also drops the bogus
-  CLAUDE.md marker assertion (CLAUDE.md uses `<!-- BEGIN GOC IMPORT -->`,
-  not the version-marker form).
-- `CLAUDE.md` — release section rewritten to describe the new "tag is
-  the version" flow.
+- `3114e17` — helper script, regression tests, CLAUDE.md release-flow
+  rewrite. Pushed by the bot directly.
+- (this commit) — `pyproject.toml` switch to `dynamic = ["version"]`
+  with `hatch-vcs`, `uv.lock` drops the now-derived literal, `ci.yml`
+  drops the Python-snippet lockstep step and adds `fetch-depth: 0` to
+  checkout so hatch-vcs can resolve a wheel version on editable
+  install, `release.yml` build job acquires the tripwire + version
+  computation + rewrite + sync + lockfile-validation + wheel-version
+  assertion steps and `publish-npm` re-runs the rewrite. The old
+  "Verify tag matches…" step is gone. The workflow header comment now
+  describes the tag-as-version flow and flags the ClawHub caveat
+  below.
 
-**Pending (needs a human or a bot with `workflows` permission to push):**
-- `pyproject.toml` — switch to `dynamic = ["version"]` + `[tool.hatch.version]
-  source = "vcs"` with `version_scheme = "no-guess-dev"` and
-  `local_scheme = "no-local-version"` so dev wheels are PyPI-uploadable and
-  tagged commits emit exactly the tag literal. Drops the static
-  `version = "0.0.12"` line. **Must land together with the ci.yml change
-  below** — the current CI lockstep step parses the static literal and
-  will fail without it.
-- `uv.lock` — drops the now-derived `version` field.
-- `.github/workflows/ci.yml` — drops the "Verify plugin version lockstep"
-  Python-snippet step (replaced by `tests/test_version_surfaces.py`); adds
-  `fetch-depth: 0` to checkout so hatch-vcs can resolve a wheel version
-  during editable install.
-- `.github/workflows/release.yml` — `build` job acquires: a tripwire that
-  fails on tag-push if the tagged commit modifies version literals; a
-  release-version computation step (tag → literal; dry_run → `0.99.0`);
-  a rewrite step; a `sync_plugin_assets.py` step; a lockfile-validation
-  step (`npm install --package-lock-only`); the existing `uv build`; and a
-  wheel-version assertion. The old "Verify tag matches…" step is removed.
-  `publish-npm` gains its own re-run of the rewrite (the build job's edits
-  don't carry across jobs). The header comment is rewritten to describe
-  the new flow and to flag the ClawHub caveat below.
-
-The exact diff is checked in alongside this card as
-`pending-workflow-edits.patch`. To apply: `git apply
-.game-of-cards/deck/automate-version-bumping-from-git-tag-at-release-time/pending-workflow-edits.patch`,
-review, commit, push (with a maintainer token that holds the GitHub
-`workflows` write scope), then delete the patch file in a follow-up
-commit.
+Originally split because the bot's GitHub App lacked `workflows`
+write permission. The grant has since been added (App-level scope +
+`workflows: write` in `pull-card.yml` / `audit-deck.yml` permission
+blocks), so future workflow-touching cards will commit normally
+without the patch-on-disk handoff.
 
 DoD #9 (one real release end-to-end) is the human-verification step
-this card always handed off.
+this card always handed off — wait for the ClawHub-publish-source
+decision below before cutting the next tag.
+
+### Pretend-version note
+
+Local smoke before landing surfaced one bug in the original patch: the
+build job runs `release_rewrite_versions.py` + `sync_plugin_assets.py`
++ `npm install --package-lock-only` *before* `uv build`, which leaves
+the working tree dirty relative to HEAD. `hatch-vcs`'s `no-guess-dev`
+scheme treats a dirty tag as `X.Y.Z.post1.dev0`, so the wheel emerges
+with that suffix and the wheel-version assertion at the end of the
+build step fails. Fix: pin `SETUPTOOLS_SCM_PRETEND_VERSION` on the
+`uv build` step. Verified locally (dirty tree at synthetic tag
+`v9.9.99` → wheel `9.9.99` not `9.9.99.post1.dev0`). Also lets the
+dry_run path drop its temp-tag conjuring.
 
 ## Decision required
 

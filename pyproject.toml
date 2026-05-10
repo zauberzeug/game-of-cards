@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "game-of-cards"
-version = "0.0.12"
+dynamic = ["version"]
 description = "Agile for the age of agents: repo-native backlog cards for human and AI contributors."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,6 +33,17 @@ Issues = "https://github.com/zauberzeug/game-of-cards/issues"
 
 [project.scripts]
 goc = "goc.cli:main"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+# At a tagged commit `vX.Y.Z`, emit exactly `X.Y.Z` (no `.dev0`, no patch bump).
+# Between tags, emit `X.Y.Z.devN` so dev wheels are obviously not the release.
+# `no-local-version` drops `+gabc1234` so dev wheels stay PyPI-uploadable if
+# someone happens to run `uv build` between tags.
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.wheel]
 packages = ["goc"]

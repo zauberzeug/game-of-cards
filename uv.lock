@@ -25,7 +25,6 @@ wheels = [
 
 [[package]]
 name = "game-of-cards"
-version = "0.0.12"
 source = { editable = "." }
 
 [package.dev-dependencies]

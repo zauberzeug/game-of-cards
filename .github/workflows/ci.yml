@@ -27,6 +27,12 @@ jobs:
         python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
+        with:
+          # `pyproject.toml` declares `dynamic = ["version"]` via hatch-vcs;
+          # the install path needs full git history + tags to resolve a
+          # version. (Without this, `uv pip install -e .` fails to compute
+          # a wheel version on a shallow checkout.)
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -61,23 +67,13 @@ jobs:
           print(f'\nAll {len(source_skills)} skills + schema ship as package data.')
           "
 
-      - name: Verify plugin version lockstep
-        run: |
-          uv run python -c "
-          import json, pathlib, re, sys
-          pyproject_text = pathlib.Path('pyproject.toml').read_text()
-          match = re.search(r'^version = \"([^\"]+)\"', pyproject_text, re.MULTILINE)
-          assert match, 'no version line in pyproject.toml'
-          pyproject = match.group(1)
-          plugin = json.loads(pathlib.Path('claude-plugin/.claude-plugin/plugin.json').read_text())['version']
-          marketplace = json.loads(pathlib.Path('.claude-plugin/marketplace.json').read_text())['metadata']['version']
-          versions = {'pyproject.toml': pyproject, 'claude-plugin/plugin.json': plugin, '.claude-plugin/marketplace.json metadata': marketplace}
-          if len(set(versions.values())) != 1:
-              for k, v in versions.items():
-                  print(f'  {k}: {v}')
-              sys.exit('ERROR: version surfaces have drifted; release policy requires lockstep.')
-          print(f'OK — all version surfaces report {pyproject}')
-          "
+      # Internal-lockstep check: every static version literal in the source
+      # tree must agree with `goc/__init__.py`'s `__version__`. The release
+      # workflow rewrites all of them from the git tag at build time, so
+      # between releases they should all match the last released literal.
+      # (The full assertion lives in tests/test_version_surfaces.py — invoked
+      # as part of the regression-tests step above; this comment documents
+      # the policy.)
 
       - name: Verify plugin assets match goc/ byte-for-byte
         run: uv run python scripts/sync_plugin_assets.py --check
