@@ -176,9 +176,12 @@ GitHub App lacks `workflows` write permission and cannot push
   don't carry across jobs). The header comment is rewritten to describe
   the new flow and to flag the ClawHub caveat below.
 
-The local commit `b075ac8` (on this agent's working copy) carries every
-file together; that commit is the canonical reference for the diff that
-needs to land.
+The exact diff is checked in alongside this card as
+`pending-workflow-edits.patch`. To apply: `git apply
+.game-of-cards/deck/automate-version-bumping-from-git-tag-at-release-time/pending-workflow-edits.patch`,
+review, commit, push (with a maintainer token that holds the GitHub
+`workflows` write scope), then delete the patch file in a follow-up
+commit.
 
 DoD #9 (one real release end-to-end) is the human-verification step
 this card always handed off.
