@@ -1,13 +1,14 @@
 {
   "id": "game-of-cards",
   "name": "Game of Cards",
-  "description": "Agile work-card methodology for AI-agent collaborators. Adds a `goc` tool, three lifecycle hooks, and 14 deck skills at workspace tier.",
+  "description": "Agile work-card methodology for AI-agent collaborators. Adds a `goc` tool, three lifecycle hooks, and 15 deck skills at workspace tier.",
   "contracts": {
     "tools": ["goc"]
   },
-  "_skills_note": "kickoff is omitted pending split-claude-specific-content-out-of-generic-kickoff-skill (the current goc/templates/skills/kickoff body is heavily Claude Code-specific; the host-agnostic kickoff lands in that card and gets added here).",
   "skills": [
     "skills/deck",
+    "skills/kickoff",
+    "skills/openclaw-kickoff",
     "skills/scan-deck",
     "skills/next-card",
     "skills/create-card",
