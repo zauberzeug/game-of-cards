@@ -6,50 +6,45 @@
 # configuration that authorizes this workflow to mint short-lived publish
 # tokens via the GitHub Actions id-token.
 #
-# Trusted publisher entries (configured once):
+# Auth setup (one-time per registry):
 #
-#   PyPI:    https://pypi.org/manage/project/game-of-cards/settings/publishing/
-#            Owner: zauberzeug · Repo: game-of-cards · Workflow: release.yml · Env: pypi
+#   PyPI (OIDC trusted publisher):
+#     https://pypi.org/manage/project/game-of-cards/settings/publishing/
+#     Owner: zauberzeug · Repo: game-of-cards · Workflow: release.yml · Env: pypi
 #
-#   npm:     https://www.npmjs.com/package/game-of-cards/access
-#            Owner: zauberzeug · Repo: game-of-cards · Workflow: release.yml · Env: npm
+#   npm (OIDC trusted publisher):
+#     https://www.npmjs.com/package/game-of-cards/access
+#     Owner: zauberzeug · Repo: game-of-cards · Workflow: release.yml · Env: npm
 #
-#   ClawHub: `clawhub package trusted-publisher set game-of-cards \
-#               --repository zauberzeug/game-of-cards --workflow-filename release.yml`
-#            (NOTE: do NOT pass --environment — ClawHub uses the official
-#            reusable workflow which can't set a job-level environment, so
-#            the OIDC token won't carry an environment claim. The trusted
-#            publisher entry must therefore not require one.)
+#   ClawHub (stored token, NOT trusted publisher):
+#     CLAWHUB_TOKEN secret set in repo settings, value = output of
+#     `jq -r .token "$HOME/Library/Application Support/clawhub/config.json"`
+#     after `clawhub login`. The token authenticates the publish on
+#     `push` events (OIDC trusted publishing on ClawHub refuses push
+#     and only accepts workflow_dispatch — so the token unlocks the
+#     single-trigger flow). Rotate by re-running `clawhub login` and
+#     re-piping the new token into `gh secret set CLAWHUB_TOKEN`.
 #
 # Tag convention: `v0.1.0`, `v0.2.3`, `v1.0.0`, etc. The tag must match
 # the version in pyproject.toml AND openclaw-plugin/package.json (build
 # step verifies both before any publish runs).
 #
-# Canonical release flow:
+# Canonical release flow (single trigger):
 #
 #   1. Bump versions across pyproject.toml, goc/__init__.py,
 #      openclaw-plugin/package.json + package-lock.json,
 #      claude-plugin/.claude-plugin/plugin.json, and
-#      .claude-plugin/marketplace.json. Run `python3 scripts/sync_plugin_assets.py`
-#      then `uv sync`. Commit and push main.
+#      .claude-plugin/marketplace.json. Run
+#      `python3 scripts/sync_plugin_assets.py && uv sync`. Commit and push.
 #   2. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-#      → tag-push triggers build → publish-pypi + publish-npm.
-#   3. `gh workflow run release.yml --ref vX.Y.Z`.
-#      → workflow_dispatch on the tag triggers publish-clawhub.
-#      (PyPI and npm jobs run again but no-op against duplicate versions.)
-#
-# Why two triggers? ClawHub's official reusable workflow refuses OIDC on
-# `push` events ("Real publishes need ... GitHub OIDC on workflow_dispatch
-# runs"). It only mints publish tokens when the trigger is workflow_dispatch.
-# PyPI + npm work fine on tag-push, so we keep that path active for them.
+#      → tag-push triggers PyPI + npm (OIDC) + ClawHub (token) in parallel.
 #
 # Other dispatch modes:
-#   - `gh workflow run release.yml --ref main --field dry_run=true` —
-#     exercises build + smoke + a clawhub dry-run publish without uploading.
-#   - `gh workflow run release.yml --ref main` (no dry_run) —
-#     publishes to ClawHub from main HEAD (skips PyPI + npm because the
-#     tag-ref guard fails). Useful for re-trying ClawHub if its publish
-#     failed during the initial release.
+#   - `gh workflow run release.yml --field dry_run=true` —
+#     exercises build + smoke + dry-run publishes (no upload).
+#   - `gh workflow run release.yml --ref vX.Y.Z` —
+#     re-runs publish for an existing tag (useful if a publish job
+#     transient-failed during the original push).
 
 name: Release
 
@@ -293,35 +288,29 @@ jobs:
         run: npm publish --provenance --access public
 
   publish-clawhub:
-    # ClawHub trusted publishing requires invoking the official reusable
-    # workflow at openclaw/clawhub/.github/workflows/package-publish.yml.
-    # Inline `clawhub package publish` calls fail server-side validation
-    # with: "Only the official ClawHub reusable workflow is supported for
-    # trusted publishing".
+    # ClawHub publish via the official reusable workflow. Authenticates
+    # with a stored CLAWHUB_TOKEN secret (created from the maintainer's
+    # `clawhub login` token) so tag-push works as a single trigger for
+    # all three registries.
     #
-    # Note: reusable workflow calls cannot set `environment:` or `name:`
-    # at the job level — only `if`, `permissions`, `secrets`, `with`,
-    # `concurrency`, `strategy`, `needs`, and `uses`. The OIDC token
-    # therefore won't carry an `environment` claim, so the ClawHub
-    # trusted publisher entry must be configured WITHOUT a required
-    # environment (or with `environment: ` left blank).
+    # Trade-off vs. OIDC trusted publishing: the token is long-lived and
+    # tied to whoever logged in to clawhub last. Rotate by re-running
+    # `clawhub login` then `jq -r .token "<config-path>" | gh secret set
+    # CLAWHUB_TOKEN`. Compromise = revoke via `clawhub auth logout` (which
+    # invalidates the token server-side) then re-login + re-set the secret.
     needs: [build, smoke]
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
     permissions:
-      id-token: write
       contents: read
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3
     with:
-      # `source_path` (not `source`) — local-folder publishes set
-      # source = ./openclaw-plugin which doesn't include a ref, so
-      # ClawHub's server-side check "Trusted publish source ref must
-      # match the verified GitHub ref" fails. Leaving source empty
-      # defaults it to GITHUB_REPOSITORY (zauberzeug/game-of-cards),
-      # which then gets the github.sha appended automatically; the
-      # source_path narrows it to the openclaw-plugin subdir.
+      # `source_path` (not `source: ./openclaw-plugin`) — server-side check
+      # "Trusted publish source ref must match the verified GitHub ref"
+      # rejects local-folder source strings. With source_path, source
+      # defaults to GITHUB_REPOSITORY@github.sha which matches the ref
+      # claim. (Less critical when authenticating via token, but kept
+      # for symmetry with the OIDC-mode fallback.)
       source_path: openclaw-plugin
-      # Do NOT pass `owner: zauberzeug` — ClawHub trusted publishing
-      # rejects manual owner overrides ("Trusted publishes must not
-      # override the package owner"). The trusted-publisher entry +
-      # package's owned-by-zauberzeug metadata are authoritative.
-      dry_run: ${{ inputs.dry_run == true }}
+      dry_run: false
+    secrets:
+      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}

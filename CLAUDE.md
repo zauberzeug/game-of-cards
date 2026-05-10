@@ -27,26 +27,28 @@ No pytest suite exists yet. `.github/workflows/ci.yml` is a
 build + console-script + `goc validate` smoke matrix on Python
 3.10–3.13; the validation step is what gates card-frontmatter drift.
 
-Releases use OIDC trusted publishing on three registries — PyPI
-(`game-of-cards`), npm (`game-of-cards`), and ClawHub
-(`game-of-cards`) — no tokens in the repo. Two-step canonical flow:
+Releases publish to three registries — PyPI, npm, ClawHub — on a
+single tag push. PyPI + npm authenticate via OIDC trusted publishing
+(no token); ClawHub authenticates via a stored `CLAWHUB_TOKEN` repo
+secret (a personal `clawhub login` token that lives in repo settings,
+not in the codebase). Single-step canonical flow:
 
 1. Bump versions in `pyproject.toml`, `goc/__init__.py`,
    `openclaw-plugin/package.json` + `package-lock.json`,
    `claude-plugin/.claude-plugin/plugin.json`,
    `.claude-plugin/marketplace.json`. Run
-   `python3 scripts/sync_plugin_assets.py && uv sync`. Commit and
-   push main.
-2. `git tag vX.Y.Z && git push origin vX.Y.Z` — tag-push triggers
-   PyPI + npm publish.
-3. `gh workflow run release.yml --ref vX.Y.Z` — workflow_dispatch
-   on the tag triggers ClawHub publish.
+   `python3 scripts/sync_plugin_assets.py && uv sync`. Commit + push.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`. Done.
 
-Step 3 is required because ClawHub's official reusable workflow
-refuses OIDC on `push` events; it only accepts `workflow_dispatch`.
-PyPI and npm work via tag-push directly. See
-`.github/workflows/release.yml` header comment for trusted publisher
-configuration details.
+Why ClawHub uses a token instead of OIDC: their official reusable
+workflow refuses OIDC handshakes on `push` events. Without a token,
+each release would need a manual `gh workflow run release.yml --ref
+vX.Y.Z` follow-up. The token avoids that two-step. Rotate by
+re-running `clawhub login` then `jq -r .token "$HOME/Library/Application
+Support/clawhub/config.json" | gh secret set CLAWHUB_TOKEN`.
+
+See `.github/workflows/release.yml` header comment for trusted
+publisher + secret configuration details.
 
 ## Code architecture
 
