@@ -1,21 +1,46 @@
-# Release workflow — publishes `game-of-cards` to PyPI on tag push.
+# Release workflow — publishes `game-of-cards` to PyPI, npm, and ClawHub
+# on tag push.
 #
-# Authentication: PyPI trusted publishing (OIDC). No token stored as
-# a repo secret. To enable, configure this workflow as a trusted
-# publisher for the `game-of-cards` project at:
+# Authentication: OIDC trusted publishing on every channel — no long-lived
+# tokens stored as repo secrets. Each publish target is a one-time web-UI
+# configuration that authorizes this workflow to mint short-lived publish
+# tokens via the GitHub Actions id-token.
 #
-#   https://pypi.org/manage/project/game-of-cards/settings/publishing/
+# Trusted publisher entries to configure (one per package, one-time):
 #
-# Required claim values:
-#   Owner:                   zauberzeug
-#   Repository:              game-of-cards
-#   Workflow name:           release.yml
-#   Environment:             pypi
+#   PyPI:    https://pypi.org/manage/project/game-of-cards/settings/publishing/
+#            Owner: zauberzeug · Repository: game-of-cards
+#            Workflow: release.yml · Environment: pypi
+#
+#   npm:     https://www.npmjs.com/package/game-of-cards/access
+#            (Add a "Trusted Publisher" entry)
+#            Owner: zauberzeug · Repository: game-of-cards
+#            Workflow filename: release.yml · Environment: npm
+#
+#   ClawHub: ClawHub web UI for the `game-of-cards` package — Trusted
+#            Publishers section. Mirror the npm config (same repo +
+#            workflow filename, environment: clawhub). Once configured,
+#            manual publishes from a maintainer machine require
+#            `--manual-override-reason`.
 #
 # Tag convention: `v0.1.0`, `v0.2.3`, `v1.0.0`, etc. The tag must
-# match the version in pyproject.toml — the build step verifies this.
+# match the version in pyproject.toml AND openclaw-plugin/package.json
+# (the build step verifies both before any publish runs).
+#
+# Release flow:
+#   - `git push origin vX.Y.Z` — fires the `push` event; build runs,
+#     smoke is skipped (the action backing it does not accept `push`
+#     events), then publish-pypi, publish-npm, and publish-clawhub all
+#     run in parallel after build. Smoke does not gate this path.
+#   - `gh workflow run release.yml --ref vX.Y.Z` — fires
+#     `workflow_dispatch` with `github.ref` resolving to the tag;
+#     build and smoke both run; publish jobs wait for smoke success.
+#     Use this path before high-risk releases to gate publishes on
+#     the end-to-end auto-bootstrap smoke check.
+#   - `gh workflow run release.yml --ref main` (or any tag with
+#     `dry_run=true`) — exercises build + smoke without publishing.
 
-name: Release to PyPI
+name: Release
 
 on:
   push:
@@ -24,7 +49,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Build only; do not publish'
+        description: 'Build + smoke only; do not publish'
         type: boolean
         default: false
 
@@ -40,7 +65,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Verify tag matches pyproject version
+      - name: Verify tag matches pyproject + package.json versions
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           tag_version="${GITHUB_REF#refs/tags/v}"
@@ -49,7 +74,12 @@ jobs:
             echo "Tag v$tag_version does not match pyproject.toml version $py_version"
             exit 1
           fi
-          echo "Version match: v$tag_version"
+          npm_version=$(node -p "require('./openclaw-plugin/package.json').version")
+          if [ "$tag_version" != "$npm_version" ]; then
+            echo "Tag v$tag_version does not match openclaw-plugin/package.json version $npm_version"
+            exit 1
+          fi
+          echo "Version match: v$tag_version (PyPI + npm + ClawHub)"
 
       - name: Build distribution
         run: uv build
@@ -62,7 +92,7 @@ jobs:
           retention-days: 7
 
   smoke:
-    # End-to-end smoke test that gates PyPI publish on the plugin actually
+    # End-to-end smoke test that gates publishes on the plugin actually
     # working in a fresh consumer environment. Reuses the same Claude Code
     # OAuth surface as pull-card.yml — no new secrets required.
     #
@@ -74,9 +104,13 @@ jobs:
     name: End-to-end auto-bootstrap smoke
     needs: build
     runs-on: ubuntu-latest
-    # Run on real tag pushes AND on workflow_dispatch (so dry_run can exercise
-    # the smoke without publishing). Only skip when nothing else triggers it.
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    # `anthropics/claude-code-action@v1` rejects the `push` event family
+    # ("Unsupported event type: push"), so smoke can only run under
+    # workflow_dispatch. Tag-push releases skip smoke; the publish jobs
+    # below tolerate that via an explicit `needs.smoke.result == 'skipped'`
+    # branch in their `if`. To exercise smoke against a tag, use
+    # `gh workflow run release.yml --ref vX.Y.Z`.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -183,16 +217,20 @@ jobs:
             || { echo "FAIL Path B: result.txt missing or wrong"; cat /tmp/smoke-B/result.txt 2>/dev/null; exit 1; }
           echo "::notice::Path B passed"
 
-  publish:
+  publish-pypi:
     name: Publish to PyPI
     needs: [build, smoke]
     runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    # `always()` keeps this from being auto-skipped when `smoke` is
+    # skipped (the tag-push path). The explicit result checks then
+    # require build to succeed and smoke to either succeed or be
+    # skipped — never to have failed.
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
     environment:
       name: pypi
       url: https://pypi.org/project/game-of-cards/
     permissions:
-      id-token: write  # OIDC for trusted publishing
+      id-token: write  # OIDC for PyPI trusted publishing
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -207,3 +245,74 @@ jobs:
           # Print upload metadata for the workflow log.
           print-hash: true
           verbose: true
+
+  publish-npm:
+    name: Publish to npm
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/game-of-cards
+    permissions:
+      id-token: write  # OIDC for npm trusted publishing
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm to a version that supports OIDC trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install plugin deps
+        working-directory: openclaw-plugin
+        run: npm ci
+
+      - name: Build dist
+        working-directory: openclaw-plugin
+        run: npm run build
+
+      - name: Publish to npm with provenance
+        working-directory: openclaw-plugin
+        run: npm publish --provenance --access public
+
+  publish-clawhub:
+    name: Publish to ClawHub
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    environment:
+      name: clawhub
+      url: https://clawhub.ai/packages/game-of-cards
+    permissions:
+      id-token: write  # OIDC for ClawHub trusted publishing
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install ClawHub CLI
+        run: npm install -g clawhub
+
+      - name: Build plugin dist
+        working-directory: openclaw-plugin
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish to ClawHub
+        run: |
+          version="${GITHUB_REF#refs/tags/v}"
+          clawhub package publish ./openclaw-plugin \
+            --version "$version" \
+            --changelog "Automated release for v$version" \
+            --json

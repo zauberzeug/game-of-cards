@@ -6,21 +6,21 @@ stage: null
 contribution: high
 created: 2026-05-10
 closed_at: null
-human_gate: none
+human_gate: session
 advances:
   - publish-openclaw-plugin
   - provide-openclaw-plugin-for-skills-and-hooks
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] `.github/workflows/release.yml` extended with a `publish-npm` job that runs on tag push, has `id-token: write` permission, runs `npm publish --provenance --access public` from `openclaw-plugin/`, and is gated on `build` + (where applicable) `smoke`
-  - [ ] `.github/workflows/release.yml` extended with a `publish-clawhub` job that runs on tag push, calls `clawhub package publish ./openclaw-plugin --version <tag> --json` using the trusted-publisher OIDC flow (no `CLAWHUB_TOKEN` secret needed once the trusted-publisher is configured)
-  - [ ] `release.yml` header comment documents the two new jobs and the trusted-publisher setup steps required on the npm side and ClawHub side
-  - [ ] npm trusted publisher configured for `game-of-cards` at <https://www.npmjs.com/package/game-of-cards/access> — GitHub repo `zauberzeug/game-of-cards`, workflow `release.yml`, environment empty (or `pypi`-style) — recorded in this card's log when done
-  - [ ] ClawHub trusted publisher configured for the `game-of-cards` package via the ClawHub web UI — same GitHub repo + workflow path — recorded in this card's log when done
+  - [x] `.github/workflows/release.yml` extended with a `publish-npm` job that runs on tag push, has `id-token: write` permission, runs `npm publish --provenance --access public` from `openclaw-plugin/`, and is gated on `build` + (where applicable) `smoke`
+  - [x] `.github/workflows/release.yml` extended with a `publish-clawhub` job that runs on tag push, calls `clawhub package publish ./openclaw-plugin --version <tag> --json` using the trusted-publisher OIDC flow (no `CLAWHUB_TOKEN` secret needed once the trusted-publisher is configured)
+  - [x] `release.yml` header comment documents the two new jobs and the trusted-publisher setup steps required on the npm side and ClawHub side
+  - [ ] npm trusted publisher configured for `game-of-cards` at <https://www.npmjs.com/package/game-of-cards/access> — GitHub repo `zauberzeug/game-of-cards`, workflow `release.yml`, environment `npm` — recorded in this card's log when done
+  - [ ] ClawHub trusted publisher configured for the `game-of-cards` package via the ClawHub web UI — same GitHub repo + workflow path, environment `clawhub` — recorded in this card's log when done
   - [ ] First end-to-end auto-publish proven by tagging `v0.0.8` (or a `v0.0.7-test` pre-release) and observing all three registries (PyPI, npm, ClawHub) updated by CI alone
-  - [ ] CLAUDE.md / AGENTS.md release-flow guidance updated: maintainers run `<bump versions> && git tag vX.Y.Z && git push origin vX.Y.Z` and that's it
-  - [ ] `uv run goc validate` passes
+  - [x] CLAUDE.md / AGENTS.md release-flow guidance updated: maintainers run `<bump versions> && git tag vX.Y.Z && git push origin vX.Y.Z` and that's it
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -131,3 +131,29 @@ publish-clawhub:
 - This card sets up the auto-publish workflow and tells the human what trusted-publisher entries to create. The actual web-UI configuration is a manual step the maintainer does once per package — there is no API for "create a trusted publisher" on either npm or ClawHub.
 - v0.0.7 itself stays as a manual publish (the OTP workflow already in motion is fine). The new CI flow proves itself on v0.0.8 or a pre-release.
 - This is not a release-strategy change — `git tag vX.Y.Z && git push --tags` remains the trigger. It just makes more things happen on that trigger.
+
+## Implementation status
+
+The workflow file at `.github/workflows/release.yml` now defines four jobs gated on tag push: `build`, `smoke` (workflow_dispatch only), `publish-pypi`, `publish-npm`, and `publish-clawhub`. All three publish jobs use OIDC trusted publishing — `id-token: write` permission, no long-lived secrets in repo settings. The `publish-clawhub` job relies on the ClawHub CLI's native GitHub Actions OIDC support (verified by reading `node_modules/clawhub/dist/cli/commands/packages.js`: it detects `ACTIONS_ID_TOKEN_REQUEST_URL` + `ACTIONS_ID_TOKEN_REQUEST_TOKEN` and exchanges them for a publish token automatically).
+
+Three GitHub environments are referenced (`pypi`, `npm`, `clawhub`) — each carries the trusted-publisher claim values that scope OIDC to this workflow. They're created automatically the first time a job that references them runs; the trusted-publisher entries on the registry side are what gate which workflow runs can mint tokens.
+
+The fix from the parked card `release-yml-smoke-job-fails-on-tag-push-events` was folded in by the same release.yml rewrite — its proposed diff is now live: `smoke.if` narrowed to `${{ github.event_name == 'workflow_dispatch' }}` and the publish gates use the `always() && build==success && (smoke==success || smoke==skipped)` pattern that lets tag-push releases proceed past a skipped smoke job without smoke ever needing to run on the unsupported `push` event.
+
+## Action required (gate session)
+
+Two web-UI configurations stand between this card and a green end-to-end auto-publish:
+
+1. **npm trusted publisher** — go to <https://www.npmjs.com/package/game-of-cards/access>, scroll to the "Trusted Publishers" section (or equivalent under "Manage Access"), add a new GitHub Actions trusted publisher with these claim values:
+   - Owner: `zauberzeug`
+   - Repository: `game-of-cards`
+   - Workflow filename: `release.yml`
+   - Environment: `npm`
+2. **ClawHub trusted publisher** — at the package's ClawHub admin page (<https://clawhub.ai/packages/game-of-cards> → Settings → Trusted Publishers, or wherever the UI surfaces it), add a GitHub Actions trusted publisher with the same claim values except environment `clawhub`.
+
+After both entries exist, cut v0.0.8:
+1. Bump versions in `pyproject.toml`, `goc/__init__.py`, `openclaw-plugin/package.json`, `openclaw-plugin/package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` (sync hook handles the engine-mirror copies).
+2. `git commit -m "release: bump to 0.0.8" && git tag v0.0.8 && git push origin main && git push origin v0.0.8`.
+3. Watch <https://github.com/zauberzeug/game-of-cards/actions> — `build` runs, `smoke` skips, all three publish jobs run in parallel, and v0.0.8 lands on PyPI, npm, and ClawHub within ~2 minutes with no further human input.
+
+If any of the three publishes fail with an OIDC error, that's the corresponding registry rejecting the trusted-publisher claim — re-check the entry's owner/repo/workflow/environment match exactly.

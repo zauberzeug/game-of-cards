@@ -27,9 +27,15 @@ No pytest suite exists yet. `.github/workflows/ci.yml` is a
 build + console-script + `goc validate` smoke matrix on Python
 3.10–3.13; the validation step is what gates card-frontmatter drift.
 
-Releases: push tag `vX.Y.Z` whose value matches `pyproject.toml`'s
-`version` (the workflow verifies the match before publishing). PyPI
-auth is OIDC trusted publishing — no tokens in the repo.
+Releases: push tag `vX.Y.Z` whose value matches both
+`pyproject.toml`'s `version` and `openclaw-plugin/package.json`'s
+`version` (the workflow verifies both before any publish runs).
+A single tag push triggers OIDC trusted publishing to **three**
+registries — PyPI (`game-of-cards`), npm (`game-of-cards`), and
+ClawHub (`game-of-cards`) — no tokens in the repo. Trusted
+publisher entries are configured one-time per registry; see the
+header comment in `.github/workflows/release.yml` for the URLs and
+required claim values.
 
 ## Code architecture
 
