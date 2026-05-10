@@ -16,6 +16,7 @@ advanced_by:
   - add-privacy-policy-page-for-marketplace-submission
   - lead-llms-txt-with-claude-code-plugin
   - kickoff-crashes-when-user-declines-merge-question
+  - cut-v0-0-7-release-before-openclaw-publish
   - pattern-generalization-hook-missing-from-local-skills-install
   - llms-txt-still-recommends-uv-tool-install-as-preferred
 tags: [story, infra, documentation]

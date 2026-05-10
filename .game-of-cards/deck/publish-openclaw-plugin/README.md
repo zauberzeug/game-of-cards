@@ -13,6 +13,7 @@ advanced_by:
   - provide-openclaw-plugin-for-skills-and-hooks
   - add-openclaw-install-section-to-llms-txt
   - openclaw-subagent-spawn-doesnt-project-plugin-tools
+  - cut-v0-0-7-release-before-openclaw-publish
 tags: [story, infra]
 definition_of_done: |
   - [ ] Plugin published on ClawHub (<https://clawhub.ai>) such that consumers can install via `openclaw skills install <id>`; chosen package id recorded in this card's log

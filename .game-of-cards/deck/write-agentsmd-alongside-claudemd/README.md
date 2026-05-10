@@ -11,6 +11,8 @@ advances:
   - ship-game-of-cards-as-cross-agent-cli
 advanced_by:
   - claude-md-template-must-import-agents-md-content
+  - kickoff-asks-where-goc-briefing-lives
+  - shrink-root-guidance-files-by-moving-content-into-skills
 tags: [story, infra, documentation]
 definition_of_done: |
   - [x] `goc install` writes `AGENTS.md` (creates if absent, appends marker-bounded section if present) at the repo root
