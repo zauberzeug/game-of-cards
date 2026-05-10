@@ -305,6 +305,11 @@ jobs:
     # HEAD which is rarely what you want.
     if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && ((startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run) || (github.event_name == 'workflow_dispatch' && inputs.dry_run == true)) }}
     permissions:
+      # id-token: write is required EVEN with token auth — the reusable
+      # workflow uses OIDC internally (audience: clawhub-workflow-source)
+      # to verify itself before any publish path. Without this, the
+      # workflow fails at startup.
+      id-token: write
       contents: read
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3
     with:
