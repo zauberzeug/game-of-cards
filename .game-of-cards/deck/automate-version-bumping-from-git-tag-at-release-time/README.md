@@ -1,7 +1,7 @@
 ---
 title: automate-version-bumping-from-git-tag-at-release-time
 summary: "Make the git tag the single source of truth for the package version. Use hatch-vcs for the wheel and have the release workflow rewrite literals in goc/__init__.py and the four plugin manifests at build time, eliminating the six-file manual bump that drifted on 0.0.12."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] CI passes a tripwire that fails the build if `goc/__init__.py` or any of the 4 manifests is touched in the same commit as a tag push (humans should never edit these post-switch)
   - [ ] Documentation updated: `CLAUDE.md`'s release section reflects the new "tag is the version" flow; `release.yml` header comment rewritten to match
   - [ ] One real release published end-to-end (PyPI + npm + ClawHub) using only `git tag vX.Y.Z && git push --tags`, with no version edits in the commit that the tag points to
+worker: {who: "claude[bot]", where: main}
 ---
 
 # automate-version-bumping-from-git-tag-at-release-time
