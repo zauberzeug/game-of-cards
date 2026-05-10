@@ -1,7 +1,7 @@
 ---
 title: shrink-root-guidance-files-by-moving-content-into-skills
 summary: "AGENTS.md (132 lines / ~6.9 KB) and CLAUDE.md (105 lines / ~5.2 KB) are loaded into baseline session context for every GoC repo — every prompt pays the token cost. Most of that content (deck-mode flowchart, verb table, YAML format rules, worker-field semantics, multi-team coordination opt-ins, marker-block explanation) is reference material the agent only needs at the moment of acting. Move that content into the relevant skill bodies (`Skill(deck)`, `Skill(card-schema)`, `Skill(create-card)`, etc.) where it loads on-demand. The root files shrink to a thin pointer: 'this repo uses Game of Cards; the methodology lives in skills, run `Skill(deck)` for an overview' plus the discovery marker. Goal: cut baseline context tokens by ~80% while preserving discoverability."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-10
@@ -22,6 +22,7 @@ definition_of_done: |
   - [ ] `goc upgrade` migrates existing repos: re-syncs the slimmer marker block, leaves user content above/below untouched
   - [ ] Plugin payload re-synced via `python scripts/sync_plugin_assets.py` and OpenClaw skill port re-run
   - [ ] Smoke test on a fresh repo: kickoff completes; agent can file/advance/finish a card using only the skills (no need to grep root files for verb syntax or YAML rules)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Shrink root guidance files by moving content into skills
