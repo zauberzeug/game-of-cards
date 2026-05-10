@@ -35,10 +35,17 @@
 # Tag convention: `v0.1.0`, `v0.2.3`, `v1.0.0`, etc. The tag IS the version —
 # everything else is derived from it at build time.
 #
-# Canonical release flow (single trigger, no manual bumps):
+# Canonical release flow (two-step, no manual version bumps):
 #
 #   1. `git tag vX.Y.Z && git push origin vX.Y.Z`.
-#      → tag-push triggers PyPI + npm (OIDC) + ClawHub (token) in parallel.
+#      → tag-push triggers PyPI + npm publishes via OIDC. ClawHub's
+#      OIDC trusted publisher refuses `push` events, so its publish
+#      does NOT fire here.
+#   2. `gh workflow run release.yml --ref vX.Y.Z`.
+#      → workflow_dispatch on the tag triggers the ClawHub publish via
+#      OIDC. Smoke runs in this path (~4 min); ClawHub publishes after
+#      smoke passes. PyPI + npm jobs also re-run but no-op (registries
+#      reject double-publish of the same version).
 #
 # How the version flows from the tag:
 #   - The wheel version (`pyproject.toml`) is dynamic via `hatch-vcs`,
