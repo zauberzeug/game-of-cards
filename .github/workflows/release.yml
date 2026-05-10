@@ -149,8 +149,14 @@ jobs:
         # package.json, `npm install --package-lock-only` would update the
         # lockfile here — which `npm ci` in publish-npm would then reject.
         # Surface that failure in the build job instead of two jobs later.
+        #
+        # `--ignore-scripts` is required: npm runs the `prepare` lifecycle
+        # script (`npm run build` → `tsc`) even under `--package-lock-only`,
+        # and tsc fails on a missing `@types/node` because the flag also
+        # prevents an actual install. The validation is purely a lockfile
+        # consistency check, so suppressing scripts is correct.
         working-directory: openclaw-plugin
-        run: npm install --package-lock-only --no-audit --no-fund
+        run: npm install --package-lock-only --no-audit --no-fund --ignore-scripts
 
       - name: Build distribution
         env:
