@@ -4,4 +4,4 @@ Distribution name on PyPI: `game-of-cards`.
 Import name + console script: `goc` (the pyyaml pattern).
 """
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
