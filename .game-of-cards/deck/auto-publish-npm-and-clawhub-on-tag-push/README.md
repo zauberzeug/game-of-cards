@@ -1,7 +1,7 @@
 ---
 title: auto-publish-npm-and-clawhub-on-tag-push
 summary: "Extend `.github/workflows/release.yml` to auto-publish the OpenClaw plugin to npm AND ClawHub on every tag push, mirroring the existing PyPI OIDC trusted-publisher flow. Today PyPI is automated but npm + ClawHub are manual (`npm login` + interactive 2FA OTP + `clawhub login` + `clawhub package publish`). The 2FA wall hit during the v0.0.7 release proves the manual flow doesn't scale: every release demands the maintainer be at their authenticator. Both registries support OIDC-style trusted publishing — npm via id-token + provenance attestation; ClawHub via `clawhub package trusted-publisher` configured in the web UI — so we can ship token-free CI publishing on tag push."
-status: active
+status: blocked
 stage: null
 contribution: high
 created: 2026-05-10
