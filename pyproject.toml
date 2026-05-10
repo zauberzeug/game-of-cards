@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "game-of-cards"
-version = "0.0.7"
+version = "0.0.8"
 description = "Agile for the age of agents: repo-native backlog cards for human and AI contributors."
 readme = "README.md"
 requires-python = ">=3.10"
