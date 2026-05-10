@@ -705,6 +705,8 @@ def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
 def _append_precommit_hook(target: Path) -> None:
     """Append the `goc validate` hook to `.pre-commit-config.yaml` (creating it)."""
 
+    if not (target.parent / ".git").is_dir():
+        return
     if not target.exists():
         target.write_text("repos:\n" + PRE_COMMIT_HOOK)
         return

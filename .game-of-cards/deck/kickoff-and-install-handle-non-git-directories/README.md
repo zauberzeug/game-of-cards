@@ -1,22 +1,22 @@
 ---
 title: kickoff-and-install-handle-non-git-directories
 summary: "Running `goc install` (and the `kickoff` skill on top of it) in a directory without a `.git/` produces dead-weight artifacts and offers no notice to the user. `_append_precommit_hook` writes `.pre-commit-config.yaml` unconditionally even when no git repo is present, leaving a config no hook can act on. The `kickoff` skill never checks for git either, so the methodology — which assumes git for auto_commit, claim records, and history — silently runs half-armed. Fix: skip the pre-commit write when `.git/` is absent, and have `kickoff` flag the absence to the user (one-line notice, no education) so they can decide whether to `git init` before continuing."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-10
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `_append_precommit_hook` in `goc/install.py` skips writing `.pre-commit-config.yaml` when `(target / ".git").is_dir()` is false; existing file in a non-git dir is left alone (do not delete user content)
-  - [ ] `kickoff` skill (in `goc/templates/skills/kickoff/SKILL.md`) checks for `.git/` early; if absent, surfaces a one-line notice ("no git repository here — version control is not set up; run `git init` if you want the deck tracked") and continues
-  - [ ] Notice text is factual, not educational — does NOT explain what git is, why GoC needs it, or recommend a specific workflow
-  - [ ] Verified: `goc install` in a fresh non-git tmpdir does NOT create `.pre-commit-config.yaml`; `.game-of-cards/`, `AGENTS.md`, `CLAUDE.md`, and the marker block still land normally
-  - [ ] Verified: `kickoff` in a fresh non-git tmpdir prints the notice once before scaffolding, then proceeds
-  - [ ] Both Claude-plugin and pipx-installed engine paths re-synced via `pre-commit run sync-plugin-assets --all-files`
+  - [x] `_append_precommit_hook` in `goc/install.py` skips writing `.pre-commit-config.yaml` when `(target / ".git").is_dir()` is false; existing file in a non-git dir is left alone (do not delete user content)
+  - [x] `kickoff` skill (in `goc/templates/skills/kickoff/SKILL.md`) checks for `.git/` early; if absent, surfaces a one-line notice ("no git repository here — version control is not set up; run `git init` if you want the deck tracked") and continues
+  - [x] Notice text is factual, not educational — does NOT explain what git is, why GoC needs it, or recommend a specific workflow
+  - [x] Verified: `goc install` in a fresh non-git tmpdir does NOT create `.pre-commit-config.yaml`; `.game-of-cards/`, `AGENTS.md`, `CLAUDE.md`, and the marker block still land normally
+  - [x] Verified: `kickoff` in a fresh non-git tmpdir prints the notice once before scaffolding, then proceeds
+  - [x] Both Claude-plugin and pipx-installed engine paths re-synced via `pre-commit run sync-plugin-assets --all-files`
 worker: {who: "claude[bot]", where: main}
 ---
 

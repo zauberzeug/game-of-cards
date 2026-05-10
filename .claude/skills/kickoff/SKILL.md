@@ -25,6 +25,7 @@ its question(s) when the corresponding signal is already present.
 ls .game-of-cards/deck/ 2>/dev/null && echo "DECK_EXISTS" || echo "deck_missing"
 which goc 2>/dev/null && echo "GOC_ON_PATH" || echo "goc_missing"
 grep -l '<!-- BEGIN GOC' AGENTS.md 2>/dev/null && echo "AGENTS_MD_MERGED" || true
+[ -d .git ] && echo "GIT_REPO" || echo "git_missing"
 ```
 
 Route on the results:
@@ -36,6 +37,11 @@ Route on the results:
   not installed. Install it (e.g. `pipx install game-of-cards`, or use
   whatever plugin/runtime ships goc for your host) and re-run kickoff."
   Do not proceed without `goc`.
+- **`git_missing`** → surface this one-line notice once, then continue:
+  "No git repository here — version control is not set up. The deck
+  assumes git (auto_commit, claim history, closure logs); run `git init`
+  if you want the deck tracked." Do not explain further; the user
+  decides whether to `git init` before or after kickoff completes.
 - **Otherwise** → continue. Hold the detected flags in mind through the
   rest of the flow.
 
