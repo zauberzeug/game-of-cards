@@ -10,7 +10,8 @@ human_gate: session
 advances:
   - publish-openclaw-plugin
   - provide-openclaw-plugin-for-skills-and-hooks
-advanced_by: []
+advanced_by:
+  - publish-npm-package-under-zauberzeug-org-not-personal
 tags: [story, infra]
 definition_of_done: |
   - [x] `.github/workflows/release.yml` extended with a `publish-npm` job that runs on tag push, has `id-token: write` permission, runs `npm publish --provenance --access public` from `openclaw-plugin/`, and is gated on `build` + (where applicable) `smoke`
