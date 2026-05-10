@@ -60,14 +60,16 @@
 #   - Humans never edit version literals. A tagged commit that touches
 #     any of those files trips the in-job tripwire and fails the build.
 #
-# ClawHub caveat: the ClawHub publish reusable workflow checks out the
-# tagged commit and publishes `openclaw-plugin/` from that commit's
-# `package.json`. Because the tagged commit (per the policy above)
-# carries the *previous* release's version literal, the package.json on
-# disk at publish time is stale relative to the tag. Track this in the
-# `version-rewrite-must-also-cover-clawhub-publish-source` follow-up
-# card; resolution will likely require either an upstream input on the
-# reusable workflow or a side-channel pre-publish rewrite.
+# ClawHub stale-package.json: the ClawHub reusable workflow checks out
+# the tagged commit and reads `openclaw-plugin/package.json` from that
+# commit. Under the tag-as-version policy, that file still carries the
+# *previous* release's version literal (the workflow rewrites literals
+# at build time, but the ClawHub reusable workflow does its own
+# checkout and never sees the rewrite). Resolved by passing
+# `version: ${{ needs.build.outputs.release_version }}` to the
+# reusable workflow's `version` input — it overrides the on-disk
+# package.json version. Discovered on v0.0.14 with error
+# `ConvexError: Version 0.0.12 already exists`.
 #
 # Other dispatch modes:
 #   - `gh workflow run release.yml --field dry_run=true` —
@@ -94,6 +96,12 @@ jobs:
   build:
     name: Build wheel + sdist
     runs-on: ubuntu-latest
+    outputs:
+      # Exposed to publish-clawhub so it can pass `version:` to the
+      # reusable workflow — that workflow checks out the tagged commit
+      # and publishes from on-disk `package.json`, which still carries
+      # the previous release's literal under the tag-as-version policy.
+      release_version: ${{ steps.version.outputs.release_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -425,12 +433,14 @@ jobs:
     # publish with `Package already exists and belongs to another
     # publisher`.
     needs: [build, smoke]
-    # Run on real tag push (publish), or workflow_dispatch with
-    # dry_run=true (dry-run preview). ClawHub's OIDC TP refuses `push`
-    # events, so the tag-push branch will fail at publish time; the
-    # documented recovery is `gh workflow run release.yml --ref vX.Y.Z`
-    # which fires the workflow_dispatch path that OIDC accepts.
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && ((startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run) || (github.event_name == 'workflow_dispatch' && inputs.dry_run == true)) }}
+    # workflow_dispatch only — ClawHub's OIDC TP refuses `push` events,
+    # so we skip the publish-clawhub job entirely on tag-push (instead
+    # of running it for ~15s and watching it fail at the reusable
+    # workflow's event-type validation). The two-step canonical flow
+    # documented in the header expects `gh workflow run release.yml
+    # --ref vX.Y.Z` to fire this job. Either tag-ref + !dry_run (real
+    # publish) or dry_run=true (dry-run preview) is accepted.
+    if: ${{ always() && needs.build.result == 'success' && needs.smoke.result == 'success' && github.event_name == 'workflow_dispatch' && ((startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run) || inputs.dry_run == true) }}
     permissions:
       # id-token: write is required for OIDC trusted publishing. The
       # reusable workflow uses audience `clawhub-workflow-source` to
@@ -446,4 +456,14 @@ jobs:
       # source defaults to GITHUB_REPOSITORY@github.sha which matches
       # the ref claim minted by the OIDC token.
       source_path: openclaw-plugin
+      # Override the on-disk `package.json` version — the reusable
+      # workflow checks out the tagged commit, whose `package.json`
+      # still carries the previous release's literal (the workflow
+      # rewrites version literals at build time, but the ClawHub
+      # reusable workflow does its own checkout and never sees the
+      # rewrite). Without this override, the publish step fails with
+      # `ConvexError: Version 0.0.X already exists` (the previous
+      # release's number). `release_version` is computed by the build
+      # job from the tag ref.
+      version: ${{ needs.build.outputs.release_version }}
       dry_run: ${{ inputs.dry_run == true }}
