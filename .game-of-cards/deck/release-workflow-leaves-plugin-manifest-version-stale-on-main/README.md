@@ -1,11 +1,11 @@
 ---
 title: release-workflow-leaves-plugin-manifest-version-stale-on-main
 summary: "release.yml rewrites version literals in-workflow but never commits the rewrites back to main, so claude-plugin/.claude-plugin/plugin.json (and the four sibling manifests) stay frozen at the first-released value (0.0.12) on main forever. PyPI/npm/ClawHub all override their own version surface via publish artifacts or reusable-workflow input, but the Claude Code plugin manager clones the marketplace and reads plugin.json directly from the git tree — no override channel exists, so users on the Claude Code plugin see a stale version label after every release. Fix: have the build job commit the rewrites back to main and tag the rewrite commit; relax the tripwire to exempt bot release commits."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-11T13:17:27Z"
-closed_at: null
+closed_at: 2026-05-11T13:53:39Z
 human_gate: none
 advances: []
 advanced_by:
@@ -16,7 +16,7 @@ definition_of_done: |
   - [x] release.yml's build job, after all consistency checks pass, commits the seven rewritten files (`goc/__init__.py`, `openclaw-plugin/package.json`, `openclaw-plugin/package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, plus the two `__init__.py` mirror copies) back to main with subject `release: bump version literals to vX.Y.Z`, then creates and pushes the tag on the new commit
   - [x] The tripwire is updated to exempt commits whose author is `github-actions[bot]` AND whose subject starts with `release: bump version literals to v` — so the *next* release dispatch doesn't fail on the previous release's own commit
   - [x] CLAUDE.md release section and `release.yml` header comment are updated to describe the commit-back step and clarify that main always reflects the *most recent shipped* version literal (lagging by at most one release dispatch, never by lifetime-of-repo)
-  - [ ] A real release end-to-end (e.g. v0.0.17) verifies the fix: after the workflow finishes, `git show v0.0.17:claude-plugin/.claude-plugin/plugin.json` reads `"version": "0.0.17"` and Claude Code's `/plugin` view also shows 0.0.17 for a fresh install
+  - [x] A real release end-to-end (e.g. v0.0.17) verifies the fix: after the workflow finishes, `git show v0.0.17:claude-plugin/.claude-plugin/plugin.json` reads `"version": "0.0.17"` and Claude Code's `/plugin` view also shows 0.0.17 for a fresh install. **Verified 2026-05-11 via run [25674213757](https://github.com/zauberzeug/game-of-cards/actions/runs/25674213757)**: build pushed release commit `6534039` (author `github-actions[bot]`, subject `release: bump version literals to v0.0.17`) to main, then tagged it `v0.0.17`. All five version surfaces at the tag read `0.0.17`; on-main file reads `0.0.17`. PyPI + npm + ClawHub publish jobs all succeeded in the same run.
   - [x] The two parked predecessor cards (`automate-version-bumping-from-git-tag-at-release-time`, `release-yml-smoke-job-fails-on-tag-push-events`) are closed — both have their DoDs ticked, and their decision-gates have been resolved by subsequent cards. Closed via `goc done` in commit d1d6250 (2026-05-11).
   - [x] `uv run goc validate` passes
 worker: {who: rodja, where: main}
