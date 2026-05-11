@@ -1,0 +1,3 @@
+## 2026-05-11: decision recorded
+
+Close — all DoD ticked; the ClawHub publish-source decision (the original parking gate) was answered by find-single-trigger-release-flow-for-all-three-registries via version: input override (closed 2026-05-11). The remaining 'main never reflects shipped version' failure mode is being addressed by release-workflow-leaves-plugin-manifest-version-stale-on-main. — Parked gate (ClawHub publish source) was a session-time policy choice that has since been resolved upstream; keeping this card open does not gate further work and the session-start hook misleadingly lists it as active.. Gate session → none.

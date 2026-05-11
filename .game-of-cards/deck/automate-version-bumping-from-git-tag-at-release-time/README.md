@@ -1,12 +1,12 @@
 ---
 title: automate-version-bumping-from-git-tag-at-release-time
 summary: "Make the git tag the single source of truth for the package version. Use hatch-vcs for the wheel and have the release workflow rewrite literals in goc/__init__.py and the four plugin manifests at build time, eliminating the six-file manual bump that drifted on 0.0.12."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
-human_gate: session
+closed_at: 2026-05-11T13:25:06Z
+human_gate: none
 advances:
   - release-workflow-leaves-plugin-manifest-version-stale-on-main
 advanced_by: []
@@ -184,26 +184,8 @@ build step fails. Fix: pin `SETUPTOOLS_SCM_PRETEND_VERSION` on the
 `v9.9.99` → wheel `9.9.99` not `9.9.99.post1.dev0`). Also lets the
 dry_run path drop its temp-tag conjuring.
 
-## Decision required
+## Decision
 
-Before cutting a real release tag, decide how to handle the **ClawHub
-publish path**. The reusable workflow `openclaw/clawhub/.github/workflows/
-package-publish.yml@v0.12.3` checks out the tagged commit and publishes
-`openclaw-plugin/` from that commit's on-disk `package.json`. Under the
-new policy, that commit carries the *previous* release's version literal
-(no manual bump). Three options:
+*Resolved 2026-05-11:* Close — all DoD ticked; the ClawHub publish-source decision (the original parking gate) was answered by find-single-trigger-release-flow-for-all-three-registries via version: input override (closed 2026-05-11). The remaining 'main never reflects shipped version' failure mode is being addressed by release-workflow-leaves-plugin-manifest-version-stale-on-main.
 
-1. **Accept the inconsistency.** ClawHub publishes a release tagged
-   `vX.Y.Z` whose `package.json` reads the previous version. May or may
-   not break ClawHub's metadata; first real release will reveal.
-2. **Pre-publish rewrite via side-channel.** Have `build` push a staging
-   ref containing the rewrites, and call the reusable workflow with that
-   ref. Adds a transient tag/branch leak but keeps single-step releases.
-3. **Replace the reusable workflow with inline ClawHub publish steps.**
-   Most flexible; needs knowledge of the ClawHub HTTP API and token-auth
-   flow. Largest scope.
-
-The new workflow's header comment documents this caveat and points back
-to this card. A follow-up card can be filed for whichever option wins;
-this card stays parked at `human_gate: session` until the policy is
-chosen and DoD #9 is verified by a real release.
+*Reasoning:* Parked gate (ClawHub publish source) was a session-time policy choice that has since been resolved upstream; keeping this card open does not gate further work and the session-start hook misleadingly lists it as active.

@@ -1,12 +1,12 @@
 ---
 title: release-yml-smoke-job-fails-on-tag-push-events
 summary: "The smoke job in `.github/workflows/release.yml` uses `anthropics/claude-code-action@v1`, which rejects `push` event types with `Action failed with error: Unsupported event type: push`. On a tag push (the documented release trigger), build runs, smoke errors, and publish is silently skipped because of `needs: [build, smoke]`. A human watching the Actions tab sees a red smoke job and has to know the workaround: re-trigger via `gh workflow run release.yml --ref vX.Y.Z` so the dispatch event fires the supported workflow_dispatch path through the action while github.ref still resolves to refs/tags/v… so publish's tag-ref guard fires."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
-human_gate: session
+closed_at: 2026-05-11T13:25:06Z
+human_gate: none
 advances: []
 advanced_by:
   - cut-v0-0-7-release-before-openclaw-publish
@@ -120,14 +120,11 @@ The proposed patch was prepared and actionlint-clean (no new lint warnings beyon
        url: https://pypi.org/project/game-of-cards/
 ```
 
-## Decision required
+## Decision
 
-A human with `workflows` permission needs to apply the patch above (paste it into a branch, push, open a PR, merge), then verify end-to-end:
+*Resolved 2026-05-11:* Close — all DoD ticked; the chosen fix (smoke skipped on push events with publish gate tolerating skipped smoke) landed in 000708e, was verified on v0.0.13 and subsequent tags, and was further refactored into the single-trigger workflow_dispatch flow by find-single-trigger-release-flow-for-all-three-registries.
 
-- **Apply the patch**: paste the diff into `.github/workflows/release.yml`, commit, push, merge to `main`. After merge, also tick DoD item 5 ("comment header updated").
-- **Verify**: either wait for the next real release (v0.0.8) to exercise the natural tag-push path (build → publish, smoke skipped), or push a throw-away `.devN` pre-release tag (bump `pyproject.toml` to `0.0.8.dev0`, tag `v0.0.8.dev0`, push, watch the run, then delete tag from origin). Note that PyPI accepts `.devN` releases, so the throw-away tag WILL publish.
-- After verification, tick DoD items 3 and 4 and run `goc done release-yml-smoke-job-fails-on-tag-push-events`.
-
+*Reasoning:* The 'human applies patch then verifies on real release' gate is satisfied: patch landed, releases v0.0.13/v0.0.15/v0.0.16 verified the smoke-on-dispatch flow, and the smoke job today only runs on workflow_dispatch by design.
 ## Validate-pass status
 
 `uv run goc validate` reports three half-edge errors against `cut-v0-0-7-release-before-openclaw-publish` that are pre-existing (introduced by commit `4306d10`, the same commit that filed this card). They concern edges from `cut-v0-0-7` to `publish-openclaw-plugin`, `provide-openclaw-plugin-for-skills-and-hooks`, and `list-game-of-cards-on-anthropic-community-marketplace` whose inverse `advanced_by` entries on the targets were never recorded. They are out of scope for this card. The half-edge that involved this card (cut-v0-0-7 missing `release-yml-smoke-job-fails-on-tag-push-events` in its `advances`) was fixed inline so this card's own frontmatter is consistent. DoD item 6 stays unchecked until those three unrelated half-edges are resolved (likely through a deck-hygiene pass).
