@@ -163,6 +163,8 @@ Edit `deck/<title>/README.md` and replace the placeholder body with:
 - **Fix** — concrete code change with file:line. **Do NOT apply the
   fix.** When the gate is `decision`, this collapses into the
   `## Decision required` section.
+- For `--gate decision` / `--gate session` cards, consider a sibling
+  `*.html` matrix, `*.svg` diagram, or interactive form (see Step 7).
 - **Refine the DoD** — replace the placeholder with real criteria.
   Each box is a contract the fix must satisfy:
 

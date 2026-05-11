@@ -2902,13 +2902,23 @@ def _cmd_triage(args):
 
 
 def _cmd_show(args):
-    """Print full README.md to stdout."""
+    """Print full README.md to stdout, followed by sibling artifact filenames."""
     title = args.title
-    p = DECK_DIR / title / "README.md"
+    card_dir = DECK_DIR / title
+    p = card_dir / "README.md"
     if not p.exists():
         print(f"ERROR: {p} not found", file=sys.stderr)
         sys.exit(2)
     print(p.read_text())
+    artifacts = sorted(
+        f.name for f in card_dir.iterdir()
+        if f.is_file() and f.name not in ("README.md", "log.md")
+    )
+    if artifacts:
+        print("## Artifacts")
+        print()
+        for a in artifacts:
+            print(f"- {a}")
 
 
 def _cmd_migrate(args):

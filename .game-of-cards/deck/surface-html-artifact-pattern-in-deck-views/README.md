@@ -6,21 +6,21 @@ summary: |-
   `Skill(card-schema)` lines 35-45. The pattern is documented but
   invisible from the daily verbs (`goc`, `goc show`, scan-deck), so it
   remains under-used. Surface it where users already look.
-status: active
+status: done
 stage: null
 contribution: low
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-11T03:51:00Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation]
 definition_of_done: |
-  - [ ] decision recorded below for which surface(s) carry the hint
-  - [ ] chosen surfaces show artifact filenames or a one-line nudge
-  - [ ] hint is concise (<= 1 line per card) — no UI clutter
-  - [ ] `goc validate` still passes
-  - [ ] `Skill(card-schema)` "Card Directory Layout" section unchanged
+  - [x] decision recorded below for which surface(s) carry the hint
+  - [x] chosen surfaces show artifact filenames or a one-line nudge
+  - [x] hint is concise (<= 1 line per card) — no UI clutter
+  - [x] `goc validate` still passes
+  - [x] `Skill(card-schema)` "Card Directory Layout" section unchanged
         (it already documents the pattern; this card is about discovery,
         not redocumentation)
 worker: {who: "claude[bot]", where: main}
