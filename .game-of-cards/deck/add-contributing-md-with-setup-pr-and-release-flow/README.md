@@ -11,13 +11,13 @@ advances: []
 advanced_by: []
 tags: [story, documentation]
 definition_of_done: |
-  - [ ] `CONTRIBUTING.md` exists at repo root.
-  - [ ] Documents environment setup (`uv sync`, editable install, `uv run goc validate`).
-  - [ ] Mentions the Game-of-Cards deck-first workflow at a glance and links to AGENTS.md / `goc.md` for deeper context (no duplication).
-  - [ ] Documents the single-trigger release flow: `gh workflow run release.yml -f version=X.Y.Z`, recovery via `--ref vX.Y.Z`, and the "tag IS the version" + plugin-asset auto-sync invariants. Links to `release.yml` header for the long-form trail.
-  - [ ] Pre-commit + `goc validate` is the canonical pre-PR check.
-  - [ ] No content duplication: facts already in CLAUDE.md / AGENTS.md are linked, not restated.
-  - [ ] `uv run goc validate` passes.
+  - [x] `CONTRIBUTING.md` exists at repo root.
+  - [x] Documents environment setup (`uv sync`, editable install, `uv run goc validate`).
+  - [x] Mentions the Game-of-Cards deck-first workflow at a glance and links to AGENTS.md / `goc.md` for deeper context (no duplication).
+  - [x] Documents the single-trigger release flow: `gh workflow run release.yml -f version=X.Y.Z`, recovery via `--ref vX.Y.Z`, and the "tag IS the version" + plugin-asset auto-sync invariants. Links to `release.yml` header for the long-form trail.
+  - [x] Pre-commit + `goc validate` is the canonical pre-PR check.
+  - [x] No content duplication: facts already in CLAUDE.md / AGENTS.md are linked, not restated.
+  - [x] `uv run goc validate` passes.
 worker: {who: Rodja Trappe, where: main}
 ---
 
