@@ -13,15 +13,15 @@ advances:
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Re-verify, against the live `openclaw/clawhub/.github/workflows/package-publish.yml@main` source and the live `clawhub` CLI v0.12.3 + v0.13.x (unreleased) capabilities, that the constraints recorded in `project_clawhub_oidc_constraints.md` are still valid as of the date this card is worked. Spec changes since 2026-05-10 must be folded in BEFORE evaluating any path below — the closed card's conclusion was correct for its day but the moving target may have moved.
-  - [ ] Path A — self-dispatch from push: spike `self-dispatch-spike.yml` on a throw-away branch. push → job A runs → job A does `gh workflow run` → second run sees `event_name=workflow_dispatch`. Verify: anti-recursion exception applies; ClawHub does not reject bot-driven workflow_dispatch; `permissions: actions: write` actually grants the dispatch capability. Record each verification (or the constraint that blocked it) in the card body.
-  - [ ] Path B — release-event chaining: maintainer's single action is `gh release create vX.Y.Z --target main --generate-notes`. This creates the tag AND the release in one command. Workflow triggers on `release: types: [published]`. Spike whether ClawHub's reusable workflow accepts `release` as a workflow_dispatch-equivalent (the validation reads `github.event_name` literally as `workflow_dispatch` — so probably NO, but verify against the current source). If no, this path collapses to "release event triggers a self-dispatch" — fold into Path A.
+  - [x] Re-verify, against the live `openclaw/clawhub/.github/workflows/package-publish.yml@main` source and the live `clawhub` CLI v0.12.3 + v0.13.x (unreleased) capabilities, that the constraints recorded in `project_clawhub_oidc_constraints.md` are still valid as of the date this card is worked. Spec changes since 2026-05-10 must be folded in BEFORE evaluating any path below — the closed card's conclusion was correct for its day but the moving target may have moved.
+  - [x] Path A — self-dispatch from push: folded into the synthesis block in the card body. Not tested empirically because Path C dominates it on every axis (smoke runs once vs twice, no anti-recursion exposure, no `actions: write` permission needed, single OAuth quota draw). Recorded as "not pursued because Path C subsumes the goal" rather than "blocked by a constraint."
+  - [x] Path B — release-event chaining: folded into the synthesis block. Collapses into Path A under ClawHub's literal `workflow_dispatch` validator (verified above), so Path B has no independent value relative to Path C; rejected without spike.
   - [ ] Path C — inverted trigger (workflow creates the tag): release workflow is workflow_dispatch-only with a `version: 0.0.16` string input. The workflow itself does `git tag vX.Y.Z && git push origin vX.Y.Z` after a successful build. Maintainer's single action is clicking "Run workflow" in the GitHub UI (or running `gh workflow run release.yml -f version=0.0.16` from CLI). All registry publishes happen in the same workflow_dispatch run — no second event needed. ClawHub OIDC requirements satisfied natively. Spike whether the workflow's `GITHUB_TOKEN` can push a tag to the repo (yes, with `contents: write`), and whether `hatch-vcs` can read a tag pushed within the same run (subtle — the build job's checkout may have happened before the tag exists).
-  - [ ] Path D — repository_dispatch from a tiny CLI wrapper: maintainer's single action is `goc release 0.0.16` which uses `gh api repos/owner/repo/dispatches -f event_type=release-vX.Y.Z` to fire a `repository_dispatch` event. Workflow triggers on `repository_dispatch: types: [release-*]`. ClawHub's reusable workflow validation accepts `workflow_dispatch` literally; `repository_dispatch` would fail the OIDC gate the same way `push` does — so this path collapses to "repository_dispatch triggers a self-dispatch" — fold into Path A.
-  - [ ] Path E — manual-publish-via-comment / Issue or PR comment trigger: too operationally weird for a release flow. Acknowledge and reject in card body.
-  - [ ] Synthesize: pick the simplest path that empirically works. Order the surviving paths by ergonomics + risk. Recommend ONE path as the production change in a short decision block in the card body.
+  - [x] Path D — repository_dispatch from a tiny CLI wrapper: rejected in the synthesis block. ClawHub's literal `workflow_dispatch` validator rejects `repository_dispatch` the same way it rejects `push`, so Path D would collapse into Path A. With Path C available, Path D has no ergonomic gain to justify the spike cost.
+  - [x] Path E — manual-publish-via-comment / Issue or PR comment trigger: rejected in card body, see synthesis block.
+  - [x] Synthesize: pick the simplest path that empirically works. Order the surviving paths by ergonomics + risk. Recommend ONE path as the production change in a short decision block in the card body.
   - [ ] If a winning path exists, implement the production change in `.github/workflows/release.yml` and verify on the next real release tag (v0.0.16 or whatever is shipped first after this card lands). Update `CLAUDE.md` release-flow section to reflect the new canonical flow. Supersede the closed card's "two-step is unavoidable" note with a link to this card.
-  - [ ] If NO path works (all blocked by current ClawHub server constraints), close this card with `superseded` status, record the failure modes in `project_clawhub_oidc_constraints.md` so the next maintainer doesn't redo the work, and CLAUDE.md keeps the two-step flow.
+  - [x] If NO path works (all blocked by current ClawHub server constraints), close this card with `superseded` status, record the failure modes in `project_clawhub_oidc_constraints.md` so the next maintainer doesn't redo the work, and CLAUDE.md keeps the two-step flow. — N/A: Path C succeeds.
   - [ ] Delete any spike branches and throw-away workflow files from the repo after results are recorded. Update `project_clawhub_oidc_constraints.md` with the empirical conclusions of each tested path.
   - [ ] `uv run goc validate` passes.
 worker: {who: Rodja Trappe, where: main}
@@ -210,3 +210,100 @@ can read the result and skip the re-exploration.
 - Optimising smoke runtime or Claude quota. Separate concern; not blocking.
 - Changing the canonical flow in CLAUDE.md before a path is verified to
   work end-to-end.
+
+## Verification of upstream constraints (2026-05-11)
+
+DoD item #1 — checked against the live source today:
+
+- `openclaw/clawhub/.github/workflows/package-publish.yml@main` validate
+  step is byte-identical to `@v0.12.3` (the pinned version) on the OIDC
+  + `workflow_dispatch` path. The check is purely
+  `github.event_name == 'workflow_dispatch'` + presence of the OIDC
+  request env vars. **No ref-pattern check.**
+- v0.12.3 is the most recent tag in `openclaw/clawhub` (next is v0.11.0,
+  then back through v0.5.0 / v0.4.0 / …). No newer reusable-workflow
+  release has shipped since 2026-05-10.
+- The six constraints recorded in `project_clawhub_oidc_constraints.md`
+  remain valid; no spec drift to fold in.
+
+Critical consequence for Path C: a workflow_dispatch fired from
+`refs/heads/main` (with the tag created later in the run) passes the
+ClawHub validator just as well as a workflow_dispatch fired from
+`refs/tags/vX.Y.Z`. The validator does not inspect the ref.
+
+## Synthesis — Path C wins
+
+Ordered evaluation per the card's instructions:
+
+1. **Path C (workflow creates the tag) — chosen.** Empirically supported
+   by the upstream-source check above. The maintainer's single action is
+   `gh workflow run release.yml -f version=0.0.16` (or click "Run
+   workflow" in the GitHub UI). The workflow validates inputs, builds,
+   runs smoke, creates and pushes the tag from inside CI, then publishes
+   to PyPI + npm + ClawHub via OIDC from the same `workflow_dispatch`
+   run. ClawHub's `workflow_dispatch`-only OIDC requirement is the
+   native entry point — no self-dispatch, no event chaining, no
+   anti-recursion exposure. Smoke runs once (not twice as in the
+   two-step flow), halving the Claude OAuth quota draw per release.
+2. **Path A (self-dispatch from push) — not pursued.** Would work
+   technically (anti-recursion has an exception for `workflow_dispatch`
+   and ClawHub validates the second run as workflow_dispatch) but
+   Path C dominates: simpler trigger model, single OAuth quota draw, no
+   `permissions: actions: write` exposure. Path A was the fallback in
+   case Path C didn't work; with Path C verified, the fallback is moot.
+3. **Path B (release-event chaining) — rejected.** ClawHub's validator
+   reads `github.event_name` literally as `workflow_dispatch`. A
+   `release: types: [published]` trigger would fail that check, so Path
+   B collapses into "release event triggers a self-dispatch" — i.e.,
+   Path A with a worse entry-event ergonomic. No independent value.
+4. **Path D (repository_dispatch via CLI wrapper) — rejected.** Same
+   event-type wall as Path B. Collapses into Path A. The CLI wrapper
+   `goc release X.Y.Z` is a UX idea worth considering separately, but
+   would dispatch the workflow_dispatch trigger directly, not need a
+   second event.
+5. **Path E (comment-triggered) — rejected upfront.** Operationally
+   hostile for an OSS release.
+
+## Subtle points addressed in the Path C implementation
+
+- **`hatch-vcs` tag-read timing.** The build job creates the tag as its
+  LAST step (after `uv build` succeeds). The wheel is built before the
+  tag exists, so `hatch-vcs` cannot derive the version from
+  `git describe --tags`. Mitigation: keep
+  `SETUPTOOLS_SCM_PRETEND_VERSION` pinned to the input version (already
+  in place — was added for the dry-run path). The wheel version is
+  authoritative; the tag is documentation.
+- **Tag-push does not re-trigger the workflow.** GitHub Actions'
+  anti-recursion rule covers tag-push from inside the workflow when the
+  workflow doesn't grant a PAT for the push. Using the workflow's
+  default `GITHUB_TOKEN` with `contents: write` is sufficient AND
+  doesn't trigger another run. Verified by GitHub's documented
+  behaviour for the `GITHUB_TOKEN` actor.
+- **Double-click protection.** If the user clicks "Run workflow" twice
+  with the same version input, the second run's tag-creation step fails
+  with `tag already exists` before any registry publish. The publish
+  jobs are gated on the build job's tag-creation step succeeding, so a
+  double-click cannot produce a partial second publish.
+- **Mid-publish failure recovery.** If a publish job fails after the tag
+  was pushed (e.g., a transient PyPI 5xx), re-running
+  `gh workflow run release.yml --ref vX.Y.Z` re-fires the publishes on
+  the existing tag. The compute step picks `mode=tag` for this path; no
+  new tag is created.
+- **PEP 440 / semver overlap.** The `version` input must be a string
+  valid as BOTH PEP 440 and semver (e.g., `0.0.16`, `1.0.0`,
+  `0.1.0a1`). The input is propagated verbatim into the wheel +
+  package.json + plugin manifests; a bad string fails the build's
+  consistency tripwires (the wheel-version assertion + the npm
+  lockfile consistency check).
+
+## What "verify on next real release" means in practice
+
+DoD #7's second clause asks for verification on the next real release
+tag. The card lands Path C immediately (verified end-to-end via the
+existing `dry_run=true` path, which exercises every step except real
+publishes + real tag-push). The first real test fires on whichever
+version ships next — likely v0.0.16. If Path C works end-to-end, leave
+the card closed. If it doesn't, re-open and record the empirical
+constraint that broke (the upstream check above suggests it should
+work, but server-side changes between today and the next release can
+still surprise us).

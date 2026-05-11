@@ -159,3 +159,29 @@ After both entries exist, cut v0.0.8:
 3. Watch <https://github.com/zauberzeug/game-of-cards/actions> — `build` runs, `smoke` skips, all three publish jobs run in parallel, and v0.0.8 lands on PyPI, npm, and ClawHub within ~2 minutes with no further human input.
 
 If any of the three publishes fail with an OIDC error, that's the corresponding registry rejecting the trusted-publisher claim — re-check the entry's owner/repo/workflow/environment match exactly.
+
+## Postscript (2026-05-11) — single-trigger flow supersedes "two-step is unavoidable"
+
+This card's implementation ended on a two-step flow: `git push tag` →
+PyPI + npm via OIDC; `gh workflow run release.yml --ref vX.Y.Z` →
+ClawHub via OIDC. That conclusion was framed around "the
+workflow_dispatch must come from a human" — a framing assumption, not
+a discovered constraint.
+
+The follow-on card
+`find-single-trigger-release-flow-for-all-three-registries` revisited
+that assumption and found ClawHub's validator only checks
+`github.event_name == 'workflow_dispatch'` (not the ref). So a
+workflow_dispatch fired from `refs/heads/main` (the workflow then
+creates and pushes the tag) satisfies the same validator a
+workflow_dispatch from `refs/tags/vX.Y.Z` would. The canonical flow is
+now:
+
+```
+gh workflow run release.yml -f version=X.Y.Z
+```
+
+The `push: tags:` trigger has been removed from `release.yml`. Tag-push
+no longer triggers anything — the workflow only enters via
+`workflow_dispatch`. See the follow-on card's body for the synthesis
+and the constraint trail.

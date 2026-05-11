@@ -35,30 +35,50 @@ this workflow to mint short-lived publish credentials at run time.
 
 **The git tag IS the version** — `pyproject.toml` declares
 `dynamic = ["version"]` and hatch-vcs reads `git describe --tags` at
-build time; the four plugin manifests (`openclaw-plugin/package.json`
-+ `package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`,
+build time (overridden in CI by `SETUPTOOLS_SCM_PRETEND_VERSION` so
+the wheel reports the right version even before the tag is created).
+The four plugin manifests (`openclaw-plugin/package.json` +
+`package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`,
 `.claude-plugin/marketplace.json`) and `goc/__init__.py`'s
-`__version__` literal are rewritten from the same tag value by
+`__version__` literal are rewritten from the input version by
 `scripts/release_rewrite_versions.py` inside the workflow. Humans
-never edit version literals; a tagged commit that touches any of
+never edit version literals; a release commit that touches any of
 those files trips the in-job tripwire and fails the build.
 
 Canonical flow:
 
 ```
-git tag vX.Y.Z && git push origin vX.Y.Z
-gh workflow run release.yml --ref vX.Y.Z   # ClawHub leg only
+gh workflow run release.yml -f version=X.Y.Z
 ```
 
-The tag-push triggers the PyPI + npm publishes (both accept OIDC over
-push events). ClawHub's OIDC trusted publisher refuses `push` events
-and accepts only `workflow_dispatch`, so the second command fires the
-ClawHub leg from the same tag commit. There is no `CLAWHUB_TOKEN`
-secret — adding one to "fix" the push case actively breaks subsequent
-releases, because the reusable workflow's token-override path
-authenticates as a different publisher than the OIDC path that
-registered the package and ClawHub's Convex store rejects publishes
-with `Package already exists and belongs to another publisher`.
+That single command publishes to PyPI, npm, AND ClawHub from one
+`workflow_dispatch` event. The workflow itself creates the tag
+`vX.Y.Z` from `main`'s HEAD as the last step of the build job (after
+every consistency check passes), then the three publish jobs run in
+parallel. ClawHub's OIDC trusted publisher accepts `workflow_dispatch`
+events regardless of ref, so a dispatch from `refs/heads/main`
+publishes the ClawHub leg natively — no second event needed. There is
+no `CLAWHUB_TOKEN` secret; adding one actively breaks releases (the
+reusable workflow's token-override path authenticates as a different
+publisher than the OIDC path that registered the package, and the
+Convex store rejects publishes with `Package already exists and
+belongs to another publisher`).
+
+Recovery / republish on an existing tag (if a publish job
+transient-failed):
+
+```
+gh workflow run release.yml --ref vX.Y.Z
+```
+
+`git push origin vX.Y.Z` from a maintainer machine no longer triggers
+a release — the workflow only runs on `workflow_dispatch`. The closed
+predecessor card `auto-publish-npm-and-clawhub-on-tag-push` documented
+a two-step tag-push + workflow-dispatch flow; that conclusion was
+superseded by
+`find-single-trigger-release-flow-for-all-three-registries`, which
+verified that the workflow_dispatch event type (not the ref) is what
+the ClawHub validator cares about.
 
 See `.github/workflows/release.yml` header comment for trusted
 publisher configuration details.

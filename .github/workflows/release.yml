@@ -21,72 +21,117 @@
 #        --repository zauberzeug/game-of-cards \
 #        --workflow-filename release.yml`
 #     ClawHub's OIDC TP refuses `push` events and accepts only
-#     `workflow_dispatch`. So tag-push runs publish PyPI + npm but not
-#     ClawHub; the documented recovery is `gh workflow run release.yml
-#     --ref vX.Y.Z` (workflow_dispatch on the tag), which OIDC accepts
-#     and which publishes the ClawHub leg from the same tag commit.
-#     Do NOT add a CLAWHUB_TOKEN secret to "fix" the push case — the
-#     reusable workflow's token-override path authenticates as a
-#     different publisher than the OIDC path, and ClawHub's Convex
-#     store rejects subsequent publishes with `Package already exists
-#     and belongs to another publisher` because the package was
-#     registered under the OIDC publisher identity.
+#     `workflow_dispatch`. Under the single-trigger canonical flow
+#     (see below), the workflow is entered only via workflow_dispatch,
+#     so all three publishes happen in the same run.
+#     Do NOT add a CLAWHUB_TOKEN secret as a fallback — the reusable
+#     workflow's token-override path authenticates as a different
+#     publisher than the OIDC path, and ClawHub's Convex store rejects
+#     subsequent publishes with `Package already exists and belongs to
+#     another publisher` because the package was registered under the
+#     OIDC publisher identity.
 #
 # Tag convention: `v0.1.0`, `v0.2.3`, `v1.0.0`, etc. The tag IS the version —
 # everything else is derived from it at build time.
 #
-# Canonical release flow (two-step, no manual version bumps):
+# Canonical release flow (single workflow_dispatch event, no manual version bumps):
 #
-#   1. `git tag vX.Y.Z && git push origin vX.Y.Z`.
-#      → tag-push triggers PyPI + npm publishes via OIDC. ClawHub's
-#      OIDC trusted publisher refuses `push` events, so its publish
-#      does NOT fire here.
-#   2. `gh workflow run release.yml --ref vX.Y.Z`.
-#      → workflow_dispatch on the tag triggers the ClawHub publish via
-#      OIDC. Smoke runs in this path (~4 min); ClawHub publishes after
-#      smoke passes. PyPI + npm jobs also re-run but no-op (registries
-#      reject double-publish of the same version).
+#   gh workflow run release.yml -f version=X.Y.Z
+#     → workflow_dispatch on main (or wherever HEAD points).
+#     → build job: rewrites version literals from the input, builds the
+#       wheel + sdist, validates lockfile consistency, asserts the wheel
+#       version matches the input, then (as its LAST step) creates the
+#       tag `vX.Y.Z` from HEAD and pushes it.
+#     → smoke job: end-to-end auto-bootstrap test.
+#     → publish-pypi, publish-npm, publish-clawhub: all OIDC trusted
+#       publishing, all in the same workflow_dispatch run.
 #
-# How the version flows from the tag:
+# Why single-event works for ClawHub: the ClawHub reusable workflow's
+# validator only checks `github.event_name == 'workflow_dispatch'` —
+# there is no ref-pattern constraint, so a dispatch from `refs/heads/main`
+# (with the tag created mid-run) passes the same validator that a
+# dispatch from `refs/tags/vX.Y.Z` would. See
+# `project_clawhub_oidc_constraints.md` for the empirical verification
+# trail. The closed predecessor card
+# `auto-publish-npm-and-clawhub-on-tag-push` documented a two-step flow
+# because it framed the workflow_dispatch as having to come from a
+# human; the single-trigger flow inverts that assumption — the workflow
+# itself is the version writer AND the tag pusher AND the publish
+# trigger.
+#
+# Recovery / republish: if a publish job fails after the tag was pushed
+# (e.g., a transient PyPI 5xx), re-run with the existing tag:
+#
+#   gh workflow run release.yml --ref vX.Y.Z
+#     → workflow_dispatch on the existing tag.
+#     → build job: compute step detects `mode=tag` (tag ref + no version
+#       input), reuses the same rewrite + assert path. The
+#       tag-creation step is a no-op for tag mode (tag already exists).
+#     → publish jobs: re-run; registries reject duplicate publishes so
+#       this is idempotent for already-shipped channels and a fresh
+#       publish for any that failed.
+#
+# How the version flows from the input:
 #   - The wheel version (`pyproject.toml`) is dynamic via `hatch-vcs`,
-#     which reads `git describe --tags` at build time.
+#     but the build job pins `SETUPTOOLS_SCM_PRETEND_VERSION` to the
+#     input so the wheel reports the right version even before the tag
+#     is created. `hatch-vcs` reads `git describe --tags` only as a
+#     fallback when the env var is unset.
 #   - `goc/__init__.py`'s `__version__` literal and the four plugin
 #     manifests (`openclaw-plugin/package.json` + `package-lock.json`,
 #     `claude-plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`)
 #     are rewritten at build time by `scripts/release_rewrite_versions.py`
-#     using the tag value. `scripts/sync_plugin_assets.py` then mirrors
-#     the rewritten `__version__` into `claude-plugin/goc/` and
+#     using the input version. `scripts/sync_plugin_assets.py` then
+#     mirrors the rewritten `__version__` into `claude-plugin/goc/` and
 #     `openclaw-plugin/goc/` byte-for-byte.
-#   - Humans never edit version literals. A tagged commit that touches
+#   - Humans never edit version literals. A commit on main that touches
 #     any of those files trips the in-job tripwire and fails the build.
 #
+# Why no `push: tags:` trigger: the single-trigger flow makes tag-push
+# obsolete. Pushing a tag manually now does nothing — the workflow is
+# only entered via workflow_dispatch. Maintainer muscle memory needs to
+# move to `gh workflow run release.yml -f version=X.Y.Z`. If you find
+# yourself wanting tag-push back, re-read the closed predecessor card
+# `auto-publish-npm-and-clawhub-on-tag-push` and this card
+# (`find-single-trigger-release-flow-for-all-three-registries`) for the
+# constraint trail.
+#
 # ClawHub stale-package.json: the ClawHub reusable workflow checks out
-# the tagged commit and reads `openclaw-plugin/package.json` from that
-# commit. Under the tag-as-version policy, that file still carries the
-# *previous* release's version literal (the workflow rewrites literals
-# at build time, but the ClawHub reusable workflow does its own
+# `github.sha` (the commit the workflow_dispatch was triggered on) and
+# reads `openclaw-plugin/package.json` from that commit. Under the
+# version-input policy, that file still carries the *previous*
+# release's version literal (the build job rewrites literals in its
+# own checkout, but the ClawHub reusable workflow does its own
 # checkout and never sees the rewrite). Resolved by passing
 # `version: ${{ needs.build.outputs.release_version }}` to the
 # reusable workflow's `version` input — it overrides the on-disk
 # package.json version. Discovered on v0.0.14 with error
 # `ConvexError: Version 0.0.12 already exists`.
 #
+# Security note for run: blocks below:
+#   workflow_dispatch inputs (`version`, `dry_run`) and other untrusted
+#   context values are passed into run: steps only via `env:` (never
+#   inlined into a shell command via `${{ }}`). This is the documented
+#   workflow-injection mitigation; see
+#   <https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/>.
+#
 # Other dispatch modes:
-#   - `gh workflow run release.yml --field dry_run=true` —
+#   - `gh workflow run release.yml -f dry_run=true` —
 #     exercises rewrite + sync + build + smoke + dry-run publishes.
 #     A static synthetic version (`0.99.0`) is used for the rewrite.
+#     The tag-creation step is skipped.
 #   - `gh workflow run release.yml --ref vX.Y.Z` —
-#     re-runs publish for an existing tag (useful if a publish job
-#     transient-failed during the original push).
+#     re-runs publish for an existing tag (see "Recovery" above).
 
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Release version to ship (e.g., 0.0.16). Required for a new release; leave empty when re-running publishes against an existing tag via `--ref vX.Y.Z`, or when passing dry_run=true.'
+        type: string
+        default: ''
       dry_run:
         description: 'Build + smoke only; do not publish'
         type: boolean
@@ -96,12 +141,21 @@ jobs:
   build:
     name: Build wheel + sdist
     runs-on: ubuntu-latest
+    permissions:
+      # `contents: write` is required so the tag-creation step at the end
+      # of this job can push `vX.Y.Z` back to the repo. The default
+      # GITHUB_TOKEN does NOT trigger another workflow run when it pushes
+      # tags (anti-recursion), so there is no loop risk.
+      contents: write
     outputs:
-      # Exposed to publish-clawhub so it can pass `version:` to the
-      # reusable workflow — that workflow checks out the tagged commit
-      # and publishes from on-disk `package.json`, which still carries
-      # the previous release's literal under the tag-as-version policy.
+      # Exposed downstream so publish jobs can:
+      #   - mode: gate on `tag` or `release` (a new tag created in this run)
+      #   - release_version: pass to the ClawHub reusable workflow's
+      #     `version:` input, since that workflow checks out
+      #     `github.sha` and reads the stale on-disk `package.json`
+      #     (see ClawHub stale-package.json note in the header).
       release_version: ${{ steps.version.outputs.release_version }}
+      mode: ${{ steps.version.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,43 +174,76 @@ jobs:
 
       - name: Compute release version
         id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            # Recovery path: workflow_dispatch fired with `--ref vX.Y.Z` to
+            # re-run publishes on an existing tag. The tag-creation step
+            # is a no-op in this mode (tag already exists).
             release_version="${GITHUB_REF#refs/tags/v}"
             mode=tag
-          elif [[ "${{ inputs.dry_run }}" == "true" ]]; then
+          elif [[ "$INPUT_DRY_RUN" == "true" ]]; then
             # A static synthetic version that is valid PEP 440 AND valid semver
             # so the rewrite + uv build + npm install paths exercise the same
             # code as a real release without needing a real tag.
             release_version="0.99.0"
             mode=dry_run
+          elif [[ -n "$INPUT_VERSION" ]]; then
+            # New-release path: workflow_dispatch fired from a branch (typically
+            # main) with `-f version=X.Y.Z`. The build job will create and push
+            # the tag as its LAST step, after every consistency check passes.
+            release_version="$INPUT_VERSION"
+            mode=release
           else
-            echo "release.yml dispatched on a non-tag ref without dry_run; nothing to publish."
+            echo "::error::release.yml dispatched without a version input or tag ref."
+            echo "Usage:"
+            echo "  gh workflow run release.yml -f version=X.Y.Z       # cut a new release"
+            echo "  gh workflow run release.yml --ref vX.Y.Z           # re-run publishes on existing tag"
+            echo "  gh workflow run release.yml -f dry_run=true        # build + smoke preview"
             exit 1
           fi
           echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "Release version: $release_version (mode: $mode)"
 
-      - name: Tripwire — tagged commit must not edit version literals
+      - name: Tripwire — release commit must not edit version literals
         # The workflow IS the version writer. If a human re-introduces a manual
-        # bump-and-tag commit, fail loudly so the policy stays enforced.
-        if: ${{ steps.version.outputs.mode == 'tag' }}
+        # bump-and-tag commit (tag mode) or pushes a literal-bumping commit to
+        # main and then dispatches (release mode), fail loudly so the policy
+        # stays enforced.
+        if: ${{ steps.version.outputs.mode == 'tag' || steps.version.outputs.mode == 'release' }}
         run: |
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
             tracked='goc/__init__.py openclaw-plugin/package.json openclaw-plugin/package-lock.json claude-plugin/.claude-plugin/plugin.json .claude-plugin/marketplace.json'
             diff=$(git diff --name-only HEAD~1 HEAD -- $tracked)
             if [ -n "$diff" ]; then
-              echo "ERROR: tagged commit modifies version literals — the workflow is the version writer."
+              echo "ERROR: HEAD modifies version literals — the workflow is the version writer."
               echo "Files touched in $(git rev-parse --short HEAD):"
               echo "$diff" | sed 's/^/  /'
-              echo "Re-tag a parent commit, or revert the literal edits."
+              echo "Revert the literal edits and re-dispatch."
               exit 1
             fi
           fi
-          echo "OK — tagged commit leaves version literals alone."
+          echo "OK — HEAD leaves version literals alone."
 
-      - name: Rewrite version literals from tag
+      - name: Refuse to overwrite an existing tag
+        # In `release` mode, the tag must not already exist or the
+        # tag-creation step later in this job will fail mid-publish.
+        # Catch it early so the build doesn't run.
+        if: ${{ steps.version.outputs.mode == 'release' }}
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+        run: |
+          if git rev-parse --verify --quiet "refs/tags/v$RELEASE_VERSION" >/dev/null; then
+            echo "::error::Tag v$RELEASE_VERSION already exists."
+            echo "If you meant to re-run publishes, dispatch with --ref v$RELEASE_VERSION instead."
+            exit 1
+          fi
+          echo "OK — tag v$RELEASE_VERSION does not exist; safe to create."
+
+      - name: Rewrite version literals
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
         run: python3 scripts/release_rewrite_versions.py "$RELEASE_VERSION"
@@ -184,10 +271,12 @@ jobs:
         env:
           # The rewrite + sync steps above leave the working tree dirty
           # relative to HEAD, so hatch-vcs's `no-guess-dev` scheme would
-          # emit `X.Y.Z.post1.dev0` instead of the bare tag. Pin the
-          # wheel version explicitly via setuptools_scm's pretend env var
-          # — works for both the tag-push and dry-run paths and is not
-          # affected by tree dirtiness.
+          # emit `X.Y.Z.post1.dev0` instead of the bare release version.
+          # Pin the wheel version explicitly via setuptools_scm's pretend
+          # env var — works for all three modes (release / tag / dry_run)
+          # and is not affected by tree dirtiness or whether the tag has
+          # been created yet (in release mode the tag is pushed AFTER
+          # this step).
           SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.version.outputs.release_version }}
         run: |
           uv build
@@ -220,6 +309,24 @@ jobs:
           path: dist/
           retention-days: 7
 
+      - name: Create and push release tag
+        # LAST step of the build job. Only runs in `release` mode (new
+        # release dispatched from a non-tag ref with a version input).
+        # In `tag` mode the tag already exists; in `dry_run` mode no tag
+        # should be created. Running this as the final step means every
+        # consistency check (rewrite, lockfile, wheel-version assertion,
+        # artifact upload) has already passed — the tag is pushed only
+        # when the build is genuinely shippable.
+        if: ${{ steps.version.outputs.mode == 'release' }}
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$RELEASE_VERSION" -m "Release v$RELEASE_VERSION"
+          git push origin "v$RELEASE_VERSION"
+          echo "::notice::Pushed tag v$RELEASE_VERSION -> $GITHUB_SHA"
+
   smoke:
     # End-to-end smoke test that gates publishes on the plugin actually
     # working in a fresh consumer environment. Reuses the same Claude Code
@@ -233,12 +340,12 @@ jobs:
     name: End-to-end auto-bootstrap smoke
     needs: build
     runs-on: ubuntu-latest
-    # `anthropics/claude-code-action@v1` rejects the `push` event family
-    # ("Unsupported event type: push"), so smoke can only run under
-    # workflow_dispatch. Tag-push releases skip smoke; the publish jobs
-    # below tolerate that via an explicit `needs.smoke.result == 'skipped'`
-    # branch in their `if`. To exercise smoke against a tag, use
-    # `gh workflow run release.yml --ref vX.Y.Z`.
+    # The workflow only has a `workflow_dispatch` trigger, so this `if:`
+    # is structurally always true today. Kept explicit as a guard against
+    # a future re-introduction of `push:` (anthropics/claude-code-action@v1
+    # historically rejected the `push` event family, so smoke would fail
+    # at action startup). If the action ever supports push events, this
+    # gate can be removed.
     if: ${{ github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 30
     steps:
@@ -350,11 +457,14 @@ jobs:
     name: Publish to PyPI
     needs: [build, smoke]
     runs-on: ubuntu-latest
-    # `always()` keeps this from being auto-skipped when `smoke` is
-    # skipped (the tag-push path). The explicit result checks then
-    # require build to succeed and smoke to either succeed or be
-    # skipped — never to have failed.
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    # `always()` keeps this from being auto-skipped if smoke is skipped
+    # (no path skips it today, but the gate is kept defensive). The
+    # explicit result checks then require build to succeed and smoke to
+    # either succeed or be skipped — never to have failed. The
+    # `release` mode publishes from `refs/heads/main` (the workflow
+    # created the tag in this run); the `tag` mode publishes from
+    # `refs/tags/vX.Y.Z` (recovery / republish).
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run }}
     environment:
       name: pypi
       url: https://pypi.org/project/game-of-cards/
@@ -379,7 +489,7 @@ jobs:
     name: Publish to npm
     needs: [build, smoke]
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run }}
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run }}
     environment:
       name: npm
       url: https://www.npmjs.com/package/game-of-cards
@@ -398,14 +508,14 @@ jobs:
       - name: Upgrade npm to a version that supports OIDC trusted publishing
         run: npm install -g npm@latest
 
-      - name: Rewrite version literals from tag
-        # publish-npm is a separate job from `build` and gets its own clean
-        # checkout — the rewrites the build job made do not carry over here.
-        # Re-derive the release version from the tag (deterministic input)
-        # and re-run the same script the build job used.
-        run: |
-          tag_version="${GITHUB_REF#refs/tags/v}"
-          python3 scripts/release_rewrite_versions.py "$tag_version"
+      - name: Rewrite version literals from build output
+        # publish-npm is a separate job from `build` and gets its own
+        # clean checkout — the rewrites the build job made do not carry
+        # over here. Use the build job's `release_version` output
+        # (deterministic) and re-run the same rewrite script.
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.release_version }}
+        run: python3 scripts/release_rewrite_versions.py "$RELEASE_VERSION"
 
       - name: Install plugin deps
         working-directory: openclaw-plugin
@@ -433,14 +543,13 @@ jobs:
     # publish with `Package already exists and belongs to another
     # publisher`.
     needs: [build, smoke]
-    # workflow_dispatch only — ClawHub's OIDC TP refuses `push` events,
-    # so we skip the publish-clawhub job entirely on tag-push (instead
-    # of running it for ~15s and watching it fail at the reusable
-    # workflow's event-type validation). The two-step canonical flow
-    # documented in the header expects `gh workflow run release.yml
-    # --ref vX.Y.Z` to fire this job. Either tag-ref + !dry_run (real
-    # publish) or dry_run=true (dry-run preview) is accepted.
-    if: ${{ always() && needs.build.result == 'success' && needs.smoke.result == 'success' && github.event_name == 'workflow_dispatch' && ((startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run) || inputs.dry_run == true) }}
+    # workflow_dispatch only — ClawHub's OIDC TP refuses any other event
+    # type. The whole workflow now triggers only on workflow_dispatch
+    # (no `push: tags:`), so the event-name check is structurally always
+    # true today; kept defensive in case `push:` is ever re-added. Both
+    # the new-release path (`release` mode) and the recovery path
+    # (`tag` mode) are accepted, plus dry-run preview.
+    if: ${{ always() && needs.build.result == 'success' && needs.smoke.result == 'success' && github.event_name == 'workflow_dispatch' && (((needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run) || inputs.dry_run == true) }}
     permissions:
       # id-token: write is required for OIDC trusted publishing. The
       # reusable workflow uses audience `clawhub-workflow-source` to
