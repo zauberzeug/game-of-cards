@@ -1,11 +1,11 @@
 ---
 title: release-workflow-skips-dogfood-version-markers
 summary: "The v0.0.17 release commit bumped the five manifest version literals but not the two dogfood self-host surfaces (`.game-of-cards/deck/.goc-version`, `AGENTS.md`'s `<!-- BEGIN GOC v… -->` marker). `tests/test_version_surfaces.py::test_self_hosted_generated_surfaces_match_package_version` correctly caught the drift on CI run 25674525151. Fix: extend `scripts/release_rewrite_versions.py` to also rewrite the dogfood surfaces, and add them to the workflow's commit-back `git add` list."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-11T15:22:53Z"
-closed_at: null
+closed_at: 2026-05-11T15:26:23Z
 human_gate: none
 advances: []
 advanced_by:
