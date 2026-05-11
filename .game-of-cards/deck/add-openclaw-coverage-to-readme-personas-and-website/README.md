@@ -7,7 +7,7 @@ summary: |-
   closed before the plugin shipped. Only site/llms.txt was refreshed
   (`add-openclaw-install-section-to-llms-txt`, done 2026-05-09).
   Bring the rest of the front-door materials up to date.
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -37,6 +37,7 @@ definition_of_done: |
   - [ ] no regression in existing Claude Code / pipx coverage; this
         card adds, never removes
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # add-openclaw-coverage-to-readme-personas-and-website
