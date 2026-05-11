@@ -7,7 +7,7 @@ summary: |-
   GoC's primary differentiator. New users learn about autonomous
   card-pulling only by accident. Add a Stage 6 that explains the modes
   and asks which to set up.
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -30,6 +30,7 @@ definition_of_done: |
   - [ ] new stage is idempotent — re-running kickoff on a repo that
         already chose an autonomy mode skips the question
   - [ ] `goc validate` passes (skill-parity tripwire stays green)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # kickoff-offers-autonomy-setup-options
