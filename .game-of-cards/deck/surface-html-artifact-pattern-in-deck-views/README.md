@@ -6,7 +6,7 @@ summary: |-
   `Skill(card-schema)` lines 35-45. The pattern is documented but
   invisible from the daily verbs (`goc`, `goc show`, scan-deck), so it
   remains under-used. Surface it where users already look.
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-10
@@ -23,6 +23,7 @@ definition_of_done: |
   - [ ] `Skill(card-schema)` "Card Directory Layout" section unchanged
         (it already documents the pattern; this card is about discovery,
         not redocumentation)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # surface-html-artifact-pattern-in-deck-views
