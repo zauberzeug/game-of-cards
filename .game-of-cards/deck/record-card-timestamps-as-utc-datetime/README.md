@@ -7,7 +7,7 @@ summary: |-
   computation. Upgrade both fields to ISO 8601 UTC datetime
   (`YYYY-MM-DDTHH:MM:SSZ`) while keeping backwards compatibility with
   existing date-only entries.
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -29,6 +29,7 @@ definition_of_done: |
         cards must remain valid)
   - [ ] schema doc in `Skill(card-schema)` describes the new shape and
         the legacy fallback
+worker: {who: "claude[bot]", where: main}
 ---
 
 # record-card-timestamps-as-utc-datetime
