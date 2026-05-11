@@ -1,11 +1,11 @@
 ---
 title: find-single-trigger-release-flow-for-all-three-registries
 summary: "Goal: a one-way release flow where the maintainer takes exactly one action and PyPI, npm, AND ClawHub all publish without further user input. The closed card `auto-publish-npm-and-clawhub-on-tag-push` concluded \"two-step is unavoidable\" — but that conclusion was reached without exploring (a) workflow self-dispatch via `gh workflow run`, (b) `release: published` event chaining (kitchen-sink pattern), (c) `gh release create` from outside which auto-creates the tag plus fires the release event, (d) `repository_dispatch` from a bot or CLI wrapper, or (e) inverting the trigger entirely so the workflow creates the tag from a manual workflow_dispatch with a `version` input. This card systematically enumerates and empirically tests those paths, then either picks a winner and implements it OR documents the constraint each path hits and supersedes the open question."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-11
-closed_at: null
+closed_at: 2026-05-11T04:19:57Z
 human_gate: session
 advances:
   - auto-publish-npm-and-clawhub-on-tag-push
