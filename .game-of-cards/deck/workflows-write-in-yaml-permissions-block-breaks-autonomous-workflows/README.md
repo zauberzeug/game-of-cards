@@ -1,11 +1,11 @@
 ---
 title: workflows-write-in-yaml-permissions-block-breaks-autonomous-workflows
 summary: "Commit `34ddd96` added `workflows: write` to the workflow-level `permissions:` blocks in `.github/workflows/pull-card.yml` and `.github/workflows/audit-deck.yml`, intending to let the autonomous bot push edits to files under `.github/workflows/`. But `workflows` is not a valid permission scope for the workflow `permissions:` field (the valid scopes are documented at docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication and do not include `workflows`). GitHub rejects the malformed workflow at validation time on every push to `main`, registering a failed check-run with zero jobs and a 0s duration. Both autonomous-agent workflows have been silently dead since 2026-05-10 17:00 UTC; only the daily cron tick of audit-deck and the hourly cron tick of pull-card still even register, and they fail the same way. The deck card body for `automate-version-bumping-from-git-tag-at-release-time` documents the addition as a correct fix, which compounds the bug by misleading future readers."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-11
-closed_at: null
+closed_at: 2026-05-11
 human_gate: none
 advances: []
 advanced_by: []
@@ -13,7 +13,7 @@ tags: [bug, infra]
 definition_of_done: |
   - [x] Remove the invalid `workflows: write` line (and its trailing comment) from the `permissions:` block in `.github/workflows/audit-deck.yml`
   - [x] Remove the invalid `workflows: write` line (and its trailing comment) from the `permissions:` block in `.github/workflows/pull-card.yml`
-  - [ ] `gh workflow run pull-card.yml` succeeds after the fix lands (i.e. the workflow parses and at least one job is scheduled, even if it short-circuits on an empty queue)
+  - [x] `gh workflow run pull-card.yml` succeeds after the fix lands (i.e. the workflow parses and at least one job is scheduled, even if it short-circuits on an empty queue) — verified on run 25648855045 (workflow_dispatch, ref main @ 5e91bcb): job `Pull one card (iteration 1)` scheduled and started, no parse failure.
   - [x] Update the body of `automate-version-bumping-from-git-tag-at-release-time/README.md` so it no longer claims `workflows: write` in the YAML permission blocks is the mechanism for granting workflow-edit capability to the bot
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
