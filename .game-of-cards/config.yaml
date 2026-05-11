@@ -47,3 +47,15 @@ hooks:
   # Set to false to disable the Stop hook that prompts the agent to file
   # generalization cards after code-mutating turns.
   pattern_generalization_check: true
+
+# Optional top-level field: how the queue gets drained. Written by the
+# `kickoff` skill's Stage 6 when the user picks a mode; absent means
+# "skip for now — kickoff will re-ask on next run."
+#
+#   manual  — file cards and work them by hand.
+#   loop    — supervised `pull-card` on a host-side timer (e.g.,
+#             `/loop /pull-card 30m` on Claude Code).
+#   cron    — local cron job runs `pull-card` unattended.
+#   action  — CI workflow runs `pull-card` on a schedule.
+#
+# autonomy: loop

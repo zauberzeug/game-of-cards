@@ -25,14 +25,18 @@ its question(s) when the corresponding signal is already present.
 ls .game-of-cards/deck/ 2>/dev/null && echo "DECK_EXISTS" || echo "deck_missing"
 which goc 2>/dev/null && echo "GOC_ON_PATH" || echo "goc_missing"
 grep -l '<!-- BEGIN GOC' AGENTS.md CLAUDE.md CLAUDE.local.md 2>/dev/null && echo "BRIEFING_MERGED" || true
+grep -E '^autonomy:' .game-of-cards/config.yaml 2>/dev/null && echo "AUTONOMY_SET" || true
 [ -d .git ] && echo "GIT_REPO" || echo "git_missing"
 ```
 
 Route on the results:
 
-- **`DECK_EXISTS`** → report "GoC is already initialized in this repo —
-  deck is live." and **stop**. Do not continue. This is the silent-exit
-  branch the skill description promises.
+- **`DECK_EXISTS` + `AUTONOMY_SET`** → report "GoC is already initialized
+  in this repo — deck is live." and **stop**. Do not continue. This is
+  the silent-exit branch the skill description promises.
+- **`DECK_EXISTS` without `AUTONOMY_SET`** → install completed previously
+  but the autonomy question was deferred. Skip Stages 1–5 and jump
+  directly to Stage 6 so the user can pick a mode now.
 - **`goc_missing`** → halt at this stage. Tell the user: "`goc` CLI is
   not installed. Install it (e.g. `pipx install game-of-cards`, or use
   whatever plugin/runtime ships goc for your host) and re-run kickoff."
@@ -167,7 +171,7 @@ continuing.
 
 ---
 
-## Stage 5 — confirm ready and hand off to host complement
+## Stage 5 — confirm ready
 
 Report to the user:
 
@@ -175,10 +179,45 @@ Report to the user:
 GoC is set up. The deck is live; `goc` and `goc validate` work.
 ```
 
+Continue to Stage 6.
+
+---
+
+## Stage 6 — pick an autonomy mode
+
+Skip this stage if Stage 0 detected `AUTONOMY_SET` — the user already
+chose a mode on a previous run and re-asking is noise.
+
+Otherwise, ask the user **one question**:
+
+> How would you like cards to be pulled off the queue? GoC's whole point
+> over a plain task list is that the deck is designed to be drained
+> autonomously when `human_gate: none`. Pick a mode (you can change
+> later by editing `.game-of-cards/config.yaml`):
+>
+> 1. **Manual** — you file cards and work them by hand. No setup.
+> 2. **Supervised loop** — your host runs `pull-card` on a timer inside
+>    a session you watch (e.g. `/loop /pull-card 30m` on the host).
+>    Best for trying GoC before automating further.
+> 3. **Local cron** — a cron job runs `pull-card` unattended on your
+>    machine. Best for solo workflows that trust the agent to drain
+>    `human_gate: none` cards overnight.
+> 4. **CI / GitHub Action** — a workflow runs `pull-card` on a schedule
+>    in CI. Best for shared decks across a team.
+> 5. **Skip for now** — defer the choice; kickoff will ask again on
+>    next run.
+
+Record the answer in `.game-of-cards/config.yaml` as a top-level
+`autonomy:` key with one of these values: `manual`, `loop`, `cron`,
+`action`. For the **Skip for now** option, do not write the key — its
+absence is what makes the next kickoff re-ask. Stage 0 detects the
+written key on re-run and skips this stage.
+
 If the host has its own kickoff complement (the host ships
-`claude-kickoff`, OpenClaw ships its own equivalent when present), invite
-the user to run it for host-specific finishing touches (permission
-grants, agent-runtime hook registration, private notes files). Otherwise
+`claude-kickoff`, OpenClaw ships its own equivalent when present),
+invite the user to run it now — the complement provides the
+host-specific recipe for the chosen mode (e.g., wiring `/loop`,
+suggesting a cron line, or scaffolding a workflow file). Otherwise
 recommend the next step:
 
 ```

@@ -7,29 +7,29 @@ summary: |-
   GoC's primary differentiator. New users learn about autonomous
   card-pulling only by accident. Add a Stage 6 that explains the modes
   and asks which to set up.
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-11T03:45:30Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, story]
 definition_of_done: |
-  - [ ] decision recorded below for which autonomy modes Stage 6 covers
-  - [ ] decision recorded for whether Stage 6 is host-agnostic or
+  - [x] decision recorded below for which autonomy modes Stage 6 covers
+  - [x] decision recorded for whether Stage 6 is host-agnostic or
         delegated to host complements
-  - [ ] `goc/templates/skills/kickoff/SKILL.md` updated with new stage
-  - [ ] consumer copy at `.claude/skills/kickoff/SKILL.md` re-synced
+  - [x] `goc/templates/skills/kickoff/SKILL.md` updated with new stage
+  - [x] consumer copy at `.claude/skills/kickoff/SKILL.md` re-synced
         (`goc upgrade --keep-local-skills` from a consumer repo, or
         in this dogfood repo edit both copies in lockstep)
-  - [ ] OpenClaw plugin's ported kickoff skill stays consistent
+  - [x] OpenClaw plugin's ported kickoff skill stays consistent
         (re-port via `scripts/port_skills_to_openclaw.py` if its
         skill body diverges)
-  - [ ] new stage is idempotent — re-running kickoff on a repo that
+  - [x] new stage is idempotent — re-running kickoff on a repo that
         already chose an autonomy mode skips the question
-  - [ ] `goc validate` passes (skill-parity tripwire stays green)
+  - [x] `goc validate` passes (skill-parity tripwire stays green)
 worker: {who: "claude[bot]", where: main}
 ---
 
