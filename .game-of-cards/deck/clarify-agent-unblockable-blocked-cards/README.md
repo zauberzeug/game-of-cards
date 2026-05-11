@@ -1,7 +1,7 @@
 ---
 title: clarify-agent-unblockable-blocked-cards
 summary: Clarify in the GoC skills/schema that `status: blocked` does not imply a human gate. Cards can be blocked by external/upstream conditions while remaining `human_gate: none` when an agent can periodically re-check and unblock them autonomously.
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-11
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] At least one skill describes the pattern: `status: blocked` + `human_gate: none` means the card is parked on an agent-checkable external condition.
   - [ ] The docs explain when an autonomous agent may move such a card from `blocked` back to `open` or `active`.
   - [ ] The docs preserve the Andon semantics: `human_gate: decision|session` is only for blockers that require human judgement or a live session.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Clarify agent-unblockable blocked cards
