@@ -1,11 +1,11 @@
 ---
 title: add-contributing-md-with-setup-pr-and-release-flow
 summary: "Add a small `CONTRIBUTING.md` at the repo root covering the basics a new contributor needs: environment setup (`uv sync`), the deck-based work model (Game of Cards) at a glance, coding conventions (point to CLAUDE.md), pre-commit / validate, and the single-trigger release flow (`gh workflow run release.yml -f version=X.Y.Z`). Modelled after NiceGUI's CONTRIBUTING.md but trimmed — this repo is small and most context lives in CLAUDE.md/AGENTS.md, which CONTRIBUTING.md should link to rather than duplicate."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-11T04:35:23Z"
-closed_at: null
+closed_at: 2026-05-11T04:36:58Z
 human_gate: none
 advances: []
 advanced_by: []
