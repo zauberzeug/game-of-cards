@@ -66,7 +66,26 @@ The website features three of these personas prominently. The full list is here 
 
 ---
 
-### 4. The classical-development team (transitional)
+### 4. The OpenClaw consumer
+
+**Who.** Uses [OpenClaw](https://openclaw.ai) — a Node-based, ClawHub-distributed personal AI assistant — as their primary agent runtime. Comes to GoC from the OpenClaw side, not the Claude Code side. May also be a vibe-coder, a solo developer, or a multi-agent coordinator; what is distinctive is the runtime they walk in with.
+
+**What they need from GoC.**
+- `goc` reachable as a typed, registered tool the assistant can call directly — not a shell binary on PATH. OpenClaw does not auto-prepend plugin `bin/` directories, so the registered-tool model is the only viable shape.
+- The same deck, card lifecycle, and skills a Claude Code user gets, so the methodology is portable across runtimes rather than runtime-specific.
+- ClawHub-native distribution (`openclaw skills install game-of-cards`) so installing GoC mirrors the shape of installing any other OpenClaw plugin.
+
+**What they don't care about.**
+- Whether the bundled engine is Python — the plugin payload hides that detail.
+- The Claude Code plugin's Python hook scripts; the OpenClaw plugin reimplements those as TypeScript event handlers registered via `api.on()`.
+
+**Workflow shape.** Plugin installed via ClawHub. Deck inside the repo (`.game-of-cards/deck/`) as in every other channel. The assistant invokes `goc` through a typed tool, not a shell binary — the human never has to type CLI commands directly unless they want to.
+
+**Trade-off they accept.** A `python3` (3.10+) host prerequisite — the plugin bundles its engine but cannot ship a Python runtime — in exchange for native, zero-friction GoC inside OpenClaw.
+
+---
+
+### 5. The classical-development team (transitional)
 
 **Who.** A team with branch-per-feature, mandatory PR review, and OSS-grade commit hygiene. Curious about GoC but uneasy about checking deck state into the main repo.
 
@@ -81,7 +100,7 @@ The website features three of these personas prominently. The full list is here 
 
 ---
 
-### 5. The agent runtime as to-do engine (future)
+### 6. The agent runtime as to-do engine (future)
 
 **Who.** A chatbot, customer-support assistant, or domain-specific agent that needs structured task management for a *non-code* domain — sales pipelines, research workflows, multi-stage approvals.
 
@@ -120,5 +139,6 @@ If your situation matches multiple personas, pick the one closest to **how the w
 - "Solo dev driving three parallel sessions" → multi-agent coordinator.
 - "Vibe-coder building a SaaS but committed to clean releases" → vibe-coder for daily flow, classical-dev considerations only at release time. (The "transitional" caveats apply.)
 - "Multi-agent setup but the domain is non-code" → today, neither persona quite fits. File an issue describing your case.
+- "Solo dev whose primary assistant is OpenClaw" → OpenClaw consumer for the delivery channel (which install path to take, which plugin handles tool registration), plus solo developer for the workflow shape (how the day actually flows). The two stack rather than compete.
 
 The personas are the lens GoC uses to decide which features to prioritize. They are not a contract — your situation can sharpen the list, and feedback is welcome.

@@ -136,6 +136,37 @@
           and follow it.
         </p>
 
+        <h2 id="install">Install paths</h2>
+        <p>
+          GoC ships through three first-class delivery channels. All three drive the same engine
+          and the same deck — pick whichever matches the agent runtime you already use.
+        </p>
+        <ul class="more-list">
+          <li>
+            <strong>Claude Code plugin.</strong>
+            <code>/plugin marketplace add zauberzeug/game-of-cards</code> then
+            <code>/plugin install game-of-cards@game-of-cards</code>. Ships the skills and hooks;
+            host prerequisite is <code>python3</code> (3.10+).
+          </li>
+          <li>
+            <strong>OpenClaw plugin.</strong>
+            <code>openclaw skills install game-of-cards</code> via
+            <a href="https://openclaw.ai">OpenClaw</a> /
+            <a href="https://clawhub.ai">ClawHub</a>. Bundles the goc engine inside the npm payload
+            and registers <code>goc</code> as a typed OpenClaw tool; host prerequisite is
+            <code>python3</code> (3.10+).
+          </li>
+          <li>
+            <strong>Generic CLI</strong> for other agent runtimes, CI, or no agent.
+            <code>pipx install game-of-cards</code> then <code>goc install</code> from the project root.
+          </li>
+        </ul>
+        <p>
+          Canonical install commands and update flow live in
+          <a href="/llms.txt"><code>llms.txt</code></a>; CLI surface and plugin coexistence rules
+          live in <a href="/goc/"><code>goc.md</code></a>.
+        </p>
+
         <h2 id="how">How it works</h2>
 
         <figure class="readme-figure narrow-figure">

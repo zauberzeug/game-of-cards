@@ -36,6 +36,16 @@ That's it — the agent handles the install. Bootstrapping flows from the PyPI p
 
 > **If you are an LLM and the user asked you to set this up:** fetch [`https://game-of-cards.com/llms.txt`](https://game-of-cards.com/llms.txt) for the canonical install recipe and follow it.
 
+## Install paths
+
+GoC ships through three first-class delivery channels — pick whichever matches the agent runtime you already use. All three drive the same engine and deck.
+
+- **Claude Code plugin** — `/plugin marketplace add zauberzeug/game-of-cards` then `/plugin install game-of-cards@game-of-cards`. Ships the skills and hooks; the only host prerequisite is `python3` (3.10+).
+- **OpenClaw plugin** — `openclaw skills install game-of-cards`. Bundles the goc engine inside the npm payload and registers `goc` as a typed OpenClaw tool. The only host prerequisite is `python3` (3.10+); no `uv` and no separate `pipx install` step. See [openclaw.ai](https://openclaw.ai) for the runtime.
+- **Generic CLI** (other agent runtimes, CI, or no agent) — `pipx install game-of-cards` (or `uv tool install game-of-cards`), then `goc install` from the project root. This is the path for OpenCode, Codex, custom runners, or running `goc` by hand.
+
+Canonical install commands and update flow live in [`llms.txt`](https://game-of-cards.com/llms.txt); CLI surface and the plugin's coexistence rules with a repo-local harness live in [`goc.md`](goc.md).
+
 ## Status
 
 Brand new alpha — only a few days of implementation, no external users yet, plenty of rough edges that are unknown until someone tries it on a fresh project. The right way to find out if it's for you is to install it, point it at a side project, and see whether it stays out of your way for a week.

@@ -163,6 +163,37 @@ For full dynamic feature support, either:
 
 A future release will fix the bootstrap path to use `${CLAUDE_SKILL_DIR}` so the plugin is fully self-contained.
 
+## OpenClaw plugin
+
+The `openclaw-plugin/` directory at the root of the `game-of-cards` repository is a plugin for [OpenClaw](https://openclaw.ai) — a Node-based personal AI assistant distributed through [ClawHub](https://clawhub.ai). It is a peer to the Claude Code plugin: same engine, same skills, same deck — different host shape.
+
+### What the plugin provides
+
+- **13 GoC skills** as workspace-tier `SKILL.md` directories that OpenClaw auto-discovers, ported from `goc/templates/skills/` once via `scripts/port_skills_to_openclaw.py` and then independently maintained (the `kickoff` skill is deferred to host-specific kickoff complements).
+- **`goc` as a registered OpenClaw tool** — not a shell binary on PATH. OpenClaw has no auto-PATH-prepend mechanism for plugin `bin/` directories (verified via spike), so the plugin's TypeScript entry point calls `api.registerTool('goc', ...)` with a typed parameter schema; the handler shells out to `python3 -m goc.cli` with `PYTHONPATH` pointing at the bundled engine inside the plugin payload.
+- **Three lifecycle hooks** registered via `api.on()`: `session_start` (active-card reminder), `before_prompt_build` (deck-first prompt injection), `agent_end` (pattern-generalization self-assessment). These are TypeScript ports of the Claude `SessionStart` / `UserPromptSubmit` / `Stop` Python hook scripts.
+- **A vendored goc engine inside the npm payload** — the same byte-for-byte mirror of `goc/` used by `claude-plugin/`, enforced by the `sync-plugin-assets` pre-commit hook.
+
+### Prerequisites
+
+The only host prerequisite is `python3` (3.10+) on PATH. No `uv` and no separate `pipx install game-of-cards` step are required — the engine is bundled.
+
+### Install from ClawHub (consumers)
+
+```sh
+openclaw skills install game-of-cards
+```
+
+The same artifact is published to npm as `game-of-cards`; consumers that prefer npm can add it via OpenClaw's plugin loading mechanism (see <https://docs.openclaw.ai/plugins>).
+
+### Install the plugin (local development)
+
+Clone or check out this repository, then point OpenClaw at the local `openclaw-plugin/` directory per OpenClaw's local-plugin docs. The plugin's TypeScript entry point (`openclaw-plugin/index.ts`) is bundled with esbuild on `prepublishOnly`; for local development the bundled `dist/index.js` is checked in so the plugin is loadable without a build step.
+
+### Known limitation: subagent tool projection
+
+OpenClaw (≤ 2026.5.6) does not project the plugin's registered `goc` tool to spawned subagents — the plugin-tool allowlist ignores `tools.subagents.tools.alsoAllow`. Main sessions are unaffected; subagent flows degrade by surfacing the tool as unavailable. Upstream tracker: <https://github.com/openclaw/openclaw/pull/51388>. Workaround guidance lives in the plugin README.
+
 ## Migrating a legacy deck layout
 
 Versions before 0.0.4 stored the deck under `deck/` at the project root. From 0.0.4 onward the deck lives under `.game-of-cards/deck/`. Both layouts work for single-tree repos, but **if both trees exist at the same time, `goc` will refuse to operate** — any command other than `goc migrate` exits with an error naming both paths.

@@ -79,6 +79,8 @@ Detection is intentionally simple: Claude markers such as `CLAUDE.md` or `.claud
 
 OpenCode is a free path: it already reads `.claude/skills/`, so `goc install --agents claude` gives OpenCode the skill files without a separate OpenCode shim. The Claude `UserPromptSubmit` hook is not part of that compatibility path; hooks remain Claude Code-specific.
 
+[OpenClaw](https://openclaw.ai) is the other supported runtime, but it sits beside the `--agents` matrix rather than inside it. OpenClaw plugins are TypeScript entry points that register typed tools and event handlers — there is no shell-PATH binary, no auto-discovered `.claude/skills/` directory, and no `goc install` step on the consumer side. So OpenClaw ships as a separate plugin payload (`openclaw-plugin/`) that bundles the goc engine inside the npm package and registers `goc` as an OpenClaw tool. Skills are workspace-tier `SKILL.md` directories ported once via `scripts/port_skills_to_openclaw.py`; the three Claude lifecycle hooks (`SessionStart`, `UserPromptSubmit`, `Stop`-equivalent) are reimplemented as TypeScript event handlers registered via `api.on()`. Consumers install with `openclaw skills install game-of-cards`; the only host prerequisite is `python3` (3.10+).
+
 To add another agent, file an issue or PR that adds `goc/templates/agents/<agent>/manifest.json`, any renderer support needed for that agent's file format, and installer tests covering `goc install --agents <agent>` plus `goc upgrade --agents <agent>`.
 
 ## Contributing

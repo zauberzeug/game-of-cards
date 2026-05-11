@@ -7,36 +7,36 @@ summary: |-
   closed before the plugin shipped. Only site/llms.txt was refreshed
   (`add-openclaw-install-section-to-llms-txt`, done 2026-05-09).
   Bring the rest of the front-door materials up to date.
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-11T03:56:32Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, story]
 definition_of_done: |
-  - [ ] decision recorded below for whether OpenClaw introduces a new
+  - [x] decision recorded below for whether OpenClaw introduces a new
         persona or widens existing ones
-  - [ ] README.md mentions OpenClaw in install / harness coverage
+  - [x] README.md mentions OpenClaw in install / harness coverage
         (sibling to Claude Code), with the same depth treatment llms.txt
         gives
-  - [ ] PERSONAS.md updated per the persona decision (either a new
+  - [x] PERSONAS.md updated per the persona decision (either a new
         persona section or amended workflow recommendations on existing
         personas)
-  - [ ] ABOUT.md updated to reference OpenClaw alongside its existing
+  - [x] ABOUT.md updated to reference OpenClaw alongside its existing
         OpenCode mention (current state: only OpenCode is named, line 80)
-  - [ ] goc.md adds an OpenClaw plugin section sibling to its existing
+  - [x] goc.md adds an OpenClaw plugin section sibling to its existing
         Claude Code plugin section (line 83+)
-  - [ ] site/index.html surfaces OpenClaw as a delivery channel
+  - [x] site/index.html surfaces OpenClaw as a delivery channel
         equivalent in standing to the Claude Code plugin
-  - [ ] cross-links to the canonical OpenClaw entry point
+  - [x] cross-links to the canonical OpenClaw entry point
         (https://openclaw.ai and the ClawHub install command) wherever
         introduced
-  - [ ] no regression in existing Claude Code / pipx coverage; this
+  - [x] no regression in existing Claude Code / pipx coverage; this
         card adds, never removes
-  - [ ] `uv run goc validate` passes
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
