@@ -59,7 +59,7 @@ blocked, done, disproved, or superseded.
 |---|---|---|
 | `open` | candidate for work; in the queue | promotion to `active`/`done`/`disproved`/`superseded` |
 | `active` | work in progress (one author/agent at a time, by convention) | usually flips to `done` (or `blocked` mid-flight) |
-| `blocked` | needs another card or external input; body should explain | unblocking; usually flips back to `active` |
+| `blocked` | needs another card or external input; body should explain. Agent-checkable external conditions (upstream release, PR merge, dependency publication) keep `human_gate: none`; human-judgement blockers use `human_gate: decision\|session`. | unblocking; usually flips back to `active` |
 | `done` | DoD checklist all ticked; `goc done <title>` enforces this | terminal |
 | `disproved` | hypothesis investigated and ruled out; body documents the rebuttal | terminal |
 | `superseded` | replaced by another card; replacement narrative in `log.md`; preserved for forensic continuity | terminal |
@@ -132,11 +132,26 @@ graph-amplified `value`.
 
 ## human_gate scale
 
+`status` answers "what is the card doing right now?"
+`human_gate` answers "does progress require a human?"
+
+These axes are **orthogonal**. A card can be `blocked` with
+`human_gate: none` (parked on an agent-observable external condition)
+or `open` with `human_gate: decision` (queueable, but a human must
+pick a direction before work proceeds). Setting `blocked` does not
+automatically imply a human gate, and raising the gate does not
+imply `blocked`.
+
 Three-value autonomy ladder:
 
 - `none`     — autonomous-loop-safe; cron may auto-pick. Examples:
   tolerance-creep test rename, stale-reference doc fix, mechanical
-  sed-style replacement.
+  sed-style replacement. Also covers `status: blocked` cards waiting
+  on an external condition an agent can re-check (upstream release,
+  PR merge, dependency publication, CI availability, scheduled
+  research): the card is parked, but no human is needed to unblock —
+  a future autonomous run can observe the condition and flip the
+  card back to `open` or `active`.
 - `decision` — needs ONE human go/no-go before work proceeds. Example:
   "Option A (rewrite the cite) vs Option B (rewrite the code)?" The
   body **must contain the framing already** — see "Decision-gate body
@@ -145,6 +160,12 @@ Three-value autonomy ladder:
 - `session`  — needs interactive working session. Subsumes
   brainstorming/exploration cases. Example: research-impacting
   framework derivation; open architectural choice.
+
+Use `decision` or `session` **only** when the unblocker is human
+judgement, stakeholder alignment, prioritization, or a live
+discussion. If an agent can periodically check the blocker and
+proceed when the external condition changes, the gate stays `none`
+even when the status is `blocked`.
 
 Default for new cards created via `goc new`: `decision`.
 Auto-agents (audit-deck, next-card reclassification) should pick a more

@@ -199,6 +199,15 @@ not paths.
 another card unblocks it. `done`, `disproved`, and `superseded` are
 all terminal — none deletes the directory; the forensic record stays.
 
+`status: blocked` and `human_gate` are orthogonal axes. A blocked
+card waiting on an agent-observable external condition (upstream
+release, PR merge, dependency publication, scheduled re-check)
+keeps `human_gate: none` — a future autonomous run can verify the
+condition cleared and flip the card back to `open` or `active`
+without human involvement. Raise the gate to `decision`/`session`
+only when human judgement is the unblocker. See
+`Skill(card-schema)` for the full orthogonality contract.
+
 ## The 9 action skills
 
 One skill per job; compose, don't bundle.

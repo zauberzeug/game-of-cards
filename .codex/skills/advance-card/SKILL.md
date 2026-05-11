@@ -38,13 +38,20 @@ Confirm:
 - For `disproved` / `superseded`, the body documents the rebuttal /
   replacement before you flip.
 
+`status` and `human_gate` are orthogonal — see `Skill(card-schema)`
+"human_gate scale". A card can be `blocked` with `human_gate: none`
+when the blocker is an agent-observable external condition. Setting
+`blocked` does NOT require raising the gate; raising the gate does
+NOT require `blocked`.
+
 ## Step 2 — match the transition to the CLI
 
 | transition | CLI | notes |
 |---|---|---|
 | `open → active` | `goc status <title> active` | "claiming" the card |
-| `active → blocked` | `goc status <title> blocked` (+ optionally `goc advance <title> --by <other>` if a specific card is what's needed) | flip status; optional edge |
-| `blocked → active` | `goc status <title> active` (+ optionally `goc unadvance <title> --by <other>` if removing an obsolete edge) | flip status; optional edge |
+| `active → blocked` | `goc status <title> blocked` (+ optionally `goc advance <title> --by <other>` if a specific card is what's needed) | flip status; optional edge. Keep `human_gate: none` when an agent can re-check the blocker (upstream release, PR merge, dependency publication); raise to `decision`/`session` only when a human must unblock. |
+| `blocked → active` | `goc status <title> active` (+ optionally `goc unadvance <title> --by <other>` if removing an obsolete edge) | flip status; optional edge. An autonomous agent MAY make this transition when it observes the external condition has cleared on a `human_gate: none` card (re-check confirms the upstream change). |
+| `blocked → open` | `goc status <title> open` | re-queue when the blocker clears but the card is not yet being worked. Same agent-autonomy rule as `blocked → active`: gate `none` means an agent may flip; gate `decision`/`session` means the human owns the unblock. |
 | `* → open` | `goc status <title> open` | re-queue (rare) |
 | `* → disproved` | `goc status <title> disproved` | populate rebuttal first |
 | `* → superseded` | `goc status <title> superseded` | log replacement rationale in old card's `log.md` |
