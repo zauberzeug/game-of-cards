@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import argparse
@@ -462,12 +462,31 @@ def load_all_cards() -> list[Card]:
 # Validate
 
 
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+
 def _is_iso_date(value) -> bool:
-    if not isinstance(value, (str, date)):
-        return False
+    # Accepts the legacy date-only shape AND the current datetime shape.
+    # Lexicographic order is preserved across both: "2026-05-10" sorts
+    # before "2026-05-10T00:00:00Z" sorts before "2026-05-11".
     if isinstance(value, date):
         return True
-    return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", value))
+    if not isinstance(value, str):
+        return False
+    return bool(_ISO_DATE_RE.match(value) or _ISO_DATETIME_UTC_RE.match(value))
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _date_part(value) -> str:
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str) and len(value) >= 10:
+        return value[:10]
+    return str(value)
 
 
 LIST_REL_FIELDS = ("advances", "advanced_by")
@@ -746,11 +765,11 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         errors.append(f"{t.title}: human_gate: {fm['human_gate']!r} not in {schema.human_gate_values}")
 
     if "created" in fm and not _is_iso_date(fm["created"]):
-        errors.append(f"{t.title}: created: {fm['created']!r} not ISO YYYY-MM-DD")
+        errors.append(f"{t.title}: created: {fm['created']!r} not ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ")
 
     closed_at = fm.get("closed_at")
     if closed_at is not None and not _is_iso_date(closed_at):
-        errors.append(f"{t.title}: closed_at: {closed_at!r} not null/ISO date")
+        errors.append(f"{t.title}: closed_at: {closed_at!r} not null/ISO date/datetime")
 
     tags = fm.get("tags") or []
     if not isinstance(tags, list):
@@ -1929,10 +1948,10 @@ def _cmd_done(args):
         )
         sys.exit(2)
     _enforce_closure_on_integration_or_exit(title)
-    today = date.today().isoformat()
+    now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", "done")
-    text = mutate_frontmatter_field(text, "closed_at", today)
+    text = mutate_frontmatter_field(text, "closed_at", now)
     (card_dir / "README.md").write_text(text)
     print(f"{title}: {prior} → done")
     print("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
@@ -2544,14 +2563,14 @@ def _cmd_new(args):
             print(f"ERROR: unknown tag '{tag}' (not in SCHEMA.md canonical_tags)", file=sys.stderr)
             sys.exit(2)
     card_dir.mkdir(parents=True)
-    today = date.today().isoformat()
+    now = _utc_now_iso()
     fm = {
         "title": title,
         "summary": "",
         "status": "open",
         "stage": None,
         "contribution": contribution,
-        "created": today,
+        "created": now,
         "closed_at": None,
         "human_gate": gate,
         "advances": [],
@@ -2831,7 +2850,7 @@ def _cmd_triage(args):
 
     def aged_days(t: Card) -> int:
         try:
-            return (today - date.fromisoformat(t.created)).days
+            return (today - date.fromisoformat(_date_part(t.created))).days
         except (TypeError, ValueError):
             return 0
 

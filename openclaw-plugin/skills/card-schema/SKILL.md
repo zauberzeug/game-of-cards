@@ -69,6 +69,23 @@ unverified-bug entries map to `status: open` + `tags: [unverified]`;
 the promotion rule is "drop the `unverified` tag once a working
 `reproduce.py` lands."
 
+## Timestamps (`created`, `closed_at`)
+
+Both fields accept two shapes:
+
+- **ISO 8601 UTC datetime** — `YYYY-MM-DDTHH:MM:SSZ` (e.g.
+  `2026-05-11T14:30:00Z`). This is what `goc new` and `goc done` write
+  going forward, so multiple cards moved through the same day retain
+  ordering.
+- **Date-only** — `YYYY-MM-DD` (e.g. `2026-05-10`). Legacy shape kept
+  for backwards compatibility; pre-existing cards never get rewritten.
+
+The two are deliberately ordering-compatible: lexicographic string
+compare gives `"2026-05-10" < "2026-05-10T00:00:00Z" < "2026-05-11"`,
+so sort keys, `--since` filters, and aging logic work uniformly across
+a mixed deck. UTC only — local timezone offsets are rejected because
+they break that ordering and make cross-machine analysis ambiguous.
+
 ## Summary (optional, but recommended)
 
 `summary` is a free-form one-to-three-sentence description of the

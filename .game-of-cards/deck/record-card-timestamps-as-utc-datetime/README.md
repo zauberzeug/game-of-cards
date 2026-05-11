@@ -7,27 +7,27 @@ summary: |-
   computation. Upgrade both fields to ISO 8601 UTC datetime
   (`YYYY-MM-DDTHH:MM:SSZ`) while keeping backwards compatibility with
   existing date-only entries.
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-11T03:41:01Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [meta-fix, documentation]
 definition_of_done: |
-  - [ ] decision recorded below for which migration strategy lands
-  - [ ] `_is_iso_date` (or successor) accepts both date-only and full
+  - [x] decision recorded below for which migration strategy lands
+  - [x] `_is_iso_date` (or successor) accepts both date-only and full
         ISO 8601 UTC datetime in `goc/engine.py`
-  - [ ] `goc new` writes datetime for `created`
-  - [ ] `goc done` writes datetime for `closed_at`
-  - [ ] sort key in `goc/engine.py` (lines around 1054 and 2839) still
+  - [x] `goc new` writes datetime for `created`
+  - [x] `goc done` writes datetime for `closed_at`
+  - [x] sort key in `goc/engine.py` (lines around 1054 and 2839) still
         orders correctly across mixed date-only and datetime entries
-  - [ ] `--since` filter (engine.py:982) still works with mixed shapes
-  - [ ] `goc validate` passes on this repo's deck (legacy date-only
+  - [x] `--since` filter (engine.py:982) still works with mixed shapes
+  - [x] `goc validate` passes on this repo's deck (legacy date-only
         cards must remain valid)
-  - [ ] schema doc in `Skill(card-schema)` describes the new shape and
+  - [x] schema doc in `Skill(card-schema)` describes the new shape and
         the legacy fallback
 worker: {who: "claude[bot]", where: main}
 ---
