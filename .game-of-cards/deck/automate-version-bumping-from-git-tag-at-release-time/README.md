@@ -153,10 +153,18 @@ DoD items 1–8 have landed across two commits:
   below.
 
 Originally split because the bot's GitHub App lacked `workflows`
-write permission. The grant has since been added (App-level scope +
-`workflows: write` in `pull-card.yml` / `audit-deck.yml` permission
-blocks), so future workflow-touching cards will commit normally
-without the patch-on-disk handoff.
+write permission. App-level grant on the Claude GitHub App is in
+place, but the YAML hookup attempted in commit `34ddd96`
+(`workflows: write` in `pull-card.yml` / `audit-deck.yml` permission
+blocks) was wrong: `workflows` is not a valid scope for the workflow
+`permissions:` field, and the resulting parse error silently
+disabled both autonomous workflows until reverted. See card
+`workflows-write-in-yaml-permissions-block-breaks-autonomous-workflows`
+for the diagnosis and the architectural follow-up needed to actually
+let bot runs push edits under `.github/workflows/` (a PAT or App
+token with `workflow` scope wired into `claude-code-action`'s
+`github_token` input). Until that follow-up lands, workflow-touching
+cards still hand off to a human commit.
 
 DoD #9 (one real release end-to-end) is the human-verification step
 this card always handed off — wait for the ClawHub-publish-source

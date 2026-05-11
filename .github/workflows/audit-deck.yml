@@ -21,9 +21,6 @@ permissions:
   id-token: write
   pull-requests: write
   issues: write
-  workflows: write        # parity with pull-card.yml: lets the audit agent
-                          # file workflow-touching cards as normal commits
-                          # rather than as on-disk patches.
 
 concurrency:
   group: audit-deck-${{ github.ref }}

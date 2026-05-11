@@ -11,11 +11,11 @@ advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Remove the invalid `workflows: write` line (and its trailing comment) from the `permissions:` block in `.github/workflows/audit-deck.yml`
-  - [ ] Remove the invalid `workflows: write` line (and its trailing comment) from the `permissions:` block in `.github/workflows/pull-card.yml`
+  - [x] Remove the invalid `workflows: write` line (and its trailing comment) from the `permissions:` block in `.github/workflows/audit-deck.yml`
+  - [x] Remove the invalid `workflows: write` line (and its trailing comment) from the `permissions:` block in `.github/workflows/pull-card.yml`
   - [ ] `gh workflow run pull-card.yml` succeeds after the fix lands (i.e. the workflow parses and at least one job is scheduled, even if it short-circuits on an empty queue)
-  - [ ] Update the body of `automate-version-bumping-from-git-tag-at-release-time/README.md` so it no longer claims `workflows: write` in the YAML permission blocks is the mechanism for granting workflow-edit capability to the bot
-  - [ ] `uv run goc validate` passes
+  - [x] Update the body of `automate-version-bumping-from-git-tag-at-release-time/README.md` so it no longer claims `workflows: write` in the YAML permission blocks is the mechanism for granting workflow-edit capability to the bot
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
