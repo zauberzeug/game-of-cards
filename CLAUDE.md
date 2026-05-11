@@ -41,9 +41,16 @@ The four plugin manifests (`openclaw-plugin/package.json` +
 `package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`,
 `.claude-plugin/marketplace.json`) and `goc/__init__.py`'s
 `__version__` literal are rewritten from the input version by
-`scripts/release_rewrite_versions.py` inside the workflow. Humans
-never edit version literals; a release commit that touches any of
-those files trips the in-job tripwire and fails the build.
+`scripts/release_rewrite_versions.py` inside the workflow, then
+committed back to main by the build job as
+`release: bump version literals to vX.Y.Z` (under the
+`github-actions[bot]` identity) so consumers reading the git tree
+directly — the Claude Code plugin manager being the only one today
+— see the correct version. Humans never edit version literals; the
+in-job tripwire fails the build on any human commit that touches
+those five files, while explicitly exempting the bot's own
+release-bump commits so the *next* release dispatch reads the
+previous release's commit as HEAD without tripping.
 
 Canonical flow:
 
@@ -52,10 +59,10 @@ gh workflow run release.yml -f version=X.Y.Z
 ```
 
 That single command publishes to PyPI, npm, AND ClawHub from one
-`workflow_dispatch` event. The workflow itself creates the tag
-`vX.Y.Z` from `main`'s HEAD as the last step of the build job (after
-every consistency check passes), then the three publish jobs run in
-parallel. ClawHub's OIDC trusted publisher accepts `workflow_dispatch`
+`workflow_dispatch` event. The workflow itself commits the version
+literals back to `main` and tags the rewrite commit as `vX.Y.Z` (as
+the last two steps of the build job, after every consistency check
+passes), then the three publish jobs run in parallel. ClawHub's OIDC trusted publisher accepts `workflow_dispatch`
 events regardless of ref, so a dispatch from `refs/heads/main`
 publishes the ClawHub leg natively — no second event needed. There is
 no `CLAWHUB_TOKEN` secret; adding one actively breaks releases (the

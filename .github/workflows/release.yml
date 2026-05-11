@@ -40,11 +40,23 @@
 #     → workflow_dispatch on main (or wherever HEAD points).
 #     → build job: rewrites version literals from the input, builds the
 #       wheel + sdist, validates lockfile consistency, asserts the wheel
-#       version matches the input, then (as its LAST step) creates the
-#       tag `vX.Y.Z` from HEAD and pushes it.
+#       version matches the input, then commits the rewritten literals
+#       back to main as `release: bump version literals to vX.Y.Z`
+#       under the github-actions[bot] identity, and finally tags the
+#       rewrite commit `vX.Y.Z` and pushes both.
 #     → smoke job: end-to-end auto-bootstrap test.
 #     → publish-pypi, publish-npm, publish-clawhub: all OIDC trusted
 #       publishing, all in the same workflow_dispatch run.
+#
+# Why commit the rewrites back to main: three of the four publish
+# channels (PyPI, npm, ClawHub) get the correct version via build
+# artifacts or reusable-workflow input overrides. Claude Code's plugin
+# manager is the exception — it clones the marketplace repo and reads
+# `claude-plugin/.claude-plugin/plugin.json` directly from the git
+# tree. Without the commit-back, that file (and the four sibling
+# manifests) stayed frozen on main at whatever the *first* release
+# wrote, and Claude Code users saw a stale version label forever
+# after. See card `release-workflow-leaves-plugin-manifest-version-stale-on-main`.
 #
 # Why single-event works for ClawHub: the ClawHub reusable workflow's
 # validator only checks `github.event_name == 'workflow_dispatch'` —
@@ -84,8 +96,16 @@
 #     using the input version. `scripts/sync_plugin_assets.py` then
 #     mirrors the rewritten `__version__` into `claude-plugin/goc/` and
 #     `openclaw-plugin/goc/` byte-for-byte.
-#   - Humans never edit version literals. A commit on main that touches
-#     any of those files trips the in-job tripwire and fails the build.
+#   - The build job commits all seven rewritten files back to main as
+#     `release: bump version literals to vX.Y.Z` under the
+#     github-actions[bot] identity, and tags that commit. After the
+#     workflow finishes, `git show vX.Y.Z:claude-plugin/.claude-plugin/plugin.json`
+#     reads the correct version, and so does the file on `main`.
+#   - Humans never edit version literals. The tripwire below fails the
+#     build if a human commits a version-literal change to main, but
+#     exempts the bot's own `release: bump version literals to v…`
+#     commits so the next release dispatch can read the previous
+#     release's commit as HEAD without tripping.
 #
 # Why no `push: tags:` trigger: the single-trigger flow makes tag-push
 # obsolete. Pushing a tag manually now does nothing — the workflow is
@@ -213,9 +233,25 @@ jobs:
         # bump-and-tag commit (tag mode) or pushes a literal-bumping commit to
         # main and then dispatches (release mode), fail loudly so the policy
         # stays enforced.
+        #
+        # Exemption: the bot's own previous release commit (subject starts
+        # with `release: bump version literals to v`, author is
+        # `github-actions[bot]`) is allowed through. That commit IS the
+        # workflow writing rewrites back to main, and the next release
+        # dispatch will read it as HEAD — failing the tripwire here
+        # would mean a release can only ever happen once.
         if: ${{ steps.version.outputs.mode == 'tag' || steps.version.outputs.mode == 'release' }}
         run: |
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            head_author=$(git log -1 --pretty=%ae HEAD)
+            head_subject=$(git log -1 --pretty=%s HEAD)
+            if [ "$head_author" = "41898282+github-actions[bot]@users.noreply.github.com" ] \
+              && printf '%s' "$head_subject" | grep -q '^release: bump version literals to v'; then
+              echo "OK — HEAD is a bot release commit; tripwire skipped."
+              echo "  author:  $head_author"
+              echo "  subject: $head_subject"
+              exit 0
+            fi
             tracked='goc/__init__.py openclaw-plugin/package.json openclaw-plugin/package-lock.json claude-plugin/.claude-plugin/plugin.json .claude-plugin/marketplace.json'
             diff=$(git diff --name-only HEAD~1 HEAD -- $tracked)
             if [ -n "$diff" ]; then
@@ -309,23 +345,69 @@ jobs:
           path: dist/
           retention-days: 7
 
-      - name: Create and push release tag
-        # LAST step of the build job. Only runs in `release` mode (new
-        # release dispatched from a non-tag ref with a version input).
-        # In `tag` mode the tag already exists; in `dry_run` mode no tag
-        # should be created. Running this as the final step means every
-        # consistency check (rewrite, lockfile, wheel-version assertion,
-        # artifact upload) has already passed — the tag is pushed only
-        # when the build is genuinely shippable.
+      - name: Commit rewrites back to main
+        # Promotes the rewrite from an in-workflow-only artifact to a
+        # real commit on `main`, so consumers that read the repo's git
+        # tree directly (Claude Code's plugin manager is the only one
+        # today) see the correct version literal. The wheel/npm/ClawHub
+        # publish channels already had their own overrides; this step
+        # fixes the fourth channel that has no override mechanism.
+        #
+        # Only runs in `release` mode (new release dispatch from a
+        # non-tag ref with a version input). In `tag` mode (recovery
+        # re-publish) the rewrite commit already exists from the
+        # original release; in `dry_run` mode nothing should be
+        # committed.
+        #
+        # All seven files are staged explicitly so an unrelated
+        # working-tree change (e.g. a stale plugin-asset mirror caught
+        # by sync) does NOT silently sneak into the release commit.
+        # If `git diff --cached` shows nothing, the run is a no-op
+        # passthrough (re-dispatch on a version that was already
+        # written) and the step exits cleanly without committing.
         if: ${{ steps.version.outputs.mode == 'release' }}
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            goc/__init__.py \
+            openclaw-plugin/package.json \
+            openclaw-plugin/package-lock.json \
+            claude-plugin/.claude-plugin/plugin.json \
+            .claude-plugin/marketplace.json \
+            claude-plugin/goc/__init__.py \
+            openclaw-plugin/goc/__init__.py
+          if git diff --cached --quiet; then
+            echo "::notice::No version-literal changes to commit (idempotent re-dispatch on already-shipped version)."
+            exit 0
+          fi
+          git commit -m "release: bump version literals to v$RELEASE_VERSION"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "::notice::Pushed release commit $(git rev-parse --short HEAD) to $GITHUB_REF_NAME"
+
+      - name: Create and push release tag
+        # LAST step of the build job. Only runs in `release` mode (new
+        # release dispatched from a non-tag ref with a version input).
+        # In `tag` mode the tag already exists; in `dry_run` mode no
+        # tag should be created. Running this as the final step means
+        # every consistency check (rewrite, lockfile, wheel-version
+        # assertion, artifact upload, commit-back) has already passed
+        # — the tag is pushed only when the build is genuinely
+        # shippable AND the rewrites are durable on main.
+        if: ${{ steps.version.outputs.mode == 'release' }}
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+        run: |
+          # Git identity already set by the previous step; set defensively
+          # in case the commit-back was a no-op passthrough.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          tagged_sha=$(git rev-parse HEAD)
           git tag -a "v$RELEASE_VERSION" -m "Release v$RELEASE_VERSION"
           git push origin "v$RELEASE_VERSION"
-          echo "::notice::Pushed tag v$RELEASE_VERSION -> $GITHUB_SHA"
+          echo "::notice::Pushed tag v$RELEASE_VERSION -> $tagged_sha"
 
   smoke:
     # End-to-end smoke test that gates publishes on the plugin actually

@@ -12,13 +12,13 @@ advanced_by:
   - automate-version-bumping-from-git-tag-at-release-time
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Reproduce: at tag v0.0.16, confirm `git show v0.0.16:claude-plugin/.claude-plugin/plugin.json` still reads `"version": "0.0.12"` (the bug) and document the consumer symptom (Claude Code's `/plugin` view shows 0.0.12 while ClawHub/PyPI/npm correctly show 0.0.16)
-  - [ ] release.yml's build job, after all consistency checks pass, commits the five rewritten files (`goc/__init__.py`, `openclaw-plugin/package.json`, `openclaw-plugin/package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`) back to main with subject `release: bump version literals to vX.Y.Z`, then creates and pushes the tag on the new commit
-  - [ ] The tripwire is updated to exempt commits whose author is `github-actions[bot]` AND whose subject starts with `release: bump version literals to v` — so the *next* release dispatch doesn't fail on the previous release's own commit
-  - [ ] CLAUDE.md release section and `release.yml` header comment are updated to describe the commit-back step and clarify that main always reflects the *most recent shipped* version literal (lagging by at most one release dispatch, never by lifetime-of-repo)
+  - [x] Reproduce: at tag v0.0.16, confirm `git show v0.0.16:claude-plugin/.claude-plugin/plugin.json` still reads `"version": "0.0.12"` (the bug) and document the consumer symptom (Claude Code's `/plugin` view shows 0.0.12 while ClawHub/PyPI/npm correctly show 0.0.16) — verified 2026-05-11
+  - [x] release.yml's build job, after all consistency checks pass, commits the seven rewritten files (`goc/__init__.py`, `openclaw-plugin/package.json`, `openclaw-plugin/package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, plus the two `__init__.py` mirror copies) back to main with subject `release: bump version literals to vX.Y.Z`, then creates and pushes the tag on the new commit
+  - [x] The tripwire is updated to exempt commits whose author is `github-actions[bot]` AND whose subject starts with `release: bump version literals to v` — so the *next* release dispatch doesn't fail on the previous release's own commit
+  - [x] CLAUDE.md release section and `release.yml` header comment are updated to describe the commit-back step and clarify that main always reflects the *most recent shipped* version literal (lagging by at most one release dispatch, never by lifetime-of-repo)
   - [ ] A real release end-to-end (e.g. v0.0.17) verifies the fix: after the workflow finishes, `git show v0.0.17:claude-plugin/.claude-plugin/plugin.json` reads `"version": "0.0.17"` and Claude Code's `/plugin` view also shows 0.0.17 for a fresh install
   - [ ] The two parked predecessor cards (`automate-version-bumping-from-git-tag-at-release-time`, `release-yml-smoke-job-fails-on-tag-push-events`) are closed — both have their DoDs ticked, and their decision-gates have been resolved by subsequent cards
-  - [ ] `uv run goc validate` passes
+  - [x] `uv run goc validate` passes
 worker: {who: rodja, where: main}
 ---
 

@@ -7,7 +7,8 @@ contribution: medium
 created: 2026-05-10
 closed_at: null
 human_gate: session
-advances: []
+advances:
+  - release-workflow-leaves-plugin-manifest-version-stale-on-main
 advanced_by: []
 tags: [infra]
 definition_of_done: |
