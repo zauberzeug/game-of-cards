@@ -12,12 +12,12 @@ advanced_by:
   - release-workflow-leaves-plugin-manifest-version-stale-on-main
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Reproduce: confirm CI run 25674525151 failed with `AssertionError: '0.0.17' != '0.0.12'` from `test_self_hosted_generated_surfaces_match_package_version`, and `git show 6534039:.game-of-cards/deck/.goc-version` and `git show 6534039:AGENTS.md | grep 'BEGIN GOC'` still read `0.0.12`
-  - [ ] `scripts/release_rewrite_versions.py` rewrites `.game-of-cards/deck/.goc-version` (full file replace) and `AGENTS.md`'s `<!-- BEGIN GOC v… -->` marker, with `expected=1` assertions for both
-  - [ ] `.github/workflows/release.yml`'s "Commit rewrites back to main" step adds the two new files to the explicit `git add` list, and the workflow header comment documents the expanded surface set
-  - [ ] `CLAUDE.md` release section is extended to mention the two dogfood surfaces as additional rewrite targets
-  - [ ] Manual 0.0.17 fix is applied to `.game-of-cards/deck/.goc-version` and `AGENTS.md` on `main` so CI on subsequent push events stays green without waiting for the next release dispatch
-  - [ ] `uv run goc validate` + `python3 -m unittest tests.test_version_surfaces` both pass after the fix
+  - [x] Reproduce: confirm CI run 25674525151 failed with `AssertionError: '0.0.17' != '0.0.12'` from `test_self_hosted_generated_surfaces_match_package_version`, and `git show 6534039:.game-of-cards/deck/.goc-version` and `git show 6534039:AGENTS.md | grep 'BEGIN GOC'` still read `0.0.12`
+  - [x] `scripts/release_rewrite_versions.py` rewrites `.game-of-cards/deck/.goc-version` (full file replace) and `AGENTS.md`'s `<!-- BEGIN GOC v… -->` marker, with `expected=1` assertions for both
+  - [x] `.github/workflows/release.yml`'s "Commit rewrites back to main" step adds the two new files to the explicit `git add` list, and the workflow header comment documents the expanded surface set
+  - [x] `CLAUDE.md` release section is extended to mention the two dogfood surfaces as additional rewrite targets
+  - [x] Manual 0.0.17 fix is applied to `.game-of-cards/deck/.goc-version` and `AGENTS.md` on `main` so CI on subsequent push events stays green without waiting for the next release dispatch
+  - [x] `uv run goc validate` + `python3 -m unittest tests.test_version_surfaces` both pass after the fix
 worker: {who: rodja, where: main}
 ---
 

@@ -10,11 +10,19 @@ value into every static literal that ships:
   - openclaw-plugin/package-lock.json (top-level `version` + `packages[""].version`)
   - claude-plugin/.claude-plugin/plugin.json (`version`)
   - .claude-plugin/marketplace.json (`metadata.version`)
+  - .game-of-cards/deck/.goc-version (full-file dogfood sentinel)
+  - AGENTS.md (`<!-- BEGIN GOC v… -->` dogfood marker)
 
 Plugin-payload mirrors (`claude-plugin/goc/__init__.py`,
 `openclaw-plugin/goc/__init__.py`) are NOT touched here — they are byte-mirrored
 from `goc/__init__.py` by `scripts/sync_plugin_assets.py`, which the workflow
 runs immediately after this script.
+
+The two dogfood surfaces (`.goc-version` and the `AGENTS.md` marker) are this
+repo's own consumer-copy of what `goc install` writes into a fresh repo. They
+are checked by `tests/test_version_surfaces.py` against the static
+`__version__` literal, so they must move in lockstep with the publish-channel
+manifests.
 
 Usage:
     python3 scripts/release_rewrite_versions.py X.Y.Z
@@ -87,6 +95,20 @@ def rewrite_all(version: str) -> None:
         ROOT / ".claude-plugin" / "marketplace.json",
         r'^(\s+"version":\s*")[^"]+(")',
         rf"\g<1>{version}\g<2>",
+        expected=1,
+    )
+
+    # .game-of-cards/deck/.goc-version — dogfood sentinel, just the bare
+    # version literal followed by a trailing newline. Full-file write.
+    (ROOT / ".game-of-cards" / "deck" / ".goc-version").write_text(f"{version}\n")
+
+    # AGENTS.md — dogfood marker block opener `<!-- BEGIN GOC v… -->`.
+    # CLAUDE.md uses the IMPORT-marker form (no version literal), so only
+    # AGENTS.md needs rewriting here. `goc install` writes both.
+    _replace(
+        ROOT / "AGENTS.md",
+        r"<!-- BEGIN GOC v[^>]+ -->",
+        f"<!-- BEGIN GOC v{version} -->",
         expected=1,
     )
 

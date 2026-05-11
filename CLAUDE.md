@@ -39,18 +39,24 @@ build time (overridden in CI by `SETUPTOOLS_SCM_PRETEND_VERSION` so
 the wheel reports the right version even before the tag is created).
 The four plugin manifests (`openclaw-plugin/package.json` +
 `package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`,
-`.claude-plugin/marketplace.json`) and `goc/__init__.py`'s
-`__version__` literal are rewritten from the input version by
+`.claude-plugin/marketplace.json`), `goc/__init__.py`'s `__version__`
+literal, and the two dogfood self-host surfaces
+(`.game-of-cards/deck/.goc-version`, `AGENTS.md`'s `<!-- BEGIN GOC
+v… -->` marker) are rewritten from the input version by
 `scripts/release_rewrite_versions.py` inside the workflow, then
 committed back to main by the build job as
 `release: bump version literals to vX.Y.Z` (under the
 `github-actions[bot]` identity) so consumers reading the git tree
 directly — the Claude Code plugin manager being the only one today
-— see the correct version. Humans never edit version literals; the
+— see the correct version, and so that
+`tests/test_version_surfaces.py` stays green on the bot's release
+commit. Humans never edit the publish-channel version literals; the
 in-job tripwire fails the build on any human commit that touches
 those five files, while explicitly exempting the bot's own
 release-bump commits so the *next* release dispatch reads the
-previous release's commit as HEAD without tripping.
+previous release's commit as HEAD without tripping. (`AGENTS.md` is
+NOT in the tripwire's tracked set — humans edit its non-marker
+content freely.)
 
 Canonical flow:
 

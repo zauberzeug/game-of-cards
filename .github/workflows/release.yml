@@ -93,10 +93,15 @@
 #     manifests (`openclaw-plugin/package.json` + `package-lock.json`,
 #     `claude-plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`)
 #     are rewritten at build time by `scripts/release_rewrite_versions.py`
-#     using the input version. `scripts/sync_plugin_assets.py` then
-#     mirrors the rewritten `__version__` into `claude-plugin/goc/` and
-#     `openclaw-plugin/goc/` byte-for-byte.
-#   - The build job commits all seven rewritten files back to main as
+#     using the input version. The same script also rewrites two
+#     dogfood self-host surfaces — `.game-of-cards/deck/.goc-version`
+#     and `AGENTS.md`'s `<!-- BEGIN GOC v… -->` marker — which the
+#     `test_self_hosted_generated_surfaces_match_package_version`
+#     regression check compares against `__version__`.
+#     `scripts/sync_plugin_assets.py` then mirrors the rewritten
+#     `__version__` into `claude-plugin/goc/` and `openclaw-plugin/goc/`
+#     byte-for-byte.
+#   - The build job commits all nine rewritten files back to main as
 #     `release: bump version literals to vX.Y.Z` under the
 #     github-actions[bot] identity, and tags that commit. After the
 #     workflow finishes, `git show vX.Y.Z:claude-plugin/.claude-plugin/plugin.json`
@@ -359,9 +364,14 @@ jobs:
         # original release; in `dry_run` mode nothing should be
         # committed.
         #
-        # All seven files are staged explicitly so an unrelated
+        # All nine files are staged explicitly so an unrelated
         # working-tree change (e.g. a stale plugin-asset mirror caught
         # by sync) does NOT silently sneak into the release commit.
+        # The list:
+        #   - 5 publish-channel manifests rewritten by release_rewrite_versions.py
+        #   - 2 plugin-payload `__init__.py` mirrors written by sync_plugin_assets.py
+        #   - 2 dogfood self-host surfaces (.goc-version + AGENTS.md marker)
+        #     rewritten by release_rewrite_versions.py
         # If `git diff --cached` shows nothing, the run is a no-op
         # passthrough (re-dispatch on a version that was already
         # written) and the step exits cleanly without committing.
@@ -378,7 +388,9 @@ jobs:
             claude-plugin/.claude-plugin/plugin.json \
             .claude-plugin/marketplace.json \
             claude-plugin/goc/__init__.py \
-            openclaw-plugin/goc/__init__.py
+            openclaw-plugin/goc/__init__.py \
+            .game-of-cards/deck/.goc-version \
+            AGENTS.md
           if git diff --cached --quiet; then
             echo "::notice::No version-literal changes to commit (idempotent re-dispatch on already-shipped version)."
             exit 0

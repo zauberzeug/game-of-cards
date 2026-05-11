@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-11T13:17:27Z"
 closed_at: 2026-05-11T13:53:39Z
 human_gate: none
-advances: []
+advances:
+  - release-workflow-skips-dogfood-version-markers
 advanced_by:
   - automate-version-bumping-from-git-tag-at-release-time
 tags: [bug, infra]
