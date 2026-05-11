@@ -12,6 +12,7 @@ advances:
   - provide-openclaw-plugin-for-skills-and-hooks
 advanced_by:
   - publish-npm-package-under-zauberzeug-org-not-personal
+  - find-single-trigger-release-flow-for-all-three-registries
 tags: [story, infra]
 definition_of_done: |
   - [x] `.github/workflows/release.yml` extended with a `publish-npm` job that runs on tag push, has `id-token: write` permission, runs `npm publish --provenance --access public` from `openclaw-plugin/`, and is gated on `build` + (where applicable) `smoke`

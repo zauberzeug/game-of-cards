@@ -10,7 +10,8 @@ human_gate: none
 advances:
   - publish-openclaw-plugin
   - provide-openclaw-plugin-for-skills-and-hooks
-advanced_by: []
+advanced_by:
+  - find-single-trigger-release-flow-for-all-three-registries
 tags: [bug, infra]
 definition_of_done: |
   - [x] Reproduce: failure traced to the `--manual-override-reason` (token-path) branch of the reusable workflow at `openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3`; v0.12.3 of the local CLI exposes only `package {explore,inspect,download,verify,delete,report,appeal}`, so a real local dry-run is not possible without using the reusable workflow itself — investigation moved server-side via run-log diff (see log.md)
