@@ -17,7 +17,7 @@ definition_of_done: |
   - [x] The tripwire is updated to exempt commits whose author is `github-actions[bot]` AND whose subject starts with `release: bump version literals to v` — so the *next* release dispatch doesn't fail on the previous release's own commit
   - [x] CLAUDE.md release section and `release.yml` header comment are updated to describe the commit-back step and clarify that main always reflects the *most recent shipped* version literal (lagging by at most one release dispatch, never by lifetime-of-repo)
   - [ ] A real release end-to-end (e.g. v0.0.17) verifies the fix: after the workflow finishes, `git show v0.0.17:claude-plugin/.claude-plugin/plugin.json` reads `"version": "0.0.17"` and Claude Code's `/plugin` view also shows 0.0.17 for a fresh install
-  - [ ] The two parked predecessor cards (`automate-version-bumping-from-git-tag-at-release-time`, `release-yml-smoke-job-fails-on-tag-push-events`) are closed — both have their DoDs ticked, and their decision-gates have been resolved by subsequent cards
+  - [x] The two parked predecessor cards (`automate-version-bumping-from-git-tag-at-release-time`, `release-yml-smoke-job-fails-on-tag-push-events`) are closed — both have their DoDs ticked, and their decision-gates have been resolved by subsequent cards. Closed via `goc done` in commit d1d6250 (2026-05-11).
   - [x] `uv run goc validate` passes
 worker: {who: rodja, where: main}
 ---
