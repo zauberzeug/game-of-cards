@@ -1,11 +1,11 @@
 ---
 title: extend-asset-sync-to-cover-local-claude-skills-and-hooks
 summary: "scripts/sync_plugin_assets.py already enforces byte-for-byte parity between goc/templates/ and claude-plugin/ + openclaw-plugin/, but the dogfood self-host copies under .claude/skills/ and .claude/hooks/ rely on a maintainer remembering to run `goc upgrade` or editing both copies in lockstep — silent drift is possible. Extend the sync pairs to cover .claude/skills/ (with the openclaw-only exclusion and a preserve-set for the bootstrap script) and .claude/hooks/, so pre-commit + CI enforce parity on all five sync targets instead of just the three plugin-payload ones."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-12T03:17:31Z"
-closed_at: null
+closed_at: 2026-05-12T03:24:45Z
 human_gate: none
 advances: []
 advanced_by: []
