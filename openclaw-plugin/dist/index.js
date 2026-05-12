@@ -2532,6 +2532,29 @@ async function pathExists(p) {
     return false;
   }
 }
+async function hasDeck(projectDir) {
+  return await pathExists(resolve(projectDir, ".game-of-cards", "deck")) || await pathExists(resolve(projectDir, "deck"));
+}
+function fallbackProjectCandidates(sessionProjectDir) {
+  const candidates = [
+    sessionProjectDir,
+    process.env.OPENCLAW_WORKSPACE_DIR,
+    process.env.OPENCLAW_WORKSPACE,
+    process.env.HOME ? resolve(process.env.HOME, ".openclaw", "workspace") : void 0,
+    process.cwd()
+  ];
+  return [...new Set(candidates.filter(Boolean))];
+}
+async function bestFallbackProjectDir(sessionProjectDir) {
+  const candidates = fallbackProjectCandidates(sessionProjectDir);
+  for (const candidate of candidates) {
+    if (await hasDeck(candidate)) return candidate;
+  }
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return void 0;
+}
 async function isOptedOut(projectDir) {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
@@ -2571,13 +2594,10 @@ var index_default = definePluginEntry({
         let cwd = requestedCwd;
         let cwdNotice = "";
         if (!await pathExists(cwd)) {
-          for (const candidate of [sessionProjectDir, process.cwd()]) {
-            if (!candidate || candidate === cwd) continue;
-            if (await pathExists(candidate)) {
-              cwdNotice = `[goc plugin] requested cwd "${requestedCwd}" does not exist on host; using "${candidate}" instead.`;
-              cwd = candidate;
-              break;
-            }
+          const candidate = await bestFallbackProjectDir(sessionProjectDir);
+          if (candidate && candidate !== cwd) {
+            cwdNotice = `[goc plugin] requested cwd "${requestedCwd}" does not exist on host; using "${candidate}" instead.`;
+            cwd = candidate;
           }
         }
         const argv = buildArgs(params);

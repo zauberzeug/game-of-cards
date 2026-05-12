@@ -220,6 +220,35 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
+async function hasDeck(projectDir: string): Promise<boolean> {
+  return (
+    (await pathExists(resolve(projectDir, ".game-of-cards", "deck"))) ||
+    (await pathExists(resolve(projectDir, "deck")))
+  );
+}
+
+function fallbackProjectCandidates(sessionProjectDir?: string): string[] {
+  const candidates = [
+    sessionProjectDir,
+    process.env.OPENCLAW_WORKSPACE_DIR,
+    process.env.OPENCLAW_WORKSPACE,
+    process.env.HOME ? resolve(process.env.HOME, ".openclaw", "workspace") : undefined,
+    process.cwd(),
+  ];
+  return [...new Set(candidates.filter(Boolean) as string[])];
+}
+
+async function bestFallbackProjectDir(sessionProjectDir?: string): Promise<string | undefined> {
+  const candidates = fallbackProjectCandidates(sessionProjectDir);
+  for (const candidate of candidates) {
+    if (await hasDeck(candidate)) return candidate;
+  }
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return undefined;
+}
+
 async function isOptedOut(projectDir: string): Promise<boolean> {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
@@ -296,13 +325,10 @@ export default definePluginEntry({
         let cwd = requestedCwd;
         let cwdNotice = "";
         if (!(await pathExists(cwd))) {
-          for (const candidate of [sessionProjectDir, process.cwd()]) {
-            if (!candidate || candidate === cwd) continue;
-            if (await pathExists(candidate)) {
-              cwdNotice = `[goc plugin] requested cwd "${requestedCwd}" does not exist on host; using "${candidate}" instead.`;
-              cwd = candidate;
-              break;
-            }
+          const candidate = await bestFallbackProjectDir(sessionProjectDir);
+          if (candidate && candidate !== cwd) {
+            cwdNotice = `[goc plugin] requested cwd "${requestedCwd}" does not exist on host; using "${candidate}" instead.`;
+            cwd = candidate;
           }
         }
         const argv = buildArgs(params);
