@@ -11,12 +11,12 @@ advances: []
 advanced_by: []
 tags: [infra]
 definition_of_done: |
-  - [ ] Add `_sync_dir` support for a `preserve_files` parameter (paths relative to dst that are neither copied from src nor deleted from dst), distinct from `excludes` (paths that should be absent from dst)
-  - [ ] Extend `_build_sync_pairs()` with three new pairs: `goc/templates/skills/` → `.claude/skills/` (excludes: openclaw-only skill dirs; preserve: `_goc-bootstrap.sh`), `goc/templates/bootstrap/_goc-bootstrap.sh` → `.claude/skills/_goc-bootstrap.sh` (single-file), and per-hook `goc/templates/hooks/<name>.py` → `.claude/hooks/<name>.py`
-  - [ ] `_check_changes()` honors `preserve_files` the same way (no false-positive drift report on files that are intentionally absent from src)
-  - [ ] Running `python3 scripts/sync_plugin_assets.py --check` on the current main produces "OK" with no drift after the script extension (or fixes any latent drift in one auto-sync commit)
-  - [ ] CLAUDE.md's "Skill and config files have two copies" section is rewritten: the file pair is no longer maintained manually — pre-commit syncs it from `goc/templates/`. Editing only `.claude/skills/...` is now CI-detectable.
-  - [ ] `uv run goc validate` + `pre-commit run --all-files` both pass after the change
+  - [x] Add `_sync_dir` support for a `preserve_files` parameter (paths relative to dst that are neither copied from src nor deleted from dst), distinct from `excludes` (paths that should be absent from dst)
+  - [x] Extend `_build_sync_pairs()` with three new pairs: `goc/templates/skills/` → `.claude/skills/` (excludes: openclaw-only skill dirs; preserve: `_goc-bootstrap.sh`), `goc/templates/bootstrap/_goc-bootstrap.sh` → `.claude/skills/_goc-bootstrap.sh` (single-file), and per-hook `goc/templates/hooks/<name>.py` → `.claude/hooks/<name>.py`
+  - [x] `_check_changes()` honors `preserve_files` the same way (no false-positive drift report on files that are intentionally absent from src)
+  - [x] Running `python3 scripts/sync_plugin_assets.py --check` on the current main produces "OK" with no drift after the script extension. Smoke-verified by temporarily injecting drift into `goc/templates/skills/kickoff/SKILL.md` and confirming the check flags both `.claude/skills/kickoff/SKILL.md` AND `claude-plugin/skills/kickoff/SKILL.md`; same for `_goc-bootstrap.sh`.
+  - [x] CLAUDE.md's "Skill and config files have two copies" section is rewritten: the file pair is no longer maintained manually — pre-commit syncs it from `goc/templates/`. Editing only `.claude/skills/...` is now CI-detectable.
+  - [x] `uv run goc validate` + `uv run pre-commit run --all-files` both pass after the change
 worker: {who: rodja, where: main}
 ---
 

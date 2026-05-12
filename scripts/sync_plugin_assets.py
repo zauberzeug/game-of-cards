@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
-"""Sync plugin payloads from goc/ and goc/templates/ to claude-plugin/ and openclaw-plugin/.
+"""Sync plugin payloads + dogfood self-host copies from goc/ and goc/templates/.
 
-Run by pre-commit before every commit. When goc/ changes, this script
-regenerates the plugin payload files and stages them so they're included
-in the same commit — no manual edit-both-copies required.
+Run by pre-commit before every commit. When goc/ or goc/templates/ changes,
+this script regenerates:
+
+  - the Claude Code plugin payload under claude-plugin/
+  - the OpenClaw plugin payload's bundled engine under openclaw-plugin/goc/
+  - this repo's own dogfood self-host copy under .claude/skills/ + .claude/hooks/
+
+and stages the changes so they're included in the same commit — no manual
+edit-both-copies required. The dogfood targets are this repo's consumer-copy
+of what `goc install` writes into a fresh repo; keeping them auto-synced
+means editing only `goc/templates/skills/foo/SKILL.md` is enough — the
+.claude/ mirror picks it up on commit, and CI's `--check` mode catches any
+drift before it lands.
 
 Usage:
     python scripts/sync_plugin_assets.py          # sync + git-add (pre-commit mode)
@@ -25,8 +35,19 @@ sys.path.insert(0, str(ROOT))
 from goc.install import deck_hook_scripts  # noqa: E402
 
 
-def _build_sync_pairs() -> list[tuple[Path, Path, frozenset[str]]]:
-    """Compute (src, dst, excludes) pairs by deriving the hook list from templates/hooks/.
+SyncPair = tuple[Path, Path, frozenset[str], frozenset[str]]
+"""(src, dst, excludes, preserve_files).
+
+excludes: paths (relative to src) that live in src but must NOT be mirrored
+to dst — if they're accidentally present in dst, the sync deletes them.
+preserve_files: paths (relative to dst) that live only in dst and must NOT
+be deleted by the sync — typically files written by `goc install` from a
+different template path, or generated state that has no src counterpart.
+"""
+
+
+def _build_sync_pairs() -> list[SyncPair]:
+    """Compute (src, dst, excludes, preserve_files) pairs by deriving the hook list from templates/hooks/.
 
     Plugin-specific files NOT touched by this sync (`claude-plugin/hooks/hooks.json`,
     `claude-plugin/bin/`, `claude-plugin/pyproject.toml`, `openclaw-plugin/index.ts`,
@@ -42,11 +63,18 @@ def _build_sync_pairs() -> list[tuple[Path, Path, frozenset[str]]]:
     The OpenClaw plugin reimplements every deck hook in TypeScript inside
     `openclaw-plugin/index.ts`, so its deep mirror also excludes
     `templates/hooks/*.py` (in addition to `templates/skills/`).
+
+    The dogfood self-host targets (`.claude/skills/`, `.claude/hooks/`) use
+    the same skill set as the Claude plugin payload, plus a one-off file
+    sync for `goc/templates/bootstrap/_goc-bootstrap.sh` →
+    `.claude/skills/_goc-bootstrap.sh`. That bootstrap file is preserved
+    during the directory sync (`preserve_files`) so the dir-sync doesn't
+    delete it before the file-sync re-creates it.
     """
     templates = ROOT / "goc" / "templates"
     hook_names = deck_hook_scripts(templates)
 
-    pairs: list[tuple[Path, Path, frozenset[str]]] = []
+    pairs: list[SyncPair] = []
 
     # --- Claude plugin payload ---
     # Exclude OpenClaw-only host complements (e.g. `openclaw-kickoff`) from
@@ -59,13 +87,19 @@ def _build_sync_pairs() -> list[tuple[Path, Path, frozenset[str]]]:
         if p.is_dir() and p.name.startswith("openclaw-")
     )
     pairs.append(
-        (templates / "skills", ROOT / "claude-plugin" / "skills", openclaw_only_skills)
+        (
+            templates / "skills",
+            ROOT / "claude-plugin" / "skills",
+            openclaw_only_skills,
+            frozenset(),
+        )
     )
     for name in hook_names:
         pairs.append(
             (
                 templates / "hooks" / name,
                 ROOT / "claude-plugin" / "hooks" / name,
+                frozenset(),
                 frozenset(),
             )
         )
@@ -74,6 +108,7 @@ def _build_sync_pairs() -> list[tuple[Path, Path, frozenset[str]]]:
             ROOT / "goc",
             ROOT / "claude-plugin" / "goc",
             frozenset({"templates/skills"}),
+            frozenset(),
         )
     )
 
@@ -86,13 +121,48 @@ def _build_sync_pairs() -> list[tuple[Path, Path, frozenset[str]]]:
             ROOT / "openclaw-plugin" / "goc",
             frozenset({"templates/skills"})
             | frozenset(f"templates/hooks/{name}" for name in hook_names),
+            frozenset(),
         )
     )
+
+    # --- Dogfood self-host: this repo's own consumer-copy of `goc install` ---
+    # Without this block, .claude/skills/ and .claude/hooks/ drift silently
+    # whenever templates change; with it, pre-commit + CI catch the drift on
+    # the spot.
+    pairs.append(
+        (
+            templates / "skills",
+            ROOT / ".claude" / "skills",
+            openclaw_only_skills,
+            # `_goc-bootstrap.sh` is written by `goc install` from
+            # `templates/bootstrap/_goc-bootstrap.sh` (a different src path
+            # than templates/skills/). Preserve it during the dir sync; a
+            # separate single-file sync pair below keeps it current.
+            frozenset({"_goc-bootstrap.sh"}),
+        )
+    )
+    pairs.append(
+        (
+            templates / "bootstrap" / "_goc-bootstrap.sh",
+            ROOT / ".claude" / "skills" / "_goc-bootstrap.sh",
+            frozenset(),
+            frozenset(),
+        )
+    )
+    for name in hook_names:
+        pairs.append(
+            (
+                templates / "hooks" / name,
+                ROOT / ".claude" / "hooks" / name,
+                frozenset(),
+                frozenset(),
+            )
+        )
 
     return pairs
 
 
-SYNC_PAIRS: list[tuple[Path, Path, frozenset[str]]] = _build_sync_pairs()
+SYNC_PAIRS: list[SyncPair] = _build_sync_pairs()
 
 _SKIP_FRAGMENTS = ("__pycache__", ".pyc")
 
@@ -113,24 +183,36 @@ def _skip(path: Path) -> bool:
     return any(frag in s for frag in _SKIP_FRAGMENTS)
 
 
-def _sync_dir(src: Path, dst: Path, excludes: frozenset[str] = frozenset()) -> list[Path]:
+def _sync_dir(
+    src: Path,
+    dst: Path,
+    excludes: frozenset[str] = frozenset(),
+    preserve_files: frozenset[str] = frozenset(),
+) -> list[Path]:
     """Copy src → dst, remove dst-only files. Return changed dst paths.
 
-    Subpaths listed in `excludes` (relative to src) are skipped in both
-    directions: they are never copied from src and never removed from dst —
-    so an excluded path that exists in dst (but not src) is left alone, and
-    an excluded path that exists in src (but not dst) is not mirrored.
-    Excluded paths in dst that are *files* (e.g. stale leftovers) are removed
-    so the dst tree can shrink as the exclusion list grows.
+    Subpaths listed in `excludes` (relative to src) are NOT mirrored from
+    src to dst, and any such path that exists in dst is actively removed
+    (so excluded leftovers can't linger in the payload).
+
+    Subpaths listed in `preserve_files` (relative to dst) are LEFT ALONE
+    in dst — neither copied from src (which is expected not to have them)
+    nor removed. This is for files that exist in dst by virtue of a
+    different source path (e.g. `_goc-bootstrap.sh`, written from
+    `templates/bootstrap/`, lives in `.claude/skills/` but isn't part of
+    `templates/skills/`).
     """
     changed: list[Path] = []
 
     # Remove files in dst that no longer exist in src OR are now excluded.
+    # `preserve_files` short-circuits both branches.
     if dst.exists():
         for item in sorted(dst.rglob("*")):
             if _skip(item) or item.is_dir():
                 continue
             rel = item.relative_to(dst)
+            if rel.as_posix() in preserve_files:
+                continue
             if _excluded(rel, excludes):
                 item.unlink()
                 changed.append(item)
@@ -188,9 +270,9 @@ def _sync_file(src: Path, dst: Path) -> list[Path]:
 
 def _compute_changes() -> list[Path]:
     changed: list[Path] = []
-    for src, dst, excludes in SYNC_PAIRS:
+    for src, dst, excludes, preserve_files in SYNC_PAIRS:
         if src.is_dir():
-            changed.extend(_sync_dir(src, dst, excludes))
+            changed.extend(_sync_dir(src, dst, excludes, preserve_files))
         else:
             changed.extend(_sync_file(src, dst))
     return changed
@@ -199,7 +281,7 @@ def _compute_changes() -> list[Path]:
 def _check_changes() -> list[Path]:
     """Return list of dst paths that differ from src, without modifying anything."""
     out: list[Path] = []
-    for src, dst, excludes in SYNC_PAIRS:
+    for src, dst, excludes, preserve_files in SYNC_PAIRS:
         if src.is_dir():
             for src_item in sorted(src.rglob("*")):
                 if _skip(src_item) or src_item.is_dir():
@@ -215,6 +297,8 @@ def _check_changes() -> list[Path]:
                     if _skip(dst_item) or dst_item.is_dir():
                         continue
                     rel = dst_item.relative_to(dst)
+                    if rel.as_posix() in preserve_files:
+                        continue
                     if _excluded(rel, excludes):
                         # An excluded path lingering in dst means the payload
                         # is stale — flag it so CI can fail until it is pruned.
@@ -240,12 +324,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         diffs = _check_changes()
         if diffs:
-            print("ERROR: plugin assets are out of sync with goc/:")
+            print("ERROR: sync targets are out of sync with goc/ + goc/templates/:")
             for p in diffs:
                 print(f"  {p.relative_to(ROOT)}")
             print("Fix: run `python scripts/sync_plugin_assets.py` and commit the result.")
             return 1
-        print("OK — plugin assets match goc/ and goc/templates/ byte-for-byte.")
+        print("OK — plugin payloads + dogfood self-host copies match goc/ and goc/templates/ byte-for-byte.")
         return 0
 
     changed = _compute_changes()

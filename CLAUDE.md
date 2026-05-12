@@ -137,16 +137,34 @@ stays explicit in `GOC_CLAUDE_HOOKS`, and `goc validate` enforces that
 every script has a registration and every registration points at a
 real file.
 
-### Skill and config files have two copies — edit the template
+### Skill and hook files have two copies — edit the template, sync handles the rest
 
-Because this repo dogfoods itself, every file under `.claude/skills/`,
-`.claude/hooks/`, and `.game-of-cards/` is a
-*consumer copy* of the corresponding file under `goc/templates/`. The
-next `goc upgrade` overwrites the consumer copy from the template.
-**When editing skill bodies, hook scripts, or per-repo config stubs,
-edit `goc/templates/...` and re-run `goc upgrade`** (or edit both
-copies in lockstep). Editing only `.claude/skills/...` is silently
-lost on the next upgrade.
+Because this repo dogfoods itself, every file under `.claude/skills/`
+and `.claude/hooks/` is a *consumer copy* of the corresponding file
+under `goc/templates/`. **Always edit `goc/templates/...`** — the
+`sync-plugin-assets` pre-commit hook regenerates the `.claude/`
+mirrors from the templates on every commit and stages them
+automatically, the same way it already does for `claude-plugin/` and
+`openclaw-plugin/`. CI runs `python scripts/sync_plugin_assets.py
+--check` and fails the build on any drift, so editing only
+`.claude/skills/...` is now CI-detectable (it gets overwritten by the
+next pre-commit pass).
+
+The `.game-of-cards/` content stubs (project-local deck README,
+config) and `.claude/settings.json` (project-specific permission
+allow-list) are NOT in the auto-sync — they're meant to be customized
+per repo. The `<!-- BEGIN GOC vX.Y.Z -->` marker in `AGENTS.md` and
+the `.goc-version` sentinel are rewritten by the release workflow
+(see release section above), so they're also out of scope for the
+pre-commit sync.
+
+Bootstrap: `.claude/skills/_goc-bootstrap.sh` lives under
+`.claude/skills/` but is sourced from
+`goc/templates/bootstrap/_goc-bootstrap.sh` (not
+`goc/templates/skills/`). The sync script handles this via a
+`preserve_files` set on the skills dir-sync so the bootstrap isn't
+deleted as "not in src", with a separate single-file sync pair
+keeping its contents current.
 
 ### Plugin assets are auto-synced — edit only the template
 
