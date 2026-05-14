@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: sync-plugin-assets
         name: sync plugin assets from goc/ to claude-plugin/
-        entry: python scripts/sync_plugin_assets.py
+        entry: uv run python scripts/sync_plugin_assets.py
         language: system
         pass_filenames: false
         files: ^goc/

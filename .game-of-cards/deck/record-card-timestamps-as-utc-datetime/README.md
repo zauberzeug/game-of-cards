@@ -11,9 +11,10 @@ status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: 2026-05-11T03:41:01Z
+closed_at: "2026-05-11T03:41:01Z"
 human_gate: none
-advances: []
+advances:
+  - extend-utc-datetime-stamps-to-log-md-entries
 advanced_by: []
 tags: [meta-fix, documentation]
 definition_of_done: |
