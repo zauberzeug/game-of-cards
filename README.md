@@ -4,13 +4,13 @@ Agile for the age of agents — turn work into durable, inspectable cards that h
 
 ## Who this is for
 
-Game of Cards is for **vibe-coders** who want their coding agent to hold context between sessions, **solo developers** using it as a structured replacement for `TODO.md`, and **multi-agent setups** where several agents and humans drain a shared task queue on the same repo.
+Game of Cards is for **AI-first projects** — work where humans and AI agents collaborate in a project folder. Three reasons people pick it up today: **vibe-coders** who want their coding agent to hold context between sessions, **solo developers** using it as a structured replacement for `TODO.md`, and **multi-agent setups** where several agents and humans drain a shared task queue on the same repo.
 
 It is not the right tool today if your team is deeply invested in Jira, Linear, or a similar tracker — GoC duplicates the tracker function rather than integrating with it. Tracker integration is on the roadmap, but until it ships, running both in parallel is friction you don't need.
 
 At its core, it's just a to-do manager. Cards are markdown files with a checklist; the CLI wraps them. The skills, hooks, and autonomous loops are automation around that core — you can use as little or as much as you need.
 
-For the full picture — five personas, anti-personas, and which workflow shape each one accepts — see [`PERSONAS.md`](PERSONAS.md).
+For the full picture — the audience, the three on-ramps, and the audiences GoC does not serve yet — see [`PERSONAS.md`](PERSONAS.md).
 
 <p align="center"><img src="assets/game-of-cards.png" width="100%" alt="Three-panel comic: an AI creates cards and flags decisions, the human delegates a session while the LLM works the rest in the background, and the LLM surfaces the remaining human-gated card." /></p>
 
@@ -52,7 +52,7 @@ Brand new alpha — only a few days of implementation, no external users yet, pl
 
 ## More
 
-- [`PERSONAS.md`](PERSONAS.md) — who GoC is for, who it's not for yet, and which workflow shape each persona accepts.
+- [`PERSONAS.md`](PERSONAS.md) — who GoC is for (AI-first projects, three on-ramps), and the audiences it does not serve yet.
 - [`DECK_LOCATION.md`](DECK_LOCATION.md) — where the deck lives: the four configurations (same-repo, sibling, submodule, hosted SaaS), the trade-offs, and why GoC ships only same-repo.
 - [`goc.md`](goc.md) — CLI reference and manual install recipe.
 - [`ABOUT.md`](ABOUT.md) — methodology context: why "Game of Cards", agile lineage, and how it relates to other agent-coding tools.

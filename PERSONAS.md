@@ -1,14 +1,16 @@
 # Who Game of Cards is for
 
-This document names the audiences Game of Cards is built for, the audiences it is *not* built for yet, and the trade-offs each persona accepts.
+Game of Cards is for **AI-first projects** — work where a human collaborates with one or more AI agents in a project folder. The deck is files at `.game-of-cards/deck/`; optionally git-backed so memory survives sessions and agents see each other's work.
 
-It exists because most disagreement about GoC's positioning is downstream of unspoken persona mismatch — an OSS-library evaluator with strict commit hygiene hits invasive-install pain, but libraries are not the target persona today; an evaluator looking for a linear feature-planner finds the autonomous loop oversized; an evaluator with a non-code domain misses the to-do-engine framing.
+Three on-ramps illustrate how that fit shows up today: vibe-coders, solo developers, and multi-agent coordinators. They share the use case and the deck — different reasons to start, same tool. Below the on-ramps: variations in how the audience configures the tool, and the audiences GoC does *not* serve yet.
 
-The website features three of these personas prominently. The full list is here so evaluators can map themselves precisely.
+This file exists because most disagreement about GoC's positioning is downstream of unspoken mismatch. An evaluator with strict commit hygiene hits invasive-install pain; an evaluator looking for a static feature planner finds the autonomous loop oversized; an evaluator with a non-code domain wonders whether the engine cares. Naming the audience precisely — and the situations it doesn't yet cover — saves that round-trip.
 
-## Personas (in priority order)
+## The three on-ramps
 
-### 1. The vibe-coder
+The on-ramps share the use case and the deck. They differ only in *what makes GoC worth picking up* — different value props, same fit. You may be all three on different days; nothing in the engine cares which on-ramp you came in through.
+
+### The vibe-coder (AI-first)
 
 **Who.** Doesn't read code. Builds apps by describing what they want and letting the agent ship it. Comfortable in plain English; uncomfortable in a terminal.
 
@@ -25,9 +27,22 @@ The website features three of these personas prominently. The full list is here 
 
 **Trade-off they accept.** Partial features in `main`. Faster forward motion in exchange for less guarantee that any single commit is releasable.
 
+> **Non-code AI-first projects use the same on-ramp.** A recipe-book
+> author orchestrating Claude on draft / test / publish, a researcher
+> using an agent to manage a long literature review, a writer running
+> a novel-revision pipeline — these are vibe-coders in non-code
+> domains. The engine is domain-agnostic; the deck is files; the
+> CLI tolerates non-git directories. The one real gap today is
+> custom statuses (e.g. `drafting → review → published` instead of
+> `open → active → done`), tracked by
+> [`support-custom-card-workflows-and-statuses`](.game-of-cards/deck/support-custom-card-workflows-and-statuses).
+> Until that ships, non-code users map their workflow onto the built-in
+> statuses or wait. Examples and skills throughout this repo currently
+> assume a code project; that's documentation shape, not engine shape.
+
 ---
 
-### 2. The solo developer
+### The solo developer (AI-augmented)
 
 **Who.** Knows code. Has used `TODO.md` files, GitHub issues for personal projects, or a Notion board — and found all of them lossy. Wants their AI to keep state across the half-hour gaps between coding sessions.
 
@@ -46,9 +61,9 @@ The website features three of these personas prominently. The full list is here 
 
 ---
 
-### 3. The multi-agent coordinator
+### The multi-agent coordinator
 
-**Who.** Has multiple AI agents — local Claude sessions plus scheduled background agents on GitHub Actions or similar — converging on the same codebase. Wants them to not collide. This is also the maintainer's primary use case for GoC.
+**Who.** Has multiple AI agents — local Claude sessions plus scheduled background agents on GitHub Actions or similar — converging on the same project. Wants them to not collide. This is also the maintainer's primary use case for GoC.
 
 **What they need from GoC.**
 - A claim protocol — `status: active` is the soft lock; agents check it before claiming new work.
@@ -64,81 +79,34 @@ The website features three of these personas prominently. The full list is here 
 
 **Trade-off they accept.** Some `main`-branch noise from card lifecycle commits, in exchange for visibility every other coordination tool fails to give them.
 
----
+## Variations within the audience (configuration, not persona)
 
-### 4. The OpenClaw consumer
+These are choices any of the three on-ramps can make independently. They don't define a different audience or use case; they shape the install and the day-to-day experience.
 
-**Who.** Uses [OpenClaw](https://openclaw.ai) — a Node-based, ClawHub-distributed personal AI assistant — as their primary agent runtime. Comes to GoC from the OpenClaw side, not the Claude Code side. May also be a vibe-coder, a solo developer, or a multi-agent coordinator; what is distinctive is the runtime they walk in with.
+- **Runtime channel.** Claude Code (via plugin or pipx), [OpenClaw](https://openclaw.ai) (via ClawHub plugin), or the generic `goc` CLI from PyPI for any other agent runtime, CI, or no agent at all. The deck and the skills are the same across channels; only the integration shape differs (typed tool vs PATH binary vs shell call).
+- **Deck visibility.** Checked into the repo (default — agents and reviewers see card state in git history) or gitignored (local-only — no PR-diff noise, no cross-collaborator visibility). See [`DECK_LOCATION.md`](DECK_LOCATION.md) for the four configurations and their trade-offs.
+- **Single vs many agents.** A solo developer with one agent assistant and a multi-agent coordinator with three parallel sessions run the same engine. Autocommit and claim discipline scale up; nothing else changes.
 
-**What they need from GoC.**
-- `goc` reachable as a typed, registered tool the assistant can call directly — not a shell binary on PATH. OpenClaw does not auto-prepend plugin `bin/` directories, so the registered-tool model is the only viable shape.
-- The same deck, card lifecycle, and skills a Claude Code user gets, so the methodology is portable across runtimes rather than runtime-specific.
-- ClawHub-native distribution (`openclaw skills install game-of-cards`) so installing GoC mirrors the shape of installing any other OpenClaw plugin.
+## Audiences GoC doesn't serve yet
 
-**What they don't care about.**
-- Whether the bundled engine is Python — the plugin payload hides that detail.
-- The Claude Code plugin's Python hook scripts; the OpenClaw plugin reimplements those as TypeScript event handlers registered via `api.on()`.
+These groups have a real need that GoC's current engine, distribution, or documentation does not meet. Each links to the open card tracking the work that would change that.
 
-**Workflow shape.** Plugin installed via ClawHub. Deck inside the repo (`.game-of-cards/deck/`) as in every other channel. The assistant invokes `goc` through a typed tool, not a shell binary — the human never has to type CLI commands directly unless they want to.
-
-**Trade-off they accept.** A `python3` (3.10+) host prerequisite — the plugin bundles its engine but cannot ship a Python runtime — in exchange for native, zero-friction GoC inside OpenClaw.
-
----
-
-### 5. The classical-development team (transitional)
-
-**Who.** A team with branch-per-feature, mandatory PR review, and OSS-grade commit hygiene. Curious about GoC but uneasy about checking deck state into the main repo.
-
-**What they need from GoC.**
-- Deck stored *outside* the repo, or in a sibling location that doesn't trigger PR review noise.
-- The CLAUDE.md / AGENTS.md merge to be opt-in, not default.
-- A way to review the deck without reviewing it as part of every feature PR.
-
-**Status today.** Partially served. The deck has moved under `.game-of-cards/deck/` (less noise than top-level `deck/`), the CLAUDE.md merge is opt-in via the kickoff flow, and [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) is the active epic finishing the rest. If you live here, the website's "not for you yet" warning is honest — try GoC on a side project first. **Solo OSS maintainers** willing to keep their deck local-only have a working recipe today: see "The gitignored-deck recipe" in [`DECK_LOCATION.md`](DECK_LOCATION.md). Multi-maintainer OSS projects need to wait for the active epic.
-
-**Workflow shape (when the epic ships).** External deck (sibling directory or separate repo). No CLAUDE.md merge. Skills and hooks installed via plugin, not committed.
-
----
-
-### 6. The agent runtime as to-do engine (future)
-
-**Who.** A chatbot, customer-support assistant, or domain-specific agent that needs structured task management for a *non-code* domain — sales pipelines, research workflows, multi-stage approvals.
-
-**What they need from GoC.**
-- Card lifecycle without the assumption that closure equals a code commit.
-- Custom statuses and workflows beyond the current `open → active → done`.
-- Decoupled from git: the deck's authority is its own files, not a git history.
-
-**Status today.** Not yet served. The CLI presumes `git` and a code repo. [`support-custom-card-workflows-and-statuses`](.game-of-cards/deck/support-custom-card-workflows-and-statuses) is the relevant story; until it ships, agent runtimes that try to use GoC for non-code domains will fight the tool.
-
----
-
-## Anti-personas — who GoC is *not* for yet
-
-### Teams already deeply invested in Jira, Linear, or similar trackers
+### Teams deeply invested in Jira, Linear, or similar trackers
 
 GoC overlaps with the tracker function: it stores tasks, has statuses, supports queries, holds an audit trail. If your team has internalized a tracker workflow — sprints, story points, board automation, integrations into Slack and PRs — GoC will feel like a duplicate.
 
-The integration story exists ([`integrate-github-issues-discussions-and-pull-requests`](.game-of-cards/deck/integrate-github-issues-discussions-and-pull-requests), [`explore-saas-deck-hosting-with-optional-tracker-sync`](.game-of-cards/deck/explore-saas-deck-hosting-with-optional-tracker-sync)) but is not the current focus. If you can't run GoC alongside your tracker (rather than replacing it), wait for those cards.
+Integration is on the roadmap ([`integrate-github-issues-discussions-and-pull-requests`](.game-of-cards/deck/integrate-github-issues-discussions-and-pull-requests), [`explore-saas-deck-hosting-with-optional-tracker-sync`](.game-of-cards/deck/explore-saas-deck-hosting-with-optional-tracker-sync)) but is not the current focus. If you cannot run GoC alongside your tracker (rather than replacing it), wait for those cards.
 
-### OSS library maintainers with strict commit hygiene
+### Multi-maintainer OSS with strict commit hygiene
 
-Until [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) ships fully, the deck lives inside the repo and shows up in every PR diff. For libraries where every commit is reviewed by external contributors, that's noise you don't want. **Solo OSS maintainers** can adopt the gitignored-deck recipe in [`DECK_LOCATION.md`](DECK_LOCATION.md) — local-only task state, no PR noise. **Multi-maintainer OSS projects** are not served by that recipe (collaborators don't see your cards); try GoC on internal services first, or wait for the external-deck path.
+A library with branch-per-feature, mandatory PR review, and external-contributor reviewers wants the deck *outside* the repo so it never appears in PR diffs. Today's default keeps the deck inside the repo. The active epic [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) is finishing the external-deck path; until it ships, multi-maintainer OSS is not served.
 
-### Anyone wanting a feature planner without an autonomous loop
+**Solo OSS maintainers willing to keep their deck local-only have a working recipe today.** See "The gitignored-deck recipe" in [`DECK_LOCATION.md`](DECK_LOCATION.md). That recipe does not work for multi-maintainer projects because collaborators cannot see your cards — wait for the epic above, or try GoC on an internal-only project first.
 
-The agent-pull loop and the gate model are core to the methodology. If you want a static planning doc with no agent participation, GoC is heavier than you need — a markdown checklist or a Notion page is fine.
+## How to read this doc
 
----
+If you're working on an AI-first project, GoC is for you today. Pick the on-ramp whose value prop matches what *you* want from the tool — vibe-coders want continuity, solo developers want a DoD-enforced replacement for TODO.md, multi-agent coordinators want a claim protocol. You can use the engine identically whichever on-ramp you came in through; the on-ramps are framing aids for the reader, not switches in the tool.
 
-## How to choose
+If you live in one of the "doesn't serve yet" groups, the website's "not for you yet" warning is honest. The relevant cards are linked above — file an issue if your situation sharpens what the cards should cover.
 
-If your situation matches multiple personas, pick the one closest to **how the work is delivered**, not how the work is described.
-
-- "Solo dev with one agent assistant" → solo developer.
-- "Solo dev driving three parallel sessions" → multi-agent coordinator.
-- "Vibe-coder building a SaaS but committed to clean releases" → vibe-coder for daily flow, classical-dev considerations only at release time. (The "transitional" caveats apply.)
-- "Multi-agent setup but the domain is non-code" → today, neither persona quite fits. File an issue describing your case.
-- "Solo dev whose primary assistant is OpenClaw" → OpenClaw consumer for the delivery channel (which install path to take, which plugin handles tool registration), plus solo developer for the workflow shape (how the day actually flows). The two stack rather than compete.
-
-The personas are the lens GoC uses to decide which features to prioritize. They are not a contract — your situation can sharpen the list, and feedback is welcome.
+The audience is the lens GoC uses to decide which features to prioritize. It is not a contract — your situation can sharpen the list, and feedback is welcome.

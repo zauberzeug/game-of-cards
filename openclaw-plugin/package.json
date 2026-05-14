@@ -1,6 +1,6 @@
 {
   "name": "game-of-cards",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "Game of Cards skills and hooks — agile work-card methodology for OpenClaw agents. Bundles the goc engine; requires only python3 (3.10+) on PATH.",
   "type": "module",
   "main": "./dist/index.js",
