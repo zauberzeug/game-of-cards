@@ -3,6 +3,10 @@ name: refine-deck
 description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct file:line references, surface orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surface engineer-jargon titles for retitling, propose new canonical tags. AUTO-INVOKE when user says "tidy up the deck", "check for stale cards", "hygiene pass", "clean up the queue", "archive old", "audit the deck", or invokes /refine-deck. The board itself gets refactored each iteration (XP refactor mercilessly + Kanban continuous improvement).
 ---
 
+## Context (project-local extension)
+
+`cat .game-of-cards/hooks/refine-deck.md 2>/dev/null || true`
+
 # Refine the deck
 
 Scrum's **Backlog Refinement** (Schwaber & Sutherland) applied to the
@@ -13,6 +17,12 @@ filing slows down — stale parks, defunct cites, missing summaries,
 tags whose predicate no longer fires. The same first-principles edge
 that catches code drift catches deck drift; this skill is the recurring
 tax that keeps the read-pattern guarantee alive.
+
+The consuming repo may extend this hygiene flow via
+`.game-of-cards/hooks/refine-deck.md` (already loaded above) — e.g.,
+to demand a pattern-discovery pass with specialized reviewers,
+override the 90-day decay threshold, or surface project-specific
+categories beyond the generic ones below.
 
 Surface rot and propose corrective edits — never apply them silently.
 Categories:

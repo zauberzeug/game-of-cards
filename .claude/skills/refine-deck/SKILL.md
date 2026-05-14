@@ -7,6 +7,10 @@ description: Deck hygiene pass — retag stale cards, prune 90-day unverified pa
 
 If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
 
+## Context (project-local extension)
+
+!`cat .game-of-cards/hooks/refine-deck.md 2>/dev/null || true`
+
 # Refine the deck
 
 Scrum's **Backlog Refinement** (Schwaber & Sutherland) applied to the
@@ -17,6 +21,12 @@ filing slows down — stale parks, defunct cites, missing summaries,
 tags whose predicate no longer fires. The same first-principles edge
 that catches code drift catches deck drift; this skill is the recurring
 tax that keeps the read-pattern guarantee alive.
+
+The consuming repo may extend this hygiene flow via
+`.game-of-cards/hooks/refine-deck.md` (already loaded above) — e.g.,
+to demand a pattern-discovery pass with specialized reviewers,
+override the 90-day decay threshold, or surface project-specific
+categories beyond the generic ones below.
 
 Surface rot and propose corrective edits — never apply them silently.
 Categories:
