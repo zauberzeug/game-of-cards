@@ -61,19 +61,19 @@ Each alternative buys cleaner commit history at the cost of substantial path-res
 
 ### Sibling repo
 
-**Persona served.** The classical-development team (PERSONAS.md §4) — branch-per-feature, mandatory PR review, OSS-grade commit hygiene. They want the deck out of the code repo's PR diffs.
+**Audience served.** Multi-maintainer OSS with strict commit hygiene — branch-per-feature, mandatory PR review, OSS-grade commit hygiene (one of the "audiences GoC doesn't serve yet" in PERSONAS.md). They want the deck out of the code repo's PR diffs.
 
-**Why deferred, not abandoned.** The active epic [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) already explores deck-path indirection (its recorded decision: `.game-of-cards/` is checked-in by default but users may gitignore it). That epic should mature first; sibling-repo discovery is downstream of it. Reconsider when an actual classical-dev team adopts GoC and asks for it — today, the persona is "transitional" precisely because it is not yet validated by adoption.
+**Why deferred, not abandoned.** The active epic [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location) already explores deck-path indirection (its recorded decision: `.game-of-cards/` is checked-in by default but users may gitignore it). That epic should mature first; sibling-repo discovery is downstream of it. Reconsider when an actual multi-maintainer OSS team adopts GoC and asks for it — today, this audience is in the "doesn't serve yet" list precisely because it is not yet validated by adoption.
 
 ### Git submodule
 
-**Persona served.** Same as sibling-repo — classical-development teams who want a versioned link from a code commit to the deck state at that commit.
+**Audience served.** Same as sibling-repo — multi-maintainer OSS teams who want a versioned link from a code commit to the deck state at that commit.
 
-**Why deferred.** Submodules are a UX friction every developer who's used them complains about. Shipping a submodule-based default would make the first-run experience worse for the personas GoC actually targets (vibe-coder, solo developer, multi-agent coordinator) to serve a persona that is not yet validated. The cost-benefit doesn't clear.
+**Why deferred.** Submodules are a UX friction every developer who's used them complains about. Shipping a submodule-based default would make the first-run experience worse for the on-ramps GoC actually targets (vibe-coder, solo developer, multi-agent coordinator) to serve an audience that is not yet validated. The cost-benefit doesn't clear.
 
 ### Hosted SaaS
 
-**Persona served.** Two: (a) teams already invested in Jira/Linear (PERSONAS.md anti-personas) who want bidirectional tracker sync — naturally a service feature, not a CLI feature; (b) the multi-agent coordinator persona at scale, where "shared mutable state with strong consistency" is easier to provide as a service than as a git protocol.
+**Audiences served.** Two: (a) teams already invested in Jira/Linear (one of the "audiences GoC doesn't serve yet" in PERSONAS.md) who want bidirectional tracker sync — naturally a service feature, not a CLI feature; (b) the multi-agent coordinator on-ramp at scale, where "shared mutable state with strong consistency" is easier to provide as a service than as a git protocol.
 
 **Why deferred.** This is its own epic — see [`explore-saas-deck-hosting-with-optional-tracker-sync`](.game-of-cards/deck/explore-saas-deck-hosting-with-optional-tracker-sync). It is research and business-modeling, not a configuration of the same CLI. The hosted-deck path is essentially "deck-as-separate-storage" with the storage outsourced; a decision to pursue it is a product decision, not a packaging decision.
 
@@ -139,11 +139,11 @@ The recipe is honest about being local-only. It is the right answer when you are
 
 ### Why this is documented but not the default
 
-Making `.gitignore` the default would reverse the multi-agent coordinator's primary use case (deck visible across machines and CI runners), which is the persona GoC is most validated for today. The decision to keep checked-in as the default and gitignore as opt-in lives on [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location); this section is the recipe for picking the opt-in.
+Making `.gitignore` the default would reverse the multi-agent coordinator's primary use case (deck visible across machines and CI runners), which is the on-ramp GoC is most validated for today. The decision to keep checked-in as the default and gitignore as opt-in lives on [`support-external-game-of-cards-state-location`](.game-of-cards/deck/support-external-game-of-cards-state-location); this section is the recipe for picking the opt-in.
 
 ## Where to read more
 
-- [`PERSONAS.md`](PERSONAS.md) — who GoC is for; classical-development team (§4) is the persona most affected by this decision.
+- [`PERSONAS.md`](PERSONAS.md) — who GoC is for; multi-maintainer OSS with strict commit hygiene (under "audiences GoC doesn't serve yet") is the group most affected by this decision.
 - [`support-worktrees-and-multi-agent-deck-sync`](.game-of-cards/deck/support-worktrees-and-multi-agent-deck-sync) — the parent epic that frames this card.
 - [`design-claim-protocol-with-branch-and-author-metadata`](.game-of-cards/deck/design-claim-protocol-with-branch-and-author-metadata) — the sibling card that designs the protocol for the same-repo path GoC actually ships.
 - [`explore-saas-deck-hosting-with-optional-tracker-sync`](.game-of-cards/deck/explore-saas-deck-hosting-with-optional-tracker-sync) — the SaaS path, scoped as its own epic.
