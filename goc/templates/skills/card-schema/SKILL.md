@@ -71,6 +71,12 @@ the promotion rule is "drop the `unverified` tag once a working
 
 ## Timestamps (`created`, `closed_at`)
 
+`created` is stamped at card birth. `closed_at` is stamped on **every
+terminal transition** — done, disproved, or superseded. `status` names
+the outcome; `closed_at` is the single date per terminal exit, not a
+shipped-only marker. Validator rule is symmetric: `closed_at` is
+required iff `status` is terminal, null otherwise.
+
 Both fields accept two shapes:
 
 - **ISO 8601 UTC datetime** — `YYYY-MM-DDTHH:MM:SSZ` (e.g.

@@ -390,6 +390,10 @@ class Card:
 
     @property
     def closed_at(self):
+        """ISO timestamp the card entered a terminal status (done, disproved,
+        or superseded). Null on non-terminal cards. `status` disambiguates
+        the outcome — `closed_at` is a single date per terminal exit, not a
+        shipped-only marker."""
         return self.frontmatter.get("closed_at")
 
     @property
@@ -788,15 +792,16 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             if tag not in schema.canonical_tags:
                 errors.append(f"{t.title}: tags: unknown tag '{tag}' (not in SCHEMA.md canonical_tags)")
 
-    if fm.get("status") == "done":
+    status_value = fm.get("status")
+    if status_value in TERMINAL_STATUSES:
         if closed_at is None:
-            errors.append(f"{t.title}: closed_at: must be set when status=done")
-        if t.dod_open > 0:
+            errors.append(f"{t.title}: closed_at: must be set when status={status_value}")
+        if status_value == "done" and t.dod_open > 0:
             errors.append(f"{t.title}: definition_of_done: status=done with {t.dod_open} unchecked boxes")
     elif closed_at is not None:
         errors.append(
-            f"{t.title}: closed_at: must be null when status is not done"
-            f" (status={fm.get('status')!r}, closed_at={closed_at!r})"
+            f"{t.title}: closed_at: must be null when status is non-terminal"
+            f" (status={status_value!r}, closed_at={closed_at!r})"
         )
 
     worker = fm.get("worker")
@@ -906,6 +911,7 @@ def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) ->
 STATUS_VALUES = ("open", "active", "blocked", "done", "disproved", "superseded")
 STATUS_FILTER_VALUES = (*STATUS_VALUES, "all")
 MUTABLE_STATUS_VALUES = tuple(status for status in STATUS_VALUES if status != "done")
+TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})
 CONTRIBUTION_ORDER = {"high": 0, "medium": 1, "low": 2}
 STAGE_ORDER = ["null", "alpha", "beta", "stable"]
 
@@ -1948,8 +1954,7 @@ def _cmd_done(args):
     if prior == "done":
         print(f"{title}: already done; closed_at unchanged")
         return
-    _TERMINAL_NON_DONE = frozenset({"disproved", "superseded"})
-    if prior in _TERMINAL_NON_DONE:
+    if prior in TERMINAL_STATUSES:
         print(
             f"ERROR: {title}: status is {prior!r} (terminal); "
             f"use the supersede/disprove workflow — 'done' cannot overwrite terminal states",
@@ -2571,8 +2576,7 @@ def _cmd_status(args):
         else:
             print(f"{title}: already {new_status}; nothing to do")
         return
-    _TERMINAL = frozenset({"done", "disproved", "superseded"})
-    if prior in _TERMINAL:
+    if prior in TERMINAL_STATUSES:
         print(
             f"ERROR: {title}: status is {prior!r} (terminal);"
             f" terminal cards cannot be moved backward through `goc status`",
@@ -2581,6 +2585,8 @@ def _cmd_status(args):
         sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
+    if new_status in TERMINAL_STATUSES:
+        text = mutate_frontmatter_field(text, "closed_at", _utc_now_iso())
     if new_status == "active":
         text = _auto_populate_worker(text, t, worker_who, worker_where)
     (card_dir / "README.md").write_text(text)
