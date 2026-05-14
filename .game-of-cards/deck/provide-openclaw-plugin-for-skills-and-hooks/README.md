@@ -1,12 +1,12 @@
 ---
 title: provide-openclaw-plugin-for-skills-and-hooks
 summary: "Replace the blocked OpenClaw harness direction with a later OpenClaw plugin/runtime package for Game of Cards skills and hooks. This supersedes `install-openclaw-harness` and should wait until the Claude/Codex plugin pattern is clear or an OpenClaw consumer appears."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-05
-closed_at: null
-human_gate: session
+closed_at: 2026-05-14T04:56:42Z
+human_gate: none
 advances:
   - support-external-game-of-cards-state-location
   - publish-openclaw-plugin
@@ -30,10 +30,10 @@ definition_of_done: |
   - [x] OpenClaw plugin-bin PATH integration verified from upstream docs/source: confirm whether OpenClaw auto-prepends a plugin's `bin/` to skill-execution PATH (parallel to Claude Code), or whether a substitute resolution path (post-install symlink, absolute-path invocation in skills, etc.) is needed; outcome recorded in this card's log
   - [x] Plugin delegates durable state to `.game-of-cards` and the `goc` CLI
   - [x] OpenClaw hook/event surface investigated and the SessionStart/UserPromptSubmit/Stop equivalence (or gap) documented in this card's log
-  - [ ] Plugin published on ClawHub (<https://clawhub.ai>) so consumers can `openclaw skills install <id>`
-  - [ ] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09; first publish claims it)
+  - [x] Plugin published on ClawHub (<https://clawhub.ai>) so consumers can `openclaw skills install <id>` — `clawhub package inspect game-of-cards` reports Latest 0.0.17 (Owner: zauberzeug, Updated 2026-05-11T13:52:32Z); driven automatically by the OIDC publish leg of `release.yml` once the publisher-identity bug closed
+  - [x] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09; first publish claims it) — `npm view game-of-cards version` returns 0.0.17, dist-tag `latest`
   - [x] Docs list OpenClaw plugin support separately from repo-local harness installation; document the `python3` (3.10+) prerequisite explicitly (no `uv` required)
-  - [ ] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback
+  - [x] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback — confirmed by Rodja 2026-05-14: OpenClaw plugin installs cleanly
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
