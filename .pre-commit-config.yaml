@@ -9,7 +9,7 @@ repos:
         files: ^goc/
       - id: goc-validate
         name: goc validate
-        entry: goc validate
+        entry: uv run goc validate
         language: system
         pass_filenames: false
         files: ^(\.game-of-cards/deck/|goc/|claude-plugin/).*$

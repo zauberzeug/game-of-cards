@@ -1,21 +1,21 @@
 ---
 title: refine-deck-skill-missing-consuming-repo-hook-override
 summary: refine-deck is the only deck-mutating skill that doesn't load a `.game-of-cards/hooks/<name>.md` override, so consuming repos can't extend its hygiene pass with project-specific decay thresholds, categories, or generalization hunters. Add the `!cat` injection line, ship the hook stub, and mention the extension point in the body.
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-14T12:30:11Z"
-closed_at: null
+closed_at: 2026-05-14T12:40:15Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] `goc/templates/skills/refine-deck/SKILL.md` loads `.game-of-cards/hooks/refine-deck.md` via `!`cat ... 2>/dev/null || true`` between the Preflight section and the `# Refine the deck` H1, mirroring audit-deck's placement at line 21
-  - [ ] One body sentence near the top of refine-deck names the hook as a consuming-repo extension point (so future readers discover it without reverse-engineering the `!cat` line)
-  - [ ] `goc/templates/game_of_cards/hooks/refine-deck.md` stub exists, mirroring the boilerplate in `audit-deck.md` (header comment explains the injection mechanism; file body is empty)
-  - [ ] `pre-commit run --all-files` passes — `sync-plugin-assets` regenerates `.claude/skills/refine-deck/SKILL.md` and `claude-plugin/skills/refine-deck/SKILL.md` from the template, and `goc validate` stays green
-  - [ ] `openclaw-plugin/skills/refine-deck/SKILL.md` reflects the hook (run `scripts/port_skills_to_openclaw.py` and review the diff)
+  - [x] `goc/templates/skills/refine-deck/SKILL.md` loads `.game-of-cards/hooks/refine-deck.md` via `!`cat ... 2>/dev/null || true`` in a `## Context (project-local extension)` block between Preflight and the `# Refine the deck` H1; the `## Context` H2 is required so the OpenClaw porter's `PREFLIGHT_RE` (which spans up to the next H1/H2 boundary) doesn't strip the hook line
+  - [x] One body sentence near the top of refine-deck names the hook as a consuming-repo extension point (so future readers discover it without reverse-engineering the `!cat` line)
+  - [x] `goc/templates/game_of_cards/hooks/refine-deck.md` stub exists, mirroring the boilerplate in `audit-deck.md` (header comment explains the injection mechanism; file body is empty)
+  - [x] `uv run goc validate` passes; `sync-plugin-assets` pre-commit hook regenerates `.claude/skills/refine-deck/SKILL.md` and `claude-plugin/skills/refine-deck/SKILL.md` from the template
+  - [x] `openclaw-plugin/skills/refine-deck/SKILL.md` reflects the hook (re-port via `scripts/port_skills_to_openclaw.py` confirmed; non-refine-deck OpenClaw drift was reverted to stay scoped — separate cleanup card should be filed)
 worker: {who: Rodja Trappe, where: main}
 ---
 
