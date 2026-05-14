@@ -526,8 +526,16 @@ def validate_skill_dir_parity() -> list[str]:
     Per-agent filter: skills with another agent's prefix (e.g. `claude-*` for
     the codex tree) are excluded — they are agent-specific complements that
     only ship under their own harness.
+
+    Skipped entirely when the repo's effective `skills_source` is `plugin` —
+    in plugin mode `.claude/skills/` is user territory (the user may keep
+    non-GoC skills there), and GoC's own skills live under
+    `${CLAUDE_PLUGIN_ROOT}/skills/` which this check does not own.
     """
     from goc.install import skill_for_agent
+
+    if effective_skills_source() == "plugin":
+        return []
 
     template_skills = PACKAGE_DIR / "templates" / "skills"
     if not template_skills.exists():
@@ -544,7 +552,8 @@ def validate_skill_dir_parity() -> list[str]:
         if missing:
             errors.append(
                 f"{relative}: missing skills {sorted(missing)} that goc templates ship; "
-                "run `goc upgrade --keep-local-skills` to resync"
+                "run `goc upgrade --keep-local-skills` to resync, or set "
+                "`skills_source: plugin` in .game-of-cards/config.yaml to skip this check"
             )
     return errors
 
@@ -2260,6 +2269,73 @@ def load_deck_config() -> dict:
     if LEGACY_DECK_CONFIG_FILE.exists():
         return yaml.safe_load(LEGACY_DECK_CONFIG_FILE.read_text()) or {}
     return {"layer_2_project_dod": [], "layer_3_goc_dod": []}
+
+
+SKILLS_SOURCE_VALUES = ("plugin", "vendored", "auto")
+DEFAULT_SKILLS_SOURCE = "auto"
+
+
+def get_skills_source() -> str:
+    """Return the configured `skills_source` value, or 'auto' if absent/invalid.
+
+    Reads `.game-of-cards/config.yaml` (or the legacy `.claude/config.yaml`).
+    Invalid values fall back to 'auto' silently — the config is meant to be
+    forward-compatible.
+    """
+    value = load_deck_config().get("skills_source")
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in SKILLS_SOURCE_VALUES:
+            return normalized
+    return DEFAULT_SKILLS_SOURCE
+
+
+def _claude_plugin_present() -> bool:
+    """True if the Claude Code GoC plugin appears installed on this host.
+
+    Looks under `$CLAUDE_PLUGIN_ROOT` (if set) and the default Claude Code
+    plugin directory (`~/.claude/plugins`) for a `game-of-cards*` plugin
+    payload with a `skills/` subtree. Used only to resolve `skills_source: auto`.
+    """
+    candidates: list[Path] = []
+    env_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    if env_root:
+        candidates.append(Path(env_root))
+    candidates.append(Path.home() / ".claude" / "plugins")
+    for root in candidates:
+        try:
+            if not root.exists() or not root.is_dir():
+                continue
+        except OSError:
+            continue
+        if (root / "skills").is_dir() and root.name.startswith("game-of-cards"):
+            return True
+        try:
+            for child in root.iterdir():
+                if not child.is_dir():
+                    continue
+                if child.name.startswith("game-of-cards") and (child / "skills").is_dir():
+                    return True
+                for grand in child.iterdir() if child.is_dir() else ():
+                    if grand.name.startswith("game-of-cards") and (grand / "skills").is_dir():
+                        return True
+        except OSError:
+            continue
+    return False
+
+
+def effective_skills_source() -> str:
+    """Resolve the configured `skills_source` to a concrete 'plugin' or 'vendored'.
+
+    'plugin' or 'vendored' configured → return as-is.
+    'auto' (or unset/invalid) → detect Claude Code GoC plugin presence;
+    return 'plugin' if found, else 'vendored'. The vendored fallback
+    preserves the historical default for installs that predate this key.
+    """
+    configured = get_skills_source()
+    if configured != "auto":
+        return configured
+    return "plugin" if _claude_plugin_present() else "vendored"
 
 
 def _run_automated_check(check: dict) -> tuple[bool, str]:

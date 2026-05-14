@@ -1,11 +1,11 @@
 ---
 title: clawhub-publish-fails-with-package-belongs-to-another-publisher
 summary: "On the v0.0.13 release run (workflow_dispatch, 2026-05-10), the `publish-clawhub / publish` job failed with `Uncaught ConvexError: Package already exists and belongs to another publisher`. PyPI (0.0.13) and npm (0.0.13) published cleanly in the same run, so the failure is ClawHub-specific. Hypothesis: the same-day npm-org rebrand (closed card `publish-npm-package-under-zauberzeug-org-not-personal`) re-anchored the publisher identity that the ClawHub trusted-publisher entry resolves to, and ClawHub's Convex store still tracks the existing `game-of-cards` package against the previous publisher — so the new identity hits the registry's ownership guard. Until this is resolved every tag push lands two-thirds of a release."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-10
-closed_at: null
+closed_at: 2026-05-14T04:54:03Z
 human_gate: none
 advances:
   - publish-openclaw-plugin

@@ -59,3 +59,24 @@ hooks:
 #   action  — CI workflow runs `pull-card` on a schedule.
 #
 # autonomy: loop
+
+# Where this repo's GoC skills come from. Read by `goc upgrade` and
+# `goc validate` so the engine knows whether `.claude/skills/` is GoC's
+# territory or the user's. Written by `goc install` based on the chosen
+# install mode; can be edited by hand to migrate between paths.
+#
+#   plugin    — skills come from a runtime plugin (e.g. Claude Code's
+#               GoC plugin at ${CLAUDE_PLUGIN_ROOT}/skills/). `goc upgrade`
+#               does NOT write `.claude/skills/`, `.claude/hooks/`, or
+#               GoC entries in `.claude/settings.json`; `goc validate`
+#               does NOT enforce skill-dir parity against `.claude/skills/`.
+#   vendored  — skills are checked into source control under
+#               `.claude/skills/`. `goc upgrade` refreshes them in place;
+#               `goc validate` enforces parity.
+#   auto      — detect whether the GoC runtime plugin is installed on
+#               this host (looks under ${CLAUDE_PLUGIN_ROOT} and the
+#               default Claude Code plugin directory). Plugin found →
+#               behave as `plugin`. Plugin not found → behave as
+#               `vendored`. This is the default when the key is absent.
+#
+# skills_source: auto

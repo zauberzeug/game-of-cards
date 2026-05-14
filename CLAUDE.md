@@ -158,6 +158,27 @@ the `.goc-version` sentinel are rewritten by the release workflow
 (see release section above), so they're also out of scope for the
 pre-commit sync.
 
+### `skills_source` — which install path owns `.claude/skills/`
+
+`.game-of-cards/config.yaml` holds a `skills_source` key, written by
+`goc install` and read by both `goc upgrade` and `goc validate`. It is
+the per-repo signal that says where Claude Code's GoC skills come from:
+
+| Value | Meaning |
+|---|---|
+| `plugin` | Skills come from the Claude Code plugin payload (`${CLAUDE_PLUGIN_ROOT}/skills/`). `goc upgrade` does not write `.claude/skills/`, `.claude/hooks/`, or GoC entries in `.claude/settings.json`. `goc validate` skips the skill-dir parity check. Written when `goc install` is run *without* `--local-skills`. |
+| `vendored` | Skills are checked into source control under `.claude/skills/`. `goc upgrade` refreshes those templates in place; `goc validate` enforces parity. Written when `goc install --local-skills` is used. |
+| `auto` / unset | The engine detects whether a Claude Code GoC plugin payload is present on the host (looks under `$CLAUDE_PLUGIN_ROOT` and `~/.claude/plugins`). Plugin found → behave as `plugin`. Plugin not found → behave as `vendored`. This is the fallback for legacy installs that predate the key. |
+
+Switching modes is a manual config edit. To move a vendored repo to
+plugin mode: edit `skills_source: plugin` in
+`.game-of-cards/config.yaml`, then `goc upgrade` — which detects the
+leftover `.claude/skills/` and prompts for cleanup. The cleanup only
+removes GoC-managed skill directories, hook files, and settings
+entries; non-GoC skills in `.claude/skills/` are preserved. Declining
+the cleanup is a strict no-op (the buggy "decline re-vendors and
+deletes user skills" path that motivated this design is gone).
+
 Bootstrap: `.claude/skills/_goc-bootstrap.sh` lives under
 `.claude/skills/` but is sourced from
 `goc/templates/bootstrap/_goc-bootstrap.sh` (not

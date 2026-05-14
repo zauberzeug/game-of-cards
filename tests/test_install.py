@@ -406,6 +406,12 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
     # ── Upgrade: migration (vendored → plugin path) ───────────────────────────
 
     def test_upgrade_migrates_vendored_claude_to_plugin_path(self) -> None:
+        """Migration is opt-in via config edit, not an upgrade-time prompt.
+
+        Flipping `skills_source: vendored` → `plugin` in config and re-running
+        upgrade prompts for cleanup; confirming removes the leftover vendored
+        layout (skills, hooks, GoC settings entries).
+        """
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
@@ -413,7 +419,13 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / ".claude" / "skills" / "pull-card" / "SKILL.md").is_file())
             self.assertTrue((cwd / ".claude" / "settings.json").is_file())
 
-            # Upgrade with migration confirmed (input "y")
+            # User opts into plugin mode by editing config.
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.write_text(
+                config_path.read_text().replace("skills_source: vendored", "skills_source: plugin")
+            )
+
+            # Upgrade with cleanup confirmed (input "y")
             result = subprocess.run(
                 [sys.executable, "-m", "goc.cli", "upgrade"],
                 cwd=cwd,
@@ -465,39 +477,50 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(result)
             self.assertNotIn("Migrate", result.stdout)
 
-    def test_upgrade_migration_dry_run_shows_note(self) -> None:
+    def test_upgrade_dry_run_announces_cleanup_when_mode_switches_to_plugin(self) -> None:
+        """After flipping config to plugin, dry-run announces the cleanup opportunity."""
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
             self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.write_text(
+                config_path.read_text().replace("skills_source: vendored", "skills_source: plugin")
+            )
 
             result = self.run_goc(cwd, "upgrade", "--dry-run")
 
             self.assert_goc_ok(result)
-            self.assertIn("plugin path", result.stdout)
+            self.assertIn("cleanup", result.stdout)
 
-    def test_upgrade_migration_decline_preserves_vendored(self) -> None:
+    def test_upgrade_in_vendored_mode_does_not_prompt(self) -> None:
+        """Once `skills_source: vendored` is pinned, upgrade never prompts.
+
+        The historical interactive migration prompt was the surface that
+        leaked the buggy decline-re-vendors behavior. With config-driven
+        mode resolution, vendored is a stable terminal state — no prompt
+        fires, no destructive default exists.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
             self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
-            stale_skill = cwd / ".claude" / "skills" / "pull-card" / "SKILL.md"
-            stale_skill.write_text("custom skill content\n")
+            (cwd / ".game-of-cards" / "deck" / ".goc-version").write_text("0.0.0\n")
 
-            # Decline migration with "n"
             result = subprocess.run(
                 [sys.executable, "-m", "goc.cli", "upgrade"],
                 cwd=cwd,
                 env={**os.environ, "PYTHONPATH": str(ROOT)},
-                input="n\n",
+                input="",
                 text=True,
                 capture_output=True,
                 check=False,
             )
 
             self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertNotIn("Migrate", result.stdout)
+            self.assertNotIn("Remove leftover", result.stdout)
             self.assertTrue((cwd / ".claude" / "skills").exists())
-            self.assertIn("# Pull a card", stale_skill.read_text())
 
     def test_upgrade_on_plugin_path_repo_needs_no_migration(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -511,6 +534,137 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(result)
             self.assertNotIn("Migrate", result.stdout)
             self.assertFalse((cwd / ".claude" / "skills").exists())
+
+    # ── skills_source config: write-on-install, read-on-upgrade ───────────────
+
+    def test_install_default_writes_skills_source_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = (cwd / ".game-of-cards" / "config.yaml").read_text()
+            self.assertIn("\nskills_source: plugin\n", config)
+
+    def test_install_local_skills_writes_skills_source_vendored(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            config = (cwd / ".game-of-cards" / "config.yaml").read_text()
+            self.assertIn("\nskills_source: vendored\n", config)
+
+    def test_plugin_mode_upgrade_preserves_non_goc_skills(self) -> None:
+        """Regression: upgrade in plugin mode must not delete user-owned skills.
+
+        The earlier bug had `_sync_skill_tree(replace_skills=True)` rmtreeing
+        any skill directory whose name wasn't in the GoC template set,
+        collateral-deleting non-GoC user skills. With plugin mode, no skill
+        write should happen at all in `.claude/skills/`.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            user_skill = cwd / ".claude" / "skills" / "my-tool"
+            user_skill.mkdir(parents=True)
+            (user_skill / "SKILL.md").write_text("# My custom tool\n")
+
+            self.assert_goc_ok(self.run_goc(cwd, "upgrade"))
+
+            self.assertTrue((user_skill / "SKILL.md").is_file())
+            self.assertIn("# My custom tool", (user_skill / "SKILL.md").read_text())
+
+    def test_vendored_mode_upgrade_preserves_non_goc_skills(self) -> None:
+        """Regression: replace_skills=True must never touch non-eligible dirs.
+
+        Even in vendored mode where eligible skills DO get refreshed in place,
+        directories outside the GoC template set are user-owned and must be
+        left strictly alone.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            user_skill = cwd / ".claude" / "skills" / "my-tool"
+            user_skill.mkdir(parents=True)
+            (user_skill / "SKILL.md").write_text("# My custom tool\n")
+
+            self.assert_goc_ok(self.run_goc(cwd, "upgrade", "--keep-local-skills"))
+
+            self.assertTrue((user_skill / "SKILL.md").is_file())
+            self.assertIn("# My custom tool", (user_skill / "SKILL.md").read_text())
+
+    def test_validate_skips_skill_parity_in_plugin_mode(self) -> None:
+        """Regression for the false-positive `goc validate` failure.
+
+        In plugin mode the user keeps non-GoC skills under `.claude/skills/`;
+        the GoC skills live under `${CLAUDE_PLUGIN_ROOT}/skills/`. The
+        parity check must skip rather than report all template skills as
+        missing.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            user_skill = cwd / ".claude" / "skills" / "my-tool"
+            user_skill.mkdir(parents=True)
+            (user_skill / "SKILL.md").write_text("# My custom tool\n")
+
+            result = self.run_goc(cwd, "validate")
+
+            self.assert_goc_ok(result)
+            self.assertNotIn("missing skills", result.stderr + result.stdout)
+
+    def test_plugin_mode_cleanup_confirm_preserves_user_skills(self) -> None:
+        """Confirmed cleanup removes GoC-owned skills but leaves user skills alone."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.write_text(
+                config_path.read_text().replace("skills_source: vendored", "skills_source: plugin")
+            )
+            user_skill = cwd / ".claude" / "skills" / "my-custom-tool"
+            user_skill.mkdir(parents=True)
+            (user_skill / "SKILL.md").write_text("# Custom\n")
+
+            result = subprocess.run(
+                [sys.executable, "-m", "goc.cli", "upgrade"],
+                cwd=cwd,
+                env={**os.environ, "PYTHONPATH": str(ROOT)},
+                input="y\n",
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertTrue((user_skill / "SKILL.md").is_file())
+            self.assertFalse((cwd / ".claude" / "skills" / "pull-card").exists())
+            self.assertFalse((cwd / ".claude" / "hooks" / "deck_session_start.py").exists())
+
+    def test_plugin_mode_cleanup_decline_is_a_no_op(self) -> None:
+        """Cleanup prompt's decline path is a true no-op — no re-vendor."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.write_text(
+                config_path.read_text().replace("skills_source: vendored", "skills_source: plugin")
+            )
+            user_skill = cwd / ".claude" / "skills" / "my-tool"
+            user_skill.mkdir(parents=True)
+            (user_skill / "SKILL.md").write_text("# My custom tool\n")
+
+            result = subprocess.run(
+                [sys.executable, "-m", "goc.cli", "upgrade"],
+                cwd=cwd,
+                env={**os.environ, "PYTHONPATH": str(ROOT)},
+                input="n\n",
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertTrue((cwd / ".claude" / "skills" / "pull-card" / "SKILL.md").is_file())
+            self.assertTrue((user_skill / "SKILL.md").is_file())
+            self.assertIn("# My custom tool", (user_skill / "SKILL.md").read_text())
 
     # ── Upgrade: general behavior ─────────────────────────────────────────────
 

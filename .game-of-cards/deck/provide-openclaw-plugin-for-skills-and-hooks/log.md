@@ -178,3 +178,24 @@ The three unchecked DoD items:
 - Smoke test in fresh repo — propagates from the parked sibling `openclaw-plugin-release-smoke-blockers-build-and-spawn-api` (gate=session, awaiting tester retest #5 on commit `a352f09`).
 
 No agent-side preparatory work remains; the plugin tree (including bundled `dist/index.js`) is shippable. Park is on multi-stakeholder alignment + blocked external evidence, not a technical decision.
+
+## 2026-05-14 — Two of three parked items resolved by release pipeline; gate lowered
+
+ClawHub and npm publishes have been automatic since the publisher-identity
+fix closed (`clawhub-publish-fails-with-package-belongs-to-another-publisher`,
+done 2026-05-14). Verified against live registries:
+
+- ClawHub: `clawhub package inspect game-of-cards` → Latest 0.0.17, Owner
+  zauberzeug, Updated 2026-05-11T13:52:32Z, source commit
+  `2326bdb867fbc64f516af955dad2afd8ce7a5f7b` on `refs/heads/main`.
+- npm: `npm view game-of-cards version` → 0.0.17, dist-tag `latest`.
+
+DoD items 9 and 10 ticked accordingly. The single remaining unchecked item
+is item 12 (fresh-repo smoke test); it does not require human credentials
+and can be picked up by an agent via `pull-card` against a temporary
+workspace. Gate lowered `session → none`.
+
+## 2026-05-14 — Smoke test confirmed by Rodja; closing card
+
+Rodja confirmed the OpenClaw plugin installs cleanly via the public ClawHub
+listing (Latest 0.0.17). All 13 DoD items now checked. Closing.
