@@ -54,8 +54,8 @@ NOT require `blocked`.
 | `blocked → active` | `goc status <title> active` (+ optionally `goc unadvance <title> --by <other>` if removing an obsolete edge) | flip status; optional edge. An autonomous agent MAY make this transition when it observes the external condition has cleared on a `human_gate: none` card (re-check confirms the upstream change). |
 | `blocked → open` | `goc status <title> open` | re-queue when the blocker clears but the card is not yet being worked. Same agent-autonomy rule as `blocked → active`: gate `none` means an agent may flip; gate `decision`/`session` means the human owns the unblock. |
 | `* → open` | `goc status <title> open` | re-queue (rare) |
-| `* → disproved` | `goc status <title> disproved` | populate rebuttal first |
-| `* → superseded` | `goc status <title> superseded` | log replacement rationale in old card's `log.md` |
+| `* → disproved` | `goc status <title> disproved` | populate rebuttal first; CLI stamps `closed_at` |
+| `* → superseded` | `goc status <title> superseded` | log replacement rationale in old card's `log.md`; CLI stamps `closed_at` |
 
 `goc advance` and `goc unadvance` maintain the bidirectional
 value-flow edge atomically (validator-enforced — if `A.advances`
@@ -64,6 +64,10 @@ is independent — set it via `goc status` when the card is parked
 on external input.
 
 ## Step 3 — populate the body for terminal transitions
+
+The CLI stamps `closed_at` automatically for every terminal flip
+(`done`, `disproved`, `superseded`); `status` names the outcome.
+The body work below is what the CLI does NOT do for you.
 
 ### Disproved
 
