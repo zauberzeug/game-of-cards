@@ -2379,10 +2379,16 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
         log_path = DECK_DIR / card.title / "log.md"
         if not log_path.exists():
             return False, "log.md missing"
-        marker = f"## {today} — Closure"
-        if marker in log_path.read_text():
-            return True, f"'{marker}' present"
-        return False, f"no '{marker}' section"
+        date_prefix = _date_part(today)
+        # Match either legacy date-only (`## YYYY-MM-DD — Closure`) or the
+        # current datetime form (`## YYYY-MM-DDTHH:MM:SSZ — Closure`).
+        pattern = re.compile(
+            rf"^## {re.escape(date_prefix)}(?:T\d{{2}}:\d{{2}}:\d{{2}}Z)? — Closure",
+            re.MULTILINE,
+        )
+        if pattern.search(log_path.read_text()):
+            return True, f"'## {date_prefix} — Closure' present"
+        return False, f"no '## {date_prefix} — Closure' section"
     return False, f"unknown derived check '{name}'"
 
 
@@ -2436,7 +2442,7 @@ def _cmd_attest(args):
         sys.exit(2)
     config = load_deck_config()
     all_cards = load_all_cards()
-    today = date.today().isoformat()
+    today = _utc_now_iso()
     skips_set = set(skips)
     results: list[dict] = []
     any_failed = False
@@ -2864,12 +2870,11 @@ def _cmd_move(args):
     # frontmatter title/advances/advanced_by fields.
     _move_rewrite_tracked_files(old_title, new_title)
 
-    # Dated rename log entry.
-    today = date.today().isoformat()
+    now = _utc_now_iso()
     log_path = dst / "log.md"
     existing = log_path.read_text() if log_path.exists() else ""
     sep = "\n\n" if existing.strip() else ""
-    log_path.write_text(existing.rstrip("\n") + sep + f"## {today}: renamed from {old_title}\n")
+    log_path.write_text(existing.rstrip("\n") + sep + f"## {now}: renamed from {old_title}\n")
 
     print(f"{old_title} → {new_title}")
 
@@ -2893,10 +2898,10 @@ def _cmd_decide(args):
         )
         sys.exit(2)
     prior_gate = t.human_gate
-    today = date.today().isoformat()
+    now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
     fm, body = parse_frontmatter(text)
-    body = replace_or_append_decision(body, decision, reasoning, today)
+    body = replace_or_append_decision(body, decision, reasoning, now)
     text = emit_frontmatter(fm, body=body)
     text = mutate_frontmatter_field(text, "human_gate", "none")
     (card_dir / "README.md").write_text(text)
@@ -2906,7 +2911,7 @@ def _cmd_decide(args):
     log_path.write_text(
         existing.rstrip("\n")
         + sep
-        + f"## {today}: decision recorded\n\n"
+        + f"## {now}: decision recorded\n\n"
         + f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
     )
     print(f"{title}: decision recorded; gate {prior_gate} → none")

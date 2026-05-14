@@ -120,7 +120,7 @@ rather than ticking it falsely.
 never rewrite existing entries. Format the closure entry:
 
 ```markdown
-## YYYY-MM-DD — Closure
+## YYYY-MM-DDTHH:MM:SSZ — Closure
 
 - **What changed**: <file:line> — <one-line essence>
 - **Verification**: <one or two key numbers>
@@ -129,6 +129,10 @@ never rewrite existing entries. Format the closure entry:
 - **Tests**: <count> passed / <count> failed / <count> xfailed
 - **Bundled with**: <title-A>, <title-B> (if any)
 ```
+
+The timestamp is ISO 8601 UTC. `goc attest`'s closure-marker check
+date-prefix-matches, so legacy date-only entries
+(`## YYYY-MM-DD — Closure`) keep validating without backfill.
 
 ## Step 5 — record the Closure verification (`goc attest`)
 
