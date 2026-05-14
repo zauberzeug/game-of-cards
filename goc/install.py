@@ -498,16 +498,29 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
 def _strip_claude_vendored_harness(target: Path, templates: Path) -> None:
     """Remove GoC-managed vendored files from a Claude install.
 
-    Removes the skill tree, hook files (from the manifest and settings),
-    and strips GoC entries from .claude/settings.json. User-authored files
-    in .claude/ are not touched.
+    Removes only the skill directories whose names match GoC templates,
+    the hook files registered in the manifest and settings, and strips
+    GoC entries from .claude/settings.json. User-authored skills with
+    other names in `.claude/skills/` are preserved.
     """
     shim = _load_agent_shim(templates, "claude")
 
     if shim.skills:
         skills_dir = target / shim.skills.target
         if skills_dir.is_dir():
-            shutil.rmtree(skills_dir)
+            skills_src = templates / "skills"
+            goc_owned = {
+                p.name for p in skills_src.iterdir()
+                if p.is_dir() and skill_for_agent(p.name, "claude")
+            }
+            for child in list(skills_dir.iterdir()):
+                if child.is_dir() and child.name in goc_owned:
+                    shutil.rmtree(child)
+            try:
+                if not any(skills_dir.iterdir()):
+                    skills_dir.rmdir()
+            except OSError:
+                pass
 
     files_to_remove: set[Path] = set()
     for file in shim.files:
@@ -732,7 +745,14 @@ def _sync_skill_tree(
     replace_skills: bool = False,
     codex_frontmatter: bool = False,
 ) -> None:
-    """Copy GoC skills into a runtime-specific skill root, filtered for `agent`."""
+    """Copy GoC skills into a runtime-specific skill root, filtered for `agent`.
+
+    `replace_skills=True` wipes only the eligible (current-GoC-template) skill
+    directories before recopying them, so a refresh picks up template edits.
+    Non-eligible directories are left untouched — `.claude/skills/` may hold
+    user-owned skills (or skills from other tools) that GoC does not own and
+    must never delete as a side effect of upgrade.
+    """
 
     skills_src = templates / "skills"
     skills_dst.mkdir(parents=True, exist_ok=True)
@@ -740,9 +760,6 @@ def _sync_skill_tree(
         p.name for p in skills_src.iterdir() if p.is_dir() and skill_for_agent(p.name, agent)
     }
     if replace_skills:
-        for skill_dir in sorted(p for p in skills_dst.iterdir() if p.is_dir()):
-            if skill_dir.name not in eligible and (skill_dir / "SKILL.md").exists():
-                shutil.rmtree(skill_dir)
         for name in sorted(eligible):
             target = skills_dst / name
             if target.exists():
@@ -899,6 +916,33 @@ def _confirm(prompt: str, *, default: bool = False) -> bool:
     return ans.startswith("y")
 
 
+_SKILLS_SOURCE_VALUES = ("plugin", "vendored", "auto")
+
+
+def _write_skills_source(target: Path, value: str) -> None:
+    """Set the `skills_source:` key in `.game-of-cards/config.yaml`.
+
+    Append the key if missing; replace the value if a (commented or active)
+    line already exists. Treats the config file as line-oriented text to
+    avoid round-tripping the whole YAML — preserves comments and ordering
+    that a parser-then-dump would lose.
+    """
+    if value not in _SKILLS_SOURCE_VALUES:
+        raise ValueError(f"invalid skills_source value: {value!r}")
+    config_path = target / ".game-of-cards" / "config.yaml"
+    if not config_path.exists():
+        return
+    text = config_path.read_text()
+    pattern = re.compile(r"^[#\s]*skills_source\s*:.*$", re.MULTILINE)
+    replacement = f"skills_source: {value}"
+    if pattern.search(text):
+        new_text = pattern.sub(replacement, text, count=1)
+    else:
+        sep = "" if text.endswith("\n") else "\n"
+        new_text = f"{text}{sep}\n{replacement}\n"
+    config_path.write_text(new_text)
+
+
 def install(
     dry_run: bool = False,
     agent_specs: tuple[str, ...] = (),
@@ -960,6 +1004,11 @@ def install(
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
     _sync_game_of_cards_config(target, templates)
+
+    # Pin skills_source so future `goc upgrade` runs (and `goc validate`)
+    # know which mode this repo is in without re-detecting host state.
+    chosen_source = "vendored" if "claude" in local_skills_agents else "plugin"
+    _write_skills_source(target, chosen_source)
 
     _sync_methodology_blocks(target, templates, briefing_target)
 
@@ -1093,33 +1142,42 @@ def upgrade(
         candidate for candidate in _detect_briefing_targets_on_disk(target) if candidate != resolved_briefing
     )
 
-    # Determine migration status for Claude: vendored → plugin path
+    # Claude skill source — config wins; --keep-local-skills forces vendored;
+    # absent config + no host plugin falls back to vendored for legacy compat.
+    from goc.engine import effective_skills_source  # local import: engine→install cycle
+
+    if keep_local_skills:
+        claude_skills_mode = "vendored"
+    elif "claude" in agents:
+        claude_skills_mode = effective_skills_source()
+    else:
+        claude_skills_mode = "vendored"
+
+    # Detect leftover vendored layout (relevant only when the new mode is plugin —
+    # then the layout is stale and the user may want it cleaned up).
     claude_has_vendored = False
     if "claude" in agents:
         claude_shim = _load_agent_shim(templates, "claude")
         claude_has_vendored = bool(claude_shim.skills and (target / claude_shim.skills.target).is_dir())
 
-    do_migrate_claude = claude_has_vendored and not keep_local_skills
-    agents_to_migrate: frozenset[str] = frozenset(["claude"]) if do_migrate_claude else frozenset()
+    needs_vendored_cleanup = claude_skills_mode == "plugin" and claude_has_vendored
 
-    # For the vendored-layout question: either explicitly kept, or migrating away, or never had vendored
     local_skills_agents: frozenset[str]
-    if keep_local_skills:
-        local_skills_agents = frozenset(a for a in agents if a == "claude" and claude_has_vendored) | frozenset(
-            a for a in agents if a != "claude"
-        )
+    if claude_skills_mode == "vendored":
+        local_skills_agents = frozenset(agents)
     else:
-        # After migration (or if no vendored layout): only codex uses local skills
+        # plugin mode: claude skills come from the runtime plugin; non-claude
+        # agents (codex) still vendor.
         local_skills_agents = frozenset(a for a in agents if a != "claude")
 
-    pending_migration = do_migrate_claude and not dry_run
+    pending_cleanup = needs_vendored_cleanup and not dry_run
     pending_briefing_migration = bool(legacy_briefings_to_strip) and not dry_run
 
     if (
         existing == __version__
         and not dry_run
         and not agents_explicit
-        and not pending_migration
+        and not pending_cleanup
         and not keep_local_skills
         and not pending_briefing_migration
         and briefing_target is None
@@ -1128,10 +1186,15 @@ def upgrade(
         return
 
     if dry_run:
-        migration_note = " (will migrate vendored .claude/skills/ → plugin path)" if do_migrate_claude else ""
+        notes: list[str] = []
+        if needs_vendored_cleanup:
+            notes.append("will offer cleanup of leftover .claude/skills/ (plugin mode)")
         if legacy_briefings_to_strip:
-            migration_note += f" (briefing target → {resolved_briefing}; will strip blocks from {', '.join(legacy_briefings_to_strip)})"
-        print(f"goc upgrade would sync {existing} → {__version__}{migration_note}")
+            notes.append(
+                f"briefing target → {resolved_briefing}; will strip blocks from {', '.join(legacy_briefings_to_strip)}"
+            )
+        suffix = f" ({'; '.join(notes)})" if notes else ""
+        print(f"goc upgrade would sync {existing} → {__version__}{suffix}")
         _print_plan(
             "upgrade",
             target,
@@ -1146,21 +1209,21 @@ def upgrade(
         )
         return
 
-    # Interactive migration prompt for Claude vendored → plugin path
-    if do_migrate_claude:
+    # Plugin-mode + leftover vendored layout: explicit, opt-in cleanup.
+    # Decline path is a no-op — never re-vendor, never touch user skills.
+    if needs_vendored_cleanup:
         print(
-            "This repo has vendored GoC skills. goc upgrade now defaults to the plugin path —\n"
-            "this will remove .claude/skills/, .claude/hooks/ (GoC-managed), and GoC\n"
-            "entries from .claude/settings.json. Pass --keep-local-skills to skip."
+            "This repo is configured for plugin-mode skills (skills_source: plugin)\n"
+            "but a leftover .claude/skills/ from a prior vendored install was found.\n"
+            "Cleanup removes GoC-managed skill directories, GoC hook files, and\n"
+            "GoC entries in .claude/settings.json. Non-GoC skills in .claude/skills/\n"
+            "are preserved."
         )
-        confirmed = _confirm("Migrate to plugin path?", default=False)
-        if not confirmed:
-            agents_to_migrate = frozenset()
-            local_skills_agents = local_skills_agents | frozenset(["claude"])
-
-    for agent in agents_to_migrate:
-        if agent == "claude":
+        confirmed = _confirm("Remove leftover vendored layout?", default=False)
+        if confirmed:
             _strip_claude_vendored_harness(target, templates)
+        else:
+            print("Skipping cleanup; leftover vendored layout preserved as-is.")
 
     for agent in agents:
         guidance_only = agent not in local_skills_agents
@@ -1168,6 +1231,9 @@ def upgrade(
         _sync_agent_harness(target, templates, agent, guidance_only=guidance_only, replace_skills=replace)
 
     _sync_game_of_cards_config(target, templates, migrate_legacy=True)
+    # Pin the resolved mode so future runs don't re-detect host state.
+    if "claude" in agents:
+        _write_skills_source(target, claude_skills_mode)
 
     for stale in legacy_briefings_to_strip:
         _strip_goc_block(target / stale)

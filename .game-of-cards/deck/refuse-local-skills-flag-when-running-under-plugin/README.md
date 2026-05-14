@@ -7,7 +7,8 @@ contribution: high
 created: 2026-05-09
 closed_at: 2026-05-09
 human_gate: none
-advances: []
+advances:
+  - goc-upgrade-clobbers-non-goc-skills-and-validate-fails-in-plugin-mode
 advanced_by: []
 tags: [story, infra, api-contract]
 definition_of_done: |
