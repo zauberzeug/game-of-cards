@@ -5,7 +5,7 @@ status: disproved
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: 2026-05-09T05:41:30Z
 human_gate: none
 advances: []
 advanced_by:

@@ -1,23 +1,23 @@
 ---
 title: record-closure-date-for-disproved-and-superseded-cards
 summary: "Today `goc/engine.py` only writes `closed_at` when a card flips to `done`; the validator (engine.py:782-791) actively forbids `closed_at` on any other status. Disproved and superseded cards therefore lose their card-local closure date — recovery requires `git log` on the auto-commit, which is a separate artefact that can be lost on repo migration, history rewrite, or hand-editing without the CLI. Change the semantics so `closed_at` records *any* terminal transition (done / disproved / superseded); `status` already names the outcome, so a single timestamp on every terminal exit gives queryable per-outcome dates without schema bloat."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-14T04:23:39Z"
-closed_at: null
+closed_at: 2026-05-14T09:06:49Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [api-contract, meta-fix]
 definition_of_done: |
-  - [ ] `_cmd_status` (engine.py:2468-2514) sets `closed_at` to the current UTC timestamp when transitioning to `disproved` or `superseded`
-  - [ ] Validator rule at engine.py:782-791 inverted: `closed_at` is required for every terminal status (`done`, `disproved`, `superseded`) and must be null otherwise — single symmetric rule, not a `done`-special-case
-  - [ ] `--since` filter (engine.py:1001) and any other `closed_at` consumers still behave correctly with the broader population; document any filters that should remain done-only via an additional `--status done` predicate
-  - [ ] Existing disproved/superseded cards in `.game-of-cards/deck/` backfilled with their closure date derived from `git log -- deck/<title>/README.md` (the auto-commit that flipped the status). Cards with no derivable git timestamp get the date of the first commit touching the README post-creation; document the migration script under `scripts/`
-  - [ ] `goc validate` green across the deck after migration
-  - [ ] Skill bodies updated where they describe `closed_at` semantics — at minimum `card-schema/SKILL.md`, `advance-card/SKILL.md`, `finish-card/SKILL.md` — to reflect that `closed_at` marks any terminal exit, with `status` disambiguating the outcome
-  - [ ] CLAUDE.md / consumer-facing docs reviewed for any "closed_at = shipped" framing that becomes stale
+  - [x] `_cmd_status` (engine.py:2468-2514) sets `closed_at` to the current UTC timestamp when transitioning to `disproved` or `superseded`
+  - [x] Validator rule at engine.py:782-791 inverted: `closed_at` is required for every terminal status (`done`, `disproved`, `superseded`) and must be null otherwise — single symmetric rule, not a `done`-special-case
+  - [x] `--since` filter (engine.py:1001) and any other `closed_at` consumers still behave correctly with the broader population; document any filters that should remain done-only via an additional `--status done` predicate
+  - [x] Existing disproved/superseded cards in `.game-of-cards/deck/` backfilled with their closure date derived from `git log -- deck/<title>/README.md` (the auto-commit that flipped the status). Cards with no derivable git timestamp get the date of the first commit touching the README post-creation; document the migration script under `scripts/`
+  - [x] `goc validate` green across the deck after migration
+  - [x] Skill bodies updated where they describe `closed_at` semantics — at minimum `card-schema/SKILL.md`, `advance-card/SKILL.md`, `finish-card/SKILL.md` — to reflect that `closed_at` marks any terminal exit, with `status` disambiguating the outcome
+  - [x] CLAUDE.md / consumer-facing docs reviewed for any "closed_at = shipped" framing that becomes stale
 worker: {who: "claude[bot]", where: main}
 ---
 
