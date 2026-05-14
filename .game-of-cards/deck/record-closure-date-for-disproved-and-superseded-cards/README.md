@@ -1,7 +1,7 @@
 ---
 title: record-closure-date-for-disproved-and-superseded-cards
 summary: "Today `goc/engine.py` only writes `closed_at` when a card flips to `done`; the validator (engine.py:782-791) actively forbids `closed_at` on any other status. Disproved and superseded cards therefore lose their card-local closure date — recovery requires `git log` on the auto-commit, which is a separate artefact that can be lost on repo migration, history rewrite, or hand-editing without the CLI. Change the semantics so `closed_at` records *any* terminal transition (done / disproved / superseded); `status` already names the outcome, so a single timestamp on every terminal exit gives queryable per-outcome dates without schema bloat."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-14T04:23:39Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] `goc validate` green across the deck after migration
   - [ ] Skill bodies updated where they describe `closed_at` semantics — at minimum `card-schema/SKILL.md`, `advance-card/SKILL.md`, `finish-card/SKILL.md` — to reflect that `closed_at` marks any terminal exit, with `status` disambiguating the outcome
   - [ ] CLAUDE.md / consumer-facing docs reviewed for any "closed_at = shipped" framing that becomes stale
+worker: {who: "claude[bot]", where: main}
 ---
 
 # record-closure-date-for-disproved-and-superseded-cards
