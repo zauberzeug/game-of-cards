@@ -139,26 +139,43 @@ and a placeholder `- [ ] (replace with real criteria)` DoD, plus an
 empty `deck/<title>/log.md`. Tags must come from the canonical set
 (see the `card-schema` skill); the CLI rejects unknowns.
 
-## Step 5 — write the body
+## Step 5 — write the body (the dashboard)
 
-Edit `deck/<title>/README.md` and replace the placeholder body with:
+The README body is the card's **dashboard**: a snapshot of latest
+knowledge and current state. As understanding evolves between rounds
+of work, **rewrite these sections in place** — replace the old
+problem framing, update the fix proposal, refine the DoD. Do NOT
+append a "Latest finding (DATE)" block at the bottom; that turns the
+README into a stale ledger a future reader has to date-sort by eye.
+History, decisions, and per-round details belong in `log.md` (the
+journal). See the `card-schema` skill's "What goes where" subsection.
+
+Edit `deck/<title>/README.md` and replace the placeholder body with
+the dashboard sections — problem framing, current understanding, fix
+proposal, DoD:
 
 - **Title (H1)** — one-line description.
 - **Summary** — populate the frontmatter `summary:` field (≤ 3
   sentences, what + why) so triage views can scan without opening.
 - **Location** — `file:line` for the offending code (bug-class) or
   doc/section (doc-class).
-- **What's broken / what's missing** — prose with **quoted code AND
-  quoted contradicted doc/comment**. Don't paraphrase — the reader
-  needs to see the conflict with their own eyes.
-- **Empirical evidence** — paste the `reproduce.py` output verbatim
-  (after Step 6).
+- **What's broken / what's missing** (problem framing) — prose with
+  **quoted code AND quoted contradicted doc/comment**. Don't
+  paraphrase — the reader needs to see the conflict with their own
+  eyes. Rewrite as the framing sharpens.
+- **Empirical evidence** (current understanding) — paste the
+  `reproduce.py` output verbatim (after Step 6). Replace with the
+  latest run when the evidence changes.
 - **Why it matters** — connect to a real symptom (an unexplained
   drift, a Sprint that "tied" unexpectedly, a metric that
   plateaus). Cross-link other cards as `[<title>](../<title>/)`.
-- **Fix** — concrete code change with file:line. **Do NOT apply the
-  fix.** When the gate is `decision`, this collapses into the
-  `## Decision required` section.
+- **Fix** (fix proposal) — concrete code change with file:line. **Do
+  NOT apply the fix.** When the gate is `decision`, this collapses
+  into the `## Decision required` section. Rewrite the proposal as
+  the chosen approach changes; record the pivot reasoning in
+  `log.md`.
+- For `--gate decision` / `--gate session` cards, consider a sibling
+  `*.html` matrix, `*.svg` diagram, or interactive form (see Step 7).
 - **Refine the DoD** — replace the placeholder with real criteria.
   Each box is a contract the fix must satisfy:
 
@@ -168,6 +185,9 @@ Edit `deck/<title>/README.md` and replace the placeholder body with:
     - [ ] <specific assertion or metric the fix must satisfy>
     - [ ] <if doc-quality: doc claim aligns with cited literature>
   ```
+
+Each round of work on the card updates the README dashboard *and*
+appends a journal entry to `log.md` recording what changed and why.
 
 ## Step 6 — write `reproduce.py` (bug-class only)
 

@@ -173,14 +173,21 @@ deck/
   README.md                 # navigation + conventions
   deck.py                   # CLI; computes filtered views from frontmatter
   <title>/                   # one dir per card; never moves on state change
-    README.md               # frontmatter + design-doc body
-    log.md                  # append-only round/phase narrative
+    README.md               # frontmatter + dashboard body — latest knowledge + current state
+    log.md                  # append-only journal — history, details, decisions, flow
     reproduce.py            # OPTIONAL — declared in DoD when present
     [other validation scripts]
 ```
 
 One title, one directory, forever. Status changes mutate frontmatter,
 not paths.
+
+Two files, two edit disciplines: the README is the **dashboard**
+(rewritten in place as understanding evolves so a cold reader sees
+only what is true now); `log.md` is the **append-only journal**
+(history, details, decisions, and flow preserved verbatim, never
+rewritten). See `Skill(card-schema)`'s "What goes where" subsection
+for the routing rule.
 
 ## Lifecycle
 

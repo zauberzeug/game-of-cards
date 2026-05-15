@@ -1,24 +1,24 @@
 ---
 title: clarify-readme-as-dashboard-and-log-md-as-history
 summary: "The card-schema, create-card, advance-card, and finish-card skill bodies describe `README.md` as the card's narrative / design-doc body — the same word (narrative) used for `log.md`, which conflates the two. The user's framing is sharper: `README.md` is a **dashboard** that always shows the *latest knowledge and current state* of the card, rewritten in place as understanding evolves so a cold reader sees only what is true now; `log.md` is the **append-only journal** for history, details, decisions, and flow, preserved verbatim and never rewritten. Make this distinction explicit in the skill templates so future humans and AI agents stop accumulating prose in README and stop dropping state-changes only into log."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-15T05:46:25Z"
-closed_at: null
+closed_at: 2026-05-15T07:16:16Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, documentation, meta-fix]
 definition_of_done: |
-  - [ ] `card-schema/SKILL.md` Layout section explicitly frames `README.md` as a **dashboard** (latest knowledge + current state, rewritten as understanding evolves) and `log.md` as the **append-only journal** (history, details, decisions, flow). The single word "narrative" is no longer reused for both.
-  - [ ] `card-schema/SKILL.md` carries a short "What goes where" rule of thumb so a cold reader can route a new piece of information without re-deriving the contract.
-  - [ ] `create-card/SKILL.md` Step 5 ("write the body") names the README sections as a dashboard snapshot (problem framing, current understanding, fix proposal, DoD) and instructs the writer to **rewrite** these sections as understanding evolves rather than appending below them.
-  - [ ] `advance-card/SKILL.md` and `finish-card/SKILL.md` make explicit which file receives what on each transition: state-of-the-world updates rewrite the README dashboard; transition narrative, decisions, and timestamps append to `log.md`.
-  - [ ] `deck/SKILL.md` (front-door overview) Layout block mirrors the dashboard / journal framing so the distinction lands on the first read, not only inside `card-schema`.
-  - [ ] All four (or five) edits mirrored byte-for-byte into `.claude/skills/...` and `claude-plugin/skills/...` and `openclaw-plugin/skills/...` via `pre-commit run sync-plugin-assets` (or its CI equivalent); `python scripts/sync_plugin_assets.py --check` passes.
-  - [ ] `uv run goc validate` passes.
-  - [ ] `tests/test_version_surfaces.py` (or whichever test covers skill-body parity) stays green.
+  - [x] `card-schema/SKILL.md` Layout section explicitly frames `README.md` as a **dashboard** (latest knowledge + current state, rewritten as understanding evolves) and `log.md` as the **append-only journal** (history, details, decisions, flow). The single word "narrative" is no longer reused for both.
+  - [x] `card-schema/SKILL.md` carries a short "What goes where" rule of thumb so a cold reader can route a new piece of information without re-deriving the contract.
+  - [x] `create-card/SKILL.md` Step 5 ("write the body") names the README sections as a dashboard snapshot (problem framing, current understanding, fix proposal, DoD) and instructs the writer to **rewrite** these sections as understanding evolves rather than appending below them.
+  - [x] `advance-card/SKILL.md` and `finish-card/SKILL.md` make explicit which file receives what on each transition: state-of-the-world updates rewrite the README dashboard; transition narrative, decisions, and timestamps append to `log.md`.
+  - [x] `deck/SKILL.md` (front-door overview) Layout block mirrors the dashboard / journal framing so the distinction lands on the first read, not only inside `card-schema`.
+  - [x] All four (or five) edits mirrored byte-for-byte into `.claude/skills/...` and `claude-plugin/skills/...` and `openclaw-plugin/skills/...` via `pre-commit run sync-plugin-assets` (or its CI equivalent); `python scripts/sync_plugin_assets.py --check` passes.
+  - [x] `uv run goc validate` passes.
+  - [x] `tests/test_version_surfaces.py` (or whichever test covers skill-body parity) stays green.
 worker: {who: "claude[bot]", where: main}
 ---
 
