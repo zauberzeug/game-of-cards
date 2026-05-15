@@ -1,7 +1,7 @@
 ---
 title: clarify-readme-as-dashboard-and-log-md-as-history
 summary: "The card-schema, create-card, advance-card, and finish-card skill bodies describe `README.md` as the card's narrative / design-doc body — the same word (narrative) used for `log.md`, which conflates the two. The user's framing is sharper: `README.md` is a **dashboard** that always shows the *latest knowledge and current state* of the card, rewritten in place as understanding evolves so a cold reader sees only what is true now; `log.md` is the **append-only journal** for history, details, decisions, and flow, preserved verbatim and never rewritten. Make this distinction explicit in the skill templates so future humans and AI agents stop accumulating prose in README and stop dropping state-changes only into log."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-15T05:46:25Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] All four (or five) edits mirrored byte-for-byte into `.claude/skills/...` and `claude-plugin/skills/...` and `openclaw-plugin/skills/...` via `pre-commit run sync-plugin-assets` (or its CI equivalent); `python scripts/sync_plugin_assets.py --check` passes.
   - [ ] `uv run goc validate` passes.
   - [ ] `tests/test_version_surfaces.py` (or whichever test covers skill-body parity) stays green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # clarify-readme-as-dashboard-and-log-md-as-history
