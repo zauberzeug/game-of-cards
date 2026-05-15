@@ -9,7 +9,8 @@ closed_at: null
 human_gate: session
 advances:
   - ship-game-of-cards-as-cross-agent-cli
-advanced_by: []
+advanced_by:
+  - support-custom-frontmatter-fields-with-enum-and-required-when-rules
 tags: [story, infra, api-contract]
 definition_of_done: |
   - [ ] Config/schema design supports project-defined additional valid `status` values
