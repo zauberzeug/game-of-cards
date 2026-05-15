@@ -29,8 +29,8 @@ deck/
   README.md                 # navigation + conventions
   deck.py                   # CLI; computes filtered views from frontmatter
   <title>/                   # one dir per card; never moves on state change
-    README.md               # frontmatter + markdown body
-    log.md                  # append-only round/phase narrative
+    README.md               # frontmatter + dashboard body — latest knowledge + current state
+    log.md                  # append-only journal — history, details, decisions, flow
     reproduce.py            # OPTIONAL — bug-class executable proof
     *.html / *.svg / *.png  # OPTIONAL — rich artifacts referenced from README.md
                             # (decision matrices, state diagrams, interactive
@@ -39,19 +39,53 @@ deck/
 ```
 
 The card directory is a **bundle of files**, not just `README.md`.
-The README is the narrative; sibling files are concrete artifacts
-the README references — `reproduce.py` for executable proof on bug
-cards, `*.html` / `*.svg` / `*.png` for visuals markdown can't
-express on decision cards, visual-evidence cards, or interactive
-decision-gate forms. The bundle pattern is the canonical extension
-point for richness without introducing a new schema field, a body-
-format dispatch, or any change to the engine; sibling files are
-opaque to `parse_frontmatter`, `goc validate`, and `goc show`. See
+The README is the **dashboard**: a snapshot of the card's latest
+knowledge and current state, rewritten in place as understanding
+evolves so a cold reader sees only what is true now. `log.md` is
+the **append-only journal**: history, details, decisions, and the
+flow of how the card got here, preserved verbatim and never
+rewritten. Sibling files are concrete artifacts the README references
+— `reproduce.py` for executable proof on bug cards, `*.html` /
+`*.svg` / `*.png` for visuals markdown can't express on decision
+cards, visual-evidence cards, or interactive decision-gate forms.
+The bundle pattern is the canonical extension point for richness
+without introducing a new schema field, a body-format dispatch, or
+any change to the engine; sibling files are opaque to
+`parse_frontmatter`, `goc validate`, and `goc show`. See
 `Skill(create-card)` Step 7 for the authoring contract.
 
 Status changes mutate frontmatter, never directories. Cross-references
 to `deck/<title>/` continue to work whether the card is open, active,
 blocked, done, disproved, or superseded.
+
+### What goes where (README dashboard vs `log.md` journal)
+
+Two files, two edit disciplines:
+
+| File | Role | Edit discipline | Reader semantics |
+|---|---|---|---|
+| `README.md` | **Dashboard** of latest knowledge and current state | Rewritten in place; outdated content is replaced, not amended below | A cold reader sees only what is true now |
+| `log.md` | **Append-only journal** of history, details, decisions, and flow | Strictly appended; existing entries are never rewritten | A forensic reader can reconstruct how we got here |
+
+Rule of thumb: **if a future reader would be misled by reading the
+README in isolation, the dashboard needs the update; if the value is
+in the sequence (when, by whom, why we changed our mind), the
+journal needs the entry.** Most operations want both — rewrite the
+README to reflect the new state, append a `log.md` entry that
+records the transition.
+
+Concrete consequences:
+- A new "Latest finding (DATE)" block at the bottom of the README is
+  an antipattern — it accumulates contradicting versions of the
+  truth. Rewrite the relevant README section in place; append the
+  finding to `log.md` with the date.
+- A state mutation that does not touch `log.md` (status flip,
+  decision recorded, scope reframing) leaves a gap in the audit
+  trail. Append the journal entry even when the README rewrite
+  alone would "look complete".
+- Decision-gate cards: keep the options matrix and `## Decision
+  required` section current in the README; each round of consideration
+  appends to `log.md`; the final resolution rewrites the dashboard.
 
 ## Status semantics
 

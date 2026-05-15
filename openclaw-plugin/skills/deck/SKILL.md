@@ -173,14 +173,21 @@ deck/
   README.md                 # navigation + conventions
   deck.py                   # CLI; computes filtered views from frontmatter
   <title>/                   # one dir per card; never moves on state change
-    README.md               # frontmatter + design-doc body
-    log.md                  # append-only round/phase narrative
+    README.md               # frontmatter + dashboard body — latest knowledge + current state
+    log.md                  # append-only journal — history, details, decisions, flow
     reproduce.py            # OPTIONAL — declared in DoD when present
     [other validation scripts]
 ```
 
 One title, one directory, forever. Status changes mutate frontmatter,
 not paths.
+
+Two files, two edit disciplines: the README is the **dashboard**
+(rewritten in place as understanding evolves so a cold reader sees
+only what is true now); `log.md` is the **append-only journal**
+(history, details, decisions, and flow preserved verbatim, never
+rewritten). See the `card-schema` skill's "What goes where" subsection
+for the routing rule.
 
 ## Lifecycle
 
@@ -198,6 +205,15 @@ not paths.
 `open` is the queue. `active` claims the work. `blocked` parks until
 another card unblocks it. `done`, `disproved`, and `superseded` are
 all terminal — none deletes the directory; the forensic record stays.
+
+`status: blocked` and `human_gate` are orthogonal axes. A blocked
+card waiting on an agent-observable external condition (upstream
+release, PR merge, dependency publication, scheduled re-check)
+keeps `human_gate: none` — a future autonomous run can verify the
+condition cleared and flip the card back to `open` or `active`
+without human involvement. Raise the gate to `decision`/`session`
+only when human judgement is the unblocker. See
+the `card-schema` skill for the full orthogonality contract.
 
 ## The 9 action skills
 

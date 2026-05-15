@@ -97,9 +97,22 @@ that verbatim.
 on every closure, not a per-card promise. Cards inherit the gate from
 `finish-card` mechanics; the closure log entry is the audit trail.
 
-## Step 3 — tick the DoD checkboxes
+## Step 3 — tick the DoD checkboxes (update the dashboard)
 
-Edit `deck/<title>/README.md` and mark each criterion `- [x]`:
+Closure routes two pieces of writing — the README is the
+**dashboard** showing the card's final state, `log.md` is the
+**append-only journal** capturing the closure transition. Step 3
+updates the dashboard; Step 4 appends to the journal. See
+`Skill(card-schema)`'s "What goes where" subsection.
+
+Edit `deck/<title>/README.md` and mark each criterion `- [x]`. This
+is a dashboard rewrite in place — the ticked DoD is what a cold
+reader sees as the resolved state. If the body's "Fix" or "Empirical
+evidence" sections still reflect the pre-resolution framing, rewrite
+them in place to describe the *applied* fix and final measurement.
+Do NOT append a "Resolution (DATE)" block below the original
+framing; the README is the resolved state, the journal entry in
+Step 4 captures the transition.
 
 ```yaml
 definition_of_done: |
@@ -114,10 +127,12 @@ turned out to be moot (e.g., not reachable in shipping at any
 default), strike it from the DoD with a one-line justification
 rather than ticking it falsely.
 
-## Step 4 — append closure context to `log.md`
+## Step 4 — append closure context to `log.md` (the journal)
 
-`deck/<title>/log.md` is the append-only round/phase narrative;
-never rewrite existing entries. Format the closure entry:
+`deck/<title>/log.md` is the **append-only journal** — history,
+details, decisions, and flow preserved verbatim. Never rewrite
+existing entries; the closure entry is one more entry at the
+bottom. Format it:
 
 ```markdown
 ## YYYY-MM-DDTHH:MM:SSZ — Closure

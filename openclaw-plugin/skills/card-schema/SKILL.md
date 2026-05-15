@@ -29,8 +29,8 @@ deck/
   README.md                 # navigation + conventions
   deck.py                   # CLI; computes filtered views from frontmatter
   <title>/                   # one dir per card; never moves on state change
-    README.md               # frontmatter + markdown body
-    log.md                  # append-only round/phase narrative
+    README.md               # frontmatter + dashboard body — latest knowledge + current state
+    log.md                  # append-only journal — history, details, decisions, flow
     reproduce.py            # OPTIONAL — bug-class executable proof
     *.html / *.svg / *.png  # OPTIONAL — rich artifacts referenced from README.md
                             # (decision matrices, state diagrams, interactive
@@ -39,19 +39,53 @@ deck/
 ```
 
 The card directory is a **bundle of files**, not just `README.md`.
-The README is the narrative; sibling files are concrete artifacts
-the README references — `reproduce.py` for executable proof on bug
-cards, `*.html` / `*.svg` / `*.png` for visuals markdown can't
-express on decision cards, visual-evidence cards, or interactive
-decision-gate forms. The bundle pattern is the canonical extension
-point for richness without introducing a new schema field, a body-
-format dispatch, or any change to the engine; sibling files are
-opaque to `parse_frontmatter`, `goc validate`, and `goc show`. See
+The README is the **dashboard**: a snapshot of the card's latest
+knowledge and current state, rewritten in place as understanding
+evolves so a cold reader sees only what is true now. `log.md` is
+the **append-only journal**: history, details, decisions, and the
+flow of how the card got here, preserved verbatim and never
+rewritten. Sibling files are concrete artifacts the README references
+— `reproduce.py` for executable proof on bug cards, `*.html` /
+`*.svg` / `*.png` for visuals markdown can't express on decision
+cards, visual-evidence cards, or interactive decision-gate forms.
+The bundle pattern is the canonical extension point for richness
+without introducing a new schema field, a body-format dispatch, or
+any change to the engine; sibling files are opaque to
+`parse_frontmatter`, `goc validate`, and `goc show`. See
 the `create-card` skill Step 7 for the authoring contract.
 
 Status changes mutate frontmatter, never directories. Cross-references
 to `deck/<title>/` continue to work whether the card is open, active,
 blocked, done, disproved, or superseded.
+
+### What goes where (README dashboard vs `log.md` journal)
+
+Two files, two edit disciplines:
+
+| File | Role | Edit discipline | Reader semantics |
+|---|---|---|---|
+| `README.md` | **Dashboard** of latest knowledge and current state | Rewritten in place; outdated content is replaced, not amended below | A cold reader sees only what is true now |
+| `log.md` | **Append-only journal** of history, details, decisions, and flow | Strictly appended; existing entries are never rewritten | A forensic reader can reconstruct how we got here |
+
+Rule of thumb: **if a future reader would be misled by reading the
+README in isolation, the dashboard needs the update; if the value is
+in the sequence (when, by whom, why we changed our mind), the
+journal needs the entry.** Most operations want both — rewrite the
+README to reflect the new state, append a `log.md` entry that
+records the transition.
+
+Concrete consequences:
+- A new "Latest finding (DATE)" block at the bottom of the README is
+  an antipattern — it accumulates contradicting versions of the
+  truth. Rewrite the relevant README section in place; append the
+  finding to `log.md` with the date.
+- A state mutation that does not touch `log.md` (status flip,
+  decision recorded, scope reframing) leaves a gap in the audit
+  trail. Append the journal entry even when the README rewrite
+  alone would "look complete".
+- Decision-gate cards: keep the options matrix and `## Decision
+  required` section current in the README; each round of consideration
+  appends to `log.md`; the final resolution rewrites the dashboard.
 
 ## Status semantics
 
@@ -59,7 +93,7 @@ blocked, done, disproved, or superseded.
 |---|---|---|
 | `open` | candidate for work; in the queue | promotion to `active`/`done`/`disproved`/`superseded` |
 | `active` | work in progress (one author/agent at a time, by convention) | usually flips to `done` (or `blocked` mid-flight) |
-| `blocked` | needs another card or external input; body should explain | unblocking; usually flips back to `active` |
+| `blocked` | needs another card or external input; body should explain. Agent-checkable external conditions (upstream release, PR merge, dependency publication) keep `human_gate: none`; human-judgement blockers use `human_gate: decision\|session`. | unblocking; usually flips back to `active` |
 | `done` | DoD checklist all ticked; `goc done <title>` enforces this | terminal |
 | `disproved` | hypothesis investigated and ruled out; body documents the rebuttal | terminal |
 | `superseded` | replaced by another card; replacement narrative in `log.md`; preserved for forensic continuity | terminal |
@@ -70,6 +104,12 @@ the promotion rule is "drop the `unverified` tag once a working
 `reproduce.py` lands."
 
 ## Timestamps (`created`, `closed_at`)
+
+`created` is stamped at card birth. `closed_at` is stamped on **every
+terminal transition** — done, disproved, or superseded. `status` names
+the outcome; `closed_at` is the single date per terminal exit, not a
+shipped-only marker. Validator rule is symmetric: `closed_at` is
+required iff `status` is terminal, null otherwise.
 
 Both fields accept two shapes:
 
@@ -149,11 +189,26 @@ graph-amplified `value`.
 
 ## human_gate scale
 
+`status` answers "what is the card doing right now?"
+`human_gate` answers "does progress require a human?"
+
+These axes are **orthogonal**. A card can be `blocked` with
+`human_gate: none` (parked on an agent-observable external condition)
+or `open` with `human_gate: decision` (queueable, but a human must
+pick a direction before work proceeds). Setting `blocked` does not
+automatically imply a human gate, and raising the gate does not
+imply `blocked`.
+
 Three-value autonomy ladder:
 
 - `none`     — autonomous-loop-safe; cron may auto-pick. Examples:
   tolerance-creep test rename, stale-reference doc fix, mechanical
-  sed-style replacement.
+  sed-style replacement. Also covers `status: blocked` cards waiting
+  on an external condition an agent can re-check (upstream release,
+  PR merge, dependency publication, CI availability, scheduled
+  research): the card is parked, but no human is needed to unblock —
+  a future autonomous run can observe the condition and flip the
+  card back to `open` or `active`.
 - `decision` — needs ONE human go/no-go before work proceeds. Example:
   "Option A (rewrite the cite) vs Option B (rewrite the code)?" The
   body **must contain the framing already** — see "Decision-gate body
@@ -162,6 +217,12 @@ Three-value autonomy ladder:
 - `session`  — needs interactive working session. Subsumes
   brainstorming/exploration cases. Example: research-impacting
   framework derivation; open architectural choice.
+
+Use `decision` or `session` **only** when the unblocker is human
+judgement, stakeholder alignment, prioritization, or a live
+discussion. If an agent can periodically check the blocker and
+proceed when the external condition changes, the gate stays `none`
+even when the status is `blocked`.
 
 Default for new cards created via `goc new`: `decision`.
 Auto-agents (audit-deck, next-card reclassification) should pick a more
