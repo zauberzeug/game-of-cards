@@ -18,7 +18,7 @@ summary: |-
   `!cmd` line — either by interpolating the skill arg into the fence
   at load time, or by replacing the executable fence with prose
   guidance that the agent runs themselves with the real title bound.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-15T11:49:06Z"
@@ -56,6 +56,7 @@ definition_of_done: |
   - [ ] `uv run goc validate` passes; manual smoke: invoke
     `Skill(create-card)` from Claude Code and confirm it walks the
     dedup → file flow without the parse error.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # create-card-skill-fails-with-shell-parse-error-on-title-placeholder
