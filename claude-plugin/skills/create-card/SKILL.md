@@ -60,20 +60,18 @@ also avoid:
   same family must too. Inventing a new slug shape per instance makes
   the family illegible.
 
-Verify it doesn't already exist:
-
-!`goc show <title> 2>&1 | head -3`
-
-Existence (frontmatter dump returned) → pick a different title.
-Non-existence ("ERROR: ... not found") → safe to proceed.
+Verify it doesn't already exist by running `goc show <your-title>`
+yourself with the candidate title bound. Existence (frontmatter dump
+returned) → pick a different title. Non-existence (`ERROR: ... not
+found`) → safe to proceed.
 
 ## Step 2 — dedup against open / done / disproved queues
 
 Same root cause as an existing card = supporting evidence on that
 card's body + a `log.md` appendage on the existing entry, NOT a new
-filing. Grep for the candidate's identifying string:
-
-!`goc --status all 2>&1 | grep -i <near-name-fragment>`
+filing. Grep for the candidate's identifying string yourself, e.g.
+`goc --status all | grep -i <fragment>` with `<fragment>` replaced
+by a distinctive substring of the candidate title.
 
 If a `disproved` rebuttal exists for this hypothesis, re-read it
 before filing. Re-promote only if `git log -p -- <cited-file>` shows

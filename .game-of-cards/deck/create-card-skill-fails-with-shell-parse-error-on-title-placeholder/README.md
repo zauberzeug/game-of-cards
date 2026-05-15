@@ -18,44 +18,45 @@ summary: |-
   `!cmd` line — either by interpolating the skill arg into the fence
   at load time, or by replacing the executable fence with prose
   guidance that the agent runs themselves with the real title bound.
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-15T11:49:06Z"
-closed_at: null
+closed_at: 2026-05-15T13:40:12Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] Reproduce: from a Claude Code session in any goc-using repo,
+  - [x] Reproduce: from a Claude Code session in any goc-using repo,
     invoke `Skill(create-card)` with any args. Capture the
     `parse error near '>&'` stderr; confirm the skill terminates
     before reaching its dedup step.
-  - [ ] Fix `goc/templates/skills/create-card/SKILL.md:65` so the
+  - [x] Fix `goc/templates/skills/create-card/SKILL.md:65` so the
     line either (a) interpolates the title arg before host execution,
     (b) is rewritten as prose with the agent expected to run
     `goc show <real-title>` itself, or (c) uses a fence form the host
     does NOT auto-execute. Pick the option that keeps the dedup check
     actually getting performed (option (b) only works if the rest of
     the skill flow strongly prompts the agent to do it).
-  - [ ] Apply the same fix to `goc/templates/skills/advance-card/SKILL.md:30`
+  - [x] Apply the same fix to `goc/templates/skills/advance-card/SKILL.md:30`
     and `goc/templates/skills/finish-card/SKILL.md:43` — same bug,
     same `!`goc show <title>`` pattern.
-  - [ ] Pre-commit `sync-plugin-assets` regenerates the three
+  - [x] Pre-commit `sync-plugin-assets` regenerates the three
     `.claude/skills/<name>/SKILL.md` mirrors and the
     `claude-plugin/skills/<name>/SKILL.md` payload copies; OpenClaw
     skills re-ported via `scripts/port_skills_to_openclaw.py` if the
     port script preserves the fix shape (otherwise hand-port).
-  - [ ] Add a regression check: a `grep` in CI (or a small test in
+  - [x] Add a regression check: a `grep` in CI (or a small test in
     `tests/`) that fails the build if any
     `goc/templates/skills/**/SKILL.md` line matches
     `!`.*<[a-z]+>.*`` (executable fence containing an
     angle-bracket placeholder). Catches re-introduction of the same
     pattern across all current and future skills.
-  - [ ] `uv run goc validate` passes; manual smoke: invoke
+  - [x] `uv run goc validate` passes; manual smoke: invoke
     `Skill(create-card)` from Claude Code and confirm it walks the
     dedup → file flow without the parse error.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # create-card-skill-fails-with-shell-parse-error-on-title-placeholder

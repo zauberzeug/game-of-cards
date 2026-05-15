@@ -27,9 +27,7 @@ User argument: $ARGUMENTS — `<title> <new-status> [--by <other-title>]`.
 
 ## Step 1 — read the card
 
-!`goc show <title>`
-
-Confirm:
+Run `goc show <title>` yourself with the real title bound. Confirm:
 - Current status matches the transition you're about to make
   (e.g. `open → active` requires current `open`).
 - The `human_gate` is appropriate for the new state. If you're

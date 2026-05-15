@@ -38,11 +38,8 @@ User argument: $ARGUMENTS — title.
 
 ## Step 1 — confirm the work satisfies the DoD
 
-Read the card:
-
-!`goc show <title>`
-
-Re-confirm each DoD criterion against the actual work:
+Read the card by running `goc show <title>` yourself with the real
+title bound. Re-confirm each DoD criterion against the actual work:
 
 - For `- [ ] reproduce.py exits zero (defect no longer fires)` —
   run `uv run python deck/<title>/reproduce.py` and confirm exit 0
