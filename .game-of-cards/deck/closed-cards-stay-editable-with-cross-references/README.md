@@ -1,22 +1,22 @@
 ---
 title: closed-cards-stay-editable-with-cross-references
 summary: Endorse amending closed cards (README dashboard or `log.md` journal) when new evidence surfaces post-close, with a required cross-reference back from the original to the new card. Update the deck, finish-card, and card-schema skill bodies and the consumer-facing CLAUDE_GOC / AGENTS_GOC templates so the principle ships. Closure is not frozenness — the deck's durable value depends on each closed card staying as a live entry-point to the full learning thread.
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-17T03:36:17Z"
-closed_at: null
+closed_at: 2026-05-17T08:50:31Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, documentation, meta-fix]
 definition_of_done: |
-  - [ ] `goc/templates/skills/finish-card/SKILL.md` carries an "After closure" subsection (or equivalent) endorsing post-close edits and prescribing the cross-reference format
-  - [ ] `goc/templates/skills/deck/SKILL.md` overview mentions closure ≠ frozenness in the operating-modes / lifecycle framing
-  - [ ] `goc/templates/skills/card-schema/SKILL.md` "What goes where" subsection notes that post-close amendments are valid (README cross-ref + `log.md` append)
-  - [ ] `goc/templates/CLAUDE_GOC.md` and `goc/templates/AGENTS_GOC.md` (consumer-shipped block) carry a one-line authoring rule on post-close cross-referencing
-  - [ ] `python scripts/sync_plugin_assets.py --check` passes after the template edits propagate to `.claude/`, `claude-plugin/`, `openclaw-plugin/` mirrors
-  - [ ] `uv run goc validate` passes
+  - [x] `goc/templates/skills/finish-card/SKILL.md` carries an "After closure" subsection (or equivalent) endorsing post-close edits and prescribing the cross-reference format
+  - [x] `goc/templates/skills/deck/SKILL.md` overview mentions closure ≠ frozenness in the operating-modes / lifecycle framing
+  - [x] `goc/templates/skills/card-schema/SKILL.md` "What goes where" subsection notes that post-close amendments are valid (README cross-ref + `log.md` append)
+  - [x] `goc/templates/CLAUDE_GOC.md` and `goc/templates/AGENTS_GOC.md` (consumer-shipped block) carry a one-line authoring rule on post-close cross-referencing
+  - [x] `python scripts/sync_plugin_assets.py --check` passes after the template edits propagate to `.claude/`, `claude-plugin/`, `openclaw-plugin/` mirrors
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -43,61 +43,35 @@ the reader walks away with stale context. Forcing strict immutability
 on closed cards orphans the original anchor: future readers have to
 grep for forward references to discover what changed.
 
-## Current state
+## Applied fix
 
-- `goc/templates/skills/card-schema/SKILL.md:61` — "What goes where"
-  subsection treats the README/`log.md` split as universal, no
-  closed-card carve-out.
-- `goc/templates/skills/finish-card/SKILL.md:100` — closure language
-  ("dashboard showing the card's final state") implies frozenness.
-- `goc/templates/skills/deck/SKILL.md` — overview does not mention
-  the lifecycle rule.
-- `goc/templates/CLAUDE_GOC.md` / `goc/templates/AGENTS_GOC.md` — the
-  consumer-shipped marker block has authoring rules but nothing on
-  post-close amendments.
+The "closure is not frozenness" principle now ships across all four
+methodology surfaces:
 
-No CLI behavior is in scope — `goc` already permits editing files in
-any directory regardless of card status. This is documentation-only.
+- `goc/templates/skills/finish-card/SKILL.md` carries an
+  "After closure — closure is not frozenness" section (before the
+  `Cross-references` section). It states the principle, routes
+  amendments through `log.md` (append-only `## YYYY-MM-DDTHH:MM:SSZ
+  — Post-close amendment` entry) and an optional `> Later evidence:`
+  pointer atop the README, and pins the rule that the original
+  closure entry itself is never rewritten.
+- `goc/templates/skills/deck/SKILL.md` lifecycle section now includes
+  a "Closure is not frozenness" paragraph after the terminal-status
+  description, cross-linking to `Skill(finish-card)` "After closure".
+- `goc/templates/skills/card-schema/SKILL.md` "What goes where"
+  subsection has a new "Concrete consequences" bullet declaring the
+  post-close amendment a valid `log.md` append, with the same README
+  pointer guidance.
+- `goc/templates/CLAUDE_GOC.md` and `goc/templates/AGENTS_GOC.md`
+  consumer-shipped blocks both end with a one-line authoring rule
+  pointing at the finish-card "After closure" section.
+- `python scripts/sync_plugin_assets.py` propagated the template
+  edits to `.claude/skills/`, `claude-plugin/skills/`, and
+  `openclaw-plugin/skills/`; the local dogfood `AGENTS.md` marker
+  block was hand-mirrored.
 
-## Fix proposal
-
-State the principle once and reference-link from the other surfaces.
-Canonical wording:
-
-> Closure is not frozenness. When new evidence surfaces after a card
-> closes — a bug found later, an assumption invalidated, a follow-up
-> that reframes the original — file a new card for the new work AND
-> amend the closed card to point readers forward. Treat the amendment
-> as additive (a back-reference, a corrected assumption); do not
-> rewrite the original closure entry itself. The deck is the durable
-> record of what was learned, not just what shipped, so the closed
-> card stays as the live entry-point to the full thread.
-
-Suggested cross-reference format (one line, dated, appended to
-`log.md` AND surfaced at the top of the README body if material):
-
-```
-[YYYY-MM-DD] Post-close amendment: superseded by [`<new-card-title>`](../<new-card-title>/) — <one-line reason>.
-```
-
-`log.md` is append-only as always — the post-close entry is a new line,
-not a rewrite. The README may add a single "Later evidence" pointer
-near the top so cold readers see it before reading the closure
-narrative.
-
-Specific edits:
-1. `goc/templates/skills/finish-card/SKILL.md` — add an "After closure"
-   subsection at the end, with the principle and the cross-ref format.
-2. `goc/templates/skills/deck/SKILL.md` — one line in the lifecycle /
-   operating-modes overview that closure ≠ frozen.
-3. `goc/templates/skills/card-schema/SKILL.md` — extend "What goes
-   where" with a row or note on post-close amendments.
-4. `goc/templates/CLAUDE_GOC.md` and `goc/templates/AGENTS_GOC.md` —
-   one-line authoring rule (paired with the existing "English only,"
-   "no direct quotes" rules) on cross-referencing post-close evidence.
-5. Run `python scripts/sync_plugin_assets.py` so `.claude/skills/`,
-   `claude-plugin/skills/`, and `openclaw-plugin/skills/` mirrors stay
-   byte-for-byte with the templates (CI tripwire enforces parity).
+No CLI behavior changed — `goc` already permits editing files in any
+directory regardless of card status. The work was documentation-only.
 
 ## Why it matters
 
