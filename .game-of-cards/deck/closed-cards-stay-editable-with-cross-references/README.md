@@ -1,7 +1,7 @@
 ---
 title: closed-cards-stay-editable-with-cross-references
 summary: Endorse amending closed cards (README dashboard or `log.md` journal) when new evidence surfaces post-close, with a required cross-reference back from the original to the new card. Update the deck, finish-card, and card-schema skill bodies and the consumer-facing CLAUDE_GOC / AGENTS_GOC templates so the principle ships. Closure is not frozenness — the deck's durable value depends on each closed card staying as a live entry-point to the full learning thread.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-17T03:36:17Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] `goc/templates/CLAUDE_GOC.md` and `goc/templates/AGENTS_GOC.md` (consumer-shipped block) carry a one-line authoring rule on post-close cross-referencing
   - [ ] `python scripts/sync_plugin_assets.py --check` passes after the template edits propagate to `.claude/`, `claude-plugin/`, `openclaw-plugin/` mirrors
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # closed-cards-stay-editable-with-cross-references
