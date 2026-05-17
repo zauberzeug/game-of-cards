@@ -206,6 +206,17 @@ for the routing rule.
 another card unblocks it. `done`, `disproved`, and `superseded` are
 all terminal — none deletes the directory; the forensic record stays.
 
+**Closure is not frozenness.** Terminal status retires the card from
+the live queue but does not freeze the directory. When new evidence
+surfaces later — a bug found weeks after close, an assumption
+invalidated by follow-up work, a successor card that reframes the
+original — file a new card AND amend the closed one with a forward
+pointer (one-line dated entry appended to `log.md`, optional `>
+Later evidence:` pointer at the top of the README body). The deck is
+the durable record of what was learned, not just what shipped; each
+closed card stays as the live entry-point to the full thread. See
+`Skill(finish-card)` "After closure" for the cross-reference format.
+
 `status: blocked` and `human_gate` are orthogonal axes. A blocked
 card waiting on an agent-observable external condition (upstream
 release, PR merge, dependency publication, scheduled re-check)
