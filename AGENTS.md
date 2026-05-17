@@ -7,7 +7,7 @@ from the repo root as `uv run goc ...`; do not assume a bare `goc` executable
 is available on PATH in this repo. Translate every bare `goc ...` example in
 the generated guidance below to `uv run goc ...` while working here.
 
-<!-- BEGIN GOC v0.0.18 -->
+<!-- BEGIN GOC v0.0.19 -->
 ## Game of Cards — methodology runtime
 
 This repo uses [Game of Cards](https://github.com/zauberzeug/game-of-cards):
