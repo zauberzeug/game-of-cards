@@ -6,22 +6,22 @@ summary: |-
   says "not found at <path>" — three different stories for the same defect.
   Unify the diagnostics by distinguishing "no opening delimiter" from
   "opening present, closing missing/unparseable".
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-17T06:01:33Z"
-closed_at: null
+closed_at: 2026-05-17T06:08:22Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug]
 definition_of_done: |
-  - [ ] `parse_frontmatter` raises a `FrontmatterError` when the opening `---` is present but the closing is absent/unparseable; still returns `({}, text)` when no opening delimiter exists at line 1.
-  - [ ] `goc validate` on a card with missing closing `---` reports `frontmatter unterminated: ...` (not "missing frontmatter").
-  - [ ] `goc done <card>` on the same card reports `frontmatter parse failed at <path>: frontmatter unterminated: ...` (not "not found at <path>").
-  - [ ] `goc show <card>` still prints the file content, but emits a stderr warning describing the parse failure.
-  - [ ] Other mutating commands that look up a card by title (`attest`, `advance`, `unadvance`, `move`, `decide`, `quality-pass`) report the same precise error via a shared helper.
-  - [ ] `reproduce.py` exits zero against the post-fix engine: pre-fix all three commands disagree; post-fix the three errors form a coherent story (show prints + warns; validate and done both name the unterminated frontmatter).
+  - [x] `parse_frontmatter` raises a `FrontmatterError` when the opening `---` is present but the closing is absent/unparseable; still returns `({}, text)` when no opening delimiter exists at line 1.
+  - [x] `goc validate` on a card with missing closing `---` reports `frontmatter unterminated: ...` (not "missing frontmatter").
+  - [x] `goc done <card>` on the same card reports `frontmatter parse failed at <path>: frontmatter unterminated: ...` (not "not found at <path>").
+  - [x] `goc show <card>` still prints the file content, but emits a stderr warning describing the parse failure.
+  - [x] Other mutating commands that look up a card by title (`attest`, `advance`, `unadvance`, `move`, `decide`, `quality-pass`) report the same precise error via a shared helper.
+  - [x] `reproduce.py` exits zero against the post-fix engine: pre-fix all three commands disagree; post-fix the three errors form a coherent story (show prints + warns; validate and done both name the unterminated frontmatter).
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -91,7 +91,7 @@ title: my-card
 status: open
 ...
 definition_of_done: |
-  - [ ] something
+  - [x] something
 
 ## Body starts here without a closing ---
 

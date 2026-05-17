@@ -129,15 +129,38 @@ LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)$", re.DOTALL)
 
 
+class FrontmatterError(ValueError):
+    """Raised when the opening `---` is present but frontmatter is malformed.
+
+    Distinct from the legitimate ({}, text) return path of `parse_frontmatter`,
+    which signals "no frontmatter delimiters present at all" — a normal state
+    for non-card files. This exception is for the corrupt-card case where the
+    opener is there but the closer is missing or the YAML inside is unparseable.
+    """
+
+
 def parse_frontmatter(text: str) -> tuple[dict, str]:
     """Extract YAML between leading `---` markers; return (data, body).
 
-    Returns ({}, text) if no frontmatter delimiters are present.
+    Three outcomes:
+      - No opening `---` at line 1  → returns ({}, text) (non-frontmatter file)
+      - Opening present, closing missing/unparseable → raises FrontmatterError
+      - Both delimiters present, YAML valid → returns (data, body)
     """
+    if not (text.startswith("---\n") or text.startswith("---\r\n")):
+        return {}, text
     m = FRONTMATTER_RE.match(text)
     if not m:
-        return {}, text
-    data = yaml.safe_load(m.group(1)) or {}
+        raise FrontmatterError(
+            "frontmatter unterminated: opening '---' at line 1 has no "
+            "matching closing '---' delimiter"
+        )
+    try:
+        data = yaml.safe_load(m.group(1)) or {}
+    except ValueError as exc:
+        raise FrontmatterError(
+            f"YAML parse error inside frontmatter: {exc}"
+        ) from exc
     return data, m.group(2)
 
 
@@ -431,6 +454,12 @@ def count_dod_boxes(dod_field: str) -> tuple[int, int]:
 
 
 def load_card(card_dir: Path) -> Card | None:
+    """Load a card; return None if the directory has no card-shaped README.md.
+
+    Raises `FrontmatterError` if README.md exists with an opening `---` but
+    no matching closer (or YAML inside is unparseable). Callers that want
+    a uniform exit-with-diagnostic should use `load_card_or_exit` instead.
+    """
     readme = card_dir / "README.md"
     if not readme.exists():
         return None
@@ -456,10 +485,51 @@ def load_all_cards() -> list[Card]:
     for sub in sorted(DECK_DIR.iterdir()):
         if not sub.is_dir():
             continue
-        t = load_card(sub)
+        try:
+            t = load_card(sub)
+        except FrontmatterError as exc:
+            # Don't let one broken card blank the whole queue — surface a
+            # warning per card and skip. `goc validate` reports authoritatively.
+            print(f"WARNING: {sub.name}: {exc}", file=sys.stderr)
+            continue
         if t is not None:
             cards.append(t)
     return cards
+
+
+def load_card_or_exit(card_dir: Path, title: str) -> "Card":
+    """Load a card or exit(2) with a precise diagnostic.
+
+    Distinguishes four failure modes that previous code collapsed into
+    "not found at <path>":
+      1. card directory missing
+      2. README.md missing
+      3. README.md has no opening `---` at line 1 (not a card-shaped file)
+      4. frontmatter malformed (opener present, closer missing/invalid YAML)
+    """
+    if not card_dir.exists():
+        print(f"ERROR: {title}: not found at {card_dir}", file=sys.stderr)
+        sys.exit(2)
+    readme = card_dir / "README.md"
+    if not readme.exists():
+        print(f"ERROR: {title}: README.md not found at {readme}", file=sys.stderr)
+        sys.exit(2)
+    try:
+        card = load_card(card_dir)
+    except FrontmatterError as exc:
+        print(
+            f"ERROR: {title}: frontmatter parse failed at {readme}: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if card is None:
+        print(
+            f"ERROR: {title}: README.md at {readme} has no frontmatter "
+            f"(missing opening '---' at line 1)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    return card
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -514,9 +584,16 @@ def validate_deck_directories() -> list[str]:
             else:
                 errors.append(f"{sub.name}: card directory missing README.md")
             continue
-        fm, _body = parse_frontmatter(readme.read_text())
+        try:
+            fm, _body = parse_frontmatter(readme.read_text())
+        except FrontmatterError as exc:
+            errors.append(f"{sub.name}: {exc}")
+            continue
         if not fm:
-            errors.append(f"{sub.name}: README.md missing frontmatter")
+            errors.append(
+                f"{sub.name}: README.md has no frontmatter "
+                f"(missing opening '---' at line 1)"
+            )
     return errors
 
 
@@ -1940,10 +2017,7 @@ def _cmd_done(args):
     title = args.title
     force = args.force
     card_dir = DECK_DIR / title
-    t = load_card(card_dir)
-    if t is None:
-        print(f"ERROR: {title}: not found at {card_dir}", file=sys.stderr)
-        sys.exit(2)
+    t = load_card_or_exit(card_dir, title)
     if t.dod_freeform and not force:
         print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
         sys.exit(2)
@@ -2436,10 +2510,7 @@ def _cmd_attest(args):
     skips = args.skips
     non_interactive = args.non_interactive
     card_dir = DECK_DIR / title
-    card = load_card(card_dir)
-    if card is None:
-        print(f"ERROR: {title}: not found at {card_dir}", file=sys.stderr)
-        sys.exit(2)
+    card = load_card_or_exit(card_dir, title)
     config = load_deck_config()
     all_cards = load_all_cards()
     today = _utc_now_iso()
@@ -2561,10 +2632,7 @@ def _cmd_status(args):
     worker_who = args.worker_who
     worker_where = args.worker_where
     card_dir = DECK_DIR / title
-    t = load_card(card_dir)
-    if t is None:
-        print(f"ERROR: {title}: not found", file=sys.stderr)
-        sys.exit(2)
+    t = load_card_or_exit(card_dir, title)
     prior = t.status
     if prior == new_status:
         if new_status == "active":
@@ -2701,12 +2769,11 @@ def _mutate_pair(child_title: str, parent_title: str, field_on_child: str, field
     """Add or remove a bidirectional edge between two cards."""
     child_dir = DECK_DIR / child_title
     parent_dir = DECK_DIR / parent_title
-    if not (child_dir / "README.md").exists():
-        print(f"ERROR: {child_title}: not found", file=sys.stderr)
-        sys.exit(2)
-    if not (parent_dir / "README.md").exists():
-        print(f"ERROR: {parent_title}: not found", file=sys.stderr)
-        sys.exit(2)
+    # load_card_or_exit gates on parseable frontmatter so the subsequent
+    # parse_frontmatter calls inside _add_to_list_field / _remove_from_list_field
+    # never see malformed input.
+    load_card_or_exit(child_dir, child_title)
+    load_card_or_exit(parent_dir, parent_title)
     op = _add_to_list_field if add else _remove_from_list_field
     child_text = (child_dir / "README.md").read_text()
     parent_text = (parent_dir / "README.md").read_text()
@@ -2887,10 +2954,7 @@ def _cmd_decide(args):
     commit = args.commit
     no_commit = args.no_commit
     card_dir = DECK_DIR / title
-    t = load_card(card_dir)
-    if t is None:
-        print(f"ERROR: {title}: not found", file=sys.stderr)
-        sys.exit(2)
+    t = load_card_or_exit(card_dir, title)
     if t.human_gate == "none":
         print(
             f"ERROR: {title}: gate already 'none' (no decision pending)",
@@ -2996,7 +3060,8 @@ def _cmd_show(args):
     if not p.exists():
         print(f"ERROR: {p} not found", file=sys.stderr)
         sys.exit(2)
-    print(p.read_text())
+    text = p.read_text()
+    print(text)
     artifacts = sorted(
         f.name for f in card_dir.iterdir()
         if f.is_file() and f.name not in ("README.md", "log.md")
@@ -3006,6 +3071,13 @@ def _cmd_show(args):
         print()
         for a in artifacts:
             print(f"- {a}")
+    # `show` stays read-everything (the broken card is the one you most want
+    # to inspect), but surface parse problems via stderr so the inconsistency
+    # with `validate` / `done` becomes visible at the same call site.
+    try:
+        parse_frontmatter(text)
+    except FrontmatterError as exc:
+        print(f"WARNING: {title}: {exc}", file=sys.stderr)
 
 
 def _cmd_migrate(args):
