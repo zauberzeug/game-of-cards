@@ -200,6 +200,12 @@ plugin_hooks = true
 
 Codex does not currently document plugin `bin/` auto-PATH behavior. The plugin ships `bin/goc` and the bundled engine for plugin-aware launchers, but skill instructions still assume `goc` is callable in the project environment. In this source repo, use `uv run goc ...`; in consumer repos, install the CLI with `pipx install game-of-cards` or `uv tool install game-of-cards` if bare `goc` is missing.
 
+### Versioning and release
+
+The Codex plugin version is **locked to the `game-of-cards` PyPI package version**. There is no separate Codex release cadence — `gh workflow run release.yml -f version=X.Y.Z` rewrites `codex-plugin/.codex-plugin/plugin.json` together with the other publish-channel manifests, mirrors the rewritten `__version__` into `codex-plugin/goc/__init__.py`, and commits the result back to `main` before tagging. Because consumers add the marketplace as `codex plugin marketplace add zauberzeug/game-of-cards`, Codex reads the new version directly from the repo's `main` branch — there is no separate package registry to push to. `tests/test_version_surfaces.py` enforces that `codex-plugin/.codex-plugin/plugin.json::version` matches `goc/__init__.py::__version__`, and `goc validate`'s plugin-mirror parity check (run in CI on every commit) keeps the bundled engine in sync with the source tree.
+
+To consume a release after it lands, run `codex plugin marketplace update zauberzeug/game-of-cards` and reinstall, the same pattern as the Claude Code plugin.
+
 ## OpenClaw plugin
 
 The `openclaw-plugin/` directory at the root of the `game-of-cards` repository is a plugin for [OpenClaw](https://openclaw.ai) — a Node-based personal AI assistant distributed through [ClawHub](https://clawhub.ai). It is a peer to the Claude Code plugin: same engine, same skills, same deck — different host shape.
