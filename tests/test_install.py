@@ -58,6 +58,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertNotIn("settings.json", result.stdout)
             self.assertIn("shared write  .game-of-cards/config.yaml", result.stdout)
             self.assertIn("shared append AGENTS.md", result.stdout)
+            self.assertIn("claude append CLAUDE.md", result.stdout)
 
     def test_default_install_creates_project_state_and_guidance_but_no_harness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -69,11 +70,23 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn(f"goc {self._goc_version()} installed for agents: claude (default).", result.stdout)
             self.assertTrue((cwd / ".game-of-cards" / "deck" / ".goc-version").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
-            self.assertFalse((cwd / "CLAUDE.md").is_file())
+            self.assertEqual("@AGENTS.md\n", (cwd / "CLAUDE.md").read_text())
             self.assertFalse((cwd / ".claude" / "skills").exists())
             self.assertFalse((cwd / ".claude" / "hooks").exists())
             self.assertFalse((cwd / ".claude" / "settings.json").exists())
             self.assertFalse((cwd / ".codex").exists())
+
+    def test_claude_only_briefing_target_omits_agents_md(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            result = self.run_goc(cwd, "install", "--briefing-target", "CLAUDE.md")
+
+            self.assert_goc_ok(result)
+            self.assertFalse((cwd / "AGENTS.md").exists())
+            claude_text = (cwd / "CLAUDE.md").read_text()
+            self.assertIn("<!-- BEGIN GOC", claude_text)
+            self.assertNotIn("@AGENTS.md", claude_text)
 
     def test_default_install_prints_plugin_instructions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -214,7 +227,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_prompt_router.py").is_file())
             self.assertTrue((cwd / ".claude" / "hooks" / "deck_session_start.py").is_file())
             self.assertTrue((cwd / "AGENTS.md").is_file())
-            self.assertFalse((cwd / "CLAUDE.md").is_file())
+            self.assertEqual("@AGENTS.md\n", (cwd / "CLAUDE.md").read_text())
 
             for skill_name in CLAUDE_SHIPPED_SKILLS:
                 self.assertTrue((cwd / ".claude" / "skills" / skill_name / "SKILL.md").is_file())
@@ -281,10 +294,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             # Claude: plugin path (no checked-in skills/hooks)
             self.assertFalse((cwd / ".claude" / "skills").exists())
             self.assertFalse((cwd / ".claude" / "hooks").exists())
-            # Guidance written to the default briefing target only (AGENTS.md);
-            # CLAUDE.md is opt-in via --briefing-target after the briefing-target unification.
+            # Guidance lives in AGENTS.md; Claude gets a one-line import pointer.
             self.assertTrue((cwd / "AGENTS.md").is_file())
-            self.assertFalse((cwd / "CLAUDE.md").is_file())
+            self.assertEqual("@AGENTS.md\n", (cwd / "CLAUDE.md").read_text())
 
     def test_mixed_dry_run_shows_codex_harness_not_claude_harness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -301,6 +313,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertNotIn("settings.json", planned)
             # Briefing block lands in the default briefing target (AGENTS.md).
             self.assertIn("shared append AGENTS.md", planned)
+            self.assertIn("claude append CLAUDE.md", planned)
 
     def test_mixed_with_local_skills_vendors_both(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -378,6 +391,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertNotIn(".claude/hooks/", planned)
             self.assertIn("shared write  .game-of-cards/config.yaml", planned)
             self.assertIn("shared append AGENTS.md", planned)
+            self.assertIn("claude append CLAUDE.md", planned)
 
     # ── Manifest integrity ────────────────────────────────────────────────────
 
@@ -534,6 +548,19 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(result)
             self.assertNotIn("Migrate", result.stdout)
             self.assertFalse((cwd / ".claude" / "skills").exists())
+
+    def test_upgrade_refreshes_claude_import_for_agents_briefing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            (cwd / "CLAUDE.md").write_text("@CLAUDE.local.md\n")
+
+            result = self.run_goc(cwd, "upgrade", "--briefing-target", "AGENTS.md")
+
+            self.assert_goc_ok(result)
+            self.assertEqual("@AGENTS.md\n", (cwd / "CLAUDE.md").read_text())
+            self.assertTrue((cwd / "AGENTS.md").is_file())
 
     # ── skills_source config: write-on-install, read-on-upgrade ───────────────
 

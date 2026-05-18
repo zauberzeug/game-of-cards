@@ -80,51 +80,33 @@ plugin support, repos that fork or template GoC), add:
 
 ---
 
-## Stage 2 — wire CLAUDE.md to the briefing
+## Stage 2 — verify CLAUDE.md loads the briefing
 
 Claude Code only auto-loads `CLAUDE.md` (and `CLAUDE.local.md` next to
 it). When the briefing lives elsewhere, Claude needs a one-line
 `@<file>` import in `CLAUDE.md` to transitively load it.
 
-Use the **briefing target** path detected in Stage 0:
+`goc install` and `goc upgrade` own this wiring. Use the **briefing
+target** path detected in Stage 0:
 
 - **target = `CLAUDE.md`** — Claude already sees the full briefing
-  inline. Skip this stage entirely; do not write a separate import.
-- **target = `AGENTS.md`** — write a minimal `CLAUDE.md` containing
-  only `@AGENTS.md` inside a marker block.
-- **target = `CLAUDE.local.md`** — write a minimal `CLAUDE.md`
-  containing only `@CLAUDE.local.md` inside a marker block.
+  inline. Skip this stage; do not write a separate import.
+- **target = `AGENTS.md`** — `CLAUDE.md` should contain `@AGENTS.md`
+  (or a marker-bounded GoC import block if pre-existing user content
+  had to be preserved).
+- **target = `CLAUDE.local.md`** — `CLAUDE.md` should contain
+  `@CLAUDE.local.md` (or the same marker-bounded import block form).
 
-When a write is required, use this snippet (substitute `<target>`):
+If the expected import is missing or stale, run:
 
 ```bash
-python3 - <<'PY' CLAUDE.md AGENTS.md
-import re, sys
-from pathlib import Path
-claude_md, target_file = Path(sys.argv[1]), sys.argv[2]
-block = (
-    "<!-- BEGIN GOC IMPORT -->\n"
-    f"@{target_file}\n"
-    "<!-- END GOC IMPORT -->\n"
-)
-if not claude_md.exists():
-    claude_md.write_text("# Claude Code Guidelines\n\n" + block)
-    sys.exit(0)
-text = claude_md.read_text()
-pattern = re.compile(r"<!-- BEGIN GOC IMPORT -->.*?<!-- END GOC IMPORT -->\n?", re.DOTALL)
-if pattern.search(text):
-    claude_md.write_text(pattern.sub(block, text))
-else:
-    claude_md.write_text(text.rstrip() + "\n\n" + block)
-PY
+goc upgrade --briefing-target <target>
 ```
 
-(Replace the `AGENTS.md` argument with `CLAUDE.local.md` when that is
-the briefing target.) The snippet uses the `<!-- BEGIN GOC IMPORT -->`
-marker — distinct from the briefing's `<!-- BEGIN GOC v… -->` — so
-`goc upgrade`'s briefing-detection logic does not mistake the import
-for a competing briefing home. The snippet preserves any pre-existing
-user content in CLAUDE.md above and below the marker block.
+Use `goc install --briefing-target <target>` instead if Stage 1 has not
+scaffolded the repo yet. Do not hand-edit the import as the normal path;
+the CLI handles fresh one-line CLAUDE.md files and preserves existing
+user CLAUDE.md content with its GoC import marker.
 
 If the briefing target is `CLAUDE.local.md` and the file does not yet
 exist (the generic kickoff already created it as the briefing home, so
