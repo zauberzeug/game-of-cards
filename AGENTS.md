@@ -296,6 +296,24 @@ from `goc/templates/AGENTS_GOC.md` and round-trips cleanly. In this repo,
 `CLAUDE.md` intentionally contains only `@AGENTS.md` so Claude Code loads
 this shared file without duplicating the guidance.
 
+## Parallel-Agent Commit Safety
+
+Multiple agents may work on local `main` at the same time. Treat Git's
+index as shared state: before staging, run `git diff --cached --name-only`.
+If it lists files you did not stage, another agent is in its commit
+window; wait with a short backoff or surface the collision instead of
+pushing through.
+
+When it is your turn, stage only explicit file paths with
+`git add <path>...`. Do not use `git add .`, `git add -A`, directory-wide
+adds, `git stash`, or destructive cleanup (`git restore`, `git checkout --`,
+`git reset --hard`, `git clean`) to isolate your work; those operations can
+move or discard another agent's WIP. Verify the staged set with
+`git diff --cached --stat`, then commit with an explicit pathspec:
+`git commit -- <path>...`. The pathspec is the last guard against
+accidentally bundling unrelated staged files. For high-risk shared-main
+commits, prepare the commit in a temporary worktree instead.
+
 ## Card authoring rules
 
 When filing GoC cards in this repo:
