@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - support-external-game-of-cards-state-location
 advanced_by:
@@ -36,3 +36,9 @@ Codex-only. Split out from the previous bundled card `publish-game-of-cards-agen
 
 - `provide-codex-plugin-for-skills-and-hooks` (implementation)
 - The Codex runtime's plugin/extension format being settled (open question on that card)
+
+## Decision
+
+*Resolved 2026-05-18T04:09:46Z:* Use a Codex marketplace file in zauberzeug/game-of-cards as the Codex plugin distribution path, pointing at the repo-hosted codex-plugin payload
+
+*Reasoning:* User approved the marketplace-file path; OpenAI's official Plugin Directory publishing is not self-serve yet, so repo-hosted marketplace distribution is the actionable official path now.

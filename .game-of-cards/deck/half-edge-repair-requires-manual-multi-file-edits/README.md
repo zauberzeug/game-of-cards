@@ -1,23 +1,24 @@
 ---
 title: half-edge-repair-requires-manual-multi-file-edits
 summary: "When `goc validate` reports half-edge errors (typically from cloud agents that bypass the pre-commit hook), the only fix today is a hand-edit of every offending pair. Add `goc repair-edges` so the validator's complaint maps to a one-command cleanup."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-17T09:34:17Z"
-closed_at: null
+closed_at: 2026-05-18T04:10:52Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] `goc repair-edges` exists as a subcommand; with no args it scans every card and reports the half-edges that would be fixed (preview / dry-run by default)
-  - [ ] `goc repair-edges --apply` writes the missing reverse edge for every half-edge found, using the same atomic writers as `_mutate_pair`
-  - [ ] `--apply` is idempotent — re-running on a clean deck is a no-op and exits 0
-  - [ ] Repair refuses to "fix" anything that would create an `advances` cycle; that pair is reported separately as a structural problem requiring human review
-  - [ ] After `goc repair-edges --apply` on a half-edge-dirty deck, `goc validate` reports zero half-edge errors
-  - [ ] CI's `goc validate` failure message points at `goc repair-edges --apply` as the suggested remediation
-  - [ ] `goc/templates/skills/refine-deck/SKILL.md` updated to use `goc repair-edges` instead of describing manual repair
+  - [x] `goc repair-edges` exists as a subcommand; with no args it scans every card and reports the half-edges that would be fixed (preview / dry-run by default)
+  - [x] `goc repair-edges --apply` writes the missing reverse edge for every half-edge found, using the same atomic writers as `_mutate_pair`
+  - [x] `--apply` is idempotent — re-running on a clean deck is a no-op and exits 0
+  - [x] Repair refuses to "fix" anything that would create an `advances` cycle; that pair is reported separately as a structural problem requiring human review
+  - [x] After `goc repair-edges --apply` on a half-edge-dirty deck, `goc validate` reports zero half-edge errors
+  - [x] CI's `goc validate` failure message points at `goc repair-edges --apply` as the suggested remediation
+  - [x] `goc/templates/skills/refine-deck/SKILL.md` updated to use `goc repair-edges` instead of describing manual repair
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # half-edge-repair-requires-manual-multi-file-edits

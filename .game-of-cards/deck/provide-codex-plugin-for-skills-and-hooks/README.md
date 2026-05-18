@@ -1,12 +1,12 @@
 ---
 title: provide-codex-plugin-for-skills-and-hooks
 summary: "Provide a Codex plugin or equivalent Codex runtime package for Game of Cards skills and hooks, matching the Claude plugin direction where the runtime supports it. The goal is to avoid checked-in `.codex/skills` copies while preserving the same `goc`-backed workflow."
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-05
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - support-external-game-of-cards-state-location
   - publish-codex-plugin
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] Local smoke test confirms Codex can discover/use the GoC runtime affordance
   - [ ] Docs explain install/use and limitations
   - [ ] `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Provide a Codex plugin for skills and hooks
@@ -32,3 +33,9 @@ Codex already has a first-class harness card, but the new direction is plugin-pr
 ## Session required
 
 This needs a session because Codex plugin capabilities and hook equivalents must be verified before implementation. If Codex cannot provide a true plugin path, the accepted fallback should be documented explicitly.
+
+## Decision
+
+*Resolved 2026-05-18T04:09:46Z:* Ship GoC Codex support as a repo-hosted Codex plugin payload from zauberzeug/game-of-cards, with bundled skills, a bundled goc engine, and Codex hook support where the runtime supports it
+
+*Reasoning:* User chose the GoC-official route and approved the proposed implementation shape; Codex docs now define plugins as installable distribution units for skills, apps, MCP servers, and optional hooks.
