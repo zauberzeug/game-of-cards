@@ -89,9 +89,10 @@
 #     input so the wheel reports the right version even before the tag
 #     is created. `hatch-vcs` reads `git describe --tags` only as a
 #     fallback when the env var is unset.
-#   - `goc/__init__.py`'s `__version__` literal and the four plugin
+#   - `goc/__init__.py`'s `__version__` literal and the five plugin
 #     manifests (`openclaw-plugin/package.json` + `package-lock.json`,
-#     `claude-plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`)
+#     `claude-plugin/.claude-plugin/plugin.json`,
+#     `codex-plugin/.codex-plugin/plugin.json`, `.claude-plugin/marketplace.json`)
 #     are rewritten at build time by `scripts/release_rewrite_versions.py`
 #     using the input version. The same script also rewrites two
 #     dogfood self-host surfaces — `.game-of-cards/deck/.goc-version`
@@ -99,9 +100,9 @@
 #     `test_self_hosted_generated_surfaces_match_package_version`
 #     regression check compares against `__version__`.
 #     `scripts/sync_plugin_assets.py` then mirrors the rewritten
-#     `__version__` into `claude-plugin/goc/` and `openclaw-plugin/goc/`
-#     byte-for-byte.
-#   - The build job commits all nine rewritten files back to main as
+#     `__version__` into `claude-plugin/goc/`, `codex-plugin/goc/`, and
+#     `openclaw-plugin/goc/` byte-for-byte.
+#   - The build job commits all eleven rewritten files back to main as
 #     `release: bump version literals to vX.Y.Z` under the
 #     github-actions[bot] identity, and tags that commit. After the
 #     workflow finishes, `git show vX.Y.Z:claude-plugin/.claude-plugin/plugin.json`
@@ -257,7 +258,7 @@ jobs:
               echo "  subject: $head_subject"
               exit 0
             fi
-            tracked='goc/__init__.py openclaw-plugin/package.json openclaw-plugin/package-lock.json claude-plugin/.claude-plugin/plugin.json .claude-plugin/marketplace.json'
+            tracked='goc/__init__.py openclaw-plugin/package.json openclaw-plugin/package-lock.json claude-plugin/.claude-plugin/plugin.json codex-plugin/.codex-plugin/plugin.json .claude-plugin/marketplace.json'
             diff=$(git diff --name-only HEAD~1 HEAD -- $tracked)
             if [ -n "$diff" ]; then
               echo "ERROR: HEAD modifies version literals — the workflow is the version writer."
@@ -290,8 +291,9 @@ jobs:
         run: python3 scripts/release_rewrite_versions.py "$RELEASE_VERSION"
 
       - name: Sync plugin asset mirrors after rewrite
-        # Propagates the new __version__ literal into claude-plugin/goc/ and
-        # openclaw-plugin/goc/ via the same byte-mirror used by pre-commit.
+        # Propagates the new __version__ literal into claude-plugin/goc/,
+        # codex-plugin/goc/, and openclaw-plugin/goc/ via the same byte-mirror
+        # used by pre-commit.
         run: python3 scripts/sync_plugin_assets.py
 
       - name: Validate npm lockfile is internally consistent
@@ -364,12 +366,12 @@ jobs:
         # original release; in `dry_run` mode nothing should be
         # committed.
         #
-        # All nine files are staged explicitly so an unrelated
+        # All eleven files are staged explicitly so an unrelated
         # working-tree change (e.g. a stale plugin-asset mirror caught
         # by sync) does NOT silently sneak into the release commit.
         # The list:
-        #   - 5 publish-channel manifests rewritten by release_rewrite_versions.py
-        #   - 2 plugin-payload `__init__.py` mirrors written by sync_plugin_assets.py
+        #   - 6 publish-channel manifests rewritten by release_rewrite_versions.py
+        #   - 3 plugin-payload `__init__.py` mirrors written by sync_plugin_assets.py
         #   - 2 dogfood self-host surfaces (.goc-version + AGENTS.md marker)
         #     rewritten by release_rewrite_versions.py
         # If `git diff --cached` shows nothing, the run is a no-op
@@ -386,8 +388,10 @@ jobs:
             openclaw-plugin/package.json \
             openclaw-plugin/package-lock.json \
             claude-plugin/.claude-plugin/plugin.json \
+            codex-plugin/.codex-plugin/plugin.json \
             .claude-plugin/marketplace.json \
             claude-plugin/goc/__init__.py \
+            codex-plugin/goc/__init__.py \
             openclaw-plugin/goc/__init__.py \
             .game-of-cards/deck/.goc-version \
             AGENTS.md

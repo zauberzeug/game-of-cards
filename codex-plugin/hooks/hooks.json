@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/deck_session_start.py",
+            "statusMessage": "Checking GoC deck state"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/deck_prompt_router.py",
+            "statusMessage": "Checking GoC prompt routing"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/pattern_generalization_check.py",
+            "statusMessage": "Checking GoC generalization prompt"
+          }
+        ]
+      }
+    ]
+  }
+}

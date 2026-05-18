@@ -43,6 +43,7 @@ class VersionSurfaceTest(unittest.TestCase):
             ("openclaw-plugin/package-lock.json", ("version",)),
             ("openclaw-plugin/package-lock.json", ("packages", "", "version")),
             ("claude-plugin/.claude-plugin/plugin.json", ("version",)),
+            ("codex-plugin/.codex-plugin/plugin.json", ("version",)),
             (".claude-plugin/marketplace.json", ("metadata", "version")),
         ]
         for relpath, locator in manifests:

@@ -1,0 +1,33 @@
+schema_version: 3
+required_fields:
+  - title
+  - status
+  - contribution
+  - created
+  - human_gate
+  - definition_of_done
+optional_fields:
+  - summary
+  - stage
+  - closed_at
+  - advances
+  - advanced_by
+  - tags
+title_pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+status_values:        [open, active, blocked, done, disproved, superseded]
+stage_values:         [null, alpha, beta, stable]
+contribution_values:  [high, medium, low]
+human_gate_values: [none, decision, session]
+human_gate_default: decision
+canonical_tags:
+  # Generic tag set shipped by goc. Consuming repos extend this list via
+  # `.game-of-cards/canonical-tags.md` (parsed by `goc validate`).
+  - bug
+  - documentation
+  - test
+  - api-contract
+  - meta-fix
+  - infra
+  - unverified
+  - epic
+  - story

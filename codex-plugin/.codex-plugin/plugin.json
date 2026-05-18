@@ -1,0 +1,28 @@
+{
+  "name": "game-of-cards",
+  "version": "0.0.19",
+  "description": "Game of Cards skills and lifecycle hooks for Codex agents.",
+  "author": { "name": "Zauberzeug GmbH" },
+  "homepage": "https://game-of-cards.com",
+  "repository": "https://github.com/zauberzeug/game-of-cards",
+  "license": "MIT",
+  "keywords": ["codex", "skills", "kanban", "agile", "workflow"],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "Game of Cards",
+    "shortDescription": "Deck-driven work cards for Codex agents.",
+    "longDescription": "Game of Cards gives Codex a durable markdown deck for filing, claiming, unblocking, and closing work with machine-checkable definitions of done.",
+    "developerName": "Zauberzeug GmbH",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write", "Bash"],
+    "websiteURL": "https://game-of-cards.com",
+    "privacyPolicyURL": "https://game-of-cards.com/privacy.html",
+    "defaultPrompt": [
+      "Use Game of Cards here",
+      "Show me the GoC deck",
+      "Pull the next GoC card"
+    ],
+    "brandColor": "#10A37F"
+  }
+}

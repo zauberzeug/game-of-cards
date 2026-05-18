@@ -1,0 +1,16 @@
+{
+  "name": "codex",
+  "description": "OpenAI Codex harness with Codex-readable skills and shared AGENTS.md guidance.",
+  "skills": {
+    "target": ".codex/skills",
+    "frontmatter": "codex"
+  },
+  "files": [
+    {
+      "source": "bootstrap/_goc-bootstrap.sh",
+      "target": ".codex/skills/_goc-bootstrap.sh",
+      "mode": "executable"
+    }
+  ],
+  "guidance": []
+}

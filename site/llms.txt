@@ -36,6 +36,35 @@ Once the plugin is installed, kick off any repo with:
 
 or tell your agent: "use game of cards for this repo".
 
+## Install (Codex)
+
+The GoC Codex plugin ships Codex-readable skills, optional lifecycle hooks,
+and a bundled engine mirror. Add this repository's marketplace, then install
+`game-of-cards` from Codex's `/plugins` browser:
+
+```bash
+codex plugin marketplace add zauberzeug/game-of-cards
+```
+
+For local development against a checkout:
+
+```bash
+codex plugin marketplace add ./path/to/game-of-cards
+```
+
+Plugin hooks are opt-in in the current Codex runtime. To enable the
+active-card reminder, prompt router, and pattern-generalization check, add:
+
+```toml
+[features]
+plugin_hooks = true
+```
+
+Codex does not currently document plugin `bin/` auto-PATH behavior. If bare
+`goc` is not available in a consumer repo, install the CLI with `pipx install
+game-of-cards` or `uv tool install game-of-cards`; inside this source repo,
+translate bare `goc ...` examples to `uv run goc ...`.
+
 ## Install (OpenClaw)
 
 The GoC [OpenClaw](https://openclaw.ai) plugin bundles the goc engine inside its npm payload — the only host prerequisite is `python3` (3.10+). `goc` is exposed as a **registered OpenClaw tool** (not a shell-PATH binary), so the agent invokes it like any typed function.

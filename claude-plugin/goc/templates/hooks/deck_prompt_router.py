@@ -1,8 +1,7 @@
 """UserPromptSubmit hook — detect work-initiating prompts and inject deck-first reminder.
 
-Reads the user prompt from stdin (Claude Code passes JSON with a `prompt` field).
-If the prompt looks work-initiating, emits a reminder that gets prepended to
-Claude's view of the message.
+Reads the user prompt from stdin. If the prompt looks work-initiating, emits a
+reminder that gets prepended to the agent's view of the message.
 
 Silent for pure exploration / explanation / one-shot tooling — those don't
 need cards. The reminder is opt-in (matched), not blanket.

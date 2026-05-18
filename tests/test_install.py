@@ -1240,7 +1240,17 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(self.run_goc(cwd, "new", "open-card", "--gate", "none", "--tag", "story"))
             self.assert_goc_ok(self.run_goc(cwd, "new", "active-card", "--gate", "none", "--tag", "story"))
-            self.assert_goc_ok(self.run_goc(cwd, "status", "active-card", "active", "--no-commit"))
+            self.assert_goc_ok(
+                self.run_goc(
+                    cwd,
+                    "status",
+                    "active-card",
+                    "active",
+                    "--worker-who",
+                    "bot",
+                    "--no-commit",
+                )
+            )
 
             board = self.run_goc(cwd, "--board", "--no-color")
             active = self.run_goc(cwd, "--status", "active", "--no-color")

@@ -5,8 +5,10 @@ Run by pre-commit before every commit. When goc/ or goc/templates/ changes,
 this script regenerates:
 
   - the Claude Code plugin payload under claude-plugin/
+  - the Codex plugin payload under codex-plugin/
   - the OpenClaw plugin payload's bundled engine under openclaw-plugin/goc/
   - this repo's own dogfood self-host copy under .claude/skills/ + .claude/hooks/
+    and .codex/skills/
 
 and stages the changes so they're included in the same commit — no manual
 edit-both-copies required. The dogfood targets are this repo's consumer-copy
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import filecmp
+import json
 import shutil
 import subprocess
 import sys
@@ -32,7 +35,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from goc.install import deck_hook_scripts  # noqa: E402
+from goc.install import _frontmatter_value, deck_hook_scripts, skill_for_agent  # noqa: E402
 
 
 SyncPair = tuple[Path, Path, frozenset[str], frozenset[str]]
@@ -50,9 +53,10 @@ def _build_sync_pairs() -> list[SyncPair]:
     """Compute (src, dst, excludes, preserve_files) pairs by deriving the hook list from templates/hooks/.
 
     Plugin-specific files NOT touched by this sync (`claude-plugin/hooks/hooks.json`,
-    `claude-plugin/bin/`, `claude-plugin/pyproject.toml`, `openclaw-plugin/index.ts`,
-    `openclaw-plugin/package.json`, `openclaw-plugin/skills/`, etc.) are not in
-    the pair list and stay untouched.
+    `claude-plugin/bin/`, `claude-plugin/pyproject.toml`,
+    `codex-plugin/.codex-plugin/plugin.json`, `codex-plugin/hooks/hooks.json`,
+    `codex-plugin/bin/`, `openclaw-plugin/index.ts`, `openclaw-plugin/package.json`,
+    `openclaw-plugin/skills/`, etc.) are not in the pair list and stay untouched.
 
     The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
     `--keep-local-skills` (see `_is_plugin_context` in goc/install.py), so it
@@ -77,20 +81,21 @@ def _build_sync_pairs() -> list[SyncPair]:
     pairs: list[SyncPair] = []
 
     # --- Claude plugin payload ---
-    # Exclude OpenClaw-only host complements (e.g. `openclaw-kickoff`) from
-    # the Claude plugin's skill set. They live in templates/skills/ as the
-    # source of truth, but the Claude plugin must never ship them.
+    # Exclude non-Claude host complements (e.g. `codex-kickoff`,
+    # `openclaw-kickoff`) from the Claude plugin's skill set. They live in
+    # templates/skills/ as the source of truth, but the Claude plugin must
+    # never ship them.
     skills_src = templates / "skills"
-    openclaw_only_skills = frozenset(
+    non_claude_skills = frozenset(
         p.name
         for p in skills_src.iterdir()
-        if p.is_dir() and p.name.startswith("openclaw-")
+        if p.is_dir() and not skill_for_agent(p.name, "claude")
     )
     pairs.append(
         (
             templates / "skills",
             ROOT / "claude-plugin" / "skills",
-            openclaw_only_skills,
+            non_claude_skills,
             frozenset(),
         )
     )
@@ -107,6 +112,28 @@ def _build_sync_pairs() -> list[SyncPair]:
         (
             ROOT / "goc",
             ROOT / "claude-plugin" / "goc",
+            frozenset({"templates/skills"}),
+            frozenset(),
+        )
+    )
+
+    # --- Codex plugin payload ---
+    # Skills use Codex frontmatter normalization and are synced by the
+    # specialized codex-skill tree functions below. Hook scripts and the bundled
+    # engine are byte mirrors.
+    for name in hook_names:
+        pairs.append(
+            (
+                templates / "hooks" / name,
+                ROOT / "codex-plugin" / "hooks" / name,
+                frozenset(),
+                frozenset(),
+            )
+        )
+    pairs.append(
+        (
+            ROOT / "goc",
+            ROOT / "codex-plugin" / "goc",
             frozenset({"templates/skills"}),
             frozenset(),
         )
@@ -133,7 +160,7 @@ def _build_sync_pairs() -> list[SyncPair]:
         (
             templates / "skills",
             ROOT / ".claude" / "skills",
-            openclaw_only_skills,
+            non_claude_skills,
             # `_goc-bootstrap.sh` is written by `goc install` from
             # `templates/bootstrap/_goc-bootstrap.sh` (a different src path
             # than templates/skills/). Preserve it during the dir sync; a
@@ -156,8 +183,20 @@ def _build_sync_pairs() -> list[SyncPair]:
                 ROOT / ".claude" / "hooks" / name,
                 frozenset(),
                 frozenset(),
-            )
         )
+    )
+
+    # Codex dogfood skills use the Codex frontmatter transform, so they are
+    # synced by the specialized codex-skill tree functions below. The bootstrap
+    # still comes from templates/bootstrap/.
+    pairs.append(
+        (
+            templates / "bootstrap" / "_goc-bootstrap.sh",
+            ROOT / ".codex" / "skills" / "_goc-bootstrap.sh",
+            frozenset(),
+            frozenset(),
+        )
+    )
 
     return pairs
 
@@ -268,6 +307,101 @@ def _sync_file(src: Path, dst: Path) -> list[Path]:
     return []
 
 
+def _codex_skill_text(src: Path, *, skill_name: str) -> str:
+    text = src.read_text()
+    if not text.startswith("---\n"):
+        return text
+    try:
+        _, frontmatter, body = text.split("---", 2)
+    except ValueError:
+        return text
+    name = _frontmatter_value(frontmatter, "name") or skill_name
+    description = _frontmatter_value(frontmatter, "description")
+    codex_frontmatter = "\n".join(
+        (
+            "---",
+            f"name: {name}",
+            f"description: {json.dumps(description, ensure_ascii=False)}",
+            "---",
+        )
+    )
+    return codex_frontmatter + body
+
+
+def _sync_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = frozenset()) -> list[Path]:
+    src = ROOT / "goc" / "templates" / "skills"
+    eligible = {
+        p.name for p in src.iterdir() if p.is_dir() and skill_for_agent(p.name, "codex")
+    }
+    changed: list[Path] = []
+    dst.mkdir(parents=True, exist_ok=True)
+
+    if dst.exists():
+        for item in sorted(dst.rglob("*")):
+            if _skip(item) or item.is_dir():
+                continue
+            rel = item.relative_to(dst)
+            if rel.as_posix() in preserve_files:
+                continue
+            if not rel.parts or rel.parts[0] not in eligible or not (src / rel).exists():
+                item.unlink()
+                changed.append(item)
+
+    for src_item in sorted(src.rglob("*")):
+        if _skip(src_item) or src_item.is_dir():
+            continue
+        rel = src_item.relative_to(src)
+        if rel.parts[0] not in eligible:
+            continue
+        dst_item = dst / rel
+        dst_item.parent.mkdir(parents=True, exist_ok=True)
+        expected = (
+            _codex_skill_text(src_item, skill_name=rel.parts[0])
+            if src_item.name == "SKILL.md"
+            else src_item.read_text()
+        )
+        if not dst_item.exists() or dst_item.read_text() != expected:
+            dst_item.write_text(expected)
+            changed.append(dst_item)
+
+    return changed
+
+
+def _check_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = frozenset()) -> list[Path]:
+    src = ROOT / "goc" / "templates" / "skills"
+    eligible = {
+        p.name for p in src.iterdir() if p.is_dir() and skill_for_agent(p.name, "codex")
+    }
+    out: list[Path] = []
+
+    for src_item in sorted(src.rglob("*")):
+        if _skip(src_item) or src_item.is_dir():
+            continue
+        rel = src_item.relative_to(src)
+        if rel.parts[0] not in eligible:
+            continue
+        dst_item = dst / rel
+        expected = (
+            _codex_skill_text(src_item, skill_name=rel.parts[0])
+            if src_item.name == "SKILL.md"
+            else src_item.read_text()
+        )
+        if not dst_item.exists() or dst_item.read_text() != expected:
+            out.append(dst_item)
+
+    if dst.exists():
+        for dst_item in sorted(dst.rglob("*")):
+            if _skip(dst_item) or dst_item.is_dir():
+                continue
+            rel = dst_item.relative_to(dst)
+            if rel.as_posix() in preserve_files:
+                continue
+            if not rel.parts or rel.parts[0] not in eligible or not (src / rel).exists():
+                out.append(dst_item)
+
+    return out
+
+
 def _compute_changes() -> list[Path]:
     changed: list[Path] = []
     for src, dst, excludes, preserve_files in SYNC_PAIRS:
@@ -275,6 +409,13 @@ def _compute_changes() -> list[Path]:
             changed.extend(_sync_dir(src, dst, excludes, preserve_files))
         else:
             changed.extend(_sync_file(src, dst))
+    changed.extend(_sync_codex_skill_tree(ROOT / "codex-plugin" / "skills"))
+    changed.extend(
+        _sync_codex_skill_tree(
+            ROOT / ".codex" / "skills",
+            preserve_files=frozenset({"_goc-bootstrap.sh"}),
+        )
+    )
     return changed
 
 
@@ -309,6 +450,13 @@ def _check_changes() -> list[Path]:
         else:
             if not dst.exists() or not filecmp.cmp(src, dst, shallow=False):
                 out.append(dst)
+    out.extend(_check_codex_skill_tree(ROOT / "codex-plugin" / "skills"))
+    out.extend(
+        _check_codex_skill_tree(
+            ROOT / ".codex" / "skills",
+            preserve_files=frozenset({"_goc-bootstrap.sh"}),
+        )
+    )
     return out
 
 
