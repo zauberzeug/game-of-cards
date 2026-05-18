@@ -1470,27 +1470,36 @@ def render_board(
             by_status[t.status].append(t)
     for c in columns:
         by_status[c] = sort_default(by_status[c], values=values)[:max_rows]
-    col_w = max(20, (120 - 4 * (len(columns) - 1)) // len(columns))
-    rows = max((len(by_status[c]) for c in columns), default=0)
+    def card_cell(t: Card) -> str:
+        marker = f" [{t.contribution[0]}]"
+        who = _worker_who(t.frontmatter.get("worker"))
+        if who:
+            marker += f" @{who[:8]}"
+        return f"{t.title}{marker}"
+
+    rendered_by_status: dict[str, list[str]] = {
+        c: [card_cell(t) for t in by_status[c]] for c in columns
+    }
+    col_widths = [
+        max(20, len(c.upper()), max((len(cell) for cell in rendered_by_status[c]), default=0))
+        for c in columns
+    ]
+    rows = max((len(rendered_by_status[c]) for c in columns), default=0)
     enabled = _color_enabled(no_color)
     out: list[str] = []
-    header = " | ".join(_wrap(c.upper().ljust(col_w), c, enabled) for c in columns)
+    header = " | ".join(
+        _wrap(c.upper().ljust(col_widths[i]), c, enabled) for i, c in enumerate(columns)
+    )
     out.append(header)
-    out.append("-+-".join("-" * col_w for _ in columns))
+    out.append("-+-".join("-" * col_widths[i] for i in range(len(columns))))
     for i in range(rows):
         cells = []
-        for c in columns:
-            if i < len(by_status[c]):
-                t = by_status[c][i]
-                who = _worker_who(t.frontmatter.get("worker"))
-                if who:
-                    suffix = f" [{t.contribution[0]}] @{who[:8]}"
-                    cell = f"{t.title[: col_w - len(suffix)].rstrip()}{suffix}"
-                else:
-                    cell = f"{t.title[: col_w - 3]} [{t.contribution[0]}]"
+        for col_index, c in enumerate(columns):
+            if i < len(rendered_by_status[c]):
+                cell = rendered_by_status[c][i]
             else:
                 cell = ""
-            cells.append(cell.ljust(col_w))
+            cells.append(cell.ljust(col_widths[col_index]))
         out.append(" | ".join(cells))
     return "\n".join(out)
 

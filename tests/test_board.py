@@ -25,7 +25,14 @@ class BoardRenderingTest(unittest.TestCase):
             check=False,
         )
 
-    def write_card(self, cwd: Path, title: str, status: str) -> None:
+    def write_card(
+        self,
+        cwd: Path,
+        title: str,
+        status: str,
+        *,
+        worker: str | None = None,
+    ) -> None:
         card_dir = cwd / "deck" / title
         card_dir.mkdir(parents=True)
         (card_dir / "README.md").write_text(
@@ -41,7 +48,8 @@ class BoardRenderingTest(unittest.TestCase):
             "advances: []\n"
             "advanced_by: []\n"
             "tags: [bug]\n"
-            "definition_of_done: |\n"
+            + (f"worker: {worker}\n" if worker else "")
+            + "definition_of_done: |\n"
             "  - [x] test card\n"
             "---\n\n"
             f"# {title}\n"
@@ -60,6 +68,18 @@ class BoardRenderingTest(unittest.TestCase):
                 self.assertIn(header, result.stdout)
             for status in ("open", "active", "blocked", "done", "disproved", "superseded"):
                 self.assertIn(f"{status}-card", result.stdout)
+
+
+    def test_board_preserves_title_when_worker_suffix_expands_cell(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "active-card", "active", worker="Rodja Tr")
+
+            result = self.run_goc(cwd, "--board", "--no-color")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("active-card [l] @Rodja Tr", result.stdout)
+            self.assertNotIn("active [l] @Rodja Tr", result.stdout)
 
     def test_board_rejects_negative_max_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
