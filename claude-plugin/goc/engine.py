@@ -14,6 +14,7 @@ skill bodies) lives under `.claude/skills/`.
 from __future__ import annotations
 
 import filecmp
+import difflib
 import json
 import os
 import re
@@ -567,6 +568,41 @@ LIST_REL_FIELDS = ("advances", "advanced_by")
 INVERSE_REL = {"advances": "advanced_by", "advanced_by": "advances"}
 
 
+@dataclass(frozen=True)
+class HalfEdge:
+    src: str
+    field: str
+    ref: str
+    inverse: str
+
+    @property
+    def message(self) -> str:
+        return (
+            f"{self.src}: {self.field} contains '{self.ref}' but "
+            f"{self.ref}.{self.inverse} is missing '{self.src}' (half-edge)"
+        )
+
+    @property
+    def repair_title(self) -> str:
+        return self.ref
+
+    @property
+    def repair_field(self) -> str:
+        return self.inverse
+
+    @property
+    def repair_value(self) -> str:
+        return self.src
+
+    @property
+    def child_title(self) -> str:
+        return self.ref if self.field == "advances" else self.src
+
+    @property
+    def parent_title(self) -> str:
+        return self.src if self.field == "advances" else self.ref
+
+
 def validate_deck_directories() -> list[str]:
     """Reject stale deck subdirectories that are not real card directories."""
 
@@ -916,7 +952,12 @@ def validate_bidirectional_edges(cards: list[Card]) -> list[str]:
     A.advances=[B] requires B.advanced_by to contain A; the inverse must also hold.
     Half-edges are an integrity bug — surface them so they can be repaired.
     """
-    errors: list[str] = []
+    return [edge.message for edge in find_half_edges(cards)]
+
+
+def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
+    """Return structured advances↔advanced_by asymmetries."""
+    half_edges: list[HalfEdge] = []
     by_title = {t.title: t for t in cards}
     for t in cards:
         for field, inverse in INVERSE_REL.items():
@@ -929,10 +970,8 @@ def validate_bidirectional_edges(cards: list[Card]) -> list[str]:
                     continue
                 inverse_list = other.frontmatter.get(inverse) or []
                 if t.title not in inverse_list:
-                    errors.append(
-                        f"{t.title}: {field} contains '{ref}' but {ref}.{inverse} is missing '{t.title}' (half-edge)"
-                    )
-    return errors
+                    half_edges.append(HalfEdge(t.title, field, ref, inverse))
+    return half_edges
 
 
 def detect_advance_cycles(cards: list[Card]) -> list[str]:
@@ -1549,6 +1588,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p_unadvance.add_argument("--no-commit", action="store_true",
                              help="Skip auto-commit for this edge mutation.")
 
+    # repair-edges
+    p_repair_edges = subparsers.add_parser(
+        "repair-edges",
+        help="Preview or repair asymmetric advances/advanced_by edges.",
+    )
+    p_repair_edges.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write missing reverse edges. Default is preview-only.",
+    )
+
     # move
     p_move = subparsers.add_parser("move", help="Rename a title and rewrite known cross-references.")
     p_move.add_argument("old_title")
@@ -1636,6 +1686,8 @@ def cli(argv=None):
         _cmd_advance(args)
     elif args.command == "unadvance":
         _cmd_unadvance(args)
+    elif args.command == "repair-edges":
+        _cmd_repair_edges(args)
     elif args.command == "move":
         _cmd_move(args)
     elif args.command == "decide":
@@ -1729,10 +1781,15 @@ def _cmd_validate(args):
         else:
             for e in per:
                 print(f"ERROR: {e}", file=sys.stderr)
-    for checker in (detect_advance_cycles, validate_bidirectional_edges):
-        for e in checker(cards):
-            print(f"ERROR: {e}", file=sys.stderr)
-            errors.append(e)
+    for e in detect_advance_cycles(cards):
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
+    half_edge_errors = validate_bidirectional_edges(cards)
+    for e in half_edge_errors:
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
+    if half_edge_errors:
+        print("Run 'goc repair-edges --apply' to fix.", file=sys.stderr)
     if errors:
         sys.exit(1)
 
@@ -2846,6 +2903,102 @@ def _mutate_pair(child_title: str, parent_title: str, field_on_child: str, field
     parent_text = (parent_dir / "README.md").read_text()
     (child_dir / "README.md").write_text(op(child_text, field_on_child, parent_title))
     (parent_dir / "README.md").write_text(op(parent_text, field_on_parent, child_title))
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _repair_edge_diff(edge: HalfEdge) -> list[str]:
+    readme = DECK_DIR / edge.repair_title / "README.md"
+    original = readme.read_text()
+    repaired = _add_to_list_field(original, edge.repair_field, edge.repair_value)
+    if repaired == original:
+        return []
+    rel = _display_path(readme)
+    return list(
+        difflib.unified_diff(
+            original.splitlines(),
+            repaired.splitlines(),
+            fromfile=f"a/{rel}",
+            tofile=f"b/{rel}",
+            lineterm="",
+        )
+    )
+
+
+def _repair_edge_cycle_problem(edge: HalfEdge, cards: list[Card]) -> str | None:
+    if _would_create_advance_cycle(cards, edge.child_title, edge.parent_title):
+        return (
+            f"{edge.parent_title} → {edge.child_title} would create a cycle "
+            "in the advances graph"
+        )
+    return None
+
+
+def _print_structural_edge_problems(problems: list[tuple[HalfEdge, str]]) -> None:
+    if not problems:
+        return
+    print("Structural problems requiring human review:", file=sys.stderr)
+    for edge, problem in problems:
+        print(f"  {edge.message}: {problem}", file=sys.stderr)
+
+
+def _cmd_repair_edges(args):
+    """Preview or repair asymmetric advances/advanced_by half-edges."""
+    cards = load_all_cards()
+    half_edges = find_half_edges(cards)
+    if not half_edges:
+        print("No half-edges found.")
+        return
+
+    fixable: list[HalfEdge] = []
+    structural: list[tuple[HalfEdge, str]] = []
+    for edge in half_edges:
+        problem = _repair_edge_cycle_problem(edge, cards)
+        if problem:
+            structural.append((edge, problem))
+        else:
+            fixable.append(edge)
+
+    if not args.apply:
+        if fixable:
+            print(f"Half-edges that would be repaired ({len(fixable)}):")
+            for edge in fixable:
+                print(f"\n# {edge.message}")
+                diff = _repair_edge_diff(edge)
+                if diff:
+                    print("\n".join(diff))
+                else:
+                    print("(already repaired on disk)")
+        _print_structural_edge_problems(structural)
+        print("\nDry run — no changes made. Run 'goc repair-edges --apply' to write fixes.")
+        return
+
+    repaired = 0
+    structural = []
+    for edge in half_edges:
+        # Re-load before each mutation so cycle checks see earlier repairs from
+        # this invocation.
+        current_cards = load_all_cards()
+        problem = _repair_edge_cycle_problem(edge, current_cards)
+        if problem:
+            structural.append((edge, problem))
+            continue
+        _mutate_pair(edge.child_title, edge.parent_title, "advanced_by", "advances", add=True)
+        print(f"repaired: {edge.message}")
+        repaired += 1
+
+    if repaired:
+        print(f"Repaired {repaired} half-edge(s).")
+    else:
+        print("No half-edges repaired.")
+    _print_structural_edge_problems(structural)
+    if structural:
+        sys.exit(1)
 
 
 def _cmd_advance(args):

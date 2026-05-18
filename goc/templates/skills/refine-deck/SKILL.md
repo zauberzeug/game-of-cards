@@ -57,8 +57,12 @@ autonomous loop decides whether to flip to `Skill(advance-card)`,
 
 !`goc validate`
 
-If validate fails, fix the half-edges / unknown tags / missing
-required fields FIRST. Hygiene runs on a valid deck.
+If validate fails with half-edge errors, run `goc repair-edges` to
+preview the missing reverse-edge writes, then `goc repair-edges
+--apply` and re-run `goc validate`. If repair reports a structural
+cycle, park that card for human review instead of guessing which edge
+is wrong. Fix unknown tags / missing required fields FIRST too.
+Hygiene runs on a valid deck.
 
 ## Step 2 — survey by category
 
