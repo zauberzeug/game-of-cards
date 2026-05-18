@@ -46,6 +46,12 @@ and a bundled engine mirror. Add this repository's marketplace, then install
 codex plugin marketplace add zauberzeug/game-of-cards
 ```
 
+**Updating after a new release:**
+
+```bash
+codex plugin marketplace update zauberzeug/game-of-cards
+```
+
 For local development against a checkout:
 
 ```bash
