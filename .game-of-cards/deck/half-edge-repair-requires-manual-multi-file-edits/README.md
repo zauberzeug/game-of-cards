@@ -1,7 +1,7 @@
 ---
 title: half-edge-repair-requires-manual-multi-file-edits
 summary: "When `goc validate` reports half-edge errors (typically from cloud agents that bypass the pre-commit hook), the only fix today is a hand-edit of every offending pair. Add `goc repair-edges` so the validator's complaint maps to a one-command cleanup."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-17T09:34:17Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] After `goc repair-edges --apply` on a half-edge-dirty deck, `goc validate` reports zero half-edge errors
   - [ ] CI's `goc validate` failure message points at `goc repair-edges --apply` as the suggested remediation
   - [ ] `goc/templates/skills/refine-deck/SKILL.md` updated to use `goc repair-edges` instead of describing manual repair
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # half-edge-repair-requires-manual-multi-file-edits
