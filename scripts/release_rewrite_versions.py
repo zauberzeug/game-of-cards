@@ -9,14 +9,16 @@ value into every static literal that ships:
   - openclaw-plugin/package.json (`version`)
   - openclaw-plugin/package-lock.json (top-level `version` + `packages[""].version`)
   - claude-plugin/.claude-plugin/plugin.json (`version`)
+  - codex-plugin/.codex-plugin/plugin.json (`version`)
   - .claude-plugin/marketplace.json (`metadata.version`)
   - .game-of-cards/deck/.goc-version (full-file dogfood sentinel)
   - AGENTS.md (`<!-- BEGIN GOC v… -->` dogfood marker)
 
 Plugin-payload mirrors (`claude-plugin/goc/__init__.py`,
-`openclaw-plugin/goc/__init__.py`) are NOT touched here — they are byte-mirrored
-from `goc/__init__.py` by `scripts/sync_plugin_assets.py`, which the workflow
-runs immediately after this script.
+`codex-plugin/goc/__init__.py`, `openclaw-plugin/goc/__init__.py`) are NOT
+touched here — they are byte-mirrored from `goc/__init__.py` by
+`scripts/sync_plugin_assets.py`, which the workflow runs immediately after this
+script.
 
 The two dogfood surfaces (`.goc-version` and the `AGENTS.md` marker) are this
 repo's own consumer-copy of what `goc install` writes into a fresh repo. They
@@ -85,6 +87,14 @@ def rewrite_all(version: str) -> None:
     # claude-plugin/.claude-plugin/plugin.json — top-level `"version": "..."`.
     _replace(
         ROOT / "claude-plugin" / ".claude-plugin" / "plugin.json",
+        r'^(\s+"version":\s*")[^"]+(")',
+        rf"\g<1>{version}\g<2>",
+        expected=1,
+    )
+
+    # codex-plugin/.codex-plugin/plugin.json — top-level `"version": "..."`.
+    _replace(
+        ROOT / "codex-plugin" / ".codex-plugin" / "plugin.json",
         r'^(\s+"version":\s*")[^"]+(")',
         rf"\g<1>{version}\g<2>",
         expected=1,

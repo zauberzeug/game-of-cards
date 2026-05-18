@@ -726,7 +726,7 @@ def validate_hook_registration() -> list[str]:
 def validate_plugin_mirror_parity() -> list[str]:
     """Check that plugin/ mirrors match their source-of-truth trees byte-for-byte.
 
-    Covers both `claude-plugin/` and `openclaw-plugin/` when present. Only the
+    Covers `claude-plugin/`, `codex-plugin/`, and `openclaw-plugin/` when present. Only the
     pairs whose plugin root actually exists at REPO_ROOT are checked, so this
     works in both the goc source repo and downstream consumers.
 
@@ -745,10 +745,15 @@ def validate_plugin_mirror_parity() -> list[str]:
     in TypeScript inside `openclaw-plugin/index.ts`, so its deep mirror also
     omits `templates/hooks/*.py`.
     """
-    from goc.install import deck_hook_scripts
+    from goc.install import _frontmatter_value, deck_hook_scripts, skill_for_agent
     claude_plugin_root = REPO_ROOT / "claude-plugin"
+    codex_plugin_root = REPO_ROOT / "codex-plugin"
     openclaw_plugin_root = REPO_ROOT / "openclaw-plugin"
-    if not claude_plugin_root.exists() and not openclaw_plugin_root.exists():
+    if (
+        not claude_plugin_root.exists()
+        and not codex_plugin_root.exists()
+        and not openclaw_plugin_root.exists()
+    ):
         return []
 
     def _is_inside_exclude(path: str, exclude: frozenset[str]) -> bool:
@@ -805,18 +810,18 @@ def validate_plugin_mirror_parity() -> list[str]:
     pairs: list[tuple[Path, Path, frozenset[str]]] = []
 
     if claude_plugin_root.exists():
-        # OpenClaw-only host complements (e.g. `openclaw-kickoff`) live in
-        # templates/skills/ as the source of truth but must never ship in
-        # claude-plugin/skills/. Exclude them from the parity walk so the
-        # intentional omission does not register as drift.
+        # Non-Claude host complements (e.g. `codex-kickoff`,
+        # `openclaw-kickoff`) live in templates/skills/ as the source of truth
+        # but must never ship in claude-plugin/skills/. Exclude them from the
+        # parity walk so the intentional omission does not register as drift.
         skills_src = templates_root / "skills"
-        openclaw_only_skills = frozenset(
+        non_claude_skills = frozenset(
             p.name
             for p in skills_src.iterdir()
-            if p.is_dir() and p.name.startswith("openclaw-")
+            if p.is_dir() and not skill_for_agent(p.name, "claude")
         )
         pairs.append(
-            (templates_root / "skills", claude_plugin_root / "skills", openclaw_only_skills)
+            (templates_root / "skills", claude_plugin_root / "skills", non_claude_skills)
         )
         for name in hook_names:
             pairs.append(
@@ -830,6 +835,19 @@ def validate_plugin_mirror_parity() -> list[str]:
             (REPO_ROOT / "goc", claude_plugin_root / "goc", claude_goc_excludes)
         )
 
+    if codex_plugin_root.exists():
+        for name in hook_names:
+            pairs.append(
+                (
+                    templates_root / "hooks" / name,
+                    codex_plugin_root / "hooks" / name,
+                    frozenset(),
+                )
+            )
+        pairs.append(
+            (REPO_ROOT / "goc", codex_plugin_root / "goc", claude_goc_excludes)
+        )
+
     if openclaw_plugin_root.exists():
         # Only the engine mirror is parity-tracked. Skills are hand-ported
         # (invocation-neutral edits) and hooks are TypeScript ports living
@@ -839,6 +857,68 @@ def validate_plugin_mirror_parity() -> list[str]:
         )
 
     errors: list[str] = []
+
+    def _codex_skill_text(src: Path, *, skill_name: str) -> str:
+        text = src.read_text()
+        if not text.startswith("---\n"):
+            return text
+        try:
+            _, frontmatter, body = text.split("---", 2)
+        except ValueError:
+            return text
+        name = _frontmatter_value(frontmatter, "name") or skill_name
+        description = _frontmatter_value(frontmatter, "description")
+        codex_frontmatter = "\n".join(
+            (
+                "---",
+                f"name: {name}",
+                f"description: {json.dumps(description, ensure_ascii=False)}",
+                "---",
+            )
+        )
+        return codex_frontmatter + body
+
+    def _validate_codex_skill_mirror(dst: Path) -> None:
+        src = templates_root / "skills"
+        eligible = {
+            p.name for p in src.iterdir() if p.is_dir() and skill_for_agent(p.name, "codex")
+        }
+        src_rel = str(src.relative_to(REPO_ROOT))
+        dst_rel = str(dst.relative_to(REPO_ROOT))
+        if not dst.exists():
+            errors.append(f"plugin mirror: {dst_rel} missing; copy from {src_rel}")
+            return
+        diffs: list[str] = []
+        for src_item in sorted(src.rglob("*")):
+            if "__pycache__" in src_item.parts or src_item.is_dir():
+                continue
+            rel = src_item.relative_to(src)
+            if rel.parts[0] not in eligible:
+                continue
+            dst_item = dst / rel
+            expected = (
+                _codex_skill_text(src_item, skill_name=rel.parts[0])
+                if src_item.name == "SKILL.md"
+                else src_item.read_text()
+            )
+            if not dst_item.exists():
+                diffs.append(f"{rel.as_posix()} (missing)")
+            elif dst_item.read_text() != expected:
+                diffs.append(f"{rel.as_posix()} (differs)")
+        for dst_item in sorted(dst.rglob("*")):
+            if "__pycache__" in dst_item.parts or dst_item.is_dir():
+                continue
+            rel = dst_item.relative_to(dst)
+            if not rel.parts or rel.parts[0] not in eligible or not (src / rel).exists():
+                diffs.append(f"{rel.as_posix()} (only in {dst_rel})")
+        if diffs:
+            errors.append(
+                f"plugin mirror drift: {src_rel} vs {dst_rel}: " + ", ".join(diffs)
+            )
+
+    if codex_plugin_root.exists():
+        _validate_codex_skill_mirror(codex_plugin_root / "skills")
+
     for src, dst, exclude in pairs:
         if not src.exists():
             continue

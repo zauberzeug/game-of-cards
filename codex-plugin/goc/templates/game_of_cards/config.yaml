@@ -1,0 +1,82 @@
+# Runtime-neutral Game of Cards configuration.
+#
+# `goc attest <title>` reads the closure sections below and records their
+# results in `deck/<title>/log.md`. Keep project-specific closure checks here,
+# not under an agent-specific directory such as `.claude/`.
+
+layer_2_project_dod: []
+layer_3_goc_dod:
+  - name: advanced-by-closed
+    kind: derived
+  - name: dod-100-percent
+    kind: derived
+  - name: log-md-closure-entry
+    kind: derived
+
+workflow:
+  # State-change commands auto-commit by default so active-card claims and
+  # decision handoffs are visible to parallel agents. Set false to leave those
+  # mutations in the working tree unless a command is run with `--commit`.
+  auto_commit: true
+
+  # claim_push: true        # uncomment for multi-human / multi-agent setups.
+  #                         # When set, `goc status <title> active` pushes the
+  #                         # claim commit to the remote tracking branch and
+  #                         # retries once on non-fast-forward; if a rebase
+  #                         # conflict reveals a concurrent claim, the command
+  #                         # aborts with the racing worker's identity. Off by
+  #                         # default to preserve solo workflows where pushes
+  #                         # are user-driven.
+
+  # closure_on_integration: true  # uncomment for multi-team setups that need
+  #                               # `done` to mean "visible to every
+  #                               # participant", not just locally
+  #                               # DoD-complete. When set, `goc done` runs
+  #                               # `git merge-base --is-ancestor HEAD
+  #                               # origin/main` and refuses to close if HEAD
+  #                               # has not been integrated to origin/main.
+
+  # worktree_deck: shared   # uncomment to share a single deck across all git
+  #                         # worktrees of this repo. When set, `goc` running
+  #                         # in any linked worktree resolves .game-of-cards/
+  #                         # from the primary working tree instead of the
+  #                         # worktree's own checkout. Also available as the
+  #                         # GOC_WORKTREE_DECK=shared environment variable.
+
+hooks:
+  # Set to false to disable the Stop hook that prompts the agent to file
+  # generalization cards after code-mutating turns.
+  pattern_generalization_check: true
+
+# Optional top-level field: how the queue gets drained. Written by the
+# `kickoff` skill's Stage 6 when the user picks a mode; absent means
+# "skip for now — kickoff will re-ask on next run."
+#
+#   manual  — file cards and work them by hand.
+#   loop    — supervised `pull-card` on a host-side timer (e.g.,
+#             `/loop /pull-card 30m` on Claude Code).
+#   cron    — local cron job runs `pull-card` unattended.
+#   action  — CI workflow runs `pull-card` on a schedule.
+#
+# autonomy: loop
+
+# Where this repo's GoC skills come from. Read by `goc upgrade` and
+# `goc validate` so the engine knows whether `.claude/skills/` is GoC's
+# territory or the user's. Written by `goc install` based on the chosen
+# install mode; can be edited by hand to migrate between paths.
+#
+#   plugin    — skills come from a runtime plugin (e.g. Claude Code's
+#               GoC plugin at ${CLAUDE_PLUGIN_ROOT}/skills/). `goc upgrade`
+#               does NOT write `.claude/skills/`, `.claude/hooks/`, or
+#               GoC entries in `.claude/settings.json`; `goc validate`
+#               does NOT enforce skill-dir parity against `.claude/skills/`.
+#   vendored  — skills are checked into source control under
+#               `.claude/skills/`. `goc upgrade` refreshes them in place;
+#               `goc validate` enforces parity.
+#   auto      — detect whether the GoC runtime plugin is installed on
+#               this host (looks under ${CLAUDE_PLUGIN_ROOT} and the
+#               default Claude Code plugin directory). Plugin found →
+#               behave as `plugin`. Plugin not found → behave as
+#               `vendored`. This is the default when the key is absent.
+#
+# skills_source: auto

@@ -439,20 +439,20 @@ _PACKAGE_DIR = Path(__file__).resolve().parent  # this goc/ package on disk
 
 
 def _is_plugin_context() -> bool:
-    """True when this engine is running from a copy bundled inside `claude-plugin/`.
+    """True when this engine is running from a copy bundled inside a GoC plugin.
 
-    The plugin extracts `goc/` to `<plugin_root>/goc/` and the wrapper sets
+    Plugin payloads carry `goc/` at `<plugin_root>/goc/` and their wrappers set
     PYTHONPATH so `python -m goc.cli` resolves to that nested copy. In every
     other layout (pipx, editable install, `uv run --project .`) the parent of
     the package directory is the project root or a site-packages dir.
     """
-    return _PACKAGE_DIR.parent.name == "claude-plugin"
+    return _PACKAGE_DIR.parent.name in {"claude-plugin", "codex-plugin", "openclaw-plugin"}
 
 
 _LOCAL_SKILLS_PLUGIN_REFUSAL = (
     "ERROR: --local-skills is not supported when running under the plugin.\n"
-    "       Skills are already provided by claude-plugin/skills/ and\n"
-    "       registered with Claude Code.\n"
+    "       Skills are already provided by the plugin payload and\n"
+    "       registered with the host runtime.\n"
     "\n"
     "       To use vendored skills (e.g. for CI without plugin support, or a\n"
     "       repo that forks/templates GoC), install goc via pipx instead:\n"
@@ -464,8 +464,8 @@ _LOCAL_SKILLS_PLUGIN_REFUSAL = (
 )
 _KEEP_LOCAL_SKILLS_PLUGIN_REFUSAL = (
     "ERROR: --keep-local-skills is not supported when running under the plugin.\n"
-    "       Skills are already provided by claude-plugin/skills/ and\n"
-    "       registered with Claude Code; there is no vendored layout for the\n"
+    "       Skills are already provided by the plugin payload and\n"
+    "       registered with the host runtime; there is no vendored layout for the\n"
     "       plugin engine to preserve.\n"
     "\n"
     "       If you need to keep a vendored .claude/skills/ tree (e.g. for CI\n"

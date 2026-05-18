@@ -44,9 +44,10 @@ this workflow to mint short-lived publish credentials at run time.
 `dynamic = ["version"]` and hatch-vcs reads `git describe --tags` at
 build time (overridden in CI by `SETUPTOOLS_SCM_PRETEND_VERSION` so
 the wheel reports the right version even before the tag is created).
-The four plugin manifests (`openclaw-plugin/package.json` +
+The five plugin manifests (`openclaw-plugin/package.json` +
 `package-lock.json`, `claude-plugin/.claude-plugin/plugin.json`,
-`.claude-plugin/marketplace.json`), `goc/__init__.py`'s `__version__`
+`codex-plugin/.codex-plugin/plugin.json`, `.claude-plugin/marketplace.json`),
+`goc/__init__.py`'s `__version__`
 literal, and the two dogfood self-host surfaces
 (`.game-of-cards/deck/.goc-version`, `AGENTS.md`'s `<!-- BEGIN GOC
 vX.Y.Z -->` marker) are rewritten from the input version by
@@ -54,12 +55,12 @@ vX.Y.Z -->` marker) are rewritten from the input version by
 committed back to main by the build job as
 `release: bump version literals to vX.Y.Z` (under the
 `github-actions[bot]` identity) so consumers reading the git tree
-directly — the Claude Code plugin manager being the only one today —
+directly — plugin managers read the checked-in payloads —
 see the correct version, and so that
 `tests/test_version_surfaces.py` stays green on the bot's release
 commit. Humans never edit the publish-channel version literals; the
 in-job tripwire fails the build on any human commit that touches
-those five files, while explicitly exempting the bot's own
+those six files, while explicitly exempting the bot's own
 release-bump commits so the *next* release dispatch reads the
 previous release's commit as HEAD without tripping. (`AGENTS.md` is
 NOT in the tripwire's tracked set — humans edit its non-marker
@@ -148,16 +149,16 @@ real file.
 
 ### Skill and hook files have two copies — edit the template, sync handles the rest
 
-Because this repo dogfoods itself, every file under `.claude/skills/`
-and `.claude/hooks/` is a *consumer copy* of the corresponding file
+Because this repo dogfoods itself, every file under `.claude/skills/`,
+`.claude/hooks/`, and `.codex/skills/` is a *consumer copy* of the corresponding file
 under `goc/templates/`. **Always edit `goc/templates/...`** — the
-`sync-plugin-assets` pre-commit hook regenerates the `.claude/`
+`sync-plugin-assets` pre-commit hook regenerates those
 mirrors from the templates on every commit and stages them
-automatically, the same way it already does for `claude-plugin/` and
-`openclaw-plugin/`. CI runs `python scripts/sync_plugin_assets.py
+automatically, the same way it already does for `claude-plugin/`,
+`codex-plugin/`, and `openclaw-plugin/`. CI runs `python scripts/sync_plugin_assets.py
 --check` and fails the build on any drift, so editing only
-`.claude/skills/...` is now CI-detectable (it gets overwritten by the
-next pre-commit pass).
+`.claude/skills/...` or `.codex/skills/...` is now CI-detectable (it gets
+overwritten by the next pre-commit pass).
 
 The `.game-of-cards/` content stubs (project-local deck README,
 config) and `.claude/settings.json` (project-specific permission
@@ -214,6 +215,17 @@ files:
 | `claude-plugin/hooks/pattern_generalization_check.py` | `goc/templates/hooks/pattern_generalization_check.py` |
 | `claude-plugin/goc/` | `goc/` (entire package — engine, schema, templates) |
 
+The Codex plugin payload at `codex-plugin/` follows the same real-file
+principle, with Codex-specific frontmatter normalization for skills:
+
+| Plugin path | Source-of-truth |
+|---|---|
+| `codex-plugin/skills/` | `goc/templates/skills/` filtered for Codex |
+| `codex-plugin/hooks/deck_prompt_router.py` | `goc/templates/hooks/deck_prompt_router.py` |
+| `codex-plugin/hooks/deck_session_start.py` | `goc/templates/hooks/deck_session_start.py` |
+| `codex-plugin/hooks/pattern_generalization_check.py` | `goc/templates/hooks/pattern_generalization_check.py` |
+| `codex-plugin/goc/` | `goc/` (entire package — engine, schema, templates) |
+
 The flat `claude-plugin/skills/` and `claude-plugin/hooks/` paths exist
 so Claude Code's plugin runtime auto-discovers them at the layout it
 expects. The nested `claude-plugin/goc/templates/...` mirrors the rest
@@ -226,13 +238,16 @@ those templates are never read from inside the plugin payload. To
 vendor skills into source control, install via `pipx install
 game-of-cards` instead — that path keeps the full template tree.
 
-**Do not edit `claude-plugin/` directly.** The `sync-plugin-assets`
+**Do not edit `claude-plugin/` or `codex-plugin/` directly.** The `sync-plugin-assets`
 pre-commit hook (`scripts/sync_plugin_assets.py`) auto-regenerates those
 files from the source-of-truth on every commit and stages the changes
 automatically. CI runs `python scripts/sync_plugin_assets.py --check`
 and fails the build on any drift. Plugin-specific files that are NOT
 auto-synced: `claude-plugin/hooks/hooks.json`, `claude-plugin/bin/goc`,
-`claude-plugin/settings.json`, `claude-plugin/README.md`.
+`claude-plugin/settings.json`, `claude-plugin/README.md`,
+`codex-plugin/.codex-plugin/plugin.json`, `codex-plugin/hooks/hooks.json`,
+`codex-plugin/bin/goc`, `codex-plugin/README.md`, and
+`.agents/plugins/marketplace.json`.
 
 ### OpenClaw plugin payload — same engine, different host shape
 

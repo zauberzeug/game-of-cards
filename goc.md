@@ -163,6 +163,43 @@ For full dynamic feature support, either:
 
 A future release will fix the bootstrap path to use `${CLAUDE_SKILL_DIR}` so the plugin is fully self-contained.
 
+## Codex plugin
+
+The `codex-plugin/` directory at the root of the `game-of-cards` repository is a Codex plugin. It is exposed through the repo marketplace file at `.agents/plugins/marketplace.json`.
+
+### What the plugin provides
+
+- **GoC skills** copied from `goc/templates/skills/`, filtered for Codex and written with Codex-compatible frontmatter.
+- **Lifecycle hooks** under `hooks/hooks.json`: `SessionStart`, `UserPromptSubmit`, and `Stop`.
+- **A bundled goc engine mirror** under `codex-plugin/goc/`, plus `bin/goc` for plugin-aware launchers.
+
+### Install from the repo marketplace
+
+Add this repository as a Codex plugin marketplace:
+
+```bash
+codex plugin marketplace add zauberzeug/game-of-cards
+```
+
+Then open Codex's plugin browser with `/plugins`, choose the `Game of Cards` marketplace source, and install `game-of-cards`.
+
+For local development against a checkout:
+
+```bash
+codex plugin marketplace add /path/to/game-of-cards
+```
+
+### Hooks and CLI behavior
+
+Codex plugin hooks are opt-in in the current runtime. To enable the GoC hook set, add this to `.codex/config.toml` or `~/.codex/config.toml` and restart Codex:
+
+```toml
+[features]
+plugin_hooks = true
+```
+
+Codex does not currently document plugin `bin/` auto-PATH behavior. The plugin ships `bin/goc` and the bundled engine for plugin-aware launchers, but skill instructions still assume `goc` is callable in the project environment. In this source repo, use `uv run goc ...`; in consumer repos, install the CLI with `pipx install game-of-cards` or `uv tool install game-of-cards` if bare `goc` is missing.
+
 ## OpenClaw plugin
 
 The `openclaw-plugin/` directory at the root of the `game-of-cards` repository is a plugin for [OpenClaw](https://openclaw.ai) — a Node-based personal AI assistant distributed through [ClawHub](https://clawhub.ai). It is a peer to the Claude Code plugin: same engine, same skills, same deck — different host shape.

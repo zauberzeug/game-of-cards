@@ -1,14 +1,16 @@
 """SessionStart hook — brief GoC session primer.
 
-Runs when Claude Code starts a new session. If there are active cards in the
-deck, prints a one-line reminder so the model can pick up where it left off.
-Silent when no cards are in-flight.
+Runs when an agent session starts. If there are active cards in the deck,
+prints a one-line reminder so the model can pick up where it left off. Silent
+when no cards are in-flight.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import sys
 from pathlib import Path
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
@@ -29,8 +31,22 @@ def _card_status(readme: Path) -> str | None:
     return None
 
 
+def _project_dir_from_hook_input() -> str:
+    try:
+        data = json.load(sys.stdin)
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+    if isinstance(data, dict) and data.get("cwd"):
+        return str(data["cwd"])
+    return (
+        os.environ.get("CLAUDE_PROJECT_DIR")
+        or os.environ.get("CODEX_PROJECT_DIR")
+        or "."
+    )
+
+
 def main() -> int:
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", ".")
+    project_dir = _project_dir_from_hook_input()
     deck_dir = Path(project_dir) / ".game-of-cards" / "deck"
     if not deck_dir.is_dir():
         legacy = Path(project_dir) / "deck"
