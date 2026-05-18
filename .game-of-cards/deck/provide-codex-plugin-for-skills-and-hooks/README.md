@@ -1,7 +1,7 @@
 ---
 title: provide-codex-plugin-for-skills-and-hooks
 summary: "Provide a Codex plugin or equivalent Codex runtime package for Game of Cards skills and hooks, matching the Claude plugin direction where the runtime supports it. The goal is to avoid checked-in `.codex/skills` copies while preserving the same `goc`-backed workflow."
-status: open
+status: active
 stage: null
 contribution: low
 created: 2026-05-05
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] Local smoke test confirms Codex can discover/use the GoC runtime affordance
   - [ ] Docs explain install/use and limitations
   - [ ] `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Provide a Codex plugin for skills and hooks
