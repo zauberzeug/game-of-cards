@@ -1,24 +1,24 @@
 ---
 title: half-edge-errors-recur-because-goc-new-cannot-wire-edges
 summary: "`goc new` has no `--advances` / `--advanced-by` flags, so agents filing an already-wired card hand-author the frontmatter and forget the reverse edge. Add the flags and route through `_mutate_pair` so both sides land symmetric in one shell call."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-17T09:33:25Z"
-closed_at: null
+closed_at: 2026-05-18T03:54:18Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] `goc new <title> --advances X --advances Y` creates the card with `advances: [X, Y]` AND adds `<title>` to `X.advanced_by` and `Y.advanced_by`
-  - [ ] `goc new <title> --advanced-by P --advanced-by Q` creates the card with `advanced_by: [P, Q]` AND adds `<title>` to `P.advances` and `Q.advances`
-  - [ ] Flags are repeatable and combinable in a single invocation
-  - [ ] If any referenced target does not exist, `goc new` fails with a clear error and creates nothing (no card dir, no mutated targets)
-  - [ ] If any proposed edge would create an `advances` cycle, `goc new` fails with the same atomic-or-nothing guarantee (reuses `_would_create_advance_cycle`)
-  - [ ] `uv run goc validate` reports zero half-edges after every accepted invocation in `tests/test_new_wires_edges.py`
-  - [ ] `goc/templates/skills/create-card/SKILL.md` Step 4 names the new flags as the preferred one-shot path for wiring at creation; the two-step `goc new` + `goc advance` is demoted to fallback
-  - [ ] `goc new --help` lists both flags with examples
+  - [x] `goc new <title> --advances X --advances Y` creates the card with `advances: [X, Y]` AND adds `<title>` to `X.advanced_by` and `Y.advanced_by`
+  - [x] `goc new <title> --advanced-by P --advanced-by Q` creates the card with `advanced_by: [P, Q]` AND adds `<title>` to `P.advances` and `Q.advances`
+  - [x] Flags are repeatable and combinable in a single invocation
+  - [x] If any referenced target does not exist, `goc new` fails with a clear error and creates nothing (no card dir, no mutated targets)
+  - [x] If any proposed edge would create an `advances` cycle, `goc new` fails with the same atomic-or-nothing guarantee (reuses `_would_create_advance_cycle`)
+  - [x] `uv run goc validate` reports zero half-edges after every accepted invocation in `tests/test_new_wires_edges.py`
+  - [x] `goc/templates/skills/create-card/SKILL.md` Step 4 names the new flags as the preferred one-shot path for wiring at creation; the two-step `goc new` + `goc advance` is demoted to fallback
+  - [x] `goc new --help` lists both flags with examples
 worker: {who: Rodja Trappe, where: main}
 ---
 
