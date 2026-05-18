@@ -1509,11 +1509,22 @@ def _build_parser() -> argparse.ArgumentParser:
                           help="Override worker.where branch or path for this claim.")
 
     # new
-    p_new = subparsers.add_parser("new", help="Scaffold a new card dir with valid frontmatter and empty log.md.")
+    p_new = subparsers.add_parser(
+        "new",
+        help="Scaffold a new card dir with valid frontmatter and empty log.md.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""examples:
+  goc new child-card --advances parent-card
+  goc new child-card --advanced-by parent-card""",
+    )
     p_new.add_argument("title")
     p_new.add_argument("--contribution", choices=["high", "medium", "low"], default="medium")
     p_new.add_argument("--gate", choices=["none", "decision", "session"], default="decision")
     p_new.add_argument("--tag", dest="tags", action="append", default=[])
+    p_new.add_argument("--advances", action="append", default=[], metavar="TITLE",
+                       help="Wire the new card as advancing TITLE (repeatable).")
+    p_new.add_argument("--advanced-by", dest="advanced_by", action="append", default=[], metavar="TITLE",
+                       help="Wire TITLE as advancing the new card (repeatable).")
     p_new.add_argument("--worker", default=None,
                        help="Worker designation — person, machine, or capability tag.")
     p_new.add_argument("--allow-jargon", action="store_true",
@@ -2685,6 +2696,55 @@ def _check_title_antipatterns(title: str) -> list[str]:
     return [reason for pat, reason in TITLE_ANTIPATTERNS if pat.search(title)]
 
 
+def _unique_preserving_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _validate_new_edge_flags(
+    title: str,
+    card_dir: Path,
+    advances: list[str],
+    advanced_by: list[str],
+) -> None:
+    """Validate all requested `goc new` edge wiring before touching disk."""
+    if not advances and not advanced_by:
+        return
+
+    cards = load_all_cards()
+    by_title = {card.title: card for card in cards}
+    missing = [ref for ref in [*advances, *advanced_by] if ref not in by_title]
+    if missing:
+        refs = ", ".join(_unique_preserving_order(missing))
+        print(f"ERROR: cannot create {title}: referenced card(s) not found: {refs}", file=sys.stderr)
+        sys.exit(2)
+
+    # Outgoing edges from the new card are enough to check whether any
+    # incoming edge would close an existing advances path back to its parent.
+    simulated_new_card = Card(
+        title=title,
+        path=card_dir,
+        frontmatter={"title": title, "advances": list(advances), "advanced_by": []},
+        body="",
+        dod_open=0,
+        dod_done=0,
+    )
+    simulated_cards = [*cards, simulated_new_card]
+    for advancer in advanced_by:
+        if _would_create_advance_cycle(simulated_cards, title, advancer):
+            print(
+                f"ERROR: adding {advancer} → {title} would create a cycle in the advances graph",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+
 def _cmd_new(args):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
     title = args.title
@@ -2693,6 +2753,8 @@ def _cmd_new(args):
     tags = args.tags
     worker = args.worker
     allow_jargon = args.allow_jargon
+    advances = _unique_preserving_order(args.advances or [])
+    advanced_by = _unique_preserving_order(args.advanced_by or [])
     schema = load_schema()
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(title)
@@ -2718,6 +2780,7 @@ def _cmd_new(args):
         if tag not in schema.canonical_tags:
             print(f"ERROR: unknown tag '{tag}' (not in SCHEMA.md canonical_tags)", file=sys.stderr)
             sys.exit(2)
+    _validate_new_edge_flags(title, card_dir, advances, advanced_by)
     card_dir.mkdir(parents=True)
     now = _utc_now_iso()
     fm = {
@@ -2739,6 +2802,10 @@ def _cmd_new(args):
     body = f"\n# {title}\n\n(write the design doc here)\n"
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     (card_dir / "log.md").write_text("")
+    for target in advances:
+        _mutate_pair(target, title, "advanced_by", "advances", add=True)
+    for advancer in advanced_by:
+        _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
     print(f"created {card_dir.relative_to(REPO_ROOT)}/")
     print(f"Next: edit deck/{title}/README.md to fill the body and DoD; then ask your agent to implement the card.")
 

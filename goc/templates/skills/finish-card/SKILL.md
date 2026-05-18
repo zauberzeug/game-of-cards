@@ -241,6 +241,36 @@ The final commit here ships the **work** only — the actual code/doc
 changes plus the closure transition (DoD ticks, log.md entries from
 Steps 4 + 5, `status: done`, `closed_at`).
 
+### Parallel-agent commit safety
+
+On shared local `main`, other agents may be using the same worktree and
+the same Git index. Before staging, run:
+
+```bash
+git diff --cached --name-only
+```
+
+If it lists files you did not stage, another agent is between `git add`
+and `git commit`. Wait with a short backoff or surface the collision;
+do not bundle or unstage their files.
+
+When the index is free, stage only the explicit paths owned by this
+closure:
+
+```bash
+git add <path>...
+git diff --cached --stat
+git commit -- <path>...
+```
+
+The `git commit -- <path>...` pathspec is intentional: it restricts the
+commit to this closure's files even if the index becomes contaminated.
+Never use `git add .`, `git add -A`, directory-wide adds, `git stash`,
+or destructive cleanup (`git restore`, `git checkout --`,
+`git reset --hard`, `git clean`) as a commit-isolation technique. For
+non-trivial commits on a busy shared `main`, prefer a temporary worktree
+for commit prep.
+
 Override the message:
 
 - **Subject:** `fix(<scope>): <one-line subject> — closes <title>`.

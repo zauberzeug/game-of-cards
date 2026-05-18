@@ -134,13 +134,21 @@ goc new <title> \
   --contribution <high|medium|low> \
   --gate <none|decision|session> \
   --tag bug \
-  --tag <area-tag>     # documentation / api-contract / infra / etc.
+  --tag <area-tag> \
+  --advances <target-title> \
+  --advanced-by <parent-title>
 ```
 
 The CLI creates `deck/<title>/README.md` with valid flat frontmatter
 and a placeholder `- [ ] (replace with real criteria)` DoD, plus an
 empty `deck/<title>/log.md`. Tags must come from the canonical set
 (see `Skill(card-schema)`); the CLI rejects unknowns.
+
+When the value-flow relationship is known at filing time, pass
+repeatable `--advances` / `--advanced-by` flags so `goc new` writes
+both sides of the edge in one command. Use the older `goc new` then
+`goc advance` two-step only as a fallback for adding edges to an
+existing card or when the relationship is discovered after creation.
 
 ## Step 5 — write the body (the dashboard)
 

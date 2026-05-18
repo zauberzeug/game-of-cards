@@ -27,6 +27,13 @@ from goc import __version__
 GOC_BEGIN = f"<!-- BEGIN GOC v{__version__} -->"
 GOC_BEGIN_RE = re.compile(r"<!-- BEGIN GOC v[\d.]+ -->")
 GOC_END = "<!-- END GOC -->"
+CLAUDE_IMPORT_BEGIN = "<!-- BEGIN GOC IMPORT -->"
+CLAUDE_IMPORT_END = "<!-- END GOC IMPORT -->"
+CLAUDE_IMPORT_RE = re.compile(
+    rf"{re.escape(CLAUDE_IMPORT_BEGIN)}.*?{re.escape(CLAUDE_IMPORT_END)}\n?",
+    re.DOTALL,
+)
+CLAUDE_IMPORTABLE_TARGETS = ("AGENTS.md", "CLAUDE.local.md")
 
 SUPPORTED_AGENTS = ("claude", "codex")
 # Hosts whose skills ship via plugin rather than `goc install --agents`.
@@ -162,6 +169,67 @@ def _strip_goc_block(path: Path) -> None:
         path.unlink()
     else:
         path.write_text(new + "\n")
+
+
+def _strip_claude_import(path: Path) -> None:
+    """Remove GoC's Claude import pointer from CLAUDE.md, preserving user text."""
+
+    if not path.exists():
+        return
+    text = path.read_text()
+    text = CLAUDE_IMPORT_RE.sub("", text)
+    lines = [
+        line
+        for line in text.splitlines()
+        if line.strip() not in {f"@{target}" for target in CLAUDE_IMPORTABLE_TARGETS}
+    ]
+    new = "\n".join(lines).strip()
+    header_only = re.fullmatch(r"# Claude Code Guidelines\s*", new)
+    if not new or header_only:
+        path.unlink()
+    else:
+        path.write_text(new + "\n")
+
+
+def _sync_claude_import(target: Path, briefing_target: str) -> None:
+    """Ensure Claude Code loads a non-CLAUDE.md briefing home via @ import.
+
+    Fresh GoC-owned CLAUDE.md files stay as a single `@...` line. If the
+    user already has custom CLAUDE.md content, keep it and manage a small
+    marker-bounded import block instead of overwriting their text.
+    """
+
+    if briefing_target not in CLAUDE_IMPORTABLE_TARGETS:
+        return
+    claude_md = target / "CLAUDE.md"
+    import_line = f"@{briefing_target}"
+    if not claude_md.exists():
+        claude_md.write_text(import_line + "\n")
+        return
+
+    text = claude_md.read_text()
+    stripped = text.strip()
+    import_lines = {f"@{candidate}" for candidate in CLAUDE_IMPORTABLE_TARGETS}
+    if not stripped or stripped in import_lines:
+        claude_md.write_text(import_line + "\n")
+        return
+
+    block = f"{CLAUDE_IMPORT_BEGIN}\n{import_line}\n{CLAUDE_IMPORT_END}\n"
+    if CLAUDE_IMPORT_RE.search(text):
+        claude_md.write_text(CLAUDE_IMPORT_RE.sub(block, text))
+        return
+
+    lines = text.splitlines()
+    replaced_bare_import = False
+    for idx, line in enumerate(lines):
+        if line.strip() in import_lines:
+            lines[idx] = import_line
+            replaced_bare_import = True
+    if replaced_bare_import:
+        claude_md.write_text("\n".join(lines).rstrip() + "\n")
+        return
+
+    claude_md.write_text(text.rstrip() + "\n\n" + block)
 
 
 def _templates_root() -> Path:
@@ -556,7 +624,9 @@ def _plan_writes(
 
     Agents in `local_skills_agents` get the full vendored layout (skills +
     hooks + settings). Other agents get guidance only (plugin path model).
-    The briefing block lands in `briefing_target` only.
+    The briefing block lands in `briefing_target`. When Claude is one of
+    the installed agents and the briefing lives outside CLAUDE.md, CLAUDE.md
+    also gets a lightweight @ import pointer to that home.
     """
 
     deck_dir = target / ".game-of-cards" / "deck"
@@ -570,6 +640,8 @@ def _plan_writes(
         rel = asset.relative_to(config_src)
         writes.append(PlannedWrite("shared", "write", target / ".game-of-cards" / rel, "project-state"))
     writes.append(PlannedWrite("shared", "append", target / briefing_target, "guidance"))
+    if "claude" in agents and briefing_target in CLAUDE_IMPORTABLE_TARGETS:
+        writes.append(PlannedWrite("claude", "append", target / "CLAUDE.md", "guidance"))
     for agent in agents:
         shim = _load_agent_shim(templates, agent)
         is_local = agent in local_skills_agents
@@ -813,20 +885,31 @@ def _append_precommit_hook(target: Path) -> None:
     target.write_text(text + PRE_COMMIT_HOOK)
 
 
-def _sync_methodology_blocks(target: Path, templates: Path, briefing_target: str) -> None:
+def _sync_methodology_blocks(
+    target: Path,
+    templates: Path,
+    briefing_target: str,
+    *,
+    agents: tuple[str, ...] = (),
+) -> None:
     """Write the marker-bounded briefing block into the chosen home file only.
 
     The briefing has exactly one home — AGENTS.md, CLAUDE.md, or CLAUDE.local.md
     — set by the caller (`goc install --briefing-target …`, default AGENTS.md).
-    Other candidates are not touched.
+    If Claude is installed and the home is not CLAUDE.md, maintain a minimal
+    CLAUDE.md @ import so Claude Code can load the chosen home.
     """
 
+    if briefing_target == "CLAUDE.md":
+        _strip_claude_import(target / "CLAUDE.md")
     body = _briefing_body(templates, briefing_target)
     _append_marker_block(
         target / briefing_target,
         body,
         header=BRIEFING_HEADERS[briefing_target],
     )
+    if "claude" in agents:
+        _sync_claude_import(target, briefing_target)
 
 
 def _sync_agent_harness(
@@ -892,8 +975,9 @@ KEEP_LOCAL_SKILLS_HELP = (
     "Requires a pipx install of game-of-cards — refused when running under the GoC plugin."
 )
 BRIEFING_TARGET_HELP = (
-    "File where the GoC briefing block lives. One of: AGENTS.md (default; cross-runtime visible), "
-    "CLAUDE.md (Claude-only; cross-runtime visibility lost), CLAUDE.local.md (gitignored). "
+    "File where the GoC briefing block lives. One of: AGENTS.md (default; cross-runtime visible, "
+    "with CLAUDE.md @ import when Claude is installed), CLAUDE.md (Claude-only; cross-runtime "
+    "visibility lost), CLAUDE.local.md (gitignored, with CLAUDE.md @ import when Claude is installed). "
     "On upgrade, omit to detect from the existing install; supplying it migrates the briefing home."
 )
 
@@ -1010,7 +1094,7 @@ def install(
     chosen_source = "vendored" if "claude" in local_skills_agents else "plugin"
     _write_skills_source(target, chosen_source)
 
-    _sync_methodology_blocks(target, templates, briefing_target)
+    _sync_methodology_blocks(target, templates, briefing_target, agents=agents)
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
@@ -1237,7 +1321,7 @@ def upgrade(
 
     for stale in legacy_briefings_to_strip:
         _strip_goc_block(target / stale)
-    _sync_methodology_blocks(target, templates, resolved_briefing)
+    _sync_methodology_blocks(target, templates, resolved_briefing, agents=agents)
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
