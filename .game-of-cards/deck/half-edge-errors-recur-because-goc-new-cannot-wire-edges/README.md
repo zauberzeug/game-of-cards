@@ -1,7 +1,7 @@
 ---
 title: half-edge-errors-recur-because-goc-new-cannot-wire-edges
 summary: "`goc new` has no `--advances` / `--advanced-by` flags, so agents filing an already-wired card hand-author the frontmatter and forget the reverse edge. Add the flags and route through `_mutate_pair` so both sides land symmetric in one shell call."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-17T09:33:25Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] `uv run goc validate` reports zero half-edges after every accepted invocation in `tests/test_new_wires_edges.py`
   - [ ] `goc/templates/skills/create-card/SKILL.md` Step 4 names the new flags as the preferred one-shot path for wiring at creation; the two-step `goc new` + `goc advance` is demoted to fallback
   - [ ] `goc new --help` lists both flags with examples
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # half-edge-errors-recur-because-goc-new-cannot-wire-edges
