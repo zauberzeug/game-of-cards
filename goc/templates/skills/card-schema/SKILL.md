@@ -86,6 +86,14 @@ Concrete consequences:
 - Decision-gate cards: keep the options matrix and `## Decision
   required` section current in the README; each round of consideration
   appends to `log.md`; the final resolution rewrites the dashboard.
+- Closure does not freeze the card. When new evidence surfaces after a
+  card closes, the post-close amendment is a **valid append** to
+  `log.md` (dated `Post-close amendment` entry, with a forward
+  reference to the new card) and an **optional one-line pointer** at
+  the top of the README body (`> Later evidence: …`) when the cold
+  reader would otherwise be misled. Do not rewrite the closure entry
+  itself; treat the amendment as additive. See `Skill(finish-card)`
+  "After closure" for the cross-reference format.
 
 ## Status semantics
 

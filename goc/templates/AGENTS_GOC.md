@@ -20,3 +20,9 @@ or `goc --board` (kanban) only if they ask.
 Project-local extensions live under `.game-of-cards/`; see its
 `README.md` if present. The `<!-- BEGIN GOC -->` markers above are the
 discovery signal that this repo uses GoC.
+
+**Closure is not frozenness.** When new evidence surfaces after a card
+closes, file a new card for the new work and amend the closed card
+with a forward pointer (dated `log.md` append; optional `> Later
+evidence:` line atop the README). See `Skill(finish-card)` "After
+closure" for the format.

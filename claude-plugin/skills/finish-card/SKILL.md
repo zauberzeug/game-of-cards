@@ -260,6 +260,42 @@ lint error you introduced, deck-validate rejection), fix and re-run it.
 If it fails on a pre-existing issue, surface that in chat and stop —
 that's a separate concern.
 
+## After closure — closure is not frozenness
+
+A closed card is the entry point a cold reader navigates to when
+asking "what was decided about X." If new evidence surfaces after the
+card closes — a bug found later, an assumption invalidated, a
+follow-up that reframes the original — file a new card for the new
+work AND amend the closed card to point readers forward. Strict
+immutability orphans the original anchor: future readers walk away
+with stale context, and the kanban accumulates orphan threads.
+
+Two-file routing still applies (see `Skill(card-schema)` "What goes
+where"):
+
+- **`log.md` (append a dated entry).** The post-close amendment IS a
+  valid append — the journal is append-only, and a new entry at the
+  bottom does not rewrite history. Format:
+
+  ```
+  ## YYYY-MM-DDTHH:MM:SSZ — Post-close amendment
+
+  Superseded / extended by [`<new-card-title>`](../<new-card-title>/)
+  — <one-line reason>.
+  ```
+
+- **`README.md` (optional pointer at the top).** If the new evidence
+  materially changes how a reader should interpret the closed card,
+  add a single one-line `> Later evidence: see …` pointer near the
+  top of the body so cold readers see it before the closure narrative.
+  Do NOT rewrite the closure entry itself; treat the amendment as
+  additive.
+
+Update only the **original** card — do not retroactively edit other
+closed cards' bodies to reference the new one. The forward pointer
+from the new card's body, plus the back-reference appended here, is
+the full bidirectional link.
+
 ## Cross-references
 
 - `Skill(card-schema)` — DoD format + free-form-prose escape.
