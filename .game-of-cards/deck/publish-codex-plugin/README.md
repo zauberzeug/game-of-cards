@@ -1,7 +1,7 @@
 ---
 title: publish-codex-plugin
 summary: "Publish the Game of Cards Codex plugin/runtime package once `provide-codex-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to the Codex runtime."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-06
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] Docs link users to the Codex install path
   - [ ] Smoke test or release-verification step covers Codex artifacts
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Publish the Codex plugin
