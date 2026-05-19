@@ -1,19 +1,19 @@
 ---
 title: release-rewrite-conflates-marker-docs-with-real-marker
 summary: The release version-rewrite script's AGENTS.md regex matches not only the real `<!-- BEGIN GOC v… -->` block opener but also documentation that mentions the marker syntax in prose. Once AGENTS.md gained doc references to the marker, every release dispatch fails at the "Rewrite version literals" step with "expected 1 replacement(s), made 3".
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-19T17:48:17Z"
-closed_at: null
+closed_at: 2026-05-19T17:59:24Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] release_rewrite_versions.py only rewrites the real marker, never doc mentions
-  - [ ] running the script locally against current AGENTS.md succeeds with exactly 1 replacement
-  - [ ] release dispatch for v0.0.20 reaches the "Create and push release tag" step
+  - [x] release_rewrite_versions.py only rewrites the real marker, never doc mentions
+  - [x] running the script locally against current AGENTS.md succeeds with exactly 1 replacement
+  - [x] release dispatch for v0.0.20 reaches the "Create and push release tag" step
 worker: {who: Rodja Trappe, where: main}
 ---
 
