@@ -115,9 +115,15 @@ def rewrite_all(version: str) -> None:
     # AGENTS.md — dogfood marker block opener `<!-- BEGIN GOC v… -->`.
     # CLAUDE.md uses the IMPORT-marker form (no version literal), so only
     # AGENTS.md needs rewriting here. `goc install` writes both.
+    #
+    # Pattern anchors on both line-start (the marker is always at column 0
+    # because `_append_marker_block` writes it as a block opener) AND a real
+    # semver triple, so prose mentions of the marker syntax — e.g. the
+    # placeholder `<!-- BEGIN GOC vX.Y.Z -->` inside backticks in the
+    # docstring above — are not rewritten.
     _replace(
         ROOT / "AGENTS.md",
-        r"<!-- BEGIN GOC v[^>]+ -->",
+        r"^<!-- BEGIN GOC v\d+\.\d+\.\d+ -->$",
         f"<!-- BEGIN GOC v{version} -->",
         expected=1,
     )
