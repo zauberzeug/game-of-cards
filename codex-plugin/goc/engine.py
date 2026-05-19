@@ -2532,6 +2532,17 @@ def _claude_plugin_present() -> bool:
     Looks under `$CLAUDE_PLUGIN_ROOT` (if set) and the default Claude Code
     plugin directory (`~/.claude/plugins`) for a `game-of-cards*` plugin
     payload with a `skills/` subtree. Used only to resolve `skills_source: auto`.
+
+    Accepted layouts (verified against live Claude Code installs):
+      <root>/skills/                                          (root is the payload, e.g. CLAUDE_PLUGIN_ROOT)
+      <root>/game-of-cards*/skills/                           (legacy direct)
+      <root>/<marketplace>/game-of-cards*/skills/             (legacy 2-level)
+      <root>/cache-or-data/<mkt>/game-of-cards*/<ver>/skills/ (modern versioned)
+
+    The walk uses `rglob` to find any `game-of-cards*` directory and then
+    accepts the payload if `skills/` is a direct child OR a grandchild
+    (covering the `<plugin>/<version>/skills/` layout). `Path.rglob` does
+    not follow symlinks in CPython 3.10+, so symlink loops can't hang it.
     """
     candidates: list[Path] = []
     env_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
@@ -2547,14 +2558,17 @@ def _claude_plugin_present() -> bool:
         if (root / "skills").is_dir() and root.name.startswith("game-of-cards"):
             return True
         try:
-            for child in root.iterdir():
-                if not child.is_dir():
+            for plugin_dir in root.rglob("game-of-cards*"):
+                if not plugin_dir.is_dir():
                     continue
-                if child.name.startswith("game-of-cards") and (child / "skills").is_dir():
+                if (plugin_dir / "skills").is_dir():
                     return True
-                for grand in child.iterdir() if child.is_dir() else ():
-                    if grand.name.startswith("game-of-cards") and (grand / "skills").is_dir():
-                        return True
+                try:
+                    for version_dir in plugin_dir.iterdir():
+                        if version_dir.is_dir() and (version_dir / "skills").is_dir():
+                            return True
+                except OSError:
+                    continue
         except OSError:
             continue
     return False
