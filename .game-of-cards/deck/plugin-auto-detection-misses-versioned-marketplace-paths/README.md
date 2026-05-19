@@ -1,22 +1,22 @@
 ---
 title: plugin-auto-detection-misses-versioned-marketplace-paths
 summary: "`_claude_plugin_present()` scans only 2 levels under `~/.claude/plugins/`, but Claude Code's marketplace layout nests the payload at `cache/<marketplace>/<plugin>/<version>/skills/` (4 levels). Auto-detection silently falls back to `vendored`, `goc install`/`upgrade` pins the wrong `skills_source`, and `goc validate` then fires a misleading skill-parity error in repos that ARE plugin-mode."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-19T04:38:44Z"
-closed_at: null
+closed_at: 2026-05-19T17:04:47Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `_claude_plugin_present()` returns True for `<root>/cache/<marketplace>/<plugin>/<version>/skills/` layouts (modern Claude Code marketplace)
-  - [ ] Still returns True for legacy direct (`<root>/game-of-cards*/skills/`) and 2-level (`<root>/<any>/game-of-cards*/skills/`) layouts
-  - [ ] Returns False when no `game-of-cards*` directory contains a `skills/` subtree
-  - [ ] Doesn't follow symlinks into infinite loops (verified by including a self-referential symlink in the reproduce.py fixture)
-  - [ ] `reproduce.py` exits 0 after the fix (and exited non-zero before)
-  - [ ] `uv run goc validate` passes
+  - [x] `_claude_plugin_present()` returns True for `<root>/cache/<marketplace>/<plugin>/<version>/skills/` layouts (modern Claude Code marketplace)
+  - [x] Still returns True for legacy direct (`<root>/game-of-cards*/skills/`) and 2-level (`<root>/<any>/game-of-cards*/skills/`) layouts
+  - [x] Returns False when no `game-of-cards*` directory contains a `skills/` subtree
+  - [x] Doesn't follow symlinks into infinite loops (verified by including a self-referential symlink in the reproduce.py fixture)
+  - [x] `reproduce.py` exits 0 after the fix (and exited non-zero before)
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
