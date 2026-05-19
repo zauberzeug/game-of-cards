@@ -55,14 +55,17 @@ autonomous loop decides whether to flip to `Skill(advance-card)`,
 
 ## Step 1 — sanity floor
 
-!`goc validate`
+!`goc validate 2>&1 || echo "[refine-deck] validate found rot; the skill body below will route you through fixing it"`
 
 If validate fails with half-edge errors, run `goc repair-edges` to
 preview the missing reverse-edge writes, then `goc repair-edges
 --apply` and re-run `goc validate`. If repair reports a structural
 cycle, park that card for human review instead of guessing which edge
 is wrong. Fix unknown tags / missing required fields FIRST too.
-Hygiene runs on a valid deck.
+Hygiene runs on a valid deck. The precondition above is intentionally
+soft-gated so a failing validator surfaces its output *into* this
+skill rather than blocking the skill load — the recovery guidance
+in this body is exactly what the user came here for.
 
 ## Step 2 — survey by category
 

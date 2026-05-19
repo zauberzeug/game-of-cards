@@ -1,21 +1,21 @@
 ---
 title: refine-deck-fails-to-load-on-the-rot-it-is-meant-to-clean-up
 summary: "`/refine-deck` runs `!goc validate` as a hard shell precondition (refine-deck/SKILL.md:58). Any non-zero exit prevents the skill from loading — including the very recovery guidance further down in its own body. Half-edges, broken advances-DAG cycles, plugin-mode false-parity ERRORs all silently block the skill from reaching the user. The chicken-and-egg loop hides the rot it was built to surface."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-19T15:02:13Z"
-closed_at: null
+closed_at: 2026-05-19T15:07:10Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug]
 definition_of_done: |
-  - [ ] `refine-deck/SKILL.md:58` no longer hard-fails skill load when `goc validate` exits non-zero
-  - [ ] When validate exits 0, the precondition output is unchanged (no spurious noise)
-  - [ ] When validate exits non-zero, the user sees the validator output AND the skill body loads, so the recovery instructions at SKILL.md:60-65 are reachable
-  - [ ] The plugin-mirror sync runs cleanly (claude-plugin, codex-plugin, openclaw-plugin templates updated)
-  - [ ] `uv run goc validate` passes
+  - [x] `refine-deck/SKILL.md:58` no longer hard-fails skill load when `goc validate` exits non-zero
+  - [x] When validate exits 0, the precondition output is unchanged (no spurious noise)
+  - [x] When validate exits non-zero, the user sees the validator output AND the skill body loads, so the recovery instructions at SKILL.md:60-65 are reachable
+  - [x] The plugin-mirror sync runs cleanly (claude-plugin, codex-plugin, openclaw-plugin templates updated)
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
