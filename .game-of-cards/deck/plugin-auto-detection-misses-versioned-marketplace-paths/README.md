@@ -1,7 +1,7 @@
 ---
 title: plugin-auto-detection-misses-versioned-marketplace-paths
 summary: "`_claude_plugin_present()` scans only 2 levels under `~/.claude/plugins/`, but Claude Code's marketplace layout nests the payload at `cache/<marketplace>/<plugin>/<version>/skills/` (4 levels). Auto-detection silently falls back to `vendored`, `goc install`/`upgrade` pins the wrong `skills_source`, and `goc validate` then fires a misleading skill-parity error in repos that ARE plugin-mode."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-19T04:38:44Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] Doesn't follow symlinks into infinite loops (verified by including a self-referential symlink in the reproduce.py fixture)
   - [ ] `reproduce.py` exits 0 after the fix (and exited non-zero before)
   - [ ] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # plugin-auto-detection-misses-versioned-marketplace-paths
