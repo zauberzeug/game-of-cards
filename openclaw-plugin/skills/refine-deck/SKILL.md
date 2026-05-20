@@ -21,8 +21,13 @@ tax that keeps the read-pattern guarantee alive.
 The consuming repo may extend this hygiene flow via
 `.game-of-cards/hooks/refine-deck.md` (already loaded above) — e.g.,
 to demand a pattern-discovery pass with specialized reviewers,
-override the 90-day decay threshold, or surface project-specific
-categories beyond the generic ones below.
+override the 90-day decay threshold, surface project-specific
+categories beyond the generic ones below, or declare which artifacts
+(modules, sub-packages, demos) are in-scope for framework-tier
+findings so cluster-finding doesn't span the entire repo
+indiscriminately — out-of-scope artifacts surface as
+`contribution: low` or skip-with-note, never Tier-1/Tier-2 verdicts
+or meta-decision-card cluster members.
 
 Surface rot and propose corrective edits — never apply them silently.
 Categories:
