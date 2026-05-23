@@ -1,7 +1,7 @@
 ---
 title: refine-deck-drops-structural-findings-by-defaulting-to-propose-not-file
 summary: "refine-deck's `propose, don't apply` framing applies to every finding class, so when project hooks extend the skill with a structural pattern-discovery pass the framing causes agents to surface findings to chat/scratch and skip filing. The asymmetry with audit-deck's mandatory Phase 3 `Park-or-disprove` disposition rule means refine-deck rounds can surface N structural candidates and file 0 cards while passing the skill's own success criteria. Decision needed: full-mirror of audit-deck's bound, minimal Step 4.5 audit, or per-category disposition rules."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-23T04:02:33Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] An autonomous refine-deck round on this repo's own deck produces ≥1 filing or explicit disposition (filed / disproved / unverified-parked) for every surfaced non-hygiene candidate — verifies the discipline change took.
   - [ ] Hygiene-category behaviour (mechanical edits to stale parks, missing summaries, defunct cites, predicate-failing tags) is unchanged — verified by re-running the hygiene categories and confirming the apply-direct path still fires.
   - [ ] If the chosen option introduces per-category disposition rules, the new taxonomy is reflected in `AGENTS.md` or a sibling note so future readers see the contract.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # refine-deck-drops-structural-findings-by-defaulting-to-propose-not-file
