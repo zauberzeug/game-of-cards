@@ -1,13 +1,14 @@
 ---
 title: refine-deck-skill-missing-consuming-repo-hook-override
-summary: refine-deck is the only deck-mutating skill that doesn't load a `.game-of-cards/hooks/<name>.md` override, so consuming repos can't extend its hygiene pass with project-specific decay thresholds, categories, or generalization hunters. Add the `!cat` injection line, ship the hook stub, and mention the extension point in the body.
+summary: "refine-deck is the only deck-mutating skill that doesn't load a `.game-of-cards/hooks/<name>.md` override, so consuming repos can't extend its hygiene pass with project-specific decay thresholds, categories, or generalization hunters. Add the `!cat` injection line, ship the hook stub, and mention the extension point in the body."
 status: done
 stage: null
 contribution: low
 created: "2026-05-14T12:30:11Z"
-closed_at: 2026-05-14T12:40:15Z
+closed_at: "2026-05-14T12:40:15Z"
 human_gate: none
-advances: []
+advances:
+  - refine-deck-drops-structural-findings-by-defaulting-to-propose-not-file
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
