@@ -1101,6 +1101,98 @@ def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) ->
     return False
 
 
+@dataclass(frozen=True)
+class BlockerWarning:
+    klass: str
+    card: str
+    detail: str
+
+    @property
+    def message(self) -> str:
+        return f"WARN {self.klass} {self.card}: {self.detail}"
+
+
+CASCADE_ROOT_THRESHOLD = 3
+
+
+def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
+    """Return non-fatal warnings about cards whose `status` is inconsistent
+    with their blocker graph.
+
+    Three warning classes, all advisory — none contributes to `validate`'s
+    exit code:
+
+    - STALE_BLOCKED: `status: blocked` with `advanced_by` non-empty whose
+      entries all sit in TERMINAL_STATUSES. No active prereq remains; the
+      card should flip to `open` or its blocker list should be refreshed.
+    - ORPHAN_BLOCKED: `status: blocked` with empty `advanced_by` and
+      `human_gate == "none"`. The real blocker is body-only and invisible
+      to graph walkers. Suppressed for raised gates because the gate
+      itself already names the bottleneck (Option B from the spec, extended
+      from `decision` to any raised gate).
+    - CASCADE_CHAIN_ROOT: a `human_gate != "none"` card whose `advances`
+      transitively reach at least CASCADE_ROOT_THRESHOLD blocked cards.
+      One human action at the root cascade-unblocks the whole subtree
+      (Lean Andon — surface the cord, not the leaf).
+    """
+    by_title = {c.title: c for c in cards}
+    warnings: list[BlockerWarning] = []
+
+    # Reverse adjacency: title -> [cards that list title in their advanced_by].
+    # A card is "downstream of X" when X advances it; equivalently, X.title
+    # appears in card.advanced_by.
+    unblocks: dict[str, list[str]] = {c.title: [] for c in cards}
+    for c in cards:
+        for prereq in c.frontmatter.get("advanced_by") or []:
+            if prereq in unblocks:
+                unblocks[prereq].append(c.title)
+
+    for c in cards:
+        if c.status != "blocked":
+            continue
+        blockers = c.frontmatter.get("advanced_by") or []
+        if not blockers:
+            if c.human_gate == "none":
+                warnings.append(BlockerWarning(
+                    "ORPHAN_BLOCKED",
+                    c.title,
+                    "status: blocked with empty advanced_by and human_gate: none "
+                    "(hoist blocker into advanced_by, raise the gate, or unblock)",
+                ))
+            continue
+        blocker_statuses = [(b, by_title[b].status) for b in blockers if b in by_title]
+        if blocker_statuses and all(s in TERMINAL_STATUSES for _, s in blocker_statuses):
+            detail = ", ".join(f"{b}={s}" for b, s in blocker_statuses)
+            warnings.append(BlockerWarning(
+                "STALE_BLOCKED",
+                c.title,
+                f"all advanced_by entries inactive: [{detail}]",
+            ))
+
+    for root in cards:
+        if root.human_gate == "none":
+            continue
+        cluster: set[str] = set()
+        stack = list(unblocks.get(root.title, []))
+        while stack:
+            title = stack.pop()
+            if title in cluster:
+                continue
+            descendant = by_title.get(title)
+            if descendant is None or descendant.status != "blocked":
+                continue
+            cluster.add(title)
+            stack.extend(unblocks.get(title, []))
+        if len(cluster) >= CASCADE_ROOT_THRESHOLD:
+            warnings.append(BlockerWarning(
+                "CASCADE_CHAIN_ROOT",
+                root.title,
+                f"{len(cluster)} blocked cards rooted here (gate={root.human_gate})",
+            ))
+
+    return warnings
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Filtering + sorting
 
@@ -1879,6 +1971,8 @@ def _cmd_validate(args):
         errors.append(e)
     if half_edge_errors:
         print("Run 'goc repair-edges --apply' to fix.", file=sys.stderr)
+    for w in validate_blocker_coherence(cards):
+        print(w.message, file=sys.stderr)
     if errors:
         sys.exit(1)
 
