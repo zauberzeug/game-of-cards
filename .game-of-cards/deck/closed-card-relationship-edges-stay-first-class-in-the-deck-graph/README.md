@@ -1,12 +1,12 @@
 ---
 title: closed-card-relationship-edges-stay-first-class-in-the-deck-graph
-summary: The deck is both a scheduler and a decision record, but its relationship graph is maintained only for the scheduler. Closed-card edges silently degrade the value walk, supersession has no machine-navigable successor pointer, and the record-axis rationale is undocumented.
+summary: "The deck is both a scheduler and a decision record, but its relationship graph is maintained only for the scheduler. Closed-card edges silently degrade the value walk, supersession has no machine-navigable successor pointer, and the record-axis rationale is undocumented."
 status: open
 stage: null
 contribution: medium
 created: "2026-05-24T03:57:21Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by:
   - rename-blocks-to-advances-and-design-value-sort
@@ -119,27 +119,8 @@ bidirectional, machine-navigable link applied at closure — not as prose:
   [Atlassian](https://confluence.atlassian.com/adminjiraserver/configuring-issue-linking-938847862.html),
   [Google Issue Tracker](https://developers.google.com/issue-tracker/guides/duplicate-issue))
 
-## Decision required
+## Decision
 
-Two coupled choices; this card is `human_gate: decision` until both are
-recorded here.
+*Resolved 2026-05-24T04:05:00Z:* A1 (typed bidirectional superseded_by/supersedes field) + B1+B2 (compute_values warns AND goc validate errors on dangling advances targets)
 
-### A. How to model the successor pointer
-
-| Option | What | Trade-off |
-|---|---|---|
-| **A1 — new typed field** (`superseded_by` / `supersedes`) | Add a dedicated bidirectional relationship field, auto-symmetric like `advances`. | Cleanest semantics and matches ADR/issue-tracker convention. Cost: schema + skill + emitter + validator + a new invariant. |
-| **A2 — reuse the advances graph** | Express supersession as an `advances`/`advanced_by` edge (the successor advances away from the superseded card), distinguished by status. | No new field; reuses existing symmetry machinery. Cost: overloads value-flow semantics with succession semantics — the value walk would start composing priority through supersession edges, which may distort GRPW. |
-| **A3 — prose-only, status quo** | Keep log.md prose; do nothing for the pointer. | Zero build cost. Rejected-by-default given the prior art, but listed for completeness — pick only if the navigable-pointer value is judged not worth the maintenance. |
-
-### B. What `compute_values` does on a dangling `advances` target
-
-| Option | Behaviour |
-|---|---|
-| **B1 — warn** | Keep walking, but emit a warning (and surface in `goc validate`) so rot is visible. |
-| **B2 — validate-error** | `goc validate` fails on any dangling `advances` target, forcing repair (consistent with half-edge treatment). |
-| **B3 — silent (status quo)** | Rejected — this is the bug. |
-
-Recommended starting point: **A1 + B2** (typed successor field; dangling
-targets are a validation error), because it mirrors the established convention
-and makes rot impossible rather than merely visible. Confirm or override.
+*Reasoning:* Typed successor link matches ADR/issue-tracker convention and makes supersession machine-navigable; surfacing dangling edges both at compute time (warn) and in validate (error) makes edge rot impossible to miss, not merely visible.
