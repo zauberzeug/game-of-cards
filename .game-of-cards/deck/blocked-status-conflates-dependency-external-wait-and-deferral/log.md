@@ -25,3 +25,30 @@ Proposed model recorded in README: three orthogonal axes — progress status,
 derived dependency readiness, stored impediment overlay. Decision still parked
 (gate: session); the open questions are listed at the foot of the README.
 Sources captured in the README "Sources" section.
+
+## 2026-05-24: decision recorded — full decomposition; promoted to epic
+
+Design session chose **full decomposition** over hybrid-redefine and
+minimal-annotate. Decision: remove `blocked` from the status enum; derive
+dependency-readiness from the `advances` graph (self-clearing); add a stored
+`waiting_on` {external|resource|deferred} + optional `waiting_until` impediment
+overlay evaluated as a read-time guard; extend the ready-to-pull predicate.
+`human_gate` (decision-wait) and `disproved`/`superseded` (rejection) unchanged.
+FS/SS/FF/SF edge typing explicitly deferred. Gate session → none. Card retagged
+`epic`.
+
+Why: all four literature tracks converge on blocked-as-orthogonal-overlay +
+derived dependency-readiness; GoC already owns decision-wait (`human_gate`) and
+rejection (`disproved`/`superseded`); full decomposition is the most expressive
+(a card may be `active` AND impeded) and the breaking migration is acceptable
+before the audience widens.
+
+Deliberation archived: the three model options and their trade-offs are recorded
+in the README "## Decision" section; the rejected alternatives were
+hybrid-redefine-blocked (keep the status, less breaking, small impurity) and
+minimal-annotate (cheapest, does not fix the anti-pattern).
+
+Children filed: `derive-dependency-readiness-instead-of-storing-blocked-status`,
+`add-waiting-overlay-with-reason-and-until-date`,
+`remove-blocked-from-status-enum-and-migrate-existing-cards` (the last
+advanced_by the first two; breaking, lands last).
