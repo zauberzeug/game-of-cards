@@ -394,4 +394,16 @@ closes, file a new card for the new work and amend the closed card
 with a forward pointer (dated `log.md` append; optional `> Later
 evidence:` line atop the README). See `Skill(finish-card)` "After
 closure" for the format.
+
+**The deck is both a scheduler and a record.** The scheduler axis
+walks `advances` edges across live cards to compose priority; the
+record axis walks edges that include closed cards so a cold reader
+can reconstruct the history of a decision. Closed-card relationship
+edges are first-class: `goc validate` enforces referential integrity
+for both axes regardless of either endpoint's status, and supersession
+records a typed `superseded_by` / `supersedes` link (set atomically
+by `goc status <old> superseded --by <new>`) so a reader landing on
+a `superseded` card can be routed forward without parsing prose. See
+`Skill(card-schema)` "Deck as scheduler vs deck as record" for the
+full invariants.
 <!-- END GOC -->
