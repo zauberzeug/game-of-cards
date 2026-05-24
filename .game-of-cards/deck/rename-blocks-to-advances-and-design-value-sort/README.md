@@ -20,7 +20,8 @@ contribution: high
 created: 2026-05-03
 closed_at: 2026-05-03
 human_gate: session
-advances: []
+advances:
+  - closed-card-relationship-edges-stay-first-class-in-the-deck-graph
 advanced_by: []
 tags: [epic, infra]
 definition_of_done: |
