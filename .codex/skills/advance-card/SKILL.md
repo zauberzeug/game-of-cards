@@ -52,7 +52,7 @@ NOT require `blocked`.
 | `blocked → open` | `goc status <title> open` | re-queue when the blocker clears but the card is not yet being worked. Same agent-autonomy rule as `blocked → active`: gate `none` means an agent may flip; gate `decision`/`session` means the human owns the unblock. |
 | `* → open` | `goc status <title> open` | re-queue (rare) |
 | `* → disproved` | `goc status <title> disproved` | populate rebuttal first; CLI stamps `closed_at` |
-| `* → superseded` | `goc status <title> superseded` | log replacement rationale in old card's `log.md`; CLI stamps `closed_at` |
+| `* → superseded` | `goc status <title> superseded --by <successor>` | sets typed `superseded_by` / `supersedes` link bidirectionally; log replacement rationale in old card's `log.md`; CLI stamps `closed_at` |
 
 `goc advance` and `goc unadvance` maintain the bidirectional
 value-flow edge atomically (validator-enforced — if `A.advances`
@@ -104,16 +104,31 @@ verification cycle.
 ### Superseded
 
 The new card's body explains what it supersedes and why. Run
-`goc status <title> superseded` on the old card.
+`goc status <title> superseded --by <successor>` on the old card —
+the `--by` flag sets the typed bidirectional `superseded_by` /
+`supersedes` link on both endpoints in one atomic operation (same
+contract `goc advance` provides for the advances graph).
 
-Append an entry to the old card's `log.md` to record the replacement:
-name the replacement card, link it as
-`[<new-title>](../<new-title>/)`, and note one-line why (different
-approach, scope split, reframing). The relationship is forensic-only
-— once a card is on the discard pile, the link lives in the journal,
-not frontmatter (see `Skill(card-schema)`, "Replacement" section).
+Append an entry to the old card's `log.md` to record the replacement
+*rationale*: one-line why the replacement happened (different
+approach, scope split, reframing). The typed field is the
+machine-navigable pointer; the journal entry is the prose-only
+*why* a graph edge cannot capture. Both, for different jobs — a
+cold reader (human or LLM) walks the typed link to find the
+successor without parsing prose, and reads the log entry for the
+rationale.
+
 Leave the old README body as the historical dashboard; do NOT
-rewrite it to point at the successor (that's the journal's job).
+rewrite it to point at the successor (the typed link does that
+mechanically). The link to the successor stays a one-line `> Later:
+[<new-title>](../<new-title>/)` pointer at the top of the body only
+if a cold reader would otherwise be misled — see `Skill(card-schema)`
+"Replacement axis" for the invariants and emitter conventions.
+
+Plain `goc status <title> superseded` (without `--by`) is still
+accepted for backwards compatibility, but leaves the supersession
+prose-only and forces forensic readers to grep `log.md`. Prefer the
+`--by` form for every new supersession.
 
 ## Step 4 — run the transition
 
@@ -129,7 +144,7 @@ goc unadvance <title> --by <other>
 
 # Disproved / superseded:
 goc status <title> disproved
-goc status <title> superseded
+goc status <title> superseded --by <successor-title>
 ```
 
 The CLI prints `<title>: <prior> → <new>` on success and follows the
