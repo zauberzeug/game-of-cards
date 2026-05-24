@@ -199,7 +199,8 @@ for the routing rule.
     │         └──→ blocked ←── (re-activate when unblocked)
     │
     ├──→ disproved (terminal; body documents rebuttal)
-    └──→ superseded (terminal; replacement noted in log.md)
+    └──→ superseded (terminal; typed `superseded_by` → successor,
+                     rationale appended to log.md)
 ```
 
 `open` is the queue. `active` claims the work. `blocked` parks until

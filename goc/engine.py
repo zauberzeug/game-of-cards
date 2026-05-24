@@ -200,7 +200,7 @@ def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
     return out
 
 
-_BLOCK_LIST_FIELDS = frozenset({"advances", "advanced_by"})
+_BLOCK_LIST_FIELDS = frozenset({"advances", "advanced_by", "supersedes", "superseded_by"})
 
 
 def _emit_worker(value) -> str:
@@ -564,8 +564,15 @@ def _date_part(value) -> str:
     return str(value)
 
 
-LIST_REL_FIELDS = ("advances", "advanced_by")
-INVERSE_REL = {"advances": "advanced_by", "advanced_by": "advances"}
+LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")
+ADVANCE_REL_FIELDS = frozenset({"advances", "advanced_by"})
+SUPERSEDE_REL_FIELDS = frozenset({"supersedes", "superseded_by"})
+INVERSE_REL = {
+    "advances": "advanced_by",
+    "advanced_by": "advances",
+    "supersedes": "superseded_by",
+    "superseded_by": "supersedes",
+}
 
 
 @dataclass(frozen=True)
@@ -593,6 +600,10 @@ class HalfEdge:
     @property
     def repair_value(self) -> str:
         return self.src
+
+    @property
+    def is_advance(self) -> bool:
+        return self.field in ADVANCE_REL_FIELDS
 
     @property
     def child_title(self) -> str:
@@ -1023,16 +1034,50 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             elif ref not in all_titles:
                 errors.append(f"{t.title}: {field}: references unknown title '{ref}'")
 
+    superseded_by = fm.get("superseded_by") or []
+    if isinstance(superseded_by, list) and superseded_by and status_value != "superseded":
+        errors.append(
+            f"{t.title}: superseded_by: non-empty requires status: superseded "
+            f"(status={status_value!r})"
+        )
+
     return errors
 
 
 def validate_bidirectional_edges(cards: list[Card]) -> list[str]:
-    """Enforce that advances↔advanced_by edges are mutually consistent.
+    """Enforce that advances↔advanced_by and supersedes↔superseded_by
+    edges are mutually consistent.
 
-    A.advances=[B] requires B.advanced_by to contain A; the inverse must also hold.
-    Half-edges are an integrity bug — surface them so they can be repaired.
+    A.advances=[B] requires B.advanced_by to contain A; the inverse must
+    also hold. The same invariant applies to supersedes/superseded_by:
+    A.superseded_by=[B] requires B.supersedes to contain A. Half-edges
+    are an integrity bug — surface them so they can be repaired.
     """
     return [edge.message for edge in find_half_edges(cards)]
+
+
+def validate_supersedes_targets(cards: list[Card]) -> list[str]:
+    """Enforce that every card in `supersedes` is itself `status: superseded`.
+
+    The record axis treats `supersedes` as the typed forward pointer that
+    replaces a closed card. A card cannot supersede something that is not
+    actually closed-as-replaced; otherwise the link is meaningless. This
+    check runs in `goc validate` and fires once per dangling-status pair.
+    """
+    by_title = {t.title: t for t in cards}
+    errors: list[str] = []
+    for t in cards:
+        for ref in t.frontmatter.get("supersedes") or []:
+            target = by_title.get(ref)
+            if target is None:
+                continue
+            if target.status != "superseded":
+                errors.append(
+                    f"{t.title}: supersedes: '{ref}' is not status: superseded "
+                    f"(target.status={target.status!r}); a typed supersession "
+                    f"pointer requires the replaced card to be marked superseded"
+                )
+    return errors
 
 
 def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
@@ -1213,6 +1258,9 @@ CONTRIBUTION_RANK: dict[str, float] = {"high": 9.0, "medium": 3.0, "low": 1.0}
 GAMMA = 0.7
 
 
+_DANGLING_ADVANCES_WARNED: set[tuple[str, str]] = set()
+
+
 def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
     """Compute (value, top_path) for each card via memoized DFS.
 
@@ -1238,7 +1286,10 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
 
     Cycles fall back to per-card rank (defense; validator should reject
     cycles via `detect_advance_cycles` but cheap to handle here too).
-    Unknown advances targets are silently skipped.
+    Unknown advances targets are skipped for the priority math AND
+    surfaced once per (card, target) pair as a stderr warning — silent
+    skipping let edge rot degrade the value walk unnoticed. Run
+    `goc validate` to get the authoritative report.
     """
     by_title = {t.title: t for t in cards}
     cache: dict[str, tuple[float, list[str]]] = {}
@@ -1256,6 +1307,15 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
         best = (0.0, [])
         for dest in t.frontmatter.get("advances") or []:
             if dest not in by_title:
+                key = (title, dest)
+                if key not in _DANGLING_ADVANCES_WARNED:
+                    _DANGLING_ADVANCES_WARNED.add(key)
+                    print(
+                        f"WARN dangling advances edge: {title} → {dest!r} "
+                        f"(target card not found; priority math drops the edge). "
+                        f"Run 'goc validate' for the authoritative report.",
+                        file=sys.stderr,
+                    )
                 continue
             d_value, d_path = value_for(dest, in_progress)
             if d_value > best[0]:
@@ -1505,7 +1565,7 @@ def render_table(
                     worker_str += f" @ {where}"
                 out_lines.append(f"    {worker_str}")
         if verbose >= 2:
-            for field in ("advances", "advanced_by"):
+            for field in LIST_REL_FIELDS:
                 v = t.frontmatter.get(field) or []
                 if v:
                     out_lines.append(f"    {field}: {list(v)}")
@@ -1534,6 +1594,8 @@ def render_json(cards: list[Card], values: dict[str, tuple[float, list[str]]] | 
                 "closed_at": str(t.closed_at) if t.closed_at else None,
                 "advances": t.frontmatter.get("advances") or [],
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
+                "supersedes": t.frontmatter.get("supersedes") or [],
+                "superseded_by": t.frontmatter.get("superseded_by") or [],
                 "worker": t.worker,
                 "dod_open": t.dod_open,
                 "dod_done": t.dod_done,
@@ -1719,6 +1781,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p_status = subparsers.add_parser("status", help="Mutate any status except `done`.")
     p_status.add_argument("title")
     p_status.add_argument("new_status", choices=list(MUTABLE_STATUS_VALUES))
+    p_status.add_argument("--by", dest="superseded_by", default=None,
+                          help="Successor card title; only valid with new_status=superseded. "
+                          "Sets bidirectional supersedes/superseded_by typed link.")
     p_status.add_argument("--commit", action="store_true",
                           help="Force auto-commit for this status flip.")
     p_status.add_argument("--no-commit", action="store_true",
@@ -1971,6 +2036,9 @@ def _cmd_validate(args):
         errors.append(e)
     if half_edge_errors:
         print("Run 'goc repair-edges --apply' to fix.", file=sys.stderr)
+    for e in validate_supersedes_targets(cards):
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
     for w in validate_blocker_coherence(cards):
         print(w.message, file=sys.stderr)
     if errors:
@@ -2896,6 +2964,20 @@ def _cmd_status(args):
     no_commit = args.no_commit
     worker_who = args.worker_who
     worker_where = args.worker_where
+    successor = args.superseded_by
+    if successor is not None and new_status != "superseded":
+        print(
+            f"ERROR: --by is only valid with new_status=superseded "
+            f"(got new_status={new_status!r})",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if successor is not None and successor == title:
+        print(f"ERROR: --by {successor!r} cannot equal the card being superseded", file=sys.stderr)
+        sys.exit(2)
+    if successor is not None:
+        successor_dir = DECK_DIR / successor
+        load_card_or_exit(successor_dir, successor)
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
     prior = t.status
@@ -2923,12 +3005,20 @@ def _cmd_status(args):
     if new_status == "active":
         text = _auto_populate_worker(text, t, worker_who, worker_where)
     (card_dir / "README.md").write_text(text)
+    if successor is not None:
+        # Maintain typed bidirectional supersession link on both endpoints.
+        _mutate_pair(title, successor, "superseded_by", "supersedes", add=True)
     print(f"{title}: {prior} → {new_status}")
+    if successor is not None:
+        print(f"  superseded_by: {successor}; {successor}.supersedes += {title}")
     if new_status == "active":
         print(f"Next: implement the card; tick DoD items as you go; then goc done {title}.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
-        if _git_auto_commit([card_dir], f"deck: {title} {prior} → {new_status}"):
+        commit_targets = [card_dir]
+        if successor is not None:
+            commit_targets.append(DECK_DIR / successor)
+        if _git_auto_commit(commit_targets, f"deck: {title} {prior} → {new_status}"):
             print("  committed")
             if new_status == "active" and claim_push_enabled():
                 if not _git_claim_push_with_retry(card_dir, title):
@@ -3128,6 +3218,11 @@ def _repair_edge_diff(edge: HalfEdge) -> list[str]:
 
 
 def _repair_edge_cycle_problem(edge: HalfEdge, cards: list[Card]) -> str | None:
+    # Supersession edges can't form a cycle (a superseded card is terminal
+    # and won't re-enter the relationship graph), so the check only applies
+    # to the advances pair.
+    if not edge.is_advance:
+        return None
     if _would_create_advance_cycle(cards, edge.child_title, edge.parent_title):
         return (
             f"{edge.parent_title} → {edge.child_title} would create a cycle "
@@ -3185,7 +3280,10 @@ def _cmd_repair_edges(args):
         if problem:
             structural.append((edge, problem))
             continue
-        _mutate_pair(edge.child_title, edge.parent_title, "advanced_by", "advances", add=True)
+        # Apply the missing reverse half: add edge.src to edge.ref's inverse list.
+        # The forward edge already exists by construction, so this idempotently
+        # restores symmetry for any LIST_REL_FIELDS pair.
+        _mutate_pair(edge.ref, edge.src, edge.inverse, edge.field, add=True)
         print(f"repaired: {edge.message}")
         repaired += 1
 

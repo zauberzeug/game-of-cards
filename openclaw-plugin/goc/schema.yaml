@@ -12,6 +12,8 @@ optional_fields:
   - closed_at
   - advances
   - advanced_by
+  - supersedes
+  - superseded_by
   - tags
   - worker
 title_pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"

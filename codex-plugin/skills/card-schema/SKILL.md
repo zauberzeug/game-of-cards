@@ -327,11 +327,32 @@ Zero matches → free-form prose. Otherwise → checkbox mode.
 
 ## Relationship fields
 
-The kanban tracks two structured relationships in frontmatter, **both
-bidirectional with consistency invariants**. Edges are stored on both
-endpoints so triage views can traverse in either direction without
-scanning, and so a half-written edge surfaces as a validator error
-rather than silent rot.
+The kanban tracks two structured relationship axes in frontmatter,
+**both bidirectional with consistency invariants**. Edges are stored
+on both endpoints so triage views can traverse in either direction
+without scanning, and so a half-written edge surfaces as a validator
+error rather than silent rot.
+
+### Deck as scheduler vs deck as record
+
+The deck has two jobs and the relationship graph serves both. The
+**scheduler axis** answers *what do I work on next?* — it walks edges
+among live cards to compose priority (`compute_values` Bellman-discounts
+the `advances` chain). The **record axis** answers *how and why did we
+get here?* — it walks edges that include closed cards so a cold reader
+(human or LLM) can reconstruct the history of a decision without
+parsing prose.
+
+A consequence: **closed-card edges are first-class members of the
+deck graph.** A card flipping to `done` / `disproved` / `superseded`
+does not discharge its relationship maintenance — its edges remain
+load-bearing for the record axis. `goc validate` enforces
+referential integrity for both axes regardless of either endpoint's
+status; `compute_values` warns (rather than silently skips) when an
+`advances` target cannot be resolved, so edge rot is loud, not
+silent. Forensic reads do NOT fall back to log.md prose for typed
+relationships — the typed link is the contract; prose is the
+explanation.
 
 ### Value-flow axis (advances graph)
 
@@ -370,22 +391,59 @@ story-2, ...]`. A standalone derivative test that doesn't contribute
 to any other closure has no value-flow edges — its provenance lives
 in body / `log.md`, not frontmatter.
 
-### Replacement (forensic-only, not in frontmatter)
+### Replacement axis (supersedes graph)
 
-When a card is replaced, the old card flips to `status: superseded`
-and its `log.md` records the replacement: which card replaced it
-(linked as `[<new-title>](../<new-title>/)`), and one-line why
-(different approach, scope split, reframing). The new card's body
-explains what it supersedes.
+- `superseded_by` — list of slugs that replace this card. Set on the
+  *old* card at the moment of supersession.
+- `supersedes`    — list of slugs this card replaces. Set on the *new*
+  card. Inverse of `superseded_by`.
 
-The replacement is **prose, not structured**. Discard-pile cards
-(`superseded`, `disproved`, `done`) are out of active play, so the
-deck owes no machine-readable relationship graph for them. Active
-queries (`scan-deck`, `next-card`, value-flow traversal) only ever
-touch the draw pile (`open` / `active` / `blocked`) where structured
-edges (`advances` / `advanced_by`) are load-bearing for live
-scheduling. Forensic reads — "what was this replaced by?", "why?" —
-recover from `log.md` via LLM grep when needed.
+A card cannot supersede itself or a non-superseded target;
+`goc validate` enforces both rules. `goc status <title> superseded
+--by <successor>` maintains both endpoints atomically — same atomicity
+contract as `goc advance` / `goc unadvance` for the advances graph.
+Prefer the CLI to manual edits.
+
+**Invariants:**
+
+- If `A.superseded_by` contains `B`, then `B.supersedes` MUST contain
+  `A` (validator-enforced).
+- A card with non-empty `superseded_by` MUST have `status: superseded`
+  (validator-enforced).
+- Every entry in `supersedes` MUST point at a card with
+  `status: superseded` (validator-enforced).
+- The replacement narrative still appends to `log.md` — the typed
+  field is the *pointer* (machine-navigable), the journal entry is
+  the *rationale* (different approach, scope split, reframing). Both,
+  for different jobs.
+
+**Why both typed and prose?** Recording a typed edge is O(1) at the
+moment the relationship is known and cheapest to state. Reconstructing
+a lost relationship later from prose is O(read-everything) and lossy —
+inferring structure that was once explicit. For a methodology whose
+readers are AI agents, a traversable typed graph beats scattered
+per-card prose decisively, while the prose-rationale retains the
+*why* a graph edge can never capture.
+
+**YAML format** (same conventions as advances/advanced_by — block-style
+when non-empty, inline `[]` when empty, fields absent on cards that
+were never involved in a supersession):
+
+```yaml
+status: superseded
+closed_at: 2026-05-14T10:00:00Z
+superseded_by:
+  - reframed-replacement-card
+```
+
+```yaml
+# the successor:
+supersedes:
+  - the-old-card-it-replaces
+```
+
+The fields are optional and absent by default. They appear only when
+a supersession is recorded.
 
 ### Grouping (use tags)
 
