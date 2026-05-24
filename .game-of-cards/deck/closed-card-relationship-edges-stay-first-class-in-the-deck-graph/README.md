@@ -1,7 +1,7 @@
 ---
 title: closed-card-relationship-edges-stay-first-class-in-the-deck-graph
 summary: "The deck is both a scheduler and a decision record, but its relationship graph is maintained only for the scheduler. Closed-card edges silently degrade the value walk, supersession has no machine-navigable successor pointer, and the record-axis rationale is undocumented."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-24T03:57:21Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] Supersession exposes a machine-navigable successor link per the recorded decision: a reader (human or `--json` consumer) landing on a `superseded` card can be routed forward without parsing log.md prose.
   - [ ] Relationship edges involving closed cards are documented as first-class: AGENTS.md (or the deck README) states the scheduler-vs-record dual purpose and that closed-card edges are maintained for the record axis, so the "discard pile owes no graph" shortcut is not re-derived.
   - [ ] If a new typed field is chosen: schema.yaml, the card-schema skill body, validation, and the block-style/flow YAML emitter all cover it; `goc validate` enforces its invariant. If the advances graph is reused: the semantic overload is documented.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Closed-card relationship edges are first-class members of the deck graph
