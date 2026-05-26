@@ -1,21 +1,21 @@
 ---
 title: frontmatter-emitter-does-not-quote-indicator-or-whitespace-padded-values
 summary: "`emit_frontmatter` decides when to quote a scalar via the `_YAML_NEEDS_QUOTE` predicate, which omits two cases the vendored parser cares about: values that BEGIN with a YAML indicator char (`*`, `&`, etc.) and values with leading/trailing whitespace. A `*`/`&`-leading value is emitted bare, then the next parse of that same frontmatter CRASHES with `anchors/aliases not supported`. A whitespace-padded value is emitted bare and silently stripped on re-parse — silent data loss. The emit→parse round-trip is not closed."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T20:20:14Z"
-closed_at: null
+closed_at: 2026-05-26T20:29:21Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a `*`/`&`-leading value and a whitespace-padded value both survive an emit->parse round-trip unchanged.
-  - [ ] TDD: the quote-trigger predicate quotes values beginning with any YAML indicator char the vendored parser treats specially (at minimum `*` and `&`; review the full indicator set the parser rejects/interprets).
-  - [ ] TDD: the quote-trigger predicate quotes values with leading or trailing whitespace.
-  - [ ] MECHANICAL: fix lands in `goc/engine.py` (`_YAML_NEEDS_QUOTE` / `_yaml_inline`); no behavior change for already-correctly-quoted values.
-  - [ ] TDD: `uv run goc validate` passes on this repo's deck.
+  - [x] TDD: reproduce.py exits zero — a `*`/`&`-leading value and a whitespace-padded value both survive an emit->parse round-trip unchanged.
+  - [x] TDD: the quote-trigger predicate quotes values beginning with any YAML indicator char the vendored parser treats specially (at minimum `*` and `&`; review the full indicator set the parser rejects/interprets).
+  - [x] TDD: the quote-trigger predicate quotes values with leading or trailing whitespace.
+  - [x] MECHANICAL: fix lands in `goc/engine.py` (`_YAML_NEEDS_QUOTE` / `_yaml_inline`); no behavior change for already-correctly-quoted values.
+  - [x] TDD: `uv run goc validate` passes on this repo's deck.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -82,12 +82,24 @@ and [yaml-lite-empty-block-scalar-consumes-next-key](../yaml-lite-empty-block-sc
 hardened the *parser*; this card closes the *emitter* side of the same
 round-trip contract.
 
-## Fix
+## Fix (applied)
 
-Extend the quote-trigger predicate so `_yaml_inline` quotes (and
-escapes) any scalar that begins with a YAML indicator char the parser
-treats specially, and any scalar with leading or trailing whitespace.
-Reuse the existing quoting path already applied to colon-bearing values
-— the emitter already knows how to quote; it just doesn't recognize
-these two triggers. Do not change emission for values that already
-round-trip bare.
+`_yaml_inline` (`goc/engine.py`) now routes a scalar through the
+existing double-quote path when, in addition to the prior
+`_YAML_NEEDS_QUOTE` / reserved-word triggers, any of these hold:
+
+- the first char is `&` or `*` (`_YAML_INDICATOR_FIRST`) — the value
+  positions the vendored parser rejects bare with `anchors/aliases not
+  supported`. `[`/`{`/`"`/`'` are already caught anywhere by
+  `_YAML_NEEDS_QUOTE`, so the leading-char set only needs the two that
+  weren't already covered;
+- the whole value is a block/folded indicator token (`|`, `|-`, `|+`,
+  `>`, `>-`, `>+`) the parser would otherwise read as a block scalar
+  (`_YAML_BLOCK_TOKENS`);
+- `s != s.strip()` — leading or trailing whitespace, which a bare
+  scalar silently loses on re-parse.
+
+The set was deliberately kept to what the *vendored parser* actually
+rejects or reinterprets in value position, so values that already
+round-trip bare (e.g. a string beginning with `!`, `%`, `?`, or `-foo`,
+all of which parse back as plain text) are unchanged.

@@ -167,6 +167,12 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
 _YAML_RESERVED = {"null", "true", "false", "yes", "no"}
 _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
+# Leading indicator chars the vendored parser rejects in value position:
+# `&`/`*` crash the parse (anchors/aliases not supported). `[`/`{`/`"`/`'`
+# are already caught anywhere by _YAML_NEEDS_QUOTE.
+_YAML_INDICATOR_FIRST = frozenset("&*")
+# Whole-value tokens the parser interprets as block/folded scalar indicators.
+_YAML_BLOCK_TOKENS = frozenset({"|", "|-", "|+", ">", ">-", ">+"})
 
 
 def _yaml_inline(value) -> str:
@@ -184,7 +190,13 @@ def _yaml_inline(value) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     s = str(value)
-    if _YAML_NEEDS_QUOTE.search(s) or s in _YAML_RESERVED:
+    if (
+        _YAML_NEEDS_QUOTE.search(s)
+        or s in _YAML_RESERVED
+        or s in _YAML_BLOCK_TOKENS
+        or (s and s[0] in _YAML_INDICATOR_FIRST)
+        or s != s.strip()
+    ):
         # Escape \ and " for safe inclusion in "..." YAML scalar.
         escaped = s.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
