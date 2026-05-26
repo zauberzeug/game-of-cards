@@ -1411,15 +1411,20 @@ def dependency_blocked(card: Card, by_title: dict[str, Card]) -> bool:
 def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
-    Ready iff `status == open` AND `human_gate == none` AND no
-    non-terminal `advanced_by` prereq AND no active impediment overlay
-    (`waiting_on` unset, `waiting_until` absent or past).
+    Ready iff `status == open` AND `human_gate == none` AND no active
+    impediment overlay (`waiting_on` unset, `waiting_until` absent or
+    past).
+
+    Non-terminal `advanced_by` prereqs do NOT block readiness — an
+    `advances` edge is a "should be done first" (value-flow + closure
+    gate + soft priority bias), not a "must wait to start". The hard
+    "must wait to start" signal is the explicit impediment overlay
+    (`waiting_on` / `waiting_until`). See `dependency_blockers` /
+    `dependency_blocked`, which remain as advisory display only.
     """
     if card.status != "open":
         return False
     if card.human_gate != "none":
-        return False
-    if dependency_blocked(card, by_title):
         return False
     if waiting_impedes(card):
         return False
@@ -1773,7 +1778,7 @@ def render_table(
                 out_lines.append(f"    summary: {t.summary}")
             blockers = dependency_blockers(t, by_title)
             if blockers:
-                out_lines.append(f"    blocked by: {', '.join(blockers)}")
+                out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
             w = t.worker
             if w:
                 who = w.get("who", "")
@@ -1820,8 +1825,8 @@ def render_json(
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
                 "supersedes": t.frontmatter.get("supersedes") or [],
                 "superseded_by": t.frontmatter.get("superseded_by") or [],
-                "dependency_blocked": dependency_blocked(t, by_title),
-                "blocked_by": dependency_blockers(t, by_title),
+                "dependency_awaiting": dependency_blocked(t, by_title),
+                "awaiting": dependency_blockers(t, by_title),
                 "ready": card_is_ready(t, by_title),
                 "worker": t.worker,
                 "dod_open": t.dod_open,
@@ -1857,7 +1862,7 @@ def render_board(
     def card_cell(t: Card) -> str:
         marker = f" [{t.contribution[0]}]"
         if t.status == "open" and dependency_blocked(t, by_title):
-            marker += " ⛓"
+            marker += " ⏳"
         who = _worker_who(t.frontmatter.get("worker"))
         if who:
             marker += f" @{who[:8]}"

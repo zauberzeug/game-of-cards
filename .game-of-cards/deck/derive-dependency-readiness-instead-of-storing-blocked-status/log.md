@@ -44,3 +44,13 @@ no longer gates the pull queue; the hard "must wait to start" gate is
 the `waiting_on` impediment overlay. That follow-up drops the
 `dependency_blocked` branch from `card_is_ready` and keeps the derived
 signal as advisory display only.
+
+## 2026-05-26 — Later: Follow-up shipped
+
+[`make-advances-gate-closure-not-the-pull-queue`](../make-advances-gate-closure-not-the-pull-queue/)
+closed: `card_is_ready` no longer reads `dependency_blocked`, the
+advisory display surfaces `awaiting: <prereqs> (you may start)` in `-v`
+and a ⏳ marker on the board, the JSON keys are renamed
+(`dependency_blocked` → `dependency_awaiting`, `blocked_by` →
+`awaiting`), and `advanced-by-closed` is unchanged so `advances` still
+gates closure. The asymmetry is resolved at the level of mechanism.

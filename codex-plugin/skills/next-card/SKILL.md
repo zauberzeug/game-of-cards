@@ -33,9 +33,11 @@ unless the user explicitly asks to continue that active card.
 
 User argument: $ARGUMENTS — if non-empty (a title or area like
 an area tag or path prefix), narrow the queue. If empty, scan the full
-ready slice (`--ready` excludes any open card with a non-terminal
-`advanced_by` prereq — dependency-blocked cards self-clear when the
-last upstream closes, no `status: blocked` flip needed).
+ready slice (`--ready` keeps cards with open `advances` prereqs —
+they are pullable with an "awaiting: <prereqs> (you may start)"
+advisory line, since `advances` is a soft "should precede" not a hard
+start-gate; hard waits are expressed via `waiting_on` /
+`waiting_until`).
 
 ## Selection criteria
 
