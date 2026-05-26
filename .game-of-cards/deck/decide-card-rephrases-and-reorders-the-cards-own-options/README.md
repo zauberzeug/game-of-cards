@@ -1,7 +1,7 @@
 ---
 title: decide-card-rephrases-and-reorders-the-cards-own-options
 summary: "When `Skill(decide-card)` bridges a card body's labeled `## Decision required` options (Option A/B/C/D) to an `AskUserQuestion` picker, the skill body offers no guidance on preserving source-option labels or order. Agents follow the tool-level `recommended first` heuristic and reorder/rephrase, which forces the user to mentally remap their pick between two presentations. Scope decision needed: decide-only guidance, sibling skills too, or a `card-schema`-level convention."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-23T05:06:53Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] If the scope decision picks Option B below (sibling skills), the prescription is replicated in or referenced from any other skill that bridges card-body options to `AskUserQuestion`.
   - [ ] If the scope decision picks Option C below (`card-schema`-level), the rule lives in `goc/templates/skills/card-schema/SKILL.md` as a general "bridging card options to user-facing pickers" convention; other skills cite it.
   - [ ] An autonomous decide-card invocation on a card with labeled `## Decision required` options demonstrates verbatim mirroring in the elicited picker — verifies the discipline change took.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # decide-card-rephrases-and-reorders-the-cards-own-options
