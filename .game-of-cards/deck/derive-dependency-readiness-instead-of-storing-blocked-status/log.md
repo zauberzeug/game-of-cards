@@ -14,3 +14,22 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-05-26 — Closure' present
+
+## 2026-05-26T05:40:57Z — Post-close amendment — closure-vs-readiness asymmetry handoff
+
+The decision card
+[`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`](../advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/)
+resolved (Option E) that `advanced-by-closed` is *correct* — every true
+`advanced_by` edge ⇔ the card's value chain includes that upstream ⇔ the
+card is not done while the upstream is open. The loose/strict
+distinction is real but governs **start ordering, not closure**.
+
+Consequence for this (closed) card: the `dependency_blocked` predicate
+landed inheriting the closure reading (True for any non-terminal
+`advanced_by`), which over-blocks *starting* on loose edges — exactly
+the over-read the original contributor flagged. The README's "Open
+consideration" section captures the three resolution options (block on
+all; route loose impediments to the `waiting_on` overlay; introduce a
+strict/loose signal). A follow-up card files the actual predicate
+refactor; this entry just records that the readiness half is
+acknowledged as live work, not closed by the parent's decision.

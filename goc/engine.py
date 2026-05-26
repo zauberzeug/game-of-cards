@@ -2849,7 +2849,13 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
         by_title = {c.title: c for c in all_cards}
         unclosed = [t for t in advanced_by if t in by_title and by_title[t].status != "done"]
         if unclosed:
-            return False, f"{len(unclosed)} not done: {', '.join(unclosed[:3])}"
+            sample = ", ".join(unclosed[:3])
+            hint = (
+                f"wait for them to close, or if an edge is false, "
+                f"retract it: `goc unadvance {card.title} --by <upstream>` "
+                f"(prefer over `--skip`)"
+            )
+            return False, f"{len(unclosed)} not done: {sample} — {hint}"
         return True, f"all {len(advanced_by)} done"
     if name == "dod-100-percent":
         if card.dod_freeform:
