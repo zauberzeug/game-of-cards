@@ -33,6 +33,9 @@ class ParseError(ValueError):
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _INT_RE = re.compile(r"^-?\d+$")
+# Literal block scalar header: `|`, with an optional explicit indentation
+# indicator (`|2`) and an optional chomping indicator (`-` strip / `+` keep).
+_BLOCK_INDICATOR_RE = re.compile(r"^\|(\d+)?([-+]?)$")
 _NULL_SET = frozenset(("null", "Null", "NULL", "~"))
 _TRUE_SET = frozenset(("true", "True", "TRUE", "yes", "Yes", "YES"))
 _FALSE_SET = frozenset(("false", "False", "FALSE", "no", "No", "NO"))
@@ -143,7 +146,9 @@ class _Parser:
 
     # ── Block scalar ( |, |- and |+ ) ─────────────────────────────────────────
 
-    def _parse_block_scalar(self, declaration_indent: int, chomp: str) -> str:
+    def _parse_block_scalar(
+        self, declaration_indent: int, chomp: str, explicit_indent: int | None = None
+    ) -> str:
         """Parse a `|` block scalar.
 
         `declaration_indent` is the indent of the line bearing the `|` indicator;
@@ -154,9 +159,20 @@ class _Parser:
         `chomp` is the YAML chomping mode: "clip" (bare `|`, keep one trailing
         newline, drop trailing blank lines), "strip" (`|-`, no trailing newline)
         or "keep" (`|+`, preserve every trailing blank line).
+
+        `explicit_indent` is the optional YAML indentation indicator (the `2` in
+        `|2`): the block indent is then pinned to `declaration_indent +
+        explicit_indent` instead of being inferred from the first content line.
+        This lets a content line carry its own leading whitespace without the
+        auto-inference folding it into the block indent (silent strip) or
+        raising on a later, less-indented line (ambiguity). The emitter uses it
+        whenever the first content line begins with whitespace.
         """
         chunks: list[str] = []
-        block_indent: int | None = None
+        block_indent: int | None = (
+            None if explicit_indent is None else declaration_indent + explicit_indent
+        )
+        content_seen = False
         saved_pos = self._pos
         while self._pos < len(self._lines):
             raw = self._lines[self._pos]
@@ -196,11 +212,13 @@ class _Parser:
             # content line is meaningful in a YAML literal block (e.g. a Markdown
             # hard-break) and must survive the emit->parse round-trip.
             chunks.append(raw[block_indent:])
+            content_seen = True
             self._pos += 1
-        if block_indent is None:
+        if not content_seen:
             # No indented content followed `|`. Rewind so the parent loop sees
             # the next sibling key (or blank line) instead of having it silently
-            # consumed.
+            # consumed. (With an explicit indicator block_indent is preset, so we
+            # gate the rewind on whether a real content line was actually read.)
             self._pos = saved_pos
             return ""
         if chomp == "keep":
@@ -218,9 +236,13 @@ class _Parser:
 
     def _resolve_value(self, rest: str, parent_indent: int) -> Any:
         rest = rest.rstrip()
-        if rest in ("|", "|-", "|+"):
-            chomp = {"|": "clip", "|-": "strip", "|+": "keep"}[rest]
-            return self._parse_block_scalar(parent_indent, chomp)
+        block_m = _BLOCK_INDICATOR_RE.match(rest)
+        if block_m:
+            explicit_indent = int(block_m.group(1)) if block_m.group(1) else None
+            chomp = {"": "clip", "-": "strip", "+": "keep"}[block_m.group(2)]
+            return self._parse_block_scalar(
+                parent_indent, chomp, explicit_indent=explicit_indent
+            )
         if rest == ">":
             raise ParseError(f"line {self._pos + 1}: folded scalars (>) not supported")
         if rest in ("&", "*") or rest.startswith("&") or rest.startswith("*"):

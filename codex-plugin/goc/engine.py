@@ -232,10 +232,24 @@ def _yaml_inline(value) -> str:
 
 
 def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
-    """Render a multi-line string field with literal-block style (`|` or `|-`)."""
+    """Render a multi-line string field with literal-block style (`|` or `|-`).
+
+    Content lines get a fixed 2-space prefix. The parser infers the block
+    indent from the first content line, so a content line whose own text begins
+    with whitespace would otherwise corrupt the round-trip: the inflated first
+    line either raises (a later, less-indented line is judged ambiguous) or
+    silently folds a shared leading indent into the block indent. When the first
+    content line begins with whitespace, emit an explicit indentation indicator
+    (`|2` / `|2-`) that pins the block indent to the 2-space prefix regardless of
+    the content's own leading whitespace.
+    """
     text = (value or "").rstrip("\n")
+    lines = text.splitlines()
+    first_content = next((ln for ln in lines if ln.strip()), "")
+    if first_content[:1].isspace():
+        indicator = f"{indicator[0]}2{indicator[1:]}"
     out = [f"{key}: {indicator}"]
-    for ln in text.splitlines():
+    for ln in lines:
         out.append(f"  {ln}" if ln else "")
     return out
 
@@ -424,6 +438,18 @@ def _load_consuming_repo_tags() -> set[str]:
 
 DOD_OPEN_BOX = re.compile(r"^[ \t]*- \[ \]", re.MULTILINE)
 DOD_DONE_BOX = re.compile(r"^[ \t]*- \[x\]", re.MULTILINE | re.IGNORECASE)
+# Matches any DoD checkbox line (open or checked), case-insensitive so it
+# agrees with DOD_OPEN_BOX + DOD_DONE_BOX on the same `[X]`/`[x]` set.
+DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
+
+
+def _dod_box_indices(lines: list[str]) -> list[int]:
+    """0-based line indices of DoD checkbox lines, counted the same way the
+    canonical box counter (DOD_OPEN_BOX + DOD_DONE_BOX) counts them — i.e.
+    case-insensitively. This is the index space LLM quality-pass verdicts
+    target, so the rewriter must agree with the counter on which lines are
+    boxes."""
+    return [i for i, ln in enumerate(lines) if DOD_ANY_BOX.match(ln)]
 
 # Method-class tags declare each DoD item's closure semantic with a one-token
 # colon-suffixed prefix (e.g. "- [ ] TDD: ..."). See Skill(card-schema)
@@ -2646,7 +2672,7 @@ def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:
     fm, body = parse_frontmatter(text)
     dod_text = fm.get("definition_of_done") or ""
     lines = dod_text.splitlines()
-    box_indices = [i for i, ln in enumerate(lines) if re.match(r"^\s*- \[[ x]\]", ln)]
+    box_indices = _dod_box_indices(lines)
     fix_by_idx = {issue["idx"]: issue["fix"] for issue in issues if "idx" in issue and "fix" in issue}
     for box_idx, line_idx in enumerate(box_indices):
         if box_idx in fix_by_idx:

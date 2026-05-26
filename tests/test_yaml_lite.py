@@ -130,6 +130,23 @@ class BlockScalarTest(unittest.TestCase):
         # whitespace invariant of the non-blank content-line path.
         self.assertEqual(safe_load("s: |-\n  content\n     \n")["s"], "content\n   ")
 
+    def test_explicit_indentation_indicator_pins_block_indent(self):
+        # `|2` fixes the block indent at 2 regardless of the first content line
+        # being more-indented, so leading whitespace on content survives instead
+        # of being folded into the block indent or raising on a later line.
+        text = "s: |2\n    indented first\n  second line\n"
+        self.assertEqual(safe_load(text)["s"], "  indented first\nsecond line\n")
+
+    def test_explicit_indentation_indicator_strip(self):
+        text = "s: |2-\n    indented summary\n  flush\n"
+        self.assertEqual(safe_load(text)["s"], "  indented summary\nflush")
+
+    def test_explicit_indentation_indicator_shared_leading_indent(self):
+        # Every content line shares a 2-space leading indent; the indicator
+        # preserves it instead of silently stripping it.
+        text = "s: |2\n    - [ ] nested\n    - [ ] second\n"
+        self.assertEqual(safe_load(text)["s"], "  - [ ] nested\n  - [ ] second\n")
+
 
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):
