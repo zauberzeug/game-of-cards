@@ -17,7 +17,7 @@ summary: |-
   governs *start ordering*, not closure, so the genuine over-read lives
   in derived *readiness*, delegated to the epic's children. This card
   now carries the Option E closure work; gate lowered to none.
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-26T04:55:34Z"
@@ -50,6 +50,7 @@ definition_of_done: |
         readiness-…` child is amended with the closure-vs-readiness
         asymmetry so its `dependency_blocked` predicate doesn't inherit
         the closure reading. This card does NOT implement readiness.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `advanced_by` is read as a hard prerequisite, but documented as mostly a loose contribution
