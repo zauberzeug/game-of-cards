@@ -10,34 +10,46 @@ summary: |-
   hard reading over-reads the loose majority: in a densely-linked deck,
   aggregator-epics with `advanced_by` up to 24 are each held closed
   until every contributor closes, even where an edge means "this
-  informed that," not "this blocks that." This is a maintainer call
-  about what `advanced_by` *means* — it can't be fixed in attest alone
-  because the same reading drives the epic's own derived-readiness
-  decision. Parked for a decision.
+  informed that," not "this blocks that." DECIDED (2026-05-26): the
+  closure gate is correct as-is — "X advances Y" means Y's value chain
+  includes X, so a true edge ⇔ Y not done; if Y can close, the edge was
+  false and must be retracted (Option E). The loose/strict distinction
+  governs *start ordering*, not closure, so the genuine over-read lives
+  in derived *readiness*, delegated to the epic's children. This card
+  now carries the Option E closure work; gate lowered to none.
 status: open
 stage: null
 contribution: high
 created: "2026-05-26T04:55:34Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - blocked-status-conflates-dependency-external-wait-and-deferral
 advanced_by: []
 tags: [api-contract, documentation]
 definition_of_done: |
-  - [ ] A chosen option is recorded in this body (`## Decision`) with
-        its reason, and the gate dropped to `none`.
-  - [ ] The decision is applied coherently to BOTH surfaces that read
-        `advanced_by` as a dependency: `advanced-by-closed` (attest) and
-        the derived dependency-readiness in
-        `derive-dependency-readiness-instead-of-storing-blocked-status`
-        — not attest alone.
-  - [ ] If the decision changes the edge schema or the check's severity,
-        `card-schema` / `advance-card` skills and the default
-        `config.yaml` are updated to match, and `goc validate` stays
-        green.
-  - [ ] A regression fixture demonstrates the chosen behaviour on a
-        loose aggregation edge vs. a strict prerequisite edge.
+  - [x] Option chosen and recorded (`## Decision`, 2026-05-26); gate
+        lowered to `none`. Closure half = Option E; readiness half
+        delegated to the epic's children.
+  - [ ] `card-schema` reaffirms `advanced-by-closed` is *correct*, with
+        the value-chain rule ("X advances Y" ⇔ Y's value chain includes
+        X ⇔ Y not done while X open) and the closure-vs-readiness
+        asymmetry table (loose edges block closure but not start order).
+  - [ ] `advanced-by-closed`'s failure message names the two honest
+        resolutions — wait, or `goc unadvance <closing> --by <upstream>`
+        (documented on both cards) when the edge is discovered false —
+        and `finish-card` blesses retraction over `--skip` as the
+        first-line escape.
+  - [ ] `_run_derived_check`'s `advanced-by-closed` logic is left
+        unchanged (no severity downgrade, no per-edge marker); the work
+        is messaging + docs only. `goc validate` stays green.
+  - [ ] reproduce.py: closing `C` with a true open `advanced_by` edge
+        FAILs; `goc unadvance C --by P` (edge was false) then lets it
+        close. Loose-vs-strict is a readiness concern, tested there.
+  - [ ] The readiness half is handed off: the `derive-dependency-
+        readiness-…` child is amended with the closure-vs-readiness
+        asymmetry so its `dependency_blocked` predicate doesn't inherit
+        the closure reading. This card does NOT implement readiness.
 ---
 
 # `advanced_by` is read as a hard prerequisite, but documented as mostly a loose contribution
@@ -75,114 +87,55 @@ downstream deck has aggregator-epics with `advanced_by` of 24
 each is held closed until *every* contributor closes. Correct for a
 true aggregation epic — wrong wherever the edge is a loose contribution.
 
-## Why this needs a human decision (not a blind pick)
+## Decision (2026-05-26) — Option E (closure half); readiness delegated
 
-The same `advanced_by`-means-hard-prerequisite reading is **already
-baked into the blocked-status epic's recorded decision** (`blocked-
-status-conflates-…` body: "a card with any non-terminal `advanced_by`
-prereq is computed blocked-by-dependency"). Its child
-`derive-dependency-readiness-instead-of-storing-blocked-status` will
-make `next-card`/`pull-card` treat any non-terminal `advanced_by` as
-"not ready." So whatever we decide here co-determines whether that
-child over-fires the same way attest does. Deciding it for attest in
-isolation would split-brain the two surfaces. And Option A below
-directly reverses a deliberate simplification from the value-sort
-design — that is exactly the kind of axiom-in-tension call a human
-should make, not an agent.
+The full A–D options matrix and the E-vs-B deliberation are archived in
+`log.md`. The decision turned on one observation that dissolved the
+framing, not on weighing the options as posed.
 
-## Decision required
+**The value-chain identity.** "X advances Y" is *defined* as "closing X
+delivers a piece of Y's value chain" (`rename-blocks-to-advances`). It
+follows that, for **closure**:
 
-### Reasoning
+> a true `advances` edge ⇔ Y's value chain includes X ⇔ Y is **not
+> done** while X is open.
 
-`advanced_by` was deliberately defined as mostly-loose with strict/loose
-carried by prose, yet two engine surfaces (attest closure gate; derived
-dependency-readiness) read it as strictly hard. Picking blindly risks
-either (a) re-introducing schema complexity the value-sort redesign
-removed on purpose, or (b) silently keeping a closure/readiness blocker
-that the design says should not exist for ~80% of edges. The choice
-trades schema simplicity against gate accuracy and must be applied to
-both surfaces at once.
+There is no coherent "true edge you may close past." Either the edge is
+true (so Y isn't done — the FAIL is correct), or Y is genuinely
+closeable (so the edge was false and points at the wrong target — e.g.
+"more tests for C" does not advance C; it advances *the testing of C's
+functionality*, a different card). The earlier worry that a hard gate
+blocks legitimate closures rested on a mis-modeled edge.
 
-### Option A — encode strict-vs-loose per edge
+**Therefore `advanced-by-closed` is correct as-is — Option E.** Keep the
+hard FAIL. The blessed resolution when you hit it is not `--skip`: it is
+to **retract the false edge** — `goc unadvance <closing> --by <upstream>`,
+documented on both cards — which is honest graph maintenance, not a
+bypass. Options A–D are rejected: B/C/D all weaken a correct gate, and A
+re-introduces the strict/loose schema split that was removed on purpose.
 
-One-line: add an optional per-edge marker (e.g. `advances` entries may
-carry a `strict: true` flag, or a parallel `requires` list); gates
-(attest + readiness) fire only on strict edges.
+**The loose/strict distinction is real — but it governs *start
+ordering*, not closure.** Loose ("X contributes; doesn't gate") means
+you may *begin* Y before X is done; it does **not** mean Y can be
+*declared done* with X's piece undelivered. So both loose and strict
+true edges block closure; they differ only on whether work on Y may
+start first:
 
-- **Pros**
-  - Most precise: the gate matches reality edge-by-edge.
-  - Lets a genuine prerequisite still hard-block while loose
-    contributions don't.
-- **Cons**
-  - Re-introduces the exact strict/loose schema distinction
-    `rename-blocks-to-advances` deliberately *removed* ("carried by the
-    body, not the field") — reverses a settled design decision.
-  - Migration cost: every existing edge is implicitly loose; someone
-    must mark the strict minority or accept silent semantic drift.
-  - More frontmatter surface, more validator rules, more to teach.
-- Preview: schema change in `goc/schema.yaml` + emitter in
-  `goc/engine.py` (`_BLOCK_LIST_FIELDS` / edge rendering) +
-  `_run_derived_check` filters to strict edges. Non-trivial.
+| edge | may Y *start* before X done? | may Y *close* while X open? |
+|---|---|---|
+| strict (X required before Y begins) | no | no |
+| loose (X contributes, no order) | **yes** | **no** (X is in Y's value chain) |
 
-### Option B — make `advanced-by-closed` advisory / severity-configurable
+**Consequence — the real over-read is in *readiness*, not attest.** The
+contributor's instinct (the hard reading over-fires on loose edges) is
+correct, but it lands on the epic's `derive-dependency-readiness` child,
+whose planned `dependency_blocked(card)` returns true for *any*
+non-terminal `advanced_by` — which would wrongly block *starting* a card
+on a loose edge. That is delegated to the epic's children
+([`derive-dependency-readiness-…`](../derive-dependency-readiness-instead-of-storing-blocked-status/)
+for the start-ordering question; [`add-waiting-overlay-…`](../add-waiting-overlay-with-reason-and-until-date/)
+for hard human/external impediments). This card amends that child with
+the asymmetry and does not implement readiness itself.
 
-One-line: downgrade the check from a hard FAIL to a non-blocking
-warning (or add a config knob for its severity), and apply the same
-"advisory" stance to derived readiness; align attest with what
-`goc done` actually enforces (it does *not* gate on this check).
-
-- **Pros**
-  - Honest to the design: the field can't distinguish, so don't pretend
-    at gate-time; keep the signal as information, not a block.
-  - Smallest change; no schema growth; no migration.
-  - Removes the autonomous-worker halt and the per-child `--skip` toil.
-- **Cons**
-  - Loses a genuine guard for the ~20% that *are* strict prerequisites
-    (a real out-of-order closure would only warn).
-  - "Advisory" needs a clear convention so it isn't ignored noise.
-- Preview: in `templates/game_of_cards/config.yaml`, mark the check
-  advisory (new `severity: warn` field consumed by `_cmd_attest`), or
-  drop it from `layer_3_goc_dod` by default. `_run_derived_check`
-  unchanged; `_cmd_attest` stops counting it toward `any_failed`.
-
-### Option C — gate only when the upstream card is itself blocking
-
-One-line: `advanced-by-closed` fails only when an unclosed
-`advanced_by` card is *itself* impeded (`human_gate != none` or
-`status: blocked`); otherwise it's informational.
-
-- **Pros**
-  - No schema change; narrows the FAIL to cases where ordering plausibly
-    matters.
-  - Keeps a hard block for the "parked parent" shape.
-- **Cons**
-  - Still a heuristic — proxies "is this a real prerequisite?" by the
-    upstream's gate/status, which is not the same thing.
-  - Couples the check to gate semantics, harder to explain.
-- Preview: `_run_derived_check` reads each upstream card's
-  `human_gate`/`status` before counting it as a blocker.
-
-### Option D — keep the hard reading (status quo)
-
-One-line: accept that every `advanced_by` is a hard prerequisite for
-closure and readiness; the friction is the cost of a simple field.
-
-- **Pros**
-  - Zero work; matches the epic's already-recorded readiness premise.
-  - Strongest closure ordering guarantee.
-- **Cons**
-  - Contradicts the design card's own "~80% loose" definition.
-  - The friction (per-child `--skip`, autonomous-worker halt on
-    clusters) is exactly what the contributor reports.
-
-### Recommendation
-
-**Option B** (advisory / severity-configurable, applied to both attest
-and derived readiness). It respects the deliberate "no per-edge schema
-distinction" decision while ending the over-read, is the smallest
-change, and aligns attest with what `goc done` already enforces. The
-dominant driver: the field was *designed* not to distinguish strict
-from loose, so a hard gate on it is reading information the field does
-not carry. Not binding — if preserving a hard ordering guard for true
-prerequisites matters more than schema simplicity, Option A is the
-precise (but heavier) alternative.
+This card now carries only the Option E *closure* work (a messaging +
+docs change; the check logic is unchanged). Gate lowered to `none`.

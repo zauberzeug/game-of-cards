@@ -64,3 +64,40 @@ This card adds the *derived* state and wires it into queues/display. It does
 is [remove-blocked-from-status-enum-and-migrate-existing-cards](../remove-blocked-from-status-enum-and-migrate-existing-cards/),
 which this card advances. The two new behaviors (derived readiness here, the
 impediment overlay in the sibling) must both exist before the status is removed.
+
+## Open consideration (2026-05-26): closure vs readiness asymmetry
+
+The decision recorded on
+[advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose](../advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/)
+establishes that `advances`/`advanced_by` carries two distinct things,
+and they behave **asymmetrically** across closure vs. start-ordering:
+
+| edge | may a card *start* before its prereq is done? | may it *close*? |
+|---|---|---|
+| strict (prereq required before work begins) | no | no |
+| loose (~80%: contributes, no order) | **yes** | no |
+
+`advanced-by-closed` (closure) correctly blocks on *both* — a true edge
+of either kind means the target's value chain is undelivered. But
+**readiness/start should block only on the strict minority**: a loose
+edge explicitly "doesn't gate" progress (`rename-blocks-to-advances`).
+
+The `dependency_blocked` predicate above, as drafted ("True iff any
+non-terminal `advanced_by`"), inherits the *closure* reading and would
+therefore wrongly block *starting* a card on a loose edge — the exact
+over-read the contributor reported. The field cannot distinguish strict
+from loose, so this child must resolve, before implementing:
+
+- block readiness on *all* `advanced_by` (simple, but over-blocks loose
+  starts — the reported friction); **or**
+- treat the graph as advisory-for-priority-only and route genuine
+  "can't start yet" impediments to the explicit `waiting_on` overlay
+  ([add-waiting-overlay-with-reason-and-until-date](../add-waiting-overlay-with-reason-and-until-date/)),
+  leaving `advanced_by` purely about value flow + closure; **or**
+- introduce a strict/loose signal (reopens Option A from the decision
+  card — rejected there for *closure*, but the readiness case is where
+  it would actually earn its cost).
+
+This is the live, unresolved part of the original Signal 2. It belongs
+to this child (start-ordering) and the overlay sibling, not to the
+closure gate.
