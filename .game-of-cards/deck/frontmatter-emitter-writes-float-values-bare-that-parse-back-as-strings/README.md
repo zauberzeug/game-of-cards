@@ -1,7 +1,7 @@
 ---
 title: frontmatter-emitter-writes-float-values-bare-that-parse-back-as-strings
 summary: "UNVERIFIED / latent. `_yaml_inline` emits `float` values bare via `str(value)` (`engine.py:209-210`), but the vendored parser's scalar recognizers have an int regex and no float regex (`yaml_lite.py:227`), so a bare `3.14` falls through to `return text` and reads back as the string '3.14'. No current schema field is a float, so this is unreachable today — but the emitter explicitly advertises float support, leaving a latent emit->parse type-loss gap of the same class as the closed int/null/bool quoting fixes."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-26T21:57:44Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: decide whether to (a) drop float handling from `_yaml_inline` (no schema field is a float — emitter should not advertise unsupported types) or (b) add a float recognizer to the parser to close the round-trip. Record the call in log.md.
   - [ ] TDD: reproduce.py exits zero under the chosen approach — either floats round-trip as floats, or the emitter refuses/quotes them so no silent string-coercion occurs.
   - [ ] TDD: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter writes float values bare that parse back as strings
