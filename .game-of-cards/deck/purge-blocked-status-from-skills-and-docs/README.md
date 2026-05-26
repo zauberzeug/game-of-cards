@@ -9,7 +9,7 @@ summary: |-
   value is removed, steering authors off `blocked` while it's still
   technically accepted — so it's autonomous-pull-safe and doesn't break
   validation.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T12:11:27Z"
@@ -39,6 +39,7 @@ definition_of_done: |
         `blocked` (this card soft-deprecates in docs; the enforced
         removal is the sibling
         `remove-blocked-from-the-status-enum-and-validator`).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Purge `blocked` from skills and AGENTS docs
