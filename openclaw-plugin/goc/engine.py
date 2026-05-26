@@ -1638,6 +1638,13 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
     γ=0.7, value is bounded asymptotically by `max_rank / (1 - γ)`
     (≈ 30 for our rank table), so growth is geometric not unbounded.
 
+    Live-only descendants: a descendant whose status is terminal
+    (`done`/`disproved`/`superseded`) is skipped — the scheduler axis
+    walks `advances` across *live* cards only (AGENTS.md "deck as
+    scheduler vs record"). Completed work can no longer be unblocked,
+    so it must not amplify a live card's scheduling priority; those
+    closed-card edges belong to the record axis instead.
+
     Switched from saturating-max (`max(own, γ·best)`) on 2026-05-03
     after the formula was identified as making native-high cards lose
     chain-distance signal: `γ × 9 = 6.3 < 9` always meant downstream
@@ -1688,6 +1695,12 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
                         f"Run 'goc validate' for the authoritative report.",
                         file=sys.stderr,
                     )
+                continue
+            if by_title[dest].status in TERMINAL_STATUSES:
+                # Scheduler axis is live-only (AGENTS.md "deck as scheduler
+                # vs record"): a terminal descendant can no longer be
+                # unblocked, so it must not amplify a live card's priority.
+                # Such edges live on the record axis, walked elsewhere.
                 continue
             d_value, d_path = value_for(dest, in_progress)
             if d_value > best[0]:
