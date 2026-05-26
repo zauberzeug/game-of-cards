@@ -1,74 +1,59 @@
 ---
 title: dod-rewrite-box-index-skips-uppercase-checked-boxes
-summary: "UNVERIFIED. `_apply_dod_rewrite` enumerates DoD checkbox lines with `re.match(r\"^\\s*- \\[[ x]\\]\", ln)` (lowercase `x` only), but the canonical box counter `DOD_DONE_BOX` is compiled with `re.IGNORECASE` and treats `- [X]` as a checked box. On a card carrying an uppercase `[X]` box, the 0-based index space the LLM verdict targets (`quality-pass --llm`) is misaligned with `box_indices`, so a rewrite can land on the wrong DoD line. Needs a reproduce.py confirming the misalignment end-to-end."
-status: active
+summary: "`_apply_dod_rewrite` enumerated DoD checkbox lines with `re.match(r\"^\\s*- \\[[ x]\\]\", ln)` (lowercase `x` only), but the canonical box counter `DOD_DONE_BOX` is `re.IGNORECASE` and treats `- [X]` as a checked box. On a card carrying an uppercase `[X]` box, the 0-based index space the LLM verdict targets (`quality-pass --llm`) was misaligned with `box_indices`, so a rewrite could land on the wrong DoD line. Fixed: box indexing routed through `_dod_box_indices`/`DOD_ANY_BOX` (case-insensitive); reproduce.py confirms the misalignment end-to-end."
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T22:25:59Z"
-closed_at: null
+closed_at: 2026-05-26T23:03:45Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, unverified]
+tags: [bug]
 definition_of_done: |
-  - [ ] TDD: a `reproduce.py` constructs a card with DoD item 0 = `- [X] ...` (uppercase) and item 1 = `- [ ] ...`, drives `_apply_dod_rewrite` with a verdict targeting `idx: 1`, and shows the edit lands on the wrong physical line (or, post-fix, the right one)
-  - [ ] TDD: after the fix, `box_indices` and `DOD_DONE_BOX` agree on which lines are boxes for both `[x]` and `[X]`
-  - [ ] PROCESS: promote out of `unverified` (drop the tag) once the reproduce.py lands; `uv run goc validate` clean
+  - [x] TDD: a `reproduce.py` constructs a card with DoD item 0 = `- [X] ...` (uppercase) and item 1 = `- [ ] ...`, drives `_apply_dod_rewrite` with a verdict targeting `idx: 1`, and shows the edit lands on the wrong physical line (or, post-fix, the right one)
+  - [x] TDD: after the fix, `box_indices` and `DOD_DONE_BOX` agree on which lines are boxes for both `[x]` and `[X]`
+  - [x] PROCESS: promote out of `unverified` (drop the tag) once the reproduce.py lands; `uv run goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
 # dod-rewrite-box-index-skips-uppercase-checked-boxes
 
-> **Status: unverified.** Static-confirmed citation disagreement; no
-> end-to-end `reproduce.py` yet (no budget this audit round).
+> **Status: fixed (verified).** Confirmed end-to-end and reconciled.
 
-## Hypothesis
+## The defect
 
-The quality-pass LLM-rewrite path indexes DoD checkbox lines with a
+The quality-pass LLM-rewrite path indexed DoD checkbox lines with a
 **case-sensitive** regex, while the rest of the engine counts boxes
 **case-insensitively**. On a DoD containing an uppercase `[X]` box, the
-two disagree, so the 0-based index the LLM verdict carries no longer maps
-to the physical line the LLM intended — a rewrite can mutate the wrong DoD
-item.
+two disagreed, so the 0-based index the LLM verdict carries no longer
+mapped to the physical line the LLM intended — a rewrite could mutate the
+wrong DoD item (or silently drop the edit).
 
-## Location (verbatim)
-
-`goc/engine.py:2649` — `_apply_dod_rewrite`:
+`_apply_dod_rewrite` computed:
 
 ```python
 box_indices = [i for i, ln in enumerate(lines) if re.match(r"^\s*- \[[ x]\]", ln)]
 ```
 
-`goc/engine.py:426` — the canonical counter, case-insensitive:
+The `[ x]` character class matched a space or a lowercase `x` only; an
+uppercase `[X]` line was skipped by `box_indices` but counted as a checked
+box by the canonical `DOD_DONE_BOX` (`re.IGNORECASE`). `reproduce.py`
+confirms: under the old regex, `box_indices` had length 1 for
+`"- [X] alpha\n- [ ] beta\n"`, so an `idx: 1` rewrite matched nothing and
+the `beta` edit was silently dropped.
 
-```python
-DOD_DONE_BOX = re.compile(r"^[ \t]*- \[x\]", re.MULTILINE | re.IGNORECASE)
-```
+## Fix
 
-The `[ x]` character class in the rewriter matches a space or a lowercase
-`x` only; an uppercase `[X]` line is skipped by `box_indices` but counted
-as a checked box by `DOD_DONE_BOX`.
+`goc/engine.py` — added `DOD_ANY_BOX` (matches `- [ ]` / `- [x]` / `- [X]`)
+and a `_dod_box_indices(lines)` helper that both `_apply_dod_rewrite` and
+the reproduce harness share, so the rewriter's box enumeration agrees with
+`DOD_OPEN_BOX + DOD_DONE_BOX` for every case variant.
 
-## Why deferred
+## Verification
 
-Reachable only via `goc quality-pass --llm` and only when a card carries
-an uppercase `[X]` box (goc itself emits lowercase, so this needs a
-hand-edited or externally-authored card). Real correctness bug, but narrow
-trigger — parked for a round with a reproduce.py budget.
-
-## Falsification recipe
-
-- Build a `Card` whose `definition_of_done` is
-  `"- [X] alpha\n- [ ] beta\n"`.
-- Call `_apply_dod_rewrite(card, [{"idx": 1, "fix": "- [ ] beta REWRITTEN"}])`.
-- **Predict (defect):** because the `[X]` line is skipped, `box_indices`
-  has length 1 (`beta` at index 0), so `idx: 1` matches nothing OR maps to
-  the wrong line — the LLM's "second item" edit misfires.
-- **Predict (fixed):** `box_indices` includes both lines; `idx: 1` rewrites
-  `beta`.
-
-If the two regexes are reconciled (both `IGNORECASE`, or `box_indices`
-reuses `DOD_DONE_BOX`/`DOD_BOX` matching), the disagreement disappears.
+`reproduce.py` exits 0: `box_indices` length matches the canonical count
+(2), and an `idx: 1` rewrite lands on `beta` with `[X] alpha` untouched.
 
 Surfaced by a general-purpose audit hunter (engine.py scope) on 2026-05-26.
 
