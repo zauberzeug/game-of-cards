@@ -16,45 +16,45 @@ summary: |-
   `card_is_ready`; keep the derived signal as advisory display only,
   relabeled so it no longer reads as "blocked". `advanced-by-closed`
   (closure) is unchanged.
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T06:55:44Z"
-closed_at: null
+closed_at: 2026-05-26T09:21:44Z
 human_gate: none
 advances:
   - blocked-status-conflates-dependency-external-wait-and-deferral
 advanced_by: []
 tags: [api-contract]
 definition_of_done: |
-  - [ ] `card_is_ready` (`engine.py:1411`) no longer excludes a card for
+  - [x] `card_is_ready` (`engine.py:1411`) no longer excludes a card for
         having non-terminal `advanced_by` prereqs (drop the
         `dependency_blocked` branch at ~1422). Ready = `status == open`
         AND `human_gate == none` AND `not waiting_impedes`. (Legacy
         `status: blocked` stays excluded by the `status != open` check.)
-  - [ ] `dependency_blocked` / `dependency_blockers` are retained as an
+  - [x] `dependency_blocked` / `dependency_blockers` are retained as an
         **advisory display only** — the `-v` line (~1859), the `--board`
         marker, and the `--json` keys — and relabeled so they read as
         "awaiting: <prereqs> (you may start)" rather than "blocked by".
         They no longer feed the ready predicate. The `--json` `ready`
         key reflects the new predicate automatically.
-  - [ ] `next-card` / `pull-card` / `--ready` now offer a card with open
+  - [x] `next-card` / `pull-card` / `--ready` now offer a card with open
         `advances` prereqs (it is a "should", not a "must"). A hard
         "must wait to start" is expressed only by the `waiting_on`
         overlay (now shipped) or — until removed — `status: blocked`.
-  - [ ] `advanced-by-closed` (closure, `_run_derived_check`) is left
+  - [x] `advanced-by-closed` (closure, `_run_derived_check`) is left
         unchanged — `advances` still gates *closure* per Option E.
-  - [ ] `card-schema`'s value-flow axis records the final role split:
+  - [x] `card-schema`'s value-flow axis records the final role split:
         `advances` = value flow + closure gate + soft "should precede";
         hard "must wait to start" = impediment overlay. The
         closure-vs-readiness asymmetry table is updated so the "loose →
         may start" row matches the shipped behaviour (readiness no
         longer hard-blocks on advances at all).
-  - [ ] reproduce.py: a card with an open `advances` prereq appears in
+  - [x] reproduce.py: a card with an open `advances` prereq appears in
         `--ready` / is pulled by next-card (with the advisory "awaiting"
         marker still shown); a card with an active `waiting_on`
         impediment is NOT offered.
-  - [ ] The closed `derive-dependency-readiness-…` card gets a dated
+  - [x] The closed `derive-dependency-readiness-…` card gets a dated
         forward-pointer in its `log.md` to this card (resolves its
         "Open consideration"). `goc validate` + plugin-asset sync green.
 worker: {who: "claude[bot]", where: main}

@@ -293,7 +293,7 @@ stranding:
 | Axis | What it answers | Where it lives | How it clears |
 |---|---|---|---|
 | **Progress status** | what is the card doing right now? | stored `status` field | author flips it (`goc status`, `goc done`) |
-| **Dependency readiness** | does a prereq card still gate me? | DERIVED from `advanced_by` predecessor status | self-clears the moment the last prereq closes |
+| **Dependency readiness** | does an `advances` prereq still gate me from *starting*? | DERIVED from `advanced_by` predecessor status, ADVISORY ONLY (no longer hard-blocks the pull queue) | self-clears the moment the last prereq closes |
 | **Impediment overlay** | is something exogenous stalling me? | stored `waiting_on` + optional `waiting_until` | author runs `goc wait <title> --clear`, or `waiting_until` elapses |
 
 The three compose. A card may be `status: active` AND carry
@@ -302,15 +302,23 @@ each axis answers a different question and they do not collapse into
 one another.
 
 The **ready-to-pull predicate** that `Skill(next-card)` and
-`Skill(pull-card)` use is the AND of all three:
+`Skill(pull-card)` use is the AND of three signals — note that the
+derived dependency-readiness signal is advisory display only, NOT a
+gate:
 
 ```
 ready ⇔ status == open
       ∧ human_gate == none
-      ∧ no non-terminal advanced_by prereq         (derived)
       ∧ waiting_on unset
       ∧ (waiting_until absent or in the past)
 ```
+
+A card with an open `advances` prereq is still pullable — it surfaces
+in `--ready` with an "awaiting: <prereqs> (you may start)" advisory
+line. The "must wait to start" hard gate is expressed explicitly via
+`waiting_on` (typically `waiting_on: external` or `resource`),
+NEVER inferred from a value-contribution edge that cannot tell
+"must" from "should".
 
 (`human_gate` is a fourth axis, but its role is different — it's the
 Andon cord telling agents NOT to autonomously claim. See the
@@ -490,16 +498,20 @@ whether work on Y may start first:
 
 | edge | may Y *start* before X done? | may Y *close* while X open? |
 |---|---|---|
-| strict (X required before Y begins) | no | no |
+| strict (X required before Y begins) | (must wait — express as impediment overlay) | no |
 | loose (X contributes, no order)     | **yes** | **no** (X is in Y's value chain) |
 
 Consequence: the `advanced-by-closed` closure check correctly reads
-all `advanced_by` as hard at closure time. The genuine over-read of
-loose edges lives in *readiness* (the start-ordering question), which
-is delegated to the sibling cards
-`derive-dependency-readiness-…` (the start-ordering predicate) and
-`add-waiting-overlay-…` (explicit human/external impediments), not
-the closure gate.
+all `advanced_by` as hard at closure time. The readiness predicate
+does NOT block on `advances` edges at all — an `advances` edge is a
+"should be done first" (priority bias + closure gate + soft order
+preference), not a "must wait to start". When work genuinely cannot
+start until an upstream finishes (the strict case), that is an
+*impediment*: express it explicitly on the dependent card via the
+`waiting_on` overlay (with reason and optional `waiting_until`),
+not as an inferred meaning of the value-contribution edge. The
+overlay is what the start-gate predicate reads; the `advances`
+edge stays a pure value-flow + closure signal.
 
 **YAML format:** non-empty `advances` and `advanced_by` lists are
 rendered as block-style (one `- item` per line). Empty lists use

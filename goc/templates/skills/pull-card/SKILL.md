@@ -17,9 +17,11 @@ it pulls one card off the queue, works it end-to-end, commits.
 The pull principle is what makes autonomous operation *safe*. Work
 isn't shoved at agents on a timer; agents pull on their own terms,
 filtered through the ready-to-pull predicate (`status: open`,
-`human_gate: none`, no non-terminal `advanced_by` prereq). The human
-steers by curating WHAT'S in the queue and at what gate; the graph
-keeps dependency-blocked cards out of sight automatically.
+`human_gate: none`, no active `waiting_on` impediment). The human
+steers by curating WHAT'S in the queue and at what gate; an explicit
+impediment overlay (`waiting_on` / `waiting_until`) hides hard waits
+automatically — `advances` edges are advisory and do NOT hide a card
+from the queue.
 
 ## What to do
 

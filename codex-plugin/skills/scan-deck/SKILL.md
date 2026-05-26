@@ -140,8 +140,8 @@ for.
 ```bash
 goc -v                          # open queue + summaries (RECOMMENDED DEFAULT)
 goc -v --tag bug --contribution high  # filter + summaries
-goc -v --ready                  # autonomous-safe queue + summaries (open, gate none, no non-terminal prereqs)
-goc -v --human-gate none        # autonomous-safe gate filter (does not hide dependency-blocked cards)
+goc -v --ready                  # autonomous-safe queue + summaries (open, gate none, no active waiting_on)
+goc -v --human-gate none        # autonomous-safe gate filter (advances-awaiting cards remain visible)
 goc -v --status all             # everything + summaries
 goc --done --since 2026-04-01   # throughput query (terse OK)
 goc                              # terse table (titles + contribution only — use sparingly)
