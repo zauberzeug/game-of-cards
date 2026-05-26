@@ -11,17 +11,23 @@ Performs mechanical Claude-→-host-neutral transformations:
     agent can call the goc tool to obtain that context.
   - Removes Claude-specific `argument-hint` / `$ARGUMENTS` references.
 
-NOT a daily sync — this is run once during the OpenClaw plugin scaffold
-to seed `openclaw-plugin/skills/`. Subsequent edits to either side
-(Claude or OpenClaw) are independent. The script is committed for
-reproducibility and to make the diff inspectable.
+The port is deterministic: re-running it must reproduce the committed
+`openclaw-plugin/skills/` byte-for-byte. `--check` asserts exactly that
+(a fresh re-port equals what is committed). The same comparison is the
+CI drift guard — `tests/test_plugin_mirror_parity.py` calls
+`drifted_skills()` from the regression-test suite (the bot's GITHUB_TOKEN
+cannot edit `.github/workflows/`, so the guard lives in a test rather
+than a workflow step). A template edit that is not propagated by a
+re-port turns the build red instead of rotting silently.
 
 Usage:
-    python scripts/port_skills_to_openclaw.py
+    python scripts/port_skills_to_openclaw.py          # re-port + write
+    python scripts/port_skills_to_openclaw.py --check   # dry-run, exit 1 on drift
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -103,7 +109,8 @@ def transform_context_block(match: re.Match[str]) -> str:
 INLINE_BANG_BLOCK_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
 
 
-def port_skill(src: Path, dst: Path) -> None:
+def render_skill(src: Path) -> str:
+    """Return the host-neutral port of a source skill (pure — no I/O)."""
     text = src.read_text(encoding="utf-8")
 
     # Drop the `## Preflight` block entirely.
@@ -126,31 +133,80 @@ def port_skill(src: Path, dst: Path) -> None:
     # an unsightly blank line gap from the dropped Preflight section.
     text = re.sub(r"(^---\n.*?\n---\n)\n+", r"\1\n", text, count=1, flags=re.DOTALL)
 
+    return text
+
+
+def port_skill(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(text, encoding="utf-8")
+    dst.write_text(render_skill(src), encoding="utf-8")
 
 
-def main() -> int:
-    if not SRC_DIR.is_dir():
-        print(f"ERROR: source skills dir not found: {SRC_DIR}", file=sys.stderr)
-        return 1
-
-    DST_DIR.mkdir(parents=True, exist_ok=True)
-    ported = 0
-    skipped: list[str] = []
+def _portable_skill_dirs() -> list[Path]:
+    """Source skill dirs that port to OpenClaw (host-specific complements excluded)."""
+    dirs = []
     for skill_dir in sorted(SRC_DIR.iterdir()):
         if not skill_dir.is_dir():
             continue
         if any(skill_dir.name.startswith(prefix) for prefix in HOST_PREFIXES):
-            skipped.append(skill_dir.name)
             continue
-        src = skill_dir / "SKILL.md"
-        if not src.is_file():
-            continue
+        if (skill_dir / "SKILL.md").is_file():
+            dirs.append(skill_dir)
+    return dirs
+
+
+def drifted_skills() -> list[Path]:
+    """Committed ported skills whose content differs from a fresh re-port.
+
+    A non-empty result means a template was edited without re-running the
+    porter (or a ported file was hand-edited). The list is the set of dst
+    paths a re-port would rewrite. Reused by the porter's own `--check` and
+    by the CI regression test so both read the same definition of drift.
+    """
+    drifted: list[Path] = []
+    for skill_dir in _portable_skill_dirs():
         dst = DST_DIR / skill_dir.name / "SKILL.md"
-        port_skill(src, dst)
+        expected = render_skill(skill_dir / "SKILL.md")
+        actual = dst.read_text(encoding="utf-8") if dst.is_file() else None
+        if actual != expected:
+            drifted.append(dst)
+    return drifted
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Report ported skills that drift from a fresh re-port and exit 1 "
+             "without modifying anything (CI mode).",
+    )
+    args = parser.parse_args(argv)
+
+    if not SRC_DIR.is_dir():
+        print(f"ERROR: source skills dir not found: {SRC_DIR}", file=sys.stderr)
+        return 1
+
+    if args.check:
+        drifted = drifted_skills()
+        if drifted:
+            print("ERROR: openclaw-plugin/skills/ have drifted from goc/templates/skills/:")
+            for p in drifted:
+                print(f"  {p.relative_to(ROOT)}")
+            print("Fix: run `python scripts/port_skills_to_openclaw.py` and commit the result.")
+            return 1
+        print("OK — openclaw-plugin/skills/ match a fresh port of goc/templates/skills/.")
+        return 0
+
+    DST_DIR.mkdir(parents=True, exist_ok=True)
+    ported = 0
+    for skill_dir in _portable_skill_dirs():
+        port_skill(skill_dir / "SKILL.md", DST_DIR / skill_dir.name / "SKILL.md")
         ported += 1
 
+    skipped = [
+        d.name for d in sorted(SRC_DIR.iterdir())
+        if d.is_dir() and any(d.name.startswith(p) for p in HOST_PREFIXES)
+    ]
     print(f"ported {ported} skills to {DST_DIR.relative_to(ROOT)}")
     if skipped:
         print(f"skipped (host-specific complements): {', '.join(skipped)}")

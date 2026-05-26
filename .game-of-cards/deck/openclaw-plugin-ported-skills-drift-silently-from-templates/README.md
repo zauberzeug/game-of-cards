@@ -1,19 +1,19 @@
 ---
 title: openclaw-plugin-ported-skills-drift-silently-from-templates
 summary: "The `openclaw-plugin/skills/` copies are hand-ported from `goc/templates/skills/` and, unlike the byte-for-byte-synced claude/codex mirrors, are not covered by any drift tripwire. They have silently rotted: re-running the porter rewrites 11 of 15 skills, so OpenClaw consumers receive stale skill guidance and CI cannot detect it."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T13:05:49Z"
-closed_at: null
+closed_at: 2026-05-26T19:46:13Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `openclaw-plugin/skills/` is re-ported from the current templates (`python3 scripts/port_skills_to_openclaw.py`); the diff is reviewed (watch for the known porter quirk that strips `!cat` lines above the H1) and committed, leaving no template→port drift.
-  - [ ] A drift guard exists — a porter `--check` mode or a test — that fails when `openclaw-plugin/skills/` differs from a fresh re-port (i.e. asserts the porter is idempotent), wired into CI next to `python scripts/sync_plugin_assets.py --check`.
-  - [ ] The guard is demonstrated: it goes red on a deliberately-stale ported skill and green after a re-port.
+  - [x] `openclaw-plugin/skills/` is re-ported from the current templates (`python3 scripts/port_skills_to_openclaw.py`); the diff is reviewed (watch for the known porter quirk that strips `!cat` lines above the H1) and committed, leaving no template→port drift.
+  - [x] A drift guard exists — a porter `--check` mode or a test — that fails when `openclaw-plugin/skills/` differs from a fresh re-port (i.e. asserts the porter is idempotent), wired into CI next to `python scripts/sync_plugin_assets.py --check`.
+  - [x] The guard is demonstrated: it goes red on a deliberately-stale ported skill and green after a re-port.
 worker: {who: "claude[bot]", where: main}
 ---
 

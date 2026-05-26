@@ -33,11 +33,8 @@ Optional argument — title.
 
 ## Step 1 — confirm the work satisfies the DoD
 
-Read the card:
-
-`goc show <title>`
-
-Re-confirm each DoD criterion against the actual work:
+Read the card by running `goc show <title>` yourself with the real
+title bound. Re-confirm each DoD criterion against the actual work:
 
 - For `- [ ] reproduce.py exits zero (defect no longer fires)` —
   run `uv run python deck/<title>/reproduce.py` and confirm exit 0
@@ -181,6 +178,24 @@ To skip a single check (rare, e.g. when an automated check is
 genuinely flaky): `--skip <name>`. The skip is recorded as
 `[~] SKIPPED — <description>` in the block. Do not skip casually.
 
+**`advanced-by-closed` failures — prefer retraction over `--skip`.**
+When this check fails, two honest resolutions exist (see
+the `card-schema` skill's "Value-chain rule"):
+
+1. **Wait** for the named upstream contributors to close, then re-run
+   `attest`.
+2. **Retract a false edge** with
+   `goc unadvance <closing-title> --by <upstream-title>`. The
+   value-chain identity ("X advances Y" ⇔ Y's value chain includes X)
+   says a true edge cannot coexist with a closeable Y; so if Y is
+   genuinely closeable, the edge was modeling the wrong relationship
+   and the right action is to remove it, not skip the check.
+
+`--skip advanced-by-closed` should be the last resort, never the
+first — it leaves a dishonest edge in the deck (the closure log shows
+SKIPPED, the graph still claims X is in Y's value chain, and the next
+reader cannot tell which it was).
+
 ## Step 6 — close via the CLI
 
 ```bash
@@ -287,6 +302,42 @@ If the commit workflow fails *because of this work* (newly broken test,
 lint error you introduced, deck-validate rejection), fix and re-run it.
 If it fails on a pre-existing issue, surface that in chat and stop —
 that's a separate concern.
+
+## After closure — closure is not frozenness
+
+A closed card is the entry point a cold reader navigates to when
+asking "what was decided about X." If new evidence surfaces after the
+card closes — a bug found later, an assumption invalidated, a
+follow-up that reframes the original — file a new card for the new
+work AND amend the closed card to point readers forward. Strict
+immutability orphans the original anchor: future readers walk away
+with stale context, and the kanban accumulates orphan threads.
+
+Two-file routing still applies (see the `card-schema` skill "What goes
+where"):
+
+- **`log.md` (append a dated entry).** The post-close amendment IS a
+  valid append — the journal is append-only, and a new entry at the
+  bottom does not rewrite history. Format:
+
+  ```
+  ## YYYY-MM-DDTHH:MM:SSZ — Post-close amendment
+
+  Superseded / extended by [`<new-card-title>`](../<new-card-title>/)
+  — <one-line reason>.
+  ```
+
+- **`README.md` (optional pointer at the top).** If the new evidence
+  materially changes how a reader should interpret the closed card,
+  add a single one-line `> Later evidence: see …` pointer near the
+  top of the body so cold readers see it before the closure narrative.
+  Do NOT rewrite the closure entry itself; treat the amendment as
+  additive.
+
+Update only the **original** card — do not retroactively edit other
+closed cards' bodies to reference the new one. The forward pointer
+from the new card's body, plus the back-reference appended here, is
+the full bidirectional link.
 
 ## Cross-references
 

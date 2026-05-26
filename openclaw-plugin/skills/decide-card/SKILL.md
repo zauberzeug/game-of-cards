@@ -162,9 +162,9 @@ the gate re-parked manually).
   make" Q&A flow that calls this skill per card).
 - the `pull-card` skill — the autonomous worker that raises the gate
   when stuck and resumes when this skill lowers it.
-- the `advance-card` skill — the status state machine. Distinct from
-  this skill: gate ≠ status. Use `advance-card` for `open→active`,
-  `→blocked`, `→disproved`, `→superseded`. Use `decide-card` for
-  `gate ≠ none → none`.
+- the `advance-card` skill — the status state machine + `waiting_on`
+  overlay. Distinct from this skill: gate ≠ status. Use `advance-card`
+  for `open→active`, `→disproved`, `→superseded`, and `goc wait`.
+  Use `decide-card` for `gate ≠ none → none`.
 - the `card-schema` skill — `human_gate` enum and the body convention
   for `## Decision required` sections.

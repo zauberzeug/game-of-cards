@@ -29,7 +29,21 @@ indiscriminately — out-of-scope artifacts surface as
 `contribution: low` or skip-with-note, never Tier-1/Tier-2 verdicts
 or meta-decision-card cluster members.
 
-Surface rot and propose corrective edits — never apply them silently.
+Surface rot and act on it before commit. Two action paths depending
+on the finding's nature:
+
+- **Hygiene findings** (mechanical: stale `unverified` parks, defunct
+  file:line cites, missing summaries, predicate-failing tags,
+  orphaned-edge mechanical wires) — apply the edit directly.
+- **Structural findings** (epic-shaped clusters, missing
+  canonical-reference families, contribution-recall proposals,
+  meta-decision umbrellas, newly-emergent tag candidates surfaced
+  by a project hook's pattern-discovery pass) — file via
+  the `create-card` skill, disprove via
+  the `advance-card` skill (with `<title> disproved`), or park
+  `--tag unverified` per Step 4.5. "Surfaced and discussed in chat"
+  is not a disposition.
+
 Categories:
 
 - `tags: [unverified]` parks older than 90 days that nobody has
@@ -50,16 +64,25 @@ Categories:
   enforces edge SYMMETRY at commit time; this skill catches edge
   ABSENCE, which is invisible to the validator.
 
-Each surfaced issue gets a one-line recommendation; the user or
-autonomous loop decides whether to flip to the `advance-card` skill,
-the `create-card` skill (for a SCHEMA.md PR), or move on.
+Each surfaced issue gets a disposition before commit. Hygiene
+findings: apply the mechanical edit directly. Structural findings:
+file via the `create-card` skill, disprove via
+the `advance-card` skill (with `<title> disproved`), or park `--tag unverified`
+per Step 4.5 — never leave surfaced findings undisposed.
 
 ## Step 1 — sanity floor
 
-`goc validate`
+`goc validate 2>&1 || echo "[refine-deck] validate found rot; the skill body below will route you through fixing it"`
 
-If validate fails, fix the half-edges / unknown tags / missing
-required fields FIRST. Hygiene runs on a valid deck.
+If validate fails with half-edge errors, run `goc repair-edges` to
+preview the missing reverse-edge writes, then `goc repair-edges
+--apply` and re-run `goc validate`. If repair reports a structural
+cycle, park that card for human review instead of guessing which edge
+is wrong. Fix unknown tags / missing required fields FIRST too.
+Hygiene runs on a valid deck. The precondition above is intentionally
+soft-gated so a failing validator surfaces its output *into* this
+skill rather than blocking the skill load — the recovery guidance
+in this body is exactly what the user came here for.
 
 ## Step 2 — survey by category
 
@@ -231,33 +254,70 @@ a stub; the integration story is tracked in
 regex-only mode is sufficient as the always-on baseline; the
 batched LLM pass is a nice-to-have, not load-bearing.
 
-## Step 3 — propose new canonical tags
+## Step 3 — file new canonical tag candidates
 
 When a coherent body of work emerges that isn't covered by an
 existing tag (e.g., a sprint of 6 cards all about a specific
-research front), propose a new canonical tag for SCHEMA.md.
+research front), file via the `create-card` skill a card whose DoD is
+the SCHEMA.md PR adding the new tag + its predicate. Adding the
+tag itself remains a SCHEMA.md PR per the schema's "Adding new
+tags" rule; the filing that schedules that PR is imperative. Like
+every other structural finding, the candidate either becomes a
+card here, gets disproved (the proposed predicate doesn't fire on
+a sufficient set), or parks `--tag unverified` per Step 4.5 — not
+a chat-only proposal.
 
-This is a **propose, don't apply** step — adding a tag is a
-SCHEMA.md PR per the schema's "Adding new tags" rule. Output the
-proposed tag + its predicate as text; let the human (or a
-follow-up the `create-card` skill filing) handle the PR.
+## Step 4 — surface and act
 
-## Step 4 — surface and recommend
-
-For each surfaced issue, output one line:
+For each surfaced issue, output one line documenting the action
+taken (hygiene) or the card filed / disprove flip / park
+(structural):
 
 ```
-<title>: <issue> → recommend the `<advance-card | create-card>` skill ...
+<title>: <issue> → <action>
 ```
 
 Example output:
 
 ```
-heuristic-driven-eta: tags=[unverified] created 2026-01-15 (107d) → recommend the `advance-card` skill → disproved (3 rounds without reproduction)
-auth-cookie-expires-too-soon: body cites auth/cookie.ts:84 (file ends at L72) → recommend mechanical citation update
+heuristic-driven-eta: tags=[unverified] created 2026-01-15 (107d) → the `advance-card` skill → disproved (3 rounds without reproduction)
+auth-cookie-expires-too-soon: body cites auth/cookie.ts:84 (file ends at L72) → updated citation to auth/cookie.ts:67
 schultz-eligibility-trace-doc-drift: missing summary → wrote ≤3-sentence summary into frontmatter
-operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → strip tag
+operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → stripped tag
+research-front-emerging-clusters: 6 cards coalescing around <topic>, no canonical tag → the `create-card` skill <new-tag-pr-card>
 ```
+
+## Step 4.5 — Park-or-disprove unfollowed structural candidates (mandatory)
+
+Project hooks may extend Step 2 with a pattern-discovery pass that
+surfaces more structural candidates than this round can verify and
+file. Structural candidates that didn't get applied this round
+MUST go somewhere durable before commit:
+
+1. **Filed** as a new card via the `create-card` skill.
+2. **Disproved** via the `advance-card` skill (with `<title> disproved`) — when
+   you re-read the cited code and the candidate is wrong on its
+   face.
+3. **Unverified** via the `create-card` skill (with `... --tag unverified`) —
+   when the candidate has substance but no verification budget
+   this round. Body must include: the candidate's hypothesis with
+   file:line (verbatim quote), why deferred, falsification recipe,
+   the category (Step 2 sub-section) that surfaced it.
+
+The only escape valve: a candidate that's clearly noise (the
+file:line doesn't exist; the predicate that surfaced it has since
+fired correctly elsewhere) AND has no underlying substance can be
+silently dropped.
+
+This rule applies to **structural** candidates only — the kind
+project-local pattern-discovery passes produce. Hygiene findings
+(stale parks, defunct cites, missing summaries, predicate-failing
+tags, orphaned-edge sub-checks) keep their mechanical-apply path —
+they're applied directly in Step 2 and need no Step 4.5 audit.
+
+This rule applies even when the round produces confirmed hygiene
+edits. The "zero applied → ≥1 disposition" rule is the
+_minimum_; this is the _maximum-amnesia bound_.
 
 ## Cross-references
 

@@ -6,6 +6,7 @@ never risks shadowing the real goc package via Python's cwd-first import search.
 
 from __future__ import annotations
 
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +14,16 @@ from pathlib import Path
 import goc.engine as eng
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_porter():
+    """Import scripts/port_skills_to_openclaw.py without putting scripts/ on sys.path."""
+    spec = importlib.util.spec_from_file_location(
+        "_goc_openclaw_porter", ROOT / "scripts" / "port_skills_to_openclaw.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _check(cwd: Path) -> list[str]:
@@ -171,6 +182,43 @@ class OpenClawPluginMirrorTest(unittest.TestCase):
             # the canonical openclaw-only exclusion case.
             (cwd / "goc" / "templates" / "hooks" / "pattern_generalization_check.py").write_text("# real hook\n")
             self.assertEqual([], _check(cwd))
+
+
+class OpenClawSkillPortDriftTest(unittest.TestCase):
+    """OpenClaw skills are hand-ported (not byte-for-byte synced like claude/codex),
+    so the engine sync tripwire does not cover them. This guard asserts the
+    committed ports match a fresh re-port — a template edit that was not
+    propagated by `scripts/port_skills_to_openclaw.py` turns this test red.
+    """
+
+    def test_committed_ports_match_fresh_render(self) -> None:
+        porter = _load_porter()
+        drifted = porter.drifted_skills()
+        rel = [str(p.relative_to(ROOT)) for p in drifted]
+        self.assertEqual(
+            [], rel,
+            msg="openclaw-plugin/skills/ drifted from goc/templates/skills/; "
+                "run `python scripts/port_skills_to_openclaw.py` and commit: " + ", ".join(rel),
+        )
+
+    def test_render_detects_a_stale_skill(self) -> None:
+        """The equality the guard relies on must actually discriminate: a stale
+        ported copy (fresh render plus an extra line) must not compare equal.
+        """
+        porter = _load_porter()
+        sample = porter._portable_skill_dirs()[0] / "SKILL.md"
+        fresh = porter.render_skill(sample)
+        stale = fresh + "\n<!-- deliberately stale -->\n"
+        self.assertNotEqual(fresh, stale)
+
+    def test_porter_is_idempotent(self) -> None:
+        """Rendering is deterministic — re-rendering every portable skill yields
+        byte-identical output, so `--check` after a re-port is always green.
+        """
+        porter = _load_porter()
+        for skill_dir in porter._portable_skill_dirs():
+            src = skill_dir / "SKILL.md"
+            self.assertEqual(porter.render_skill(src), porter.render_skill(src))
 
 
 if __name__ == "__main__":

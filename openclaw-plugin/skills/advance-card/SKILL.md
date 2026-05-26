@@ -1,6 +1,6 @@
 ---
 name: advance-card
-description: Mutate a card's status (open / active / blocked / disproved / superseded — everything except `done`). AUTO-INVOKE when user says "I'll start on X", "I'm working on", "this is blocked by Y", "mark this disproved", "supersede with Z", "unblock", or describes any non-done status change. Status transitions are documented agreements (Kanban explicit policies, Anderson).
+description: Mutate a card's status (open / active / disproved / superseded — everything except `done`), record relationship edges between cards (`goc advance` / `goc unadvance`), or set the impediment overlay (`goc wait`). AUTO-INVOKE when user says "I'll start on X", "I'm working on", "mark this disproved", "supersede with Z", "this is part of X", "make this depend on Y", "these should be linked", "should this be an edge or a tag?", "remove this dependency", "unlink these", or describes any non-done status change or relationship-modeling intent. For "this is blocked by Y" / "unblock", set or clear the impediment overlay with `goc wait` (Step 6) instead of flipping status. Status transitions and relationship edges are documented agreements (Kanban explicit policies, Anderson).
 ---
 
 # Advance a card
@@ -22,9 +22,7 @@ Optional argument — `<title> <new-status> [--by <other-title>]`.
 
 ## Step 1 — read the card
 
-`goc show <title>`
-
-Confirm:
+Run `goc show <title>` yourself with the real title bound. Confirm:
 - Current status matches the transition you're about to make
   (e.g. `open → active` requires current `open`).
 - The `human_gate` is appropriate for the new state. If you're
@@ -35,28 +33,52 @@ Confirm:
   replacement before you flip.
 
 `status` and `human_gate` are orthogonal — see the `card-schema` skill
-"human_gate scale". A card can be `blocked` with `human_gate: none`
-when the blocker is an agent-observable external condition. Setting
-`blocked` does NOT require raising the gate; raising the gate does
-NOT require `blocked`.
+"human_gate scale". A `decision` or `session` gate parks a card for
+human input; it does NOT depend on a separate "blocked" status.
+
+The **impediment overlay** (`waiting_on` + `waiting_until`) is the
+stored signal for exogenous waits the dependency graph cannot derive
+(vendor delivery, a specific person, a calendar-based defer). It
+composes with `status`: a card may be `active` AND carry
+`waiting_on`. Set or clear via `goc wait` (see "Step 6").
+
+> Deprecated: the legacy `status: blocked` value. Three-axis model
+> (see the `card-schema` skill "Three-axis 'stuck' model") splits the
+> old `blocked` meaning into derived dependency-readiness (an
+> `advanced_by` prereq still open — self-clears when the prereq
+> closes) and the stored `waiting_on` overlay (exogenous wait).
+> Authors should set the overlay (`goc wait …`) or rely on derived
+> readiness instead of flipping status to `blocked`. The enum value
+> still parses for backwards compatibility but is being removed in a
+> follow-up release.
 
 ## Step 2 — match the transition to the CLI
 
 | transition | CLI | notes |
 |---|---|---|
 | `open → active` | `goc status <title> active` | "claiming" the card |
-| `active → blocked` | `goc status <title> blocked` (+ optionally `goc advance <title> --by <other>` if a specific card is what's needed) | flip status; optional edge. Keep `human_gate: none` when an agent can re-check the blocker (upstream release, PR merge, dependency publication); raise to `decision`/`session` only when a human must unblock. |
-| `blocked → active` | `goc status <title> active` (+ optionally `goc unadvance <title> --by <other>` if removing an obsolete edge) | flip status; optional edge. An autonomous agent MAY make this transition when it observes the external condition has cleared on a `human_gate: none` card (re-check confirms the upstream change). |
-| `blocked → open` | `goc status <title> open` | re-queue when the blocker clears but the card is not yet being worked. Same agent-autonomy rule as `blocked → active`: gate `none` means an agent may flip; gate `decision`/`session` means the human owns the unblock. |
+| `active → open` | `goc status <title> open` | release the claim (re-queue) when stepping away mid-flight without disproving the work |
 | `* → open` | `goc status <title> open` | re-queue (rare) |
 | `* → disproved` | `goc status <title> disproved` | populate rebuttal first; CLI stamps `closed_at` |
-| `* → superseded` | `goc status <title> superseded` | log replacement rationale in old card's `log.md`; CLI stamps `closed_at` |
+| `* → superseded` | `goc status <title> superseded --by <successor>` | sets typed `superseded_by` / `supersedes` link bidirectionally; log replacement rationale in old card's `log.md`; CLI stamps `closed_at` |
 
 `goc advance` and `goc unadvance` maintain the bidirectional
 value-flow edge atomically (validator-enforced — if `A.advances`
-contains `B`, `B.advanced_by` MUST contain `A`). The status `blocked`
-is independent — set it via `goc status` when the card is parked
-on external input.
+contains `B`, `B.advanced_by` MUST contain `A`). An `advanced_by`
+prereq that is still non-terminal is what the **derived
+dependency-readiness** signal reads — it self-clears when the prereq
+closes, so no status flip is needed to park the card on an upstream
+sibling.
+
+**Parking a card on an external wait:** use the impediment overlay
+(Step 6), not `status: blocked`. For an agent-observable wait
+(upstream release, PR merge, dependency publication) the card stays
+`status: open` with `waiting_on: external` and an optional
+`waiting_until` date — a future autonomous run re-checks the
+condition and `goc wait <title> --clear`s the overlay when the wait
+resolves. For a human-judgement wait, raise `human_gate` to
+`decision` / `session` and write the framing into the body; no
+status flip required.
 
 ## Step 3 — populate the body for transitions
 
@@ -67,8 +89,8 @@ status flip routes information to the right file:
 | Transition | README dashboard (rewrite in place) | `log.md` journal (append entry) |
 |---|---|---|
 | `open → active` | no change required (claim adds `worker` field, not body content) | optional one-line "claimed by X on DATE" entry; usually skipped — the git commit suffices |
-| `active → blocked` | update the relevant body section to reflect the blocker (e.g. "Fix" → "Blocked on upstream release of X") | append entry: when blocked, what the blocker is, expected unblock signal |
-| `blocked → active` | rewrite the body section that named the blocker to reflect the new state of the world | append entry: when unblocked, what changed externally that cleared it |
+| `set `waiting_on` overlay` | update the relevant body section to reflect the wait (e.g. "Fix" → "Waiting on upstream release of X, expected YYYY-MM-DD") | append entry: when the overlay was set, what the wait is for, expected return signal |
+| `clear `waiting_on` overlay` | rewrite the body section that named the wait to reflect the new state of the world | append entry: when the wait cleared, what changed externally |
 | `* → open` (re-queue) | rewrite the body sections that are no longer accurate to match the new framing | append entry: why the card was re-queued (scope reset, evidence superseded, etc.) |
 | `* → disproved` | rewrite body to document the rebuttal (see below) | append entry: when disproved, by what evidence |
 | `* → superseded` | leave the body as the historical record; do NOT rewrite to point at the successor | append entry naming and linking the successor card and one-line why |
@@ -102,16 +124,31 @@ verification cycle.
 ### Superseded
 
 The new card's body explains what it supersedes and why. Run
-`goc status <title> superseded` on the old card.
+`goc status <title> superseded --by <successor>` on the old card —
+the `--by` flag sets the typed bidirectional `superseded_by` /
+`supersedes` link on both endpoints in one atomic operation (same
+contract `goc advance` provides for the advances graph).
 
-Append an entry to the old card's `log.md` to record the replacement:
-name the replacement card, link it as
-`[<new-title>](../<new-title>/)`, and note one-line why (different
-approach, scope split, reframing). The relationship is forensic-only
-— once a card is on the discard pile, the link lives in the journal,
-not frontmatter (see the `card-schema` skill, "Replacement" section).
+Append an entry to the old card's `log.md` to record the replacement
+*rationale*: one-line why the replacement happened (different
+approach, scope split, reframing). The typed field is the
+machine-navigable pointer; the journal entry is the prose-only
+*why* a graph edge cannot capture. Both, for different jobs — a
+cold reader (human or LLM) walks the typed link to find the
+successor without parsing prose, and reads the log entry for the
+rationale.
+
 Leave the old README body as the historical dashboard; do NOT
-rewrite it to point at the successor (that's the journal's job).
+rewrite it to point at the successor (the typed link does that
+mechanically). The link to the successor stays a one-line `> Later:
+[<new-title>](../<new-title>/)` pointer at the top of the body only
+if a cold reader would otherwise be misled — see the `card-schema` skill
+"Replacement axis" for the invariants and emitter conventions.
+
+Plain `goc status <title> superseded` (without `--by`) is still
+accepted for backwards compatibility, but leaves the supersession
+prose-only and forces forensic readers to grep `log.md`. Prefer the
+`--by` form for every new supersession.
 
 ## Step 4 — run the transition
 
@@ -127,7 +164,7 @@ goc unadvance <title> --by <other>
 
 # Disproved / superseded:
 goc status <title> disproved
-goc status <title> superseded
+goc status <title> superseded --by <successor-title>
 ```
 
 The CLI prints `<title>: <prior> → <new>` on success and follows the
@@ -150,6 +187,135 @@ contains the actual code/doc changes — NOT the status flip.
 If the configured/forced auto-commit is skipped (no git repo, mid-merge /
 mid-rebase, no diff), the CLI prints a one-line note. The on-disk state
 still mutated; only the visibility-to-other-branches step deferred.
+
+## Step 6 — set or clear an impediment overlay (`goc wait`)
+
+The dependency-readiness predicate covers card-blocks-card, but cannot
+see exogenous waits. Three kinds need a stored signal:
+
+- `external` — vendor, client, hardware, a third party.
+- `resource` — a specific person/skill currently unavailable.
+- `deferred` — deliberately postponed (a calendar-based defer).
+
+Set the overlay with `goc wait`:
+
+```bash
+# Wait on a vendor; expect to retry on 2026-06-15.
+goc wait <title> --reason external --until 2026-06-15
+
+# Defer-only (no reason): bare --until implies `deferred`.
+goc wait <title> --until 2026-06-15
+
+# Open-ended wait on a specific person; no expected return date.
+goc wait <title> --reason resource
+
+# Clear the overlay when the wait resolves.
+goc wait <title> --clear
+```
+
+Effects:
+
+- A future `waiting_until` (or a reason with no date) hides the card
+  from `goc --ready` / the `next-card` skill / the `pull-card` skill. When
+  the date passes the card re-enters the queue with no manual action.
+- An elapsed `waiting_until` is surfaced by `goc validate` as
+  `WAITING_OVERDUE` — the Kanban SLE escalation: the wait overran its
+  expected return, re-triage or clear.
+- The overlay is orthogonal to `status` — a card may be `active` AND
+  carry a `waiting_on`, e.g. work in progress that is partially gated
+  on an external answer.
+
+## Modeling a relationship: edge vs tag
+
+A reader landing here on a relationship question ("this is part of X",
+"make this depend on Y", "these should be linked", "should this be an
+edge or a tag?", "remove this dependency") is asking *how to express a
+link*, not *how to flip a status*. This section is the decision
+procedure; the canonical taxonomy and the value-flow invariants live in
+the `card-schema` skill — link, don't re-derive.
+
+### Decision procedure
+
+1. **Same value chain — does the source's closure deliver a piece of the
+   target's value?** → `advances` edge. The dependent inherits the
+   source's priority and cannot close until the source closes (see
+   the `card-schema` skill "Value-flow axis" for the closure semantics).
+2. **Same theme, no closure-time dependency — would a future filter
+   ("show me all the X cards") want them grouped?** → shared **tag**.
+   No edge in either direction.
+3. **One card coordinates many others** → see the three-way fork below
+   before reaching for `--advances`.
+
+### Three coordinating-card shapes (short form)
+
+Full reasoning, the value-law derivation, and the `BACKWARDS_EPIC_EDGE`
+lint live in the `card-schema` skill "Coordinating cards — aggregation epic
+vs governing cluster". The short form, paired with the verb you reach
+for:
+
+- **Aggregation epic** — its value chain *is* its children; closes
+  when they close. Encoding: `child.advances: [epic]`. Verb on the
+  child (open or after creation):
+  `goc advance <child> --by <epic>`.
+- **Governing cluster** — a decision or standard-setting card that
+  closes when *decided*, independent of the cluster's work. Encoding:
+  a **shared tag**, no `advances` edge in either direction. Add the
+  tag at `goc new --tag <name>` time on both the governing card and
+  each instance; for an existing card, edit `tags:` in the
+  frontmatter directly. To register a new project-specific tag, see
+  the `card-schema` skill "Adding new tags".
+- **Backwards aggregation** — `epic.advances: [children]`. **Never.**
+  Defeats the value law (children stop inheriting the epic's value,
+  so the GRPW sort cannot see the chain) and trips a spurious
+  `advanced-by-closed` FAIL on every child at attest time. `goc
+  validate` flags this signature as `BACKWARDS_EPIC_EDGE`.
+
+The tell: if the coordinating card closes on its own deliverable
+(typically `human_gate: decision`) rather than on its cluster's
+completion, it is a governing cluster → tag, not edge.
+
+### Retraction — `goc unadvance` is the honest fix
+
+When an `advanced-by-closed` check fires at closure time, the gate is
+reading the value-chain identity (the `card-schema` skill "Value-flow
+axis"): a true edge cannot coexist with a closeable target. Two
+honest resolutions:
+
+1. **Wait** for the upstream contributor(s) to close.
+2. **Retract** when the edge was false (the upstream was tangential,
+   scope was reframed, or the relationship was authored backwards):
+   `goc unadvance <closing-title> --by <upstream>`.
+
+Retraction is graph maintenance, not a bypass. Prefer it to
+`goc attest --skip advanced-by-closed`; the skip leaves a dishonest
+edge in the deck. Same rule applies in the opposite direction — if
+you discover a card should depend on another after filing, add the
+edge with `goc advance <title> --by <other>` rather than letting the
+relationship live only in prose.
+
+### Verbs
+
+```bash
+# Record a value-flow edge (this advances other):
+goc advance <title> --by <other>
+
+# Retract a value-flow edge:
+goc unadvance <title> --by <other>
+
+# At filing time, both sides at once:
+goc new <child-title> --advances <epic-title>
+```
+
+`goc advance` / `unadvance` maintain the bidirectional invariant
+(`A.advances` ⇔ `B.advanced_by`) atomically — same atomicity contract
+`goc status … superseded --by` provides for the replacement graph. The
+validator refuses half-edges. Cycles are forbidden.
+
+For grouping (the governing-cluster shape and other soft themes), there
+is intentionally no `goc add-tag` verb on existing cards — set tags at
+`goc new --tag <name>` time, or edit `tags:` in the frontmatter
+directly. The unknown-tag error names the file to register a new tag
+in (see the `card-schema` skill "Adding new tags").
 
 ## Worker field — populated at claim time
 
