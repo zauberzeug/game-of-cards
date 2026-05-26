@@ -28,7 +28,7 @@ from pathlib import Path
 from goc import __version__
 
 GOC_BEGIN = f"<!-- BEGIN GOC v{__version__} -->"
-GOC_BEGIN_RE = re.compile(r"<!-- BEGIN GOC v[\d.]+ -->")
+GOC_BEGIN_RE = re.compile(r"<!-- BEGIN GOC v[\w.+!-]+ -->")
 GOC_END = "<!-- END GOC -->"
 CLAUDE_IMPORT_BEGIN = "<!-- BEGIN GOC IMPORT -->"
 CLAUDE_IMPORT_END = "<!-- END GOC IMPORT -->"
