@@ -180,12 +180,14 @@ def _parser_coerces_scalar(s: str) -> bool:
 
     Derived by reference from the parser's own recognizers
     (`yaml._INT_RE`, `yaml._NULL_SET`, `yaml._TRUE_SET`, `yaml._FALSE_SET`)
+    plus its empty-string branch (`if not text` in `_parse_scalar`)
     so the emitter's quote-trigger and the parser's coercion cannot drift.
     `_DATE_RE` is intentionally excluded: the parser returns date-shaped
     scalars as the original string, so they round-trip bare unchanged.
     """
     return (
-        s in yaml._NULL_SET
+        s == ""
+        or s in yaml._NULL_SET
         or s in yaml._TRUE_SET
         or s in yaml._FALSE_SET
         or bool(yaml._INT_RE.match(s))
