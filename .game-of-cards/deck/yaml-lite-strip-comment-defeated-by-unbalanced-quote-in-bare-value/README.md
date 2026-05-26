@@ -1,19 +1,19 @@
 ---
 title: yaml-lite-strip-comment-defeated-by-unbalanced-quote-in-bare-value
 summary: "yaml-lite's `_strip_comment` tracks quote state to avoid stripping a `#` inside a quoted run, but on a bare (unquoted) scalar value containing a lone `'` or `\"` (e.g. an apostrophe) it enters quote mode and never exits, so a trailing `# comment` is never recognized and is kept as part of the value. Real YAML strips that comment. Confirmed: `safe_load(\"title: don't  # note\")` returns `{'title': \"don't  # note\"}`. Narrow blast radius — goc's emitter quotes values containing `#`, so it only bites hand-edited frontmatter / config.yaml / canonical-tags.md."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T22:28:42Z"
-closed_at: null
+closed_at: 2026-05-26T23:07:10Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: a `reproduce.py` asserts `safe_load("title: don't  # note") == {"title": "don't"}` (comment stripped, matching real YAML); fails before the fix, passes after
-  - [ ] TDD: regression guard — a `#` inside a properly *balanced* quoted run is still NOT stripped (e.g. `a: "x # y"` → `"x # y"`), and a bare value with no quote still strips its comment
-  - [ ] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads)
+  - [x] TDD: a `reproduce.py` asserts `safe_load("title: don't  # note") == {"title": "don't"}` (comment stripped, matching real YAML); fails before the fix, passes after
+  - [x] TDD: regression guard — a `#` inside a properly *balanced* quoted run is still NOT stripped (e.g. `a: "x # y"` → `"x # y"`), and a bare value with no quote still strips its comment
+  - [x] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads)
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -78,12 +78,13 @@ the comment folded into the value.
 
 ## Fix
 
-The quote-tracking in `_strip_comment` is appropriate for a properly
-quoted scalar but wrong for a bare value. Options to weigh in log.md:
-treat quote characters as ordinary content in a bare value (only honor
-`in_q` when the value actually *starts* with a quote, i.e. is a quoted
-scalar), or have `_split_key` route quoted vs bare values to different
-comment-stripping logic. Either way a lone apostrophe in a bare value must
-not suppress comment detection, while a `#` inside a genuinely quoted run
-must still be preserved.
+Applied: `_strip_comment` now only enters quote-tracking mode when the
+value is a *genuinely quoted* scalar — one that **starts** with a quote
+char (`quoted = text[:1] in ('"', "'")`). In a bare value a lone quote
+char (the apostrophe in `don't`, the `'` in `5 o'clock`) is treated as
+ordinary content and never flips `in_q`, so the trailing `# comment` is
+still recognized and stripped. A `#` inside a genuinely quoted run is
+still preserved because the leading quote turns tracking on. This keeps
+the change local to `_strip_comment`; `_split_key` still routes every
+bare value through it unchanged.
 
