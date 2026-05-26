@@ -33,9 +33,11 @@ Treat any listed active card as a soft lock. Do not claim the same card,
 or adjacent/conflicting work, unless the user explicitly asks to continue
 that active card.
 
-Pick the highest-contribution **ready** card (`--ready` excludes any
-open card with a non-terminal `advanced_by` prereq — derived from the
-graph, no `status: blocked` flip needed):
+Pick the highest-contribution **ready** card (`--ready` filters to
+`status: open` ∧ `human_gate: none` ∧ no active `waiting_on` overlay
+— dependency-readiness is advisory display only, an `advances` prereq
+that is still open shows up as "awaiting" but does NOT hide the card
+from the queue):
 
 !`goc --ready -v 2>&1 | head -20`
 
