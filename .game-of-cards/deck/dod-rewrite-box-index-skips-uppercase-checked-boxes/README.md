@@ -1,7 +1,7 @@
 ---
 title: dod-rewrite-box-index-skips-uppercase-checked-boxes
 summary: "UNVERIFIED. `_apply_dod_rewrite` enumerates DoD checkbox lines with `re.match(r\"^\\s*- \\[[ x]\\]\", ln)` (lowercase `x` only), but the canonical box counter `DOD_DONE_BOX` is compiled with `re.IGNORECASE` and treats `- [X]` as a checked box. On a card carrying an uppercase `[X]` box, the 0-based index space the LLM verdict targets (`quality-pass --llm`) is misaligned with `box_indices`, so a rewrite can land on the wrong DoD line. Needs a reproduce.py confirming the misalignment end-to-end."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T22:25:59Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a `reproduce.py` constructs a card with DoD item 0 = `- [X] ...` (uppercase) and item 1 = `- [ ] ...`, drives `_apply_dod_rewrite` with a verdict targeting `idx: 1`, and shows the edit lands on the wrong physical line (or, post-fix, the right one)
   - [ ] TDD: after the fix, `box_indices` and `DOD_DONE_BOX` agree on which lines are boxes for both `[x]` and `[X]`
   - [ ] PROCESS: promote out of `unverified` (drop the tag) once the reproduce.py lands; `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # dod-rewrite-box-index-skips-uppercase-checked-boxes
