@@ -467,6 +467,16 @@ honest resolutions when the gate fires are:
    maintenance, not a bypass. Prefer this to `goc attest --skip
    advanced-by-closed`; the skip leaves a dishonest edge in the deck.
 
+The closure half of this argument was decided in
+[`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`](../../../.game-of-cards/deck/advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/)
+(Option E, 2026-05-26): "X advances Y" ⇔ Y's value chain includes X
+⇔ Y is not done while X is open, so a true edge cannot coexist with a
+closeable Y. A reader who hits an `advanced-by-closed` FAIL should
+land there for the value-chain reasoning and the `goc unadvance`
+retraction path — not reach for `--skip`. The loose/strict distinction
+the report flagged governs *start ordering* (delegated to derived
+readiness), not closure.
+
 ### Closure vs readiness — the asymmetry
 
 The loose/strict distinction (~80% loose value contribution, ~20%
@@ -512,6 +522,63 @@ contributions is just the epic having `advanced_by: [story-1,
 story-2, ...]`. A standalone derivative test that doesn't contribute
 to any other closure has no value-flow edges — its provenance lives
 in body / `log.md`, not frontmatter.
+
+### Coordinating cards — aggregation epic vs governing cluster
+
+Not every coordinating card takes an `advances` edge. There are
+**three** shapes, and only one of them uses edges:
+
+1. **Aggregation epic** — its value chain *is* its children; it
+   closes *when they close*. Canonical encoding:
+   `child.advances: [epic]` (so `epic.advanced_by: [children]`).
+   The child contributes to the epic's value; the epic stays open
+   until each child closes. The `advanced-by-closed` check on the
+   epic correctly holds it shut until the work lands.
+2. **Governing cluster** — a decision or standard-setting card that
+   closes *when the decision is made*, independent of the work it
+   standardizes. Instances may exist before *or* after the standard
+   is set. Canonical encoding: a **shared tag**, no `advances` edge
+   in either direction. The `tags` field's per-epic conventional tag
+   is exactly this tool (`epic` is "multiple cards block it from
+   closing **OR** carry the same epic-grouping tag" — that *OR* is
+   load-bearing).
+3. **Backwards aggregation** — `epic.advances: [children]` (so
+   `child.advanced_by: [epic]`). **This is the bug.** Two silent
+   costs: (a) the value law is defeated — children no longer inherit
+   the epic's value, so the GRPW sort can't see the chain; (b) every
+   child trips a spurious `advanced-by-closed` FAIL at attest time
+   because it reads as gated on a parent that is meant to outlive
+   it. An autonomous `pull-card` / `/loop` worker halts on the whole
+   cluster.
+
+**Why an edge can't model a governing cluster.** An `advances` edge
+encodes two hard, directional commitments at once: value flow (the
+source lends its priority to the target via GRPW) AND closure gating
+(`advanced-by-closed`: the target can't close until the source is
+done). For a soft, two-way govern relationship *both* commitments
+are wrong, so *either* edge direction mismodels it:
+
+| encoding | what `advanced-by-closed` does | verdict |
+|---|---|---|
+| `decision.advances: [instances]` (=`instance.advanced_by: [decision]`) | blocks each **instance** behind the open decision | deadlock — instances can't close |
+| `instance.advances: [decision]` (=`decision.advanced_by: [instances]`) | blocks the **decision** behind all instances | contradicts the decision's DoD (closes when *decided*) |
+| **shared tag**, no edge | nothing — pure grouping | **correct**: govern without blocking |
+
+**The tell:** if the coordinating card is itself a *decision*
+(`human_gate: decision`) or otherwise closes on its own deliverable
+rather than on its cluster's completion, it is a governing cluster
+→ use a tag. Reach for an `advances` edge only when the
+coordinator's closure genuinely waits on the work.
+
+**Lint.** `goc validate` emits an advisory hint
+(`BACKWARDS_EPIC_EDGE`, warning — does not fail the build) when a
+card carries ≥ 2 `advances` entries whose contribution is
+predominantly *lower* than the card's own. The hint names both
+candidate fixes (flip vs. convert-to-tag) and lets the author pick;
+it does not blindly suggest flipping, because for a governing
+cluster the flip is also wrong. The check uses the contribution
+gradient (not a bare `advances ≥ N` count), so legitimate hubs that
+advance many higher-or-equal contribution targets pass clean.
 
 ### Replacement axis (supersedes graph)
 

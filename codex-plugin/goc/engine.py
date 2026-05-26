@@ -1215,6 +1215,77 @@ def validate_waiting_overlay(cards: list[Card], *, today: date | None = None) ->
 
 
 CASCADE_ROOT_THRESHOLD = 3
+BACKWARDS_EPIC_MIN_TARGETS = 2
+
+
+def validate_epic_edge_direction(cards: list[Card]) -> list[BlockerWarning]:
+    """Advisory hint for the backwards-aggregation-epic signature.
+
+    Canonical aggregation: a child has `child.advances: [epic]`, so the
+    epic aggregates upward via `advanced_by`. The intuitive-but-wrong
+    shape is `epic.advances: [children]`, which (1) defeats the value
+    law (children don't inherit the epic's value) and (2) trips a
+    spurious `advanced-by-closed` FAIL on every child at attest time.
+    See `Skill(card-schema)` "Coordinating cards — aggregation epic vs
+    governing cluster" for the three-way fork and the fix options.
+
+    Heuristic: a non-terminal card with at least
+    BACKWARDS_EPIC_MIN_TARGETS resolved `advances` targets where the
+    *majority* are strictly lower contribution (higher
+    CONTRIBUTION_ORDER number) than the card itself. Uses the
+    contribution gradient — not a bare `advances ≥ N` count — so
+    legitimate hubs that advance equal-or-higher contribution targets
+    pass clean.
+
+    Fix suggestion is shape-sensitive:
+
+    - `human_gate == "decision"` (governing cluster — closes on its own
+      deliverable) → drop the edge, group with a shared tag.
+    - otherwise (aggregation epic — closes when its children close) →
+      flip to `child.advances:[card]`.
+
+    Advisory only: the message is emitted but does not contribute to
+    `validate`'s exit code.
+    """
+    by_title = {c.title: c for c in cards}
+    warnings: list[BlockerWarning] = []
+    for c in cards:
+        if c.status in TERMINAL_STATUSES:
+            continue
+        targets = c.frontmatter.get("advances") or []
+        resolved = [by_title[t] for t in targets if t in by_title]
+        if len(resolved) < BACKWARDS_EPIC_MIN_TARGETS:
+            continue
+        own_rank = CONTRIBUTION_ORDER.get(c.contribution)
+        if own_rank is None:
+            continue
+        lower = [
+            t for t in resolved
+            if CONTRIBUTION_ORDER.get(t.contribution, own_rank) > own_rank
+        ]
+        if len(lower) * 2 <= len(resolved):
+            continue
+        sample = ", ".join(f"{t.title}({t.contribution})" for t in lower[:3])
+        if c.human_gate == "decision":
+            fix = (
+                "card looks like a governing cluster (human_gate: decision) — "
+                "drop the edge and group via a shared tag"
+            )
+        else:
+            fix = (
+                "if closure waits on the work, flip to `child.advances:[card]` "
+                "(`goc unadvance <card> --by <child>` then `goc advance <child> "
+                "--by <card>`); if card closes on its own deliverable, drop the "
+                "edge and use a shared tag"
+            )
+        warnings.append(BlockerWarning(
+            "BACKWARDS_EPIC_EDGE",
+            c.title,
+            f"contribution={c.contribution} but advances targets are "
+            f"predominantly lower: [{sample}] — likely backwards aggregation "
+            f"epic. Fix: {fix}. See Skill(card-schema) 'Coordinating cards'.",
+        ))
+    return warnings
 
 
 def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
@@ -2228,6 +2299,8 @@ def _cmd_validate(args):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for w in validate_blocker_coherence(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_epic_edge_direction(cards):
         print(w.message, file=sys.stderr)
     for w in validate_waiting_overlay(cards):
         print(w.message, file=sys.stderr)
