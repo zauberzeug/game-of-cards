@@ -1,7 +1,7 @@
 ---
 title: goc-new-ignores-schema-human-gate-default-and-contribution-values
 summary: "UNVERIFIED. `schema.yaml` declares `human_gate_default: decision` (loaded into `Schema.human_gate_default`) and a `contribution_values` enum, but `goc new` hardcodes the argparse defaults `--gate default=\"decision\"` and `--contribution default=\"medium\" choices=[...]` rather than reading the schema fields. The schema gate-default is dead config — a repo that changed `human_gate_default` would see `goc new` silently ignore it. Needs verification that the field is truly never consulted by the new-card path."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-26T22:25:59Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: editing `schema.yaml` to `human_gate_default: none` and running `goc new foo-bar` (with no `--gate`) emits `human_gate: none`, not `decision`
   - [ ] MECHANICAL: `goc new` derives the `--gate` default from `schema.human_gate_default` and the `--contribution` choices from `schema.contribution_values`, rather than hardcoded literals
   - [ ] PROCESS: drop the `unverified` tag once the behavior is confirmed and a fix path chosen; `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-new-ignores-schema-human-gate-default-and-contribution-values
