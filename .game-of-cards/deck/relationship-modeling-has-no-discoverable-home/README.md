@@ -14,7 +14,7 @@ summary: |-
   discoverable home for relationship modeling (broaden its triggers + a
   how-to body) and consolidate the concepts in `card-schema`'s
   value-flow axis, linking rather than duplicating.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T06:05:09Z"
@@ -48,6 +48,7 @@ definition_of_done: |
   - [ ] A reader who asks "should these cards be linked, and how?" lands
         in `advance-card` and gets a decision procedure, not scattered
         fragments.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Relationship modeling has no front door
