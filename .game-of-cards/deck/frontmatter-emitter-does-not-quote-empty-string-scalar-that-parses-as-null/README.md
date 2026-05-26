@@ -1,7 +1,7 @@
 ---
 title: frontmatter-emitter-does-not-quote-empty-string-scalar-that-parses-as-null
 summary: "The frontmatter emitter writes an empty-string field as a bare `key: ` line, which the vendored parser reads back as `None` — a silent str -> None mutation on every card rewrite. `_parser_coerces_scalar` omits the parser's `not text` (empty -> None) branch, so the quote-trigger and parser coercion drift, exactly the failure its docstring claims it prevents. Third instance of the emitter-quote-class family."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T21:44:33Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_parser_coerces_scalar` (or the emitter quote-trigger) recognizes the empty string as parser-coerced, so `_yaml_inline("")` returns `'""'`.
   - [ ] EMPIRICAL: `uv run goc validate` stays clean and the existing emitter sibling reproducers still pass.
   - [ ] PROCESS: log.md records whether the fix lands in `_parser_coerces_scalar` or as a standalone empty-string guard, and notes this is the 3rd family instance (a 4th warrants the round-trip-by-construction meta-fix).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter does not quote the empty string, so it parses back as null
