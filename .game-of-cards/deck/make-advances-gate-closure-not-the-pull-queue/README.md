@@ -16,7 +16,7 @@ summary: |-
   `card_is_ready`; keep the derived signal as advisory display only,
   relabeled so it no longer reads as "blocked". `advanced-by-closed`
   (closure) is unchanged.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T06:55:44Z"
@@ -57,6 +57,7 @@ definition_of_done: |
   - [ ] The closed `derive-dependency-readiness-…` card gets a dated
         forward-pointer in its `log.md` to this card (resolves its
         "Open consideration"). `goc validate` + plugin-asset sync green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `advances` should gate closure, not the pull queue
