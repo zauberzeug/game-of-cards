@@ -1,7 +1,7 @@
 ---
 title: frontmatter-emitter-does-not-quote-indicator-or-whitespace-padded-values
 summary: "`emit_frontmatter` decides when to quote a scalar via the `_YAML_NEEDS_QUOTE` predicate, which omits two cases the vendored parser cares about: values that BEGIN with a YAML indicator char (`*`, `&`, etc.) and values with leading/trailing whitespace. A `*`/`&`-leading value is emitted bare, then the next parse of that same frontmatter CRASHES with `anchors/aliases not supported`. A whitespace-padded value is emitted bare and silently stripped on re-parse — silent data loss. The emit→parse round-trip is not closed."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T20:20:14Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: the quote-trigger predicate quotes values with leading or trailing whitespace.
   - [ ] MECHANICAL: fix lands in `goc/engine.py` (`_YAML_NEEDS_QUOTE` / `_yaml_inline`); no behavior change for already-correctly-quoted values.
   - [ ] TDD: `uv run goc validate` passes on this repo's deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter doesn't quote indicator-leading or whitespace-padded values
