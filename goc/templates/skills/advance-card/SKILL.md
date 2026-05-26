@@ -1,6 +1,6 @@
 ---
 name: advance-card
-description: Mutate a card's status (open / active / disproved / superseded — everything except `done`). AUTO-INVOKE when user says "I'll start on X", "I'm working on", "mark this disproved", "supersede with Z", or describes any non-done status change. For "this is blocked by Y" / "unblock", set or clear the impediment overlay with `goc wait` (Step 6) instead of flipping status. Status transitions are documented agreements (Kanban explicit policies, Anderson).
+description: Mutate a card's status (open / active / disproved / superseded — everything except `done`), record relationship edges between cards (`goc advance` / `goc unadvance`), or set the impediment overlay (`goc wait`). AUTO-INVOKE when user says "I'll start on X", "I'm working on", "mark this disproved", "supersede with Z", "this is part of X", "make this depend on Y", "these should be linked", "should this be an edge or a tag?", "remove this dependency", "unlink these", or describes any non-done status change or relationship-modeling intent. For "this is blocked by Y" / "unblock", set or clear the impediment overlay with `goc wait` (Step 6) instead of flipping status. Status transitions and relationship edges are documented agreements (Kanban explicit policies, Anderson).
 argument-hint: <title> <new-status: active|open|disproved|superseded> [--by <other-title>]
 ---
 
@@ -229,6 +229,98 @@ Effects:
 - The overlay is orthogonal to `status` — a card may be `active` AND
   carry a `waiting_on`, e.g. work in progress that is partially gated
   on an external answer.
+
+## Modeling a relationship: edge vs tag
+
+A reader landing here on a relationship question ("this is part of X",
+"make this depend on Y", "these should be linked", "should this be an
+edge or a tag?", "remove this dependency") is asking *how to express a
+link*, not *how to flip a status*. This section is the decision
+procedure; the canonical taxonomy and the value-flow invariants live in
+`Skill(card-schema)` — link, don't re-derive.
+
+### Decision procedure
+
+1. **Same value chain — does the source's closure deliver a piece of the
+   target's value?** → `advances` edge. The dependent inherits the
+   source's priority and cannot close until the source closes (see
+   `Skill(card-schema)` "Value-flow axis" for the closure semantics).
+2. **Same theme, no closure-time dependency — would a future filter
+   ("show me all the X cards") want them grouped?** → shared **tag**.
+   No edge in either direction.
+3. **One card coordinates many others** → see the three-way fork below
+   before reaching for `--advances`.
+
+### Three coordinating-card shapes (short form)
+
+Full reasoning, the value-law derivation, and the `BACKWARDS_EPIC_EDGE`
+lint live in `Skill(card-schema)` "Coordinating cards — aggregation epic
+vs governing cluster". The short form, paired with the verb you reach
+for:
+
+- **Aggregation epic** — its value chain *is* its children; closes
+  when they close. Encoding: `child.advances: [epic]`. Verb on the
+  child (open or after creation):
+  `goc advance <child> --by <epic>`.
+- **Governing cluster** — a decision or standard-setting card that
+  closes when *decided*, independent of the cluster's work. Encoding:
+  a **shared tag**, no `advances` edge in either direction. Add the
+  tag at `goc new --tag <name>` time on both the governing card and
+  each instance; for an existing card, edit `tags:` in the
+  frontmatter directly. To register a new project-specific tag, see
+  `Skill(card-schema)` "Adding new tags".
+- **Backwards aggregation** — `epic.advances: [children]`. **Never.**
+  Defeats the value law (children stop inheriting the epic's value,
+  so the GRPW sort cannot see the chain) and trips a spurious
+  `advanced-by-closed` FAIL on every child at attest time. `goc
+  validate` flags this signature as `BACKWARDS_EPIC_EDGE`.
+
+The tell: if the coordinating card closes on its own deliverable
+(typically `human_gate: decision`) rather than on its cluster's
+completion, it is a governing cluster → tag, not edge.
+
+### Retraction — `goc unadvance` is the honest fix
+
+When an `advanced-by-closed` check fires at closure time, the gate is
+reading the value-chain identity (`Skill(card-schema)` "Value-flow
+axis"): a true edge cannot coexist with a closeable target. Two
+honest resolutions:
+
+1. **Wait** for the upstream contributor(s) to close.
+2. **Retract** when the edge was false (the upstream was tangential,
+   scope was reframed, or the relationship was authored backwards):
+   `goc unadvance <closing-title> --by <upstream>`.
+
+Retraction is graph maintenance, not a bypass. Prefer it to
+`goc attest --skip advanced-by-closed`; the skip leaves a dishonest
+edge in the deck. Same rule applies in the opposite direction — if
+you discover a card should depend on another after filing, add the
+edge with `goc advance <title> --by <other>` rather than letting the
+relationship live only in prose.
+
+### Verbs
+
+```bash
+# Record a value-flow edge (this advances other):
+goc advance <title> --by <other>
+
+# Retract a value-flow edge:
+goc unadvance <title> --by <other>
+
+# At filing time, both sides at once:
+goc new <child-title> --advances <epic-title>
+```
+
+`goc advance` / `unadvance` maintain the bidirectional invariant
+(`A.advances` ⇔ `B.advanced_by`) atomically — same atomicity contract
+`goc status … superseded --by` provides for the replacement graph. The
+validator refuses half-edges. Cycles are forbidden.
+
+For grouping (the governing-cluster shape and other soft themes), there
+is intentionally no `goc add-tag` verb on existing cards — set tags at
+`goc new --tag <name>` time, or edit `tags:` in the frontmatter
+directly. The unknown-tag error names the file to register a new tag
+in (see `Skill(card-schema)` "Adding new tags").
 
 ## Worker field — populated at claim time
 

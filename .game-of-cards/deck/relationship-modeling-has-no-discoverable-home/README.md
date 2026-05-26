@@ -14,38 +14,38 @@ summary: |-
   discoverable home for relationship modeling (broaden its triggers + a
   how-to body) and consolidate the concepts in `card-schema`'s
   value-flow axis, linking rather than duplicating.
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T06:05:09Z"
-closed_at: null
+closed_at: 2026-05-26T13:28:16Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation]
 definition_of_done: |
-  - [ ] `advance-card`'s `description`/trigger phrasing is broadened to
+  - [x] `advance-card`'s `description`/trigger phrasing is broadened to
         fire on relationship-modeling intents, not just status changes:
         "this is part of X", "make this depend on Y", "these are all
         about Z", "should this be an edge or a tag?", "remove this
         dependency". (It already owns `goc advance`/`unadvance`.)
-  - [ ] `advance-card` body gains a "Modeling a relationship: edge vs
+  - [x] `advance-card` body gains a "Modeling a relationship: edge vs
         tag" section covering, as a how-to: the three coordinating-card
         shapes (aggregation epic → `child.advances:[epic]`;
         govern-cluster → shared tag; never `epic.advances:[children]`),
         retraction (`goc unadvance`) as the honest resolution when an
         edge turns out false, and grouping-via-tag (pointing at the tag
         mechanism / the sibling tag card).
-  - [ ] Concepts are NOT duplicated: the section links `card-schema`'s
+  - [x] Concepts are NOT duplicated: the section links `card-schema`'s
         value-flow axis (which already carries the value-chain identity
         + closure-vs-readiness asymmetry table) and the guardrail card
         for the edge-vs-tag fork. `card-schema` gets only what's missing
         from its reference (the three-shapes taxonomy, if not already
         present), stated once.
-  - [ ] No new skill is created (explicit non-goal). No change to the
+  - [x] No new skill is created (explicit non-goal). No change to the
         engine's edge logic. `goc validate` + plugin-asset sync stay
         green.
-  - [ ] A reader who asks "should these cards be linked, and how?" lands
+  - [x] A reader who asks "should these cards be linked, and how?" lands
         in `advance-card` and gets a decision procedure, not scattered
         fragments.
 worker: {who: "claude[bot]", where: main}
