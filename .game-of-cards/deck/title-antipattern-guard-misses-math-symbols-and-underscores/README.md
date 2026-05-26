@@ -1,20 +1,21 @@
 ---
 title: title-antipattern-guard-misses-math-symbols-and-underscores
 summary: "The `card-schema` skill documents a 7-row title-antipattern table whose final row is `Math symbols` with the tailored remedy `Use words (gte, at-least)`, and claims `goc new rejects titles matching any of these antipatterns`. But `TITLE_ANTIPATTERNS` has only 6 patterns and none match math symbols or a bare underscore, so those titles fall through the antipattern guard to the generic regex error — the exact unhelpful-message failure mode the closed card `title-guard-shows-regex-error-instead-of-helpful-suggestion` was meant to eliminate. Confirmed end-to-end: `goc new late-hr-≥-half` and `goc new my_first_card` both print the bare regex error."
-status: open
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T22:25:59Z"
-closed_at: null
+closed_at: 2026-05-26T23:11:00Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation, api-contract]
 definition_of_done: |
-  - [ ] TDD: `goc new "late-hr-≥-half"` and `goc new "my_first_card"` print a tailored antipattern message naming the remedy (e.g. "Use words (gte, at-least)" / "lower-kebab; underscores aren't allowed"), not the bare `does not match '^[a-z0-9]...'` regex error
-  - [ ] TDD: `_check_title_antipatterns("late-hr-≥-0.5")` and `_check_title_antipatterns("my_first_card")` each return a non-empty reason list
-  - [ ] MECHANICAL: the `card-schema` skill's antipattern table and `TITLE_ANTIPATTERNS` agree row-for-row (the doc's 7th "Math symbols" row has a matching code pattern; underscore is covered by either a doc row + pattern or the existing `_md_`/`_py_` row is generalized)
-  - [ ] PROCESS: plugin/skill mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) since the card-schema skill body is mirrored; `uv run goc validate` clean
+  - [x] TDD: `goc new "late-hr-≥-half"` and `goc new "my_first_card"` print a tailored antipattern message naming the remedy (e.g. "Use words (gte, at-least)" / "lower-kebab; underscores aren't allowed"), not the bare `does not match '^[a-z0-9]...'` regex error
+  - [x] TDD: `_check_title_antipatterns("late-hr-≥-0.5")` and `_check_title_antipatterns("my_first_card")` each return a non-empty reason list
+  - [x] MECHANICAL: the `card-schema` skill's antipattern table and `TITLE_ANTIPATTERNS` agree row-for-row (the doc's 7th "Math symbols" row has a matching code pattern; underscore is covered by either a doc row + pattern or the existing `_md_`/`_py_` row is generalized)
+  - [x] PROCESS: plugin/skill mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) since the card-schema skill body is mirrored; `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # title-antipattern-guard-misses-math-symbols-and-underscores

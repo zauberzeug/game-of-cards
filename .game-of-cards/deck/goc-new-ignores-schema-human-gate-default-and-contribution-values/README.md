@@ -1,27 +1,31 @@
 ---
 title: goc-new-ignores-schema-human-gate-default-and-contribution-values
-summary: "UNVERIFIED. `schema.yaml` declares `human_gate_default: decision` (loaded into `Schema.human_gate_default`) and a `contribution_values` enum, but `goc new` hardcodes the argparse defaults `--gate default=\"decision\"` and `--contribution default=\"medium\" choices=[...]` rather than reading the schema fields. The schema gate-default is dead config — a repo that changed `human_gate_default` would see `goc new` silently ignore it. Needs verification that the field is truly never consulted by the new-card path."
-status: open
+summary: "`goc new` hardcoded the argparse defaults `--gate default=\"decision\"` and `--contribution choices=[...]` instead of reading `schema.human_gate_default` / `schema.contribution_values`, so the schema gate-default was dead config — a repo that changed `human_gate_default` saw `goc new` silently ignore it. Fixed: `_build_parser` now loads the schema and derives the `new` subparser's gate default and contribution choices from it."
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T22:25:59Z"
-closed_at: null
+closed_at: 2026-05-26T23:15:21Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, api-contract, unverified]
+tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] EMPIRICAL: confirm `human_gate_default` is read only at the `Schema` constructor and never by the new-card path (`grep` + trace `_cmd_new`); record verdict in log.md either way
-  - [ ] TDD: editing `schema.yaml` to `human_gate_default: none` and running `goc new foo-bar` (with no `--gate`) emits `human_gate: none`, not `decision`
-  - [ ] MECHANICAL: `goc new` derives the `--gate` default from `schema.human_gate_default` and the `--contribution` choices from `schema.contribution_values`, rather than hardcoded literals
-  - [ ] PROCESS: drop the `unverified` tag once the behavior is confirmed and a fix path chosen; `uv run goc validate` clean
+  - [x] EMPIRICAL: confirm `human_gate_default` is read only at the `Schema` constructor and never by the new-card path (`grep` + trace `_cmd_new`); record verdict in log.md either way
+  - [x] TDD: editing `schema.yaml` to `human_gate_default: none` and running `goc new foo-bar` (with no `--gate`) emits `human_gate: none`, not `decision`
+  - [x] MECHANICAL: `goc new` derives the `--gate` default from `schema.human_gate_default` and the `--contribution` choices from `schema.contribution_values`, rather than hardcoded literals
+  - [x] PROCESS: drop the `unverified` tag once the behavior is confirmed and a fix path chosen; `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-new-ignores-schema-human-gate-default-and-contribution-values
 
-> **Status: unverified.** Static-confirmed that the schema field is loaded
-> but the `goc new` argparse default is a hardcoded literal; not yet
-> end-to-end confirmed that no later code overrides it.
+> **Status: confirmed and fixed (2026-05-26).** Traced `_cmd_new` end to
+> end — it reads `args.gate` / `args.contribution` straight from the
+> argparse defaults; the schema fields were never consulted on the
+> new-card path. `_build_parser` now loads the schema and derives the
+> `new` subparser's `--gate` default from `schema.human_gate_default` and
+> the `--contribution` choices from `schema.contribution_values`.
 
 ## Hypothesis
 

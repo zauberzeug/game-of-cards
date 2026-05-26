@@ -391,12 +391,18 @@ def _strip_comment(text: str) -> str:
     """Remove trailing `# comment` (or leading `#` comment) from a value."""
     if text.startswith("#"):
         return ""
+    # Quote-tracking only applies to a genuinely *quoted* scalar (one that
+    # starts with a quote). In a bare value a lone quote char — the
+    # apostrophe in `don't`, the `'` in `5 o'clock` — is ordinary content
+    # and must not flip into quote mode, or it would suppress comment
+    # detection for the rest of the line.
+    quoted = text[:1] in ('"', "'")
     in_q: str | None = None
     for i, c in enumerate(text):
         if in_q:
             if c == in_q:
                 in_q = None
-        elif c in ('"', "'"):
+        elif quoted and c in ('"', "'"):
             in_q = c
         elif c == "#" and i > 0 and text[i - 1] in (" ", "\t"):
             return text[:i].rstrip()
