@@ -16,3 +16,14 @@ goc validate` passes) cannot be ticked: validate fails at HEAD with
 `validate-plugin-mirror-fails-when-openclaw-omits-hooks-dir`
 (advanced_by). Once that lands, validate will pass, item 4 ticks,
 and this card closes.
+
+## 2026-05-26 — reclassified blocked → open (dependency-wait)
+
+Reclassified off the `status: blocked` axis as part of the three-axis
+migration (`migrate-existing-blocked-cards-to-open-or-waiting-overlay`).
+The prereq `validate-plugin-mirror-fails-when-openclaw-omits-hooks-dir`
+already closed on 2026-05-09, so the dependency-wait is itself
+resolved — derived readiness (`card_is_ready`) treats a terminal
+`advanced_by` as ready and the card re-enters the pull queue. No
+`waiting_on` overlay is needed (this was never an exogenous wait;
+it was a card-blocks-card edge the graph already represents).
