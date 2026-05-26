@@ -1,20 +1,20 @@
 ---
 title: frontmatter-emitter-does-not-quote-empty-string-scalar-that-parses-as-null
 summary: "The frontmatter emitter writes an empty-string field as a bare `key: ` line, which the vendored parser reads back as `None` — a silent str -> None mutation on every card rewrite. `_parser_coerces_scalar` omits the parser's `not text` (empty -> None) branch, so the quote-trigger and parser coercion drift, exactly the failure its docstring claims it prevents. Third instance of the emitter-quote-class family."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T21:44:33Z"
-closed_at: null
+closed_at: 2026-05-26T21:48:20Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (an empty-string field round-trips back to `""`, not `None`).
-  - [ ] MECHANICAL: `_parser_coerces_scalar` (or the emitter quote-trigger) recognizes the empty string as parser-coerced, so `_yaml_inline("")` returns `'""'`.
-  - [ ] EMPIRICAL: `uv run goc validate` stays clean and the existing emitter sibling reproducers still pass.
-  - [ ] PROCESS: log.md records whether the fix lands in `_parser_coerces_scalar` or as a standalone empty-string guard, and notes this is the 3rd family instance (a 4th warrants the round-trip-by-construction meta-fix).
+  - [x] TDD: reproduce.py exits zero (an empty-string field round-trips back to `""`, not `None`).
+  - [x] MECHANICAL: `_parser_coerces_scalar` (or the emitter quote-trigger) recognizes the empty string as parser-coerced, so `_yaml_inline("")` returns `'""'`.
+  - [x] EMPIRICAL: `uv run goc validate` stays clean and the existing emitter sibling reproducers still pass.
+  - [x] PROCESS: log.md records whether the fix lands in `_parser_coerces_scalar` or as a standalone empty-string guard, and notes this is the 3rd family instance (a 4th warrants the round-trip-by-construction meta-fix).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -84,10 +84,13 @@ quote decision *by construction* — emit, re-parse, and quote iff the
 re-parsed value differs from the input — instead of re-enumerating the
 parser's recognizers by hand in `_parser_coerces_scalar`.
 
-## Fix
+## Fix (applied)
 
-Smallest mechanical fix: make the guard recognize the empty string.
-In `_parser_coerces_scalar` (`goc/engine.py:187-192`), add `s == ""`
-(or `not s`) to the disjunction so `_yaml_inline("")` falls into the
-quote branch and emits `""`. **Do not apply the fix in this card's
-filing.** Verify by re-running `reproduce.py` (must exit 0).
+`_parser_coerces_scalar` (`goc/engine.py`) now leads its disjunction
+with `s == ""`, mirroring the parser's `if not text` empty-string
+branch (`yaml_lite.py:221`). `_yaml_inline("")` now falls into the
+quote branch and emits `""`, which the parser reads back as the empty
+string instead of `None`. The docstring's "cannot drift" invariant is
+restored: the guard now consults every parser coercion branch
+(empty-string + `_NULL_SET` + `_TRUE_SET` + `_FALSE_SET` + `_INT_RE`).
+`reproduce.py` exits 0 (round-trip `'' -> '' `).
