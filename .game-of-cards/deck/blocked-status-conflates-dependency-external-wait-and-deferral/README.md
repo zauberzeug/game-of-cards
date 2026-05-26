@@ -12,6 +12,7 @@ advanced_by:
   - derive-dependency-readiness-instead-of-storing-blocked-status
   - add-waiting-overlay-with-reason-and-until-date
   - remove-blocked-from-status-enum-and-migrate-existing-cards
+  - no-guardrail-for-canonical-epic-edge-direction
 tags: [epic, api-contract, documentation]
 definition_of_done: |
   - [ ] Agreed design recorded in this body (done — see "## Decision").
