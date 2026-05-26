@@ -27,3 +27,20 @@ resolved — derived readiness (`card_is_ready`) treats a terminal
 `advanced_by` as ready and the card re-enters the pull queue. No
 `waiting_on` overlay is needed (this was never an exogenous wait;
 it was a card-blocks-card edge the graph already represents).
+
+## 2026-05-26T13:12:20Z — Closure
+
+- **What changed**: `site/llms.txt:95-96` — install snippet already reads `pipx install game-of-cards` first with `# or: uv tool install game-of-cards` as the alternate (no `# preferred` comment); the body of the work landed in the 2026-05-09 edit, this closure ticks the final DoD item now that `uv run goc validate` is clean.
+- **Verification**: `uv run goc validate` — all OK across the deck.
+- **Audit**: PASS — invokes the recorded `python3` / `pipx` runtime baseline (memory `feedback_runtime_baseline_python3.md`); the llms.txt install snippet now matches.
+- **Project impact**: n/a (single doc-comment alignment with recorded baseline).
+- **Tests**: `goc validate` green; no pytest suite in this repo.
+- **Bundled with**: n/a.
+
+## Closure verification (2026-05-26T13:12:33Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — all 1 done
+- [x] dod-100-percent — 4/4 ticked
+- [x] log-md-closure-entry — '## 2026-05-26 — Closure' present
