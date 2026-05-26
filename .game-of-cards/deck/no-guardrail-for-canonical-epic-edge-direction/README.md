@@ -24,7 +24,7 @@ summary: |-
   suggests the *right* fix (flip vs. convert-to-tag). Do NOT change the
   `advanced-by-closed` check — it is correct under the documented
   convention.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T04:41:02Z"
@@ -70,6 +70,7 @@ definition_of_done: |
         `advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`
         (Option E) so a reader who hits the attest FAIL is routed to the
         value-chain reasoning and the `goc unadvance` retraction path.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Nothing steers epic authors to the canonical edge direction
