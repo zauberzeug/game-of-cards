@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: high
 created: "2026-05-26T20:53:28Z"
-closed_at: 2026-05-26T21:02:38Z
+closed_at: "2026-05-26T21:02:38Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -17,6 +17,8 @@ definition_of_done: |
   - [x] TDD: no behavior change for values that already round-trip bare (plain prose, already-quoted reserved words) and for genuine int/bool/None Python values (which must still emit bare, not quoted).
   - [x] TDD: `uv run goc validate` passes on this repo's deck.
 worker: {who: "claude[bot]", where: main}
+supersedes:
+  - frontmatter-emitter-does-not-quote-integer-looking-string-scalars
 ---
 
 # Frontmatter emitter doesn't quote integer-, null-, or case-variant-boolean-looking string values

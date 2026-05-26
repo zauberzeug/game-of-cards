@@ -1,11 +1,11 @@
 ---
 title: frontmatter-emitter-does-not-quote-integer-looking-string-scalars
 summary: "The frontmatter emitter (`_yaml_inline`) emits integer-looking string scalars (e.g. `\"123\"`, `\"007\"`, `\"-3\"`) bare. The vendored parser then coerces them back to `int`, so the emit->parse round-trip changes the Python type. A card claimed on a numeric branch name gets `worker.where` written as an int and then fails `goc validate` permanently."
-status: open
+status: superseded
 stage: null
 contribution: medium
 created: "2026-05-26T20:41:44Z"
-closed_at: null
+closed_at: "2026-05-26T21:10:22Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -15,6 +15,8 @@ definition_of_done: |
   - [ ] TDD: `_yaml_inline("123")`, `_yaml_inline("007")`, `_yaml_inline("-3")` each emit a double-quoted scalar, and `yaml_lite.safe_load` reads them back as the original `str`
   - [ ] MECHANICAL: the quote trigger in `_yaml_inline` (goc/engine.py:193-199) covers any scalar the vendored parser would coerce to a non-str type (integer-looking `^-?\d+$`); dates/floats already round-trip as str and need no change
   - [ ] PROCESS: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` clean) and `uv run goc validate` clean
+superseded_by:
+  - frontmatter-emitter-does-not-quote-integer-null-or-case-variant-boolean-values
 ---
 
 # Frontmatter emitter does not quote integer-looking string scalars
