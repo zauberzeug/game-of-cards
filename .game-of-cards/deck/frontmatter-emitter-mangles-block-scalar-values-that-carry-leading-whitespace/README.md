@@ -1,7 +1,7 @@
 ---
 title: frontmatter-emitter-mangles-block-scalar-values-that-carry-leading-whitespace
 summary: "`_emit_block_field` prefixes every content line with a fixed 2-space indent but never accounts for the value's own leading whitespace. A block-scalar value whose first line is more-indented than the rest emits YAML that the parser REJECTS on re-parse (FrontmatterError); a value where all lines share leading indent round-trips but SILENTLY STRIPS that indent. Breaks the emit→parse round-trip the rest of the frontmatter family guarantees."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T22:38:00Z"
@@ -24,6 +24,7 @@ definition_of_done: |
         mirrors re-sync and `python scripts/sync_plugin_assets.py --check`
         passes.
   - [ ] PROCESS: `uv run goc validate` is clean on this repo's own deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter mangles block-scalar values that carry leading whitespace
