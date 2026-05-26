@@ -1,7 +1,7 @@
 ---
 title: yaml-lite-keep-chomping-indicator-treated-as-clip
 summary: "The vendored YAML parser maps the `|+` (keep) block-scalar chomping indicator to the same behavior as bare `|` (clip — one trailing newline) instead of keeping all trailing blank lines. The goc emitter never emits `|+`, so this only affects externally-authored frontmatter; parked unverified, low impact."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-26T20:44:09Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py parses a `|+` block scalar with trailing blank lines and asserts the result preserves them (distinct from `|` clip)
   - [ ] MECHANICAL: `_resolve_value` (goc/_vendor/yaml_lite.py:184-186) and `_parse_block_scalar` distinguish keep (`|+`) from clip (`|`) and strip (`|-`) — a three-way chomp, not a boolean `strip`
   - [ ] PROCESS: drop the `unverified` tag once the reproduce.py lands; or disprove if YAML 1.1/1.2 chomp semantics are deemed out-of-scope for the lite parser
+worker: {who: "claude[bot]", where: main}
 ---
 
 # yaml-lite treats the `|+` keep-chomping indicator as clip
