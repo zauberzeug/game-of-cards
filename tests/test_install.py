@@ -1357,6 +1357,93 @@ class PluginContextRefusalTest(unittest.TestCase):
             self.assertIn(".claude/skills/", result.stdout)
 
 
+class OpenClawPluginContextTest(unittest.TestCase):
+    """Regression for `openclaw-kickoff-defaults-to-claude-install`.
+
+    When the bundled engine runs from inside `openclaw-plugin/`, a no-flag
+    install/upgrade must default to *no harness* — OpenClaw ships skills via its
+    plugin runtime and has no Claude/Codex surface. Before the fix a fresh repo
+    fell back to the documented Claude default and planned `agents: claude` plus
+    a `CLAUDE.md` append, contradicting the kickoff's host-agnostic promise.
+
+    These run against a copy of the *source* `goc/` placed under a fake
+    `openclaw-plugin/` so they exercise the fix directly, independent of the
+    auto-synced plugin mirror.
+    """
+
+    def _run_under_openclaw_context(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        plugin_root = cwd / "_plugin" / "openclaw-plugin"
+        if not (plugin_root / "goc").exists():
+            shutil.copytree(ROOT / "goc", plugin_root / "goc")
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(plugin_root)
+        return subprocess.run(
+            [sys.executable, "-m", "goc.cli", *args],
+            cwd=cwd,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    def test_fresh_repo_defaults_to_no_harness_not_claude(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = self._run_under_openclaw_context(cwd, "install", "--dry-run")
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("agents: none", result.stdout)
+            self.assertIn("shared append AGENTS.md", result.stdout)
+            self.assertNotIn("agents: claude", result.stdout)
+            self.assertNotIn("claude append CLAUDE.md", result.stdout)
+            self.assertNotIn(".claude/", result.stdout)
+
+    def test_stray_agents_md_does_not_trigger_codex_detection(self) -> None:
+        """A pre-existing AGENTS.md (the briefing home) must not be read as a
+        Codex surface under OpenClaw — auto-detection is suppressed entirely."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            (cwd / "AGENTS.md").write_text("# Existing guidance\n")
+            result = self._run_under_openclaw_context(cwd, "install", "--dry-run")
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("agents: none", result.stdout)
+            self.assertNotIn("agents: codex", result.stdout)
+            self.assertNotIn(".codex/", result.stdout)
+
+    def test_explicit_agents_still_overrides_no_harness_default(self) -> None:
+        """The no-harness default is default-only; a deliberate --agents wins."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = self._run_under_openclaw_context(cwd, "install", "--dry-run", "--agents", "claude")
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("agents: claude", result.stdout)
+
+    def test_real_install_writes_agents_md_and_no_claude_md(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = self._run_under_openclaw_context(cwd, "install")
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("no agent harness", result.stdout)
+            self.assertTrue((cwd / ".game-of-cards" / "deck" / ".goc-version").is_file())
+            self.assertTrue((cwd / "AGENTS.md").is_file())
+            self.assertFalse((cwd / "CLAUDE.md").exists())
+            self.assertFalse((cwd / ".claude").exists())
+            self.assertFalse((cwd / ".codex").exists())
+            # Plugin path is pinned, so a later `goc validate` won't expect a
+            # vendored skill tree.
+            self.assertIn("skills_source: plugin", (cwd / ".game-of-cards" / "config.yaml").read_text())
+
+    def test_upgrade_defaults_to_no_harness_not_claude(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assertEqual(0, self._run_under_openclaw_context(cwd, "install").returncode)
+            (cwd / ".game-of-cards" / "deck" / ".goc-version").write_text("0.0.1\n")
+            result = self._run_under_openclaw_context(cwd, "upgrade", "--dry-run")
+            self.assertEqual(0, result.returncode, msg=f"stdout:\n{result.stdout}\n\nstderr:\n{result.stderr}")
+            self.assertIn("agents: none", result.stdout)
+            self.assertNotIn("agents: claude", result.stdout)
+            self.assertNotIn("claude append CLAUDE.md", result.stdout)
+
+
 class KickoffStage4StripSnippetTest(unittest.TestCase):
     """Regression coverage for `kickoff-crashes-when-user-declines-merge-question`.
 

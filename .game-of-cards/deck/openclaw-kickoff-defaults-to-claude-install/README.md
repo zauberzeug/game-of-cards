@@ -1,19 +1,20 @@
 ---
 title: openclaw-kickoff-defaults-to-claude-install
-summary: The OpenClaw onboarding path claims the generic kickoff is host-agnostic, but the bundled install engine still defaults to the Claude harness when no repo marker exists. A fresh OpenClaw repo therefore plans `agents: claude` and a `CLAUDE.md` append instead of an OpenClaw-safe scaffold.
-status: open
+summary: "The OpenClaw onboarding path claims the generic kickoff is host-agnostic, but the bundled install engine still defaults to the Claude harness when no repo marker exists. A fresh OpenClaw repo therefore plans `agents: claude` and a `CLAUDE.md` append instead of an OpenClaw-safe scaffold."
+status: done
 stage: null
 contribution: medium
 created: "2026-05-18T04:28:15Z"
-closed_at: null
-human_gate: session
+closed_at: 2026-05-26T13:03:06Z
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] `python3 .game-of-cards/deck/openclaw-kickoff-defaults-to-claude-install/reproduce.py` exits zero and demonstrates the current wrong default against the OpenClaw-bundled engine.
-  - [ ] The install/kickoff contract for OpenClaw is decided: either the bundled engine recognizes OpenClaw explicitly, or the kickoff docs stop claiming that plain `goc install` is host-agnostic on OpenClaw.
-  - [ ] The chosen fix is covered by a regression test that fails if an OpenClaw-hosted fresh repo ever plans `agents: claude` again.
+  - [x] `python3 .game-of-cards/deck/openclaw-kickoff-defaults-to-claude-install/reproduce.py` exits zero and demonstrates the current wrong default against the OpenClaw-bundled engine.
+  - [x] The install/kickoff contract for OpenClaw is decided: either the bundled engine recognizes OpenClaw explicitly, or the kickoff docs stop claiming that plain `goc install` is host-agnostic on OpenClaw.
+  - [x] The chosen fix is covered by a regression test that fails if an OpenClaw-hosted fresh repo ever plans `agents: claude` again.
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # openclaw-kickoff-defaults-to-claude-install
@@ -117,3 +118,37 @@ The repo needs one explicit contract for OpenClaw onboarding:
 - Should OpenClaw become a first-class install target in `goc install`, or
 - Should the plugin keep using a reduced "project-state only" install path that
   bypasses harness selection entirely?
+
+## Decision
+
+*Resolved 2026-05-26T12:52:38Z:* Engine recognizes OpenClaw plugin context and defaults to no harness — write .game-of-cards/ + AGENTS.md only, never CLAUDE.md (card option 1).
+
+*Reasoning:* Keyed on the same _PACKAGE_DIR.parent.name signal _is_plugin_context() already trusts, so it is automatic and correct regardless of how install is invoked; needs no new flag (a user-facing --no-harness flag was previously rejected); honors the kickoff promise that plain goc install is host-agnostic on OpenClaw.
+
+## Resolution
+
+Implemented option 1 in `goc/install.py`:
+
+- New `_is_openclaw_plugin_context()` (true when the engine runs from
+  `openclaw-plugin/`, via `_PACKAGE_DIR.parent.name`).
+- `install()` and `upgrade()`: when no `--agents` is given and the OpenClaw
+  plugin context is detected, the default agent set is `()` (no harness).
+  Auto-detection is suppressed too, so a pre-existing `AGENTS.md` (the briefing
+  home) is not misread as a Codex surface. Explicit `--agents` still overrides.
+- Success/plan messages render the no-harness case ("no agent harness; OpenClaw
+  provides skills via its plugin"); `_print_plan` already showed `agents: none`.
+
+A fresh OpenClaw repo now plans `agents: none — .game-of-cards/ + AGENTS.md +
+pre-commit`, never `CLAUDE.md`. `reproduce.py` was inverted into a green guard
+(exit 0 on the fixed contract; exit 1 if the Claude default returns), matching
+the precedent set by `upgrade-default-adds-claude-to-codex-repos`. Regression
+coverage: `OpenClawPluginContextTest` in `tests/test_install.py`.
+
+The `openclaw-kickoff` skill template gained a one-clause note confirming the
+no-`CLAUDE.md` scaffold is correct, not a missed harness.
+
+> Later evidence: re-porting the skill template surfaced that the
+> `openclaw-plugin/skills/` copies (porter output, not covered by the
+> byte-for-byte sync tripwire) have silently drifted from the templates. That is
+> out of scope here and filed separately as
+> `openclaw-plugin-ported-skills-drift-silently-from-templates`.
