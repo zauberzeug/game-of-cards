@@ -1,7 +1,7 @@
 ---
 title: compute-values-inherits-value-through-done-and-superseded-descendants
 summary: "`compute_values`'s Bellman recursion `value(c) = rank(c) + γ·max(value(d) for d in advances(c))` applies no terminal-status filter to the descendant `d`. An open card that advances an already-`done` (or `superseded`) card still inherits that descendant's full rank, so completed work amplifies a live card's priority even though it can no longer be unblocked. May be intended (chain depth as a curation signal) or a gap (the deck doc says the scheduler walks `advances` across *live* cards). UNVERIFIED — needs a decision + reproduce.py."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T20:56:27Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py demonstrates the current value an open→done chain yields, and (if the decision is "exclude terminal descendants") asserts the corrected value.
   - [ ] MECHANICAL: if excluding, `value_for` skips descendants whose status is terminal (or the caller pre-filters); the docstring is updated to state the live-only rule explicitly.
   - [ ] PROCESS: drop the `unverified` tag once the decision is recorded and (if applicable) the fix lands.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `compute_values` inherits value through `done` / `superseded` descendants
