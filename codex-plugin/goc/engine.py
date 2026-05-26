@@ -165,7 +165,6 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return data, m.group(2)
 
 
-_YAML_RESERVED = {"null", "true", "false", "yes", "no"}
 _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 # Leading indicator chars the vendored parser rejects in value position:
 # `&`/`*` crash the parse (anchors/aliases not supported). `[`/`{`/`"`/`'`
@@ -173,6 +172,24 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 _YAML_INDICATOR_FIRST = frozenset("&*")
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
 _YAML_BLOCK_TOKENS = frozenset({"|", "|-", "|+", ">", ">-", ">+"})
+
+
+def _parser_coerces_scalar(s: str) -> bool:
+    """True when the vendored parser would coerce bare scalar `s` to a
+    non-string (int / None / bool).
+
+    Derived by reference from the parser's own recognizers
+    (`yaml._INT_RE`, `yaml._NULL_SET`, `yaml._TRUE_SET`, `yaml._FALSE_SET`)
+    so the emitter's quote-trigger and the parser's coercion cannot drift.
+    `_DATE_RE` is intentionally excluded: the parser returns date-shaped
+    scalars as the original string, so they round-trip bare unchanged.
+    """
+    return (
+        s in yaml._NULL_SET
+        or s in yaml._TRUE_SET
+        or s in yaml._FALSE_SET
+        or bool(yaml._INT_RE.match(s))
+    )
 
 
 def _yaml_inline(value) -> str:
@@ -192,7 +209,7 @@ def _yaml_inline(value) -> str:
     s = str(value)
     if (
         _YAML_NEEDS_QUOTE.search(s)
-        or s in _YAML_RESERVED
+        or _parser_coerces_scalar(s)
         or s in _YAML_BLOCK_TOKENS
         or (s and s[0] in _YAML_INDICATOR_FIRST)
         or s != s.strip()
@@ -1216,6 +1233,62 @@ def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) ->
     return False
 
 
+def detect_supersedes_cycles(cards: list[Card]) -> list[str]:
+    """Return cycle errors in the supersession (superseded_by) routing graph.
+
+    The forward routing pointer a cold reader follows is `superseded_by`
+    (A.superseded_by=[B] means "A was replaced by B; go to B"). A cycle in
+    that graph makes the forward walk non-terminating. Mirror of
+    `detect_advance_cycles` over the supersession edge set.
+    """
+    by_title = {t.title: t for t in cards}
+    errors: list[str] = []
+    for start in cards:
+        seen: set[str] = set()
+        stack: list[str] = [start.title]
+        while stack:
+            cur = stack.pop()
+            if cur in seen:
+                continue
+            seen.add(cur)
+            t = by_title.get(cur)
+            if t is None:
+                continue
+            superseded_by = t.frontmatter.get("superseded_by") or []
+            for b in superseded_by:
+                if b == start.title and cur != start.title:
+                    errors.append(f"{start.title}: superseded_by: cycle detected through {cur} → {b}")
+                stack.append(b)
+    return errors
+
+
+def _would_create_supersedes_cycle(cards: list[Card], title: str, successor: str) -> bool:
+    """Return True if adding `title.superseded_by += successor` would cycle.
+
+    The proposed edge routes title→successor (title was replaced by
+    successor). A cycle exists when successor can already reach title by
+    following existing `superseded_by` edges — closing that path back to
+    title would form a loop in the forward-routing graph. Analog of
+    `_would_create_advance_cycle` for the supersession edge set.
+    """
+    by_title = {c.title: c for c in cards}
+    seen: set[str] = set()
+    stack: list[str] = [successor]
+    while stack:
+        cur = stack.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        card = by_title.get(cur)
+        if card is None:
+            continue
+        for s in card.frontmatter.get("superseded_by") or []:
+            if s == title:
+                return True
+            stack.append(s)
+    return False
+
+
 @dataclass(frozen=True)
 class BlockerWarning:
     klass: str
@@ -1528,7 +1601,10 @@ def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
         try:
             until_date = date.fromisoformat(_date_part(until))
         except (TypeError, ValueError):
-            return False
+            # Malformed date: treat as absent and fall through to the
+            # reason check — a present-but-unparseable waiting_until must
+            # not silently un-impede a card that carries a waiting_on.
+            until_date = None
     if reason is None and until_date is None:
         return False
     if until_date is None:
@@ -2386,6 +2462,9 @@ def _cmd_validate(args):
     for w in validate_dod_method_tags(cards):
         print(w.message, file=sys.stderr)
     for e in detect_advance_cycles(cards):
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
+    for e in detect_supersedes_cycles(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     half_edge_errors = validate_bidirectional_edges(cards)
@@ -3360,6 +3439,14 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if successor is not None and _would_create_supersedes_cycle(load_all_cards(), title, successor):
+        print(
+            f"ERROR: superseding {title} by {successor} would create a cycle in "
+            f"the supersession graph ({successor} already reaches {title} through "
+            f"superseded_by); a forward walk would never terminate",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
     if new_status in TERMINAL_STATUSES:
@@ -3583,15 +3670,24 @@ def _repair_edge_diff(edge: HalfEdge) -> list[str]:
 
 
 def _repair_edge_cycle_problem(edge: HalfEdge, cards: list[Card]) -> str | None:
-    # Supersession edges can't form a cycle (a superseded card is terminal
-    # and won't re-enter the relationship graph), so the check only applies
-    # to the advances pair.
-    if not edge.is_advance:
+    # Both edge sets can cycle: advances directly, and supersession because
+    # `goc status … superseded` only makes the *holder* terminal, leaving the
+    # successor free to be superseded back (see detect_supersedes_cycles).
+    if edge.is_advance:
+        if _would_create_advance_cycle(cards, edge.child_title, edge.parent_title):
+            return (
+                f"{edge.parent_title} → {edge.child_title} would create a cycle "
+                "in the advances graph"
+            )
         return None
-    if _would_create_advance_cycle(cards, edge.child_title, edge.parent_title):
+    # Supersession half-edge: identify the `superseded_by` direction (holder→successor).
+    if edge.field == "superseded_by":
+        holder, successor = edge.src, edge.ref
+    else:  # supersedes
+        holder, successor = edge.ref, edge.src
+    if _would_create_supersedes_cycle(cards, holder, successor):
         return (
-            f"{edge.parent_title} → {edge.child_title} would create a cycle "
-            "in the advances graph"
+            f"{holder} → {successor} would create a cycle in the supersession graph"
         )
     return None
 
