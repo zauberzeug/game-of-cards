@@ -165,7 +165,6 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return data, m.group(2)
 
 
-_YAML_RESERVED = {"null", "true", "false", "yes", "no"}
 _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 # Leading indicator chars the vendored parser rejects in value position:
 # `&`/`*` crash the parse (anchors/aliases not supported). `[`/`{`/`"`/`'`
@@ -173,6 +172,24 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 _YAML_INDICATOR_FIRST = frozenset("&*")
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
 _YAML_BLOCK_TOKENS = frozenset({"|", "|-", "|+", ">", ">-", ">+"})
+
+
+def _parser_coerces_scalar(s: str) -> bool:
+    """True when the vendored parser would coerce bare scalar `s` to a
+    non-string (int / None / bool).
+
+    Derived by reference from the parser's own recognizers
+    (`yaml._INT_RE`, `yaml._NULL_SET`, `yaml._TRUE_SET`, `yaml._FALSE_SET`)
+    so the emitter's quote-trigger and the parser's coercion cannot drift.
+    `_DATE_RE` is intentionally excluded: the parser returns date-shaped
+    scalars as the original string, so they round-trip bare unchanged.
+    """
+    return (
+        s in yaml._NULL_SET
+        or s in yaml._TRUE_SET
+        or s in yaml._FALSE_SET
+        or bool(yaml._INT_RE.match(s))
+    )
 
 
 def _yaml_inline(value) -> str:
@@ -192,7 +209,7 @@ def _yaml_inline(value) -> str:
     s = str(value)
     if (
         _YAML_NEEDS_QUOTE.search(s)
-        or s in _YAML_RESERVED
+        or _parser_coerces_scalar(s)
         or s in _YAML_BLOCK_TOKENS
         or (s and s[0] in _YAML_INDICATOR_FIRST)
         or s != s.strip()

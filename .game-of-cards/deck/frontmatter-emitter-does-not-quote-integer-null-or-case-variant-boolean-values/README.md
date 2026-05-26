@@ -1,21 +1,21 @@
 ---
 title: frontmatter-emitter-does-not-quote-integer-null-or-case-variant-boolean-values
 summary: "`_yaml_inline` quotes a scalar only when `_YAML_NEEDS_QUOTE` matches or the value is in `_YAML_RESERVED` (the lowercase set `{null,true,false,yes,no}`). But the vendored parser ALSO coerces integer-looking strings (`_INT_RE`), the full null set (`null/Null/NULL/~`), and case-variant booleans (`True/TRUE/Yes/NO/...`). A string field holding any of these is emitted bare and re-parsed as int / None / bool — silent type-loss on the emit->parse round-trip."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-26T20:53:28Z"
-closed_at: null
+closed_at: 2026-05-26T21:02:38Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — integer-looking, null-variant, and case-variant-boolean string values all survive an emit->parse round-trip unchanged (`data == fm`).
-  - [ ] TDD: the quote-trigger predicate quotes a value the parser would coerce to int (`_INT_RE`), to null (full `_NULL_SET`: `null/Null/NULL/~`), or to bool (full `_TRUE_SET`/`_FALSE_SET`, including case variants).
-  - [ ] MECHANICAL: fix lands in `goc/engine.py` (`_yaml_inline` / its quote-trigger predicate) and derives the keyword/int recognition from the parser's own sets rather than the hand-maintained lowercase `_YAML_RESERVED`, so the two truth-sets cannot drift again.
-  - [ ] TDD: no behavior change for values that already round-trip bare (plain prose, already-quoted reserved words) and for genuine int/bool/None Python values (which must still emit bare, not quoted).
-  - [ ] TDD: `uv run goc validate` passes on this repo's deck.
+  - [x] TDD: reproduce.py exits zero — integer-looking, null-variant, and case-variant-boolean string values all survive an emit->parse round-trip unchanged (`data == fm`).
+  - [x] TDD: the quote-trigger predicate quotes a value the parser would coerce to int (`_INT_RE`), to null (full `_NULL_SET`: `null/Null/NULL/~`), or to bool (full `_TRUE_SET`/`_FALSE_SET`, including case variants).
+  - [x] MECHANICAL: fix lands in `goc/engine.py` (`_yaml_inline` / its quote-trigger predicate) and derives the keyword/int recognition from the parser's own sets rather than the hand-maintained lowercase `_YAML_RESERVED`, so the two truth-sets cannot drift again.
+  - [x] TDD: no behavior change for values that already round-trip bare (plain prose, already-quoted reserved words) and for genuine int/bool/None Python values (which must still emit bare, not quoted).
+  - [x] TDD: `uv run goc validate` passes on this repo's deck.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -110,15 +110,19 @@ sees `"42"` vs `"42"` by luck but `"True"` -> `"True"` (Python `str(True)`)
 which is a *different string*. It is latent data corruption in the
 core persistence path.
 
-## Fix
+## Fix (applied)
 
-In `goc/engine.py`, extend the quote-trigger predicate in `_yaml_inline`
-so it quotes any value the parser would coerce. Reuse the parser's own
-recognizers rather than re-listing them: import (or mirror) `_INT_RE`,
-`_NULL_SET`, `_TRUE_SET`, `_FALSE_SET` from `goc/_vendor/yaml_lite.py`
-and quote when `s` matches `_INT_RE` or is in the union of the keyword
-sets. Optionally include `_DATE_RE` for symmetry (today dates happen to
-round-trip as strings, but relying on that is fragile). **Do NOT** quote
-genuine Python `int`/`float`/`bool`/`None` values — those are handled by
-the earlier `isinstance` branches and must stay bare. Do NOT apply the
-fix as part of filing this card.
+`goc/engine.py` deletes the hand-maintained lowercase `_YAML_RESERVED`
+set and replaces the `s in _YAML_RESERVED` quote-trigger clause with a
+new `_parser_coerces_scalar(s)` predicate that references the parser's
+own recognizers by name — `yaml._NULL_SET`, `yaml._TRUE_SET`,
+`yaml._FALSE_SET`, and `yaml._INT_RE` (the module is imported as
+`from goc._vendor import yaml_lite as yaml`). Because the emitter now
+reads the parser's sets directly instead of duplicating them, the two
+truth-sets cannot drift again.
+
+`_DATE_RE` is intentionally excluded: the parser returns date-shaped
+scalars as the original string, so they already round-trip bare and
+quoting them would be a needless output change. Genuine Python
+`int`/`float`/`bool`/`None` values still emit bare — they are handled
+by the earlier `isinstance` branches before the string predicate runs.
