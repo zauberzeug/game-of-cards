@@ -431,6 +431,39 @@ Either:
 DoD detection: the CLI parses the field text for `^- \[[ x]\]` lines.
 Zero matches → free-form prose. Otherwise → checkbox mode.
 
+### DoD method tags
+
+A bare checkbox flattens four epistemically distinct closure contracts
+into one ticked-or-not signal. The contracts differ in *what makes the
+box closeable*, and the difference matters most for experiments: a
+ticked `- [x]` reads as "this assertion holds," but an experiment's
+closure contract is "the experiment ran and the verdict — whichever
+way — is recorded," not "the verdict came out favourable."
+
+Declare each item's method class with a one-token, colon-suffixed
+prefix right after the checkbox:
+
+| Tag | Class | Closure rule | Example |
+|---|---|---|---|
+| `TDD:` | Provable assertion | A deterministic predicate with a closed-form expected value holds. | `- [ ] TDD: reproduce.py exits zero (defect no longer fires)` |
+| `EMPIRICAL:` | Experimental outcome | The experiment ran and the verdict is documented — the direction does **not** gate closure. | `- [ ] EMPIRICAL: paired Wilcoxon across N seeds run; p-value recorded in log.md regardless of sign` |
+| `MECHANICAL:` | Inspection-verifiable edit | A reviewer can confirm the edit landed by reading. | `- [ ] MECHANICAL: schema.yaml gains the new tag entry` |
+| `PROCESS:` | Decision / cross-reference | An agreement, gate flip, or relationship-edge update happened. | `- [ ] PROCESS: decision recorded in ## Decision section` |
+
+**Discipline rule — prefer `TDD:` whenever a closed-form expected
+value exists.** Reach for `EMPIRICAL:` only when the outcome is
+genuinely a measurement with a pre-registered falsifier, not when a
+deterministic check was merely inconvenient to write. Mislabelling a
+provable assertion as empirical lets a real failure hide behind
+"the experiment ran."
+
+`goc validate` emits a warning-only `UNTAGGED_DOD_ITEM` for any
+non-terminal card whose checkbox lines lack one of these prefixes.
+It never fails the build — legacy untagged cards stay valid; the
+warning just nudges new authorship toward legible closure semantics.
+(A fifth `SPIKE:` class for time-boxed exploration is deliberately
+deferred until the four-class baseline has been lived with.)
+
 ## Relationship fields
 
 The kanban tracks two structured relationship axes in frontmatter,

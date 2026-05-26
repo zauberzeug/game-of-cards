@@ -381,6 +381,16 @@ def _load_consuming_repo_tags() -> set[str]:
 DOD_OPEN_BOX = re.compile(r"^[ \t]*- \[ \]", re.MULTILINE)
 DOD_DONE_BOX = re.compile(r"^[ \t]*- \[x\]", re.MULTILINE | re.IGNORECASE)
 
+# Method-class tags declare each DoD item's closure semantic with a one-token
+# colon-suffixed prefix (e.g. "- [ ] TDD: ..."). See Skill(card-schema)
+# "DoD method tags" for the vocabulary. Detection is line-anchored, matching
+# the DOD_*_BOX predicates above.
+DOD_METHOD_TAGS = ("TDD", "EMPIRICAL", "MECHANICAL", "PROCESS")
+DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
+DOD_TAGGED_BOX = re.compile(
+    r"^[ \t]*- \[[ xX]\] (?:" + "|".join(DOD_METHOD_TAGS) + r"): "
+)
+
 
 @dataclass
 class Card:
@@ -472,6 +482,21 @@ def count_dod_boxes(dod_field: str) -> tuple[int, int]:
     if not isinstance(dod_field, str):
         return 0, 0
     return len(DOD_OPEN_BOX.findall(dod_field)), len(DOD_DONE_BOX.findall(dod_field))
+
+
+def untagged_dod_items(dod_field: str) -> list[str]:
+    """Return DoD checkbox lines (stripped) that lack a method-class tag.
+
+    A tagged line carries one of DOD_METHOD_TAGS colon-suffixed right after
+    the checkbox. Freeform (non-checkbox) DoD text yields no items.
+    """
+    if not isinstance(dod_field, str):
+        return []
+    return [
+        line.strip()
+        for line in dod_field.splitlines()
+        if DOD_ANY_BOX.match(line) and not DOD_TAGGED_BOX.match(line)
+    ]
 
 
 def load_card(card_dir: Path) -> Card | None:
@@ -1377,6 +1402,35 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
                 f"{len(cluster)} blocked cards rooted here (gate={root.human_gate})",
             ))
 
+    return warnings
+
+
+def validate_dod_method_tags(cards: list[Card]) -> list[BlockerWarning]:
+    """Surface DoD checkboxes that lack a method-class tag prefix.
+
+    Each DoD item should declare its closure semantic with a one-token
+    colon-suffixed prefix — TDD / EMPIRICAL / MECHANICAL / PROCESS — so a
+    cold reader can tell a must-pass assertion from a must-run-and-record
+    experiment without parsing prose. Warning-only and migration-safe:
+    legacy untagged cards stay valid; the warning only nudges new
+    authorship. Closed cards are exempt (historical record, not live
+    authoring). See Skill(card-schema) "DoD method tags".
+    """
+    warnings: list[BlockerWarning] = []
+    for c in cards:
+        if c.status in TERMINAL_STATUSES:
+            continue
+        untagged = untagged_dod_items(c.frontmatter.get("definition_of_done") or "")
+        if not untagged:
+            continue
+        sample = "; ".join(item[:50] for item in untagged[:3])
+        more = f" (+{len(untagged) - 3} more)" if len(untagged) > 3 else ""
+        warnings.append(BlockerWarning(
+            "UNTAGGED_DOD_ITEM",
+            c.title,
+            f"{len(untagged)} DoD item(s) lack a method tag "
+            f"(TDD:/EMPIRICAL:/MECHANICAL:/PROCESS:): [{sample}]{more}",
+        ))
     return warnings
 
 
@@ -2302,6 +2356,16 @@ def _cmd_validate(args):
         else:
             for e in per:
                 print(f"ERROR: {e}", file=sys.stderr)
+    # Advisory warnings print first; the exit-gating errors and their
+    # remediation hints come last so they stay the most prominent output.
+    for w in validate_blocker_coherence(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_epic_edge_direction(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_waiting_overlay(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_dod_method_tags(cards):
+        print(w.message, file=sys.stderr)
     for e in detect_advance_cycles(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
@@ -2314,12 +2378,6 @@ def _cmd_validate(args):
     for e in validate_supersedes_targets(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
-    for w in validate_blocker_coherence(cards):
-        print(w.message, file=sys.stderr)
-    for w in validate_epic_edge_direction(cards):
-        print(w.message, file=sys.stderr)
-    for w in validate_waiting_overlay(cards):
-        print(w.message, file=sys.stderr)
     if errors:
         sys.exit(1)
 

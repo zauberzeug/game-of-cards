@@ -70,3 +70,20 @@ Leave the DoD as-is. Document the empirical-vs-assertion distinction informally 
 ## 2026-05-26T12:10:35Z: decision recorded
 
 Option B — four method classes (TDD / EMPIRICAL / MECHANICAL / PROCESS) with a colon-suffix prefix on each DoD line (e.g. TDD: ...), plus a line-anchored validator emitting a warning-only UNTAGGED_DOD_ITEM. The SPIKE fifth class is deferred to a follow-up card filed once the four-class shape has been lived with for about 10 new cards. — The colon-suffix avoids the double-bracket visual noise next to the checkbox without losing greppability, and the four-class baseline is a strictly-smaller-and-safer adoption surface than the five-class variant. Line-anchored validator scope matches the existing DoD-detection predicate.. Gate decision → none.
+
+## 2026-05-26T00:00:00Z — Closure
+
+- **What changed**: `goc/engine.py` — added `DOD_METHOD_TAGS` + `DOD_TAGGED_BOX`/`DOD_ANY_BOX` regexes, `untagged_dod_items()` helper, and `validate_dod_method_tags()` emitting warning-only `UNTAGGED_DOD_ITEM` for non-terminal cards whose DoD checkboxes lack a `TDD:`/`EMPIRICAL:`/`MECHANICAL:`/`PROCESS:` prefix. Advisory warnings reordered before the structural-error block so the repair-edges hint stays last. `card-schema` SKILL.md gained a `### DoD method tags` subsection; `create-card` Step 5 example DoD demonstrates the convention. Plugin mirrors + OpenClaw port re-synced.
+- **Verification**: `goc validate` exits 0 (warnings are advisory); 152/152 unittest suite passes including 3 new UNTAGGED_DOD_ITEM tests; sync-plugin-assets `--check` and openclaw port `--check` both clean.
+- **Audit**: PASS — no rubric configured; mechanical fix (warning-only validator + doc subsection, no breaking change).
+- **Project impact**: n/a
+- **Tests**: 152 passed / 0 failed / 0 xfailed
+- **Bundled with**: n/a
+
+## Closure verification (2026-05-26T20:11:10Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-05-26 — Closure' present

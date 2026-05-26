@@ -221,13 +221,19 @@ proposal, DoD:
 - For `--gate decision` / `--gate session` cards, consider a sibling
   `*.html` matrix, `*.svg` diagram, or interactive form (see Step 7).
 - **Refine the DoD** — replace the placeholder with real criteria.
-  Each box is a contract the fix must satisfy:
+  Each box is a contract the fix must satisfy. Prefix each item with
+  its method class (`TDD:` / `EMPIRICAL:` / `MECHANICAL:` / `PROCESS:`)
+  so the closure semantic is legible — see `Skill(card-schema)`
+  "DoD method tags". Prefer `TDD:` whenever a closed-form expected
+  value exists:
 
   ```yaml
   definition_of_done: |
-    - [ ] reproduce.py exits zero (defect no longer fires)
-    - [ ] <specific assertion or metric the fix must satisfy>
-    - [ ] <if doc-quality: doc claim aligns with cited literature>
+    - [ ] TDD: reproduce.py exits zero (defect no longer fires)
+    - [ ] TDD: <specific assertion or metric the fix must satisfy>
+    - [ ] EMPIRICAL: <if a sweep/A-B: experiment run, verdict recorded in log.md either way>
+    - [ ] MECHANICAL: <if a doc/config edit: the edit landed and reads correctly>
+    - [ ] PROCESS: <if a decision/cross-ref: agreement recorded, parent advanced_by updated>
   ```
 
 Each round of work on the card updates the README dashboard *and*

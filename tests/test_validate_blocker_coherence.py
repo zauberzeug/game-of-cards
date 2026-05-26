@@ -34,6 +34,7 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
         human_gate: str = "none",
         advanced_by: list[str] | None = None,
         advances: list[str] | None = None,
+        dod: str | None = None,
     ) -> None:
         card_dir = cwd / ".game-of-cards" / "deck" / title
         card_dir.mkdir(parents=True)
@@ -45,6 +46,7 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
                 return "[]"
             return "\n" + "\n".join(f"  - {item}" for item in items)
 
+        dod_block = dod if dod is not None else f"  - [{done}] PROCESS: test card"
         (card_dir / "README.md").write_text(
             "---\n"
             f"title: {title}\n"
@@ -59,7 +61,7 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
             f"advanced_by: {fmt(advanced_by)}\n"
             "tags: [bug]\n"
             "definition_of_done: |\n"
-            f"  - [{done}] test card\n"
+            f"{dod_block}\n"
             "---\n\n"
             f"# {title}\n"
         )
@@ -194,6 +196,41 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
 
             self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
             self.assertNotIn("WARN", result.stderr)
+
+    def test_untagged_dod_item_warning_fires_for_open_card(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "untagged-card", status="open", dod="  - [ ] do the thing")
+
+            result = self.run_goc(cwd, "validate", "--quiet")
+
+            self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+            self.assertIn("WARN UNTAGGED_DOD_ITEM untagged-card:", result.stderr)
+
+    def test_tagged_dod_item_does_not_fire_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(
+                cwd,
+                "tagged-card",
+                status="open",
+                dod="  - [ ] TDD: assertion holds\n  - [ ] MECHANICAL: edit lands",
+            )
+
+            result = self.run_goc(cwd, "validate", "--quiet")
+
+            self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+            self.assertNotIn("UNTAGGED_DOD_ITEM", result.stderr)
+
+    def test_untagged_dod_item_suppressed_for_closed_card(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "done-untagged", status="done", dod="  - [x] do the thing")
+
+            result = self.run_goc(cwd, "validate", "--quiet")
+
+            self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+            self.assertNotIn("UNTAGGED_DOD_ITEM", result.stderr)
 
 
 if __name__ == "__main__":
