@@ -1,7 +1,7 @@
 ---
 title: add-waiting-overlay-with-reason-and-until-date
 summary: "Add a stored impediment overlay for exogenous waits the dependency graph can't derive: `waiting_on` ∈ {external, resource, deferred} plus an optional `waiting_until` ISO date. A future date is a read-time guard (card hidden from queues); an elapsed date is surfaced by validate/standup. A card may be active AND impeded."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-24T11:22:11Z"
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] A CLI affordance sets and clears the overlay (e.g. `goc wait <title> --reason external --until 2026-06-15` and a clear form); it composes with `status` (a card may be `active` and carry `waiting_on`).
   - [ ] card-schema skill documents the overlay and the three-axis model; advance-card skill documents set/clear.
   - [ ] reproduce.py: a card with a future `waiting_until` is hidden from `next-card`; advancing the clock (or backdating) makes it appear.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Add a typed impediment overlay (`waiting_on` + optional `waiting_until`)
