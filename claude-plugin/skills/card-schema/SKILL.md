@@ -283,6 +283,83 @@ deciding, and either:
 - Setting the gate to `session` if the framing itself needs to be
   revisited interactively.
 
+## Three-axis "stuck" model: status / dependency-readiness / impediment overlay
+
+`status` is one of three axes a reader uses to decide whether a card
+is workable right now. The other two are *derived* from the deck
+state, not stored as a status, so cards self-clear instead of
+stranding:
+
+| Axis | What it answers | Where it lives | How it clears |
+|---|---|---|---|
+| **Progress status** | what is the card doing right now? | stored `status` field | author flips it (`goc status`, `goc done`) |
+| **Dependency readiness** | does a prereq card still gate me? | DERIVED from `advanced_by` predecessor status | self-clears the moment the last prereq closes |
+| **Impediment overlay** | is something exogenous stalling me? | stored `waiting_on` + optional `waiting_until` | author runs `goc wait <title> --clear`, or `waiting_until` elapses |
+
+The three compose. A card may be `status: active` AND carry
+`waiting_on: external` AND have an unresolved `advanced_by` prereq —
+each axis answers a different question and they do not collapse into
+one another.
+
+The **ready-to-pull predicate** that `Skill(next-card)` and
+`Skill(pull-card)` use is the AND of all three:
+
+```
+ready ⇔ status == open
+      ∧ human_gate == none
+      ∧ no non-terminal advanced_by prereq         (derived)
+      ∧ waiting_on unset
+      ∧ (waiting_until absent or in the past)
+```
+
+(`human_gate` is a fourth axis, but its role is different — it's the
+Andon cord telling agents NOT to autonomously claim. See the
+"human_gate scale" section above.)
+
+### Impediment overlay (`waiting_on`, `waiting_until`)
+
+Stored, orthogonal to `status`. Three kinds of exogenous wait the
+dependency graph cannot derive:
+
+| `waiting_on` | Meaning |
+|---|---|
+| `external` | vendor, client, hardware delivery, a third party |
+| `resource` | a specific person or skill currently unavailable |
+| `deferred` | deliberately postponed (GTD "tickler" / calendar defer) |
+
+`waiting_until` is an optional ISO date the wait is expected to clear
+(same shape as `created` / `closed_at` — `YYYY-MM-DD` or
+`YYYY-MM-DDTHH:MM:SSZ`). A bare `waiting_until` (no `waiting_on`)
+implies `deferred`.
+
+**Read-time behavior** (no daemon — evaluated when a command runs):
+
+- A future `waiting_until` (or a `waiting_on` reason without a date)
+  hides the card from `--ready` / `next-card` / `pull-card`. When the
+  date passes the card re-enters the queue with no manual action.
+- An elapsed `waiting_until` is surfaced by `goc validate` as
+  `WAITING_OVERDUE` — the Kanban SLE escalation signal that the wait
+  overran its expected return and should be re-triaged or cleared.
+
+**CLI** (see `Skill(advance-card)` "Step 6" for full examples):
+
+```bash
+goc wait <title> --reason external --until 2026-06-15
+goc wait <title> --until 2026-06-15           # bare date implies deferred
+goc wait <title> --reason resource             # open-ended wait
+goc wait <title> --clear
+```
+
+**YAML format** — both fields are optional flat scalars. Absent fields
+do not appear in frontmatter; the CLI removes them on `--clear`.
+Example:
+
+```yaml
+status: active
+waiting_on: external
+waiting_until: 2026-06-15
+```
+
 ## Definition of Done (DoD) — three implicit layers
 
 Scrum's **Definition of Done** as a machine-checkable closure
@@ -390,6 +467,16 @@ honest resolutions when the gate fires are:
    maintenance, not a bypass. Prefer this to `goc attest --skip
    advanced-by-closed`; the skip leaves a dishonest edge in the deck.
 
+The closure half of this argument was decided in
+[`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`](../../../.game-of-cards/deck/advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/)
+(Option E, 2026-05-26): "X advances Y" ⇔ Y's value chain includes X
+⇔ Y is not done while X is open, so a true edge cannot coexist with a
+closeable Y. A reader who hits an `advanced-by-closed` FAIL should
+land there for the value-chain reasoning and the `goc unadvance`
+retraction path — not reach for `--skip`. The loose/strict distinction
+the report flagged governs *start ordering* (delegated to derived
+readiness), not closure.
+
 ### Closure vs readiness — the asymmetry
 
 The loose/strict distinction (~80% loose value contribution, ~20%
@@ -435,6 +522,63 @@ contributions is just the epic having `advanced_by: [story-1,
 story-2, ...]`. A standalone derivative test that doesn't contribute
 to any other closure has no value-flow edges — its provenance lives
 in body / `log.md`, not frontmatter.
+
+### Coordinating cards — aggregation epic vs governing cluster
+
+Not every coordinating card takes an `advances` edge. There are
+**three** shapes, and only one of them uses edges:
+
+1. **Aggregation epic** — its value chain *is* its children; it
+   closes *when they close*. Canonical encoding:
+   `child.advances: [epic]` (so `epic.advanced_by: [children]`).
+   The child contributes to the epic's value; the epic stays open
+   until each child closes. The `advanced-by-closed` check on the
+   epic correctly holds it shut until the work lands.
+2. **Governing cluster** — a decision or standard-setting card that
+   closes *when the decision is made*, independent of the work it
+   standardizes. Instances may exist before *or* after the standard
+   is set. Canonical encoding: a **shared tag**, no `advances` edge
+   in either direction. The `tags` field's per-epic conventional tag
+   is exactly this tool (`epic` is "multiple cards block it from
+   closing **OR** carry the same epic-grouping tag" — that *OR* is
+   load-bearing).
+3. **Backwards aggregation** — `epic.advances: [children]` (so
+   `child.advanced_by: [epic]`). **This is the bug.** Two silent
+   costs: (a) the value law is defeated — children no longer inherit
+   the epic's value, so the GRPW sort can't see the chain; (b) every
+   child trips a spurious `advanced-by-closed` FAIL at attest time
+   because it reads as gated on a parent that is meant to outlive
+   it. An autonomous `pull-card` / `/loop` worker halts on the whole
+   cluster.
+
+**Why an edge can't model a governing cluster.** An `advances` edge
+encodes two hard, directional commitments at once: value flow (the
+source lends its priority to the target via GRPW) AND closure gating
+(`advanced-by-closed`: the target can't close until the source is
+done). For a soft, two-way govern relationship *both* commitments
+are wrong, so *either* edge direction mismodels it:
+
+| encoding | what `advanced-by-closed` does | verdict |
+|---|---|---|
+| `decision.advances: [instances]` (=`instance.advanced_by: [decision]`) | blocks each **instance** behind the open decision | deadlock — instances can't close |
+| `instance.advances: [decision]` (=`decision.advanced_by: [instances]`) | blocks the **decision** behind all instances | contradicts the decision's DoD (closes when *decided*) |
+| **shared tag**, no edge | nothing — pure grouping | **correct**: govern without blocking |
+
+**The tell:** if the coordinating card is itself a *decision*
+(`human_gate: decision`) or otherwise closes on its own deliverable
+rather than on its cluster's completion, it is a governing cluster
+→ use a tag. Reach for an `advances` edge only when the
+coordinator's closure genuinely waits on the work.
+
+**Lint.** `goc validate` emits an advisory hint
+(`BACKWARDS_EPIC_EDGE`, warning — does not fail the build) when a
+card carries ≥ 2 `advances` entries whose contribution is
+predominantly *lower* than the card's own. The hint names both
+candidate fixes (flip vs. convert-to-tag) and lets the author pick;
+it does not blindly suggest flipping, because for a governing
+cluster the flip is also wrong. The check uses the contribution
+gradient (not a bare `advances ≥ N` count), so legitimate hubs that
+advance many higher-or-equal contribution targets pass clean.
 
 ### Replacement axis (supersedes graph)
 

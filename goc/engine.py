@@ -313,6 +313,7 @@ class Schema:
     contribution_values: list[str]
     human_gate_values: list[str]
     human_gate_default: str
+    waiting_on_values: list[str]
     canonical_tags: set[str]
 
 
@@ -333,6 +334,7 @@ def load_schema() -> Schema:
             contribution_values=fm["contribution_values"],
             human_gate_values=fm["human_gate_values"],
             human_gate_default=fm["human_gate_default"],
+            waiting_on_values=fm["waiting_on_values"],
             canonical_tags=canonical_tags,
         )
     except KeyError as e:
@@ -435,6 +437,18 @@ class Card:
         if isinstance(v, dict):
             return v
         return None
+
+    @property
+    def waiting_on(self) -> str | None:
+        """Stored impediment reason: external, resource, deferred — or None."""
+        v = self.frontmatter.get("waiting_on")
+        return v if isinstance(v, str) and v else None
+
+    @property
+    def waiting_until(self):
+        """Optional ISO date the wait is expected to clear. May be set without
+        `waiting_on` — a bare `waiting_until` implies `deferred`."""
+        return self.frontmatter.get("waiting_until")
 
 
 def _worker_who(raw) -> str:
@@ -1023,6 +1037,17 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         else:
             errors.append(f"{t.title}: worker: must be a string or mapping with 'who'")
 
+    if "waiting_on" in fm and fm["waiting_on"] is not None:
+        if fm["waiting_on"] not in schema.waiting_on_values:
+            errors.append(
+                f"{t.title}: waiting_on: {fm['waiting_on']!r} not in {schema.waiting_on_values}"
+            )
+    if "waiting_until" in fm and fm["waiting_until"] is not None:
+        if not _is_iso_date(fm["waiting_until"]):
+            errors.append(
+                f"{t.title}: waiting_until: {fm['waiting_until']!r} not ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ"
+            )
+
     for field in LIST_REL_FIELDS:
         v = fm.get(field) or []
         if v and not isinstance(v, list):
@@ -1157,7 +1182,110 @@ class BlockerWarning:
         return f"WARN {self.klass} {self.card}: {self.detail}"
 
 
+def validate_waiting_overlay(cards: list[Card], *, today: date | None = None) -> list[BlockerWarning]:
+    """Surface elapsed-wait impediments — the Kanban SLE escalation signal.
+
+    A non-terminal card whose `waiting_until` is in the past has overrun
+    its expected return; the wait is no longer plausibly self-clearing
+    and should be re-triaged. Closed cards are exempt (the historical
+    date is a record, not an SLE).
+    """
+    today = today or date.today()
+    warnings: list[BlockerWarning] = []
+    for c in cards:
+        if c.status in TERMINAL_STATUSES:
+            continue
+        until = c.waiting_until
+        if until is None:
+            continue
+        try:
+            until_date = date.fromisoformat(_date_part(until))
+        except (TypeError, ValueError):
+            continue
+        if until_date >= today:
+            continue
+        reason = c.waiting_on or "deferred"
+        warnings.append(BlockerWarning(
+            "WAITING_OVERDUE",
+            c.title,
+            f"waiting_on={reason} waiting_until={until_date.isoformat()} "
+            f"elapsed {(today - until_date).days}d ago — re-triage or clear",
+        ))
+    return warnings
+
+
 CASCADE_ROOT_THRESHOLD = 3
+BACKWARDS_EPIC_MIN_TARGETS = 2
+
+
+def validate_epic_edge_direction(cards: list[Card]) -> list[BlockerWarning]:
+    """Advisory hint for the backwards-aggregation-epic signature.
+
+    Canonical aggregation: a child has `child.advances: [epic]`, so the
+    epic aggregates upward via `advanced_by`. The intuitive-but-wrong
+    shape is `epic.advances: [children]`, which (1) defeats the value
+    law (children don't inherit the epic's value) and (2) trips a
+    spurious `advanced-by-closed` FAIL on every child at attest time.
+    See `Skill(card-schema)` "Coordinating cards — aggregation epic vs
+    governing cluster" for the three-way fork and the fix options.
+
+    Heuristic: a non-terminal card with at least
+    BACKWARDS_EPIC_MIN_TARGETS resolved `advances` targets where the
+    *majority* are strictly lower contribution (higher
+    CONTRIBUTION_ORDER number) than the card itself. Uses the
+    contribution gradient — not a bare `advances ≥ N` count — so
+    legitimate hubs that advance equal-or-higher contribution targets
+    pass clean.
+
+    Fix suggestion is shape-sensitive:
+
+    - `human_gate == "decision"` (governing cluster — closes on its own
+      deliverable) → drop the edge, group with a shared tag.
+    - otherwise (aggregation epic — closes when its children close) →
+      flip to `child.advances:[card]`.
+
+    Advisory only: the message is emitted but does not contribute to
+    `validate`'s exit code.
+    """
+    by_title = {c.title: c for c in cards}
+    warnings: list[BlockerWarning] = []
+    for c in cards:
+        if c.status in TERMINAL_STATUSES:
+            continue
+        targets = c.frontmatter.get("advances") or []
+        resolved = [by_title[t] for t in targets if t in by_title]
+        if len(resolved) < BACKWARDS_EPIC_MIN_TARGETS:
+            continue
+        own_rank = CONTRIBUTION_ORDER.get(c.contribution)
+        if own_rank is None:
+            continue
+        lower = [
+            t for t in resolved
+            if CONTRIBUTION_ORDER.get(t.contribution, own_rank) > own_rank
+        ]
+        if len(lower) * 2 <= len(resolved):
+            continue
+        sample = ", ".join(f"{t.title}({t.contribution})" for t in lower[:3])
+        if c.human_gate == "decision":
+            fix = (
+                "card looks like a governing cluster (human_gate: decision) — "
+                "drop the edge and group via a shared tag"
+            )
+        else:
+            fix = (
+                "if closure waits on the work, flip to `child.advances:[card]` "
+                "(`goc unadvance <card> --by <child>` then `goc advance <child> "
+                "--by <card>`); if card closes on its own deliverable, drop the "
+                "edge and use a shared tag"
+            )
+        warnings.append(BlockerWarning(
+            "BACKWARDS_EPIC_EDGE",
+            c.title,
+            f"contribution={c.contribution} but advances targets are "
+            f"predominantly lower: [{sample}] — likely backwards aggregation "
+            f"epic. Fix: {fix}. See Skill(card-schema) 'Coordinating cards'.",
+        ))
+    return warnings
 
 
 def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
@@ -1284,8 +1412,8 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
     Ready iff `status == open` AND `human_gate == none` AND no
-    non-terminal `advanced_by` prereq. Future sibling cards extend this
-    with the stored impediment overlay (`waiting_on` + `waiting_until`).
+    non-terminal `advanced_by` prereq AND no active impediment overlay
+    (`waiting_on` unset, `waiting_until` absent or past).
     """
     if card.status != "open":
         return False
@@ -1293,7 +1421,42 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
         return False
     if dependency_blocked(card, by_title):
         return False
+    if waiting_impedes(card):
+        return False
     return True
+
+
+def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
+    """True iff the card carries an active impediment overlay.
+
+    Two stored signals contribute:
+
+    - A `waiting_on` reason without an elapsed `waiting_until` means the
+      block is ongoing (no expected return date, or the date is in the
+      future) and the card is hidden from queues.
+    - A bare `waiting_until` in the future implies a `deferred` wait and
+      hides the card until that date passes.
+
+    When `waiting_until` is in the past (elapsed), the card RE-ENTERS the
+    queue with no manual action — the elapsed-wait is then surfaced
+    separately by `validate_waiting_overlay` as an SLE escalation signal.
+    """
+    today = today or date.today()
+    reason = card.waiting_on
+    until = card.waiting_until
+    until_date: date | None = None
+    if until is not None:
+        try:
+            until_date = date.fromisoformat(_date_part(until))
+        except (TypeError, ValueError):
+            return False
+    if reason is None and until_date is None:
+        return False
+    if until_date is None:
+        # Reason set, no date — open-ended wait; hide from queue.
+        return True
+    # Future date hides; elapsed date resurfaces the card.
+    return until_date > today
 
 # GRPW sort: per-card contribution composes through the `advances` graph
 # into a `value` score with Bellman discount γ per hop. See
@@ -1887,6 +2050,25 @@ def _build_parser() -> argparse.ArgumentParser:
     p_new.add_argument("--allow-jargon", action="store_true",
                        help="Bypass the title-antipattern check (rare; used by migration tools).")
 
+    # wait
+    p_wait = subparsers.add_parser(
+        "wait",
+        help="Set or clear the impediment overlay (waiting_on + waiting_until).",
+    )
+    p_wait.add_argument("title")
+    p_wait.add_argument("--reason", choices=["external", "resource", "deferred"], default=None,
+                        help="Exogenous wait reason. Composes with --until.")
+    p_wait.add_argument("--until", default=None,
+                        help="ISO date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ) the wait is expected to clear. "
+                        "Future date hides the card from next-card/pull-card; elapsed date is surfaced "
+                        "as an SLE escalation by goc validate.")
+    p_wait.add_argument("--clear", action="store_true",
+                        help="Drop both waiting_on and waiting_until.")
+    p_wait.add_argument("--commit", action="store_true",
+                        help="Force auto-commit for this overlay change.")
+    p_wait.add_argument("--no-commit", action="store_true",
+                        help="Skip auto-commit for this overlay change.")
+
     # advance
     p_advance = subparsers.add_parser("advance", help="Add bidirectional value-flow edge.")
     p_advance.add_argument("title")
@@ -2000,6 +2182,8 @@ def cli(argv=None):
         _cmd_status(args)
     elif args.command == "new":
         _cmd_new(args)
+    elif args.command == "wait":
+        _cmd_wait(args)
     elif args.command == "advance":
         _cmd_advance(args)
     elif args.command == "unadvance":
@@ -2115,6 +2299,10 @@ def _cmd_validate(args):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for w in validate_blocker_coherence(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_epic_edge_direction(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_waiting_overlay(cards):
         print(w.message, file=sys.stderr)
     if errors:
         sys.exit(1)
@@ -3375,6 +3563,79 @@ def _cmd_repair_edges(args):
     _print_structural_edge_problems(structural)
     if structural:
         sys.exit(1)
+
+
+def _cmd_wait(args):
+    """Set or clear the impediment overlay (`waiting_on` + `waiting_until`).
+
+    The overlay is orthogonal to `status` — a card may be active AND
+    impeded. `--clear` drops both fields; otherwise `--reason` and/or
+    `--until` set the overlay.
+    """
+    title = args.title
+    card_dir = DECK_DIR / title
+    t = load_card_or_exit(card_dir, title)
+    schema = load_schema()
+    text = (card_dir / "README.md").read_text()
+    fm, body = parse_frontmatter(text)
+    prior_reason = fm.get("waiting_on")
+    prior_until = fm.get("waiting_until")
+    if args.clear:
+        if prior_reason is None and prior_until is None:
+            print(f"{title}: no waiting overlay to clear; nothing to do")
+            return
+        fm.pop("waiting_on", None)
+        fm.pop("waiting_until", None)
+        new_reason: str | None = None
+        new_until: str | None = None
+    else:
+        if not args.reason and not args.until:
+            print(
+                "ERROR: pass --reason and/or --until (or --clear to drop the overlay)",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        new_reason = args.reason
+        new_until = args.until
+        if new_reason is not None and new_reason not in schema.waiting_on_values:
+            print(
+                f"ERROR: --reason: {new_reason!r} not in {schema.waiting_on_values}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if new_until is not None and not _is_iso_date(new_until):
+            print(
+                f"ERROR: --until: {new_until!r} not ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if new_reason is not None:
+            fm["waiting_on"] = new_reason
+        if new_until is not None:
+            fm["waiting_until"] = new_until
+    (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
+    effective_reason = fm.get("waiting_on") or ("deferred" if fm.get("waiting_until") else None)
+    if args.clear:
+        print(
+            f"{title}: waiting overlay cleared "
+            f"(was waiting_on={prior_reason!r}, waiting_until={prior_until!r})"
+        )
+    else:
+        print(
+            f"{title}: waiting_on={fm.get('waiting_on')!r} "
+            f"waiting_until={fm.get('waiting_until')!r}"
+            + (f" (no reason set; implied {effective_reason!r})"
+               if fm.get("waiting_on") is None and effective_reason else "")
+        )
+    commit_policy = _commit_override(args.commit, args.no_commit)
+    if auto_commit_enabled(commit_policy):
+        msg = (
+            f"deck: {title} clear waiting overlay"
+            if args.clear
+            else f"deck: {title} waiting_on {fm.get('waiting_on') or 'deferred'}"
+        )
+        if _git_auto_commit([card_dir], msg):
+            print("  committed")
 
 
 def _cmd_advance(args):

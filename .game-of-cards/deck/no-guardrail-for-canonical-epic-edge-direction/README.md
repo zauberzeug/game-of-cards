@@ -24,18 +24,18 @@ summary: |-
   suggests the *right* fix (flip vs. convert-to-tag). Do NOT change the
   `advanced-by-closed` check — it is correct under the documented
   convention.
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T04:41:02Z"
-closed_at: null
+closed_at: 2026-05-26T06:01:47Z
 human_gate: none
 advances:
   - blocked-status-conflates-dependency-external-wait-and-deferral
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |
-  - [ ] `create-card` and `card-schema` skills state, at the point an
+  - [x] `create-card` and `card-schema` skills state, at the point an
         edge is authored, the three-way fork for a coordinating card:
         (a) **aggregation epic** — its value chain *is* its children;
         closes when they close → `child.advances: [epic]`;
@@ -46,7 +46,7 @@ definition_of_done: |
         Include the consequences: backwards defeats the value law + trips
         a spurious attest FAIL; a wrong edge on a govern-cluster
         deadlocks one way or contradicts the decision's DoD the other.
-  - [ ] `goc validate` emits a hint (warning, not error) for the
+  - [x] `goc validate` emits a hint (warning, not error) for the
         backwards/over-edged signature: a coordinating card whose
         `advances` targets are predominantly *lower* contribution than
         itself. Use the contribution gradient, NOT a bare `advances ≥ N`
@@ -56,20 +56,21 @@ definition_of_done: |
         work → flip to `child.advances:[card]`; if the card closes
         independently (esp. `human_gate: decision` / a standard-setting
         card) → drop the edge and group with a shared tag.
-  - [ ] The hint does not fire on (a) this repo's own correctly-modeled
+  - [x] The hint does not fire on (a) this repo's own correctly-modeled
         aggregation epic (`blocked-status-conflates-…`), nor (b) a
         legitimate hub advancing many higher-or-equal contribution
         targets.
-  - [ ] `advanced-by-closed` (engine `_run_derived_check`) is left
+  - [x] `advanced-by-closed` (engine `_run_derived_check`) is left
         unchanged — verified by reading the check.
-  - [ ] reproduce.py (or fixtures) covers all three shapes: backwards
+  - [x] reproduce.py (or fixtures) covers all three shapes: backwards
         aggregation (lint + attest FAIL) → flip fixes it; govern-cluster
         edge (deadlock one way / DoD-contradiction the other) → tag fixes
         it; canonical aggregation passes clean.
-  - [ ] Cross-reference the now-decided
+  - [x] Cross-reference the now-decided
         `advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`
         (Option E) so a reader who hits the attest FAIL is routed to the
         value-chain reasoning and the `goc unadvance` retraction path.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Nothing steers epic authors to the canonical edge direction
