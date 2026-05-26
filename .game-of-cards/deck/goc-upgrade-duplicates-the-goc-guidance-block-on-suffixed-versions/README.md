@@ -1,7 +1,7 @@
 ---
 title: goc-upgrade-duplicates-the-goc-guidance-block-on-suffixed-versions
 summary: "`GOC_BEGIN_RE = re.compile(r\"<!-- BEGIN GOC v[\\d.]+ -->\")` matches only digits and dots, but `__version__` is a PEP 440 string that can carry letters (`.post1`, `.dev101`, `rc1`, `+local`). When the on-disk marker is suffixed, `_append_marker_block` can't find it and APPENDS a second GoC block instead of replacing in place — breaking the marker-bounded-merge idempotency contract. Hits every non-release build (editable/`uv run` source installs, pre-releases), i.e. the dogfood path; tagged releases report bare X.Y.Z and are unaffected."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T22:38:59Z"
@@ -24,6 +24,7 @@ definition_of_done: |
         --check` passes.
   - [ ] PROCESS: `uv run goc validate` is clean and the existing
         version-surface tests still pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc upgrade` duplicates the GoC guidance block on suffixed versions
