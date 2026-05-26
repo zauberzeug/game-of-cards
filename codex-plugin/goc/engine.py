@@ -295,9 +295,13 @@ def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
         raise ValueError("no frontmatter found")
     fm_text = m.group(1)
     body = m.group(2)
-    # Match the field header and any subsequent indented block lines.
+    # Match the field header and any subsequent block lines: indented
+    # continuation lines, plus internal blank lines that belong to the block
+    # (a bare `\n` is only consumed when the next line is indented or itself
+    # blank, so the match stops at the next top-level `key:` line instead of
+    # truncating at the first internal blank and orphaning the tail).
     pattern = re.compile(
-        rf"^{re.escape(field_name)}:[ \t]*[^\n]*(?:\n[ \t]+[^\n]*)*",
+        rf"^{re.escape(field_name)}:[ \t]*[^\n]*(?:\n[ \t]+[^\n]*|\n(?=[ \t]|\n))*",
         re.MULTILINE,
     )
     if not pattern.search(fm_text):
