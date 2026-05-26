@@ -15,7 +15,7 @@ summary: |-
   Fix: make the error messages name the fix and stop mis-citing
   SCHEMA.md; add a pointer in create-card. Discoverability only — no
   `goc tag` helper (deferred).
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T06:05:09Z"
@@ -40,6 +40,7 @@ definition_of_done: |
   - [ ] The error wording is consistent across all three sites (same
         remedy sentence), so a reader sees the same fix wherever they
         hit the wall.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The "unknown tag" error names the rule but not the fix
