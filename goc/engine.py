@@ -1573,8 +1573,15 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
     rendering as the WHY column. For a leaf with no descendants,
     `top_path` is `["self"]`.
 
-    Cycles fall back to per-card rank (defense; validator should reject
-    cycles via `detect_advance_cycles` but cheap to handle here too).
+    Cycles cannot occur in a deck that passes `goc validate`:
+    `detect_advance_cycles` is a gating ERROR and `goc advance` refuses
+    cycle-creating edges. The in-progress guard below
+    (`if title in in_progress`) is therefore unreachable defensive code
+    on any valid deck; it returns the re-entered node's bare rank purely
+    to break the recursion. It does NOT compute an order-independent
+    per-card-rank fallback — on a (validate-failing) cyclic deck the
+    cycle members get values that depend on `cards`/`advances` list
+    order — so it must not be relied on as one.
     Unknown advances targets are skipped for the priority math AND
     surfaced once per (card, target) pair as a stderr warning — silent
     skipping let edge rot degrade the value walk unnoticed. Run

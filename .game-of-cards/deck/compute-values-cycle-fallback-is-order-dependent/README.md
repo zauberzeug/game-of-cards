@@ -1,23 +1,42 @@
 ---
 title: compute-values-cycle-fallback-is-order-dependent
 summary: "UNVERIFIED. `compute_values`' cycle guard returns `(own, [\"cycle\"])` for a re-entered node WITHOUT caching it, so the first-traversed cycle member absorbs the chained value while the other gets bare rank — making priority order-dependent on the `cards`/`advances` list order. But the docstring says cycles should fall back to per-card rank, AND `detect_advance_cycles` is a validate-gating ERROR (plus `goc advance` refuses cycle-creating edges), so a cycle cannot exist in any deck that passes `goc validate`. Likely unreachable defensive code with a docstring that overclaims; parked pending a reachability decision."
-status: active
+status: disproved
 stage: null
 contribution: low
 created: "2026-05-26T20:20:14Z"
-closed_at: null
+closed_at: 2026-05-26T20:33:33Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, unverified, api-contract]
 definition_of_done: |
-  - [ ] EMPIRICAL: decide reachability — confirm whether a cycle can ever reach `compute_values` in a deck that passes `goc validate`. Record the verdict in log.md either way.
-  - [ ] If reachable: TDD: reproduce.py exits zero — cycle members get order-independent values (true per-card-rank fallback, matching the docstring).
-  - [ ] If unreachable: MECHANICAL: correct the docstring (lines 1564-1565) to stop claiming a per-card-rank fallback the code doesn't actually deliver, and disprove/close.
+  - [x] EMPIRICAL: decide reachability — confirm whether a cycle can ever reach `compute_values` in a deck that passes `goc validate`. Record the verdict in log.md either way.
+  - [~] If reachable: TDD: reproduce.py exits zero — cycle members get order-independent values (true per-card-rank fallback, matching the docstring). (N/A — verdict was UNREACHABLE.)
+  - [x] If unreachable: MECHANICAL: correct the docstring (lines 1564-1565) to stop claiming a per-card-rank fallback the code doesn't actually deliver, and disprove/close.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # `compute_values` cycle fallback is order-dependent
+
+> Disproved 2026-05-26. The order-dependence is real in the code but
+> **unreachable** in any deck that passes `goc validate`, so it is not a
+> live defect. Docstring corrected; see log.md for the empirical verdict.
+
+## Verdict (2026-05-26)
+
+- **Order-dependence: CONFIRMED.** `compute_values` does not deliver the
+  per-card-rank fallback the docstring claimed. On the A/B/X cyclic deck,
+  A and B swap between 19.710 and 15.300 depending on `cards` list order.
+- **Reachability: UNREACHABLE.** `detect_advance_cycles` gates `goc
+  validate`'s exit code (`engine.py:2381-2383`, `sys.exit(1)`) and
+  `_would_create_advance_cycle` makes `goc advance` refuse cycle-creating
+  edges (`engine.py:3740`). Both verified empirically. No valid deck ever
+  traverses a cycle, so the user-facing priority math is never corrupted.
+- **Resolution:** docstring at `compute_values` corrected to stop
+  claiming a per-card-rank fallback and to mark the in-progress guard as
+  unreachable defensive code. Disproved — the only real issue was the
+  overclaiming docstring, now fixed.
 
 ## Location
 
