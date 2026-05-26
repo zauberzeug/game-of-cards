@@ -170,7 +170,10 @@ class _Parser:
                 break
             if block_indent is None:
                 block_indent = curr
-            chunks.append(raw[block_indent:].rstrip())
+            # Strip only the leading block indentation; trailing whitespace on a
+            # content line is meaningful in a YAML literal block (e.g. a Markdown
+            # hard-break) and must survive the emit->parse round-trip.
+            chunks.append(raw[block_indent:])
             self._pos += 1
         if block_indent is None:
             # No indented content followed `|`. Rewind so the parent loop sees

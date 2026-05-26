@@ -28,8 +28,10 @@ sys.path.insert(0, str(_repo_root()))
 
 from goc.engine import emit_frontmatter, parse_frontmatter  # noqa: E402
 
-# A DoD whose first item ends in a Markdown hard-break (two trailing spaces).
-dod = "- [ ] item with hard break  \n- [ ] second item"
+# Trailing whitespace on the first AND a later content line (each a Markdown
+# hard-break). The parser must preserve trailing whitespace on every line, not
+# just the first — a fix that only stripped one line would still fail here.
+dod = "- [ ] first item with hard break  \n- [ ] middle line  \n- [ ] last item"
 fm = {"title": "x", "definition_of_done": dod}
 
 text = emit_frontmatter(fm) + "\nbody\n"
@@ -53,8 +55,8 @@ print("ROUND-TRIP PRESERVES TRAILING WHITESPACE:", ok)
 
 if not ok:
     print(
-        "\nFAIL: emitter wrote the trailing two spaces but the parser stripped "
-        "them.\nThe emit->parse round-trip is not closed for block-scalar content."
+        "\nFAIL: emitter wrote the trailing whitespace but the parser stripped "
+        "it.\nThe emit->parse round-trip is not closed for block-scalar content."
     )
     sys.exit(1)
 
