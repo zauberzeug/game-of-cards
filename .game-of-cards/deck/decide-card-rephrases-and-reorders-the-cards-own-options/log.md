@@ -45,3 +45,26 @@ Option C. card-schema is the right home for cross-skill conventions, the existin
 ## 2026-05-26T12:10:35Z: decision recorded
 
 Option A — decide-card-only guidance. Add a Workflow Step 1.5 to the decide-card SKILL.md: when a card body has a labeled Decision-required section, the AskUserQuestion payload uses the source labels and order verbatim and marks the recommendation in-place with (Recommended), overriding the tool recommended-first guidance for this bridging case. — Narrow scope, single SKILL.md edit, fixes the confirmed-defect surface, and auto-syncs to the four mirror copies. The recommended Option C (card-schema convention) was passed over as scope creep of a presentation rule into a schema-documentation skill; revisit C if the same bridge recurs in sibling skills.. Gate decision → none.
+
+## 2026-05-26T00:00:00Z — Closure
+
+- **What changed**: `goc/templates/skills/decide-card/SKILL.md` Workflow — inserted a new **Step 1.5** ("Eliciting the pick from labeled options — mirror the source verbatim"). It prescribes that when a card body's `## Decision required` enumerates labeled options, the `AskUserQuestion` payload reuse the source order (no reorder), reuse the source labels verbatim (keeping the leading `Option X` token), and mark the recommendation in-place with ` (Recommended)`. It explicitly overrides the `AskUserQuestion` tool description's "recommended first" guidance for this bridging case. Synced to the four auto-mirrors (`.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`) and re-ported to `openclaw-plugin/skills/`.
+- **DoD items 3 & 4**: N/A — the resolved scope is Option A (decide-card-only), so Option B (sibling-skill replication) and Option C (card-schema convention) carry no work. Ticked as N/A rather than struck so the conditional record survives.
+- **Verification (item 5, method:experiment — recorded dry-run)**: Applied the new Step 1.5 to *this card's own* archived labeled options (see the "Decision required (archived at filing)" entry above: Option A, B, C, D in that order, with Option C marked recommended). The discipline yields the picker:
+  - 1. `Option A — decide-card-only guidance (minimum viable)`
+  - 2. `Option B — Replicate in sibling skills`
+  - 3. `Option C — card-schema-level convention (Recommended)`
+  - 4. `Option D — Defer`
+
+  Verdict: source order A→B→C→D is preserved and the recommendation is marked in-place on C — **verbatim mirroring confirmed**. Contrast with the pre-fix behavior the card documents (the predecessor `refine-deck-drops-structural-findings` invocation floated the recommended option to position #1 and rephrased the labels, forcing the user to remap "Option A" between two presentations). The fix removes that remap layer.
+- **Audit**: PASS — no project rubric configured (finish-card hook empty); documentation-only skill-body edit, mechanical fix.
+- **Project impact**: n/a
+- **Tests**: no pytest suite in repo; `goc validate` clean, `sync_plugin_assets.py --check` and `port_skills_to_openclaw.py --check` both green.
+
+## Closure verification (2026-05-26T19:56:28Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-05-26 — Closure' present

@@ -80,6 +80,31 @@ project-specific reasoning is decisive.
    goc show <title>
    ```
 
+   **1.5. Eliciting the pick from labeled options — mirror the source
+   verbatim.** When the card body's `## Decision required` section
+   enumerates labeled options (Option A / B / C / D) and you elicit the
+   user's choice with `AskUserQuestion`, build the picker payload from
+   the *source's* labels and order:
+
+   - **Order:** present the options in the same order the card body
+     lists them (A, then B, then C…). Do **not** reorder.
+   - **Labels:** reuse the card body's option labels verbatim (trimmed
+     to `AskUserQuestion`'s length limit if necessary, but keep the
+     leading `Option X` token so the user can map their pick back to
+     the body).
+   - **Recommendation:** mark the recommended option *in place* by
+     appending ` (Recommended)` to its existing label — leave it where
+     it sits in the source order.
+
+   This **overrides** the `AskUserQuestion` tool description's "make
+   the recommended option first" guidance for this bridging case. That
+   guidance is correct when labels don't pre-exist anywhere; here the
+   card body is the canonical enumeration, so reordering or rephrasing
+   forces the user to remap their pick between two presentations (they
+   read "Option A" in the body, the picker shows it as item #2). The
+   decision skill exists to make lowering the cord cheap — a picker
+   that needs a mental remap defeats that purpose.
+
 2. **Run the CLI.**
 
    ```bash
