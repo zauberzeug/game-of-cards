@@ -1170,6 +1170,12 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
     - STALE_BLOCKED: `status: blocked` with `advanced_by` non-empty whose
       entries all sit in TERMINAL_STATUSES. No active prereq remains; the
       card should flip to `open` or its blocker list should be refreshed.
+      With derived dependency-readiness (`card_is_ready` /
+      `dependency_blocked`), the recommended pattern is to leave the card
+      `open` and let the queue hide it via the derived predicate — so the
+      card self-clears the moment its last prereq closes. This warning
+      remains as a migration aid for cards still using the legacy
+      `status: blocked` for a dependency wait.
     - ORPHAN_BLOCKED: `status: blocked` with empty `advanced_by` and
       `human_gate == "none"`. The real blocker is body-only and invisible
       to graph walkers. Suppressed for raised gates because the gate
@@ -1247,6 +1253,47 @@ MUTABLE_STATUS_VALUES = tuple(status for status in STATUS_VALUES if status != "d
 TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})
 CONTRIBUTION_ORDER = {"high": 0, "medium": 1, "low": 2}
 STAGE_ORDER = ["null", "alpha", "beta", "stable"]
+
+
+def dependency_blockers(card: Card, by_title: dict[str, Card]) -> list[str]:
+    """Return the subset of `card.advanced_by` whose status is non-terminal.
+
+    A non-empty list means the card is dependency-blocked: at least one
+    upstream prereq has not reached a terminal status yet. Unknown titles
+    are treated as non-terminal (a dangling reference is conservatively
+    a blocker until the validator reconciles it).
+    """
+    blockers: list[str] = []
+    for prereq in card.frontmatter.get("advanced_by") or []:
+        upstream = by_title.get(prereq)
+        if upstream is None or upstream.status not in TERMINAL_STATUSES:
+            blockers.append(prereq)
+    return blockers
+
+
+def dependency_blocked(card: Card, by_title: dict[str, Card]) -> bool:
+    """True iff the card has at least one non-terminal `advanced_by` prereq.
+
+    Derived from the advances graph at read time — no stored `blocked`
+    status required. A card self-clears the moment its last prereq closes.
+    """
+    return bool(dependency_blockers(card, by_title))
+
+
+def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
+    """Composite "ready-to-pull" predicate used by next-card / pull-card.
+
+    Ready iff `status == open` AND `human_gate == none` AND no
+    non-terminal `advanced_by` prereq. Future sibling cards extend this
+    with the stored impediment overlay (`waiting_on` + `waiting_until`).
+    """
+    if card.status != "open":
+        return False
+    if card.human_gate != "none":
+        return False
+    if dependency_blocked(card, by_title):
+        return False
+    return True
 
 # GRPW sort: per-card contribution composes through the `advances` graph
 # into a `value` score with Bellman discount γ per hop. See
@@ -1346,6 +1393,8 @@ def filter_cards(
     advances: str | None = None,
     advanced_by: str | None = None,
     worker: str | None = None,
+    ready: bool = False,
+    by_title: dict[str, Card] | None = None,
 ) -> list[Card]:
     out = list(cards)
     if statuses is not None:
@@ -1369,6 +1418,9 @@ def filter_cards(
     if worker:
         needle = worker.lower()
         out = [t for t in out if needle in _worker_who(t.frontmatter.get("worker")).lower()]
+    if ready:
+        lookup = by_title if by_title is not None else {t.title: t for t in cards}
+        out = [t for t in out if card_is_ready(t, lookup)]
     return out
 
 
@@ -1556,6 +1608,9 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
+            blockers = dependency_blockers(t, by_title)
+            if blockers:
+                out_lines.append(f"    blocked by: {', '.join(blockers)}")
             w = t.worker
             if w:
                 who = w.get("who", "")
@@ -1575,9 +1630,15 @@ def render_table(
     return "\n".join(out_lines)
 
 
-def render_json(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> str:
+def render_json(
+    cards: list[Card],
+    values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
+) -> str:
     if values is None:
         values = compute_values(cards)
+    if by_title is None:
+        by_title = {t.title: t for t in cards}
     return json.dumps(
         [
             {
@@ -1596,6 +1657,9 @@ def render_json(cards: list[Card], values: dict[str, tuple[float, list[str]]] | 
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
                 "supersedes": t.frontmatter.get("supersedes") or [],
                 "superseded_by": t.frontmatter.get("superseded_by") or [],
+                "dependency_blocked": dependency_blocked(t, by_title),
+                "blocked_by": dependency_blockers(t, by_title),
+                "ready": card_is_ready(t, by_title),
                 "worker": t.worker,
                 "dod_open": t.dod_open,
                 "dod_done": t.dod_done,
@@ -1614,11 +1678,14 @@ def render_board(
     max_rows: int,
     no_color: bool,
     values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
 ) -> str:
     if values is None:
         values = compute_values(cards)
     columns = ["open", "active", "blocked", "done", "disproved", "superseded"]
     by_status: dict[str, list[Card]] = {c: [] for c in columns}
+    if by_title is None:
+        by_title = {t.title: t for t in cards}
     for t in cards:
         if t.status in by_status:
             by_status[t.status].append(t)
@@ -1626,6 +1693,8 @@ def render_board(
         by_status[c] = sort_default(by_status[c], values=values)[:max_rows]
     def card_cell(t: Card) -> str:
         marker = f" [{t.contribution[0]}]"
+        if t.status == "open" and dependency_blocked(t, by_title):
+            marker += " ⛓"
         who = _worker_who(t.frontmatter.get("worker"))
         if who:
             marker += f" @{who[:8]}"
@@ -1731,6 +1800,9 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Filter to cards advanced by this title.")
     parser.add_argument("--worker", default=os.environ.get("GOC_WORKER"),
                         help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.")
+    parser.add_argument("--ready", action="store_true",
+                        help="Filter to ready-to-pull cards (status open, human_gate none, "
+                        "no non-terminal advanced_by prereqs). Defaults --status to open.")
     parser.add_argument("-v", dest="verbose", action="count", default=0,
                         help="-v adds STAGE/CREATED columns + summary line; -vv inlines DoD checklist + cross-refs.")
     parser.add_argument("--json", dest="as_json", action="store_true",
@@ -1969,6 +2041,7 @@ def _cmd_default(args):
         sys.exit(2)
     stages = parse_stage_filter(args.stage_flag)
     tag_filters = validate_tag_filters(args.tags)
+    full_by_title = {t.title: t for t in cards}
     filtered = filter_cards(
         cards,
         status=status,
@@ -1980,19 +2053,21 @@ def _cmd_default(args):
         advances=args.advances,
         advanced_by=args.advanced_by,
         worker=args.worker,
+        ready=args.ready,
+        by_title=full_by_title,
     )
     full_values = compute_values(cards)
-    full_by_title = {t.title: t for t in cards}
     filtered = sort_default(filtered, values=full_values)
     if args.board:
         board_cards = filtered if (status_filter_explicit or args.worker) else cards
         print(
             render_board(
-                board_cards, max_rows=args.max_rows, no_color=args.no_color, values=full_values
+                board_cards, max_rows=args.max_rows, no_color=args.no_color,
+                values=full_values, by_title=full_by_title,
             )
         )
     elif args.as_json:
-        print(render_json(filtered, values=full_values))
+        print(render_json(filtered, values=full_values, by_title=full_by_title))
     else:
         out = render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
         active_notice = render_active_notice(cards, values=full_values) if status == "open" else ""
