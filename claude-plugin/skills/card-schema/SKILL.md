@@ -283,6 +283,83 @@ deciding, and either:
 - Setting the gate to `session` if the framing itself needs to be
   revisited interactively.
 
+## Three-axis "stuck" model: status / dependency-readiness / impediment overlay
+
+`status` is one of three axes a reader uses to decide whether a card
+is workable right now. The other two are *derived* from the deck
+state, not stored as a status, so cards self-clear instead of
+stranding:
+
+| Axis | What it answers | Where it lives | How it clears |
+|---|---|---|---|
+| **Progress status** | what is the card doing right now? | stored `status` field | author flips it (`goc status`, `goc done`) |
+| **Dependency readiness** | does a prereq card still gate me? | DERIVED from `advanced_by` predecessor status | self-clears the moment the last prereq closes |
+| **Impediment overlay** | is something exogenous stalling me? | stored `waiting_on` + optional `waiting_until` | author runs `goc wait <title> --clear`, or `waiting_until` elapses |
+
+The three compose. A card may be `status: active` AND carry
+`waiting_on: external` AND have an unresolved `advanced_by` prereq —
+each axis answers a different question and they do not collapse into
+one another.
+
+The **ready-to-pull predicate** that `Skill(next-card)` and
+`Skill(pull-card)` use is the AND of all three:
+
+```
+ready ⇔ status == open
+      ∧ human_gate == none
+      ∧ no non-terminal advanced_by prereq         (derived)
+      ∧ waiting_on unset
+      ∧ (waiting_until absent or in the past)
+```
+
+(`human_gate` is a fourth axis, but its role is different — it's the
+Andon cord telling agents NOT to autonomously claim. See the
+"human_gate scale" section above.)
+
+### Impediment overlay (`waiting_on`, `waiting_until`)
+
+Stored, orthogonal to `status`. Three kinds of exogenous wait the
+dependency graph cannot derive:
+
+| `waiting_on` | Meaning |
+|---|---|
+| `external` | vendor, client, hardware delivery, a third party |
+| `resource` | a specific person or skill currently unavailable |
+| `deferred` | deliberately postponed (GTD "tickler" / calendar defer) |
+
+`waiting_until` is an optional ISO date the wait is expected to clear
+(same shape as `created` / `closed_at` — `YYYY-MM-DD` or
+`YYYY-MM-DDTHH:MM:SSZ`). A bare `waiting_until` (no `waiting_on`)
+implies `deferred`.
+
+**Read-time behavior** (no daemon — evaluated when a command runs):
+
+- A future `waiting_until` (or a `waiting_on` reason without a date)
+  hides the card from `--ready` / `next-card` / `pull-card`. When the
+  date passes the card re-enters the queue with no manual action.
+- An elapsed `waiting_until` is surfaced by `goc validate` as
+  `WAITING_OVERDUE` — the Kanban SLE escalation signal that the wait
+  overran its expected return and should be re-triaged or cleared.
+
+**CLI** (see `Skill(advance-card)` "Step 6" for full examples):
+
+```bash
+goc wait <title> --reason external --until 2026-06-15
+goc wait <title> --until 2026-06-15           # bare date implies deferred
+goc wait <title> --reason resource             # open-ended wait
+goc wait <title> --clear
+```
+
+**YAML format** — both fields are optional flat scalars. Absent fields
+do not appear in frontmatter; the CLI removes them on `--clear`.
+Example:
+
+```yaml
+status: active
+waiting_on: external
+waiting_until: 2026-06-15
+```
+
 ## Definition of Done (DoD) — three implicit layers
 
 Scrum's **Definition of Done** as a machine-checkable closure
