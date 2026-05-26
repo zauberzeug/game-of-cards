@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] Remove or revise workaround notes after the fixed OpenClaw version is the minimum supported version
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
+waiting_on: external
 ---
 
 # OpenClaw subagent plugin tools `alsoAllow` ignored
