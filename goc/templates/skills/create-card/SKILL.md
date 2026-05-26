@@ -150,6 +150,30 @@ both sides of the edge in one command. Use the older `goc new` then
 `goc advance` two-step only as a fallback for adding edges to an
 existing card or when the relationship is discovered after creation.
 
+**Edge direction for coordinating cards (the three-way fork).** When
+the card you're filing coordinates other work, decide which of three
+shapes you're authoring before reaching for `--advances`. See
+`Skill(card-schema)` "Coordinating cards — aggregation epic vs
+governing cluster" for the full rules; the short form:
+
+- **Aggregation epic** (its value chain *is* its children; closes
+  when they close) → `child.advances: [epic]`. The child contributes
+  upward; the epic aggregates downward via `advanced_by`. Concretely
+  on a child filing: `goc new <child> --advances <epic>`.
+- **Governing cluster** (a decision or standard-setting card that
+  closes when *decided*, independent of the cluster's work) → a
+  **shared tag**, no `advances` edge in either direction. Add the
+  tag via `--tag <epic-grouping-tag>` on both the governing card and
+  its instances.
+- **Never** `epic.advances: [children]` (backwards). It defeats the
+  value law and trips a spurious `advanced-by-closed` FAIL on every
+  child at attest time. `goc validate` emits a
+  `BACKWARDS_EPIC_EDGE` advisory hint when this signature appears.
+
+The tell: if the coordinating card itself has `--gate decision` or
+otherwise closes on its own deliverable rather than on its cluster's
+completion, it's a governing cluster → use a tag, not an edge.
+
 ## Step 5 — write the body (the dashboard)
 
 The README body is the card's **dashboard**: a snapshot of latest

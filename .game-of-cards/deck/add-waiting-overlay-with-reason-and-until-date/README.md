@@ -1,11 +1,11 @@
 ---
 title: add-waiting-overlay-with-reason-and-until-date
 summary: "Add a stored impediment overlay for exogenous waits the dependency graph can't derive: `waiting_on` ∈ {external, resource, deferred} plus an optional `waiting_until` ISO date. A future date is a read-time guard (card hidden from queues); an elapsed date is surfaced by validate/standup. A card may be active AND impeded."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-24T11:22:11Z"
-closed_at: null
+closed_at: 2026-05-26T05:52:49Z
 human_gate: none
 advances:
   - blocked-status-conflates-dependency-external-wait-and-deferral
@@ -13,13 +13,14 @@ advances:
 advanced_by: []
 tags: [api-contract, documentation]
 definition_of_done: |
-  - [ ] Schema: `waiting_on` (optional, enum {external, resource, deferred}) and `waiting_until` (optional ISO date) added to `optional_fields` in schema.yaml; the frontmatter emitter round-trips both as flat fields.
-  - [ ] `goc validate`: `waiting_on` must be in the enum; `waiting_until` must parse as an ISO date; (decide whether `waiting_until` without `waiting_on` is allowed — propose: yes, implies `deferred`).
-  - [ ] Read-time guard: a card with `waiting_until` in the future is excluded from `next-card` / `pull-card` readiness; when the date passes it re-enters the queue with no manual action.
-  - [ ] Elapsed-wait surfacing: `goc validate` (and standup) flag a card whose `waiting_until` is in the past as an SLE-escalation signal.
-  - [ ] A CLI affordance sets and clears the overlay (e.g. `goc wait <title> --reason external --until 2026-06-15` and a clear form); it composes with `status` (a card may be `active` and carry `waiting_on`).
-  - [ ] card-schema skill documents the overlay and the three-axis model; advance-card skill documents set/clear.
-  - [ ] reproduce.py: a card with a future `waiting_until` is hidden from `next-card`; advancing the clock (or backdating) makes it appear.
+  - [x] Schema: `waiting_on` (optional, enum {external, resource, deferred}) and `waiting_until` (optional ISO date) added to `optional_fields` in schema.yaml; the frontmatter emitter round-trips both as flat fields.
+  - [x] `goc validate`: `waiting_on` must be in the enum; `waiting_until` must parse as an ISO date; `waiting_until` alone (no `waiting_on`) IS allowed and implies `deferred`.
+  - [x] Read-time guard: a card with `waiting_until` in the future is excluded from `next-card` / `pull-card` readiness; when the date passes it re-enters the queue with no manual action.
+  - [x] Elapsed-wait surfacing: `goc validate` flags a card whose `waiting_until` is in the past as a `WAITING_OVERDUE` SLE-escalation signal.
+  - [x] A CLI affordance sets and clears the overlay (`goc wait <title> --reason external --until 2026-06-15` and `--clear`); it composes with `status` (a card may be `active` and carry `waiting_on`).
+  - [x] card-schema skill documents the overlay and the three-axis model; advance-card skill documents set/clear.
+  - [x] reproduce.py: a card with a future `waiting_until` is hidden from `next-card`; backdating makes it appear and surfaces `WAITING_OVERDUE`.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Add a typed impediment overlay (`waiting_on` + optional `waiting_until`)

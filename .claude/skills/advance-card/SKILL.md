@@ -43,6 +43,12 @@ when the blocker is an agent-observable external condition. Setting
 `blocked` does NOT require raising the gate; raising the gate does
 NOT require `blocked`.
 
+A third orthogonal axis — the **impediment overlay** (`waiting_on`
++ `waiting_until`) — captures exogenous waits the dependency graph
+cannot derive (vendor delivery, a specific person, a calendar-based
+defer). It composes with `status`: a card may be `active` AND carry
+`waiting_on`. Set or clear via `goc wait` (see "Step 6").
+
 ## Step 2 — match the transition to the CLI
 
 | transition | CLI | notes |
@@ -168,6 +174,43 @@ contains the actual code/doc changes — NOT the status flip.
 If the configured/forced auto-commit is skipped (no git repo, mid-merge /
 mid-rebase, no diff), the CLI prints a one-line note. The on-disk state
 still mutated; only the visibility-to-other-branches step deferred.
+
+## Step 6 — set or clear an impediment overlay (`goc wait`)
+
+The dependency-readiness predicate covers card-blocks-card, but cannot
+see exogenous waits. Three kinds need a stored signal:
+
+- `external` — vendor, client, hardware, a third party.
+- `resource` — a specific person/skill currently unavailable.
+- `deferred` — deliberately postponed (a calendar-based defer).
+
+Set the overlay with `goc wait`:
+
+```bash
+# Wait on a vendor; expect to retry on 2026-06-15.
+goc wait <title> --reason external --until 2026-06-15
+
+# Defer-only (no reason): bare --until implies `deferred`.
+goc wait <title> --until 2026-06-15
+
+# Open-ended wait on a specific person; no expected return date.
+goc wait <title> --reason resource
+
+# Clear the overlay when the wait resolves.
+goc wait <title> --clear
+```
+
+Effects:
+
+- A future `waiting_until` (or a reason with no date) hides the card
+  from `goc --ready` / `Skill(next-card)` / `Skill(pull-card)`. When
+  the date passes the card re-enters the queue with no manual action.
+- An elapsed `waiting_until` is surfaced by `goc validate` as
+  `WAITING_OVERDUE` — the Kanban SLE escalation: the wait overran its
+  expected return, re-triage or clear.
+- The overlay is orthogonal to `status` — a card may be `active` AND
+  carry a `waiting_on`, e.g. work in progress that is partially gated
+  on an external answer.
 
 ## Worker field — populated at claim time
 
