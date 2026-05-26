@@ -1,21 +1,21 @@
 ---
 title: tag-dod-items-by-method-class-test-experiment-edit-or-decision
 summary: "Definition-of-Done checkboxes today flatten four epistemically distinct closure contracts — provable assertions, experimental outcomes, inspection-verifiable edits, and pure agreements — into uniform ticked-or-not. The most consequential conflation is empirical items: a `- [ ]` line that reads as a must-pass gate when the correct semantics is must-run-and-record-the-verdict. Proposes a one-token method-tag prefix per DoD line plus a warning-only validator check for migration safety."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-23T05:07:26Z"
-closed_at: null
+closed_at: 2026-05-26T20:11:13Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] decision recorded in `## Decision` section: which tag format (`[TDD]` bracket prefix vs `TDD:` colon prefix); whether taxonomy is four-class or includes `[SPIKE]`; validator regex scope (line-anchored vs lenient)
-  - [ ] `goc/templates/skills/card-schema/SKILL.md` extended with a new `### DoD method tags` subsection nested inside the existing `## Definition of Done` section, defining the chosen vocabulary and the discipline rule ("prefer TDD whenever a closed-form expected value exists")
-  - [ ] `goc/templates/skills/create-card/SKILL.md` Step 5 example DoD updated to demonstrate the chosen tagging convention end-to-end
-  - [ ] `goc/engine.py` validator emits a fourth warning class (`UNTAGGED_DOD_ITEM`) for DoD checkboxes lacking a method tag — warning-only, sibling to STALE_BLOCKED / ORPHAN_BLOCKED / CASCADE_CHAIN_ROOT in `compute_blocker_warnings`
-  - [ ] pre-commit `sync-plugin-assets` propagates the SKILL.md edits to all five consumer surfaces (claude-plugin, codex-plugin, openclaw-plugin, .claude/, .codex/) without drift; CI tripwire passes
+  - [x] PROCESS: decision recorded in `## Decision` section: which tag format (`[TDD]` bracket prefix vs `TDD:` colon prefix); whether taxonomy is four-class or includes `[SPIKE]`; validator regex scope (line-anchored vs lenient)
+  - [x] MECHANICAL: `goc/templates/skills/card-schema/SKILL.md` extended with a new `### DoD method tags` subsection nested inside the existing `## Definition of Done` section, defining the chosen vocabulary and the discipline rule ("prefer TDD whenever a closed-form expected value exists")
+  - [x] MECHANICAL: `goc/templates/skills/create-card/SKILL.md` Step 5 example DoD updated to demonstrate the chosen tagging convention end-to-end
+  - [x] MECHANICAL: `goc/engine.py` validator emits a fourth warning class (`UNTAGGED_DOD_ITEM`) for DoD checkboxes lacking a method tag — warning-only, sibling to STALE_BLOCKED / ORPHAN_BLOCKED / CASCADE_CHAIN_ROOT in `compute_blocker_warnings`
+  - [x] TDD: pre-commit `sync-plugin-assets` propagates the SKILL.md edits to all five consumer surfaces (claude-plugin, codex-plugin, openclaw-plugin, .claude/, .codex/) without drift; CI tripwire passes
 worker: {who: "claude[bot]", where: main}
 ---
 
