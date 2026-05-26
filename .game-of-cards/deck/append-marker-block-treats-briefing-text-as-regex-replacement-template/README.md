@@ -1,20 +1,20 @@
 ---
 title: append-marker-block-treats-briefing-text-as-regex-replacement-template
 summary: "`_append_marker_block` (and two sibling sites) pass dynamic content as the *replacement* argument to `re.sub`, which parses it for backreferences (`\\1`, `\\g<name>`, `\\\\`). The GoC marker block / import block is the replacement, so any backslash-escape sequence a future AGENTS_GOC.md / CLAUDE_GOC.md edit introduces would be misinterpreted or raise `re.error` on install/upgrade. Latent today (templates contain no such sequences). UNVERIFIED — needs a reproduce.py. Fix: `pattern.sub(lambda _: block, text)`."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T20:56:28Z"
-closed_at: null
+closed_at: 2026-05-26T21:24:11Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, unverified]
+tags: [bug]
 definition_of_done: |
-  - [ ] TDD: reproduce.py — a marker/import block body containing a `\g<x>` or `\1` or trailing backslash round-trips through the merge unchanged (today it corrupts or raises `re.error`).
-  - [ ] MECHANICAL: replace the dynamic-replacement `re.sub` calls in `goc/install.py` with a callable replacement (`lambda _: block`) or `re.sub` with a pre-escaped replacement, at ALL sibling sites: lines 222, 884, 1040.
-  - [ ] TDD: existing install/upgrade behavior unchanged for the current (escape-free) templates; `tests/test_install.py` stays green.
-  - [ ] PROCESS: drop the `unverified` tag once reproduce.py lands.
+  - [x] TDD: reproduce.py — a marker/import block body containing a `\g<x>` or `\1` or trailing backslash round-trips through the merge unchanged (today it corrupts or raises `re.error`).
+  - [x] MECHANICAL: replace the dynamic-replacement `re.sub` calls in `goc/install.py` with a callable replacement (`lambda _: block`) or `re.sub` with a pre-escaped replacement, at ALL sibling sites: lines 222, 884, 1040.
+  - [x] TDD: existing install/upgrade behavior unchanged for the current (escape-free) templates (no pytest suite exists; verified by smoke `goc install` + `goc upgrade` into a temp repo — marker block lands once, upgrade exercises the replace branch cleanly).
+  - [x] PROCESS: drop the `unverified` tag once reproduce.py lands.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -26,7 +26,13 @@ worker: {who: "claude[bot]", where: main}
 - `goc/install.py:222` — `claude_md.write_text(CLAUDE_IMPORT_RE.sub(block, text))`
 - `goc/install.py:1040` — `new_text = pattern.sub(replacement, text, count=1)`
 
-## Hypothesis (UNVERIFIED)
+## Hypothesis (VERIFIED 2026-05-26)
+
+> Confirmed: `reproduce.py` drives `_append_marker_block` with a briefing body
+> containing `\g<name>` and raises `IndexError: unknown group name 'name'` at
+> `goc/install.py:884` before the fix. After switching all three sites to a
+> callable replacement (`lambda _: block`), the literal text survives verbatim.
+
 
 `re.sub(pattern, repl, text)` parses `repl` for backreferences: `\1`,
 `\g<name>`, and treats a lone trailing `\` or unknown `\x` escape as an
