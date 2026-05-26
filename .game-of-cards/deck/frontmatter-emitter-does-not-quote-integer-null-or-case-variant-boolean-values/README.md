@@ -1,7 +1,7 @@
 ---
 title: frontmatter-emitter-does-not-quote-integer-null-or-case-variant-boolean-values
 summary: "`_yaml_inline` quotes a scalar only when `_YAML_NEEDS_QUOTE` matches or the value is in `_YAML_RESERVED` (the lowercase set `{null,true,false,yes,no}`). But the vendored parser ALSO coerces integer-looking strings (`_INT_RE`), the full null set (`null/Null/NULL/~`), and case-variant booleans (`True/TRUE/Yes/NO/...`). A string field holding any of these is emitted bare and re-parsed as int / None / bool — silent type-loss on the emit->parse round-trip."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-26T20:53:28Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: fix lands in `goc/engine.py` (`_yaml_inline` / its quote-trigger predicate) and derives the keyword/int recognition from the parser's own sets rather than the hand-maintained lowercase `_YAML_RESERVED`, so the two truth-sets cannot drift again.
   - [ ] TDD: no behavior change for values that already round-trip bare (plain prose, already-quoted reserved words) and for genuine int/bool/None Python values (which must still emit bare, not quoted).
   - [ ] TDD: `uv run goc validate` passes on this repo's deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter doesn't quote integer-, null-, or case-variant-boolean-looking string values
