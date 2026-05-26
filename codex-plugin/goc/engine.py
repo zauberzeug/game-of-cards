@@ -2156,6 +2156,7 @@ def _non_negative_int(value: str) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    schema = load_schema()
     parser = argparse.ArgumentParser(
         prog="goc",
         description="Game of Cards deck CLI",
@@ -2257,8 +2258,9 @@ def _build_parser() -> argparse.ArgumentParser:
   goc new child-card --advanced-by parent-card""",
     )
     p_new.add_argument("title")
-    p_new.add_argument("--contribution", choices=["high", "medium", "low"], default="medium")
-    p_new.add_argument("--gate", choices=["none", "decision", "session"], default="decision")
+    p_new.add_argument("--contribution", choices=schema.contribution_values,
+                       default="medium" if "medium" in schema.contribution_values else schema.contribution_values[0])
+    p_new.add_argument("--gate", choices=schema.human_gate_values, default=schema.human_gate_default)
     p_new.add_argument("--tag", dest="tags", action="append", default=[])
     p_new.add_argument("--advances", action="append", default=[], metavar="TITLE",
                        help="Wire the new card as advancing TITLE (repeatable).")
