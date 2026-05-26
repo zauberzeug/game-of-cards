@@ -131,7 +131,8 @@ claims and implements per the recorded decision.
 | `goc --board` | Multi-column kanban view. |
 | `goc --status done --since YYYY-MM-DD` | Recently closed cards. |
 | `goc new <title>` | Scaffold a new card under `.game-of-cards/deck/<title>/`. |
-| `goc status <title> <state>` | Flip status (open/active/blocked/disproved/superseded). |
+| `goc status <title> <state>` | Flip status (open/active/disproved/superseded). |
+| `goc wait <title> --reason <r> [--until <date>]` | Set the impediment overlay for exogenous waits; `--clear` to drop it. |
 | `goc done <title>` | Close + DoD enforcement (no auto-commit). |
 | `goc decide <title> --decision X --because Y` | Lower gate from decision/session → none. |
 | `goc validate` | Validate every card's frontmatter (pre-commit-friendly). |
@@ -192,27 +193,45 @@ for the routing rule.
 ## Lifecycle
 
 ```
-            ┌──────────────┐
-            │              ▼
    open ──→ active ──→ done (terminal, DoD-100% required)
-    │         │
-    │         └──→ blocked ←── (re-activate when unblocked)
     │
     ├──→ disproved (terminal; body documents rebuttal)
-    └──→ superseded (terminal; replacement noted in log.md)
+    └──→ superseded (terminal; typed `superseded_by` → successor,
+                     rationale appended to log.md)
 ```
 
-`open` is the queue. `active` claims the work. `blocked` parks until
-another card unblocks it. `done`, `disproved`, and `superseded` are
-all terminal — none deletes the directory; the forensic record stays.
+`open` is the queue. `active` claims the work. `done`, `disproved`,
+and `superseded` are all terminal — none deletes the directory; the
+forensic record stays.
 
-`status: blocked` and `human_gate` are orthogonal axes. A blocked
-card waiting on an agent-observable external condition (upstream
-release, PR merge, dependency publication, scheduled re-check)
-keeps `human_gate: none` — a future autonomous run can verify the
-condition cleared and flip the card back to `open` or `active`
-without human involvement. Raise the gate to `decision`/`session`
-only when human judgement is the unblocker. See
+A card that is **temporarily not workable** does not move to a
+separate status; the three-axis model expresses it as either derived
+dependency-readiness (an `advances` prereq is still open and shows as
+"awaiting" in the queue, advisory only) or the stored impediment
+overlay (`waiting_on` + optional `waiting_until`, set via `goc wait`,
+hides the card from the ready queue until cleared or the date
+elapses). See the `card-schema` skill "Three-axis 'stuck' model" for the
+full contract.
+
+**Closure is not frozenness.** Terminal status retires the card from
+the live queue but does not freeze the directory. When new evidence
+surfaces later — a bug found weeks after close, an assumption
+invalidated by follow-up work, a successor card that reframes the
+original — file a new card AND amend the closed one with a forward
+pointer (one-line dated entry appended to `log.md`, optional `>
+Later evidence:` pointer at the top of the README body). The deck is
+the durable record of what was learned, not just what shipped; each
+closed card stays as the live entry-point to the full thread. See
+the `finish-card` skill "After closure" for the cross-reference format.
+
+`status`, the `waiting_on` overlay, and `human_gate` are three
+orthogonal axes. An exogenous wait on an agent-observable condition
+(upstream release, PR merge, dependency publication, scheduled
+re-check) sits as `waiting_on: external` (+ optional `waiting_until`)
+on a `status: open` card with `human_gate: none` — a future autonomous
+run verifies the condition cleared and `goc wait <title> --clear`s
+the overlay without human involvement. Raise `human_gate` to
+`decision`/`session` only when human judgement is the unblocker. See
 the `card-schema` skill for the full orthogonality contract.
 
 ## The 9 action skills
@@ -227,10 +246,10 @@ One skill per job; compose, don't bundle.
   `gate=none` card to work on next. Read-only; does NOT flip status.
 - the `create-card` skill — file a new card with proper frontmatter,
   DoD scaffold, and (for bug-class) reproduce.py stub.
-- the `advance-card` skill — flip status (open→active, active→blocked,
-  blocked→active, *→disproved, *→superseded). Wraps `goc status`
-  and `goc block`/`unblock`. Status only — gate is `decide-card`'s
-  responsibility.
+- the `advance-card` skill — flip status (open→active, *→open, *→disproved,
+  *→superseded) and manage the `waiting_on` impediment overlay
+  (`goc wait`). Wraps `goc status` and `goc wait`. Status + overlay
+  only — `human_gate` is `decide-card`'s responsibility.
 - the `decide-card` skill — the human's Andon-cord lowering action.
   Records `<decision> + <because>` on a parked card and flips gate
   `decision`/`session` → `none`. Status stays `open` so the next
@@ -247,8 +266,9 @@ One skill per job; compose, don't bundle.
 - the `audit-deck` skill — discovery: hunt for one previously-undocumented
   defect / derivation gap / doc drift / missing test. Files via
   the `create-card` skill.
-- the `standup` skill — daily read: active + blocked cards, closures
-  since yesterday, cards waiting on a human decision gate.
+- the `standup` skill — daily read: active + impeded cards (those
+  carrying a `waiting_on` overlay), closures since yesterday, cards
+  waiting on a human decision gate.
 - the `retrospective` skill — backwards analysis of the last N closed
   cards: cluster by tag, surface recurring failure modes, propose
   generalization candidates.

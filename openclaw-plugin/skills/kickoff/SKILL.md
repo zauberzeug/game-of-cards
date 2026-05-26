@@ -121,8 +121,9 @@ persona but always offering all three:
 > file.
 >
 > 1. **AGENTS.md** — read by Codex, Cursor, Copilot, OpenCode, Aider, and
->    the host (via `@AGENTS.md` import that `claude-kickoff` writes
->    into a minimal CLAUDE.md). Recommended for cross-runtime,
+>    the host (via the `@AGENTS.md` import that `goc install` /
+>    `goc upgrade` writes into CLAUDE.md when the agent is installed).
+>    Recommended for cross-runtime,
 >    agent-runtime, and OSS-eval personas.
 > 2. **CLAUDE.md** — read only by the host; the host-agnostic body
 >    plus the the agent-specific extras live inline. **Cross-runtime
@@ -160,10 +161,14 @@ omit it only when the user wants the default `AGENTS.md`).
 > commands to `uv run goc` when working in the goc package source tree itself.
 
 `goc install --briefing-target <file>` writes project state and merges
-the briefing block into the chosen file (creating it if absent). The
-other two candidate files are not touched. Host-specific files like
-`.claude/skills/` are not written by this skill — host-specific
-complement skills handle those.
+the briefing block into the chosen file (creating it if absent). When
+the agent is installed and the chosen file is `AGENTS.md` or
+`CLAUDE.local.md`, the install primitive also writes or refreshes
+`CLAUDE.md` as an `@<chosen file>` import so the host can load the
+briefing. `--briefing-target CLAUDE.md` is the the agent-only path: the
+full briefing lives inline there and `AGENTS.md` may be omitted.
+Host-specific files like `.claude/skills/` are not written by this
+skill — host-specific complement skills handle those.
 
 After `goc install` returns, verify `.game-of-cards/deck/` exists and
 the chosen file contains a `<!-- BEGIN GOC -->` block before

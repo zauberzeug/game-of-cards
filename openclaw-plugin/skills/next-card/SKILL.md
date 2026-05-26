@@ -8,7 +8,7 @@ description: Pick the highest-leverage open card to work on next. Read-only verd
 Before running the body of this skill, the agent should see current deck state. Run these via the `goc` tool (top-level filters like `--status` / `--tag` / `--worker` map to the tool's `flags` parameter; the subcommand maps to `verb`). For bare-queue listings with no subcommand, shell out via the `exec` tool:
 
 - `goc --status active -v 2>&1 | head -20`
-- `goc --status open --human-gate none -v${GOC_WORKER:+ --worker "$GOC_WORKER"}`
+- `goc --ready -v${GOC_WORKER:+ --worker "$GOC_WORKER"}`
 
 # Pick the next card
 
@@ -30,7 +30,11 @@ unless the user explicitly asks to continue that active card.
 
 Optional argument — if non-empty (a title or area like
 an area tag or path prefix), narrow the queue. If empty, scan the full
-`human_gate: none` slice.
+ready slice (`--ready` keeps cards with open `advances` prereqs —
+they are pullable with an "awaiting: <prereqs> (you may start)"
+advisory line, since `advances` is a soft "should precede" not a hard
+start-gate; hard waits are expressed via `waiting_on` /
+`waiting_until`).
 
 ## Selection criteria
 
@@ -90,8 +94,8 @@ Every card carries `human_gate: none | decision | session`:
   `decision`.
 
 **Autonomous-mode rule** (`/loop`, cron, or any non-interactive
-invocation): walk down `--human-gate none` and recommend the top.
-If every unblocked candidate is `decision` or `session`, the run
+invocation): walk down `--ready` and recommend the top.
+If every ready candidate is `decision` or `session`, the run
 halts with a one-line summary listing the parked cards. Better to
 ship nothing than to land a research move without a review
 checkpoint.

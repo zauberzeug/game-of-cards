@@ -56,7 +56,7 @@ the `create-card` skill Step 7 for the authoring contract.
 
 Status changes mutate frontmatter, never directories. Cross-references
 to `deck/<title>/` continue to work whether the card is open, active,
-blocked, done, disproved, or superseded.
+done, disproved, or superseded.
 
 ### What goes where (README dashboard vs `log.md` journal)
 
@@ -86,17 +86,34 @@ Concrete consequences:
 - Decision-gate cards: keep the options matrix and `## Decision
   required` section current in the README; each round of consideration
   appends to `log.md`; the final resolution rewrites the dashboard.
+- Closure does not freeze the card. When new evidence surfaces after a
+  card closes, the post-close amendment is a **valid append** to
+  `log.md` (dated `Post-close amendment` entry, with a forward
+  reference to the new card) and an **optional one-line pointer** at
+  the top of the README body (`> Later evidence: …`) when the cold
+  reader would otherwise be misled. Do not rewrite the closure entry
+  itself; treat the amendment as additive. See the `finish-card` skill
+  "After closure" for the cross-reference format.
 
 ## Status semantics
 
 | value | meaning | what closes it |
 |---|---|---|
 | `open` | candidate for work; in the queue | promotion to `active`/`done`/`disproved`/`superseded` |
-| `active` | work in progress (one author/agent at a time, by convention) | usually flips to `done` (or `blocked` mid-flight) |
-| `blocked` | needs another card or external input; body should explain. Agent-checkable external conditions (upstream release, PR merge, dependency publication) keep `human_gate: none`; human-judgement blockers use `human_gate: decision\|session`. | unblocking; usually flips back to `active` |
+| `active` | work in progress (one author/agent at a time, by convention) | usually flips to `done` |
 | `done` | DoD checklist all ticked; `goc done <title>` enforces this | terminal |
 | `disproved` | hypothesis investigated and ruled out; body documents the rebuttal | terminal |
 | `superseded` | replaced by another card; replacement narrative in `log.md`; preserved for forensic continuity | terminal |
+
+**Deprecated — `blocked`.** Earlier releases included a `blocked`
+status that conflated three orthogonal axes (dependency-readiness,
+exogenous wait, deferral). The three-axis model below replaces it:
+dependency waits are *derived* from the `advances` graph and clear
+themselves; exogenous waits are stored as the `waiting_on` overlay;
+deferrals also live in the overlay (`waiting_until`). The enum value
+still parses for backwards compatibility but is being removed in a
+follow-up release. Authors should set the overlay (`goc wait …`) or
+rely on derived readiness instead of flipping status to `blocked`.
 
 There is no separate `unverified` or `parked` state. Legacy
 unverified-bug entries map to `status: open` + `tags: [unverified]`;
@@ -192,23 +209,24 @@ graph-amplified `value`.
 `status` answers "what is the card doing right now?"
 `human_gate` answers "does progress require a human?"
 
-These axes are **orthogonal**. A card can be `blocked` with
-`human_gate: none` (parked on an agent-observable external condition)
-or `open` with `human_gate: decision` (queueable, but a human must
-pick a direction before work proceeds). Setting `blocked` does not
-automatically imply a human gate, and raising the gate does not
-imply `blocked`.
+These axes are **orthogonal**. A card can be `open` with `human_gate:
+decision` (queueable, but a human must pick a direction before work
+proceeds), or `active` with `waiting_on: external` (in-flight but
+partially gated on a third party). The progress status, the human
+gate, and the impediment overlay are three independent answers to
+three different questions.
 
 Three-value autonomy ladder:
 
 - `none`     — autonomous-loop-safe; cron may auto-pick. Examples:
   tolerance-creep test rename, stale-reference doc fix, mechanical
-  sed-style replacement. Also covers `status: blocked` cards waiting
-  on an external condition an agent can re-check (upstream release,
-  PR merge, dependency publication, CI availability, scheduled
-  research): the card is parked, but no human is needed to unblock —
-  a future autonomous run can observe the condition and flip the
-  card back to `open` or `active`.
+  sed-style replacement. Also covers cards waiting on an external
+  condition an agent can re-check (upstream release, PR merge,
+  dependency publication, CI availability, scheduled research): the
+  wait is expressed as `waiting_on: external` (+ optional
+  `waiting_until`) on a `status: open` card — no human is needed to
+  unblock — a future autonomous run observes the condition and
+  `goc wait <title> --clear`s the overlay.
 - `decision` — needs ONE human go/no-go before work proceeds. Example:
   "Option A (rewrite the cite) vs Option B (rewrite the code)?" The
   body **must contain the framing already** — see "Decision-gate body
@@ -220,9 +238,9 @@ Three-value autonomy ladder:
 
 Use `decision` or `session` **only** when the unblocker is human
 judgement, stakeholder alignment, prioritization, or a live
-discussion. If an agent can periodically check the blocker and
+discussion. If an agent can periodically check the wait and
 proceed when the external condition changes, the gate stays `none`
-even when the status is `blocked`.
+and the wait lives in the `waiting_on` overlay.
 
 Default for new cards created via `goc new`: `decision`.
 Auto-agents (audit-deck, next-card reclassification) should pick a more
@@ -275,6 +293,102 @@ deciding, and either:
 - Setting the gate to `session` if the framing itself needs to be
   revisited interactively.
 
+## Three-axis "stuck" model: status / dependency-readiness / impediment overlay
+
+`status` is one of three axes a reader uses to decide whether a card
+is workable right now. The other two are *derived* from the deck
+state, not stored as a status, so cards self-clear instead of
+stranding:
+
+| Axis | What it answers | Where it lives | How it clears |
+|---|---|---|---|
+| **Progress status** | what is the card doing right now? | stored `status` field | author flips it (`goc status`, `goc done`) |
+| **Dependency readiness** | does an `advances` prereq still gate me from *starting*? | DERIVED from `advanced_by` predecessor status, ADVISORY ONLY (no longer hard-blocks the pull queue) | self-clears the moment the last prereq closes |
+| **Impediment overlay** | is something exogenous stalling me? | stored `waiting_on` + optional `waiting_until` | author runs `goc wait <title> --clear`, or `waiting_until` elapses |
+
+The three compose. A card may be `status: active` AND carry
+`waiting_on: external` AND have an unresolved `advanced_by` prereq —
+each axis answers a different question and they do not collapse into
+one another.
+
+This decomposition is what replaces the legacy `status: blocked`
+value. The validator surfacings that used to police the legacy value
+(`STALE_BLOCKED`: a `blocked` card whose `advanced_by` are all
+terminal; `ORPHAN_BLOCKED`: a `blocked` card with no `advanced_by` and
+`human_gate: none`) are now migration aids — they identify cards still
+encoded in the old style and recommend the right axis-specific
+replacement (drop to `open` for dependency-derived cases; set
+`waiting_on` for exogenous-wait cases). Under the three-axis model
+nothing is ever steady-state `blocked`; the validator findings are
+expected to drain to zero as cards migrate.
+
+The **ready-to-pull predicate** that the `next-card` skill and
+the `pull-card` skill use is the AND of three signals — note that the
+derived dependency-readiness signal is advisory display only, NOT a
+gate:
+
+```
+ready ⇔ status == open
+      ∧ human_gate == none
+      ∧ waiting_on unset
+      ∧ (waiting_until absent or in the past)
+```
+
+A card with an open `advances` prereq is still pullable — it surfaces
+in `--ready` with an "awaiting: <prereqs> (you may start)" advisory
+line. The "must wait to start" hard gate is expressed explicitly via
+`waiting_on` (typically `waiting_on: external` or `resource`),
+NEVER inferred from a value-contribution edge that cannot tell
+"must" from "should".
+
+(`human_gate` is a fourth axis, but its role is different — it's the
+Andon cord telling agents NOT to autonomously claim. See the
+"human_gate scale" section above.)
+
+### Impediment overlay (`waiting_on`, `waiting_until`)
+
+Stored, orthogonal to `status`. Three kinds of exogenous wait the
+dependency graph cannot derive:
+
+| `waiting_on` | Meaning |
+|---|---|
+| `external` | vendor, client, hardware delivery, a third party |
+| `resource` | a specific person or skill currently unavailable |
+| `deferred` | deliberately postponed (GTD "tickler" / calendar defer) |
+
+`waiting_until` is an optional ISO date the wait is expected to clear
+(same shape as `created` / `closed_at` — `YYYY-MM-DD` or
+`YYYY-MM-DDTHH:MM:SSZ`). A bare `waiting_until` (no `waiting_on`)
+implies `deferred`.
+
+**Read-time behavior** (no daemon — evaluated when a command runs):
+
+- A future `waiting_until` (or a `waiting_on` reason without a date)
+  hides the card from `--ready` / `next-card` / `pull-card`. When the
+  date passes the card re-enters the queue with no manual action.
+- An elapsed `waiting_until` is surfaced by `goc validate` as
+  `WAITING_OVERDUE` — the Kanban SLE escalation signal that the wait
+  overran its expected return and should be re-triaged or cleared.
+
+**CLI** (see the `advance-card` skill "Step 6" for full examples):
+
+```bash
+goc wait <title> --reason external --until 2026-06-15
+goc wait <title> --until 2026-06-15           # bare date implies deferred
+goc wait <title> --reason resource             # open-ended wait
+goc wait <title> --clear
+```
+
+**YAML format** — both fields are optional flat scalars. Absent fields
+do not appear in frontmatter; the CLI removes them on `--clear`.
+Example:
+
+```yaml
+status: active
+waiting_on: external
+waiting_until: 2026-06-15
+```
+
 ## Definition of Done (DoD) — three implicit layers
 
 Scrum's **Definition of Done** as a machine-checkable closure
@@ -319,11 +433,32 @@ Zero matches → free-form prose. Otherwise → checkbox mode.
 
 ## Relationship fields
 
-The kanban tracks two structured relationships in frontmatter, **both
-bidirectional with consistency invariants**. Edges are stored on both
-endpoints so triage views can traverse in either direction without
-scanning, and so a half-written edge surfaces as a validator error
-rather than silent rot.
+The kanban tracks two structured relationship axes in frontmatter,
+**both bidirectional with consistency invariants**. Edges are stored
+on both endpoints so triage views can traverse in either direction
+without scanning, and so a half-written edge surfaces as a validator
+error rather than silent rot.
+
+### Deck as scheduler vs deck as record
+
+The deck has two jobs and the relationship graph serves both. The
+**scheduler axis** answers *what do I work on next?* — it walks edges
+among live cards to compose priority (`compute_values` Bellman-discounts
+the `advances` chain). The **record axis** answers *how and why did we
+get here?* — it walks edges that include closed cards so a cold reader
+(human or LLM) can reconstruct the history of a decision without
+parsing prose.
+
+A consequence: **closed-card edges are first-class members of the
+deck graph.** A card flipping to `done` / `disproved` / `superseded`
+does not discharge its relationship maintenance — its edges remain
+load-bearing for the record axis. `goc validate` enforces
+referential integrity for both axes regardless of either endpoint's
+status; `compute_values` warns (rather than silently skips) when an
+`advances` target cannot be resolved, so edge rot is loud, not
+silent. Forensic reads do NOT fall back to log.md prose for typed
+relationships — the typed link is the contract; prose is the
+explanation.
 
 ### Value-flow axis (advances graph)
 
@@ -339,6 +474,65 @@ rather than silent rot.
 contain `A`. The validator reports any half-edge. The `goc advance
 <title> --by <other>` and `goc unadvance <title> --by <other>`
 commands maintain both sides atomically.
+
+**Value-chain rule (the closure semantics).** Because "X advances Y"
+is *defined* as "closing X delivers a piece of Y's value chain," it
+follows that a true edge ⇔ Y's value chain includes X ⇔ Y is **not
+done** while X is open. There is no coherent "true edge you may close
+past." Either the edge is true (so Y isn't done — the closure FAIL is
+correct), or Y is genuinely closeable (so the edge was false and
+points at the wrong target — e.g. "more tests for C" does not advance
+C; it advances *the testing of C's functionality*, a different card).
+
+The `advanced-by-closed` derived check in `layer_3_goc_dod` enforces
+this rule at closure time: a card cannot move to `done` while any
+card in its `advanced_by` is non-terminal. This is **correct, not
+over-strict** — the gate is the value-chain identity above. The two
+honest resolutions when the gate fires are:
+
+1. **Wait** for the upstream contributor(s) to close.
+2. **Retract a false edge** with
+   `goc unadvance <closing-title> --by <upstream-title>` — honest graph
+   maintenance, not a bypass. Prefer this to `goc attest --skip
+   advanced-by-closed`; the skip leaves a dishonest edge in the deck.
+
+The closure half of this argument was decided in
+[`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`](../../../.game-of-cards/deck/advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/)
+(Option E, 2026-05-26): "X advances Y" ⇔ Y's value chain includes X
+⇔ Y is not done while X is open, so a true edge cannot coexist with a
+closeable Y. A reader who hits an `advanced-by-closed` FAIL should
+land there for the value-chain reasoning and the `goc unadvance`
+retraction path — not reach for `--skip`. The loose/strict distinction
+the report flagged governs *start ordering* (delegated to derived
+readiness), not closure.
+
+### Closure vs readiness — the asymmetry
+
+The loose/strict distinction (~80% loose value contribution, ~20%
+strict prerequisite — see
+`rename-blocks-to-advances-and-design-value-sort`) is real, but it
+governs **start ordering, not closure**. A loose "X contributes;
+doesn't gate" edge means you may *begin* Y before X is done; it does
+**not** mean Y can be *declared done* with X's piece undelivered. So
+both loose and strict true edges block closure; they differ only on
+whether work on Y may start first:
+
+| edge | may Y *start* before X done? | may Y *close* while X open? |
+|---|---|---|
+| strict (X required before Y begins) | (must wait — express as impediment overlay) | no |
+| loose (X contributes, no order)     | **yes** | **no** (X is in Y's value chain) |
+
+Consequence: the `advanced-by-closed` closure check correctly reads
+all `advanced_by` as hard at closure time. The readiness predicate
+does NOT block on `advances` edges at all — an `advances` edge is a
+"should be done first" (priority bias + closure gate + soft order
+preference), not a "must wait to start". When work genuinely cannot
+start until an upstream finishes (the strict case), that is an
+*impediment*: express it explicitly on the dependent card via the
+`waiting_on` overlay (with reason and optional `waiting_until`),
+not as an inferred meaning of the value-contribution edge. The
+overlay is what the start-gate predicate reads; the `advances`
+edge stays a pure value-flow + closure signal.
 
 **YAML format:** non-empty `advances` and `advanced_by` lists are
 rendered as block-style (one `- item` per line). Empty lists use
@@ -362,22 +556,116 @@ story-2, ...]`. A standalone derivative test that doesn't contribute
 to any other closure has no value-flow edges — its provenance lives
 in body / `log.md`, not frontmatter.
 
-### Replacement (forensic-only, not in frontmatter)
+### Coordinating cards — aggregation epic vs governing cluster
 
-When a card is replaced, the old card flips to `status: superseded`
-and its `log.md` records the replacement: which card replaced it
-(linked as `[<new-title>](../<new-title>/)`), and one-line why
-(different approach, scope split, reframing). The new card's body
-explains what it supersedes.
+Not every coordinating card takes an `advances` edge. There are
+**three** shapes, and only one of them uses edges:
 
-The replacement is **prose, not structured**. Discard-pile cards
-(`superseded`, `disproved`, `done`) are out of active play, so the
-deck owes no machine-readable relationship graph for them. Active
-queries (`scan-deck`, `next-card`, value-flow traversal) only ever
-touch the draw pile (`open` / `active` / `blocked`) where structured
-edges (`advances` / `advanced_by`) are load-bearing for live
-scheduling. Forensic reads — "what was this replaced by?", "why?" —
-recover from `log.md` via LLM grep when needed.
+1. **Aggregation epic** — its value chain *is* its children; it
+   closes *when they close*. Canonical encoding:
+   `child.advances: [epic]` (so `epic.advanced_by: [children]`).
+   The child contributes to the epic's value; the epic stays open
+   until each child closes. The `advanced-by-closed` check on the
+   epic correctly holds it shut until the work lands.
+2. **Governing cluster** — a decision or standard-setting card that
+   closes *when the decision is made*, independent of the work it
+   standardizes. Instances may exist before *or* after the standard
+   is set. Canonical encoding: a **shared tag**, no `advances` edge
+   in either direction. The `tags` field's per-epic conventional tag
+   is exactly this tool (`epic` is "multiple cards block it from
+   closing **OR** carry the same epic-grouping tag" — that *OR* is
+   load-bearing).
+3. **Backwards aggregation** — `epic.advances: [children]` (so
+   `child.advanced_by: [epic]`). **This is the bug.** Two silent
+   costs: (a) the value law is defeated — children no longer inherit
+   the epic's value, so the GRPW sort can't see the chain; (b) every
+   child trips a spurious `advanced-by-closed` FAIL at attest time
+   because it reads as gated on a parent that is meant to outlive
+   it. An autonomous `pull-card` / `/loop` worker halts on the whole
+   cluster.
+
+**Why an edge can't model a governing cluster.** An `advances` edge
+encodes two hard, directional commitments at once: value flow (the
+source lends its priority to the target via GRPW) AND closure gating
+(`advanced-by-closed`: the target can't close until the source is
+done). For a soft, two-way govern relationship *both* commitments
+are wrong, so *either* edge direction mismodels it:
+
+| encoding | what `advanced-by-closed` does | verdict |
+|---|---|---|
+| `decision.advances: [instances]` (=`instance.advanced_by: [decision]`) | blocks each **instance** behind the open decision | deadlock — instances can't close |
+| `instance.advances: [decision]` (=`decision.advanced_by: [instances]`) | blocks the **decision** behind all instances | contradicts the decision's DoD (closes when *decided*) |
+| **shared tag**, no edge | nothing — pure grouping | **correct**: govern without blocking |
+
+**The tell:** if the coordinating card is itself a *decision*
+(`human_gate: decision`) or otherwise closes on its own deliverable
+rather than on its cluster's completion, it is a governing cluster
+→ use a tag. Reach for an `advances` edge only when the
+coordinator's closure genuinely waits on the work.
+
+**Lint.** `goc validate` emits an advisory hint
+(`BACKWARDS_EPIC_EDGE`, warning — does not fail the build) when a
+card carries ≥ 2 `advances` entries whose contribution is
+predominantly *lower* than the card's own. The hint names both
+candidate fixes (flip vs. convert-to-tag) and lets the author pick;
+it does not blindly suggest flipping, because for a governing
+cluster the flip is also wrong. The check uses the contribution
+gradient (not a bare `advances ≥ N` count), so legitimate hubs that
+advance many higher-or-equal contribution targets pass clean.
+
+### Replacement axis (supersedes graph)
+
+- `superseded_by` — list of slugs that replace this card. Set on the
+  *old* card at the moment of supersession.
+- `supersedes`    — list of slugs this card replaces. Set on the *new*
+  card. Inverse of `superseded_by`.
+
+A card cannot supersede itself or a non-superseded target;
+`goc validate` enforces both rules. `goc status <title> superseded
+--by <successor>` maintains both endpoints atomically — same atomicity
+contract as `goc advance` / `goc unadvance` for the advances graph.
+Prefer the CLI to manual edits.
+
+**Invariants:**
+
+- If `A.superseded_by` contains `B`, then `B.supersedes` MUST contain
+  `A` (validator-enforced).
+- A card with non-empty `superseded_by` MUST have `status: superseded`
+  (validator-enforced).
+- Every entry in `supersedes` MUST point at a card with
+  `status: superseded` (validator-enforced).
+- The replacement narrative still appends to `log.md` — the typed
+  field is the *pointer* (machine-navigable), the journal entry is
+  the *rationale* (different approach, scope split, reframing). Both,
+  for different jobs.
+
+**Why both typed and prose?** Recording a typed edge is O(1) at the
+moment the relationship is known and cheapest to state. Reconstructing
+a lost relationship later from prose is O(read-everything) and lossy —
+inferring structure that was once explicit. For a methodology whose
+readers are AI agents, a traversable typed graph beats scattered
+per-card prose decisively, while the prose-rationale retains the
+*why* a graph edge can never capture.
+
+**YAML format** (same conventions as advances/advanced_by — block-style
+when non-empty, inline `[]` when empty, fields absent on cards that
+were never involved in a supersession):
+
+```yaml
+status: superseded
+closed_at: 2026-05-14T10:00:00Z
+superseded_by:
+  - reframed-replacement-card
+```
+
+```yaml
+# the successor:
+supersedes:
+  - the-old-card-it-replaces
+```
+
+The fields are optional and absent by default. They appear only when
+a supersession is recorded.
 
 ### Grouping (use tags)
 

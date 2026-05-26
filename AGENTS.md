@@ -278,10 +278,23 @@ shape from Claude Code's:
 
 The auto-synced engine pair (`goc -> openclaw-plugin/goc`) is enforced
 by the same byte-for-byte tripwire as the Claude one. Skills are NOT
-auto-synced — they go through the porting script once during scaffold
-and are independently maintained from then on. To re-port (e.g., after
-a major rewrite of the source skills), re-run
+auto-synced into the commit — they go through the porting script, whose
+output is reviewed and committed by hand (unlike the claude/codex
+mirrors, the porter applies non-trivial normalization worth eyeballing).
+To re-port (e.g., after editing a source skill), re-run
 `python3 scripts/port_skills_to_openclaw.py` and review the diff.
+
+The port is deterministic, so a drift guard keeps it honest even though
+it is not auto-staged: `scripts/port_skills_to_openclaw.py --check`
+re-ports into memory and fails on any difference from the committed
+`openclaw-plugin/skills/`. The same comparison is enforced in CI by
+`tests/test_plugin_mirror_parity.py` (it calls the porter's
+`drifted_skills()` from the regression-test suite), so a template edit
+that is not followed by a re-port turns the build red instead of rotting
+silently. The guard lives in a test, not a `ci.yml` step, because the
+autonomous bot's `GITHUB_TOKEN` cannot edit files under
+`.github/workflows/`. The porter is idempotent — re-running `--check`
+immediately after a re-port is always green.
 
 OpenClaw-plugin-specific files that are NOT auto-synced:
 `openclaw-plugin/index.ts`, `openclaw-plugin/package.json`,

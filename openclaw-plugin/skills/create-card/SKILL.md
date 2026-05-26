@@ -55,20 +55,18 @@ also avoid:
   same family must too. Inventing a new slug shape per instance makes
   the family illegible.
 
-Verify it doesn't already exist:
-
-`goc show <title> 2>&1 | head -3`
-
-Existence (frontmatter dump returned) → pick a different title.
-Non-existence ("ERROR: ... not found") → safe to proceed.
+Verify it doesn't already exist by running `goc show <your-title>`
+yourself with the candidate title bound. Existence (frontmatter dump
+returned) → pick a different title. Non-existence (`ERROR: ... not
+found`) → safe to proceed.
 
 ## Step 2 — dedup against open / done / disproved queues
 
 Same root cause as an existing card = supporting evidence on that
 card's body + a `log.md` appendage on the existing entry, NOT a new
-filing. Grep for the candidate's identifying string:
-
-`goc --status all 2>&1 | grep -i <near-name-fragment>`
+filing. Grep for the candidate's identifying string yourself, e.g.
+`goc --status all | grep -i <fragment>` with `<fragment>` replaced
+by a distinctive substring of the candidate title.
 
 If a `disproved` rebuttal exists for this hypothesis, re-read it
 before filing. Re-promote only if `git log -p -- <cited-file>` shows
@@ -131,13 +129,54 @@ goc new <title> \
   --contribution <high|medium|low> \
   --gate <none|decision|session> \
   --tag bug \
-  --tag <area-tag>     # documentation / api-contract / infra / etc.
+  --tag <area-tag> \
+  --advances <target-title> \
+  --advanced-by <parent-title>
 ```
 
 The CLI creates `deck/<title>/README.md` with valid flat frontmatter
 and a placeholder `- [ ] (replace with real criteria)` DoD, plus an
 empty `deck/<title>/log.md`. Tags must come from the canonical set
 (see the `card-schema` skill); the CLI rejects unknowns.
+
+**Need a new grouping tag?** Project-local tags (domain vocabulary,
+sub-project names, cluster groupings — e.g. when filing a card whose
+governing peer wants a shared epic tag) are added in
+`.game-of-cards/canonical-tags.md` under a fenced `canonical_tags:`
+YAML block; `goc validate` merges it into the enum on every run. A
+tag that should ship with goc itself goes through a PR. See
+the `card-schema` skill "Adding new tags" for the predicates that decide
+when a new tag is warranted vs. an existing one fits.
+
+When the value-flow relationship is known at filing time, pass
+repeatable `--advances` / `--advanced-by` flags so `goc new` writes
+both sides of the edge in one command. Use the older `goc new` then
+`goc advance` two-step only as a fallback for adding edges to an
+existing card or when the relationship is discovered after creation.
+
+**Edge direction for coordinating cards (the three-way fork).** When
+the card you're filing coordinates other work, decide which of three
+shapes you're authoring before reaching for `--advances`. See
+the `card-schema` skill "Coordinating cards — aggregation epic vs
+governing cluster" for the full rules; the short form:
+
+- **Aggregation epic** (its value chain *is* its children; closes
+  when they close) → `child.advances: [epic]`. The child contributes
+  upward; the epic aggregates downward via `advanced_by`. Concretely
+  on a child filing: `goc new <child> --advances <epic>`.
+- **Governing cluster** (a decision or standard-setting card that
+  closes when *decided*, independent of the cluster's work) → a
+  **shared tag**, no `advances` edge in either direction. Add the
+  tag via `--tag <epic-grouping-tag>` on both the governing card and
+  its instances.
+- **Never** `epic.advances: [children]` (backwards). It defeats the
+  value law and trips a spurious `advanced-by-closed` FAIL on every
+  child at attest time. `goc validate` emits a
+  `BACKWARDS_EPIC_EDGE` advisory hint when this signature appears.
+
+The tell: if the coordinating card itself has `--gate decision` or
+otherwise closes on its own deliverable rather than on its cluster's
+completion, it's a governing cluster → use a tag, not an edge.
 
 ## Step 5 — write the body (the dashboard)
 

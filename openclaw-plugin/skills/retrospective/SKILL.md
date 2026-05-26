@@ -70,7 +70,7 @@ Read the closure entries in `log.md` for each card. Look for:
 
 - Cards closed with `disproved` or `superseded` — what was wrong?
 - Cards whose `log.md` mentions rework, revert, or "fixed incidentally".
-- Cards that were blocked (check `status` history in `log.md`) before closing.
+- Cards that carried a `waiting_on` overlay (check `log.md` for the wait being set/cleared) before closing — a long-running wait often signals an under-explored dependency or coordination gap.
 - Cards whose DoD had many unchecked items at closure (if the log notes this).
 
 For each pattern that appears in ≥2 cards, report it:
@@ -160,5 +160,5 @@ working context; only the surfaced patterns and proposals go to chat.
 
 - the `create-card` skill — file a generalization card from a candidate proposal.
 - the `audit-deck` skill — hunt for NEW defects in the codebase (forward-looking).
-- the `standup` skill — daily read of in-flight and blocked work.
+- the `standup` skill — daily read of in-flight and impeded work.
 - the `scan-deck` skill — full queue browse including closed cards.
