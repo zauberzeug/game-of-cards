@@ -1,20 +1,20 @@
 ---
 title: block-scalar-parser-collapses-whitespace-only-content-lines
 summary: "The vendored yaml-lite block-scalar parser tests each content line for blankness with `raw.rstrip() == \"\"` and, when true, appends an empty string — collapsing a whitespace-only content line (indent + interior spaces) to nothing. The goc frontmatter emitter writes such a line verbatim, so a multiline `summary`/`definition_of_done` value with an all-whitespace interior line does NOT survive emit->parse. This is the residual whitespace-only-line code path left unfixed by the closed sibling `block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip`, which only fixed the non-blank content-line slice."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T22:21:44Z"
-closed_at: null
+closed_at: 2026-05-26T22:47:29Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero (the whitespace-only content line round-trips losslessly)
-  - [ ] TDD: a block scalar whose only content is a single whitespace-only line still round-trips (e.g. value `"   "` survives emit->parse), and an all-blank/whitespace tail is still clip/strip-chomped exactly as before (no regression in trailing-blank-line handling)
-  - [ ] MECHANICAL: the fix preserves the existing whitespace-only-line semantics outside a block (the `rstripped == ""` short-circuit at `goc/_vendor/yaml_lite.py:164` is corrected, not removed wholesale, so genuinely-empty lines past the block indent still chomp correctly)
-  - [ ] PROCESS: `uv run goc validate` clean and `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads)
+  - [x] TDD: `reproduce.py` exits zero (the whitespace-only content line round-trips losslessly)
+  - [x] TDD: a block scalar whose only content is a single whitespace-only line still round-trips (e.g. value `"   "` survives emit->parse), and an all-blank/whitespace tail is still clip/strip-chomped exactly as before (no regression in trailing-blank-line handling)
+  - [x] MECHANICAL: the fix preserves the existing whitespace-only-line semantics outside a block (the `rstripped == ""` short-circuit at `goc/_vendor/yaml_lite.py:164` is corrected, not removed wholesale, so genuinely-empty lines past the block indent still chomp correctly)
+  - [x] PROCESS: `uv run goc validate` clean and `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads)
 
 # block-scalar-parser-collapses-whitespace-only-content-lines
 
@@ -84,13 +84,13 @@ advanced_by: []
 
 === round-trip of summary ===
 in : 'first line\n   \nthird line'
-out: 'first line\n\nthird line'
-match: False
+out: 'first line\n   \nthird line'
+match: True
 
-DEFECT: whitespace-only content line collapsed to empty; the spaces past the block indent were dropped.
+OK: block-scalar round-trip is lossless.
 ```
 
-Exit code 1 while the defect fires.
+Exit code 0 after the fix (the whitespace-only content line round-trips).
 
 ## Why it matters
 
