@@ -53,13 +53,33 @@ project-specific reasoning is decisive.
    If absent, appends a fresh `## Decision` section to the end of the
    body.
 
-2. **log.md.** Appends one entry:
+2. **log.md.** Appends up to two entries — the archive precedes the
+   resolution so the journal reads as a timeline (filed → decided):
 
-   ```
-   ## YYYY-MM-DD: decision recorded
+   - **If the body had a `## Decision required` section**, first archives
+     its prior content (the options, recommendation, and trade-offs that
+     are about to be overwritten in the README) as a dated entry stamped
+     with the card's `created` timestamp:
 
-   <decision> — <reason>. Gate <prior> → none.
-   ```
+     ```
+     ## <created>: decision deliberation archived
+
+     Archived from the README's `## Decision required` section … 
+
+     <prior section content — options, recommendation, trade-offs>
+     ```
+
+     README is the dashboard (rewritten in place); log.md is the journal
+     (append-only). The archive recovers the deliberation that the README
+     replacement would otherwise lose.
+
+   - Then records the resolution:
+
+     ```
+     ## <decided-at>: decision recorded
+
+     <decision> — <reason>. Gate <prior> → none.
+     ```
 
 3. **Frontmatter.** Flips `human_gate: decision` (or `session`) →
    `none`. Status is unchanged (`open` stays `open`).
@@ -78,6 +98,31 @@ project-specific reasoning is decisive.
    ```bash
    goc show <title>
    ```
+
+   **1.5. Eliciting the pick from labeled options — mirror the source
+   verbatim.** When the card body's `## Decision required` section
+   enumerates labeled options (Option A / B / C / D) and you elicit the
+   user's choice with `AskUserQuestion`, build the picker payload from
+   the *source's* labels and order:
+
+   - **Order:** present the options in the same order the card body
+     lists them (A, then B, then C…). Do **not** reorder.
+   - **Labels:** reuse the card body's option labels verbatim (trimmed
+     to `AskUserQuestion`'s length limit if necessary, but keep the
+     leading `Option X` token so the user can map their pick back to
+     the body).
+   - **Recommendation:** mark the recommended option *in place* by
+     appending ` (Recommended)` to its existing label — leave it where
+     it sits in the source order.
+
+   This **overrides** the `AskUserQuestion` tool description's "make
+   the recommended option first" guidance for this bridging case. That
+   guidance is correct when labels don't pre-exist anywhere; here the
+   card body is the canonical enumeration, so reordering or rephrasing
+   forces the user to remap their pick between two presentations (they
+   read "Option A" in the body, the picker shows it as item #2). The
+   decision skill exists to make lowering the cord cheap — a picker
+   that needs a mental remap defeats that purpose.
 
 2. **Run the CLI.**
 

@@ -3841,19 +3841,31 @@ def _cmd_decide(args):
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
     fm, body = parse_frontmatter(text)
+    archived = extract_decision_required_section(body)
     body = replace_or_append_decision(body, decision, reasoning, now)
     text = emit_frontmatter(fm, body=body)
     text = mutate_frontmatter_field(text, "human_gate", "none")
     (card_dir / "README.md").write_text(text)
     log_path = card_dir / "log.md"
     existing = log_path.read_text() if log_path.exists() else ""
-    sep = "\n\n" if existing.strip() else ""
-    log_path.write_text(
-        existing.rstrip("\n")
-        + sep
-        + f"## {now}: decision recorded\n\n"
-        + f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
+    entries = []
+    if archived:
+        filed = t.created or now
+        entries.append(
+            f"## {filed}: decision deliberation archived\n\n"
+            "Archived from the README's `## Decision required` section by "
+            "`goc decide` before it was replaced with the resolved `## Decision` "
+            "block — README is the dashboard, log.md is the journal. This "
+            "preserves the options and recommendation that produced the "
+            "decision below.\n\n"
+            f"{archived}\n"
+        )
+    entries.append(
+        f"## {now}: decision recorded\n\n"
+        f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
     )
+    sep = "\n\n" if existing.strip() else ""
+    log_path.write_text(existing.rstrip("\n") + sep + "\n\n".join(entries))
     print(f"{title}: decision recorded; gate {prior_gate} → none")
     print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
     commit_policy = _commit_override(commit, no_commit)

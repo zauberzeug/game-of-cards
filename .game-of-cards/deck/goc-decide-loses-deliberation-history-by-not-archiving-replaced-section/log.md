@@ -47,3 +47,20 @@ Option A. Minimum-viable fix that lands the discipline at the engine level for t
 ## 2026-05-26T12:10:35Z: decision recorded
 
 Option A — goc decide-specific archival. Modify goc decide in engine.py to append the prior Decision-required section content to log.md as a dated archive entry before replacing it in the README, and update the decide-card SKILL.md to document the dual-write behaviour (README replaced; log.md archives prior section AND records resolution). — Minimum-viable fix that lands the discipline at the engine level for the one confirmed caller; narrow blast radius and easy to test. The generalised archive-section helper (Option B) is deferred until a second section-replacing caller appears.. Gate decision → none.
+
+## 2026-05-26T12:10:35Z — Closure
+
+- **What changed**: `goc/engine.py` `_cmd_decide` — extracts the prior `## Decision required` section before the README replacement and appends it to log.md as a dated archive entry (stamped with the card's `created` timestamp) preceding the "decision recorded" entry. `goc/templates/skills/decide-card/SKILL.md` Step 2 documents the dual-write. Plugin mirrors re-synced; OpenClaw skill re-ported.
+- **Verification**: new `tests/test_decide_archives_deliberation.py` — 2 tests (archival timeline + no-section backwards-compat); 149 passed total; `goc validate` clean.
+- **Audit**: PASS — invokes the README-as-dashboard / log.md-as-journal convention (`Skill(card-schema)` "What goes where"); enforces it at the engine level for the one confirmed caller.
+- **Project impact**: n/a
+- **Tests**: 149 passed / 0 failed / 0 xfailed
+- **Bundled with**: n/a
+
+## Closure verification (2026-05-26T20:02:20Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 6/6 ticked
+- [x] log-md-closure-entry — '## 2026-05-26 — Closure' present
