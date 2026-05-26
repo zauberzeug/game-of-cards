@@ -1,7 +1,7 @@
 ---
 title: compute-values-amplifies-priority-through-impeded-descendants
 summary: "`compute_values` prunes only TERMINAL descendants from the GRPW value walk; an `open` descendant carrying an active `waiting_on` impediment overlay is hidden from the queue (`card_is_ready` → False) yet still amplifies its ancestor's scheduling priority up the `advances` chain. A descendant nobody can work for months inflates a live card's rank — the exact distortion the terminal-pruning fix removed, left unpatched for the impediment axis the blocked-status redesign introduced."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T23:42:05Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — an ancestor of a far-future-impeded descendant no longer inherits that descendant's value; an ancestor of a workable (non-impeded, open) descendant still does.
   - [ ] MECHANICAL: if excluding, `value_for` skips descendants for which `waiting_impedes(dest)` is True (mirroring the existing `TERMINAL_STATUSES` prune at `engine.py:1740`); the `compute_values` docstring states the impediment-aware rule explicitly.
   - [ ] MECHANICAL: plugin mirrors synced and `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `compute_values` amplifies priority through impeded (`waiting_on`) descendants
