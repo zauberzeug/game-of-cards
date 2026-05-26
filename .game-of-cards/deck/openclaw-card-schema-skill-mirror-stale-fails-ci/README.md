@@ -1,7 +1,7 @@
 ---
 title: openclaw-card-schema-skill-mirror-stale-fails-ci
 summary: "The committed `openclaw-plugin/skills/card-schema/SKILL.md` is stale relative to its source-of-truth template `goc/templates/skills/card-schema/SKILL.md`. Two template edits (ready-predicate rewrite, underscore title-antipattern row) landed without a manual `port_skills_to_openclaw.py` re-port, so the OpenClaw port-drift guard test fails on main — CI is red. Fix is to re-port and commit."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-26T23:49:47Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: `uv run python -m unittest tests.test_plugin_mirror_parity` passes (the `OpenClawSkillPortDriftTest.test_committed_ports_match_fresh_render` failure is cleared).
   - [ ] TDD: `python scripts/port_skills_to_openclaw.py --check` exits zero (no drift).
   - [ ] MECHANICAL: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw card-schema skill mirror is stale — CI red on main
