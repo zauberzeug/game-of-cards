@@ -182,6 +182,24 @@ To skip a single check (rare, e.g. when an automated check is
 genuinely flaky): `--skip <name>`. The skip is recorded as
 `[~] SKIPPED — <description>` in the block. Do not skip casually.
 
+**`advanced-by-closed` failures — prefer retraction over `--skip`.**
+When this check fails, two honest resolutions exist (see
+`Skill(card-schema)`'s "Value-chain rule"):
+
+1. **Wait** for the named upstream contributors to close, then re-run
+   `attest`.
+2. **Retract a false edge** with
+   `goc unadvance <closing-title> --by <upstream-title>`. The
+   value-chain identity ("X advances Y" ⇔ Y's value chain includes X)
+   says a true edge cannot coexist with a closeable Y; so if Y is
+   genuinely closeable, the edge was modeling the wrong relationship
+   and the right action is to remove it, not skip the check.
+
+`--skip advanced-by-closed` should be the last resort, never the
+first — it leaves a dishonest edge in the deck (the closure log shows
+SKIPPED, the graph still claims X is in Y's value chain, and the next
+reader cannot tell which it was).
+
 ## Step 6 — close via the CLI
 
 ```bash

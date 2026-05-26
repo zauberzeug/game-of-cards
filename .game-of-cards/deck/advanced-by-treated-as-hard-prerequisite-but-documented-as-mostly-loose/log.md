@@ -83,3 +83,43 @@ declared value-chain piece. E keeps the gate honest and makes the escape
 (retract the false edge) the honest action. The loose-edge friction B
 was trying to fix turned out to be a *readiness* concern, not a closure
 one, so it didn't need the closure gate weakened at all.
+
+## 2026-05-26T05:42:00Z — Closure
+
+- **What changed**: `goc/templates/skills/card-schema/SKILL.md` gained
+  the value-chain rule and the closure-vs-readiness asymmetry table
+  under "Value-flow axis"; `goc/engine.py` `_run_derived_check`'s
+  `advanced-by-closed` summary now names the two honest resolutions
+  (wait, or `goc unadvance <closing> --by <upstream>`, prefer over
+  `--skip`); `goc/templates/skills/finish-card/SKILL.md` Step 5 adds
+  a paragraph blessing retraction over `--skip` as the first-line
+  escape; the readiness sibling
+  ([`derive-dependency-readiness-…`](../derive-dependency-readiness-instead-of-storing-blocked-status/))
+  receives a post-close amendment in its `log.md` flagging that its
+  current `dependency_blocked` predicate inherits the closure reading
+  and that the asymmetry is delegated to follow-up work there.
+  `reproduce.py` exercises all three resolution paths against a temp
+  deck.
+- **Verification**:
+  `uv run python .game-of-cards/deck/advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/reproduce.py`
+  exits 0 — scenario A FAILs `advanced-by-closed` with the new
+  hint visible; scenario B PASSes after the upstream closes; scenario
+  C PASSes after `goc unadvance` retracts the false edge.
+  `uv run goc validate` exits 0 (only pre-existing STALE_BLOCKED /
+  ORPHAN_BLOCKED warns unrelated to this card).
+- **Audit**: PASS — no rubric configured; this card binds to the
+  value-chain identity recorded on
+  `rename-blocks-to-advances-and-design-value-sort` (closure semantics
+  = "Y's value chain includes X"), not a mechanical fix.
+- **Project impact**: n/a
+- **Tests**: no pytest suite — `uv run goc validate` clean after
+  `python scripts/sync_plugin_assets.py`.
+- **Bundled with**: none
+
+## Closure verification (2026-05-26T05:42:23Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 6/6 ticked
+- [x] log-md-closure-entry — '## 2026-05-26 — Closure' present

@@ -11,7 +11,7 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 !`goc --status active -v 2>&1 | head -20`
 
-!`goc --status open --human-gate none -v${GOC_WORKER:+ --worker "$GOC_WORKER"}`
+!`goc --ready -v${GOC_WORKER:+ --worker "$GOC_WORKER"}`
 
 # Pick the next card
 
@@ -33,7 +33,9 @@ unless the user explicitly asks to continue that active card.
 
 User argument: $ARGUMENTS — if non-empty (a title or area like
 an area tag or path prefix), narrow the queue. If empty, scan the full
-`human_gate: none` slice.
+ready slice (`--ready` excludes any open card with a non-terminal
+`advanced_by` prereq — dependency-blocked cards self-clear when the
+last upstream closes, no `status: blocked` flip needed).
 
 ## Selection criteria
 
@@ -93,8 +95,8 @@ Every card carries `human_gate: none | decision | session`:
   `decision`.
 
 **Autonomous-mode rule** (`/loop`, cron, or any non-interactive
-invocation): walk down `--human-gate none` and recommend the top.
-If every unblocked candidate is `decision` or `session`, the run
+invocation): walk down `--ready` and recommend the top.
+If every ready candidate is `decision` or `session`, the run
 halts with a one-line summary listing the parked cards. Better to
 ship nothing than to land a research move without a review
 checkpoint.

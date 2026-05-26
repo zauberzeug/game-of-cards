@@ -369,6 +369,51 @@ contain `A`. The validator reports any half-edge. The `goc advance
 <title> --by <other>` and `goc unadvance <title> --by <other>`
 commands maintain both sides atomically.
 
+**Value-chain rule (the closure semantics).** Because "X advances Y"
+is *defined* as "closing X delivers a piece of Y's value chain," it
+follows that a true edge ⇔ Y's value chain includes X ⇔ Y is **not
+done** while X is open. There is no coherent "true edge you may close
+past." Either the edge is true (so Y isn't done — the closure FAIL is
+correct), or Y is genuinely closeable (so the edge was false and
+points at the wrong target — e.g. "more tests for C" does not advance
+C; it advances *the testing of C's functionality*, a different card).
+
+The `advanced-by-closed` derived check in `layer_3_goc_dod` enforces
+this rule at closure time: a card cannot move to `done` while any
+card in its `advanced_by` is non-terminal. This is **correct, not
+over-strict** — the gate is the value-chain identity above. The two
+honest resolutions when the gate fires are:
+
+1. **Wait** for the upstream contributor(s) to close.
+2. **Retract a false edge** with
+   `goc unadvance <closing-title> --by <upstream-title>` — honest graph
+   maintenance, not a bypass. Prefer this to `goc attest --skip
+   advanced-by-closed`; the skip leaves a dishonest edge in the deck.
+
+### Closure vs readiness — the asymmetry
+
+The loose/strict distinction (~80% loose value contribution, ~20%
+strict prerequisite — see
+`rename-blocks-to-advances-and-design-value-sort`) is real, but it
+governs **start ordering, not closure**. A loose "X contributes;
+doesn't gate" edge means you may *begin* Y before X is done; it does
+**not** mean Y can be *declared done* with X's piece undelivered. So
+both loose and strict true edges block closure; they differ only on
+whether work on Y may start first:
+
+| edge | may Y *start* before X done? | may Y *close* while X open? |
+|---|---|---|
+| strict (X required before Y begins) | no | no |
+| loose (X contributes, no order)     | **yes** | **no** (X is in Y's value chain) |
+
+Consequence: the `advanced-by-closed` closure check correctly reads
+all `advanced_by` as hard at closure time. The genuine over-read of
+loose edges lives in *readiness* (the start-ordering question), which
+is delegated to the sibling cards
+`derive-dependency-readiness-…` (the start-ordering predicate) and
+`add-waiting-overlay-…` (explicit human/external impediments), not
+the closure gate.
+
 **YAML format:** non-empty `advances` and `advanced_by` lists are
 rendered as block-style (one `- item` per line). Empty lists use
 inline `[]`. The `tags` field stays inline. Example:

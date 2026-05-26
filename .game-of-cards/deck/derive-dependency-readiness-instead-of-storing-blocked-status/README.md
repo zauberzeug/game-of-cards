@@ -1,11 +1,11 @@
 ---
 title: derive-dependency-readiness-instead-of-storing-blocked-status
 summary: "Compute dependency-blocking from the advances graph instead of storing it as a manual status. A card with any non-terminal `advanced_by` prereq is derived not-ready and self-clears when the last prereq closes. Surfaces in queues, board, and the pull-card readiness predicate. Replaces the warn-only STALE_BLOCKED/ORPHAN_BLOCKED model."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-24T11:22:05Z"
-closed_at: null
+closed_at: 2026-05-26T05:33:30Z
 human_gate: none
 advances:
   - blocked-status-conflates-dependency-external-wait-and-deferral
@@ -13,12 +13,13 @@ advances:
 advanced_by: []
 tags: [api-contract]
 definition_of_done: |
-  - [ ] A pure function (e.g. `dependency_blocked(card, by_title) -> bool`) returns True iff the card has at least one `advanced_by` prereq whose status is non-terminal; False when all prereqs are terminal or there are none.
-  - [ ] `next-card` / `pull-card` readiness excludes dependency-blocked open cards (they are not "ready to pull").
-  - [ ] `goc status` / table / board renders the derived dependency-block state (e.g. a marker + which prereqs remain) without reading a stored `blocked` value.
-  - [ ] `STALE_BLOCKED` is reconciled: a card whose `advanced_by` are all terminal is shown ready, not warned (the warn is now structurally impossible because nothing stays `blocked` for a resolved dependency).
-  - [ ] reproduce.py demonstrates: a card with an open prereq is derived-blocked; closing the prereq makes it derived-ready with no manual status flip.
-  - [ ] Does NOT remove `blocked` from the status enum (that is the sibling card) — derived readiness coexists with the legacy status until then.
+  - [x] A pure function (e.g. `dependency_blocked(card, by_title) -> bool`) returns True iff the card has at least one `advanced_by` prereq whose status is non-terminal; False when all prereqs are terminal or there are none.
+  - [x] `next-card` / `pull-card` readiness excludes dependency-blocked open cards (they are not "ready to pull").
+  - [x] `goc status` / table / board renders the derived dependency-block state (e.g. a marker + which prereqs remain) without reading a stored `blocked` value.
+  - [x] `STALE_BLOCKED` is reconciled: a card whose `advanced_by` are all terminal is shown ready, not warned (the warn is now structurally impossible because nothing stays `blocked` for a resolved dependency).
+  - [x] reproduce.py demonstrates: a card with an open prereq is derived-blocked; closing the prereq makes it derived-ready with no manual status flip.
+  - [x] Does NOT remove `blocked` from the status enum (that is the sibling card) — derived readiness coexists with the legacy status until then.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Derive dependency-readiness from the advances graph instead of storing it
@@ -40,22 +41,37 @@ So "this card is waiting on an upstream card" is expressed by a *manually set*
 Jira anti-pattern (no auto-transition; cards get stranded). The graph already
 holds the truth; the status duplicates it and drifts.
 
-## What to build
+## What was built
 
 A **computed** readiness property, not a stored field:
 
-- `dependency_blocked(card, by_title)` → True iff any `advanced_by` prereq is
-  non-terminal (`status ∉ TERMINAL_STATUSES`). The data is already loaded; this
-  is a cheap lookup.
-- Feed it into the ready-to-pull predicate used by `next-card` / `pull-card`
-  (alongside the existing `human_gate == none` filter) so dependency-blocked
-  open cards are not offered.
-- Surface it in `goc status` / table / `--board` so a reader sees "blocked by:
-  <remaining prereqs>" derived live, with no stored `blocked`.
-- Reconcile `STALE_BLOCKED`: once dependency-block is derived, an all-terminal
-  prereq set simply yields ready — the stale warning is moot. `ORPHAN_BLOCKED`
-  (a body-only blocker with no edge) is folded into the impediment overlay from
-  the sibling card.
+- `dependency_blocked(card, by_title)` and `dependency_blockers(card, by_title)`
+  in `engine.py` (near `TERMINAL_STATUSES`). The first returns True iff any
+  `advanced_by` prereq is non-terminal; the second returns the list of
+  outstanding prereqs for display. An unresolved prereq title is conservatively
+  treated as a blocker.
+- `card_is_ready(card, by_title)` composes status==open, human_gate==none, and
+  not-dependency-blocked. The sibling impediment-overlay card extends this with
+  `waiting_on` / `waiting_until`.
+- A new `goc --ready` flag wires this into the default table. `next-card` /
+  `pull-card` (and the recommended scan-deck recipe) now use `--ready`, so
+  dependency-blocked open cards never reach the autonomous picker.
+- Renderers surface the derived state: `-v` prints a `blocked by:
+  <prereqs>` line under any card with outstanding upstream work; `--board`
+  appends a ⛓ marker on dependency-blocked open cards; `--json` includes
+  `dependency_blocked`, `blocked_by`, and `ready` keys. The renderers accept a
+  `by_title` argument so filtered subsets evaluate against the full deck (not
+  the filtered slice, which would mis-report any prereq that fell outside the
+  filter).
+- `STALE_BLOCKED` becomes a migration aid: the docstring documents that the
+  derived-readiness pattern leaves the card `open` and lets the queue hide it,
+  so the warning is structurally unnecessary going forward. The check itself
+  stays in place until the sibling card removes `blocked` from the status
+  enum and migrates existing cards.
+- `reproduce.py` builds a two-card temp deck (`upstream-prereq` →
+  `dependent-card`), confirms the dependent is derived-blocked while the
+  prereq is open, flips the prereq to `done`, and confirms the dependent
+  self-clears with no manual status edit on the dependent.
 
 ## Scope boundary
 

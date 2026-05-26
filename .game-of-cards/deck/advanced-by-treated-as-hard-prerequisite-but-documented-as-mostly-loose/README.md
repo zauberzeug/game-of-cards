@@ -17,11 +17,11 @@ summary: |-
   governs *start ordering*, not closure, so the genuine over-read lives
   in derived *readiness*, delegated to the epic's children. This card
   now carries the Option E closure work; gate lowered to none.
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-26T04:55:34Z"
-closed_at: null
+closed_at: 2026-05-26T05:42:28Z
 human_gate: none
 advances:
   - blocked-status-conflates-dependency-external-wait-and-deferral
@@ -31,25 +31,26 @@ definition_of_done: |
   - [x] Option chosen and recorded (`## Decision`, 2026-05-26); gate
         lowered to `none`. Closure half = Option E; readiness half
         delegated to the epic's children.
-  - [ ] `card-schema` reaffirms `advanced-by-closed` is *correct*, with
+  - [x] `card-schema` reaffirms `advanced-by-closed` is *correct*, with
         the value-chain rule ("X advances Y" ⇔ Y's value chain includes
         X ⇔ Y not done while X open) and the closure-vs-readiness
         asymmetry table (loose edges block closure but not start order).
-  - [ ] `advanced-by-closed`'s failure message names the two honest
+  - [x] `advanced-by-closed`'s failure message names the two honest
         resolutions — wait, or `goc unadvance <closing> --by <upstream>`
         (documented on both cards) when the edge is discovered false —
         and `finish-card` blesses retraction over `--skip` as the
         first-line escape.
-  - [ ] `_run_derived_check`'s `advanced-by-closed` logic is left
+  - [x] `_run_derived_check`'s `advanced-by-closed` logic is left
         unchanged (no severity downgrade, no per-edge marker); the work
         is messaging + docs only. `goc validate` stays green.
-  - [ ] reproduce.py: closing `C` with a true open `advanced_by` edge
+  - [x] reproduce.py: closing `C` with a true open `advanced_by` edge
         FAILs; `goc unadvance C --by P` (edge was false) then lets it
         close. Loose-vs-strict is a readiness concern, tested there.
-  - [ ] The readiness half is handed off: the `derive-dependency-
+  - [x] The readiness half is handed off: the `derive-dependency-
         readiness-…` child is amended with the closure-vs-readiness
         asymmetry so its `dependency_blocked` predicate doesn't inherit
         the closure reading. This card does NOT implement readiness.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `advanced_by` is read as a hard prerequisite, but documented as mostly a loose contribution
