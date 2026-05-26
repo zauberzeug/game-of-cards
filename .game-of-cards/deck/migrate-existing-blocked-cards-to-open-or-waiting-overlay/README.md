@@ -9,7 +9,7 @@ summary: |-
   `waiting_on: <reason>`. No enum/code change here (`blocked` stays a
   valid value), so this is autonomous-pull-safe and unblocks the queue
   while the breaking removal waits for a release boundary.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T12:11:27Z"
@@ -40,6 +40,7 @@ definition_of_done: |
   - [ ] Optional: if a reusable `goc` migration helper is cheap, add it;
         otherwise a documented one-shot is fine — the population is 3
         cards. (Helper is not required to close.)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Migrate existing `blocked` cards off the status axis
