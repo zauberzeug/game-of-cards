@@ -16,8 +16,10 @@ it pulls one card off the queue, works it end-to-end, commits.
 
 The pull principle is what makes autonomous operation *safe*. Work
 isn't shoved at agents on a timer; agents pull on their own terms,
-filtered to `human_gate: none`. The human steers by curating WHAT'S
-in the queue and at what gate.
+filtered through the ready-to-pull predicate (`status: open`,
+`human_gate: none`, no non-terminal `advanced_by` prereq). The human
+steers by curating WHAT'S in the queue and at what gate; the graph
+keeps dependency-blocked cards out of sight automatically.
 
 ## What to do
 
@@ -29,9 +31,11 @@ Treat any listed active card as a soft lock. Do not claim the same card,
 or adjacent/conflicting work, unless the user explicitly asks to continue
 that active card.
 
-Pick the highest-contribution `human_gate: none` open card:
+Pick the highest-contribution **ready** card (`--ready` excludes any
+open card with a non-terminal `advanced_by` prereq — derived from the
+graph, no `status: blocked` flip needed):
 
-!`goc --status open --human-gate none -v 2>&1 | head -20`
+!`goc --ready -v 2>&1 | head -20`
 
 Then:
 
@@ -45,7 +49,7 @@ The card body is the briefing the original filer wrote. Trust it.
 
 ## When to stop without finishing
 
-- **Queue empty.** No `human_gate: none` open cards. Invoke
+- **Queue empty.** No ready cards. Invoke
   `Skill(audit-deck)` to file one new card from emergent codebase
   observations, then exit. The next invocation can work it.
 
