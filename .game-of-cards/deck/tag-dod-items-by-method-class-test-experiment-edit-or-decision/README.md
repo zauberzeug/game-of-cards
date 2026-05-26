@@ -1,7 +1,7 @@
 ---
 title: tag-dod-items-by-method-class-test-experiment-edit-or-decision
 summary: "Definition-of-Done checkboxes today flatten four epistemically distinct closure contracts — provable assertions, experimental outcomes, inspection-verifiable edits, and pure agreements — into uniform ticked-or-not. The most consequential conflation is empirical items: a `- [ ]` line that reads as a must-pass gate when the correct semantics is must-run-and-record-the-verdict. Proposes a one-token method-tag prefix per DoD line plus a warning-only validator check for migration safety."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-23T05:07:26Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] `goc/templates/skills/create-card/SKILL.md` Step 5 example DoD updated to demonstrate the chosen tagging convention end-to-end
   - [ ] `goc/engine.py` validator emits a fourth warning class (`UNTAGGED_DOD_ITEM`) for DoD checkboxes lacking a method tag — warning-only, sibling to STALE_BLOCKED / ORPHAN_BLOCKED / CASCADE_CHAIN_ROOT in `compute_blocker_warnings`
   - [ ] pre-commit `sync-plugin-assets` propagates the SKILL.md edits to all five consumer surfaces (claude-plugin, codex-plugin, openclaw-plugin, .claude/, .codex/) without drift; CI tripwire passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Tag DoD items by method class (test / experiment / edit / decision)
