@@ -1,7 +1,7 @@
 ---
 title: yaml-lite-strip-comment-defeated-by-unbalanced-quote-in-bare-value
 summary: "yaml-lite's `_strip_comment` tracks quote state to avoid stripping a `#` inside a quoted run, but on a bare (unquoted) scalar value containing a lone `'` or `\"` (e.g. an apostrophe) it enters quote mode and never exits, so a trailing `# comment` is never recognized and is kept as part of the value. Real YAML strips that comment. Confirmed: `safe_load(\"title: don't  # note\")` returns `{'title': \"don't  # note\"}`. Narrow blast radius — goc's emitter quotes values containing `#`, so it only bites hand-edited frontmatter / config.yaml / canonical-tags.md."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-26T22:28:42Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a `reproduce.py` asserts `safe_load("title: don't  # note") == {"title": "don't"}` (comment stripped, matching real YAML); fails before the fix, passes after
   - [ ] TDD: regression guard — a `#` inside a properly *balanced* quoted run is still NOT stripped (e.g. `a: "x # y"` → `"x # y"`), and a bare value with no quote still strips its comment
   - [ ] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # yaml-lite-strip-comment-defeated-by-unbalanced-quote-in-bare-value
