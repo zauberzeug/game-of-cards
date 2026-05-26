@@ -1,7 +1,7 @@
 ---
 title: block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip
 summary: "The frontmatter emitter writes `definition_of_done` (always) and multiline `summary` (when it contains a newline) as literal block scalars, preserving each content line verbatim including trailing whitespace. The vendored yaml-lite parser rstrips every block-scalar content line, so a value goc emits does NOT survive being parsed back by goc. Because goc rewrites frontmatter on most verbs, a DoD/summary line ending in whitespace (e.g. a Markdown hard-break) is silently mutated. This is a distinct, unfixed code path from the closed inline-scalar quoting fixes."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T21:56:30Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: the fix preserves trailing whitespace on every content line of a multi-line block scalar, not just the first.
   - [ ] MECHANICAL: fix lands in `goc/_vendor/yaml_lite.py` `_parse_block_scalar`; leading-indent stripping (`raw[block_indent:]`) is retained, only the trailing `.rstrip()` of meaningful content is reconsidered.
   - [ ] TDD: `uv run goc validate` passes on this repo's deck (no regression in existing block-scalar parsing — empty-block-scalar, three-way chomping, and indentation handling all still correct).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Block-scalar parser strips trailing whitespace, breaking the emit->parse round-trip
