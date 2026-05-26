@@ -86,6 +86,12 @@ hunting for a Claude Code-style analog:
 > Git ignores. OpenClaw has no equivalent convention; project-local
 > notes can live anywhere the user prefers (or in `AGENTS.md`, which the
 > generic kickoff already handled).
+>
+> **No `CLAUDE.md` either.** Run from the OpenClaw plugin, `goc install`
+> recognizes the host and scaffolds a no-harness layout — `.game-of-cards/`
+> plus the `AGENTS.md` briefing — and never writes a `CLAUDE.md`. The
+> dry-run plan reads `agents: none`; that is correct on OpenClaw, not a
+> missed harness.
 
 ---
 

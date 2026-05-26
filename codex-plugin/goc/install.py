@@ -4,7 +4,10 @@ Drops the shared deck/config scaffold plus selected agent harness assets into
 the current working directory. No-flag installs detect existing Claude/Codex
 project surfaces and fall back to the Claude Code reference harness when no
 agent marker is present. Codex uses the shared AGENTS.md guidance plus
-Codex-readable skills, without Claude-only hooks.
+Codex-readable skills, without Claude-only hooks. The exception is the OpenClaw
+plugin context (this engine running from `openclaw-plugin/`): OpenClaw ships
+skills via its plugin runtime and has no harness surface, so the no-flag default
+there is no harness at all — shared scaffold + AGENTS.md only, never CLAUDE.md.
 Idempotent — second runs detect existing installs via `.game-of-cards/deck/.goc-version`
 (or legacy `deck/.goc-version`) and exit clean.
 
@@ -447,6 +450,20 @@ def _is_plugin_context() -> bool:
     the package directory is the project root or a site-packages dir.
     """
     return _PACKAGE_DIR.parent.name in {"claude-plugin", "codex-plugin", "openclaw-plugin"}
+
+
+def _is_openclaw_plugin_context() -> bool:
+    """True when this engine runs from the bundled copy inside `openclaw-plugin/`.
+
+    OpenClaw provides skills and lifecycle hooks through its plugin runtime and
+    has no Claude/Codex-style harness surface (no CLAUDE.md, no settings.json,
+    no `.claude/` tree). So under this context the install/upgrade default is
+    *no harness* — only the shared `.game-of-cards/` scaffold plus the AGENTS.md
+    briefing — rather than the Claude fallback every other layout uses. Keyed on
+    the same package-location signal as `_is_plugin_context()` so it is automatic
+    regardless of how `goc install` was invoked.
+    """
+    return _PACKAGE_DIR.parent.name == "openclaw-plugin"
 
 
 _LOCAL_SKILLS_PLUGIN_REFUSAL = (
@@ -1048,8 +1065,16 @@ def install(
     supported_agents = _registered_agents(templates)
 
     explicit_agents = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
-    detected_agents = _detect_agent_surfaces(target, supported_agents=supported_agents)
-    default_agents = detected_agents or _default_install_agents(target, supported_agents=supported_agents)
+    if not explicit_agents and _is_openclaw_plugin_context():
+        # OpenClaw ships skills/hooks via its plugin runtime and has no harness
+        # surface, so the default is no harness — never the Claude fallback, and
+        # never auto-detecting Codex from the AGENTS.md briefing this very install
+        # writes. Explicit --agents still overrides below.
+        detected_agents: tuple[str, ...] = ()
+        default_agents: tuple[str, ...] = ()
+    else:
+        detected_agents = _detect_agent_surfaces(target, supported_agents=supported_agents)
+        default_agents = detected_agents or _default_install_agents(target, supported_agents=supported_agents)
     agents = _parse_agents(
         agent_specs,
         claude=claude_flag,
@@ -1098,10 +1123,13 @@ def install(
 
     _append_precommit_hook(target / ".pre-commit-config.yaml")
 
-    source = ""
-    if not explicit_agents:
-        source = " (auto-detected)" if detected_agents else " (default)"
-    print(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
+    if agents:
+        source = ""
+        if not explicit_agents:
+            source = " (auto-detected)" if detected_agents else " (default)"
+        print(f"goc {__version__} installed for agents: {','.join(agents)}{source}.")
+    else:
+        print(f"goc {__version__} installed (no agent harness; OpenClaw provides skills via its plugin).")
     print(
         'Next: ask your LLM agent to "expand the deck" — it audits the repo and files initial cards. '
         'Or "create a card for X" if you already know the first change you want to make.'
@@ -1200,6 +1228,10 @@ def upgrade(
     agents_explicit = _agent_override_requested(agent_specs, claude=claude_flag, codex=codex_flag)
     if agents_explicit:
         default_agents: tuple[str, ...] = DEFAULT_AGENTS
+    elif _is_openclaw_plugin_context():
+        # Mirror install: OpenClaw has no harness surface, so upgrade refreshes
+        # only the shared scaffold + AGENTS.md briefing, never the Claude default.
+        default_agents = ()
     else:
         installed = _detect_installed_surfaces(target, templates, supported_agents=supported_agents)
         default_agents = installed or DEFAULT_AGENTS
@@ -1325,7 +1357,10 @@ def upgrade(
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
-    print(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    if agents:
+        print(f"goc upgrade complete for agents: {','.join(agents)} — {existing} → {__version__}.")
+    else:
+        print(f"goc upgrade complete (no agent harness; OpenClaw plugin path) — {existing} → {__version__}.")
     if legacy_briefings_to_strip:
         print(f"Briefing target is now {resolved_briefing}; stripped GoC blocks from {', '.join(legacy_briefings_to_strip)}.")
     print("Next: re-run goc validate to confirm cards parse against the new schema.")

@@ -16,6 +16,19 @@ def _repo_root() -> Path:
 
 
 def main() -> int:
+    """Guard: a fresh repo driven through the OpenClaw-bundled engine must plan
+    a no-harness scaffold — `.game-of-cards/` + AGENTS.md only, never `agents:
+    claude` or a `CLAUDE.md` append.
+
+    History: when this card was filed (2026-05-18), the bundled engine fell back
+    to the documented Claude default on a blank repo, so this script reported the
+    defect (`agents: claude`, `claude append CLAUDE.md`). After the fix
+    (`_is_openclaw_plugin_context()` → no-harness default in `goc/install.py`),
+    the script asserts the corrected contract and exits zero. It runs against the
+    *bundled* `openclaw-plugin/goc/` mirror, so it also fails if the plugin asset
+    sync ever drifts from source.
+    """
+
     repo = _repo_root()
     plugin_root = repo / "openclaw-plugin"
     if not plugin_root.exists():
@@ -38,20 +51,23 @@ def main() -> int:
         output = proc.stdout + proc.stderr
         print(output.rstrip())
 
-        must_contain = [
-            "agents: claude",
-            "claude append CLAUDE.md",
-        ]
-        missing = [needle for needle in must_contain if needle not in output]
         if proc.returncode != 0:
             print(f"\nFAIL: expected exit 0, got {proc.returncode}")
             return 1
-        if missing:
-            print(f"\nFAIL: missing expected markers: {missing}")
+
+        # The OpenClaw default must be no harness: the shared briefing lands in
+        # AGENTS.md, and nothing pins the Claude harness.
+        wrong = [needle for needle in ("agents: claude", "claude append CLAUDE.md") if needle in output]
+        required = [needle for needle in ("agents: none", "shared append AGENTS.md") if needle not in output]
+        if wrong:
+            print(f"\nDEFECT PRESENT: OpenClaw-bundled install still plans Claude harness writes: {wrong}")
+            return 1
+        if required:
+            print(f"\nFAIL: OpenClaw-safe scaffold missing expected markers: {required}")
             return 1
 
         print(f"\nTMPDIR={tmpdir}")
-        print("Observed wrong default: OpenClaw-bundled install plans Claude harness writes.")
+        print("ok: OpenClaw-bundled install plans a no-harness scaffold (AGENTS.md only, no CLAUDE.md).")
         return 0
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
