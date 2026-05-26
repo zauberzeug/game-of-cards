@@ -1679,12 +1679,19 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
     γ=0.7, value is bounded asymptotically by `max_rank / (1 - γ)`
     (≈ 30 for our rank table), so growth is geometric not unbounded.
 
-    Live-only descendants: a descendant whose status is terminal
-    (`done`/`disproved`/`superseded`) is skipped — the scheduler axis
-    walks `advances` across *live* cards only (AGENTS.md "deck as
-    scheduler vs record"). Completed work can no longer be unblocked,
-    so it must not amplify a live card's scheduling priority; those
-    closed-card edges belong to the record axis instead.
+    Live-and-workable descendants: a descendant is skipped from the
+    value walk when it is either (a) terminal in status
+    (`done`/`disproved`/`superseded`) or (b) carrying an active
+    impediment overlay (`waiting_impedes` — a `waiting_on` reason or a
+    future `waiting_until`, the same guard that hides it from the pull
+    queue). The scheduler axis walks `advances` across *live, workable*
+    cards only (AGENTS.md "deck as scheduler vs record"). Completed work
+    can no longer be unblocked, and an impeded descendant cannot be
+    pulled for the duration of its wait, so neither may amplify a live
+    card's scheduling priority. Terminal edges belong to the record axis
+    instead; the impediment prune is self-clearing (an elapsed
+    `waiting_until` or a cleared `waiting_on` re-admits the descendant on
+    the next recompute, no manual action).
 
     Switched from saturating-max (`max(own, γ·best)`) on 2026-05-03
     after the formula was identified as making native-high cards lose
@@ -1737,11 +1744,19 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
                         file=sys.stderr,
                     )
                 continue
-            if by_title[dest].status in TERMINAL_STATUSES:
-                # Scheduler axis is live-only (AGENTS.md "deck as scheduler
-                # vs record"): a terminal descendant can no longer be
-                # unblocked, so it must not amplify a live card's priority.
-                # Such edges live on the record axis, walked elsewhere.
+            dest_card = by_title[dest]
+            if dest_card.status in TERMINAL_STATUSES or waiting_impedes(dest_card):
+                # Scheduler axis is live-AND-workable only (AGENTS.md "deck
+                # as scheduler vs record"): a terminal descendant can no
+                # longer be unblocked, and an impeded descendant (active
+                # `waiting_on` overlay, hidden from the queue by
+                # `card_is_ready`/`waiting_impedes`) cannot be pulled for the
+                # duration of its wait — so neither may amplify a live card's
+                # priority. The impediment prune is self-clearing: when a
+                # `waiting_until` elapses or `waiting_on` is cleared, the
+                # descendant re-enters the walk on the next recompute with no
+                # manual action. Terminal edges live on the record axis,
+                # walked elsewhere.
                 continue
             d_value, d_path = value_for(dest, in_progress)
             if d_value > best[0]:
