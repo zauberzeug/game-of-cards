@@ -1,7 +1,7 @@
 ---
 title: block-scalar-parser-chops-characters-when-a-later-line-is-less-indented-than-the-first
 summary: "UNVERIFIED. `_parse_block_scalar` locks `block_indent` to the first content line's indent, then slices every subsequent line with `raw[block_indent:]`. A later line indented less than the first (but still deeper than the block declaration) gets real leading characters chopped off instead of ending the block (YAML spec behavior). Parse-only — the emitter always indents uniformly by 2, so this bites hand-edited or externally-authored frontmatter, not goc's own emit output."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-26T21:57:44Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — a block scalar whose second content line is less-indented than the first parses without silently eating characters (either the block ends at that line per YAML spec, or a ParseError is raised).
   - [ ] MECHANICAL: fix lands in `goc/_vendor/yaml_lite.py` `_parse_block_scalar`.
   - [ ] TDD: `uv run goc validate` passes; existing block-scalar regression cards still pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Block-scalar parser chops characters when a later line is less-indented than the first
