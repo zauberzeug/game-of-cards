@@ -1,7 +1,7 @@
 ---
 title: waiting-impedes-treats-malformed-waiting-until-as-no-impediment
 summary: "`waiting_impedes` returns `False` (card NOT hidden) the moment a present-but-unparseable `waiting_until` is encountered — BEFORE consulting the `waiting_on` reason. A card with an active reason and a garbage date therefore re-enters the pull/next queue, contradicting the docstring's promise that a reason without a usable date is an open-ended block. Bounded because `validate_card` rejects non-ISO `waiting_until`, but `waiting_impedes` runs on live (pre-validate) decks. UNVERIFIED — needs a reproduce.py."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T20:56:27Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: fix in `goc/engine.py` `waiting_impedes` — a malformed `waiting_until` falls through to the reason check (`until_date = None`) instead of early-returning `False`.
   - [ ] TDD: no behavior change for valid future/elapsed dates and for the bare-reason / bare-date paths.
   - [ ] PROCESS: drop the `unverified` tag once reproduce.py lands.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `waiting_impedes` treats a malformed `waiting_until` as "no impediment"
