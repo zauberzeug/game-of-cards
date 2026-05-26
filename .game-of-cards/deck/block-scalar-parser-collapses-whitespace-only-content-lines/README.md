@@ -1,0 +1,123 @@
+---
+title: block-scalar-parser-collapses-whitespace-only-content-lines
+summary: "The vendored yaml-lite block-scalar parser tests each content line for blankness with `raw.rstrip() == \"\"` and, when true, appends an empty string — collapsing a whitespace-only content line (indent + interior spaces) to nothing. The goc frontmatter emitter writes such a line verbatim, so a multiline `summary`/`definition_of_done` value with an all-whitespace interior line does NOT survive emit->parse. This is the residual whitespace-only-line code path left unfixed by the closed sibling `block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip`, which only fixed the non-blank content-line slice."
+status: open
+stage: null
+contribution: medium
+created: "2026-05-26T22:21:44Z"
+closed_at: null
+human_gate: none
+advances: []
+advanced_by: []
+tags: [bug, api-contract, infra]
+definition_of_done: |
+  - [ ] TDD: `reproduce.py` exits zero (the whitespace-only content line round-trips losslessly)
+  - [ ] TDD: a block scalar whose only content is a single whitespace-only line still round-trips (e.g. value `"   "` survives emit->parse), and an all-blank/whitespace tail is still clip/strip-chomped exactly as before (no regression in trailing-blank-line handling)
+  - [ ] MECHANICAL: the fix preserves the existing whitespace-only-line semantics outside a block (the `rstripped == ""` short-circuit at `goc/_vendor/yaml_lite.py:164` is corrected, not removed wholesale, so genuinely-empty lines past the block indent still chomp correctly)
+  - [ ] PROCESS: `uv run goc validate` clean and `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads)
+
+# block-scalar-parser-collapses-whitespace-only-content-lines
+
+## Location
+
+`goc/_vendor/yaml_lite.py:163-167` — the blank-line short-circuit inside
+`_parse_block_scalar`:
+
+```python
+raw = self._lines[self._pos]
+rstripped = raw.rstrip()
+if rstripped == "":
+    chunks.append("")
+    self._pos += 1
+    continue
+```
+
+## What's broken
+
+A block-scalar content line that is *all whitespace* (e.g. two spaces of
+block indent plus three interior spaces) is `rstrip()`'d to `""`, so it
+takes the blank-line branch and is appended as an empty string. The spaces
+past the block indent are silently dropped.
+
+This is the residual half of the block-scalar round-trip family. The closed
+card
+[block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip](../block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip/)
+fixed the **non-blank** content-line path (line 189) to slice
+`raw[block_indent:]` so trailing whitespace survives. Its own comment at
+lines 186-188 states the intent:
+
+> Strip only the leading block indentation; trailing whitespace on a
+> content line is meaningful in a YAML literal block (e.g. a Markdown
+> hard-break) and must survive the emit->parse round-trip.
+
+But a whitespace-only line never reaches that slice — it is intercepted by
+the `rstripped == ""` test above and never gets `raw[block_indent:]`
+applied. So the very invariant that fix established (content past the block
+indent is meaningful and must round-trip) is still violated for lines whose
+content happens to be only whitespace.
+
+The goc emitter (`emit_frontmatter` -> `_emit_block_field`) writes such a
+line verbatim — see the empirical output, where the emitted middle line is
+`     ` (2 indent + 3 content) — so this is a genuine emitter/parser
+disagreement, not a malformed-input edge case.
+
+## Empirical evidence
+
+`uv run python .game-of-cards/deck/block-scalar-parser-collapses-whitespace-only-content-lines/reproduce.py`:
+
+```
+=== emitted frontmatter ===
+---
+title: x
+summary: |-
+  first line
+     
+  third line
+status: open
+contribution: medium
+human_gate: none
+tags: [bug]
+advances: []
+advanced_by: []
+---
+
+=== round-trip of summary ===
+in : 'first line\n   \nthird line'
+out: 'first line\n\nthird line'
+match: False
+
+DEFECT: whitespace-only content line collapsed to empty; the spaces past the block indent were dropped.
+```
+
+Exit code 1 while the defect fires.
+
+## Why it matters
+
+`goc` rewrites frontmatter on most mutating verbs (`status`, `decide`,
+`advance`, `wait`, `quality-pass`, `move`). A card whose `summary` or
+`definition_of_done` contains a whitespace-only interior line — a real
+shape in Markdown, where a line of spaces between paragraphs or inside a
+fenced/indented block is content — is silently de-whitespaced the next time
+any such verb touches the card. The emit/parse contract the trailing-
+whitespace fix was meant to guarantee ("a value goc emits survives being
+parsed back by goc") is still broken for this input class.
+
+## Fix
+
+Distinguish "a line that is blank because it has no characters past the
+block indent" from "a line whose characters past the block indent are
+whitespace". Once `block_indent` is established, a line should only be
+treated as a structural blank when it has nothing at or beyond the block
+indent; otherwise it is a content line and must be sliced `raw[block_indent:]`
+like any other.
+
+A minimal shape: keep the `rstripped == ""` short-circuit only while
+`block_indent is None` (leading blank lines before the first content line,
+where there is no indent to slice against yet). After `block_indent` is set,
+fold whitespace-only lines into the normal content path — slice
+`raw[block_indent:]` (which yields the meaningful interior spaces, or `""`
+for a truly-short line) and let the existing trailing-blank-line chomp at
+lines 202-206 drop genuine trailing blanks. Care is needed so a line shorter
+than `block_indent` (fewer characters than the indent) still yields `""`
+rather than raising or eating the next key.
+
