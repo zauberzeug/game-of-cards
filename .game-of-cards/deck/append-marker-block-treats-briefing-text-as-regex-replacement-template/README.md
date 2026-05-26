@@ -1,7 +1,7 @@
 ---
 title: append-marker-block-treats-briefing-text-as-regex-replacement-template
 summary: "`_append_marker_block` (and two sibling sites) pass dynamic content as the *replacement* argument to `re.sub`, which parses it for backreferences (`\\1`, `\\g<name>`, `\\\\`). The GoC marker block / import block is the replacement, so any backslash-escape sequence a future AGENTS_GOC.md / CLAUDE_GOC.md edit introduces would be misinterpreted or raise `re.error` on install/upgrade. Latent today (templates contain no such sequences). UNVERIFIED — needs a reproduce.py. Fix: `pattern.sub(lambda _: block, text)`."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-26T20:56:28Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: replace the dynamic-replacement `re.sub` calls in `goc/install.py` with a callable replacement (`lambda _: block`) or `re.sub` with a pre-escaped replacement, at ALL sibling sites: lines 222, 884, 1040.
   - [ ] TDD: existing install/upgrade behavior unchanged for the current (escape-free) templates; `tests/test_install.py` stays green.
   - [ ] PROCESS: drop the `unverified` tag once reproduce.py lands.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `_append_marker_block` treats briefing text as an `re.sub` replacement template
