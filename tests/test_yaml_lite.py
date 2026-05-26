@@ -106,6 +106,30 @@ class BlockScalarTest(unittest.TestCase):
             {"outer": {"dod": "", "next": "value"}},
         )
 
+    def test_interior_whitespace_only_line_preserved(self):
+        # A whitespace-only content line between two content lines keeps the
+        # spaces past the block indent (here: 2 indent + 3 interior spaces).
+        text = "s: |-\n  first\n     \n  third\n"
+        self.assertEqual(safe_load(text)["s"], "first\n   \nthird")
+
+    def test_whitespace_only_line_shorter_than_block_indent(self):
+        # A blank line with fewer characters than the block indent yields ""
+        # (a genuine interior blank), not a slice past the string end.
+        text = "s: |-\n  first\n \n  third\n"
+        self.assertEqual(safe_load(text)["s"], "first\n\nthird")
+
+    def test_trailing_genuine_blank_still_chomped(self):
+        # No regression: a truly-empty trailing line is still dropped by clip/
+        # strip chomping.
+        self.assertEqual(safe_load("s: |-\n  content\n\n")["s"], "content")
+        self.assertEqual(safe_load("s: |\n  content\n\n")["s"], "content\n")
+
+    def test_trailing_whitespace_only_line_preserved(self):
+        # A trailing line whose characters past the block indent are whitespace
+        # is content (the spaces survive), matching the meaningful-trailing-
+        # whitespace invariant of the non-blank content-line path.
+        self.assertEqual(safe_load("s: |-\n  content\n     \n")["s"], "content\n   ")
+
 
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):

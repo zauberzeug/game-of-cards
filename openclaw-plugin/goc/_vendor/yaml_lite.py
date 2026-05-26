@@ -162,7 +162,16 @@ class _Parser:
             raw = self._lines[self._pos]
             rstripped = raw.rstrip()
             if rstripped == "":
-                chunks.append("")
+                # A line with nothing past rstrip() is either a structural
+                # blank or a whitespace-only content line. Before the block
+                # indent is fixed there is nothing to slice against, so treat
+                # it as a structural blank. Once block_indent is known, slice
+                # it like any content line: interior whitespace past the block
+                # indent is meaningful and must survive the emit->parse round
+                # trip (raw[block_indent:] yields the interior spaces, or ""
+                # for a line shorter than the block indent — a genuine blank,
+                # which the trailing-blank chomp below still drops).
+                chunks.append("" if block_indent is None else raw[block_indent:])
                 self._pos += 1
                 continue
             curr = self._indent(rstripped)
