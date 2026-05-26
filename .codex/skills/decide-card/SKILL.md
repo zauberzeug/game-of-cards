@@ -53,13 +53,33 @@ project-specific reasoning is decisive.
    If absent, appends a fresh `## Decision` section to the end of the
    body.
 
-2. **log.md.** Appends one entry:
+2. **log.md.** Appends up to two entries — the archive precedes the
+   resolution so the journal reads as a timeline (filed → decided):
 
-   ```
-   ## YYYY-MM-DD: decision recorded
+   - **If the body had a `## Decision required` section**, first archives
+     its prior content (the options, recommendation, and trade-offs that
+     are about to be overwritten in the README) as a dated entry stamped
+     with the card's `created` timestamp:
 
-   <decision> — <reason>. Gate <prior> → none.
-   ```
+     ```
+     ## <created>: decision deliberation archived
+
+     Archived from the README's `## Decision required` section … 
+
+     <prior section content — options, recommendation, trade-offs>
+     ```
+
+     README is the dashboard (rewritten in place); log.md is the journal
+     (append-only). The archive recovers the deliberation that the README
+     replacement would otherwise lose.
+
+   - Then records the resolution:
+
+     ```
+     ## <decided-at>: decision recorded
+
+     <decision> — <reason>. Gate <prior> → none.
+     ```
 
 3. **Frontmatter.** Flips `human_gate: decision` (or `session`) →
    `none`. Status is unchanged (`open` stays `open`).

@@ -1,22 +1,22 @@
 ---
 title: goc-decide-loses-deliberation-history-by-not-archiving-replaced-section
 summary: "`goc decide` replaces the README's `## Decision required` section with the resolved `## Decision` block (correct dashboard behaviour) but writes only a one-line entry to log.md, losing the deliberation context (original options, agent recommendation, trade-offs). README is the dashboard, log.md is the journal — the engine should archive the replaced content to log.md before/during the replacement. Scope decision needed: decide-only fix, generalised engine convention, or skill-workflow-only fix."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-23T05:06:53Z"
-closed_at: null
+closed_at: 2026-05-26T20:02:24Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug]
 definition_of_done: |
-  - [ ] `goc decide` archives the prior `## Decision required` section content to log.md as a dated entry that precedes the new "decision recorded" entry chronologically.
-  - [ ] log.md after `goc decide` reads as a timeline: (filing date) options enumerated → (decision date) decision recorded.
-  - [ ] No README content is lost — dashboard reflects current state, journal preserves the path that led there.
-  - [ ] Test coverage: file a card with a `## Decision required` section, run `goc decide`, assert log.md contains both the archival entry AND the resolution entry; assert README contains only the resolved `## Decision`.
-  - [ ] `goc/templates/skills/decide-card/SKILL.md` "What this skill does to the card" subsection updates to describe the new dual-write behaviour (README replaced; log.md archives prior section AND records resolution).
-  - [ ] If the scope decision picks the generalised engine convention (Option B below), a `goc archive-section <card> <section>` CLI helper exists for use by other commands that replace README sections.
+  - [x] `goc decide` archives the prior `## Decision required` section content to log.md as a dated entry that precedes the new "decision recorded" entry chronologically.
+  - [x] log.md after `goc decide` reads as a timeline: (filing date) options enumerated → (decision date) decision recorded.
+  - [x] No README content is lost — dashboard reflects current state, journal preserves the path that led there.
+  - [x] Test coverage: file a card with a `## Decision required` section, run `goc decide`, assert log.md contains both the archival entry AND the resolution entry; assert README contains only the resolved `## Decision`.
+  - [x] `goc/templates/skills/decide-card/SKILL.md` "What this skill does to the card" subsection updates to describe the new dual-write behaviour (README replaced; log.md archives prior section AND records resolution).
+  - [x] MOOT — scope decision picked Option A (decide-only fix), not Option B; no `goc archive-section` helper is built. Deferred until a second section-replacing caller appears.
 worker: {who: "claude[bot]", where: main}
 ---
 
