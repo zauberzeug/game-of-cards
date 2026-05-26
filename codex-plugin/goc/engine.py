@@ -167,6 +167,12 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
 _YAML_RESERVED = {"null", "true", "false", "yes", "no"}
 _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
+# Leading indicator chars the vendored parser rejects in value position:
+# `&`/`*` crash the parse (anchors/aliases not supported). `[`/`{`/`"`/`'`
+# are already caught anywhere by _YAML_NEEDS_QUOTE.
+_YAML_INDICATOR_FIRST = frozenset("&*")
+# Whole-value tokens the parser interprets as block/folded scalar indicators.
+_YAML_BLOCK_TOKENS = frozenset({"|", "|-", "|+", ">", ">-", ">+"})
 
 
 def _yaml_inline(value) -> str:
@@ -184,7 +190,13 @@ def _yaml_inline(value) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     s = str(value)
-    if _YAML_NEEDS_QUOTE.search(s) or s in _YAML_RESERVED:
+    if (
+        _YAML_NEEDS_QUOTE.search(s)
+        or s in _YAML_RESERVED
+        or s in _YAML_BLOCK_TOKENS
+        or (s and s[0] in _YAML_INDICATOR_FIRST)
+        or s != s.strip()
+    ):
         # Escape \ and " for safe inclusion in "..." YAML scalar.
         escaped = s.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
@@ -1561,8 +1573,15 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
     rendering as the WHY column. For a leaf with no descendants,
     `top_path` is `["self"]`.
 
-    Cycles fall back to per-card rank (defense; validator should reject
-    cycles via `detect_advance_cycles` but cheap to handle here too).
+    Cycles cannot occur in a deck that passes `goc validate`:
+    `detect_advance_cycles` is a gating ERROR and `goc advance` refuses
+    cycle-creating edges. The in-progress guard below
+    (`if title in in_progress`) is therefore unreachable defensive code
+    on any valid deck; it returns the re-entered node's bare rank purely
+    to break the recursion. It does NOT compute an order-independent
+    per-card-rank fallback — on a (validate-failing) cyclic deck the
+    cycle members get values that depend on `cards`/`advances` list
+    order — so it must not be relied on as one.
     Unknown advances targets are skipped for the priority math AND
     surfaced once per (card, target) pair as a stderr warning — silent
     skipping let edge rot degrade the value walk unnoticed. Run
