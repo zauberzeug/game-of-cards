@@ -1,27 +1,29 @@
 ---
 title: mutate-frontmatter-field-truncates-block-fields-with-internal-blank-lines
 summary: "The line-anchored regex in `mutate_frontmatter_field` matches block continuation lines with `(?:\\n[ \\t]+[^\\n]*)*`, which stops at the first internal blank line. Mutating a block-scalar/block-list field that contains a blank line would orphan everything after the blank. Latent today — no current caller mutates a block field — so parked unverified."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T20:44:09Z"
-closed_at: null
+closed_at: 2026-05-26T21:29:04Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, unverified]
+tags: [bug]
 definition_of_done: |
-  - [ ] TDD: a reproduce.py mutates a `definition_of_done` block that contains an internal blank line and asserts the post-mutation frontmatter is intact (no orphaned tail)
-  - [ ] MECHANICAL: the continuation pattern in goc/engine.py:282-283 captures blank lines that belong to the block (e.g. `(?:\n(?:[ \t]+[^\n]*)?)*` anchored to stop at the next `key:` line) without swallowing the rest of the frontmatter
-  - [ ] PROCESS: drop the `unverified` tag once the reproduce.py lands and shows the defect firing
+  - [x] TDD: a reproduce.py mutates a `definition_of_done` block that contains an internal blank line and asserts the post-mutation frontmatter is intact (no orphaned tail)
+  - [x] MECHANICAL: the continuation pattern in goc/engine.py captures blank lines that belong to the block (`\n[ \t]+[^\n]*|\n(?=[ \t]|\n)`, which stops at the next `key:` line) without swallowing the rest of the frontmatter
+  - [x] PROCESS: drop the `unverified` tag once the reproduce.py lands and shows the defect firing
 worker: {who: "claude[bot]", where: main}
 ---
 
 # `mutate_frontmatter_field` truncates block fields with internal blank lines
 
-> **Unverified.** Confirmed by code inspection; no `reproduce.py` budget this
-> round, and the defect is latent (no current caller mutates a block field).
-> Parked so the observation is not lost.
+> **Verified and fixed (2026-05-26).** `reproduce.py` confirmed the defect
+> fired (trailing `status` field lost, post-blank block line orphaned) and now
+> passes after the continuation pattern was widened to consume internal blank
+> lines. The defect was latent (no current caller mutates a block field) but
+> the trap is now closed for any future block-field mutator.
 
 ## Location
 
