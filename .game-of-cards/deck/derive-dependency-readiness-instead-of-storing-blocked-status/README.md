@@ -1,7 +1,7 @@
 ---
 title: derive-dependency-readiness-instead-of-storing-blocked-status
 summary: "Compute dependency-blocking from the advances graph instead of storing it as a manual status. A card with any non-terminal `advanced_by` prereq is derived not-ready and self-clears when the last prereq closes. Surfaces in queues, board, and the pull-card readiness predicate. Replaces the warn-only STALE_BLOCKED/ORPHAN_BLOCKED model."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-24T11:22:05Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] `STALE_BLOCKED` is reconciled: a card whose `advanced_by` are all terminal is shown ready, not warned (the warn is now structurally impossible because nothing stays `blocked` for a resolved dependency).
   - [ ] reproduce.py demonstrates: a card with an open prereq is derived-blocked; closing the prereq makes it derived-ready with no manual status flip.
   - [ ] Does NOT remove `blocked` from the status enum (that is the sibling card) — derived readiness coexists with the legacy status until then.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Derive dependency-readiness from the advances graph instead of storing it
