@@ -170,7 +170,23 @@ class _Parser:
                 break
             if block_indent is None:
                 block_indent = curr
-            chunks.append(raw[block_indent:].rstrip())
+            elif curr < block_indent:
+                # A content line less-indented than the block's established
+                # indent cannot belong to the block (YAML fixes block indent
+                # from the first non-empty line). It is also over-indented
+                # relative to the declaration's parent, so it is not a clean
+                # sibling either — slicing it with raw[block_indent:] would eat
+                # real characters. Reject rather than silently corrupt.
+                raise ParseError(
+                    f"line {self._pos + 1}: block scalar content line is "
+                    f"indented {curr}, less than the block indent "
+                    f"{block_indent} but more than its declaration "
+                    f"{declaration_indent}; ambiguous indentation"
+                )
+            # Strip only the leading block indentation; trailing whitespace on a
+            # content line is meaningful in a YAML literal block (e.g. a Markdown
+            # hard-break) and must survive the emit->parse round-trip.
+            chunks.append(raw[block_indent:])
             self._pos += 1
         if block_indent is None:
             # No indented content followed `|`. Rewind so the parent loop sees

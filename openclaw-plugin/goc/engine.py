@@ -206,8 +206,17 @@ def _yaml_inline(value) -> str:
         return "true" if value else "false"
     if isinstance(value, list):
         return "[]" if not value else "[" + ", ".join(_yaml_inline(v) for v in value) + "]"
-    if isinstance(value, (int, float)):
+    if isinstance(value, int):
         return str(value)
+    if isinstance(value, float):
+        # The vendored parser has no float recognizer (only `_INT_RE`), so a
+        # bare float would read back as a string — silent type-loss. No card
+        # frontmatter field is a float, so refuse at the boundary rather than
+        # advertise a type that cannot round-trip.
+        raise FrontmatterError(
+            f"float frontmatter values are not supported (got {value!r}); "
+            "store the value as a string or int."
+        )
     s = str(value)
     if (
         _YAML_NEEDS_QUOTE.search(s)

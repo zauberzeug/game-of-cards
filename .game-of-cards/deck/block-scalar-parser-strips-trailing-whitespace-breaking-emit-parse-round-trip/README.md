@@ -1,20 +1,21 @@
 ---
 title: block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip
 summary: "The frontmatter emitter writes `definition_of_done` (always) and multiline `summary` (when it contains a newline) as literal block scalars, preserving each content line verbatim including trailing whitespace. The vendored yaml-lite parser rstrips every block-scalar content line, so a value goc emits does NOT survive being parsed back by goc. Because goc rewrites frontmatter on most verbs, a DoD/summary line ending in whitespace (e.g. a Markdown hard-break) is silently mutated. This is a distinct, unfixed code path from the closed inline-scalar quoting fixes."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T21:56:30Z"
-closed_at: null
+closed_at: 2026-05-26T22:02:03Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a block-scalar content line with trailing whitespace survives an emit->parse round-trip unchanged (modulo the single clip-mode trailing newline, which is correct).
-  - [ ] TDD: the fix preserves trailing whitespace on every content line of a multi-line block scalar, not just the first.
-  - [ ] MECHANICAL: fix lands in `goc/_vendor/yaml_lite.py` `_parse_block_scalar`; leading-indent stripping (`raw[block_indent:]`) is retained, only the trailing `.rstrip()` of meaningful content is reconsidered.
-  - [ ] TDD: `uv run goc validate` passes on this repo's deck (no regression in existing block-scalar parsing — empty-block-scalar, three-way chomping, and indentation handling all still correct).
+  - [x] TDD: reproduce.py exits zero — a block-scalar content line with trailing whitespace survives an emit->parse round-trip unchanged (modulo the single clip-mode trailing newline, which is correct).
+  - [x] TDD: the fix preserves trailing whitespace on every content line of a multi-line block scalar, not just the first.
+  - [x] MECHANICAL: fix lands in `goc/_vendor/yaml_lite.py` `_parse_block_scalar`; leading-indent stripping (`raw[block_indent:]`) is retained, only the trailing `.rstrip()` of meaningful content is reconsidered.
+  - [x] TDD: `uv run goc validate` passes on this repo's deck (no regression in existing block-scalar parsing — empty-block-scalar, three-way chomping, and indentation handling all still correct).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Block-scalar parser strips trailing whitespace, breaking the emit->parse round-trip
@@ -105,15 +106,17 @@ accrues unnoticed. The whole point of the recently-closed quoting family is to
 guarantee that what goc writes, goc reads back identically; this path violates
 that guarantee.
 
-## Fix (do NOT apply — proposal only)
+## Fix (applied)
 
-The trailing `.rstrip()` at `yaml_lite.py:173` over-normalizes. YAML literal
+The trailing `.rstrip()` at `yaml_lite.py:173` over-normalized. YAML literal
 block scalars preserve trailing whitespace on content lines; only the
-*leading* indentation is stripped (`raw[block_indent:]`). Drop the trailing
-`.rstrip()` so content is `raw[block_indent:]` with at most a trailing
-line-ending normalization.
+*leading* indentation is stripped (`raw[block_indent:]`). The fix drops the
+trailing `.rstrip()`, appending `raw[block_indent:]` directly. Because
+`_lines` comes from `splitlines()` (no line terminators), this preserves
+trailing whitespace per content line while still stripping leading indent —
+the line-ending normalization is handled afterward by the chomping logic.
 
-Care points the fix must respect (covered by the DoD's no-regression item):
+Care points the fix respects (covered by the DoD's no-regression item):
 
 - The blank-line short-circuit at `yaml_lite.py:163-167` already uses
   `raw.rstrip() == ""` to detect blank lines for chomping — that logic is
