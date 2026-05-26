@@ -756,6 +756,7 @@ must understand what each card is about without opening the body.
 | `_md_` / `_py_` | `coupling-md-formula` / `agent-py-init` | Source-file infix; describe the *concept* not the *file* |
 | camelCase tokens | `runSimulation-fails` | Function-name jargon; lower-kebab the intent |
 | Math symbols (`Δ`, `≤`, `²`, `√`, `±`) | `late-hr-≥-0.5` | Use words (`gte`, `at-least`); the slug pattern allows `[a-z0-9-]` only |
+| Underscores | `my_first_card` | Lower-kebab the intent; the slug pattern allows `[a-z0-9-]` only, underscores aren't allowed |
 
 When the regex fires, the CLI suggests an alternative phrasing
 based on the *observable problem*, e.g. `r88-fix-attempt-3`

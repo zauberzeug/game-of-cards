@@ -3535,6 +3535,8 @@ TITLE_ANTIPATTERNS = [
     (re.compile(r"\bbug-\d+\b"), "bug-tracker numbering; use the defect-shape clause"),
     (re.compile(r"_md_|_py_"), "source-file infix; describe the *concept*, not the file"),
     (re.compile(r"[a-z][A-Z]"), "camelCase token; lower-kebab the intent"),
+    (re.compile(r"[^a-zA-Z0-9\s_-]"), "math/symbol or non-ASCII character; use words (gte, at-least) — the slug allows [a-z0-9-] only"),
+    (re.compile(r"_"), "underscore in slug; lower-kebab the intent — underscores aren't allowed"),
 ]
 
 
