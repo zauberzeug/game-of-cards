@@ -1,52 +1,63 @@
 ---
 title: block-scalar-parser-chops-characters-when-a-later-line-is-less-indented-than-the-first
-summary: "UNVERIFIED. `_parse_block_scalar` locks `block_indent` to the first content line's indent, then slices every subsequent line with `raw[block_indent:]`. A later line indented less than the first (but still deeper than the block declaration) gets real leading characters chopped off instead of ending the block (YAML spec behavior). Parse-only — the emitter always indents uniformly by 2, so this bites hand-edited or externally-authored frontmatter, not goc's own emit output."
-status: active
+summary: "`_parse_block_scalar` locked `block_indent` to the first content line's indent, then sliced every subsequent line with `raw[block_indent:]`. A later line indented less than the first (but still deeper than the block declaration) had real leading characters chopped off instead of ending the block (YAML spec behavior). Parse-only — the emitter always indents uniformly by 2, so this bit hand-edited or externally-authored frontmatter, not goc's own emit output. Fixed: such a line now raises a ParseError instead of silently corrupting."
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T21:57:44Z"
-closed_at: null
+closed_at: 2026-05-26T22:06:53Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, infra, unverified]
+tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a block scalar whose second content line is less-indented than the first parses without silently eating characters (either the block ends at that line per YAML spec, or a ParseError is raised).
-  - [ ] MECHANICAL: fix lands in `goc/_vendor/yaml_lite.py` `_parse_block_scalar`.
-  - [ ] TDD: `uv run goc validate` passes; existing block-scalar regression cards still pass.
+  - [x] TDD: reproduce.py exits zero — a block scalar whose second content line is less-indented than the first parses without silently eating characters (either the block ends at that line per YAML spec, or a ParseError is raised).
+  - [x] MECHANICAL: fix lands in `goc/_vendor/yaml_lite.py` `_parse_block_scalar`.
+  - [x] TDD: `uv run goc validate` passes; existing block-scalar regression cards still pass.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # Block-scalar parser chops characters when a later line is less-indented than the first
 
-## Hypothesis (unverified — no reproduce.py budget this round)
+## Verified bug (reproduce.py exits 1 against the unfixed parser)
 
-`goc/_vendor/yaml_lite.py:171-173`:
+`goc/_vendor/yaml_lite.py` `_parse_block_scalar`:
 
 ```python
 if block_indent is None:
     block_indent = curr
-chunks.append(raw[block_indent:].rstrip())
+chunks.append(raw[block_indent:])
 ```
 
-`block_indent` is fixed to the **first** content line's indentation. The loop
-continues as long as `curr > declaration_indent` (line 169). A subsequent line
-whose indent is between `declaration_indent` and the first line's indent is
-still admitted to the block, then sliced with `raw[block_indent:]` — which
-removes real content characters rather than indentation.
+`block_indent` was fixed to the **first** content line's indentation. The loop
+continued as long as `curr > declaration_indent`. A subsequent line whose indent
+was between `declaration_indent` and the first line's indent was still admitted
+to the block, then sliced with `raw[block_indent:]` — removing real content
+characters rather than indentation. The reproducer confirmed
+`k: |\n    deep line\n  shallow line\nnext: x` parsed to
+`{'k': 'deep line\nallow line\n', ...}` — the leading `sh` of `shallow` eaten.
 
-Per the YAML spec, the block scalar's indentation is set by the first
-non-empty line; a line less-indented than that should terminate the block. The
-current code neither terminates nor errors — it silently corrupts.
+Per the YAML spec, the block scalar's indentation is set by the first non-empty
+line; a line less-indented than that ends the block. Such a line is also
+over-indented relative to the declaration's parent, so it cannot be a clean
+sibling key either — it is unambiguously malformed.
 
-## Why deferred
+## Fix
 
-Parse-only. `_emit_block_field` (`goc/engine.py:225-231`) always indents every
-content line by exactly 2, so goc's own emit output never triggers this. It can
-only bite frontmatter authored or hand-edited outside goc. Lower realism than
-the sibling round-trip bug
-[block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip](../block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip/),
-so parked rather than filed with a reproducer this round.
+`_parse_block_scalar` now raises a `ParseError` when a non-blank content line is
+indented strictly less than the established `block_indent` (and more than the
+declaration). Rejecting is the honest outcome: the line can neither be valid
+block content nor a clean sibling, and silently slicing it corrupts data. Blank
+lines are unaffected (they never set `block_indent`), and goc's own uniformly
+indented emit output never hits the new branch, so there is no round-trip
+regression.
+
+## Why this was parked as parse-only
+
+`_emit_block_field` always indents every content line by exactly 2, so goc's own
+emit output never triggers this. It can only bite frontmatter authored or
+hand-edited outside goc — sibling of the round-trip bug
+[block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip](../block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip/).
 
 ## Falsification recipe
 
