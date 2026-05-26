@@ -56,7 +56,7 @@ any change to the engine; sibling files are opaque to
 
 Status changes mutate frontmatter, never directories. Cross-references
 to `deck/<title>/` continue to work whether the card is open, active,
-blocked, done, disproved, or superseded.
+done, disproved, or superseded.
 
 ### What goes where (README dashboard vs `log.md` journal)
 
@@ -100,11 +100,20 @@ Concrete consequences:
 | value | meaning | what closes it |
 |---|---|---|
 | `open` | candidate for work; in the queue | promotion to `active`/`done`/`disproved`/`superseded` |
-| `active` | work in progress (one author/agent at a time, by convention) | usually flips to `done` (or `blocked` mid-flight) |
-| `blocked` | needs another card or external input; body should explain. Agent-checkable external conditions (upstream release, PR merge, dependency publication) keep `human_gate: none`; human-judgement blockers use `human_gate: decision\|session`. | unblocking; usually flips back to `active` |
+| `active` | work in progress (one author/agent at a time, by convention) | usually flips to `done` |
 | `done` | DoD checklist all ticked; `goc done <title>` enforces this | terminal |
 | `disproved` | hypothesis investigated and ruled out; body documents the rebuttal | terminal |
 | `superseded` | replaced by another card; replacement narrative in `log.md`; preserved for forensic continuity | terminal |
+
+**Deprecated — `blocked`.** Earlier releases included a `blocked`
+status that conflated three orthogonal axes (dependency-readiness,
+exogenous wait, deferral). The three-axis model below replaces it:
+dependency waits are *derived* from the `advances` graph and clear
+themselves; exogenous waits are stored as the `waiting_on` overlay;
+deferrals also live in the overlay (`waiting_until`). The enum value
+still parses for backwards compatibility but is being removed in a
+follow-up release. Authors should set the overlay (`goc wait …`) or
+rely on derived readiness instead of flipping status to `blocked`.
 
 There is no separate `unverified` or `parked` state. Legacy
 unverified-bug entries map to `status: open` + `tags: [unverified]`;
@@ -200,23 +209,24 @@ graph-amplified `value`.
 `status` answers "what is the card doing right now?"
 `human_gate` answers "does progress require a human?"
 
-These axes are **orthogonal**. A card can be `blocked` with
-`human_gate: none` (parked on an agent-observable external condition)
-or `open` with `human_gate: decision` (queueable, but a human must
-pick a direction before work proceeds). Setting `blocked` does not
-automatically imply a human gate, and raising the gate does not
-imply `blocked`.
+These axes are **orthogonal**. A card can be `open` with `human_gate:
+decision` (queueable, but a human must pick a direction before work
+proceeds), or `active` with `waiting_on: external` (in-flight but
+partially gated on a third party). The progress status, the human
+gate, and the impediment overlay are three independent answers to
+three different questions.
 
 Three-value autonomy ladder:
 
 - `none`     — autonomous-loop-safe; cron may auto-pick. Examples:
   tolerance-creep test rename, stale-reference doc fix, mechanical
-  sed-style replacement. Also covers `status: blocked` cards waiting
-  on an external condition an agent can re-check (upstream release,
-  PR merge, dependency publication, CI availability, scheduled
-  research): the card is parked, but no human is needed to unblock —
-  a future autonomous run can observe the condition and flip the
-  card back to `open` or `active`.
+  sed-style replacement. Also covers cards waiting on an external
+  condition an agent can re-check (upstream release, PR merge,
+  dependency publication, CI availability, scheduled research): the
+  wait is expressed as `waiting_on: external` (+ optional
+  `waiting_until`) on a `status: open` card — no human is needed to
+  unblock — a future autonomous run observes the condition and
+  `goc wait <title> --clear`s the overlay.
 - `decision` — needs ONE human go/no-go before work proceeds. Example:
   "Option A (rewrite the cite) vs Option B (rewrite the code)?" The
   body **must contain the framing already** — see "Decision-gate body
@@ -228,9 +238,9 @@ Three-value autonomy ladder:
 
 Use `decision` or `session` **only** when the unblocker is human
 judgement, stakeholder alignment, prioritization, or a live
-discussion. If an agent can periodically check the blocker and
+discussion. If an agent can periodically check the wait and
 proceed when the external condition changes, the gate stays `none`
-even when the status is `blocked`.
+and the wait lives in the `waiting_on` overlay.
 
 Default for new cards created via `goc new`: `decision`.
 Auto-agents (audit-deck, next-card reclassification) should pick a more
@@ -300,6 +310,17 @@ The three compose. A card may be `status: active` AND carry
 `waiting_on: external` AND have an unresolved `advanced_by` prereq —
 each axis answers a different question and they do not collapse into
 one another.
+
+This decomposition is what replaces the legacy `status: blocked`
+value. The validator surfacings that used to police the legacy value
+(`STALE_BLOCKED`: a `blocked` card whose `advanced_by` are all
+terminal; `ORPHAN_BLOCKED`: a `blocked` card with no `advanced_by` and
+`human_gate: none`) are now migration aids — they identify cards still
+encoded in the old style and recommend the right axis-specific
+replacement (drop to `open` for dependency-derived cases; set
+`waiting_on` for exogenous-wait cases). Under the three-axis model
+nothing is ever steady-state `blocked`; the validator findings are
+expected to drain to zero as cards migrate.
 
 The **ready-to-pull predicate** that `Skill(next-card)` and
 `Skill(pull-card)` use is the AND of three signals — note that the

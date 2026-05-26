@@ -344,6 +344,12 @@ def load_schema() -> Schema:
 
 _FENCED_YAML = re.compile(r"```ya?ml\n(.*?)```", re.DOTALL)
 
+_UNKNOWN_TAG_REMEDY = (
+    "add a project-local tag in .game-of-cards/canonical-tags.md "
+    "(under a `canonical_tags:` YAML block, merged by `goc validate`); "
+    "for a tag that should ship with goc, open a PR against the goc repo"
+)
+
 
 def _load_consuming_repo_tags() -> set[str]:
     """Merge tags declared in `.game-of-cards/canonical-tags.md`.
@@ -1008,7 +1014,9 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     else:
         for tag in tags:
             if tag not in schema.canonical_tags:
-                errors.append(f"{t.title}: tags: unknown tag '{tag}' (not in SCHEMA.md canonical_tags)")
+                errors.append(
+                    f"{t.title}: tags: unknown tag '{tag}' — {_UNKNOWN_TAG_REMEDY}"
+                )
 
     status_value = fm.get("status")
     if status_value in TERMINAL_STATUSES:
@@ -1629,7 +1637,10 @@ def validate_tag_filters(tags: list[str]) -> list[str] | None:
     schema = load_schema()
     unknown = [tag for tag in tags if tag not in schema.canonical_tags]
     if unknown:
-        print(f"goc: error: --tag: unknown tag '{unknown[0]}'", file=sys.stderr)
+        print(
+            f"goc: error: --tag: unknown tag '{unknown[0]}' — {_UNKNOWN_TAG_REMEDY}",
+            file=sys.stderr,
+        )
         sys.exit(2)
     return list(tags)
 
@@ -3396,7 +3407,10 @@ def _cmd_new(args):
         sys.exit(2)
     for tag in tags:
         if tag not in schema.canonical_tags:
-            print(f"ERROR: unknown tag '{tag}' (not in SCHEMA.md canonical_tags)", file=sys.stderr)
+            print(
+                f"ERROR: unknown tag '{tag}' — {_UNKNOWN_TAG_REMEDY}",
+                file=sys.stderr,
+            )
             sys.exit(2)
     _validate_new_edge_flags(title, card_dir, advances, advanced_by)
     card_dir.mkdir(parents=True)

@@ -9,36 +9,37 @@ summary: |-
   value is removed, steering authors off `blocked` while it's still
   technically accepted — so it's autonomous-pull-safe and doesn't break
   validation.
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T12:11:27Z"
-closed_at: null
+closed_at: 2026-05-26T13:21:02Z
 human_gate: none
 advances:
   - remove-blocked-from-status-enum-and-migrate-existing-cards
 advanced_by: []
 tags: [documentation]
 definition_of_done: |
-  - [ ] `advance-card` skill: the `* → blocked` transition row is
+  - [x] `advance-card` skill: the `* → blocked` transition row is
         removed; replaced with guidance to set the impediment overlay
         (`goc wait …` / `waiting_on`) for hard "can't start yet" waits,
         or rely on derived dependency-readiness for prereq waits.
-  - [ ] `card-schema` skill: the status lifecycle documents the
+  - [x] `card-schema` skill: the status lifecycle documents the
         three-axis model (progress status; derived dependency readiness;
         stored impediment overlay) and marks `blocked` as deprecated /
         being removed; `STALE_BLOCKED` / `ORPHAN_BLOCKED` references are
         reconciled in prose (they become migration aids, not steady
         state).
-  - [ ] `deck` skill lifecycle diagram + `templates/AGENTS_GOC.md` and
+  - [x] `deck` skill lifecycle diagram + `templates/AGENTS_GOC.md` and
         this repo's `AGENTS.md` describe the model without `blocked` as
         a first-class status.
-  - [ ] Plugin mirrors re-synced (`python scripts/sync_plugin_assets.py`)
+  - [x] Plugin mirrors re-synced (`python scripts/sync_plugin_assets.py`)
         and `goc validate` + the sync `--check` are green.
-  - [ ] Edits are forward-compatible with the enum still accepting
+  - [x] Edits are forward-compatible with the enum still accepting
         `blocked` (this card soft-deprecates in docs; the enforced
         removal is the sibling
         `remove-blocked-from-the-status-enum-and-validator`).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Purge `blocked` from skills and AGENTS docs
