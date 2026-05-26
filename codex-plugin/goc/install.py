@@ -219,7 +219,7 @@ def _sync_claude_import(target: Path, briefing_target: str) -> None:
 
     block = f"{CLAUDE_IMPORT_BEGIN}\n{import_line}\n{CLAUDE_IMPORT_END}\n"
     if CLAUDE_IMPORT_RE.search(text):
-        claude_md.write_text(CLAUDE_IMPORT_RE.sub(block, text))
+        claude_md.write_text(CLAUDE_IMPORT_RE.sub(lambda _: block, text))
         return
 
     lines = text.splitlines()
@@ -881,7 +881,7 @@ def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
     text = target.read_text()
     pattern = re.compile(rf"{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n?", re.DOTALL)
     if pattern.search(text):
-        target.write_text(pattern.sub(block, text))
+        target.write_text(pattern.sub(lambda _: block, text))
         return
     target.write_text(text.rstrip() + "\n\n" + block)
 
@@ -1037,7 +1037,7 @@ def _write_skills_source(target: Path, value: str) -> None:
     pattern = re.compile(r"^[#\s]*skills_source\s*:.*$", re.MULTILINE)
     replacement = f"skills_source: {value}"
     if pattern.search(text):
-        new_text = pattern.sub(replacement, text, count=1)
+        new_text = pattern.sub(lambda _: replacement, text, count=1)
     else:
         sep = "" if text.endswith("\n") else "\n"
         new_text = f"{text}{sep}\n{replacement}\n"
