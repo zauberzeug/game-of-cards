@@ -33,23 +33,30 @@ definition_of_done: |
         `child.advances: [epic]` (work serves goal), never
         `epic.advances: [children]`. Include the two consequences of
         inverting it (value law defeated; spurious attest FAIL).
-  - [ ] `goc validate` emits a hint (warning, not error) when a card's
-        `advances` lists a card that, by tags/shape, it appears to
-        *aggregate* rather than *serve* — i.e. the likely-backwards
-        epic edge. The hint names both cards and the corrective edit.
-  - [ ] The hint does not fire on this repo's own correctly-modeled
-        epic (`blocked-status-conflates-…` with `advanced_by: [3
-        children]`, children with `advances: [epic]`).
+  - [ ] `goc validate` emits a hint (warning, not error) for the
+        backwards-epic signature: a card whose `advances` targets are
+        predominantly *lower* contribution than itself (value flowing
+        the wrong way — an aggregator pointing down at the work it
+        collects). Use the contribution gradient, NOT a bare
+        `advances ≥ N` count: a downstream deck reports 124 live cards
+        with ≥3 advances that are legitimate hubs, so a count rule
+        over-fires. The hint names both cards and the corrective edit.
+  - [ ] The hint does not fire on (a) this repo's own correctly-modeled
+        epic (`blocked-status-conflates-…` with `advanced_by: [3+
+        children]`, children with `advances: [epic]`), nor (b) a
+        legitimate hub card that advances many higher-or-equal
+        contribution targets.
   - [ ] `advanced-by-closed` (engine `_run_derived_check`) is left
         unchanged — verified by reading the check and confirming it is
         correct under the documented convention.
   - [ ] reproduce.py (or a fixture) shows: backwards model trips the
         lint + a child attest FAIL; canonical model passes both.
-  - [ ] A pointer is added to the `blocked-status-conflates-…` epic
-        body: the "is `advanced_by` a hard prerequisite or a loose
-        contribution?" severity question is its decision to make, once,
-        across both `attest` and the derived-readiness feature — not a
-        standalone attest tweak.
+  - [ ] The strict-vs-loose severity question is carried by a separate
+        decision card
+        (`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`,
+        `human_gate: decision`, advancing the same epic). This card does
+        NOT decide it — it only cross-references it so a reader who hits
+        the attest FAIL is routed to the open decision.
 ---
 
 # Nothing steers epic authors to the canonical edge direction
@@ -65,7 +72,11 @@ Investigation against this repo's engine and deck shows the check is
 **correct**; the report's root-cause framing is inverted from GoC's
 documented convention. The real gap is that the convention is neither
 surfaced at authoring time nor lint-enforced, so authors fall into the
-backwards shape and hit the symptom.
+backwards shape and hit the symptom. A follow-up report from the same
+contributor confirmed this diagnosis (the check is correct; the
+deadlock came from a backwards-modeled epic) and refined the lint
+heuristic to a contribution-gradient signal — folded into the DoD
+below.
 
 ## The canonical direction (already documented, never surfaced)
 
@@ -131,12 +142,21 @@ signal. If epics are modeled backwards, that new feature derive-blocks
 every epic child too — so this guardrail protects the in-flight work,
 which is why it advances that epic.
 
-The deeper question the report raises in passing — `advances`/
-`advanced_by` is documented as ~80% loose contribution, ~20% strict
-prerequisite, so should `advanced-by-closed` be a hard FAIL at all? —
-is real but must be answered *once*, coherently, across both `attest`
-and derived readiness. That belongs to the blocked-status epic's
-decision, not to this card.
+The deeper question the report raises — `advances`/`advanced_by` is
+documented as ~80% loose contribution, ~20% strict prerequisite, so
+should `advanced-by-closed` be a hard FAIL at all? — is split out to
+its own decision card,
+[`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`](../advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/).
+It must be answered *once*, coherently, across both `attest` and the
+derived-readiness feature — note the epic's **own recorded decision**
+already commits to "any non-terminal `advanced_by` ⇒ blocked-by-
+dependency," which is the same hard reading, so the decision card
+re-examines a premise the epic depends on. This guardrail card stays
+`human_gate: none` and does not wait on that decision.
+
+A third, optional helper the report suggests (not a DoD requirement
+here): a `goc epic <epic> --over <child…>` command that writes the
+edges in the canonical direction so adopters never hand-roll them.
 
 ## Reproduction (minimal)
 
