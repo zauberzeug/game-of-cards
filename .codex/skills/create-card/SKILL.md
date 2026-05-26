@@ -143,6 +143,15 @@ and a placeholder `- [ ] (replace with real criteria)` DoD, plus an
 empty `deck/<title>/log.md`. Tags must come from the canonical set
 (see `Skill(card-schema)`); the CLI rejects unknowns.
 
+**Need a new grouping tag?** Project-local tags (domain vocabulary,
+sub-project names, cluster groupings — e.g. when filing a card whose
+governing peer wants a shared epic tag) are added in
+`.game-of-cards/canonical-tags.md` under a fenced `canonical_tags:`
+YAML block; `goc validate` merges it into the enum on every run. A
+tag that should ship with goc itself goes through a PR. See
+`Skill(card-schema)` "Adding new tags" for the predicates that decide
+when a new tag is warranted vs. an existing one fits.
+
 When the value-flow relationship is known at filing time, pass
 repeatable `--advances` / `--advanced-by` flags so `goc new` writes
 both sides of the edge in one command. Use the older `goc new` then

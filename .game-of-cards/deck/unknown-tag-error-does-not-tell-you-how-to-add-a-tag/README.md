@@ -15,29 +15,29 @@ summary: |-
   Fix: make the error messages name the fix and stop mis-citing
   SCHEMA.md; add a pointer in create-card. Discoverability only — no
   `goc tag` helper (deferred).
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T06:05:09Z"
-closed_at: null
+closed_at: 2026-05-26T13:33:32Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |
-  - [ ] The three "unknown tag" error sites in `goc/engine.py`
+  - [x] The three "unknown tag" error sites in `goc/engine.py`
         (validate ~997, `--tag` filter ~1464, `goc new` ~3206) name the
         remedy: project tags → add to `.game-of-cards/canonical-tags.md`
         (`canonical_tags:` block, merged by `goc validate`); a generic
         tag → PR against goc. Stop citing "SCHEMA.md" (the consuming
         path is `canonical-tags.md`, not the shipped schema).
-  - [ ] `create-card` skill gains a short "need a new grouping tag?"
+  - [x] `create-card` skill gains a short "need a new grouping tag?"
         pointer to the `canonical-tags.md` mechanism, placed where
         `--tag` is introduced.
-  - [ ] Verified end-to-end: with a fresh tag added to
+  - [x] Verified end-to-end: with a fresh tag added to
         `.game-of-cards/canonical-tags.md`, `goc new x --tag <newtag>`
         succeeds; without it, the error shows the remedy line.
-  - [ ] The error wording is consistent across all three sites (same
+  - [x] The error wording is consistent across all three sites (same
         remedy sentence), so a reader sees the same fix wherever they
         hit the wall.
 worker: {who: "claude[bot]", where: main}
