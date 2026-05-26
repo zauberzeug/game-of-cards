@@ -232,10 +232,24 @@ def _yaml_inline(value) -> str:
 
 
 def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
-    """Render a multi-line string field with literal-block style (`|` or `|-`)."""
+    """Render a multi-line string field with literal-block style (`|` or `|-`).
+
+    Content lines get a fixed 2-space prefix. The parser infers the block
+    indent from the first content line, so a content line whose own text begins
+    with whitespace would otherwise corrupt the round-trip: the inflated first
+    line either raises (a later, less-indented line is judged ambiguous) or
+    silently folds a shared leading indent into the block indent. When the first
+    content line begins with whitespace, emit an explicit indentation indicator
+    (`|2` / `|2-`) that pins the block indent to the 2-space prefix regardless of
+    the content's own leading whitespace.
+    """
     text = (value or "").rstrip("\n")
+    lines = text.splitlines()
+    first_content = next((ln for ln in lines if ln.strip()), "")
+    if first_content[:1].isspace():
+        indicator = f"{indicator[0]}2{indicator[1:]}"
     out = [f"{key}: {indicator}"]
-    for ln in text.splitlines():
+    for ln in lines:
         out.append(f"  {ln}" if ln else "")
     return out
 
