@@ -1,7 +1,7 @@
 ---
 title: mutual-supersession-passes-validation-and-creates-forward-pointer-cycle
 summary: "`goc status A superseded --by B` then `goc status B superseded --by A` is fully permitted: at the second call B's status is still `open` (only `B.supersedes` was touched), so the terminal-status guard never fires and there is no check that the successor already supersedes the holder. The result is A.superseded_by=[B], B.superseded_by=[A] — a mutual supersession cycle that passes every validator (`detect_advance_cycles` is advances-only; no `detect_supersedes_cycles` exists). A reader routed forward through `superseded_by` loops forever."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-26T20:54:24Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: `goc validate` flags any pre-existing mutual/longer supersession cycle (a `detect_supersedes_cycles` analogous to `detect_advance_cycles`, OR an extension that covers the supersession edge set).
   - [ ] MECHANICAL: the false-premise comment at `goc/engine.py:3586-3588` ("Supersession edges can't form a cycle ...") is corrected or removed.
   - [ ] TDD: `uv run goc validate` passes on this repo's deck (no false positives on the legitimate single-direction supersession links already present).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Mutual supersession passes validation and creates a forward-pointer cycle
