@@ -1,7 +1,7 @@
 ---
 title: block-scalar-parser-collapses-whitespace-only-content-lines
 summary: "The vendored yaml-lite block-scalar parser tests each content line for blankness with `raw.rstrip() == \"\"` and, when true, appends an empty string — collapsing a whitespace-only content line (indent + interior spaces) to nothing. The goc frontmatter emitter writes such a line verbatim, so a multiline `summary`/`definition_of_done` value with an all-whitespace interior line does NOT survive emit->parse. This is the residual whitespace-only-line code path left unfixed by the closed sibling `block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip`, which only fixed the non-blank content-line slice."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T22:21:44Z"
@@ -67,6 +67,7 @@ disagreement, not a malformed-input edge case.
 
 ```
 === emitted frontmatter ===
+worker: {who: "claude[bot]", where: main}
 ---
 title: x
 summary: |-
