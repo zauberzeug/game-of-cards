@@ -1,19 +1,20 @@
 ---
 title: ready-predicate-doc-contradicts-elapsed-waiting-resurfacing
 summary: "The `card-schema` skill's boxed ready-to-pull predicate lists `∧ waiting_on unset` as a standalone hard conjunct, so read literally a card with `waiting_on` set can never be ready. But `waiting_impedes` resurfaces a card the moment its `waiting_until` elapses, regardless of `waiting_on` — and the skill's own prose a few lines below correctly describes that resurfacing. The formal predicate block is internally inconsistent with both the adjacent prose and the code; it should fold the two waiting signals together (`∧ not waiting_impedes`)."
-status: open
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T22:28:42Z"
-closed_at: null
+closed_at: 2026-05-26T23:29:38Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: the boxed ready predicate in `card-schema/SKILL.md` is corrected so it matches `waiting_impedes` — an elapsed `waiting_until` makes a card ready even when `waiting_on` is set (e.g. replace the two waiting conjuncts with `∧ not waiting_impedes(card)`, or `∧ (waiting_on unset OR waiting_until elapsed)`)
-  - [ ] MECHANICAL: the corrected predicate reads consistently with the prose at `SKILL.md:366-368` (no remaining internal contradiction)
-  - [ ] PROCESS: plugin/skill mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) since the card-schema skill body is mirrored into the plugin payloads; `uv run goc validate` clean
+  - [x] MECHANICAL: the boxed ready predicate in `card-schema/SKILL.md` is corrected so it matches `waiting_impedes` — an elapsed `waiting_until` makes a card ready even when `waiting_on` is set (e.g. replace the two waiting conjuncts with `∧ not waiting_impedes(card)`, or `∧ (waiting_on unset OR waiting_until elapsed)`)
+  - [x] MECHANICAL: the corrected predicate reads consistently with the prose at `SKILL.md:366-368` (no remaining internal contradiction)
+  - [x] PROCESS: plugin/skill mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) since the card-schema skill body is mirrored into the plugin payloads; `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # ready-predicate-doc-contradicts-elapsed-waiting-resurfacing

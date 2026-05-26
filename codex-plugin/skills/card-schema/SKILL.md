@@ -330,9 +330,12 @@ gate:
 ```
 ready ⇔ status == open
       ∧ human_gate == none
-      ∧ waiting_on unset
-      ∧ (waiting_until absent or in the past)
+      ∧ not waiting_impedes(card)   # no waiting_on, OR its waiting_until has elapsed
 ```
+
+An elapsed `waiting_until` resurfaces the card regardless of
+`waiting_on` — so the two waiting signals are a single condition, not
+independent conjuncts (see the impediment-overlay prose below).
 
 A card with an open `advances` prereq is still pullable — it surfaces
 in `--ready` with an "awaiting: <prereqs> (you may start)" advisory
