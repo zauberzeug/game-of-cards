@@ -14,6 +14,7 @@ advanced_by:
   - remove-blocked-from-status-enum-and-migrate-existing-cards
   - no-guardrail-for-canonical-epic-edge-direction
   - advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose
+  - make-advances-gate-closure-not-the-pull-queue
 tags: [epic, api-contract, documentation]
 definition_of_done: |
   - [ ] Agreed design recorded in this body (done — see "## Decision").

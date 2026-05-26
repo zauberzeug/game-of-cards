@@ -33,3 +33,14 @@ all; route loose impediments to the `waiting_on` overlay; introduce a
 strict/loose signal). A follow-up card files the actual predicate
 refactor; this entry just records that the readiness half is
 acknowledged as live work, not closed by the parent's decision.
+
+## 2026-05-26 — Later: Open consideration resolved by follow-up card
+
+The "closure vs readiness asymmetry" consideration is now owned by
+[`make-advances-gate-closure-not-the-pull-queue`](../make-advances-gate-closure-not-the-pull-queue/)
+(`human_gate: none`). Decision taken: option 2 (reassign roles) — an
+`advances` edge expresses "should precede" (priority + closure gate) and
+no longer gates the pull queue; the hard "must wait to start" gate is
+the `waiting_on` impediment overlay. That follow-up drops the
+`dependency_blocked` branch from `card_is_ready` and keeps the derived
+signal as advisory display only.
