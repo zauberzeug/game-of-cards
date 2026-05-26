@@ -1,7 +1,7 @@
 ---
 title: goc-decide-loses-deliberation-history-by-not-archiving-replaced-section
 summary: "`goc decide` replaces the README's `## Decision required` section with the resolved `## Decision` block (correct dashboard behaviour) but writes only a one-line entry to log.md, losing the deliberation context (original options, agent recommendation, trade-offs). README is the dashboard, log.md is the journal — the engine should archive the replaced content to log.md before/during the replacement. Scope decision needed: decide-only fix, generalised engine convention, or skill-workflow-only fix."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-23T05:06:53Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] Test coverage: file a card with a `## Decision required` section, run `goc decide`, assert log.md contains both the archival entry AND the resolution entry; assert README contains only the resolved `## Decision`.
   - [ ] `goc/templates/skills/decide-card/SKILL.md` "What this skill does to the card" subsection updates to describe the new dual-write behaviour (README replaced; log.md archives prior section AND records resolution).
   - [ ] If the scope decision picks the generalised engine convention (Option B below), a `goc archive-section <card> <section>` CLI helper exists for use by other commands that replace README sections.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-decide-loses-deliberation-history-by-not-archiving-replaced-section
