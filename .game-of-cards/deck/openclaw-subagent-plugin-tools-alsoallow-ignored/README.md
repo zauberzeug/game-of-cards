@@ -1,7 +1,7 @@
 ---
 title: openclaw-subagent-plugin-tools-alsoallow-ignored
 summary: "OpenClaw 2026.5.6 ignores `tools.subagents.tools.alsoAllow` while building plugin tool allowlists for subagents. The GoC plugin registers `goc` correctly and main sessions can call it, but spawned subagents still cannot see the `goc` first-class tool. This matches upstream issue openclaw/openclaw#23359 and open PR #51388."
-status: blocked
+status: open
 stage: null
 contribution: medium
 created: 2026-05-10
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] Remove or revise workaround notes after the fixed OpenClaw version is the minimum supported version
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
+waiting_on: external
 ---
 
 # OpenClaw subagent plugin tools `alsoAllow` ignored
@@ -116,8 +117,9 @@ goc validate
 
 ## Partial close 2026-05-10
 
-DoD items 1, 2, 3, and 6 closed in this pass. Card moved to `blocked`
-pending the upstream PR landing in a tagged OpenClaw release.
+DoD items 1, 2, 3, and 6 closed in this pass. Card carries an
+exogenous `waiting_on: external` overlay pending the upstream PR
+landing in a tagged OpenClaw release.
 
 - DoD 1 (track upstream): issue/PR states verified — see "Online
   finding" above.

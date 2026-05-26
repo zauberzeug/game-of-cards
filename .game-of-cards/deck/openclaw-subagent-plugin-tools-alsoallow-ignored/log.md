@@ -1,3 +1,14 @@
+## 2026-05-26 — reclassified blocked → open + waiting_on: external
+
+Reclassified off the `status: blocked` axis as part of the three-axis
+migration (`migrate-existing-blocked-cards-to-open-or-waiting-overlay`).
+This is an exogenous wait on an upstream OpenClaw release containing
+the `alsoAllow` fix (PR #51388 or successor), not a card-blocks-card
+dependency, so the shipped impediment overlay
+(`waiting_on: external`) is the correct stored signal. The overlay
+hides the card from the pull queue without overloading the progress
+status; once OpenClaw ships the fix, `goc wait <title> --clear` and
+re-pull to retest the remaining DoD items.
 
 ## 2026-05-10 — Slack sandbox first-class tool ENOENT follow-up
 

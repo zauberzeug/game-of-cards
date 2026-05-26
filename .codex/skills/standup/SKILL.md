@@ -1,6 +1,6 @@
 ---
 name: standup
-description: "Daily-style deck read — list active and blocked cards with blocker reasons, show closures from log.md within the last 24h, surface cards waiting on a human decision gate. Read-only, never mutates state. AUTO-INVOKE when user says \"what's up\", \"where do we stand\", \"what's blocked\", \"daily check\", \"standup\", \"morning check\", or \"what happened since yesterday\"."
+description: "Daily-style deck read — list active and impeded cards (carrying a `waiting_on` overlay), show closures from log.md within the last 24h, surface cards waiting on a human decision gate. Read-only, never mutates state. AUTO-INVOKE when user says \"what's up\", \"where do we stand\", \"what's blocked\", \"what's stuck\", \"daily check\", \"standup\", \"morning check\", or \"what happened since yesterday\"."
 ---
 
 ## Preflight
@@ -11,7 +11,7 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 !`goc --status active -v`
 
-!`goc --status blocked -v`
+!`goc --json --status open 2>/dev/null | python3 -c "import json,sys; cards=json.load(sys.stdin); impeded=[c for c in cards if c.get('waiting_on')]; print('\n'.join(f\"{c['title']} [waiting_on: {c['waiting_on']}{(' until ' + c['waiting_until']) if c.get('waiting_until') else ''}]: {(c.get('summary') or '(no summary)')[:80]}\" for c in impeded) or 'No impeded cards.')" 2>/dev/null || true`
 
 !`goc --status open --json | head -60`
 
@@ -30,11 +30,14 @@ For each `active` card (shown above): report title, summary, and who
 claimed it (`worker` field). If the card has been active longer than 48h
 without a `log.md` update, flag it as potentially stalled.
 
-## Section 2 — Blocked
+## Section 2 — Impeded (waiting overlay)
 
-For each `blocked` card (shown above): report title and the blocker
-reason from the body's `## Blocked` section (or the most recent
-`log.md` entry if no section exists). One line per card.
+For each card carrying a `waiting_on` overlay (shown above): report
+title, the `waiting_on` reason, the `waiting_until` date if any, and
+the body's `## Waiting` section (or the most recent `log.md` entry if
+no section exists). One line per card. A card may appear here even
+while `status: active` — the overlay is orthogonal to the progress
+status.
 
 ## Section 3 — Closed since yesterday
 
@@ -88,8 +91,8 @@ goc 2>/dev/null | head -5 || true
 ## In flight
 - <title> (claimed by <worker>, <N>h): <one-line summary>
 
-## Blocked
-- <title>: <blocker reason>
+## Impeded
+- <title> [waiting_on: <reason>{ until <date>}]: <one-line reason>
 
 ## Closed since yesterday
 - <title>: closed — <one-line what-changed>

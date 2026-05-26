@@ -9,11 +9,11 @@ summary: |-
   `waiting_on: <reason>`. No enum/code change here (`blocked` stays a
   valid value), so this is autonomous-pull-safe and unblocks the queue
   while the breaking removal waits for a release boundary.
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T12:11:27Z"
-closed_at: null
+closed_at: 2026-05-26T13:10:18Z
 human_gate: none
 advances:
   - remove-blocked-from-status-enum-and-migrate-existing-cards
@@ -21,25 +21,26 @@ advances:
 advanced_by: []
 tags: [api-contract]
 definition_of_done: |
-  - [ ] The three current `status: blocked` cards are reclassified:
+  - [x] The `status: blocked` cards in the deck are reclassified:
         - `llms-txt-still-recommends-uv-tool-install-as-preferred`
-          (non-terminal `advanced_by`) → `status: open` — derived
-          readiness hides it from the queue while its prereq is open.
-        - `clarify-agent-unblockable-blocked-cards` (empty
-          `advanced_by`, exogenous) → `status: open` +
-          `waiting_on: <reason>`.
-        - `openclaw-subagent-plugin-tools-alsoallow-ignored` (empty
-          `advanced_by`, exogenous; also `human_gate: session`) →
-          `status: open` + `waiting_on: <reason>`; gate unchanged.
-  - [ ] Each reclassification gets a one-line `log.md` entry recording
-        the old `blocked` state and why the new axis (derived vs
-        overlay) fits.
-  - [ ] No card in the deck retains `status: blocked` after this card.
-        `goc validate` is clean (the enum still ACCEPTS `blocked` — this
-        card does not change the enum; it just stops using it).
-  - [ ] Optional: if a reusable `goc` migration helper is cheap, add it;
-        otherwise a documented one-shot is fine — the population is 3
-        cards. (Helper is not required to close.)
+          → `status: open`. Its `advanced_by` prereq
+          (`validate-plugin-mirror-fails-when-openclaw-omits-hooks-dir`)
+          already closed on 2026-05-09, so derived readiness now lets
+          the card through to the pull queue without an overlay.
+        - `openclaw-subagent-plugin-tools-alsoallow-ignored`
+          → `status: open` + `waiting_on: external`; gate unchanged
+          at `none`. (The original DoD claimed gate=`session`; actual
+          state was already `none`, so no gate change was needed.)
+        - `clarify-agent-unblockable-blocked-cards` was listed in the
+          original DoD but closed `done` on 2026-05-11 (two weeks
+          before this card was filed) — no action required.
+  - [x] Each reclassification has a `log.md` entry recording the old
+        `blocked` state and why the new axis (derived vs overlay) fits.
+  - [x] No card in the deck retains `status: blocked` after this card.
+        `goc validate` is clean.
+  - [x] No reusable migration helper added — population was 2 cards,
+        each touched once via existing `goc status` / `goc wait`.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Migrate existing `blocked` cards off the status axis
