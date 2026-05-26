@@ -1601,7 +1601,10 @@ def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
         try:
             until_date = date.fromisoformat(_date_part(until))
         except (TypeError, ValueError):
-            return False
+            # Malformed date: treat as absent and fall through to the
+            # reason check — a present-but-unparseable waiting_until must
+            # not silently un-impede a card that carries a waiting_on.
+            until_date = None
     if reason is None and until_date is None:
         return False
     if until_date is None:
