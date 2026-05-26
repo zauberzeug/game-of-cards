@@ -86,6 +86,7 @@ with TemporaryDirectory() as d:
     for c in cards:
         errors += engine.validate_card(c, schema, all_titles)
     errors += engine.detect_advance_cycles(cards)
+    errors += engine.detect_supersedes_cycles(cards)
     errors += engine.validate_bidirectional_edges(cards)
     errors += engine.validate_supersedes_targets(cards)
 

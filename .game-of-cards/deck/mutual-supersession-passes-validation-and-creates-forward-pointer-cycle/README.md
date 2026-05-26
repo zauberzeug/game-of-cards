@@ -1,21 +1,21 @@
 ---
 title: mutual-supersession-passes-validation-and-creates-forward-pointer-cycle
 summary: "`goc status A superseded --by B` then `goc status B superseded --by A` is fully permitted: at the second call B's status is still `open` (only `B.supersedes` was touched), so the terminal-status guard never fires and there is no check that the successor already supersedes the holder. The result is A.superseded_by=[B], B.superseded_by=[A] — a mutual supersession cycle that passes every validator (`detect_advance_cycles` is advances-only; no `detect_supersedes_cycles` exists). A reader routed forward through `superseded_by` loops forever."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-26T20:54:24Z"
-closed_at: null
+closed_at: 2026-05-26T21:07:51Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a mutual supersession pair is either rejected at construction time or flagged by `goc validate` (the forward-pointer walk no longer cycles).
-  - [ ] TDD: `goc status B superseded --by A` is rejected when A is already `superseded_by B` (or A already `supersedes` B), with a message naming the cycle — mirroring the advances-cycle guard.
-  - [ ] TDD: `goc validate` flags any pre-existing mutual/longer supersession cycle (a `detect_supersedes_cycles` analogous to `detect_advance_cycles`, OR an extension that covers the supersession edge set).
-  - [ ] MECHANICAL: the false-premise comment at `goc/engine.py:3586-3588` ("Supersession edges can't form a cycle ...") is corrected or removed.
-  - [ ] TDD: `uv run goc validate` passes on this repo's deck (no false positives on the legitimate single-direction supersession links already present).
+  - [x] TDD: reproduce.py exits zero — a mutual supersession pair is either rejected at construction time or flagged by `goc validate` (the forward-pointer walk no longer cycles).
+  - [x] TDD: `goc status B superseded --by A` is rejected when A is already `superseded_by B` (or A already `supersedes` B), with a message naming the cycle — mirroring the advances-cycle guard.
+  - [x] TDD: `goc validate` flags any pre-existing mutual/longer supersession cycle (a `detect_supersedes_cycles` analogous to `detect_advance_cycles`, OR an extension that covers the supersession edge set).
+  - [x] MECHANICAL: the false-premise comment at `goc/engine.py:3586-3588` ("Supersession edges can't form a cycle ...") is corrected or removed.
+  - [x] TDD: `uv run goc validate` passes on this repo's deck (no false positives on the legitimate single-direction supersession links already present).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -85,9 +85,11 @@ card can be routed forward without parsing prose." A forward walk through
 ## Empirical evidence
 
 `reproduce.py` builds the mutual end-state in a temp deck, runs every
-supersession-relevant validator, and walks the forward pointer. See the
-script output (exit 1 = defect fires): all validators return no errors
-*and* the `superseded_by` walk detects a cycle.
+supersession-relevant validator (now including `detect_supersedes_cycles`),
+and walks the forward pointer. After the fix it exits 0: the new
+validator reports `aaa: superseded_by: cycle detected through bbb → aaa`
+(and the symmetric `bbb → aaa → bbb`), so the cycle is flagged before a
+forward walk can hang.
 
 ## Why it matters
 
@@ -100,18 +102,19 @@ has `detect_advance_cycles` precedent
 ([advance-command-can-create-value-graph-cycles](../advance-command-can-create-value-graph-cycles/),
 done); the supersession edge set has no equivalent.
 
-## Fix
+## Fix (applied)
 
-Two complementary changes (both, ideally):
+Both complementary changes landed in `goc/engine.py`:
 
-1. **Reject at construction.** In `_cmd_status` (`goc/engine.py`), before
-   committing a `--by` supersession, refuse when the successor already
-   reaches the holder through `superseded_by` (the analog of
-   `_would_create_advance_cycle`). Exit non-zero with a message naming
-   the cycle.
-2. **Catch at validate.** Add a `detect_supersedes_cycles` mirroring
-   `detect_advance_cycles` (walk `superseded_by` / `supersedes`), wired
-   into `_cmd_validate` alongside the advances-cycle check. Correct or
-   delete the false-premise comment at `goc/engine.py:3586`.
-
-Do NOT apply the fix as part of filing this card.
+1. **Reject at construction.** `_would_create_supersedes_cycle` (analog
+   of `_would_create_advance_cycle`) walks `superseded_by` from the
+   successor; `_cmd_status` calls it before any disk write and exits 2
+   with a message naming the cycle when the successor already reaches
+   the holder.
+2. **Catch at validate.** `detect_supersedes_cycles` (mirror of
+   `detect_advance_cycles`, walking `superseded_by`) is wired into
+   `_cmd_validate` alongside the advances-cycle check, so a
+   hand-authored mutual/longer cycle is flagged as an ERROR.
+3. **Comment corrected.** The false-premise comment in
+   `_repair_edge_cycle_problem` was rewritten, and that function now
+   also guards supersession half-edges against completing a cycle.

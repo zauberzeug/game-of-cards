@@ -1233,6 +1233,62 @@ def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) ->
     return False
 
 
+def detect_supersedes_cycles(cards: list[Card]) -> list[str]:
+    """Return cycle errors in the supersession (superseded_by) routing graph.
+
+    The forward routing pointer a cold reader follows is `superseded_by`
+    (A.superseded_by=[B] means "A was replaced by B; go to B"). A cycle in
+    that graph makes the forward walk non-terminating. Mirror of
+    `detect_advance_cycles` over the supersession edge set.
+    """
+    by_title = {t.title: t for t in cards}
+    errors: list[str] = []
+    for start in cards:
+        seen: set[str] = set()
+        stack: list[str] = [start.title]
+        while stack:
+            cur = stack.pop()
+            if cur in seen:
+                continue
+            seen.add(cur)
+            t = by_title.get(cur)
+            if t is None:
+                continue
+            superseded_by = t.frontmatter.get("superseded_by") or []
+            for b in superseded_by:
+                if b == start.title and cur != start.title:
+                    errors.append(f"{start.title}: superseded_by: cycle detected through {cur} → {b}")
+                stack.append(b)
+    return errors
+
+
+def _would_create_supersedes_cycle(cards: list[Card], title: str, successor: str) -> bool:
+    """Return True if adding `title.superseded_by += successor` would cycle.
+
+    The proposed edge routes title→successor (title was replaced by
+    successor). A cycle exists when successor can already reach title by
+    following existing `superseded_by` edges — closing that path back to
+    title would form a loop in the forward-routing graph. Analog of
+    `_would_create_advance_cycle` for the supersession edge set.
+    """
+    by_title = {c.title: c for c in cards}
+    seen: set[str] = set()
+    stack: list[str] = [successor]
+    while stack:
+        cur = stack.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        card = by_title.get(cur)
+        if card is None:
+            continue
+        for s in card.frontmatter.get("superseded_by") or []:
+            if s == title:
+                return True
+            stack.append(s)
+    return False
+
+
 @dataclass(frozen=True)
 class BlockerWarning:
     klass: str
@@ -2405,6 +2461,9 @@ def _cmd_validate(args):
     for e in detect_advance_cycles(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
+    for e in detect_supersedes_cycles(cards):
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
     half_edge_errors = validate_bidirectional_edges(cards)
     for e in half_edge_errors:
         print(f"ERROR: {e}", file=sys.stderr)
@@ -3377,6 +3436,14 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if successor is not None and _would_create_supersedes_cycle(load_all_cards(), title, successor):
+        print(
+            f"ERROR: superseding {title} by {successor} would create a cycle in "
+            f"the supersession graph ({successor} already reaches {title} through "
+            f"superseded_by); a forward walk would never terminate",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
     if new_status in TERMINAL_STATUSES:
@@ -3600,15 +3667,24 @@ def _repair_edge_diff(edge: HalfEdge) -> list[str]:
 
 
 def _repair_edge_cycle_problem(edge: HalfEdge, cards: list[Card]) -> str | None:
-    # Supersession edges can't form a cycle (a superseded card is terminal
-    # and won't re-enter the relationship graph), so the check only applies
-    # to the advances pair.
-    if not edge.is_advance:
+    # Both edge sets can cycle: advances directly, and supersession because
+    # `goc status … superseded` only makes the *holder* terminal, leaving the
+    # successor free to be superseded back (see detect_supersedes_cycles).
+    if edge.is_advance:
+        if _would_create_advance_cycle(cards, edge.child_title, edge.parent_title):
+            return (
+                f"{edge.parent_title} → {edge.child_title} would create a cycle "
+                "in the advances graph"
+            )
         return None
-    if _would_create_advance_cycle(cards, edge.child_title, edge.parent_title):
+    # Supersession half-edge: identify the `superseded_by` direction (holder→successor).
+    if edge.field == "superseded_by":
+        holder, successor = edge.src, edge.ref
+    else:  # supersedes
+        holder, successor = edge.ref, edge.src
+    if _would_create_supersedes_cycle(cards, holder, successor):
         return (
-            f"{edge.parent_title} → {edge.child_title} would create a cycle "
-            "in the advances graph"
+            f"{holder} → {successor} would create a cycle in the supersession graph"
         )
     return None
 
