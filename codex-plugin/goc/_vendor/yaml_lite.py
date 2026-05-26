@@ -9,7 +9,7 @@ Accepted YAML features (driven by what goc/engine.py emits and reads):
     plain string, single-quoted string, double-quoted string (with \\ \\n escapes)
   - Inline flow list: [a, b, c]
   - Inline flow map: {k: v, k2: v2}
-  - Block literal scalar: | and |-
+  - Block literal scalar: | (clip), |- (strip) and |+ (keep) chomping
   - Block sequence: - item (items may be scalars or block maps)
   - Block mapping value at next indent level
   - # comments on their own lines or at end of lines
@@ -141,15 +141,19 @@ class _Parser:
                             result.append(self._parse_block_mapping(ni))
         return result
 
-    # ── Block scalar ( | and |- ) ─────────────────────────────────────────────
+    # ── Block scalar ( |, |- and |+ ) ─────────────────────────────────────────
 
-    def _parse_block_scalar(self, declaration_indent: int, strip: bool) -> str:
+    def _parse_block_scalar(self, declaration_indent: int, chomp: str) -> str:
         """Parse a `|` block scalar.
 
         `declaration_indent` is the indent of the line bearing the `|` indicator;
         block content must be indented strictly more than that. If the first
         non-blank line is at indent <= declaration_indent, the block scalar is
         empty and that line is left for the parent parser to consume.
+
+        `chomp` is the YAML chomping mode: "clip" (bare `|`, keep one trailing
+        newline, drop trailing blank lines), "strip" (`|-`, no trailing newline)
+        or "keep" (`|+`, preserve every trailing blank line).
         """
         chunks: list[str] = []
         block_indent: int | None = None
@@ -174,16 +178,24 @@ class _Parser:
             # consumed.
             self._pos = saved_pos
             return ""
-        text = "\n".join(chunks)
-        return text if strip else text + "\n"
+        if chomp == "keep":
+            # Preserve every trailing blank line plus the final line break.
+            return "\n".join(chunks) + "\n"
+        # clip and strip both drop trailing blank lines; they differ only in
+        # whether the single final line break survives.
+        end = len(chunks)
+        while end > 0 and chunks[end - 1] == "":
+            end -= 1
+        text = "\n".join(chunks[:end])
+        return text if chomp == "strip" else text + "\n"
 
     # ── Value resolver ────────────────────────────────────────────────────────
 
     def _resolve_value(self, rest: str, parent_indent: int) -> Any:
         rest = rest.rstrip()
         if rest in ("|", "|-", "|+"):
-            strip = rest == "|-"
-            return self._parse_block_scalar(parent_indent, strip)
+            chomp = {"|": "clip", "|-": "strip", "|+": "keep"}[rest]
+            return self._parse_block_scalar(parent_indent, chomp)
         if rest == ">":
             raise ParseError(f"line {self._pos + 1}: folded scalars (>) not supported")
         if rest in ("&", "*") or rest.startswith("&") or rest.startswith("*"):

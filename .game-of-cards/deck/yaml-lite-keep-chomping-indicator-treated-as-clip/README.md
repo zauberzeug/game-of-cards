@@ -1,27 +1,30 @@
 ---
 title: yaml-lite-keep-chomping-indicator-treated-as-clip
 summary: "The vendored YAML parser maps the `|+` (keep) block-scalar chomping indicator to the same behavior as bare `|` (clip — one trailing newline) instead of keeping all trailing blank lines. The goc emitter never emits `|+`, so this only affects externally-authored frontmatter; parked unverified, low impact."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-26T20:44:09Z"
-closed_at: null
+closed_at: 2026-05-26T21:39:45Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, unverified]
+tags: [bug]
 definition_of_done: |
-  - [ ] TDD: a reproduce.py parses a `|+` block scalar with trailing blank lines and asserts the result preserves them (distinct from `|` clip)
-  - [ ] MECHANICAL: `_resolve_value` (goc/_vendor/yaml_lite.py:184-186) and `_parse_block_scalar` distinguish keep (`|+`) from clip (`|`) and strip (`|-`) — a three-way chomp, not a boolean `strip`
-  - [ ] PROCESS: drop the `unverified` tag once the reproduce.py lands; or disprove if YAML 1.1/1.2 chomp semantics are deemed out-of-scope for the lite parser
+  - [x] TDD: a reproduce.py parses a `|+` block scalar with trailing blank lines and asserts the result preserves them (distinct from `|` clip)
+  - [x] MECHANICAL: `_resolve_value` (goc/_vendor/yaml_lite.py:184-186) and `_parse_block_scalar` distinguish keep (`|+`) from clip (`|`) and strip (`|-`) — a three-way chomp, not a boolean `strip`
+  - [x] PROCESS: drop the `unverified` tag once the reproduce.py lands; or disprove if YAML 1.1/1.2 chomp semantics are deemed out-of-scope for the lite parser
 worker: {who: "claude[bot]", where: main}
 ---
 
 # yaml-lite treats the `|+` keep-chomping indicator as clip
 
-> **Unverified.** Confirmed by code inspection; no `reproduce.py` budget this
-> round, and the impact is read-only (the goc emitter never produces `|+`).
-> Parked so the observation is not lost.
+> **Verified & fixed (2026-05-26).** The `reproduce.py` confirmed the defect
+> but with the symptom *inverted* from this card's inspection: `|+` (keep) was
+> already correct, while **both `|` (clip) and `|-` (strip) wrongly retained
+> trailing blank lines** they are supposed to chomp. The root cause and fix are
+> exactly as scoped — a real three-way chomp instead of a clip-vs-strip boolean.
+> See the `log.md` closure entry.
 
 ## Location
 
