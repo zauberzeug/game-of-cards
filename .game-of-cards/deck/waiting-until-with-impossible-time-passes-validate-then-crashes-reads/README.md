@@ -1,7 +1,7 @@
 ---
 title: waiting-until-with-impossible-time-passes-validate-then-crashes-reads
 summary: "`_is_iso_date` only calendar-validates the date prefix (`value[:10]`), so a `waiting_until` with an ISO-shaped but impossible TIME like `2026-05-20T25:61:99Z` passes `goc validate`. The consumer `_waiting_until_instant` then parses the full timestamp with `strptime` and raises an uncaught `ValueError` — crashing `goc validate`, `waiting_impedes`, and every queue read of a deck that contains such a card. Same validator-weaker-than-parser shape as the closed date-prefix card, but for the time component, and the failure is a hard crash rather than a silent un-defer."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-27T04:03:30Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: `waiting_impedes` on a card with an impossible-time `waiting_until` returns a bool (treats it as still-impeding, same backstop contract as the date-prefix sibling) instead of raising `ValueError`.
   - [ ] TDD: no behavior change for genuinely valid date/datetime shapes — valid `YYYY-MM-DD` and `YYYY-MM-DDTHH:MM:SSZ` values still parse and impede/clear exactly as before (existing waiting-overlay tests stay green).
   - [ ] MECHANICAL: the `_is_iso_date` docstring (engine.py:667-670) stays accurate — it currently claims it "matches the predicate to the parser", which is false for the time component until this lands.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `waiting_until` with an impossible time passes `goc validate`, then crashes every read
