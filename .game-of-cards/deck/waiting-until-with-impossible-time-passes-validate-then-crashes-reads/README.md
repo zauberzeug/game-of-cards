@@ -1,20 +1,21 @@
 ---
 title: waiting-until-with-impossible-time-passes-validate-then-crashes-reads
 summary: "`_is_iso_date` only calendar-validates the date prefix (`value[:10]`), so a `waiting_until` with an ISO-shaped but impossible TIME like `2026-05-20T25:61:99Z` passes `goc validate`. The consumer `_waiting_until_instant` then parses the full timestamp with `strptime` and raises an uncaught `ValueError` — crashing `goc validate`, `waiting_impedes`, and every queue read of a deck that contains such a card. Same validator-weaker-than-parser shape as the closed date-prefix card, but for the time component, and the failure is a hard crash rather than a silent un-defer."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-27T04:03:30Z"
-closed_at: null
+closed_at: 2026-05-27T05:35:32Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `_is_iso_date('2026-05-20T25:61:99Z')` returns False and `goc validate` rejects (clean FAIL, no traceback) a card whose `waiting_until` carries an impossible time component.
-  - [ ] TDD: `waiting_impedes` on a card with an impossible-time `waiting_until` returns a bool (treats it as still-impeding, same backstop contract as the date-prefix sibling) instead of raising `ValueError`.
-  - [ ] TDD: no behavior change for genuinely valid date/datetime shapes — valid `YYYY-MM-DD` and `YYYY-MM-DDTHH:MM:SSZ` values still parse and impede/clear exactly as before (existing waiting-overlay tests stay green).
-  - [ ] MECHANICAL: the `_is_iso_date` docstring (engine.py:667-670) stays accurate — it currently claims it "matches the predicate to the parser", which is false for the time component until this lands.
+  - [x] TDD: reproduce.py exits zero — `_is_iso_date('2026-05-20T25:61:99Z')` returns False and `goc validate` rejects (clean FAIL, no traceback) a card whose `waiting_until` carries an impossible time component.
+  - [x] TDD: `waiting_impedes` on a card with an impossible-time `waiting_until` returns a bool (treats it as still-impeding, same backstop contract as the date-prefix sibling) instead of raising `ValueError`.
+  - [x] TDD: no behavior change for genuinely valid date/datetime shapes — valid `YYYY-MM-DD` and `YYYY-MM-DDTHH:MM:SSZ` values still parse and impede/clear exactly as before (existing waiting-overlay tests stay green).
+  - [x] MECHANICAL: the `_is_iso_date` docstring (engine.py:667-670) stays accurate — it currently claims it "matches the predicate to the parser", which is false for the time component until this lands.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `waiting_until` with an impossible time passes `goc validate`, then crashes every read
@@ -89,12 +90,22 @@ render of a deck containing the card.
 
 ## Empirical evidence
 
+Before the fix:
+
 ```
-$ uv run python deck/waiting-until-with-impossible-time-passes-validate-then-crashes-reads/reproduce.py
 _is_iso_date('2026-05-20T25:61:99Z')      = True    (EXPECTED False)
 _waiting_until_instant(...)                 -> RAISED ValueError: time data '2026-05-20T25:61:99Z' does not match format '%Y-%m-%dT%H:%M:%SZ'
 waiting_impedes(card with that until)       -> RAISED ValueError (EXPECTED a bool)
 DEFECT CONFIRMED: validator accepts an impossible time the read-time guard then crashes on.
+```
+
+After the fix (reproduce.py exits 0):
+
+```
+_is_iso_date('2026-05-20T25:61:99Z')      = False    (EXPECTED False)
+_waiting_until_instant(...)                 -> returned without raising
+waiting_impedes(card with that until)       -> returned True
+FIXED: impossible time rejected by the predicate and waiting_impedes is total.
 ```
 
 ## Why it matters
@@ -110,15 +121,13 @@ aborts with a traceback until the offending card is found and hand-fixed,
 which is hard precisely because the listing commands that would surface it
 also crash.
 
-## Fix
+## Fix (applied)
 
-Match the predicate to the parser fully. In `_is_iso_date`, when the value is
-the datetime shape, parse it with the **same** `strptime` the consumer uses
-(not just the date prefix):
+Matched the predicate to the parser fully. In `_is_iso_date` (engine.py:662-684),
+when the value is the datetime shape, it is now parsed with the **same**
+`strptime` the consumer uses (not just the date prefix):
 
 ```python
-if not (_ISO_DATE_RE.match(value) or _ISO_DATETIME_UTC_RE.match(value)):
-    return False
 try:
     if _ISO_DATETIME_UTC_RE.match(value):
         datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
@@ -133,8 +142,6 @@ That single change makes `_is_iso_date` reject the impossible time, so
 `validate_card` emits its clean FAIL and `_waiting_until_instant`'s
 `_is_iso_date` gate returns `None` for it — restoring the
 treat-malformed-as-impeding backstop in `waiting_impedes` exactly as the
-date-prefix sibling intended. (A belt-and-suspenders alternative is to also
-wrap the `strptime` in `_waiting_until_instant` in `try/except → None`, but the
-predicate fix is the root cause and keeps the two functions consistent.)
-
-Do NOT apply the fix here — this card files the defect.
+date-prefix sibling intended. The root-cause predicate fix keeps the two
+functions consistent; no `try/except` patch was needed in
+`_waiting_until_instant`.
