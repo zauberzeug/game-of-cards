@@ -1,20 +1,20 @@
 ---
 title: mutate-frontmatter-field-over-consumes-blank-line-after-a-flat-field
 summary: "The continuation pattern in `mutate_frontmatter_field` was widened with `\\n(?=[ \\t]|\\n)` to keep internal blank lines of a block field. It has no \"inside a block field\" guard, so mutating a FLAT field (`status`, `worker`, `closed_at`) that is immediately followed by a blank line consumes that blank line — and any indented line after it — into the match and deletes it. This is the regression introduced by the fix for the inverse block-field truncation bug, now firing on the live mutation path."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T01:18:40Z"
-closed_at: null
+closed_at: 2026-05-27T01:23:58Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — mutating a flat field immediately followed by a blank line preserves the blank line, and a stray indented line after the blank is preserved (no silent loss)
-  - [ ] TDD: the existing block-field invariant still holds — mutating a block field (e.g. `definition_of_done`) with an internal blank line does NOT orphan its tail (the case from the closed sibling card stays green)
-  - [ ] MECHANICAL: the continuation pattern in `goc/engine.py` only consumes a blank line when it is genuinely internal to the field being mutated (a following indented continuation line exists), not when it is a structural separator before the next top-level `key:` line
-  - [ ] MECHANICAL: plugin mirrors synced (`python scripts/sync_plugin_assets.py --check` clean) and `uv run goc validate` clean
+  - [x] TDD: reproduce.py exits zero — mutating a flat field immediately followed by a blank line preserves the blank line, and a stray indented line after the blank is preserved (no silent loss)
+  - [x] TDD: the existing block-field invariant still holds — mutating a block field (e.g. `definition_of_done`) with an internal blank line does NOT orphan its tail (the case from the closed sibling card stays green)
+  - [x] MECHANICAL: the continuation pattern in `goc/engine.py` only consumes a blank line when it is genuinely internal to the field being mutated (a following indented continuation line exists), not when it is a structural separator before the next top-level `key:` line
+  - [x] MECHANICAL: plugin mirrors synced (`python scripts/sync_plugin_assets.py --check` clean) and `uv run goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -94,16 +94,27 @@ Case 2: a `worker` mutation deletes a `  stray: indented` line that
 followed the blank — genuine data loss of frontmatter content the field
 never owned.
 
-## Fix (proposal — do NOT apply here)
+## Fix (applied)
 
-Constrain the blank-line clause so a blank `\n` is only consumed when it
-is genuinely internal to the field being mutated — i.e. when an indented
-continuation line follows the blank run. One shape: only allow a blank
-line to be absorbed if the next non-blank line is indented (a `(?=...)`
-lookahead for `[ \t]` after the run of blanks), so a blank line preceding
-a top-level `key:` line stops the match. Whatever the exact regex, the
-invariant is: the match must cover the field header plus only the lines
-that belong to that field, and nothing past the field's own content.
+The continuation pattern was restructured so the block tail is a single
+optional group that can only *open* with an indented line directly after
+the header:
 
-Both the block-field invariant (sibling card) and the flat-field
-invariant (this card) must hold simultaneously — the DoD encodes both.
+```python
+pattern = re.compile(
+    rf"^{re.escape(field_name)}:[ \t]*[^\n]*"
+    rf"(?:\n[ \t]+[^\n]*(?:\n[ \t]+[^\n]*|\n(?=\n*[ \t]))*)?",
+    re.MULTILINE,
+)
+```
+
+A flat scalar (`status: x`, `worker: y`) followed by a blank line never
+enters the continuation group, because the first thing after the header
+is not an indented line — so the match stops on the header alone and the
+structural blank (and anything past it) is left untouched. Once inside
+the block, the blank-line clause `\n(?=\n*[ \t])` absorbs an internal
+blank only when a further indented line follows it, so a blank preceding
+the next top-level `key:` line still ends the match. Both invariants —
+block-field tail preserved (sibling card) and flat-field surroundings
+preserved (this card) — hold simultaneously; `reproduce.py` now reports
+all three cases correct.
