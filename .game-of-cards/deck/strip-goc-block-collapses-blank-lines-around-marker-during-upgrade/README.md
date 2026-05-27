@@ -1,18 +1,18 @@
 ---
 title: strip-goc-block-collapses-blank-lines-around-marker-during-upgrade
-summary: "UNVERIFIED. `_strip_goc_block` removes a GoC marker block from AGENTS.md/CLAUDE.md by replacing the block plus its surrounding `\\n*` runs with a single `\\n`. When user-authored content sits both above and below the block, the blank-line separator between them is collapsed — a paragraph above and a `## Section` below get jammed onto adjacent lines. Content is preserved but paragraph/heading separation is destroyed during upgrade migration."
-status: active
+summary: "FIXED. `_strip_goc_block` removed a GoC marker block from AGENTS.md/CLAUDE.md by replacing the block plus its surrounding `\\n*` runs with a single `\\n`, collapsing the blank-line separator when user content sat both above and below the block. Fixed by replacing the block with `\\n\\n`; the trailing `.strip()` keeps block-at-top/bottom/only edges clean."
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T07:40:12Z"
-closed_at: null
+closed_at: 2026-05-27T07:48:18Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, infra, unverified]
+tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: a reproduce.py feeds `_strip_goc_block` a file with user content above AND below the marker block and asserts the blank-line separator survives; fails on current code, passes after the fix. Promote off `unverified` when it lands.
-  - [ ] MECHANICAL: `_strip_goc_block` preserves the inter-paragraph blank line (e.g. replace the block with `\n\n` when content exists on both sides, or strip the block without eating both surrounding blank runs).
+  - [x] TDD: a reproduce.py feeds `_strip_goc_block` a file with user content above AND below the marker block and asserts the blank-line separator survives; fails on current code, passes after the fix. Promote off `unverified` when it lands.
+  - [x] MECHANICAL: `_strip_goc_block` preserves the inter-paragraph blank line (e.g. replace the block with `\n\n` when content exists on both sides, or strip the block without eating both surrounding blank runs).
 worker: {who: "claude[bot]", where: main}
 ---
 

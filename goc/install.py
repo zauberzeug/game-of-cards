@@ -166,7 +166,7 @@ def _strip_goc_block(path: Path) -> None:
         return
     text = path.read_text()
     pattern = re.compile(rf"\n*{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n*", re.DOTALL)
-    new = pattern.sub("\n", text).strip()
+    new = pattern.sub("\n\n", text).strip()
     header_only = re.fullmatch(r"# (Agent Guidelines|Claude Code Guidelines|Local notes for Claude Code \(not checked in\))\s*", new)
     if not new or header_only:
         path.unlink()
