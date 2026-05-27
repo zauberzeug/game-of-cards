@@ -353,7 +353,7 @@ def replace_or_append_decision(body: str, decision: str, reasoning: str, today: 
     """Replace `## Decision required` with `## Decision`, or append a new section."""
     block = f"## Decision\n\n*Resolved {today}:* {decision}\n\n*Reasoning:* {reasoning}\n"
     if DECISION_REQUIRED_RE.search(body):
-        return DECISION_REQUIRED_RE.sub(block, body, count=1)
+        return DECISION_REQUIRED_RE.sub(lambda _: block, body, count=1)
     return body.rstrip("\n") + "\n\n" + block
 
 
