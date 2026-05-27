@@ -1,19 +1,19 @@
 ---
 title: goc-json-omits-the-waiting-on-and-waiting-until-impediment-fields
 summary: "`goc --json` (render_json) exposes the status, human_gate, dependency (`awaiting`/`dependency_awaiting`), and derived `ready` axes, but omits the raw impediment-overlay fields `waiting_on` and `waiting_until`. A machine consumer sees `ready: false` with no way to learn whether a card is gated, dependency-awaiting, or impeded — nor the overlay's reason or expected clear-date. The board human-surface already got its overlay marker; the JSON record was never updated to match."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T11:49:13Z"
-closed_at: null
+closed_at: 2026-05-27T11:56:44Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `render_json` emits both `waiting_on` and `waiting_until`.
-  - [ ] TDD: a regression test in `tests/` asserts the JSON record for a card with an active overlay contains `waiting_on` and `waiting_until` with the stored values (and that a card without the overlay emits them as `null`).
-  - [ ] MECHANICAL: `render_json` (`goc/engine.py`) adds the two keys; the value matches the card's stored frontmatter (use `t.waiting_on` / `t.waiting_until`). Plugin mirrors synced; `uv run goc validate` clean.
+  - [x] TDD: reproduce.py exits zero — `render_json` emits both `waiting_on` and `waiting_until`.
+  - [x] TDD: a regression test in `tests/` asserts the JSON record for a card with an active overlay contains `waiting_on` and `waiting_until` with the stored values (and that a card without the overlay emits them as `null`).
+  - [x] MECHANICAL: `render_json` (`goc/engine.py`) adds the two keys; the value matches the card's stored frontmatter (use `t.waiting_on` / `t.waiting_until`). Plugin mirrors synced; `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 

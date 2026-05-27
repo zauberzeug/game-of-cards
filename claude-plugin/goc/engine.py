@@ -2166,6 +2166,8 @@ def render_json(
                 "value": values.get(t.title, (0.0, []))[0],
                 "value_path": values.get(t.title, (0.0, []))[1],
                 "human_gate": t.human_gate,
+                "waiting_on": t.waiting_on,
+                "waiting_until": t.waiting_until,
                 "tags": t.tags,
                 "created": t.created,
                 "closed_at": str(t.closed_at) if t.closed_at else None,
