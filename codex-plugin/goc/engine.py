@@ -3396,7 +3396,7 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
         if not advanced_by:
             return True, "no advanced_by edges"
         by_title = {c.title: c for c in all_cards}
-        unclosed = [t for t in advanced_by if t in by_title and by_title[t].status != "done"]
+        unclosed = [t for t in advanced_by if t in by_title and by_title[t].status not in TERMINAL_STATUSES]
         if unclosed:
             sample = ", ".join(unclosed[:3])
             hint = (
@@ -3405,7 +3405,7 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
                 f"(prefer over `--skip`)"
             )
             return False, f"{len(unclosed)} not done: {sample} — {hint}"
-        return True, f"all {len(advanced_by)} done"
+        return True, f"all {len(advanced_by)} closed"
     if name == "dod-100-percent":
         if card.dod_freeform:
             return True, "freeform DoD"

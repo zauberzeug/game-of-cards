@@ -1,20 +1,20 @@
 ---
 title: closure-gate-rejects-superseded-or-disproved-prereqs-as-not-done
 summary: "The `advanced-by-closed` closure gate (engine.py:3399) counts an upstream `advanced_by` prereq as unmet unless its status is exactly `done`, but every other predicate over the same edge — `dependency_blockers` (engine.py:1662) and the `compute_values` scheduler prune — treats `{done, disproved, superseded}` (TERMINAL_STATUSES) as resolved. A card whose prereq was superseded or disproved therefore shows 'awaiting: nothing' everywhere yet `goc done`/`attest` blocks its closure with '1 not done', nudging the user toward a record-destroying `goc unadvance`."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-27T05:59:14Z"
-closed_at: null
+closed_at: 2026-05-27T06:03:25Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (closure gate accepts a superseded or disproved upstream prereq, matching `dependency_blockers`).
-  - [ ] MECHANICAL: the `advanced-by-closed` check in `_run_derived_check` (engine.py ~3399) uses `not in TERMINAL_STATUSES` instead of `!= "done"`, so the three predicates over the `advanced_by` edge agree.
-  - [ ] TDD: a regression test asserts the gate passes for `superseded`/`disproved` upstreams and still fails for `open`/`active` upstreams.
-  - [ ] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green (no doc surface claims `done`-only closure; if any does, reconcile it).
+  - [x] TDD: reproduce.py exits zero (closure gate accepts a superseded or disproved upstream prereq, matching `dependency_blockers`).
+  - [x] MECHANICAL: the `advanced-by-closed` check in `_run_derived_check` (engine.py ~3399) uses `not in TERMINAL_STATUSES` instead of `!= "done"`, so the three predicates over the `advanced_by` edge agree.
+  - [x] TDD: a regression test asserts the gate passes for `superseded`/`disproved` upstreams and still fails for `open`/`active` upstreams.
+  - [x] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green (no doc surface claims `done`-only closure; if any does, reconcile it).
 worker: {who: "claude[bot]", where: main}
 ---
 
