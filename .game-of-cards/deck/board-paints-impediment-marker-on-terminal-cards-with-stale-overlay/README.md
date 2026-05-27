@@ -1,19 +1,19 @@
 ---
 title: board-paints-impediment-marker-on-terminal-cards-with-stale-overlay
 summary: "The kanban board (`goc --board`) paints the ⏳ impediment glyph on terminal (done/disproved/superseded) cards that still carry a `waiting_on`/`waiting_until` overlay. Closing a card never clears the overlay, and `card_cell` gates the dependency-block term on `status == \"open\"` but leaves the impediment term ungated — so a closed card renders as if it were still impeded, which is semantically impossible."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T08:15:13Z"
-closed_at: null
+closed_at: 2026-05-27T08:21:30Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits non-zero — no terminal-status card carries the ⏳ impediment marker on the board.
-  - [ ] MECHANICAL: the impediment term in `card_cell` (`goc/engine.py`) is gated so it only fires for non-terminal cards, mirroring the adjacent dependency-block term's `status == "open"` gate and `card_is_ready`'s status guard. The stored overlay fields are NOT mutated on close (preserved as historical record).
-  - [ ] PROCESS: the closed sibling `board-omits-marker-for-cards-with-active-waiting-overlay` is amended with a forward pointer to this card (dated log.md append).
+  - [x] TDD: reproduce.py exits non-zero — no terminal-status card carries the ⏳ impediment marker on the board.
+  - [x] MECHANICAL: the impediment term in `card_cell` (`goc/engine.py`) is gated so it only fires for non-terminal cards, mirroring the adjacent dependency-block term's `status == "open"` gate and `card_is_ready`'s status guard. The stored overlay fields are NOT mutated on close (preserved as historical record).
+  - [x] PROCESS: the closed sibling `board-omits-marker-for-cards-with-active-waiting-overlay` is amended with a forward pointer to this card (dated log.md append).
 worker: {who: "claude[bot]", where: main}
 ---
 
