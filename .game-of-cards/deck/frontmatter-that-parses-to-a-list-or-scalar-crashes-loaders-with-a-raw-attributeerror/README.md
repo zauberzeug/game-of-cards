@@ -1,7 +1,7 @@
 ---
 title: frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror
 summary: "When a card's README.md has both `---` delimiters and the YAML between them parses cleanly to a non-mapping value (a block list, or some bare scalars), `parse_frontmatter`'s `or {}` guard passes the non-dict through and `load_card` then calls `fm.get(...)`, raising a raw `AttributeError` with a Python traceback instead of the `FrontmatterError` the loader contract promises. Same point-away-from-the-problem failure the unterminated-frontmatter card already eliminated, for an input shape that fix never anticipated."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T13:49:20Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: `parse_frontmatter` raises `FrontmatterError` (not AttributeError) when the YAML between `---` delimiters parses to a non-mapping type; the message names the actual problem (frontmatter is not a mapping).
   - [ ] TDD: a regression test in `tests/` covers list/scalar top-level frontmatter and asserts `FrontmatterError`.
   - [ ] EMPIRICAL: `uv run goc validate` on a deck containing such a card reports a coherent per-card error (not a bare traceback).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror
