@@ -1,7 +1,7 @@
 ---
 title: agents-md-claims-no-test-suite-but-ci-runs-regression-tests
 summary: "AGENTS.md's `Common commands` section states `No pytest suite exists yet` and describes CI as only a build + console-script + `goc validate` smoke matrix. Both claims are stale: `tests/` holds 17 files / 165 passing tests, and `ci.yml` runs a `Run regression tests` step (`unittest discover -s tests`) on every push. An agent reading AGENTS.md will wrongly believe there is no test suite to run or extend when fixing a bug."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T11:34:40Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the `## Common commands` block lists a command to run the regression suite locally.
   - [ ] MECHANICAL: the CI description in AGENTS.md names the regression-test step alongside build/console-script/`goc validate`.
   - [ ] PROCESS: `goc validate` clean and the regression suite still passes after the edit.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # AGENTS.md claims no test suite exists, but CI runs a full regression suite
