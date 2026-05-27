@@ -156,6 +156,37 @@ def _detect_briefing_targets_on_disk(target: Path) -> tuple[str, ...]:
     return tuple(found)
 
 
+def _detect_newline(raw: bytes) -> str:
+    """Return *raw*'s dominant line ending — ``\\r\\n`` if CRLF predominates, else ``\\n``."""
+
+    crlf = raw.count(b"\r\n")
+    lf = raw.count(b"\n") - crlf
+    return "\r\n" if crlf > lf else "\n"
+
+
+def _read_text_keep_newline(path: Path) -> tuple[str, str]:
+    """Read *path* as LF-normalized text, returning ``(text, detected_newline)``.
+
+    The returned text matches `Path.read_text()`'s universal-newline
+    normalization, but the second element reports the file's dominant line
+    ending so callers can re-emit it via `_write_text_keep_newline` instead of
+    silently forcing LF on a CRLF-authored file.
+    """
+
+    raw = path.read_bytes()
+    newline = _detect_newline(raw)
+    text = raw.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    return text, newline
+
+
+def _write_text_keep_newline(path: Path, text: str, newline: str) -> None:
+    """Write LF-normalized *text* to *path*, translating ``\\n`` back to *newline*."""
+
+    if newline != "\n":
+        text = text.replace("\n", newline)
+    path.write_bytes(text.encode("utf-8"))
+
+
 def _strip_goc_block(path: Path) -> None:
     """Remove the GoC marker-bounded block from a markdown file (no-op if absent).
 
@@ -164,14 +195,14 @@ def _strip_goc_block(path: Path) -> None:
 
     if not path.exists():
         return
-    text = path.read_text()
+    text, newline = _read_text_keep_newline(path)
     pattern = re.compile(rf"\n*{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n*", re.DOTALL)
     new = pattern.sub("\n\n", text).strip()
     header_only = re.fullmatch(r"# (Agent Guidelines|Claude Code Guidelines|Local notes for Claude Code \(not checked in\))\s*", new)
     if not new or header_only:
         path.unlink()
     else:
-        path.write_text(new + "\n")
+        _write_text_keep_newline(path, new + "\n", newline)
 
 
 def _strip_claude_import(path: Path) -> None:
@@ -179,7 +210,7 @@ def _strip_claude_import(path: Path) -> None:
 
     if not path.exists():
         return
-    text = path.read_text()
+    text, newline = _read_text_keep_newline(path)
     text = CLAUDE_IMPORT_RE.sub("", text)
     lines = [
         line
@@ -191,7 +222,7 @@ def _strip_claude_import(path: Path) -> None:
     if not new or header_only:
         path.unlink()
     else:
-        path.write_text(new + "\n")
+        _write_text_keep_newline(path, new + "\n", newline)
 
 
 def _sync_claude_import(target: Path, briefing_target: str) -> None:
@@ -210,16 +241,16 @@ def _sync_claude_import(target: Path, briefing_target: str) -> None:
         claude_md.write_text(import_line + "\n")
         return
 
-    text = claude_md.read_text()
+    text, newline = _read_text_keep_newline(claude_md)
     stripped = text.strip()
     import_lines = {f"@{candidate}" for candidate in CLAUDE_IMPORTABLE_TARGETS}
     if not stripped or stripped in import_lines:
-        claude_md.write_text(import_line + "\n")
+        _write_text_keep_newline(claude_md, import_line + "\n", newline)
         return
 
     block = f"{CLAUDE_IMPORT_BEGIN}\n{import_line}\n{CLAUDE_IMPORT_END}\n"
     if CLAUDE_IMPORT_RE.search(text):
-        claude_md.write_text(CLAUDE_IMPORT_RE.sub(lambda _: block, text))
+        _write_text_keep_newline(claude_md, CLAUDE_IMPORT_RE.sub(lambda _: block, text), newline)
         return
 
     lines = text.splitlines()
@@ -229,10 +260,10 @@ def _sync_claude_import(target: Path, briefing_target: str) -> None:
             lines[idx] = import_line
             replaced_bare_import = True
     if replaced_bare_import:
-        claude_md.write_text("\n".join(lines).rstrip() + "\n")
+        _write_text_keep_newline(claude_md, "\n".join(lines).rstrip() + "\n", newline)
         return
 
-    claude_md.write_text(text.rstrip() + "\n\n" + block)
+    _write_text_keep_newline(claude_md, text.rstrip() + "\n\n" + block, newline)
 
 
 def _templates_root() -> Path:
@@ -878,12 +909,12 @@ def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
     if not target.exists():
         target.write_text(f"{header}\n\n{block}")
         return
-    text = target.read_text()
+    text, newline = _read_text_keep_newline(target)
     pattern = re.compile(rf"{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n?", re.DOTALL)
     if pattern.search(text):
-        target.write_text(pattern.sub(lambda _: block, text))
+        _write_text_keep_newline(target, pattern.sub(lambda _: block, text), newline)
         return
-    target.write_text(text.rstrip() + "\n\n" + block)
+    _write_text_keep_newline(target, text.rstrip() + "\n\n" + block, newline)
 
 
 def _append_precommit_hook(target: Path) -> None:
@@ -894,12 +925,12 @@ def _append_precommit_hook(target: Path) -> None:
     if not target.exists():
         target.write_text("repos:\n" + PRE_COMMIT_HOOK)
         return
-    text = target.read_text()
+    text, newline = _read_text_keep_newline(target)
     if "id: goc-validate" in text:
         return
     if not text.endswith("\n"):
         text += "\n"
-    target.write_text(text + PRE_COMMIT_HOOK)
+    _write_text_keep_newline(target, text + PRE_COMMIT_HOOK, newline)
 
 
 def _sync_methodology_blocks(
