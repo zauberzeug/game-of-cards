@@ -1086,7 +1086,7 @@ def _write_skills_source(target: Path, value: str) -> None:
     if not config_path.exists():
         return
     text = config_path.read_text()
-    pattern = re.compile(r"^[#\s]*skills_source\s*:.*$", re.MULTILINE)
+    pattern = re.compile(r"^[ \t]*#?[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
     replacement = f"skills_source: {value}"
     if pattern.search(text):
         new_text = pattern.sub(lambda _: replacement, text, count=1)
