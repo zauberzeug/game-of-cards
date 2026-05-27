@@ -1,20 +1,20 @@
 ---
 title: yaml-lite-truncates-flow-collection-with-hash-in-quoted-element
 summary: "yaml_lite's `_strip_comment` only enters quote-tracking mode when the *whole* value starts with a quote. An inline flow collection starts with `[` or `{`, so quote-tracking stays off and a ` #` inside a quoted element is treated as a comment and stripped — corrupting `tags: [\"a #b\", c]` to `['[\"a']` and silently dropping `worker: {who: x, where: \"br #1\"}` to `{}`. goc's own emitter produces these exact strings, so a card written by goc round-trips to data loss on reload."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T09:34:08Z"
-closed_at: null
+closed_at: 2026-05-27T09:39:53Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `safe_load('tags: ["a #b", c]\nworker: {who: x, where: "br #1"}')` returns `{'tags': ['a #b', 'c'], 'worker': {'who': 'x', 'where': 'br #1'}}` (no truncation, no dropped field). Fails before the fix, passes after.
-  - [ ] TDD: regression guard — the sibling fix's behavior is preserved: a bare value with an unbalanced lone quote still strips its trailing comment (`title: don't  # note` → `don't`), and a `#` inside a *balanced* quoted scalar is still NOT stripped (`a: "x # y"` → `x # y`).
-  - [ ] TDD: emit→parse round-trip is lossless for the cases above — `emit_frontmatter({'tags': ['a #b','c'], 'worker': {'who':'x','where':'br #1'}})` reparses to an equal dict.
-  - [ ] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads).
+  - [x] TDD: `reproduce.py` exits zero — `safe_load('tags: ["a #b", c]\nworker: {who: x, where: "br #1"}')` returns `{'tags': ['a #b', 'c'], 'worker': {'who': 'x', 'where': 'br #1'}}` (no truncation, no dropped field). Fails before the fix, passes after.
+  - [x] TDD: regression guard — the sibling fix's behavior is preserved: a bare value with an unbalanced lone quote still strips its trailing comment (`title: don't  # note` → `don't`), and a `#` inside a *balanced* quoted scalar is still NOT stripped (`a: "x # y"` → `x # y`).
+  - [x] TDD: emit→parse round-trip is lossless for the cases above — `emit_frontmatter({'tags': ['a #b','c'], 'worker': {'who':'x','where':'br #1'}})` reparses to an equal dict.
+  - [x] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -69,7 +69,7 @@ strings. `_yaml_inline` (`goc/engine.py:197`) quotes any value matching
 `where: "br #1"` inside the flow mapping and `"a #b"` inside the flow list —
 output its own parser cannot read back.
 
-## Empirical evidence
+## Empirical evidence (post-fix)
 
 ```
 INPUT YAML:
@@ -77,10 +77,7 @@ title: x
 tags: ["a #b", c]
 worker: {who: x, where: "br #1"}
 
-safe_load -> {'title': 'x', 'tags': ['["a'], 'worker': {}}
-
-  [FAIL] tags corrupted: ['["a'] != ['a #b', 'c']
-  [FAIL] worker dropped/corrupted: {} != {'who': 'x', 'where': 'br #1'}
+safe_load -> {'title': 'x', 'tags': ['a #b', 'c'], 'worker': {'who': 'x', 'where': 'br #1'}}
 
 emit_frontmatter(fm):
 ---
@@ -89,13 +86,13 @@ tags: ["a #b", c]
 worker: {who: x, where: "br #1"}
 ---
 
-reparsed -> {'title': 'x', 'tags': ['["a'], 'worker': {}}
-  [FAIL] emit -> parse round-trip is lossy (emitter output its own parser cannot read)
+reparsed -> {'title': 'x', 'tags': ['a #b', 'c'], 'worker': {'who': 'x', 'where': 'br #1'}}
 
-RESULT: FAIL — defect reproduced
+RESULT: PASS — defect fixed
 ```
 
 (`uv run python .game-of-cards/deck/yaml-lite-truncates-flow-collection-with-hash-in-quoted-element/reproduce.py`)
+Before the fix this printed `tags: ['["a']` and `worker: {}` and exited 1.
 
 ## Why it matters
 
@@ -108,17 +105,15 @@ the next load. The blast radius is narrower than the apostrophe sibling (only
 flow collections with a quoted ` #` element trigger it) but the failure is
 silent and lossy rather than a retained stray comment.
 
-## Fix
+## Fix (applied)
 
-Make `_strip_comment` flow-aware. Two viable shapes:
-
-1. Track bracket/brace depth and enable quote-tracking unconditionally while
-   inside a flow collection (`depth > 0`), so a `#` is only treated as a comment
-   when it is outside both quotes and brackets. This generalizes the `quoted`
-   gate rather than replacing it.
-2. Detect a flow-collection value (`text[:1] in '[{'`) up front and route it
-   through a depth+quote-aware scan, keeping the existing bare-scalar path
-   untouched.
-
-Either preserves the sibling card's bare-scalar behavior. Do NOT apply the fix
-in this card — file records the defect; `pull-card` implements.
+`_strip_comment` (`goc/_vendor/yaml_lite.py:395`) now takes approach 2: it
+detects a flow-collection value up front (`flow = text[:1] in ("[", "{")`) and,
+only for such values, tracks bracket/brace `depth` and enables quote-tracking.
+A `#` terminates the value only when `depth == 0` (outside every bracket) and
+outside any quote. The bare-scalar path is byte-for-byte unchanged — bracket
+tracking and quote-tracking are both gated on `flow`/`quoted`, so a lone
+apostrophe in `don't` or a stray `[` in a non-flow value cannot flip the scan.
+This preserves the sibling card
+[`yaml-lite-strip-comment-defeated-by-unbalanced-quote-in-bare-value`](../yaml-lite-strip-comment-defeated-by-unbalanced-quote-in-bare-value/)'s
+behavior while making flow collections quote- and depth-aware.

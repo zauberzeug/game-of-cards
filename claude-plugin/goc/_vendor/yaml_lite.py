@@ -397,18 +397,29 @@ def _strip_comment(text: str) -> str:
     if text.startswith("#"):
         return ""
     # Quote-tracking only applies to a genuinely *quoted* scalar (one that
-    # starts with a quote). In a bare value a lone quote char — the
-    # apostrophe in `don't`, the `'` in `5 o'clock` — is ordinary content
-    # and must not flip into quote mode, or it would suppress comment
-    # detection for the rest of the line.
+    # starts with a quote) or to the interior of an inline flow collection
+    # (`[...]`/`{...}`). In a bare value a lone quote char — the apostrophe in
+    # `don't`, the `'` in `5 o'clock` — is ordinary content and must not flip
+    # into quote mode, or it would suppress comment detection for the rest of
+    # the line. A flow collection, by contrast, uses quotes to delimit its
+    # elements, so a `#` inside a quoted element is content, not a comment;
+    # bracket depth gates comment detection so only a `#` outside both quotes
+    # and brackets terminates the value.
+    flow = text[:1] in ("[", "{")
     quoted = text[:1] in ('"', "'")
     in_q: str | None = None
+    depth = 0
     for i, c in enumerate(text):
         if in_q:
             if c == in_q:
                 in_q = None
-        elif quoted and c in ('"', "'"):
+        elif flow and c in ("[", "{"):
+            depth += 1
+        elif flow and c in ("]", "}"):
+            if depth > 0:
+                depth -= 1
+        elif (quoted or flow) and c in ('"', "'"):
             in_q = c
-        elif c == "#" and i > 0 and text[i - 1] in (" ", "\t"):
+        elif c == "#" and depth == 0 and i > 0 and text[i - 1] in (" ", "\t"):
             return text[:i].rstrip()
     return text
