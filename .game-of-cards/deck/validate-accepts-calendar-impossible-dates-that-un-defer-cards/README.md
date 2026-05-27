@@ -1,7 +1,7 @@
 ---
 title: validate-accepts-calendar-impossible-dates-that-un-defer-cards
 summary: "`goc validate`'s date check (`_is_iso_date`) is regex-shape only, so a calendar-impossible-but-ISO-shaped `waiting_until` like `2026-13-45` passes validation. The read-time guard `waiting_impedes` then parses it with `date.fromisoformat`, fails, and — for a bare deferral with no `waiting_on` — silently un-impedes the card, re-admitting it to the pull queue. The validator predicate is strictly weaker than the consumer's parser."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T02:13:54Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a bare-deferral card (`waiting_until` only, no `waiting_on`) carrying a calendar-impossible date no longer escapes `waiting_impedes` — either it cannot pass validate, or `waiting_impedes` treats an unparseable bare date as still-impeding (decide in fix; reproduce.py asserts the chosen contract).
   - [ ] TDD: no behavior change for genuinely valid date/datetime shapes (`created`, `closed_at`, `waiting_until` for valid past/future dates) — the existing control paths stay green.
   - [ ] MECHANICAL: the `_is_iso_date` docstring / the validate error message stay accurate to the tightened predicate.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc validate` accepts calendar-impossible dates, which silently un-defer cards
