@@ -252,12 +252,17 @@ class _Parser:
             if next_line is None:
                 return None
             ni = self._indent(next_line)
-            if ni <= parent_indent:
-                return None
             nb = next_line.lstrip()
-            if nb.startswith("- ") or nb == "-":
+            is_seq = nb.startswith("- ") or nb == "-"
+            # A block sequence's items may sit at the SAME indent as the
+            # parent key (valid YAML, and what PyYAML emits). A mapping
+            # continuation must stay strictly more indented, otherwise a
+            # sibling key would be swallowed as a nested mapping.
+            if is_seq and ni >= parent_indent:
                 return self._parse_block_sequence(ni)
-            return self._parse_block_mapping(ni)
+            if not is_seq and ni > parent_indent:
+                return self._parse_block_mapping(ni)
+            return None
         return _parse_scalar(rest)
 
 
