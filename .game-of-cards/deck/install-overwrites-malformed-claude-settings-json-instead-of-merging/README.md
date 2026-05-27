@@ -1,7 +1,7 @@
 ---
 title: install-overwrites-malformed-claude-settings-json-instead-of-merging
 summary: "`_merge_claude_settings` swallows a JSONDecodeError on an existing `.claude/settings.json` and writes a fresh file with GoC hooks only — silently destroying the user's `permissions.allow`, `env`, and any other keys. Contradicts the function's own docstring contract to merge without removing unrelated keys."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-27T09:49:10Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: when the existing settings.json is unparseable, the original bytes are preserved (a timestamped `.bak` sibling is written) and the failure is surfaced (warning printed), not silently swallowed.
   - [ ] MECHANICAL: the `except json.JSONDecodeError: pass` branch at `install.py:558-559` no longer falls through to an unconditional overwrite.
   - [ ] PROCESS: behavior verified for both `goc install` and `goc upgrade --agents claude` entry points (both call `_merge_claude_settings`).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # install overwrites a malformed `.claude/settings.json` instead of merging
