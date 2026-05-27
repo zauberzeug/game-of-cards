@@ -1,7 +1,7 @@
 ---
 title: yaml-lite-flow-mapping-drops-pairs-without-a-space-after-the-colon
 summary: "`_parse_flow_mapping` splits each pair on `partition(\": \")`, requiring a space after the colon. A hand-written flow mapping like `worker: {who:rodja, where:foo}` (no space) yields an empty mapping — every pair is silently dropped. UNVERIFIED: confirmed in a one-liner but no full reproduce.py written yet."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-27T09:50:39Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py asserting `safe_load('w: {who:a, where:b}') == {'w': {'who': 'a', 'where': 'b'}}` passes (currently returns `{'w': {}}`).
   - [ ] TDD: pairs with a space after the colon continue to parse (no regression).
   - [ ] MECHANICAL: `_parse_flow_mapping` splits on the first `:` (with optional surrounding whitespace), not the literal `": "`.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # yaml-lite flow mapping drops `key:value` pairs that lack a space after the colon
