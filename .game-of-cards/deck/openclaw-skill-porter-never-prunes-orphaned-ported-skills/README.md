@@ -1,7 +1,7 @@
 ---
 title: openclaw-skill-porter-never-prunes-orphaned-ported-skills
 summary: "`port_skills_to_openclaw.py` only iterates source skill dirs — it never walks `openclaw-plugin/skills/` for ported skills that no longer have a source. When a source skill is renamed or removed, the stale ported copy lingers forever and `--check` (plus the CI parity test that reuses `drifted_skills()`) stays green, shipping a defunct skill in the OpenClaw payload."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T03:47:07Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: `drifted_skills()` reports dst-only ported skill dirs (orphans) as drift, matching the dst-only handling in `scripts/sync_plugin_assets.py::_check_changes`.
   - [ ] TDD: the porter's re-port pass (`main` without `--check`) prunes orphaned ported skill dirs under `DST_DIR`, leaving only skills that correspond to a current portable source skill.
   - [ ] MECHANICAL: `uv run goc validate` clean; `python scripts/port_skills_to_openclaw.py --check` green; `python scripts/sync_plugin_assets.py --check` green; existing parity test `tests/test_plugin_mirror_parity.py` still passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw skill porter never prunes orphaned ported skills
