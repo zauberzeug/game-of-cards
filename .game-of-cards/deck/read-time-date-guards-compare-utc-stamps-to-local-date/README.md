@@ -1,26 +1,26 @@
 ---
 title: read-time-date-guards-compare-utc-stamps-to-local-date
 summary: "Cards stamp dates in UTC (`_utc_now_iso`) but three read-time guards — `waiting_impedes`, `validate_waiting_overlay`, and triage aging — default `today` to `date.today()` (the LOCAL civil date). On a non-UTC runner near midnight the two bases disagree by a full day, so a deferred card un-defers (or an overdue wait surfaces, or an age is computed) up to one civil day early. Contradicts the closed `record-card-timestamps-as-utc-datetime` card's audit claim of \"UTC-only enforced (no local-tz drift)\"."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T02:27:59Z"
-closed_at: null
+closed_at: 2026-05-27T02:33:48Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero (the chosen `today` base no longer
+  - [x] TDD: `reproduce.py` exits zero (the chosen `today` base no longer
         diverges from the write-side UTC base under `TZ=Pacific/Kiritimati`).
-  - [ ] MECHANICAL: the three read-time `today = ... or date.today()` /
+  - [x] MECHANICAL: the three read-time `today = ... or date.today()` /
         `today = date.today()` defaults (engine.py `waiting_impedes`,
         `validate_waiting_overlay`, `_cmd_triage` `aged_days`) derive
         from the same UTC base the write side uses (a `_utc_today()`
         helper paired with `_utc_now_iso`), keeping the injectable
         `today=` test parameter.
-  - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) and `uv run goc validate` clean.
-  - [ ] PROCESS: the closed `record-card-timestamps-as-utc-datetime` card gets a dated `log.md` forward-pointer noting the read-side gap its audit missed.
+  - [x] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) and `uv run goc validate` clean.
+  - [x] PROCESS: the closed `record-card-timestamps-as-utc-datetime` card gets a dated `log.md` forward-pointer noting the read-side gap its audit missed.
 worker: {who: "claude[bot]", where: main}
 ---
 

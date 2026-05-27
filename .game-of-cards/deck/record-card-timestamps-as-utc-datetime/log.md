@@ -18,3 +18,17 @@ Accept both date and datetime shapes in created/closed_at; write datetime going 
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 8/8 ticked
 - [x] log-md-closure-entry — '## 2026-05-11 — Closure' present
+
+## 2026-05-27 — Later evidence: read-side gap the audit missed
+
+The 2026-05-11 audit claimed "UTC-only enforced (no local-tz drift)",
+but that covered only the WRITE side plus lexicographic sort / `--since`
+reads. Three read-time guards still defaulted their `today` base to
+`date.today()` (the LOCAL civil date): `waiting_impedes`,
+`validate_waiting_overlay`, and `_cmd_triage`'s `aged_days`. On a
+non-UTC runner near midnight that disagrees with the UTC write base by
+a full civil day, so a deferred card could un-defer (or an overdue wait
+surface, or an age compute) up to one day early. Fixed under
+[read-time-date-guards-compare-utc-stamps-to-local-date](../read-time-date-guards-compare-utc-stamps-to-local-date/)
+by adding `_utc_today()` next to `_utc_now_iso()` and defaulting the
+three guards to it.
