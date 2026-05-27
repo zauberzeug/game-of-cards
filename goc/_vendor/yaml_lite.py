@@ -332,8 +332,8 @@ def _parse_flow_mapping(text: str) -> dict:
     result: dict[str, Any] = {}
     for pair in _split_flow(inner):
         pair = pair.strip()
-        key, _, val = pair.partition(": ")
-        if _:
+        key, sep, val = pair.partition(":")
+        if sep:
             k = key.strip()
             # Strip quotes from keys (YAML keys are sometimes double-quoted).
             if len(k) >= 2 and k[0] == k[-1] and k[0] in ('"', "'"):

@@ -1,19 +1,19 @@
 ---
 title: yaml-lite-flow-mapping-drops-pairs-without-a-space-after-the-colon
 summary: "`_parse_flow_mapping` splits each pair on `partition(\": \")`, requiring a space after the colon. A hand-written flow mapping like `worker: {who:rodja, where:foo}` (no space) yields an empty mapping — every pair is silently dropped. UNVERIFIED: confirmed in a one-liner but no full reproduce.py written yet."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-27T09:50:39Z"
-closed_at: null
+closed_at: 2026-05-27T10:04:56Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, api-contract, unverified]
+tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: a reproduce.py asserting `safe_load('w: {who:a, where:b}') == {'w': {'who': 'a', 'where': 'b'}}` passes (currently returns `{'w': {}}`).
-  - [ ] TDD: pairs with a space after the colon continue to parse (no regression).
-  - [ ] MECHANICAL: `_parse_flow_mapping` splits on the first `:` (with optional surrounding whitespace), not the literal `": "`.
+  - [x] TDD: a reproduce.py asserting `safe_load('w: {who:a, where:b}') == {'w': {'who': 'a', 'where': 'b'}}` passes (currently returns `{'w': {}}`).
+  - [x] TDD: pairs with a space after the colon continue to parse (no regression).
+  - [x] MECHANICAL: `_parse_flow_mapping` splits on the first `:` (with optional surrounding whitespace), not the literal `": "`.
 worker: {who: "claude[bot]", where: main}
 ---
 
