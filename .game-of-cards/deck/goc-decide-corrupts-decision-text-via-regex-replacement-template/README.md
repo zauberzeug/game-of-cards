@@ -1,7 +1,7 @@
 ---
 title: goc-decide-corrupts-decision-text-via-regex-replacement-template
 summary: "`goc decide` routes the user's --decision/--reasoning text into `replace_or_append_decision`, which hands it to `re.sub` as the replacement template. Python parses backslash escapes there: `\\p` (e.g. a Windows path `C:\\path`) raises `re.error` and crashes the command; `\\1` silently expands to a captured group, mangling the recorded decision. Third sibling of the regex-replacement-template family; fix mirrors the already-shipped `lambda _:` guard at engine.py:336."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T01:05:42Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `replace_or_append_decision` (engine.py:356) replaces the bare-template `.sub(block, ...)` with the opaque `.sub(lambda _: block, ...)` form, mirroring the shipped fix at engine.py:336.
   - [ ] EMPIRICAL: a real `goc decide --decision "Use C:\path" --reasoning "go \1 ahead"` against a parked test card records the literal text in the rewritten README (no crash, no group expansion).
   - [ ] PROCESS: sibling sweep recorded in log.md — confirm no other `pattern.sub(<dynamic-template>, ...)` site remains unfixed across engine.py / install.py.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc decide corrupts decision text via regex replacement template
