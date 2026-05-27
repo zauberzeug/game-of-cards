@@ -1,20 +1,21 @@
 ---
 title: goc-decide-corrupts-decision-text-via-regex-replacement-template
 summary: "`goc decide` routes the user's --decision/--reasoning text into `replace_or_append_decision`, which hands it to `re.sub` as the replacement template. Python parses backslash escapes there: `\\p` (e.g. a Windows path `C:\\path`) raises `re.error` and crashes the command; `\\1` silently expands to a captured group, mangling the recorded decision. Third sibling of the regex-replacement-template family; fix mirrors the already-shipped `lambda _:` guard at engine.py:336."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T01:05:42Z"
-closed_at: null
+closed_at: 2026-05-27T01:10:50Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — both the crash variant (`C:\path`) and the group-reference variant (`go \1 ahead`) preserve the decision text verbatim.
-  - [ ] MECHANICAL: `replace_or_append_decision` (engine.py:356) replaces the bare-template `.sub(block, ...)` with the opaque `.sub(lambda _: block, ...)` form, mirroring the shipped fix at engine.py:336.
-  - [ ] EMPIRICAL: a real `goc decide --decision "Use C:\path" --reasoning "go \1 ahead"` against a parked test card records the literal text in the rewritten README (no crash, no group expansion).
-  - [ ] PROCESS: sibling sweep recorded in log.md — confirm no other `pattern.sub(<dynamic-template>, ...)` site remains unfixed across engine.py / install.py.
+  - [x] TDD: `reproduce.py` exits zero — both the crash variant (`C:\path`) and the group-reference variant (`go \1 ahead`) preserve the decision text verbatim.
+  - [x] MECHANICAL: `replace_or_append_decision` (engine.py:356) replaces the bare-template `.sub(block, ...)` with the opaque `.sub(lambda _: block, ...)` form, mirroring the shipped fix at engine.py:336.
+  - [x] EMPIRICAL: a real `goc decide --decision "Use C:\path" --reasoning "go \1 ahead"` against a parked test card records the literal text in the rewritten README (no crash, no group expansion).
+  - [x] PROCESS: sibling sweep recorded in log.md — confirm no other `pattern.sub(<dynamic-template>, ...)` site remains unfixed across engine.py / install.py.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc decide corrupts decision text via regex replacement template
@@ -92,9 +93,9 @@ blocks the handoff entirely; silent corruption is worse — the card looks
 decided but the recorded text is wrong, and nothing flags it. Any
 decision mentioning a path, a regex, or an escape sequence is exposed.
 
-## Fix
+## Fix (applied)
 
-Mirror the engine.py:336 sibling — make the replacement opaque so `re`
+Mirrored the engine.py:336 sibling — the replacement is now opaque so `re`
 does no template parsing:
 
 ```python
@@ -102,5 +103,9 @@ return DECISION_REQUIRED_RE.sub(lambda _: block, body, count=1)
 ```
 
 A lambda replacement receives the match object and returns the string
-literally; no `\1` / `\p` interpretation. Do NOT apply the fix in this
-card — flag only.
+literally; no `\1` / `\p` interpretation. reproduce.py now exits 0, and a
+real `goc decide --decision 'Use C:\path' --because 'go \1 ahead'` records
+both strings verbatim. Full sibling re-sweep (see log.md) found no other
+unfixed dynamic-template `.sub` site: the `_move_text_rewrite` sites
+(engine.py:3945/3952) take a slug constrained to `[a-z0-9-]`, so no
+backslash escape can reach them.

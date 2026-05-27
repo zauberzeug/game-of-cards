@@ -320,13 +320,16 @@ def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
         raise ValueError("no frontmatter found")
     fm_text = m.group(1)
     body = m.group(2)
-    # Match the field header and any subsequent block lines: indented
-    # continuation lines, plus internal blank lines that belong to the block
-    # (a bare `\n` is only consumed when the next line is indented or itself
-    # blank, so the match stops at the next top-level `key:` line instead of
-    # truncating at the first internal blank and orphaning the tail).
+    # Match the field header and any block continuation that belongs to it.
+    # A continuation only opens with an indented line directly after the
+    # header, so a flat scalar (`status: x`) followed by a blank line keeps
+    # the match on the header alone. Once inside the block, an internal blank
+    # line is absorbed only when a further indented line follows it — so a
+    # blank line preceding the next top-level `key:` line ends the match
+    # instead of swallowing the structural separator (or the line after it).
     pattern = re.compile(
-        rf"^{re.escape(field_name)}:[ \t]*[^\n]*(?:\n[ \t]+[^\n]*|\n(?=[ \t]|\n))*",
+        rf"^{re.escape(field_name)}:[ \t]*[^\n]*"
+        rf"(?:\n[ \t]+[^\n]*(?:\n[ \t]+[^\n]*|\n(?=\n*[ \t]))*)?",
         re.MULTILINE,
     )
     if not pattern.search(fm_text):
@@ -353,7 +356,7 @@ def replace_or_append_decision(body: str, decision: str, reasoning: str, today: 
     """Replace `## Decision required` with `## Decision`, or append a new section."""
     block = f"## Decision\n\n*Resolved {today}:* {decision}\n\n*Reasoning:* {reasoning}\n"
     if DECISION_REQUIRED_RE.search(body):
-        return DECISION_REQUIRED_RE.sub(block, body, count=1)
+        return DECISION_REQUIRED_RE.sub(lambda _: block, body, count=1)
     return body.rstrip("\n") + "\n\n" + block
 
 
