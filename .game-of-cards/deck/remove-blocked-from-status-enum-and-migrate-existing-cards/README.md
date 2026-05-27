@@ -17,8 +17,8 @@ advanced_by:
   - remove-blocked-from-the-status-enum-and-validator
 tags: [epic, api-contract, documentation]
 definition_of_done: |
-  - [ ] Child `migrate-existing-blocked-cards-to-open-or-waiting-overlay` closed (the safe prep — reclassify the existing blocked cards; autonomous-pull-safe).
-  - [ ] Child `purge-blocked-status-from-skills-and-docs` closed (advance-card/card-schema/deck/AGENTS rewrite to the three-axis model + plugin sync; autonomous-pull-safe).
+  - [x] Child `migrate-existing-blocked-cards-to-open-or-waiting-overlay` closed (the safe prep — reclassify the existing blocked cards; autonomous-pull-safe).
+  - [x] Child `purge-blocked-status-from-skills-and-docs` closed (advance-card/card-schema/deck/AGENTS rewrite to the three-axis model + plugin sync; autonomous-pull-safe).
   - [ ] Child `remove-blocked-from-the-status-enum-and-validator` closed (the breaking enum removal; `human_gate: session`, release-coordinated, lands last).
   - [ ] After all three: no card has `status: blocked`, the enum value is gone, docs match the code, plugin mirrors are synced, and `goc validate` is clean.
 ---
