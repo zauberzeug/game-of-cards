@@ -21,6 +21,7 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -2187,6 +2188,21 @@ def render_json(
     )
 
 
+def _display_width(text: str) -> int:
+    """Terminal column count: East-Asian Wide/Fullwidth glyphs (e.g. the
+    `⏳` impediment marker) render across 2 columns though `len()` counts
+    them as 1 codepoint."""
+    return sum(
+        2 if unicodedata.east_asian_width(c) in ("W", "F") else 1 for c in text
+    )
+
+
+def _display_ljust(text: str, width: int) -> str:
+    """Left-justify to a target display width (not codepoint count)."""
+    pad = width - _display_width(text)
+    return text + " " * pad if pad > 0 else text
+
+
 def render_board(
     cards: list[Card],
     *,
@@ -2224,14 +2240,18 @@ def render_board(
         c: [card_cell(t) for t in by_status[c]] for c in columns
     }
     col_widths = [
-        max(20, len(c.upper()), max((len(cell) for cell in rendered_by_status[c]), default=0))
+        max(
+            20,
+            _display_width(c.upper()),
+            max((_display_width(cell) for cell in rendered_by_status[c]), default=0),
+        )
         for c in columns
     ]
     rows = max((len(rendered_by_status[c]) for c in columns), default=0)
     enabled = _color_enabled(no_color)
     out: list[str] = []
     header = " | ".join(
-        _wrap(c.upper().ljust(col_widths[i]), c, enabled) for i, c in enumerate(columns)
+        _wrap(_display_ljust(c.upper(), col_widths[i]), c, enabled) for i, c in enumerate(columns)
     )
     out.append(header)
     out.append("-+-".join("-" * col_widths[i] for i in range(len(columns))))
@@ -2242,7 +2262,7 @@ def render_board(
                 cell = rendered_by_status[c][i]
             else:
                 cell = ""
-            cells.append(cell.ljust(col_widths[col_index]))
+            cells.append(_display_ljust(cell, col_widths[col_index]))
         out.append(" | ".join(cells))
     return "\n".join(out)
 
