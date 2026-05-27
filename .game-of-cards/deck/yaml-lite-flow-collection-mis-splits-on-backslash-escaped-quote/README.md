@@ -1,20 +1,20 @@
 ---
 title: yaml-lite-flow-collection-mis-splits-on-backslash-escaped-quote
 summary: "`_split_flow` in the vendored yaml-lite parser toggles quote state on every quote char with no backslash-escape awareness, so a flow mapping/sequence element containing an emitter-produced `\\\"` is mis-split: the comma after it is swallowed inside quote-mode and the following key/element is lost. Triggered on round-trip by a `worker` mapping whose value contains a literal double-quote. Sibling of the closed `_strip_comment` fix, which was repaired but `_split_flow` was not."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-27T11:25:27Z"
-closed_at: null
+closed_at: 2026-05-27T11:31:32Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a `worker: {who: 'a"', where: 'b'}` mapping round-trips through `emit_frontmatter` → `parse_frontmatter` unchanged (both keys preserved, value exact).
-  - [ ] TDD: a flow sequence element containing an escaped double-quote (e.g. a tag-like list `["x\"y", "z"]`) also splits correctly and round-trips.
-  - [ ] MECHANICAL: `_split_flow` honors backslash escapes inside double-quoted strings (skip the char after a backslash), mirroring the fix already applied to `_strip_comment`/`_parse_double_quoted`.
-  - [ ] PROCESS: `uv run goc validate` is clean and the existing yaml-lite round-trip behavior is unregressed.
+  - [x] TDD: reproduce.py exits zero — a `worker: {who: 'a"', where: 'b'}` mapping round-trips through `emit_frontmatter` → `parse_frontmatter` unchanged (both keys preserved, value exact).
+  - [x] TDD: a flow sequence element containing an escaped double-quote (e.g. a tag-like list `["x\"y", "z"]`) also splits correctly and round-trips.
+  - [x] MECHANICAL: `_split_flow` honors backslash escapes inside double-quoted strings (skip the char after a backslash), mirroring the fix already applied to `_strip_comment`/`_parse_double_quoted`.
+  - [x] PROCESS: `uv run goc validate` is clean and the existing yaml-lite round-trip behavior is unregressed.
 worker: {who: "claude[bot]", where: main}
 ---
 
