@@ -1,20 +1,20 @@
 ---
 title: mutate-frontmatter-field-corrupts-backslashes-via-regex-replacement-template
 summary: "`mutate_frontmatter_field` interpolates `new_value` into the *replacement* argument of `re.sub` (goc/engine.py:336), which interprets backslash escapes. Combined with `_yaml_inline`'s `\\`→`\\\\` quoting, any value containing a backslash is silently corrupted on round-trip — live via `quality-pass --llm` summary rewrites and `worker` rewrites. Same root-cause shape as the closed install.py card, whose sibling sweep missed this engine site."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-26T23:59:41Z"
-closed_at: null
+closed_at: 2026-05-27T00:04:50Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — values containing backslashes (Windows paths, regex-backreference text) round-trip through `mutate_frontmatter_field` unchanged.
-  - [ ] MECHANICAL: `goc/engine.py:336` no longer passes `new_value` as the `re.sub` *replacement template*; the replacement is made opaque (callable `lambda _: f"{field_name}: {new_value}"`, or equivalent literal-replacement form).
-  - [ ] TDD: existing single-line and block-field replacement behavior is unchanged for escape-free values (the `_apply_summary_rewrite`, `worker`, `status`/`closed_at`, and `human_gate` callers still mutate correctly).
-  - [ ] PROCESS: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` clean) and `goc validate` clean, since `engine.py` is vendored into the plugin payloads.
+  - [x] TDD: reproduce.py exits zero — values containing backslashes (Windows paths, regex-backreference text) round-trip through `mutate_frontmatter_field` unchanged.
+  - [x] MECHANICAL: `goc/engine.py:336` no longer passes `new_value` as the `re.sub` *replacement template*; the replacement is made opaque (callable `lambda _: f"{field_name}: {new_value}"`, or equivalent literal-replacement form).
+  - [x] TDD: existing single-line and block-field replacement behavior is unchanged for escape-free values (the `_apply_summary_rewrite`, `worker`, `status`/`closed_at`, and `human_gate` callers still mutate correctly).
+  - [x] PROCESS: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` clean) and `goc validate` clean, since `engine.py` is vendored into the plugin payloads.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -116,4 +116,5 @@ fm_text = pattern.sub(lambda _: f"{field_name}: {new_value}", fm_text, count=1)
 ```
 
 A callable replacement is not parsed for backreferences, so `new_value`
-lands verbatim. **Do NOT apply the fix as part of filing this card.**
+lands verbatim. Applied at `goc/engine.py:336`; both reproduce.py cases
+now round-trip cleanly and the 159-test suite stays green.

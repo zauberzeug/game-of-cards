@@ -333,7 +333,7 @@ def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
         # Field absent — append at the end of the frontmatter block.
         fm_text = fm_text.rstrip() + f"\n{field_name}: {new_value}"
     else:
-        fm_text = pattern.sub(f"{field_name}: {new_value}", fm_text, count=1)
+        fm_text = pattern.sub(lambda _: f"{field_name}: {new_value}", fm_text, count=1)
     return f"---\n{fm_text}\n---\n{body}"
 
 
