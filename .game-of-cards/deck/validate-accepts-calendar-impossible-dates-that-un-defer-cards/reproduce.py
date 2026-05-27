@@ -46,6 +46,12 @@ def _card(fm: dict) -> Card:
 def main() -> int:
     today = date(2026, 1, 1)
 
+    # Chosen contract (both sides — belt and suspenders):
+    #   1. `_is_iso_date` is the validator's net: it must REJECT a
+    #      calendar-impossible ISO-shaped value (predicate == parser).
+    #   2. `waiting_impedes` is the read-time backstop: a bare deferral with
+    #      an unparseable date stays impeded (no silent un-defer) for decks
+    #      that predate the tightened validator.
     predicate_accepts = _is_iso_date(IMPOSSIBLE)
     bad_bare_impedes = waiting_impedes(
         _card({"waiting_until": IMPOSSIBLE}), today=today
@@ -53,32 +59,41 @@ def main() -> int:
     valid_bare_impedes = waiting_impedes(
         _card({"waiting_until": VALID_FUTURE}), today=today
     )
+    valid_predicate = _is_iso_date(VALID_FUTURE)
+    valid_datetime_predicate = _is_iso_date("2026-05-10T00:00:00Z")
 
-    print(f"_is_iso_date({IMPOSSIBLE!r}): {predicate_accepts}")
+    print(f"_is_iso_date({IMPOSSIBLE!r}): {predicate_accepts}   (want False)")
+    print(f"_is_iso_date({VALID_FUTURE!r}): {valid_predicate}   (control: True)")
+    print(
+        f"_is_iso_date('2026-05-10T00:00:00Z'): {valid_datetime_predicate}"
+        "   (control: True)"
+    )
     print(
         f"waiting_impedes(bare deferral, waiting_until={IMPOSSIBLE!r}): "
-        f"{bad_bare_impedes}   (defect if False)"
+        f"{bad_bare_impedes}   (want True — stays deferred)"
     )
     print(
         f"waiting_impedes(bare deferral, waiting_until={VALID_FUTURE!r}): "
-        f"{valid_bare_impedes}   (control: should be True)"
+        f"{valid_bare_impedes}   (control: True)"
     )
 
-    # Control must always hold.
+    # Controls must always hold — no regression for genuinely valid shapes.
+    assert valid_predicate is True, "control regressed: valid date rejected"
+    assert valid_datetime_predicate is True, "control regressed: valid datetime rejected"
     assert valid_bare_impedes is True, "control regressed: valid future date no longer impedes"
 
-    # Defect: the validator predicate accepts a calendar-impossible date AND
-    # the bare deferral escapes the impediment guard. The fix must close at
-    # least the predicate side (validate rejects it); ideally the guard too.
-    defect_present = predicate_accepts and (bad_bare_impedes is False)
-    if defect_present:
+    ok = (predicate_accepts is False) and (bad_bare_impedes is True)
+    if not ok:
         print(
-            "\nDEFECT: validate accepts a calendar-impossible waiting_until, "
-            "and the bare-deferral card silently re-enters the pull queue."
+            "\nDEFECT: validate accepts a calendar-impossible waiting_until "
+            "and/or the bare-deferral card silently re-enters the pull queue."
         )
         return 1
 
-    print("\nOK: calendar-impossible dates are rejected / the deferral holds.")
+    print(
+        "\nOK: calendar-impossible dates are rejected by the validator "
+        "predicate, and the bare deferral holds at read time."
+    )
     return 0
 
 

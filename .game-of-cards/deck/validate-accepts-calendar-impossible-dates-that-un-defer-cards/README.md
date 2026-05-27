@@ -1,20 +1,20 @@
 ---
 title: validate-accepts-calendar-impossible-dates-that-un-defer-cards
 summary: "`goc validate`'s date check (`_is_iso_date`) is regex-shape only, so a calendar-impossible-but-ISO-shaped `waiting_until` like `2026-13-45` passes validation. The read-time guard `waiting_impedes` then parses it with `date.fromisoformat`, fails, and — for a bare deferral with no `waiting_on` — silently un-impedes the card, re-admitting it to the pull queue. The validator predicate is strictly weaker than the consumer's parser."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T02:13:54Z"
-closed_at: null
+closed_at: 2026-05-27T02:20:14Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `_is_iso_date('2026-13-45')` returns False and `goc validate` rejects a card whose `waiting_until` is a calendar-impossible date.
-  - [ ] TDD: a bare-deferral card (`waiting_until` only, no `waiting_on`) carrying a calendar-impossible date no longer escapes `waiting_impedes` — either it cannot pass validate, or `waiting_impedes` treats an unparseable bare date as still-impeding (decide in fix; reproduce.py asserts the chosen contract).
-  - [ ] TDD: no behavior change for genuinely valid date/datetime shapes (`created`, `closed_at`, `waiting_until` for valid past/future dates) — the existing control paths stay green.
-  - [ ] MECHANICAL: the `_is_iso_date` docstring / the validate error message stay accurate to the tightened predicate.
+  - [x] TDD: reproduce.py exits zero — `_is_iso_date('2026-13-45')` returns False and `goc validate` rejects a card whose `waiting_until` is a calendar-impossible date.
+  - [x] TDD: a bare-deferral card (`waiting_until` only, no `waiting_on`) carrying a calendar-impossible date no longer escapes `waiting_impedes` — chosen contract (both): it cannot pass validate AND `waiting_impedes` treats an unparseable bare date as still-impeding. reproduce.py asserts both.
+  - [x] TDD: no behavior change for genuinely valid date/datetime shapes (`created`, `closed_at`, `waiting_until` for valid past/future dates) — the existing control paths stay green.
+  - [x] MECHANICAL: the `_is_iso_date` docstring / the validate error message stay accurate to the tightened predicate.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -107,14 +107,23 @@ deferred card is silently pulled — the opposite of the author's intent — and
 and `closed_at`, which are parsed with `date.fromisoformat` by triage/age and
 elapsed-wait surfacing (`engine.py:1364`, `engine.py:4161`).
 
-## Fix
+## Fix (applied)
 
-Tighten `_is_iso_date` so its predicate matches the consumer's parser: after the
-regex shape check, parse the date portion with `date.fromisoformat(_date_part(value))`
-and return `False` if it raises. This makes `validate` reject calendar-impossible
-dates in `created`, `closed_at`, and `waiting_until` in one place, restoring the
-"validated deck cannot hold an unparseable date" invariant the prior fix relied on.
-Decide in the fix whether `waiting_impedes` should additionally treat an
-unparseable *bare* date as still-impeding (defensive, for pre-validate decks) or
-rely solely on the tightened validator; the reproduce.py asserts whichever
-contract is chosen.
+Two changes, belt and suspenders:
+
+1. **`_is_iso_date` now parses the calendar.** After the regex shape check it
+   calls `date.fromisoformat(_date_part(value))` and returns `False` on
+   `ValueError`. The predicate now matches the consumer's parser, so `goc
+   validate` rejects calendar-impossible dates in `created`, `closed_at`, and
+   `waiting_until` (and the `goc wait --until` CLI guard) in one place —
+   restoring the "validated deck cannot hold an unparseable date" invariant the
+   prior fix relied on.
+2. **`waiting_impedes` backstops un-validated decks.** A present-but-unparseable
+   `waiting_until` now keeps the card impeded (returns `True`) instead of
+   silently un-deferring it — for a bare deferral as well as alongside a
+   `waiting_on`. The validator is the upstream net; this is the read-time
+   backstop for pre-validate / hand-edited decks.
+
+The three validator/CLI date-error messages now read "not a valid ISO … date"
+to signal that calendar validity (not just shape) is enforced. `reproduce.py`
+asserts both contracts plus the valid date/datetime controls.
