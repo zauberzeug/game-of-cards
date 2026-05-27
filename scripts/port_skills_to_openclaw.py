@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -154,21 +155,57 @@ def _portable_skill_dirs() -> list[Path]:
     return dirs
 
 
+def _expected_dst_names() -> set[str]:
+    """Names of skill dirs that should exist under DST_DIR — one per portable source.
+
+    The single source of truth for "what belongs in the OpenClaw payload",
+    reused by both the drift check and the prune so they cannot diverge.
+    """
+    return {skill_dir.name for skill_dir in _portable_skill_dirs()}
+
+
+def _orphaned_ported_dirs(expected: set[str] | None = None) -> list[Path]:
+    """Ported skill dirs under DST_DIR with no portable-source counterpart.
+
+    Mirrors the dst-only handling in scripts/sync_plugin_assets.py: a dst
+    skill dir whose name has no source is stale (the source was renamed or
+    removed) and must be pruned. Host-specific complement dirs (claude-/codex-
+    prefixed) are never managed by this porter, so they are left untouched
+    rather than flagged or deleted.
+    """
+    if not DST_DIR.is_dir():
+        return []
+    if expected is None:
+        expected = _expected_dst_names()
+    orphans: list[Path] = []
+    for child in sorted(DST_DIR.iterdir()):
+        if not child.is_dir() or child.name in expected:
+            continue
+        if any(child.name.startswith(prefix) for prefix in HOST_PREFIXES):
+            continue
+        if (child / "SKILL.md").is_file():
+            orphans.append(child)
+    return orphans
+
+
 def drifted_skills() -> list[Path]:
     """Committed ported skills whose content differs from a fresh re-port.
 
     A non-empty result means a template was edited without re-running the
-    porter (or a ported file was hand-edited). The list is the set of dst
-    paths a re-port would rewrite. Reused by the porter's own `--check` and
-    by the CI regression test so both read the same definition of drift.
+    porter (or a ported file was hand-edited), OR a ported skill dir has lost
+    its source (an orphan). The list is the set of dst paths a re-port would
+    rewrite or remove. Reused by the porter's own `--check` and by the CI
+    regression test so both read the same definition of drift.
     """
+    expected = _expected_dst_names()
     drifted: list[Path] = []
     for skill_dir in _portable_skill_dirs():
         dst = DST_DIR / skill_dir.name / "SKILL.md"
-        expected = render_skill(skill_dir / "SKILL.md")
+        rendered = render_skill(skill_dir / "SKILL.md")
         actual = dst.read_text(encoding="utf-8") if dst.is_file() else None
-        if actual != expected:
+        if actual != rendered:
             drifted.append(dst)
+    drifted.extend(orphan / "SKILL.md" for orphan in _orphaned_ported_dirs(expected))
     return drifted
 
 
@@ -198,16 +235,25 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     DST_DIR.mkdir(parents=True, exist_ok=True)
+    expected = _expected_dst_names()
     ported = 0
     for skill_dir in _portable_skill_dirs():
         port_skill(skill_dir / "SKILL.md", DST_DIR / skill_dir.name / "SKILL.md")
         ported += 1
+
+    # Prune orphaned ported skill dirs (source renamed or removed) so a stale
+    # skill can't ship to OpenClaw consumers undetected.
+    orphans = _orphaned_ported_dirs(expected)
+    for orphan in orphans:
+        shutil.rmtree(orphan)
 
     skipped = [
         d.name for d in sorted(SRC_DIR.iterdir())
         if d.is_dir() and any(d.name.startswith(p) for p in HOST_PREFIXES)
     ]
     print(f"ported {ported} skills to {DST_DIR.relative_to(ROOT)}")
+    if orphans:
+        print(f"pruned {len(orphans)} orphaned ported skill dir(s): {', '.join(o.name for o in orphans)}")
     if skipped:
         print(f"skipped (host-specific complements): {', '.join(skipped)}")
     return 0

@@ -2035,6 +2035,10 @@ def _format_why(path: list[str], by_title: dict[str, Card]) -> str:
         return ""
     if path == ["cycle"]:
         return "(cycle)"
+    if path[-1] == "self":
+        path = path[:-1]
+    if not path:
+        return ""
     parts = []
     for slug in path:
         c = by_title.get(slug)
