@@ -1869,23 +1869,43 @@ def validate_tag_filters(tags: list[str]) -> list[str] | None:
 def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> list[Card]:
     """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
 
-    Key tuple: (-value, -direct_advances_count, age_days)
+    Key tuple: (-value, -live_direct_advances_count, age_days)
     - primary: highest computed value first (graph-amplified contribution)
-    - tiebreak: more direct downstream cards = unblock more flow now
+    - tiebreak: more *live* direct downstream cards = unblock more flow now.
+      Counts only `advances` targets the value walk would traverse — target
+      exists in `by_title`, status not terminal, and not impeded by an active
+      `waiting_on` overlay. A terminal or impeded downstream unblocks zero
+      flow now, so it contributes 0 — mirroring the prune `compute_values`
+      applies at engine.py:1751. (Without this, a card whose downstream is
+      fully closed would out-rank an equal-value card that unblocks no less
+      live flow, contradicting the tiebreak's own rationale.)
     - final: oldest-created first (kanban WIP-aging discipline)
 
     `values` should be precomputed on the FULL deck (not the filtered
-    subset) so chains through filtered-out cards (e.g. status=blocked
-    quality gates) still amplify open cards. If omitted, computed
-    locally over `cards` — only correct when `cards` IS the full deck.
+    subset) so chains through filtered-out cards still amplify open cards.
+    If omitted, computed locally over `cards` — only correct when `cards`
+    IS the full deck. The live-edge tiebreak builds `by_title` from whatever
+    `cards` is passed; a dangling edge (target not in the subset) counts 0,
+    consistent with the value walk's dangling-edge drop at engine.py:1739.
     """
     if values is None:
         values = compute_values(cards)
+    by_title = {c.title: c for c in cards}
+
+    def live_direct(t: Card) -> int:
+        n = 0
+        for dest in t.frontmatter.get("advances") or []:
+            dc = by_title.get(dest)
+            if dc is None:
+                continue
+            if dc.status in TERMINAL_STATUSES or waiting_impedes(dc):
+                continue
+            n += 1
+        return n
 
     def key(t: Card):
         v, _ = values.get(t.title, (0.0, []))
-        n_direct = len(t.frontmatter.get("advances") or [])
-        return (-v, -n_direct, t.created)
+        return (-v, -live_direct(t), t.created)
 
     return sorted(cards, key=key)
 

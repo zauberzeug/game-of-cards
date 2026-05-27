@@ -1,11 +1,11 @@
 ---
 title: dod-rewrite-trailing-newline-reconstruction-is-inverted
 summary: "`_apply_dod_rewrite` reconstructs the DoD text as `\"\\n\".join(lines) + (\"\\n\" if not dod_text.endswith(\"\\n\") else \"\")` — but the join never produces a trailing newline, so the condition is backwards: a newline-terminated DoD (the common block-scalar shape) loses its trailing newline, while a non-terminated one gains a spurious one. Currently MASKED because `_emit_block_field` rstrips trailing newlines on emit, so the written file is byte-identical either way. Unverified — no reproduce.py proving an observable difference."
-status: open
+status: disproved
 stage: null
 contribution: low
 created: "2026-05-27T01:54:46Z"
-closed_at: null
+closed_at: 2026-05-27T02:07:12Z
 human_gate: none
 advances: []
 advanced_by: []
@@ -14,9 +14,44 @@ definition_of_done: |
   - [ ] PROCESS: decide whether to fix the inverted condition or disprove as harmless given the emit-time rstrip masking. Record the verdict in log.md.
   - [ ] TDD: if fixed, a unit test on `_apply_dod_rewrite` (or the emitted text) showing the trailing-newline state matches the input's, for both newline-terminated and non-terminated `definition_of_done` inputs.
   - [ ] MECHANICAL: if fixed, promotion — drop the `unverified` tag once a reproduce.py shows a written-file difference attributable to this line (requires a code path where the emit-time rstrip does NOT run, or removing the masking).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # DoD-rewrite trailing-newline reconstruction is inverted
+
+## Verdict (disproved 2026-05-27)
+
+**Disproved as a behavioral defect.** The inversion in the code is real
+(`engine.py:2724` appends `"\n"` exactly when the input did *not* end in
+one, the inverse of faithful restoration), but it is not a
+user-observable bug and the card's own promotion conditions do not hold:
+
+- The only caller of `_apply_dod_rewrite` is `_apply_verdict_interactive`
+  (`engine.py:2774`). It writes the value back via
+  `readme.write_text(emit_frontmatter(fm, body=body))` (`engine.py:2725`).
+- `emit_frontmatter` routes `definition_of_done` through `_emit_block_field`
+  (`engine.py:291`), whose first line is `text = (value or "").rstrip("\n")`
+  (`engine.py:246`). Every trailing newline this line produces or drops is
+  normalized away before the block scalar is re-emitted. The file on disk
+  is byte-identical either way.
+- There is **no caller that consumes `fm["definition_of_done"]` without
+  routing it through `_emit_block_field`'s rstrip** (grepped 2026-05-27 —
+  `engine.py:2774` is the only caller, and it always emits via
+  `emit_frontmatter`). So the recipe's promotion condition (an unmasked
+  consumer, or removal of the emit-time normalization) is false.
+
+The MECHANICAL DoD item — drop `unverified` once a reproduce.py shows a
+written-file difference attributable to this line — is therefore
+unsatisfiable: no path reaches the line's output without the rstrip. The
+one-clause correction (flip the condition to
+`("\n" if dod_text.endswith("\n") else "")`) is available as cheap
+hygiene but changes no on-disk byte today, so it is not filed here.
+Closing as disproved per the card's stated falsification recipe.
+
+If the emit-time `rstrip("\n")` in `_emit_block_field` is ever removed or
+narrowed, or a future code path serializes `fm["definition_of_done"]`
+directly, re-file: at that point the inversion becomes observable and the
+one-clause fix is warranted.
 
 ## Hypothesis (file:line)
 
