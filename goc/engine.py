@@ -158,11 +158,18 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             "matching closing '---' delimiter"
         )
     try:
-        data = yaml.safe_load(m.group(1)) or {}
+        data = yaml.safe_load(m.group(1))
     except ValueError as exc:
         raise FrontmatterError(
             f"YAML parse error inside frontmatter: {exc}"
         ) from exc
+    if data is None:
+        data = {}
+    elif not isinstance(data, dict):
+        raise FrontmatterError(
+            "frontmatter is not a mapping: the YAML between the '---' "
+            f"delimiters parsed to a {type(data).__name__}, expected key/value pairs"
+        )
     return data, m.group(2)
 
 
