@@ -663,11 +663,22 @@ def _is_iso_date(value) -> bool:
     # Accepts the legacy date-only shape AND the current datetime shape.
     # Lexicographic order is preserved across both: "2026-05-10" sorts
     # before "2026-05-10T00:00:00Z" sorts before "2026-05-11".
+    #
+    # Shape alone is not enough: the consumers parse with the real calendar
+    # (date.fromisoformat), so a calendar-impossible-but-ISO-shaped value
+    # like "2026-13-45" would pass a regex-only check yet raise at read time.
+    # Match the predicate to the parser by also parsing the date portion.
     if isinstance(value, date):
         return True
     if not isinstance(value, str):
         return False
-    return bool(_ISO_DATE_RE.match(value) or _ISO_DATETIME_UTC_RE.match(value))
+    if not (_ISO_DATE_RE.match(value) or _ISO_DATETIME_UTC_RE.match(value)):
+        return False
+    try:
+        date.fromisoformat(_date_part(value))
+    except ValueError:
+        return False
+    return True
 
 
 def _utc_now_iso() -> str:
@@ -1100,7 +1111,7 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         errors.append(f"{t.title}: human_gate: {fm['human_gate']!r} not in {schema.human_gate_values}")
 
     if "created" in fm and not _is_iso_date(fm["created"]):
-        errors.append(f"{t.title}: created: {fm['created']!r} not ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ")
+        errors.append(f"{t.title}: created: {fm['created']!r} not a valid ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ date")
 
     closed_at = fm.get("closed_at")
     if closed_at is not None and not _is_iso_date(closed_at):
@@ -1151,7 +1162,7 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     if "waiting_until" in fm and fm["waiting_until"] is not None:
         if not _is_iso_date(fm["waiting_until"]):
             errors.append(
-                f"{t.title}: waiting_until: {fm['waiting_until']!r} not ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ"
+                f"{t.title}: waiting_until: {fm['waiting_until']!r} not a valid ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ date"
             )
 
     for field in LIST_REL_FIELDS:
@@ -1641,16 +1652,21 @@ def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
     reason = card.waiting_on
     until = card.waiting_until
     until_date: date | None = None
+    until_unparseable = False
     if until is not None:
         try:
             until_date = date.fromisoformat(_date_part(until))
         except (TypeError, ValueError):
-            # Malformed date: treat as absent and fall through to the
-            # reason check — a present-but-unparseable waiting_until must
-            # not silently un-impede a card that carries a waiting_on.
+            # Malformed date: a present-but-unparseable waiting_until signals
+            # deferral intent we cannot evaluate. Err on the side of impeding
+            # so the card is not silently un-deferred — for a bare deferral
+            # (no reason) as well as alongside a waiting_on. `goc validate`
+            # is the upstream net (rejects calendar-impossible shapes); this
+            # is the read-time backstop for pre-validate / hand-edited decks.
             until_date = None
+            until_unparseable = True
     if reason is None and until_date is None:
-        return False
+        return until_unparseable
     if until_date is None:
         # Reason set, no date — open-ended wait; hide from queue.
         return True
@@ -3893,7 +3909,7 @@ def _cmd_wait(args):
             sys.exit(2)
         if new_until is not None and not _is_iso_date(new_until):
             print(
-                f"ERROR: --until: {new_until!r} not ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ",
+                f"ERROR: --until: {new_until!r} not a valid ISO YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ date",
                 file=sys.stderr,
             )
             sys.exit(2)
