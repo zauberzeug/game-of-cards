@@ -1,20 +1,20 @@
 ---
 title: why-trace-renders-spurious-self-hop-on-multi-hop-cards
 summary: "The `-v` WHY column appends a spurious `→ self (?)` hop to every card whose value trace passes through at least one descendant. `_format_why` only suppresses the exact leaf path `[\"self\"]`, but `compute_values` drags the `\"self\"` sentinel into the tail of every longer `top_path`, so the loop renders it as an unknown-contribution slug."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T03:45:33Z"
-closed_at: null
+closed_at: 2026-05-27T03:51:32Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — a multi-hop `top_path` ending in the `"self"` sentinel renders WITHOUT a trailing `→ self (?)`, and the leaf/empty cases still render `""`.
-  - [ ] TDD: `_format_why(["B", "C", "self"], {...})` returns `"→ B (low) → C (low)"` (no `self` hop); `_format_why(["self"], {})` still returns `""`; the `["cycle"]` case still returns `"(cycle)"`.
-  - [ ] EMPIRICAL: `uv run goc -v` no longer prints `→ self (?)` on any card (verify against the active/open queue, e.g. `support-external-game-of-cards-state-location` and `remove-blocked-from-status-enum-and-migrate-existing-cards`).
-  - [ ] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green (engine mirrors re-synced if `engine.py` changed under the plugin payloads).
+  - [x] TDD: `reproduce.py` exits zero — a multi-hop `top_path` ending in the `"self"` sentinel renders WITHOUT a trailing `→ self (?)`, and the leaf/empty cases still render `""`.
+  - [x] TDD: `_format_why(["B", "C", "self"], {...})` returns `"→ B (low) → C (low)"` (no `self` hop); `_format_why(["self"], {})` still returns `""`; the `["cycle"]` case still returns `"(cycle)"`.
+  - [x] EMPIRICAL: `uv run goc -v` no longer prints `→ self (?)` on any card (verify against the active/open queue, e.g. `support-external-game-of-cards-state-location` and `remove-blocked-from-status-enum-and-migrate-existing-cards`).
+  - [x] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green (engine mirrors re-synced if `engine.py` changed under the plugin payloads).
 worker: {who: "claude[bot]", where: main}
 ---
 
