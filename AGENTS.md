@@ -113,14 +113,16 @@ publisher configuration details.
 
 The Python package is intentionally small:
 
-- **`goc/cli.py`** — thin Click entry point. Imports the engine's Click
-  group, bolts on `install` + `upgrade` from `install.py`, and adds
-  `--version`. Wired as `goc = "goc.cli:main"` in `pyproject.toml`.
+- **`goc/cli.py`** — thin argparse entry point. Builds the engine's
+  argparse parser via `_build_parser`, bolts on `install` + `upgrade`
+  from `install.py`, and adds `--version`. Wired as
+  `goc = "goc.cli:main"` in `pyproject.toml`.
 - **`goc/engine.py`** — the bulk of the tool: frontmatter parser, schema
   loader, card loader, validator, value/edge graph, table/board
   renderers, and every verb except install/upgrade (`new`, `status`,
-  `done`, `attest`, `decide`, `advance`, `unadvance`, `move`, `triage`,
-  `show`, `quality-pass`, `validate`).
+  `done`, `attest`, `decide`, `advance`, `unadvance`, `wait`,
+  `repair-edges`, `move`, `triage`, `show`, `quality-pass`, `validate`,
+  `migrate`, `migrate-list-style`).
 - **`goc/install.py`** — `install` and `upgrade` commands. Reads
   templates via `importlib.resources` so it works from a wheel.
 - **`goc/schema.yaml`** — single source of truth for card frontmatter
