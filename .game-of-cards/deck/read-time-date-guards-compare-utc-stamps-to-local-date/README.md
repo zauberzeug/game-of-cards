@@ -1,7 +1,7 @@
 ---
 title: read-time-date-guards-compare-utc-stamps-to-local-date
 summary: "Cards stamp dates in UTC (`_utc_now_iso`) but three read-time guards — `waiting_impedes`, `validate_waiting_overlay`, and triage aging — default `today` to `date.today()` (the LOCAL civil date). On a non-UTC runner near midnight the two bases disagree by a full day, so a deferred card un-defers (or an overdue wait surfaces, or an age is computed) up to one civil day early. Contradicts the closed `record-card-timestamps-as-utc-datetime` card's audit claim of \"UTC-only enforced (no local-tz drift)\"."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T02:27:59Z"
@@ -21,6 +21,7 @@ definition_of_done: |
         `today=` test parameter.
   - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) and `uv run goc validate` clean.
   - [ ] PROCESS: the closed `record-card-timestamps-as-utc-datetime` card gets a dated `log.md` forward-pointer noting the read-side gap its audit missed.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Read-time date guards compare UTC-stamped dates against the local civil date
