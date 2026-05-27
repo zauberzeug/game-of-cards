@@ -1,27 +1,29 @@
 ---
 title: board-grid-misaligns-when-a-row-contains-the-wide-hourglass-glyph
 summary: "`goc --board` computes column widths with `len()`, which counts the impediment marker `⏳` (U+23F3, East-Asian-width Wide) as 1 codepoint though terminals render it 2 columns wide. Every row bearing the marker is shifted one display column right of the header, skewing the grid. UNVERIFIED: hunter measured the offset but no reproduce.py written yet."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T09:50:39Z"
-closed_at: null
+closed_at: 2026-05-27T10:02:02Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, api-contract, unverified]
+tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: a reproduce.py builds a board column with one `⏳`-bearing row and one plain row, and asserts the first `|` separator lands at the same display column on both (currently off by one).
-  - [ ] TDD: rows without the marker remain aligned (no regression).
-  - [ ] MECHANICAL: column width + cell padding use a display-width measure (East-Asian-width aware) instead of `len()` for the marked cells.
+  - [x] TDD: a reproduce.py builds a board column with one `⏳`-bearing row and one plain row, and asserts the first `|` separator lands at the same display column on both (currently off by one).
+  - [x] TDD: rows without the marker remain aligned (no regression).
+  - [x] MECHANICAL: column width + cell padding use a display-width measure (East-Asian-width aware) instead of `len()` for the marked cells.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # board grid misaligns when a row contains the wide `⏳` glyph
 
-> UNVERIFIED — the hunter measured the one-column offset, but no full
-> `deck/.../reproduce.py` has been written. Drop the `unverified` tag once a
-> reproduce.py lands.
+> VERIFIED (2026-05-27) — `reproduce.py` renders a board with one
+> impeded (`⏳`-bearing) row and one plain row and confirmed the marked
+> row's first `|` separator landed at display column 22 vs 21 for the
+> header/unmarked rows. The fix (display-width-aware padding) aligns all
+> three at column 21. `unverified` tag dropped.
 
 ## Location
 
@@ -67,6 +69,13 @@ this candidate still needs an independent reproduce.py plus a fix-approach
 decision (vendor a tiny East-Asian-width table vs. add a `wcwidth` dependency —
 the project currently has no third-party runtime deps, so a dependency add is a
 real decision).
+
+**Decision resolved (2026-05-27):** neither — Python's stdlib
+`unicodedata.east_asian_width` classifies `⏳` (and any other glyph) as
+Wide/Fullwidth with zero third-party deps and no vendored table to
+maintain. `render_board` now measures display width via
+`_display_width` and pads via `_display_ljust` instead of `len()` /
+`str.ljust()`.
 
 ## Falsification recipe
 
