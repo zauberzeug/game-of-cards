@@ -1,19 +1,19 @@
 ---
 title: skills-source-rewrite-regex-eats-blank-lines-above-the-key
 summary: "`_write_skills_source` rewrites the `skills_source:` key in config.yaml with a `re.MULTILINE` regex whose `[#\\s]*` char class matches newlines, so it back-consumes blank-line separators (and a preceding comment line's body) above the key. This contradicts the function's own docstring promise to preserve comments and ordering, and runs unconditionally on every `goc upgrade` / mode switch."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T13:25:03Z"
-closed_at: null
+closed_at: 2026-05-27T13:31:23Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (both cases preserve surrounding blank lines / comment bodies)
-  - [ ] TDD: a regression test asserts `_write_skills_source` leaves blank-line separators and a preceding comment line intact when rewriting the key
-  - [ ] MECHANICAL: the regex char class no longer matches `\n` (e.g. `[ \t]*` for leading whitespace, comment handled explicitly), and the docstring's "preserves comments and ordering" claim is true again
+  - [x] TDD: reproduce.py exits zero (both cases preserve surrounding blank lines / comment bodies)
+  - [x] TDD: a regression test asserts `_write_skills_source` leaves blank-line separators and a preceding comment line intact when rewriting the key
+  - [x] MECHANICAL: the regex char class no longer matches `\n` (e.g. `[ \t]*` for leading whitespace, comment handled explicitly), and the docstring's "preserves comments and ordering" claim is true again
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -56,25 +56,27 @@ consumer's hand-formatted config.
 
 `uv run python .game-of-cards/deck/skills-source-rewrite-regex-eats-blank-lines-above-the-key/reproduce.py`:
 
+Before the fix, both cases destroyed the surrounding lines (case 1
+collapsed `auto_commit: true\n\n\nskills_source: auto` to
+`auto_commit: true\nskills_source: plugin`; case 2 ate the blank line
+under the top comment). After the fix:
+
 ```
 --- blank separators above an active skills_source key
   input    : 'auto_commit: true\n\n\nskills_source: auto\n'
-  output   : 'auto_commit: true\nskills_source: plugin\n'
+  output   : 'auto_commit: true\n\n\nskills_source: plugin\n'
   expected : 'auto_commit: true\n\n\nskills_source: plugin\n'
-  preserved: False
+  preserved: True
 
 --- blank line above a commented skills_source key
   input    : '# top comment\n\n# skills_source: vendored\n'
-  output   : '# top comment\nskills_source: plugin\n'
+  output   : '# top comment\n\nskills_source: plugin\n'
   expected : '# top comment\n\nskills_source: plugin\n'
-  preserved: False
+  preserved: True
 
 ============================================================
-FAIL: _write_skills_source destroyed surrounding lines.
+PASS: blank lines / comments preserved (defect absent).
 ```
-
-Both blank-line separators in case 1 are gone; in case 2 the blank line
-between the top comment and the key is gone.
 
 ## Why it matters
 
@@ -88,20 +90,19 @@ above the key can be partially eaten. It is cosmetic rather than
 data-destroying, hence `medium`, but it directly falsifies a documented
 guarantee that other code/maintainers may rely on.
 
-## Fix
+## Fix (applied)
 
-Restrict the leading whitespace to horizontal whitespace so the match
+Restricted the leading whitespace to horizontal whitespace so the match
 cannot cross line boundaries, and handle the optional comment marker
-explicitly. One candidate:
+explicitly (`goc/install.py:1089`):
 
 ```python
 pattern = re.compile(r"^[ \t]*#?[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
 ```
 
 `[ \t]*` matches indentation without newlines; the optional `#?` covers a
-commented-out key on its own line. With this, `^` still anchors per line
-under `MULTILINE`, but the class can no longer reach back over blank lines.
-Add a regression test next to the existing install/upgrade tests asserting
-the blank-line and comment cases above round-trip untouched.
-
-Flag only — do not apply the fix as part of this audit filing.
+commented-out key on its own line. `^` still anchors per line under
+`MULTILINE`, but the class can no longer reach back over blank lines.
+A regression test
+(`tests/test_install.py::test_write_skills_source_preserves_blank_separators_and_comments`)
+asserts both cases above round-trip untouched.
