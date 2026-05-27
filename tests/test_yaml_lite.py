@@ -279,3 +279,33 @@ class DeckRoundTripTest(unittest.TestCase):
             self.assertIn("status", data, msg=f"{readme}: missing status")
             count += 1
         self.assertGreater(count, 0, "no card frontmatter found")
+
+
+class NonMappingFrontmatterTest(unittest.TestCase):
+    """Frontmatter that parses to a non-mapping YAML value must raise a
+    coherent FrontmatterError, not a raw AttributeError from a downstream
+    `fm.get(...)`."""
+
+    def test_top_level_list_raises_frontmatter_error(self):
+        from goc import engine as e
+
+        with self.assertRaises(e.FrontmatterError) as ctx:
+            e.parse_frontmatter("---\n- a\n- b\n---\nbody\n")
+        self.assertIn("not a mapping", str(ctx.exception))
+        self.assertIn("list", str(ctx.exception))
+
+    def test_load_card_on_list_frontmatter_raises_frontmatter_error(self):
+        import tempfile
+        from goc import engine as e
+
+        d = Path(tempfile.mkdtemp())
+        (d / "README.md").write_text("---\n- a\n- b\n---\nbody\n")
+        with self.assertRaises(e.FrontmatterError):
+            e.load_card(d)
+
+    def test_empty_frontmatter_still_yields_empty_dict(self):
+        from goc import engine as e
+
+        data, body = e.parse_frontmatter("---\n\n---\nbody\n")
+        self.assertEqual(data, {})
+        self.assertEqual(body, "body\n")

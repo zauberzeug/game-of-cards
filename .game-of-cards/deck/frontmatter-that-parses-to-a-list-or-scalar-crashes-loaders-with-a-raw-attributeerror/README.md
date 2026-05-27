@@ -1,20 +1,20 @@
 ---
 title: frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror
 summary: "When a card's README.md has both `---` delimiters and the YAML between them parses cleanly to a non-mapping value (a block list, or some bare scalars), `parse_frontmatter`'s `or {}` guard passes the non-dict through and `load_card` then calls `fm.get(...)`, raising a raw `AttributeError` with a Python traceback instead of the `FrontmatterError` the loader contract promises. Same point-away-from-the-problem failure the unterminated-frontmatter card already eliminated, for an input shape that fix never anticipated."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T13:49:20Z"
-closed_at: null
+closed_at: 2026-05-27T13:54:52Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — every non-mapping frontmatter shape (top-level list, bare scalar, int) is handled coherently instead of raising a raw AttributeError.
-  - [ ] TDD: `parse_frontmatter` raises `FrontmatterError` (not AttributeError) when the YAML between `---` delimiters parses to a non-mapping type; the message names the actual problem (frontmatter is not a mapping).
-  - [ ] TDD: a regression test in `tests/` covers list/scalar top-level frontmatter and asserts `FrontmatterError`.
-  - [ ] EMPIRICAL: `uv run goc validate` on a deck containing such a card reports a coherent per-card error (not a bare traceback).
+  - [x] TDD: reproduce.py exits zero — every non-mapping frontmatter shape (top-level list, bare scalar, int) is handled coherently instead of raising a raw AttributeError.
+  - [x] TDD: `parse_frontmatter` raises `FrontmatterError` (not AttributeError) when the YAML between `---` delimiters parses to a non-mapping type; the message names the actual problem (frontmatter is not a mapping).
+  - [x] TDD: a regression test in `tests/` covers list/scalar top-level frontmatter and asserts `FrontmatterError`.
+  - [x] EMPIRICAL: `uv run goc validate` on a deck containing such a card reports a coherent per-card error (not a bare traceback).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -67,18 +67,21 @@ frontmatter that parses to the wrong *type*. The `or {}` guard is the gap.
 
 ## Empirical evidence
 
+Pre-fix the list case crashed; post-fix all shapes are coherent:
+
 ```
-[FAIL] top-level list       -> AttributeError: 'list' object has no attribute 'get'
+[PASS] top-level list       -> FrontmatterError: frontmatter is not a mapping: ... parsed to a list, expected key/value pairs
 [PASS] bare scalar string   -> returned None
 [PASS] top-level int        -> returned None
 
-DEFECT PRESENT: 1 case(s) raised a non-FrontmatterError exception: top-level list
+OK: all non-mapping frontmatter shapes handled coherently
 ```
 
-(The bare-scalar / int cases happen to be coerced by the vendored parser
-into a value that `if not fm` treats as non-card and returns `None` — so
-they don't crash today, but they also silently swallow a malformed card.
-The list case is the hard crash.)
+(The bare-scalar / int cases are coerced by the vendored `yaml_lite`
+parser to `{}` — `safe_load("justastring\n")` returns `{}`, not the
+scalar — so `if not fm` treats them as non-card and returns `None`.
+Only the block list parses to a real non-mapping value, which is the
+case the `isinstance` guard now routes through `FrontmatterError`.)
 
 ## Why it matters
 
@@ -91,7 +94,8 @@ this exact situation legible; this input shape slips past that work.
 
 ## Fix
 
-In `parse_frontmatter`, after `safe_load`, reject a non-mapping result:
+`parse_frontmatter` (`goc/engine.py`) now rejects a non-mapping result
+after `safe_load`:
 
 ```python
 data = yaml.safe_load(m.group(1))
@@ -108,4 +112,6 @@ return data, m.group(2)
 This routes the non-mapping shape through the same `FrontmatterError`
 channel `load_card_or_exit` already turns into a per-card diagnostic, so
 `goc validate` / `goc done` / `goc show` report a coherent story instead
-of a bare traceback. Do NOT apply the fix as part of filing this card.
+of a bare traceback. Replacing the old `or {}` with the explicit
+`None`-vs-non-dict split also stops silently swallowing the empty-string
+edge while preserving the empty-frontmatter `{}` contract.
