@@ -1,19 +1,19 @@
 ---
 title: board-crashes-when-a-card-has-no-contribution-value
 summary: "`goc --board` builds each cell's marker with `f\" [{t.contribution[0]}]\"`, indexing the first character of `contribution`. The `--board` path never validates first, so a hand-edited or legacy card that omits `contribution` (property returns `\"\"`) or writes it blank (`contribution:` -> None) loads cleanly and then crashes the renderer with IndexError/TypeError. One malformed card takes down the entire board for the whole deck; the default table renderer survives because it does not index."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T06:12:13Z"
-closed_at: null
+closed_at: 2026-05-27T06:15:55Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `render_board` over a deck containing a card with blank/absent `contribution` renders without raising.
-  - [ ] MECHANICAL: `card_cell` (`goc/engine.py:2210`) tolerates an empty/None `contribution` — emit a placeholder marker (e.g. `[?]`) instead of indexing `[0]`, matching the default table renderer which already survives such a card.
-  - [ ] MECHANICAL: plugin mirrors synced (`goc/engine.py` is mirrored byte-for-byte into the plugin payloads); `uv run goc validate` clean.
+  - [x] TDD: reproduce.py exits zero — `render_board` over a deck containing a card with blank/absent `contribution` renders without raising.
+  - [x] MECHANICAL: `card_cell` (`goc/engine.py:2210`) tolerates an empty/None `contribution` — emit a placeholder marker (e.g. `[?]`) instead of indexing `[0]`, matching the default table renderer which already survives such a card.
+  - [x] MECHANICAL: plugin mirrors synced (`goc/engine.py` is mirrored byte-for-byte into the plugin payloads); `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 

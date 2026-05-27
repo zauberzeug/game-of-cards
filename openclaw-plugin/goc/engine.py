@@ -2207,7 +2207,8 @@ def render_board(
     for c in columns:
         by_status[c] = sort_default(by_status[c], values=values)[:max_rows]
     def card_cell(t: Card) -> str:
-        marker = f" [{t.contribution[0]}]"
+        c = t.contribution or ""
+        marker = f" [{c[0] if c else '?'}]"
         if t.status == "open" and dependency_blocked(t, by_title):
             marker += " ⏳"
         who = _worker_who(t.frontmatter.get("worker"))
