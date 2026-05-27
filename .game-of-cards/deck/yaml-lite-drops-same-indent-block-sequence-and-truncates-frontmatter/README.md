@@ -1,7 +1,7 @@
 ---
 title: yaml-lite-drops-same-indent-block-sequence-and-truncates-frontmatter
 summary: "The vendored yaml_lite parser requires block-sequence items to be indented strictly more than their parent key, but YAML (and PyYAML) accept items at the SAME indent. A card written with `advanced_by:\\n- item` loses that value (resolves to None) AND every frontmatter key after it (tags, definition_of_done) is silently dropped — no error. Hand-authored or externally-tooled cards lose their edges, tags, and DoD on every read."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-27T09:21:42Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: keys that follow a same-indent block sequence (`tags`, `definition_of_done`) survive parsing instead of being dropped.
   - [ ] TDD: an inline-map item at same indent (`worker:\n- who: x`) and a nested same-indent sequence both round-trip; the existing strictly-more-indented form is unchanged (no regression).
   - [ ] MECHANICAL: `uv run goc validate` is clean and the plugin engine mirrors are re-synced (yaml_lite is vendored into every plugin payload).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # yaml_lite drops a same-indent block sequence and truncates the rest of the frontmatter
