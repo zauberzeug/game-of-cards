@@ -1,11 +1,11 @@
 ---
 title: advance-cycle-detector-misses-length-one-self-cycle
 summary: "`detect_advance_cycles` (and its mirror `detect_supersedes_cycles`) excludes the start node from the cycle check (`cur != start.title`), so a length-1 self-edge (`advanced_by: [self]` / `superseded_by: [self]`) produces no cycle error from these detectors. Currently MASKED: full `goc validate` rejects any self-reference earlier via the per-field check at engine.py:1163, so this is latent defense-in-depth rot, not a user-observable escape. Unverified — no reproduce.py proving a user-facing failure."
-status: open
+status: disproved
 stage: null
 contribution: low
 created: "2026-05-27T01:54:46Z"
-closed_at: null
+closed_at: 2026-05-27T02:03:37Z
 human_gate: none
 advances: []
 advanced_by: []
@@ -17,6 +17,36 @@ definition_of_done: |
 ---
 
 # `detect_advance_cycles` cannot flag a length-1 (self) cycle
+
+## Verdict (disproved 2026-05-27)
+
+**Disproved as a reachable defect.** The blind spot in the code is real
+(the `cur != start.title` guard does suppress the length-1 self-cycle
+case), but it is not a user-observable bug and the card's own promotion
+conditions do not hold:
+
+- The only callers of `detect_advance_cycles` / `detect_supersedes_cycles`
+  are inside `goc validate` (`engine.py:2558` and `engine.py:2561`).
+- `validate` runs `validate_card` on every card *first* (`engine.py:2541`),
+  which includes the per-field self-reference check at `engine.py:1163`
+  that rejects any `advances` / `advanced_by` / `superseded_by` entry equal
+  to the card's own title. A self-edge therefore fails validation before
+  the cycle detectors ever run.
+- There is **no caller of the cycle detectors that bypasses the per-field
+  check** (grepped 2026-05-27 — `engine.py:2558`/`2561` are the only two,
+  both downstream of `validate_card`). So the recipe's promotion condition
+  #1 (an unmasked direct caller) is false, and condition #2 (the per-field
+  check refactored away) has not happened.
+
+The MECHANICAL DoD item — drop `unverified` once a reproduce.py exercises a
+path where the per-field check does not run but the detector does — is
+therefore unsatisfiable: no such path exists. "Fixing" the guard would only
+add a redundant second error message for self-edges that `validate` already
+rejects. Closing as disproved per the card's stated falsification recipe.
+
+If condition #2 ever changes (the per-field self-reference check is removed
+or narrowed), re-file: at that point the guard becomes a live escape and
+the one-line fix (drop `cur != start.title` in both detectors) is warranted.
 
 ## Hypothesis (file:line)
 
