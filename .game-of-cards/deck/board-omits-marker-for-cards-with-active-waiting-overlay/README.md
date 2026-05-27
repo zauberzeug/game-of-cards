@@ -1,7 +1,7 @@
 ---
 title: board-omits-marker-for-cards-with-active-waiting-overlay
 summary: "The kanban board (`goc --board`) marks dependency-blocked open cards with a ⏳ glyph but gives no marker to a card carrying an active `waiting_on`/future-`waiting_until` impediment overlay. Such a card is hidden from the pull queue by `card_is_ready` yet renders identically to a genuinely pullable card on the board — the primary human triage surface — so a human reading the board cannot tell an impeded card from an available one."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T07:38:40Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — an open card with an active impediment overlay renders on the board with a distinguishing marker (so it is no longer identical to a pullable card).
   - [ ] MECHANICAL: `card_cell` in `render_board` (`goc/engine.py`) adds an impediment marker when `waiting_impedes(t)` is true, alongside (and visually distinct from, or shared with) the existing dependency-blocked ⏳.
   - [ ] PROCESS: the marker semantics are documented wherever the board legend / dependency-block ⏳ is described (deck skill board section, if any), so a reader knows what the glyph means.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Board gives no marker to a card carrying an active impediment overlay
