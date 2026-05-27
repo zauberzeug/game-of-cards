@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: "2026-05-27T00:53:41Z"
 closed_at: null
-human_gate: none
+human_gate: session
 advances: []
 advanced_by: []
 tags: [bug, infra]
@@ -15,9 +15,28 @@ definition_of_done: |
   - [ ] MECHANICAL: `.github/workflows/ci.yml` "Validate deck" step guards on `.game-of-cards/deck` (with legacy `deck/` fallback if desired), so `goc validate` actually runs on this repo's own deck in CI.
   - [ ] MECHANICAL: the stale `ci.yml` header comment is refreshed — it still says "All 11 skill templates" (there are 17) and refers to "the repo's own `deck/` directory" / the old scaffolding card; reword to match the `.game-of-cards/deck/` reality.
   - [ ] MECHANICAL: AGENTS.md line "No pytest suite exists yet" is corrected — `tests/` has 16 files / 159 passing tests, and CI already runs them via `uv run python -m unittest discover -s tests`. Re-sync `goc/templates/AGENTS_GOC.md` if the corrected text lives there. Plugin mirrors synced; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # CI silently skips `goc validate` on the real deck after the deck move
+
+## Handoff required (2026-05-27)
+
+The autonomous drain bot implemented the fix below and verified it
+(reproduce.py exit 0, `goc validate` clean, plugin-sync clean), but
+**could not ship it**: the change touches `.github/workflows/ci.yml`,
+and the bot's GitHub App token lacks the `workflows` permission
+(`remote rejected … refusing to allow a GitHub App to create or update
+workflow … without workflows permission`). This is the same structural
+limit AGENTS.md documents ("the autonomous bot's `GITHUB_TOKEN` cannot
+edit files under `.github/workflows/`").
+
+The bot reverted its uncommitted ci.yml + AGENTS.md edits to keep the
+shared `main` push path clean, and parked this card at `human_gate:
+session`. **A maintainer with `workflows` push permission must apply
+the ready-to-paste diff in the "## Fix" section below and the AGENTS.md
+correction, then push.** No code investigation is needed — the fix is
+fully specified.
 
 ## Location
 
