@@ -1,7 +1,7 @@
 ---
 title: waiting-until-with-time-of-day-un-defers-card-at-start-of-day
 summary: "The read-time guard `waiting_impedes` accepts a datetime-form `waiting_until` (`YYYY-MM-DDTHH:MM:SSZ`) but truncates it to a bare date via `_date_part` and compares `until_date > today`. A card deferred until `2026-05-27T23:59:59Z` is treated as un-impeded the entire civil day 2026-05-27, re-entering the ready/pull queue up to ~24h early. `validate_waiting_overlay`'s elapsed-wait surfacing has the same truncation. Accepted input precision (datetime) is wider than honored precision (date)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T03:29:18Z"
@@ -22,6 +22,7 @@ definition_of_done: |
         elapsed before it actually elapses).
   - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check`
         green) and `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `waiting_until` with a time-of-day un-defers the card at the start of its civil day
