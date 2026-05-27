@@ -22,6 +22,7 @@ import re
 import shutil
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
 
@@ -544,6 +545,14 @@ GOC_CLAUDE_HOOKS: dict[str, str] = {
 _HOOK_FILE_RE = re.compile(r"\$\{CLAUDE_PROJECT_DIR\}/(.+?\.py)")
 
 
+def _backup_unparseable_settings(settings_path: Path, original: str) -> Path:
+    """Preserve an unparseable settings file's bytes in a timestamped sibling."""
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup = settings_path.with_name(f"{settings_path.name}.{ts}.bak")
+    backup.write_text(original)
+    return backup
+
+
 def _merge_claude_settings(settings_path: Path) -> None:
     """Write or merge .claude/settings.json with GoC hook registrations.
 
@@ -553,10 +562,17 @@ def _merge_claude_settings(settings_path: Path) -> None:
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings: dict = {}
     if settings_path.exists():
+        original = settings_path.read_text()
         try:
-            settings = json.loads(settings_path.read_text())
-        except json.JSONDecodeError:
-            pass
+            settings = json.loads(original)
+        except json.JSONDecodeError as exc:
+            backup = _backup_unparseable_settings(settings_path, original)
+            print(
+                f"  warning: {settings_path} is not valid JSON ({exc}); "
+                f"backed it up to {backup.name} before writing GoC hooks. "
+                f"Merge your keys back in by hand.",
+                file=sys.stderr,
+            )
 
     hooks = settings.setdefault("hooks", {})
     for event, command in GOC_CLAUDE_HOOKS.items():
@@ -578,7 +594,12 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
         return
     try:
         settings = json.loads(settings_path.read_text())
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        print(
+            f"  warning: {settings_path} is not valid JSON ({exc}); "
+            f"leaving it untouched (GoC hook entries not removed).",
+            file=sys.stderr,
+        )
         return
 
     goc_commands = set(GOC_CLAUDE_HOOKS.values())

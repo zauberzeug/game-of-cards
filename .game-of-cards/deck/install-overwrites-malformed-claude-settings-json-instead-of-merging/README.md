@@ -1,20 +1,20 @@
 ---
 title: install-overwrites-malformed-claude-settings-json-instead-of-merging
 summary: "`_merge_claude_settings` swallows a JSONDecodeError on an existing `.claude/settings.json` and writes a fresh file with GoC hooks only — silently destroying the user's `permissions.allow`, `env`, and any other keys. Contradicts the function's own docstring contract to merge without removing unrelated keys."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-27T09:49:10Z"
-closed_at: null
+closed_at: 2026-05-27T09:56:55Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits non-zero (the user's `permissions`/`env` keys survive a `goc install`/`upgrade` over a malformed settings.json).
-  - [ ] TDD: when the existing settings.json is unparseable, the original bytes are preserved (a timestamped `.bak` sibling is written) and the failure is surfaced (warning printed), not silently swallowed.
-  - [ ] MECHANICAL: the `except json.JSONDecodeError: pass` branch at `install.py:558-559` no longer falls through to an unconditional overwrite.
-  - [ ] PROCESS: behavior verified for both `goc install` and `goc upgrade --agents claude` entry points (both call `_merge_claude_settings`).
+  - [x] TDD: reproduce.py exits non-zero (the user's `permissions`/`env` keys survive a `goc install`/`upgrade` over a malformed settings.json).
+  - [x] TDD: when the existing settings.json is unparseable, the original bytes are preserved (a timestamped `.bak` sibling is written) and the failure is surfaced (warning printed), not silently swallowed.
+  - [x] MECHANICAL: the `except json.JSONDecodeError: pass` branch at `install.py:558-559` no longer falls through to an unconditional overwrite.
+  - [x] PROCESS: behavior verified for both `goc install` and `goc upgrade --agents claude` entry points (both call `_merge_claude_settings`).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -60,26 +60,25 @@ rather than overwriting unrelated user settings." That card delivered the
 merge for the *valid-JSON* path; the *malformed-JSON* path was never covered
 and still overwrites.
 
-## Empirical evidence
+## Empirical evidence (resolved)
 
-`uv run python deck/install-overwrites-malformed-claude-settings-json-instead-of-merging/reproduce.py`:
+`uv run python deck/install-overwrites-malformed-claude-settings-json-instead-of-merging/reproduce.py`
+now exits 1 — the user's bytes survive:
 
 ```
-BEFORE (user's malformed file):
-{
-  "permissions": {
-    "allow": ["Bash(ls:*)", "Bash(uv run goc:*)"]
-  },
-  "env": {"FOO": "bar"},
-}
+  warning: .../settings.json is not valid JSON (...); backed it up to
+  settings.json.<ts>.bak before writing GoC hooks. Merge your keys back in by hand.
 
 AFTER _merge_claude_settings:
 {
-  "hooks": { ...only GoC's three hooks... } }
+  "hooks": { ...GoC's three hooks... } }
 
-DEFECT REPRODUCED: silently lost user keys: permissions.allow, env
-The malformed file was overwritten with GoC hooks only; no backup written.
+Data preserved — original bytes backed up to settings.json.<ts>.bak.
 ```
+
+Before the fix the same script exited 0: the malformed file was overwritten
+with GoC hooks only and no backup was written, silently losing
+`permissions.allow` and `env`.
 
 ## Why it matters
 
@@ -91,19 +90,21 @@ deletes the user's permission grants and env config. The data is unrecoverable
 (no backup is written) and the loss is silent (no warning), so the user only
 discovers it when something stops working.
 
-## Fix
+## Fix (applied)
 
-In `_merge_claude_settings`, the parse-failure branch must not fall through to
-a destructive overwrite. Recommended (non-destructive, doesn't abort the
-install flow): before resetting `settings = {}`, write the original bytes to a
-timestamped backup sibling (e.g. `settings.json.bak` or
-`settings.json.<ts>.bak`) and print a warning naming the backup path, so the
-user's data is recoverable and the loss is visible. The same guard applies to
-`_strip_goc_settings_entries` (`install.py:579-582`), which also swallows
-`JSONDecodeError` — though that path only declines to edit (returns early)
-rather than overwriting, so it is lower-risk; confirm it stays non-destructive.
+`_merge_claude_settings` now routes the parse-failure branch through
+`_backup_unparseable_settings`: it writes the original bytes to a timestamped
+sibling (`settings.json.<UTC-ts>.bak`) and prints a warning to stderr naming
+the backup before falling back to `settings = {}`. The user's data is
+recoverable and the loss is visible; the install flow still completes
+(non-interactive installs don't abort). The valid-JSON merge path is
+unchanged — user keys are merged in place with no backup.
+
+`_strip_goc_settings_entries` already declined to edit on a parse failure
+(returns early, non-destructive); it now also prints a warning so the skip
+isn't silent.
 
 Alternative considered: abort the install/upgrade with a clear error telling
-the user to fix or move aside the malformed file. Rejected as the primary fix
-because it breaks non-interactive install flows; the backup-and-warn approach
-preserves data without halting setup.
+the user to fix or move aside the malformed file. Rejected because it breaks
+non-interactive install flows; backup-and-warn preserves data without halting
+setup.
