@@ -69,12 +69,49 @@ print(f"Keys lost entirely: {missing}")
 print(f"Keys with wrong value: {sorted(wrong)}")
 print()
 
-if not missing and not wrong:
+# Additional cases: inline-map items at same indent, a nested same-indent
+# sequence, and a no-regression check on the strictly-more-indented form
+# that goc's own emitter produces.
+CASES = [
+    (
+        "inline-map items at same indent",
+        "worker:\n- who: rodja\n  where: main\n- who: claude\ntags: [a, b]\n",
+        {
+            "worker": [{"who": "rodja", "where": "main"}, {"who": "claude"}],
+            "tags": ["a", "b"],
+        },
+    ),
+    (
+        "nested same-indent sequence inside a mapping",
+        "outer:\n  inner:\n  - x\n  - y\nsibling: ok\n",
+        {"outer": {"inner": ["x", "y"]}, "sibling": "ok"},
+    ),
+    (
+        "no regression: strictly-more-indented sequence (emitter form)",
+        "advanced_by:\n  - upstream\ntags:\n  - bug\n",
+        {"advanced_by": ["upstream"], "tags": ["bug"]},
+    ),
+]
+
+case_failures = []
+for name, doc, expected in CASES:
+    got = yaml_lite.safe_load(doc)
+    ok = got == expected
+    print(f"  [{'PASS' if ok else 'FAIL'}] {name}: {got!r}")
+    if not ok:
+        case_failures.append((name, expected, got))
+
+print()
+
+if not missing and not wrong and not case_failures:
     print("PASS: same-indent block sequences parse correctly.")
     sys.exit(0)
 
 print("FAIL: same-indent block sequence dropped and frontmatter truncated.")
-print("  - 'advanced_by' resolves to None instead of ['upstream-card']")
-print("  - 'tags' and 'definition_of_done' vanish from the dict entirely")
-print("  -> card loses its dependency edges, tags, and DoD on every read.")
+if missing or wrong:
+    print("  - 'advanced_by' resolves to None instead of ['upstream-card']")
+    print("  - 'tags' and 'definition_of_done' vanish from the dict entirely")
+    print("  -> card loses its dependency edges, tags, and DoD on every read.")
+for name, expected, got in case_failures:
+    print(f"  - {name}: expected {expected!r}, got {got!r}")
 sys.exit(1)

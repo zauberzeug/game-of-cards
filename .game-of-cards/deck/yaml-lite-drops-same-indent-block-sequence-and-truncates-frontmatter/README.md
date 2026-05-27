@@ -1,20 +1,20 @@
 ---
 title: yaml-lite-drops-same-indent-block-sequence-and-truncates-frontmatter
 summary: "The vendored yaml_lite parser requires block-sequence items to be indented strictly more than their parent key, but YAML (and PyYAML) accept items at the SAME indent. A card written with `advanced_by:\\n- item` loses that value (resolves to None) AND every frontmatter key after it (tags, definition_of_done) is silently dropped — no error. Hand-authored or externally-tooled cards lose their edges, tags, and DoD on every read."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-27T09:21:42Z"
-closed_at: null
+closed_at: 2026-05-27T09:26:25Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a same-indent block sequence (`key:\n- item`) parses to a list, not None.
-  - [ ] TDD: keys that follow a same-indent block sequence (`tags`, `definition_of_done`) survive parsing instead of being dropped.
-  - [ ] TDD: an inline-map item at same indent (`worker:\n- who: x`) and a nested same-indent sequence both round-trip; the existing strictly-more-indented form is unchanged (no regression).
-  - [ ] MECHANICAL: `uv run goc validate` is clean and the plugin engine mirrors are re-synced (yaml_lite is vendored into every plugin payload).
+  - [x] TDD: reproduce.py exits zero — a same-indent block sequence (`key:\n- item`) parses to a list, not None.
+  - [x] TDD: keys that follow a same-indent block sequence (`tags`, `definition_of_done`) survive parsing instead of being dropped.
+  - [x] TDD: an inline-map item at same indent (`worker:\n- who: x`) and a nested same-indent sequence both round-trip; the existing strictly-more-indented form is unchanged (no regression).
+  - [x] MECHANICAL: `uv run goc validate` is clean and the plugin engine mirrors are re-synced (yaml_lite is vendored into every plugin payload).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -82,30 +82,22 @@ convention literally.
 
 ## Empirical evidence
 
-`uv run python deck/<this-card>/reproduce.py`:
+Before the fix, `reproduce.py` resolved `advanced_by` to `None` and
+dropped `tags` and `definition_of_done` entirely. After the fix,
+`uv run python deck/<this-card>/reproduce.py` exits 0:
 
 ```
-Input frontmatter (same-indent block sequences, valid YAML):
-title: example
-advanced_by:
-- upstream-card
-tags:
-- bug
-- infra
-definition_of_done: |
-  - [ ] do the thing
-
 yaml_lite.safe_load result:
   'title': 'example'
-  'advanced_by': None
+  'advanced_by': ['upstream-card']
+  'tags': ['bug', 'infra']
+  'definition_of_done': '- [ ] do the thing\n'
 
-Keys lost entirely: ['tags', 'definition_of_done']
-Keys with wrong value: ['advanced_by']
+  [PASS] inline-map items at same indent
+  [PASS] nested same-indent sequence inside a mapping
+  [PASS] no regression: strictly-more-indented sequence (emitter form)
 
-FAIL: same-indent block sequence dropped and frontmatter truncated.
-  - 'advanced_by' resolves to None instead of ['upstream-card']
-  - 'tags' and 'definition_of_done' vanish from the dict entirely
-  -> card loses its dependency edges, tags, and DoD on every read.
+PASS: same-indent block sequences parse correctly.
 ```
 
 ## Why it matters
