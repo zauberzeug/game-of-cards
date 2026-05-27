@@ -1,7 +1,7 @@
 ---
 title: yaml-lite-truncates-flow-collection-with-hash-in-quoted-element
 summary: "yaml_lite's `_strip_comment` only enters quote-tracking mode when the *whole* value starts with a quote. An inline flow collection starts with `[` or `{`, so quote-tracking stays off and a ` #` inside a quoted element is treated as a comment and stripped — corrupting `tags: [\"a #b\", c]` to `['[\"a']` and silently dropping `worker: {who: x, where: \"br #1\"}` to `{}`. goc's own emitter produces these exact strings, so a card written by goc round-trips to data loss on reload."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T09:34:08Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: regression guard — the sibling fix's behavior is preserved: a bare value with an unbalanced lone quote still strips its trailing comment (`title: don't  # note` → `don't`), and a `#` inside a *balanced* quoted scalar is still NOT stripped (`a: "x # y"` → `x # y`).
   - [ ] TDD: emit→parse round-trip is lossless for the cases above — `emit_frontmatter({'tags': ['a #b','c'], 'worker': {'who':'x','where':'br #1'}})` reparses to an equal dict.
   - [ ] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # yaml-lite truncates inline flow collections when a quoted element contains a hash
