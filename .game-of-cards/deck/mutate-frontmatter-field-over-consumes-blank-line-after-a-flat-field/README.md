@@ -1,7 +1,7 @@
 ---
 title: mutate-frontmatter-field-over-consumes-blank-line-after-a-flat-field
 summary: "The continuation pattern in `mutate_frontmatter_field` was widened with `\\n(?=[ \\t]|\\n)` to keep internal blank lines of a block field. It has no \"inside a block field\" guard, so mutating a FLAT field (`status`, `worker`, `closed_at`) that is immediately followed by a blank line consumes that blank line — and any indented line after it — into the match and deletes it. This is the regression introduced by the fix for the inverse block-field truncation bug, now firing on the live mutation path."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T01:18:40Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: the existing block-field invariant still holds — mutating a block field (e.g. `definition_of_done`) with an internal blank line does NOT orphan its tail (the case from the closed sibling card stays green)
   - [ ] MECHANICAL: the continuation pattern in `goc/engine.py` only consumes a blank line when it is genuinely internal to the field being mutated (a following indented continuation line exists), not when it is a structural separator before the next top-level `key:` line
   - [ ] MECHANICAL: plugin mirrors synced (`python scripts/sync_plugin_assets.py --check` clean) and `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `mutate_frontmatter_field` over-consumes a blank line after a flat field
