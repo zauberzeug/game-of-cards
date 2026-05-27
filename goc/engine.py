@@ -2207,7 +2207,8 @@ def render_board(
     for c in columns:
         by_status[c] = sort_default(by_status[c], values=values)[:max_rows]
     def card_cell(t: Card) -> str:
-        marker = f" [{t.contribution[0]}]"
+        c = t.contribution or ""
+        marker = f" [{c[0] if c else '?'}]"
         if t.status == "open" and dependency_blocked(t, by_title):
             marker += " ⏳"
         who = _worker_who(t.frontmatter.get("worker"))
@@ -2318,7 +2319,7 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.")
     parser.add_argument("--ready", action="store_true",
                         help="Filter to ready-to-pull cards (status open, human_gate none, "
-                        "no non-terminal advanced_by prereqs). Defaults --status to open.")
+                        "no active waiting_on impediment). Defaults --status to open.")
     parser.add_argument("-v", dest="verbose", action="count", default=0,
                         help="-v adds STAGE/CREATED columns + summary line; -vv inlines DoD checklist + cross-refs.")
     parser.add_argument("--json", dest="as_json", action="store_true",
