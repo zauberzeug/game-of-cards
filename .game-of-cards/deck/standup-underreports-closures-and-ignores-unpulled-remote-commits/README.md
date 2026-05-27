@@ -1,22 +1,22 @@
 ---
 title: standup-underreports-closures-and-ignores-unpulled-remote-commits
 summary: "The standup skill's 'Closed since yesterday' scan finds log.md files by filesystem mtime (`find ... -newer .game-of-cards/deck -mmin -1440`), which is git-blind: after any pull/merge the deck dir and every log.md share one mtime, so the strict `-newer` test matches nothing and standup reports 'Nothing closed' even when dozens of cards closed. It also never checks whether the local tree is current with the remote, so on a behind tree it silently under-reports with no warning. Fix: drive the closure scan from the engine's structured `closed_at` field, and add a git fetch + behind-upstream warning to the preflight."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T18:13:47Z"
-closed_at: null
+closed_at: 2026-05-27T18:21:30Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: Section 3 closure scan in `goc/templates/skills/standup/SKILL.md` no longer uses `find`/`-newer`/`-mmin`; it lists cards whose `closed_at` falls within the last 24h, read from `goc --json --status all`. Covers done + disproved + superseded.
-  - [ ] MECHANICAL: a sync-state preflight is added (Preflight or Context) that runs `git fetch` and warns when local HEAD is behind its upstream, degrading silently when offline or when no upstream is configured.
-  - [ ] TDD: `reproduce.py` exits zero (both defects fixed in the template); it exits non-zero on the pre-fix template.
-  - [ ] EMPIRICAL: on this repo's current state, the new Section 3 command lists the cards closed in the last 24h (was 0 via the old `find`); the count + a sample recorded in `log.md`.
-  - [ ] PROCESS: only the template under `goc/templates/skills/standup/` is hand-edited; `python scripts/sync_plugin_assets.py --check` passes (mirrors regenerated, no drift).
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] MECHANICAL: Section 3 closure scan in `goc/templates/skills/standup/SKILL.md` no longer uses `find`/`-newer`/`-mmin`; it lists cards whose `closed_at` falls within the last 24h, read from `goc --json --status all`. Covers done + disproved + superseded.
+  - [x] MECHANICAL: a sync-state preflight is added (Preflight or Context) that runs `git fetch` and warns when local HEAD is behind its upstream, degrading silently when offline or when no upstream is configured.
+  - [x] TDD: `reproduce.py` exits zero (both defects fixed in the template); it exits non-zero on the pre-fix template.
+  - [x] EMPIRICAL: on this repo's current state, the new Section 3 command lists the cards closed in the last 24h (was 0 via the old `find`); the count + a sample recorded in `log.md`.
+  - [x] PROCESS: only the template under `goc/templates/skills/standup/` is hand-edited; `python scripts/sync_plugin_assets.py --check` passes (mirrors regenerated, no drift).
+  - [x] PROCESS: `uv run goc validate` passes.
 worker: {who: Rodja Trappe, where: main}
 ---
 
