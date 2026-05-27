@@ -1,7 +1,7 @@
 ---
 title: sort-tiebreak-counts-closed-and-impeded-advances-edges
 summary: "The queue's near-term-flow tiebreak in `sort_default` counts every `advances` edge, including `done`/`disproved`/`superseded` and `waiting_on`-impeded targets — the exact edges `compute_values` prunes from the scheduler axis at engine.py:1751. A card whose downstream is fully closed therefore out-ranks an equal-value card that unblocks no less live flow, contradicting the tiebreak's own stated rationale."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T01:53:06Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: the tiebreak counts only `advances` targets that the value walk would traverse — i.e. target exists in `by_title`, status not in `TERMINAL_STATUSES`, and not `waiting_impedes(target)`. An impeded or terminal downstream contributes 0 to the count.
   - [ ] MECHANICAL: `sort_default`'s docstring (engine.py:1872) still describes the tiebreak accurately after the change; if the count semantic is now "live direct downstream", the docstring says so.
   - [ ] PROCESS: plugin mirrors re-synced (pre-commit `sync-plugin-assets`) and `goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Queue tiebreak counts closed and impeded `advances` edges the value walk prunes
