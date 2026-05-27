@@ -28,7 +28,7 @@ def _repo_root() -> Path:
 
 sys.path.insert(0, str(_repo_root()))
 
-from goc.engine import Card, waiting_impedes  # noqa: E402
+from goc.engine import Card, validate_waiting_overlay, waiting_impedes  # noqa: E402
 
 
 def _card(waiting_until: str) -> Card:
@@ -70,8 +70,24 @@ def main() -> int:
     print("so the card should still be impeded (hidden from the ready queue).")
     print()
 
-    if impedes_eod:
-        print("PASS: end-of-day datetime wait still impedes at start of day.")
+    # validate_waiting_overlay must use the same full-timestamp comparison:
+    # an end-of-day datetime wait is NOT yet elapsed at the start of its day,
+    # so it must not be surfaced as WAITING_OVERDUE.
+    overdue_titles = {
+        w.card for w in validate_waiting_overlay([end_of_day], today=today)
+    }
+    eod_flagged_early = "repro" in overdue_titles
+    print(f"validate_waiting_overlay(end-of-day) overdue = {eod_flagged_early}  (want False)")
+
+    # A datetime that genuinely elapsed before `today` SHOULD still surface.
+    past = _card("2026-05-25T12:00:00Z")
+    past_overdue = {w.card for w in validate_waiting_overlay([past], today=today)}
+    past_flagged = "repro" in past_overdue
+    print(f"validate_waiting_overlay(elapsed)    overdue = {past_flagged}  (want True)")
+    print()
+
+    if impedes_eod and not eod_flagged_early and past_flagged:
+        print("PASS: end-of-day datetime wait still impedes and is not flagged overdue early.")
         return 0
 
     print("FAIL: end-of-day datetime wait un-defers ~16h early — time component dropped.")

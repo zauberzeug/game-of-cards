@@ -1,26 +1,26 @@
 ---
 title: waiting-until-with-time-of-day-un-defers-card-at-start-of-day
 summary: "The read-time guard `waiting_impedes` accepts a datetime-form `waiting_until` (`YYYY-MM-DDTHH:MM:SSZ`) but truncates it to a bare date via `_date_part` and compares `until_date > today`. A card deferred until `2026-05-27T23:59:59Z` is treated as un-impeded the entire civil day 2026-05-27, re-entering the ready/pull queue up to ~24h early. `validate_waiting_overlay`'s elapsed-wait surfacing has the same truncation. Accepted input precision (datetime) is wider than honored precision (date)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T03:29:18Z"
-closed_at: null
+closed_at: 2026-05-27T03:40:34Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (a `waiting_until` of `2026-05-27T23:59:59Z`
+  - [x] TDD: reproduce.py exits zero (a `waiting_until` of `2026-05-27T23:59:59Z`
         still impedes when evaluated during 2026-05-27).
-  - [ ] TDD: `waiting_impedes` compares the full timestamp (date-only values clear
+  - [x] TDD: `waiting_impedes` compares the full timestamp (date-only values clear
         at midnight UTC of the named day, exactly as today — no behavior change for
         bare-date `waiting_until`, future/elapsed date-only, bare-reason, no-overlay,
         or the malformed-prefix backstop the closed sibling installed).
-  - [ ] TDD: `validate_waiting_overlay`'s elapsed-wait surfacing uses the same
+  - [x] TDD: `validate_waiting_overlay`'s elapsed-wait surfacing uses the same
         full-timestamp comparison (an end-of-day datetime wait is not reported as
         elapsed before it actually elapses).
-  - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check`
+  - [x] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check`
         green) and `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
@@ -88,15 +88,17 @@ This is distinct from the three closed sibling cards:
 
 `uv run python deck/waiting-until-with-time-of-day-un-defers-card-at-start-of-day/reproduce.py`:
 
+After the fix:
+
 ```
 today (UTC civil)                 = 2026-05-27
-waiting_until 2026-05-27T23:59:59Z -> impedes = False  (want True)
+waiting_until 2026-05-27T23:59:59Z -> impedes = True  (want True)
 waiting_until 2026-05-27 (bare)    -> impedes = False  (want False)
 
-At wall-clock 2026-05-27T08:00:00+00:00 the end-of-day wait has NOT elapsed,
-so the card should still be impeded (hidden from the ready queue).
+validate_waiting_overlay(end-of-day) overdue = False  (want False)
+validate_waiting_overlay(elapsed)    overdue = True  (want True)
 
-FAIL: end-of-day datetime wait un-defers ~16h early — time component dropped.
+PASS: end-of-day datetime wait still impedes and is not flagged overdue early.
 ```
 
 ## Why it matters
@@ -110,21 +112,26 @@ Symmetrically, `validate_waiting_overlay` will *not* flag the wait as an
 elapsed SLE-escalation at the right moment either, since it rounds the same
 way.
 
-## Fix
+## Fix (applied)
 
-In `waiting_impedes`, compare against the wall clock at full precision instead
-of truncating to a civil date. Parse `waiting_until` as a datetime (treating a
-bare `YYYY-MM-DD` as midnight UTC of that day) and compare to `datetime.now(tz=utc)`
-(injectable, paralleling the existing `today=` test hook — likely a `now=`
-parameter). This is backward-compatible: a bare date `2026-05-27` becomes
-`2026-05-27T00:00:00Z`, so it clears at the start of the 27th exactly as today.
-Mirror the same change in `validate_waiting_overlay`'s elapsed-wait branch so
-the read guard and the validator agree.
+`waiting_impedes` and `validate_waiting_overlay` now compare at full timestamp
+precision instead of truncating to a civil date. A new
+`_waiting_until_instant` helper (`goc/engine.py`) parses `waiting_until` into a
+UTC instant — a bare `YYYY-MM-DD` becomes midnight UTC of that day, a
+`YYYY-MM-DDTHH:MM:SSZ` is honored at full precision — and returns `None` for
+anything `_is_iso_date` rejects (the malformed backstop is preserved). A
+companion `_now_instant` resolves the comparison instant: `None` → the live
+clock (`datetime.now(tz=utc)`), a `datetime` → that instant, and a plain `date`
+(the legacy `today=` test hook) → midnight UTC of that day. Both guards compare
+`until_dt > now`, so the read guard and the validator agree on when a deferral
+has elapsed.
+
+Backward-compatible: a bare date `2026-05-27` becomes `2026-05-27T00:00:00Z`, so
+it clears at the start of the 27th exactly as before, and every existing
+`today=<date>` caller keeps its date-vs-date semantics.
 
 (An alternative framing — *reject* the datetime shape for `waiting_until` and
 keep date granularity — was considered but rejected: it would break the
 already-accepted input contract and the `goc wait --until` help text, and
 date-precision deferral is strictly less expressive. Honoring the timestamp is
 the lower-surprise, backward-compatible fix.)
-
-**Do NOT apply the fix in this card filing.**

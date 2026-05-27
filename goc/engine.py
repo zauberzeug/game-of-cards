@@ -697,6 +697,51 @@ def _date_part(value) -> str:
     return str(value)
 
 
+def _waiting_until_instant(value) -> datetime | None:
+    """Parse an ISO date/datetime `waiting_until` into a UTC instant.
+
+    A bare date `YYYY-MM-DD` becomes midnight UTC of that day, so a
+    date-only deferral clears at the start of its named day exactly as
+    before. A datetime `YYYY-MM-DDTHH:MM:SSZ` is honored at full
+    precision — the read-time guard no longer rounds the time component
+    away. Returns None for anything `_is_iso_date` rejects (the
+    malformed-value backstop in `waiting_impedes`).
+
+    `strptime` rather than `datetime.fromisoformat` because the latter
+    only accepts the trailing `Z` on Python 3.11+, while this package
+    supports 3.10.
+    """
+    if not _is_iso_date(value):
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, date):
+        dt = datetime(value.year, value.month, value.day)
+    elif _ISO_DATETIME_UTC_RE.match(value):
+        dt = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    else:
+        d = date.fromisoformat(value)
+        dt = datetime(d.year, d.month, d.day)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _now_instant(today: "date | datetime | None") -> datetime:
+    """Resolve the comparison instant for the read-time wait guards.
+
+    `None` → the live wall clock (`datetime.now(tz=utc)`), the production
+    path. A `datetime` is used at full precision. A plain `date` (the
+    legacy `today=` test hook) is interpreted as midnight UTC of that day,
+    preserving the date-vs-date semantics every existing caller relies on.
+    """
+    if today is None:
+        return datetime.now(tz=timezone.utc)
+    if isinstance(today, datetime):
+        return today if today.tzinfo is not None else today.replace(tzinfo=timezone.utc)
+    return datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
+
+
 LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")
 ADVANCE_REL_FIELDS = frozenset({"advances", "advanced_by"})
 SUPERSEDE_REL_FIELDS = frozenset({"supersedes", "superseded_by"})
@@ -1359,15 +1404,20 @@ class BlockerWarning:
         return f"WARN {self.klass} {self.card}: {self.detail}"
 
 
-def validate_waiting_overlay(cards: list[Card], *, today: date | None = None) -> list[BlockerWarning]:
+def validate_waiting_overlay(cards: list[Card], *, today: "date | datetime | None" = None) -> list[BlockerWarning]:
     """Surface elapsed-wait impediments — the Kanban SLE escalation signal.
 
     A non-terminal card whose `waiting_until` is in the past has overrun
     its expected return; the wait is no longer plausibly self-clearing
     and should be re-triaged. Closed cards are exempt (the historical
     date is a record, not an SLE).
+
+    The elapsed test uses the same full-timestamp comparison as
+    `waiting_impedes`: a datetime-form wait is not reported as overdue
+    until its named instant actually passes, so the read guard and this
+    validator agree on when a deferral has elapsed.
     """
-    today = today or _utc_today()
+    now = _now_instant(today)
     warnings: list[BlockerWarning] = []
     for c in cards:
         if c.status in TERMINAL_STATUSES:
@@ -1376,21 +1426,21 @@ def validate_waiting_overlay(cards: list[Card], *, today: date | None = None) ->
         if until is None:
             continue
         # Skip values the frontmatter validator already rejects rather than
-        # parsing them by prefix-truncation: _date_part would turn garbage
-        # like "2026-05-20xx" into a valid past date and emit a spurious
-        # WAITING_OVERDUE. The invalid shape is surfaced by the main
-        # frontmatter validation, not here.
-        if not _is_iso_date(until):
+        # parsing them by prefix-truncation: a garbage value like
+        # "2026-05-20xx" would otherwise turn into a valid past date and emit
+        # a spurious WAITING_OVERDUE. The invalid shape is surfaced by the
+        # main frontmatter validation, not here.
+        until_dt = _waiting_until_instant(until)
+        if until_dt is None:
             continue
-        until_date = date.fromisoformat(_date_part(until))
-        if until_date >= today:
+        if until_dt > now:
             continue
         reason = c.waiting_on or "deferred"
         warnings.append(BlockerWarning(
             "WAITING_OVERDUE",
             c.title,
-            f"waiting_on={reason} waiting_until={until_date.isoformat()} "
-            f"elapsed {(today - until_date).days}d ago — re-triage or clear",
+            f"waiting_on={reason} waiting_until={until_dt.date().isoformat()} "
+            f"elapsed {(now - until_dt).days}d ago — re-triage or clear",
         ))
     return warnings
 
@@ -1641,7 +1691,7 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     return True
 
 
-def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
+def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bool:
     """True iff the card carries an active impediment overlay.
 
     Two stored signals contribute:
@@ -1649,41 +1699,45 @@ def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
     - A `waiting_on` reason without an elapsed `waiting_until` means the
       block is ongoing (no expected return date, or the date is in the
       future) and the card is hidden from queues.
-    - A bare `waiting_until` in the future implies a `deferred` wait and
-      hides the card until that date passes.
+    - A `waiting_until` in the future implies a `deferred` wait and
+      hides the card until that instant passes.
 
     When `waiting_until` is in the past (elapsed), the card RE-ENTERS the
     queue with no manual action — the elapsed-wait is then surfaced
     separately by `validate_waiting_overlay` as an SLE escalation signal.
+
+    `waiting_until` is compared at full timestamp precision: a datetime
+    shape (`YYYY-MM-DDTHH:MM:SSZ`) clears at its named instant, not at
+    the start of its civil day. A bare date `YYYY-MM-DD` is midnight UTC,
+    so date-only deferrals clear exactly as before. The `today=` hook
+    accepts a `date` (the legacy form, read as midnight UTC) or a
+    `datetime` (a precise instant) for tests; default is the live clock.
     """
-    today = today or _utc_today()
+    now = _now_instant(today)
     reason = card.waiting_on
     until = card.waiting_until
-    until_date: date | None = None
+    until_dt: datetime | None = None
     until_unparseable = False
     if until is not None:
-        if _is_iso_date(until):
-            until_date = date.fromisoformat(_date_part(until))
-        else:
+        until_dt = _waiting_until_instant(until)
+        if until_dt is None:
             # Malformed date: a present-but-unparseable waiting_until signals
             # deferral intent we cannot evaluate. Err on the side of impeding
             # so the card is not silently un-deferred — for a bare deferral
             # (no reason) as well as alongside a waiting_on. `goc validate`
             # is the upstream net (rejects calendar-impossible shapes); this
             # is the read-time backstop for pre-validate / hand-edited decks.
-            # Gate on _is_iso_date — not just a fromisoformat try/except —
-            # because _date_part prefix-truncates, so garbage whose first 10
-            # chars happen to be a valid date ("2026-05-20xx") would parse
-            # cleanly and slip past the backstop.
-            until_date = None
+            # `_waiting_until_instant` gates on _is_iso_date — not a bare
+            # parse try/except — so garbage whose first 10 chars happen to be
+            # a valid date ("2026-05-20xx") does not slip past the backstop.
             until_unparseable = True
-    if reason is None and until_date is None:
+    if reason is None and until_dt is None:
         return until_unparseable
-    if until_date is None:
+    if until_dt is None:
         # Reason set, no date — open-ended wait; hide from queue.
         return True
-    # Future date hides; elapsed date resurfaces the card.
-    return until_date > today
+    # Future instant hides; elapsed instant resurfaces the card.
+    return until_dt > now
 
 # GRPW sort: per-card contribution composes through the `advances` graph
 # into a `value` score with Bellman discount γ per hop. See
