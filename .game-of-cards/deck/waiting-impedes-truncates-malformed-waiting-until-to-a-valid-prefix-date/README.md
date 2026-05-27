@@ -1,20 +1,20 @@
 ---
 title: waiting-impedes-truncates-malformed-waiting-until-to-a-valid-prefix-date
 summary: "The read-time guard `waiting_impedes` parses `waiting_until` via `_date_part`, which prefix-truncates any >=10-char string to its first 10 chars. A malformed value like `2026-05-20xx` (which `goc validate` rejects) parses cleanly to a past date and silently un-defers the card, re-entering the pull queue. This defeats the impede-on-malformed backstop installed by the closed sibling card, whose fix relies on `date.fromisoformat` raising — which truncation prevents."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T03:18:36Z"
-closed_at: null
+closed_at: 2026-05-27T03:23:42Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (prefix-valid garbage like `2026-05-20xx` reports `impeded=True`, same as total garbage and bare-reason).
-  - [ ] TDD: fix in `goc/engine.py` `waiting_impedes` — treat a `waiting_until` the validator would reject (fails `_is_iso_date` / the anchored ISO shape) as unparseable, falling through to `until_unparseable=True` instead of accepting a truncated prefix.
-  - [ ] TDD: `validate_waiting_overlay` mirrors the same strictness — a value rejected by `_is_iso_date` does not silently `continue` as if absent (decide: skip vs. surface, but do not parse-by-truncation).
-  - [ ] TDD: no behavior change for valid date-only, valid datetime-UTC, future, and elapsed `waiting_until`, nor for the bare-reason / no-overlay paths.
+  - [x] TDD: reproduce.py exits zero (prefix-valid garbage like `2026-05-20xx` reports `impeded=True`, same as total garbage and bare-reason).
+  - [x] TDD: fix in `goc/engine.py` `waiting_impedes` — treat a `waiting_until` the validator would reject (fails `_is_iso_date` / the anchored ISO shape) as unparseable, falling through to `until_unparseable=True` instead of accepting a truncated prefix.
+  - [x] TDD: `validate_waiting_overlay` mirrors the same strictness — a value rejected by `_is_iso_date` does not silently `continue` as if absent (decide: skip vs. surface, but do not parse-by-truncation).
+  - [x] TDD: no behavior change for valid date-only, valid datetime-UTC, future, and elapsed `waiting_until`, nor for the bare-reason / no-overlay paths.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -81,7 +81,12 @@ guards (`waiting_impedes`, `validate_waiting_overlay`) call `_date_part`
 directly on raw frontmatter with no prior shape check, so the lenient
 truncation leaks through.
 
-## Empirical evidence
+## Empirical evidence (resolved)
+
+Before the fix the prefix-valid garbage silently un-deferred the card
+(`impeded=False`) while total garbage and bare-reason both impeded. After
+gating the parse on `_is_iso_date`, all three rejected/ongoing inputs impede
+uniformly:
 
 ```
 == input the validator rejects ==
@@ -89,11 +94,9 @@ truncation leaks through.
   _date_part('2026-05-20xx')   = '2026-05-20'
 
 == waiting_impedes (today = 2026-05-27) ==
-  prefix-garbage '2026-05-20xx' -> impeded=False  (EXPECTED True)
+  prefix-garbage '2026-05-20xx' -> impeded=True  (EXPECTED True)
   total-garbage  'not-a-date'   -> impeded=True  (control: True)
   no date, reason set           -> impeded=True  (control: True)
-
-DEFECT CONFIRMED: prefix-valid garbage un-defers the card (impeded=False) while total garbage and bare-reason both impede.
 ```
 
 ## Why it matters
@@ -107,15 +110,20 @@ timezone-ish suffix, a date with an appended comment). A hand-edited card with
 `waiting_on: external` and such a value silently rejoins the `pull-card` /
 `next-card` queue — a card the human meant to defer gets autonomously pulled.
 
-## Fix
+## Fix (applied)
 
-Make the read-time guard mirror the validator's strictness rather than parsing
-by truncation. In `waiting_impedes`, gate the parse on the same full-string
-shape the validator uses — e.g. treat the value as unparseable when
-`_is_iso_date(until)` is false (set `until_unparseable = True`), only calling
-`_date_part`/`fromisoformat` once the shape is confirmed. Apply the same gate
-in `validate_waiting_overlay` so a rejected value is not parsed via its prefix.
-A narrower alternative is to tighten `_date_part` itself to refuse truncation
-of non-ISO-shaped strings, but that helper is also used in safe post-regex
-contexts, so gating at the two read-time call sites is lower-risk. **Do not
-apply the fix** — this card flags it; `pull-card` implements.
+Both read-time guards now gate the parse on `_is_iso_date(until)` before
+calling `_date_part`/`fromisoformat`, mirroring the validator's full-string
+strictness rather than parsing by truncation:
+
+- `waiting_impedes` routes a value that fails `_is_iso_date` into the
+  `until_unparseable = True` branch (impedes), so prefix-valid garbage like
+  `2026-05-20xx` no longer un-defers the card.
+- `validate_waiting_overlay` skips a value that fails `_is_iso_date`
+  (`continue`) instead of parsing its truncated prefix, so it never emits a
+  spurious `WAITING_OVERDUE`. The malformed shape is surfaced by the main
+  frontmatter validator, not re-reported here.
+
+The narrower alternative — tightening `_date_part` itself — was rejected:
+that helper is also used in safe post-regex contexts (e.g. inside
+`_is_iso_date`), so gating at the two read-time call sites is lower-risk.

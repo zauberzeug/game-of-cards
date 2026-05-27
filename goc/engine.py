@@ -1375,10 +1375,14 @@ def validate_waiting_overlay(cards: list[Card], *, today: date | None = None) ->
         until = c.waiting_until
         if until is None:
             continue
-        try:
-            until_date = date.fromisoformat(_date_part(until))
-        except (TypeError, ValueError):
+        # Skip values the frontmatter validator already rejects rather than
+        # parsing them by prefix-truncation: _date_part would turn garbage
+        # like "2026-05-20xx" into a valid past date and emit a spurious
+        # WAITING_OVERDUE. The invalid shape is surfaced by the main
+        # frontmatter validation, not here.
+        if not _is_iso_date(until):
             continue
+        until_date = date.fromisoformat(_date_part(until))
         if until_date >= today:
             continue
         reason = c.waiting_on or "deferred"
@@ -1658,15 +1662,19 @@ def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
     until_date: date | None = None
     until_unparseable = False
     if until is not None:
-        try:
+        if _is_iso_date(until):
             until_date = date.fromisoformat(_date_part(until))
-        except (TypeError, ValueError):
+        else:
             # Malformed date: a present-but-unparseable waiting_until signals
             # deferral intent we cannot evaluate. Err on the side of impeding
             # so the card is not silently un-deferred — for a bare deferral
             # (no reason) as well as alongside a waiting_on. `goc validate`
             # is the upstream net (rejects calendar-impossible shapes); this
             # is the read-time backstop for pre-validate / hand-edited decks.
+            # Gate on _is_iso_date — not just a fromisoformat try/except —
+            # because _date_part prefix-truncates, so garbage whose first 10
+            # chars happen to be a valid date ("2026-05-20xx") would parse
+            # cleanly and slip past the backstop.
             until_date = None
             until_unparseable = True
     if reason is None and until_date is None:
