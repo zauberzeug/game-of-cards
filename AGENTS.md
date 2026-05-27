@@ -25,14 +25,19 @@ uv sync                            # install dev environment
 uv pip install --system -e .       # editable install (what CI does)
 uv run goc --help                  # exercise the CLI from source
 uv run goc validate                # check every card's frontmatter
+uv run python -m unittest discover -s tests  # run the regression suite
 uv build                           # produce wheel + sdist in dist/
 pre-commit run --all-files         # sync plugin assets + goc validate
 python scripts/sync_plugin_assets.py --check  # verify claude-plugin/ is in sync
 ```
 
-No pytest suite exists yet. `.github/workflows/ci.yml` is a
-build + console-script + `goc validate` smoke matrix on Python
-3.10-3.13; the validation step is what gates card-frontmatter drift.
+`tests/` is a stdlib `unittest`-based regression suite (run it locally
+with `uv run python -m unittest discover -s tests`; it also passes under
+pytest). `.github/workflows/ci.yml` is a build + console-script +
+regression-test + `goc validate` matrix on Python 3.10-3.13: the
+`Run regression tests` step (`uv run python -m unittest discover -s
+tests`) gates code correctness, and the validation step gates
+card-frontmatter drift.
 
 Releases publish to three registries — PyPI, npm, ClawHub — all via
 OIDC trusted publishing. No long-lived tokens in repo secrets; each
