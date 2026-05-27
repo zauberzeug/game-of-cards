@@ -578,6 +578,34 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             config = (cwd / ".game-of-cards" / "config.yaml").read_text()
             self.assertIn("\nskills_source: vendored\n", config)
 
+    def test_write_skills_source_preserves_blank_separators_and_comments(self) -> None:
+        """Regression: the rewrite regex must not back-consume blank lines.
+
+        `[#\\s]*` matched `\\n` under MULTILINE, so `pattern.sub` ate the
+        blank-line separators (and a preceding comment body) above the key —
+        falsifying the docstring's "preserves comments and ordering" promise.
+        """
+        from goc.install import _write_skills_source
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.parent.mkdir(parents=True)
+
+            config_path.write_text("auto_commit: true\n\n\nskills_source: auto\n")
+            _write_skills_source(cwd, "plugin")
+            self.assertEqual(
+                config_path.read_text(),
+                "auto_commit: true\n\n\nskills_source: plugin\n",
+            )
+
+            config_path.write_text("# top comment\n\n# skills_source: vendored\n")
+            _write_skills_source(cwd, "plugin")
+            self.assertEqual(
+                config_path.read_text(),
+                "# top comment\n\nskills_source: plugin\n",
+            )
+
     def test_plugin_mode_upgrade_preserves_non_goc_skills(self) -> None:
         """Regression: upgrade in plugin mode must not delete user-owned skills.
 

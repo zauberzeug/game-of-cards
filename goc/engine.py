@@ -1172,6 +1172,9 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     if closed_at is not None and not _is_iso_date(closed_at):
         errors.append(f"{t.title}: closed_at: {closed_at!r} not null/ISO date/datetime")
 
+    if "definition_of_done" in fm and not isinstance(fm["definition_of_done"], str):
+        errors.append(f"{t.title}: definition_of_done: must be a string")
+
     tags = fm.get("tags") or []
     if not isinstance(tags, list):
         errors.append(f"{t.title}: tags: must be a list")
