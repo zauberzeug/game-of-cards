@@ -685,6 +685,10 @@ def _utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _utc_today() -> date:
+    return datetime.now(tz=timezone.utc).date()
+
+
 def _date_part(value) -> str:
     if isinstance(value, date):
         return value.isoformat()
@@ -1363,7 +1367,7 @@ def validate_waiting_overlay(cards: list[Card], *, today: date | None = None) ->
     and should be re-triaged. Closed cards are exempt (the historical
     date is a record, not an SLE).
     """
-    today = today or date.today()
+    today = today or _utc_today()
     warnings: list[BlockerWarning] = []
     for c in cards:
         if c.status in TERMINAL_STATUSES:
@@ -1648,7 +1652,7 @@ def waiting_impedes(card: Card, *, today: date | None = None) -> bool:
     queue with no manual action — the elapsed-wait is then surfaced
     separately by `validate_waiting_overlay` as an SLE escalation signal.
     """
-    today = today or date.today()
+    today = today or _utc_today()
     reason = card.waiting_on
     until = card.waiting_until
     until_date: date | None = None
@@ -4170,7 +4174,7 @@ def _cmd_triage(args):
         cards = [t for t in all_cards if needle in _worker_who(t.frontmatter.get("worker")).lower()]
     else:
         cards = all_cards
-    today = date.today()
+    today = _utc_today()
 
     def aged_days(t: Card) -> int:
         try:
