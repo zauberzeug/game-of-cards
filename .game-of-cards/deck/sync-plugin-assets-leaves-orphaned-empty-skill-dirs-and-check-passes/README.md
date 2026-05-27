@@ -1,19 +1,19 @@
 ---
 title: sync-plugin-assets-leaves-orphaned-empty-skill-dirs-and-check-passes
 summary: "When a source skill directory under goc/templates/skills/ is renamed or removed, scripts/sync_plugin_assets.py prunes the orphaned FILES from the claude-plugin/ and codex-plugin/ mirrors but never rmdir's the now-empty skill directory. The `--check` mode walks rglob and skips directories, so it reports OK while a stale empty dir remains and ships in any wheel/tarball copy of the payload (git masks empty dirs, so the auto-stage commits cleanly). The OpenClaw porter does this correctly (shutil.rmtree). Parked unverified pending a reproduce.py."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T04:04:34Z"
-closed_at: null
+closed_at: 2026-05-27T05:42:43Z
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, infra, unverified]
+tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — after a source skill dir is removed and sync runs, the corresponding claude-plugin/ and codex-plugin/ skill dirs are gone (no empty orphan), and `--check` FAILs while one remains.
-  - [ ] TDD: removing only some files from a skill dir still syncs correctly (no over-eager rmdir of a dir that still has synced content).
-  - [ ] PROCESS: confirm-or-disprove recorded in log.md; drop the `unverified` tag once reproduce.py lands.
+  - [x] TDD: reproduce.py exits zero — after a source skill dir is removed and sync runs, the corresponding claude-plugin/ and codex-plugin/ skill dirs are gone (no empty orphan), and `--check` FAILs while one remains.
+  - [x] TDD: removing only some files from a skill dir still syncs correctly (no over-eager rmdir of a dir that still has synced content).
+  - [x] PROCESS: confirm-or-disprove recorded in log.md; drop the `unverified` tag once reproduce.py lands.
 worker: {who: "claude[bot]", where: main}
 ---
 

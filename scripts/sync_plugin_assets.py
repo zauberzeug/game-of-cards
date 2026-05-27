@@ -296,6 +296,25 @@ def _sync_dir(
                 except OSError:
                     pass
 
+    # Prune directories left empty because their source was renamed or removed.
+    # Without this, a dst skill dir whose template vanished lingers as an empty
+    # orphan: git does not track empty dirs, so the auto-stage commits "cleanly"
+    # while the stale dir persists and ships in any wheel/tarball copy of the
+    # payload. Walk depth-first (reverse sort) so nested empties collapse
+    # bottom-up; rmdir is self-guarding (fails on non-empty), and the src-exists
+    # guard preserves dirs that legitimately mirror an empty src dir.
+    if dst.exists():
+        for item in sorted(dst.rglob("*"), reverse=True):
+            if not item.is_dir() or _skip(item):
+                continue
+            rel = item.relative_to(dst)
+            if (src / rel).exists() and not _excluded(rel, excludes):
+                continue
+            try:
+                item.rmdir()
+            except OSError:
+                pass
+
     return changed
 
 
@@ -364,6 +383,21 @@ def _sync_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = frozen
             dst_item.write_text(expected)
             changed.append(dst_item)
 
+    # Prune empty orphan dirs (a skill dir whose source was removed or made
+    # ineligible). Same rationale as `_sync_dir`: git masks empty dirs so they
+    # rot silently in the payload otherwise.
+    if dst.exists():
+        for item in sorted(dst.rglob("*"), reverse=True):
+            if not item.is_dir() or _skip(item):
+                continue
+            rel = item.relative_to(dst)
+            if rel.parts and rel.parts[0] in eligible and (src / rel).exists():
+                continue
+            try:
+                item.rmdir()
+            except OSError:
+                pass
+
     return changed
 
 
@@ -391,9 +425,18 @@ def _check_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = froze
 
     if dst.exists():
         for dst_item in sorted(dst.rglob("*")):
-            if _skip(dst_item) or dst_item.is_dir():
+            if _skip(dst_item):
                 continue
             rel = dst_item.relative_to(dst)
+            if dst_item.is_dir():
+                is_orphan = (
+                    not rel.parts
+                    or rel.parts[0] not in eligible
+                    or not (src / rel).exists()
+                )
+                if is_orphan and not any(dst_item.iterdir()):
+                    out.append(dst_item)
+                continue
             if rel.as_posix() in preserve_files:
                 continue
             if not rel.parts or rel.parts[0] not in eligible or not (src / rel).exists():
@@ -435,9 +478,18 @@ def _check_changes() -> list[Path]:
                     out.append(dst_item)
             if dst.exists():
                 for dst_item in sorted(dst.rglob("*")):
-                    if _skip(dst_item) or dst_item.is_dir():
+                    if _skip(dst_item):
                         continue
                     rel = dst_item.relative_to(dst)
+                    if dst_item.is_dir():
+                        # An empty dir with no src counterpart (or an excluded
+                        # one) is an orphan the sync should have pruned. Flag it
+                        # so CI fails — rglob skips dirs by default, which is the
+                        # blind spot that let empty orphans ship silently.
+                        is_orphan = _excluded(rel, excludes) or not (src / rel).exists()
+                        if is_orphan and not any(dst_item.iterdir()):
+                            out.append(dst_item)
+                        continue
                     if rel.as_posix() in preserve_files:
                         continue
                     if _excluded(rel, excludes):
