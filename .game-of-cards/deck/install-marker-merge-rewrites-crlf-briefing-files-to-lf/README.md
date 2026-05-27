@@ -1,7 +1,7 @@
 ---
 title: install-marker-merge-rewrites-crlf-briefing-files-to-lf
 summary: "`goc install`/`goc upgrade` merge their guidance block into AGENTS.md/CLAUDE.md via `_append_marker_block`, which reads with `Path.read_text()` and writes with `Path.write_text()`. Both apply universal-newline translation, so a CRLF-authored briefing file has its ENTIRE contents — including the user's text outside the GoC markers — silently normalized to LF on every run. The documented contract promises content outside the markers is preserved; the line-ending bytes are not."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T08:17:24Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits non-zero — a CRLF-authored AGENTS.md keeps its CRLF line endings (CR-byte count unchanged) after a marker merge, including user content outside the GoC block.
   - [ ] MECHANICAL: `_append_marker_block`, `_strip_goc_block`, and `_strip_claude_import` (`goc/install.py`) preserve the file's existing newline convention rather than forcing LF (e.g. read bytes / detect the dominant newline and re-emit it, or read with `newline=""` and write back with the detected ending). The GoC block content itself may use the file's detected ending.
   - [ ] PROCESS: the behavior is consistent with the AGENTS.md "content above or below those markers is preserved" guarantee — verify no other install/upgrade write-path silently re-encodes newlines.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Marker-merge rewrites a CRLF-authored briefing file to LF
