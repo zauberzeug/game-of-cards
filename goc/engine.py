@@ -2319,7 +2319,7 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.")
     parser.add_argument("--ready", action="store_true",
                         help="Filter to ready-to-pull cards (status open, human_gate none, "
-                        "no non-terminal advanced_by prereqs). Defaults --status to open.")
+                        "no active waiting_on impediment). Defaults --status to open.")
     parser.add_argument("-v", dest="verbose", action="count", default=0,
                         help="-v adds STAGE/CREATED columns + summary line; -vv inlines DoD checklist + cross-refs.")
     parser.add_argument("--json", dest="as_json", action="store_true",

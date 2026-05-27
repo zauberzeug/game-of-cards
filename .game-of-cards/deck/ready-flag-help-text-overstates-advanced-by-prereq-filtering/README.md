@@ -1,19 +1,19 @@
 ---
 title: ready-flag-help-text-overstates-advanced-by-prereq-filtering
 summary: "The `goc --ready` CLI help text claims the filter excludes cards with 'no non-terminal advanced_by prereqs', but the predicate it actually calls (`card_is_ready`) was deliberately changed to ignore `advanced_by` entirely. The help is stale documentation left behind when `make-advances-gate-closure-not-the-pull-queue` reversed the semantics — a reader trusting `--help` expects prereq-blocked cards hidden; they are not."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T06:10:26Z"
-closed_at: null
+closed_at: 2026-05-27T06:18:11Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (the `--ready` help string no longer claims advanced_by prereq filtering, and the claim matches `card_is_ready`'s actual behaviour).
-  - [ ] MECHANICAL: the `--ready` argparse help at `goc/engine.py:2319-2321` is rewritten to describe the real predicate (status open, human_gate none, no active waiting_on impediment) — `advanced_by` prereqs are advisory only and do NOT gate readiness.
-  - [ ] MECHANICAL: plugin mirrors synced if any (this string lives only in `goc/engine.py`, which is mirrored byte-for-byte into the plugin payloads); `uv run goc validate` clean.
+  - [x] TDD: reproduce.py exits zero (the `--ready` help string no longer claims advanced_by prereq filtering, and the claim matches `card_is_ready`'s actual behaviour).
+  - [x] MECHANICAL: the `--ready` argparse help at `goc/engine.py:2319-2321` is rewritten to describe the real predicate (status open, human_gate none, no active waiting_on impediment) — `advanced_by` prereqs are advisory only and do NOT gate readiness.
+  - [x] MECHANICAL: plugin mirrors synced if any (this string lives only in `goc/engine.py`, which is mirrored byte-for-byte into the plugin payloads); `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
