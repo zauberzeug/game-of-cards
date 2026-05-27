@@ -348,10 +348,16 @@ def _split_flow(text: str) -> list[str]:
     depth = 0
     in_q: str | None = None
     buf: list[str] = []
+    escaped = False
     for c in text:
-        if in_q:
+        if escaped:
             buf.append(c)
-            if c == in_q:
+            escaped = False
+        elif in_q:
+            buf.append(c)
+            if c == "\\" and in_q == '"':
+                escaped = True  # double-quoted YAML escapes the next char
+            elif c == in_q:
                 in_q = None
         elif c in ('"', "'"):
             in_q = c
@@ -377,9 +383,14 @@ def _split_flow(text: str) -> list[str]:
 def _split_key(bare: str) -> tuple[str | None, str]:
     """Split 'key: rest' → ('key', 'rest'). Returns (None, '') if not kv."""
     in_q: str | None = None
+    escaped = False
     for i, c in enumerate(bare):
-        if in_q:
-            if c == in_q:
+        if escaped:
+            escaped = False
+        elif in_q:
+            if c == "\\" and in_q == '"':
+                escaped = True  # double-quoted YAML escapes the next char
+            elif c == in_q:
                 in_q = None
         elif c in ('"', "'"):
             in_q = c

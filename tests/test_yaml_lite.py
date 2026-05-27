@@ -219,6 +219,39 @@ worker: {who: "claude[bot]", where: main}
         self.assertEqual(data["worker"], {"who": "claude[bot]", "where": "main"})
 
 
+class EscapedQuoteFlowSplitTest(unittest.TestCase):
+    """_split_flow / _split_key must honor backslash escapes inside double
+    quotes, so an emitter-produced `\\"` is not seen as a delimiting quote and
+    the structural comma after it is not swallowed."""
+
+    def test_flow_mapping_value_with_escaped_quote(self):
+        # The `where` key must survive; `who` must dequote exactly.
+        self.assertEqual(
+            safe_load('worker: {who: "a\\"", where: b}\n')["worker"],
+            {"who": 'a"', "where": "b"},
+        )
+
+    def test_flow_sequence_element_with_escaped_quote(self):
+        self.assertEqual(
+            safe_load('sample: ["a\\"", "b"]\n')["sample"],
+            ['a"', "b"],
+        )
+
+    def test_block_key_with_escaped_quote_in_quoted_value(self):
+        # _split_key shares the same quote loop; an escaped quote inside a
+        # double-quoted value must not terminate quote mode early.
+        self.assertEqual(safe_load('k: "a\\"b"\n')["k"], 'a"b')
+
+    def test_engine_round_trip_worker_with_quote(self):
+        from goc import engine as e
+
+        worker = {"who": 'a"', "where": "b"}
+        text = e.emit_frontmatter(
+            {"title": "t", "status": "open", "worker": worker}, body="x"
+        )
+        self.assertEqual(e.parse_frontmatter(text)[0]["worker"], worker)
+
+
 class DeckRoundTripTest(unittest.TestCase):
     """Parse every README.md in the real deck and verify key fields are present."""
 
