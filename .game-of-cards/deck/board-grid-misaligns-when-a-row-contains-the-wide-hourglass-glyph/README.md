@@ -1,7 +1,7 @@
 ---
 title: board-grid-misaligns-when-a-row-contains-the-wide-hourglass-glyph
 summary: "`goc --board` computes column widths with `len()`, which counts the impediment marker `⏳` (U+23F3, East-Asian-width Wide) as 1 codepoint though terminals render it 2 columns wide. Every row bearing the marker is shifted one display column right of the header, skewing the grid. UNVERIFIED: hunter measured the offset but no reproduce.py written yet."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T09:50:39Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py builds a board column with one `⏳`-bearing row and one plain row, and asserts the first `|` separator lands at the same display column on both (currently off by one).
   - [ ] TDD: rows without the marker remain aligned (no regression).
   - [ ] MECHANICAL: column width + cell padding use a display-width measure (East-Asian-width aware) instead of `len()` for the marked cells.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # board grid misaligns when a row contains the wide `⏳` glyph
