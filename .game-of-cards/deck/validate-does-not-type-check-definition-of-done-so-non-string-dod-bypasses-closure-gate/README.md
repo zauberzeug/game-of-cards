@@ -1,7 +1,7 @@
 ---
 title: validate-does-not-type-check-definition-of-done-so-non-string-dod-bypasses-closure-gate
 summary: "`validate_card` type-checks `tags` (must be a list) but never checks that `definition_of_done` is a string. A card hand-edited to `definition_of_done: []` or `null` validates clean, `count_dod_boxes` returns (0,0) → `dod_freeform` True, so the closure gate treats it as prose and lets `goc done --force` close it with zero verified criteria."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T13:27:23Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py shows a card with `definition_of_done: []` (or `null`) passing `goc validate` today, then failing it after the fix
   - [ ] MECHANICAL: `validate_card` rejects a non-string `definition_of_done` with a clear message (mirroring the existing `tags: must be a list` check)
   - [ ] PROCESS: drop the `unverified` tag once the reproduce.py lands and confirms the gap
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc validate` never type-checks `definition_of_done`; a non-string DoD bypasses the closure gate
