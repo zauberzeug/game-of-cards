@@ -1,20 +1,20 @@
 ---
 title: agents-md-architecture-section-cites-removed-click-and-omits-verbs
 summary: "AGENTS.md's `## Code architecture` section is stale on two facts: it calls `goc/cli.py` a \"thin Click entry point\" that \"imports the engine's Click group\", but Click was fully removed for argparse (closed `replace-click-with-argparse`, 2026-05-09); and it lists only 12 of the engine's 16 verbs, omitting `wait`, `repair-edges`, `migrate`, and `migrate-list-style`. Mechanical doc-sync, no code change."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-27T12:11:31Z"
-closed_at: null
+closed_at: 2026-05-27T13:18:02Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: AGENTS.md `goc/cli.py` bullet no longer says "Click"; it describes the argparse wiring (builds the argparse parser via `_build_parser`, bolts on `install`/`upgrade`, adds `--version`).
-  - [ ] MECHANICAL: AGENTS.md `goc/engine.py` verb list includes `wait`, `repair-edges`, `migrate`, and `migrate-list-style` (or is reworded so it no longer claims an exhaustive "every verb except install/upgrade (...)" list while omitting them).
-  - [ ] TDD: a check confirms `click` appears in neither `goc/cli.py` nor AGENTS.md's cli bullet, and that every engine subcommand from `goc --help` (minus install/upgrade) is accounted for in the AGENTS.md passage.
-  - [ ] PROCESS: plugin-asset sync `--check` green and `goc validate` clean after the edit (AGENTS.md is not auto-synced, but verify nothing else drifted).
+  - [x] MECHANICAL: AGENTS.md `goc/cli.py` bullet no longer says "Click"; it describes the argparse wiring (builds the argparse parser via `_build_parser`, bolts on `install`/`upgrade`, adds `--version`).
+  - [x] MECHANICAL: AGENTS.md `goc/engine.py` verb list includes `wait`, `repair-edges`, `migrate`, and `migrate-list-style` (or is reworded so it no longer claims an exhaustive "every verb except install/upgrade (...)" list while omitting them).
+  - [x] TDD: a check confirms `click` appears in neither `goc/cli.py` nor AGENTS.md's cli bullet, and that every engine subcommand from `goc --help` (minus install/upgrade) is accounted for in the AGENTS.md passage.
+  - [x] PROCESS: plugin-asset sync `--check` green and `goc validate` clean after the edit (AGENTS.md is not auto-synced, but verify nothing else drifted).
 worker: {who: "claude[bot]", where: main}
 ---
 
