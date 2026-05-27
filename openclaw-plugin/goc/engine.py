@@ -2040,16 +2040,20 @@ def _format_why(path: list[str], by_title: dict[str, Card]) -> str:
         return ""
     if path == ["cycle"]:
         return "(cycle)"
+    suffix = ""
     if path[-1] == "self":
         path = path[:-1]
+    elif path[-1] == "cycle":
+        path = path[:-1]
+        suffix = " (cycle)"
     if not path:
-        return ""
+        return suffix.strip()
     parts = []
     for slug in path:
         c = by_title.get(slug)
         contrib = c.contribution if c else "?"
         parts.append(f"→ {slug} ({contrib})")
-    return " ".join(parts)
+    return " ".join(parts) + suffix
 
 
 def render_table(
