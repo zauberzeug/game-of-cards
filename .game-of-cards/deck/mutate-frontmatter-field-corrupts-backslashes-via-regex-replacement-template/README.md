@@ -1,7 +1,7 @@
 ---
 title: mutate-frontmatter-field-corrupts-backslashes-via-regex-replacement-template
 summary: "`mutate_frontmatter_field` interpolates `new_value` into the *replacement* argument of `re.sub` (goc/engine.py:336), which interprets backslash escapes. Combined with `_yaml_inline`'s `\\`→`\\\\` quoting, any value containing a backslash is silently corrupted on round-trip — live via `quality-pass --llm` summary rewrites and `worker` rewrites. Same root-cause shape as the closed install.py card, whose sibling sweep missed this engine site."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-26T23:59:41Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/engine.py:336` no longer passes `new_value` as the `re.sub` *replacement template*; the replacement is made opaque (callable `lambda _: f"{field_name}: {new_value}"`, or equivalent literal-replacement form).
   - [ ] TDD: existing single-line and block-field replacement behavior is unchanged for escape-free values (the `_apply_summary_rewrite`, `worker`, `status`/`closed_at`, and `human_gate` callers still mutate correctly).
   - [ ] PROCESS: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` clean) and `goc validate` clean, since `engine.py` is vendored into the plugin payloads.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # mutate_frontmatter_field corrupts values containing backslashes
