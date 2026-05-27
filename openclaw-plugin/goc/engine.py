@@ -665,9 +665,11 @@ def _is_iso_date(value) -> bool:
     # before "2026-05-10T00:00:00Z" sorts before "2026-05-11".
     #
     # Shape alone is not enough: the consumers parse with the real calendar
-    # (date.fromisoformat), so a calendar-impossible-but-ISO-shaped value
-    # like "2026-13-45" would pass a regex-only check yet raise at read time.
-    # Match the predicate to the parser by also parsing the date portion.
+    # (date.fromisoformat / strptime), so a calendar-impossible-but-ISO-shaped
+    # value like "2026-13-45" or "2026-05-20T25:61:99Z" would pass a regex-only
+    # check yet raise at read time. Match the predicate to the parser by
+    # parsing with the SAME calendar the consumer uses — the full timestamp for
+    # the datetime shape, not just the date prefix.
     if isinstance(value, date):
         return True
     if not isinstance(value, str):
@@ -675,7 +677,10 @@ def _is_iso_date(value) -> bool:
     if not (_ISO_DATE_RE.match(value) or _ISO_DATETIME_UTC_RE.match(value)):
         return False
     try:
-        date.fromisoformat(_date_part(value))
+        if _ISO_DATETIME_UTC_RE.match(value):
+            datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+        else:
+            date.fromisoformat(_date_part(value))
     except ValueError:
         return False
     return True
