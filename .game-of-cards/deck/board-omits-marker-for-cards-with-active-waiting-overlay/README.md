@@ -1,19 +1,19 @@
 ---
 title: board-omits-marker-for-cards-with-active-waiting-overlay
 summary: "The kanban board (`goc --board`) marks dependency-blocked open cards with a ⏳ glyph but gives no marker to a card carrying an active `waiting_on`/future-`waiting_until` impediment overlay. Such a card is hidden from the pull queue by `card_is_ready` yet renders identically to a genuinely pullable card on the board — the primary human triage surface — so a human reading the board cannot tell an impeded card from an available one."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T07:38:40Z"
-closed_at: null
+closed_at: 2026-05-27T07:45:05Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — an open card with an active impediment overlay renders on the board with a distinguishing marker (so it is no longer identical to a pullable card).
-  - [ ] MECHANICAL: `card_cell` in `render_board` (`goc/engine.py`) adds an impediment marker when `waiting_impedes(t)` is true, alongside (and visually distinct from, or shared with) the existing dependency-blocked ⏳.
-  - [ ] PROCESS: the marker semantics are documented wherever the board legend / dependency-block ⏳ is described (deck skill board section, if any), so a reader knows what the glyph means.
+  - [x] TDD: reproduce.py exits zero — an open card with an active impediment overlay renders on the board with a distinguishing marker (so it is no longer identical to a pullable card).
+  - [x] MECHANICAL: `card_cell` in `render_board` (`goc/engine.py`) adds an impediment marker when `waiting_impedes(t)` is true, alongside (and visually distinct from, or shared with) the existing dependency-blocked ⏳.
+  - [x] PROCESS: the marker semantics are documented wherever the board legend / dependency-block ⏳ is described (deck skill board section, if any), so a reader knows what the glyph means.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -106,21 +106,21 @@ overlay was added to fence off. Worse, the dependency-block ⏳ *is* shown,
 so a reader reasonably infers "no glyph ⇒ ready", which is false for
 impeded cards. The board silently under-reports the deck's true state.
 
-## Fix
+## Fix (applied)
 
-In `card_cell`, add an impediment marker driven by `waiting_impedes(t)`,
-e.g. a distinct glyph (a lock/pause) or reuse ⏳ if dependency-block and
-impediment need not be told apart visually. Sketch:
+`card_cell` now emits a single shared "not-ready" glyph (⏳) when a card
+is either dependency-blocked OR carries an active impediment overlay,
+collapsing both signals into one condition so no card gets a doubled
+glyph:
 
 ```python
-if t.status == "open" and dependency_blocked(t, by_title):
+not_ready = (t.status == "open" and dependency_blocked(t, by_title)) or waiting_impedes(t)
+if not_ready:
     marker += " ⏳"
-if waiting_impedes(t):
-    marker += " ⛔"   # or a shared "not-ready" glyph
 ```
 
-Pick one glyph scheme and document it. Whether dependency-block and
-impediment share a glyph or get distinct ones is a small presentation
-call left to the implementer; the contract is only that an impeded card
-is visually distinguishable from a pullable one.
+Dependency-block and impediment share one glyph: the board's only
+contract is "⏳ ⇒ not pullable, no glyph ⇒ pullable", which is the
+distinction a human curating the queue needs. The glyph is documented
+in the deck skill's `goc --board` legend row.
 

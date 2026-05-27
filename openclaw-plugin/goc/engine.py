@@ -2209,7 +2209,8 @@ def render_board(
     def card_cell(t: Card) -> str:
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
-        if t.status == "open" and dependency_blocked(t, by_title):
+        not_ready = (t.status == "open" and dependency_blocked(t, by_title)) or waiting_impedes(t)
+        if not_ready:
             marker += " ⏳"
         who = _worker_who(t.frontmatter.get("worker"))
         if who:
