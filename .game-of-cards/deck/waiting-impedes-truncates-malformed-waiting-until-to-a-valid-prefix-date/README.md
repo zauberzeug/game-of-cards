@@ -1,7 +1,7 @@
 ---
 title: waiting-impedes-truncates-malformed-waiting-until-to-a-valid-prefix-date
 summary: "The read-time guard `waiting_impedes` parses `waiting_until` via `_date_part`, which prefix-truncates any >=10-char string to its first 10 chars. A malformed value like `2026-05-20xx` (which `goc validate` rejects) parses cleanly to a past date and silently un-defers the card, re-entering the pull queue. This defeats the impede-on-malformed backstop installed by the closed sibling card, whose fix relies on `date.fromisoformat` raising — which truncation prevents."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T03:18:36Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: fix in `goc/engine.py` `waiting_impedes` — treat a `waiting_until` the validator would reject (fails `_is_iso_date` / the anchored ISO shape) as unparseable, falling through to `until_unparseable=True` instead of accepting a truncated prefix.
   - [ ] TDD: `validate_waiting_overlay` mirrors the same strictness — a value rejected by `_is_iso_date` does not silently `continue` as if absent (decide: skip vs. surface, but do not parse-by-truncation).
   - [ ] TDD: no behavior change for valid date-only, valid datetime-UTC, future, and elapsed `waiting_until`, nor for the bare-reason / no-overlay paths.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `waiting_impedes` truncates a malformed `waiting_until` to a valid prefix date
