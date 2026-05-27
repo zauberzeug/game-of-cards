@@ -1,20 +1,20 @@
 ---
 title: openclaw-skill-porter-never-prunes-orphaned-ported-skills
 summary: "`port_skills_to_openclaw.py` only iterates source skill dirs — it never walks `openclaw-plugin/skills/` for ported skills that no longer have a source. When a source skill is renamed or removed, the stale ported copy lingers forever and `--check` (plus the CI parity test that reuses `drifted_skills()`) stays green, shipping a defunct skill in the OpenClaw payload."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-27T03:47:07Z"
-closed_at: null
+closed_at: 2026-05-27T03:55:18Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — after creating an orphan `openclaw-plugin/skills/<bogus>/SKILL.md` (no matching source dir), `drifted_skills()` flags it AND a full re-port removes it.
-  - [ ] TDD: `drifted_skills()` reports dst-only ported skill dirs (orphans) as drift, matching the dst-only handling in `scripts/sync_plugin_assets.py::_check_changes`.
-  - [ ] TDD: the porter's re-port pass (`main` without `--check`) prunes orphaned ported skill dirs under `DST_DIR`, leaving only skills that correspond to a current portable source skill.
-  - [ ] MECHANICAL: `uv run goc validate` clean; `python scripts/port_skills_to_openclaw.py --check` green; `python scripts/sync_plugin_assets.py --check` green; existing parity test `tests/test_plugin_mirror_parity.py` still passes.
+  - [x] TDD: `reproduce.py` exits zero — after creating an orphan `openclaw-plugin/skills/<bogus>/SKILL.md` (no matching source dir), `drifted_skills()` flags it AND a full re-port removes it.
+  - [x] TDD: `drifted_skills()` reports dst-only ported skill dirs (orphans) as drift, matching the dst-only handling in `scripts/sync_plugin_assets.py::_check_changes`.
+  - [x] TDD: the porter's re-port pass (`main` without `--check`) prunes orphaned ported skill dirs under `DST_DIR`, leaving only skills that correspond to a current portable source skill.
+  - [x] MECHANICAL: `uv run goc validate` clean; `python scripts/port_skills_to_openclaw.py --check` green; `python scripts/sync_plugin_assets.py --check` green; existing parity test `tests/test_plugin_mirror_parity.py` still passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -79,16 +79,16 @@ not red.
 ## Empirical evidence
 
 See `reproduce.py`. With a synthetic orphan
-`openclaw-plugin/skills/<bogus>/SKILL.md` (no matching source):
+`openclaw-plugin/skills/<bogus>/SKILL.md` (no matching source), the
+porter is now orphan-aware:
 
 ```
-drifted_skills() flags orphan? False        <- BUG: should be True
-re-port removed orphan?        False        <- BUG: should be True
-orphan still present after re-port? True     <- BUG: should be gone
+drifted_skills() flags orphan? True
+orphan still present after re-port? False
 ```
 
-Expected after the fix: `drifted_skills()` returns the orphan, and a
-full re-port deletes it.
+`drifted_skills()` returns the orphan and a full re-port deletes it
+(`reproduce.py` exits 0).
 
 > The reproducer creates and removes its own synthetic orphan dir; it
 > does not mutate any committed ported skill.
@@ -102,17 +102,18 @@ orphan-blind guard defeats that contract precisely at the moment it
 matters most — a skill rename — letting a stale, removed-upstream skill
 ship to OpenClaw consumers undetected.
 
-## Fix
+## Fix (applied)
 
-Make both the guard and the re-port pass destination-aware, mirroring
+Both the guard and the re-port pass are now destination-aware, mirroring
 `sync_plugin_assets.py`'s dst-only handling:
 
-1. In `drifted_skills()`, after the source loop, enumerate ported skill
-   dirs under `DST_DIR` whose name has no corresponding portable source
-   dir (and is not a host-specific complement) and append them as drift.
-2. In `main()`'s re-port branch, after porting, delete orphaned ported
-   skill dirs under `DST_DIR`.
-
-Compute the set of expected dst names once from `_portable_skill_dirs()`
-and reuse it for both the prune and the drift check so they cannot
-diverge.
+- `_expected_dst_names()` computes the set of skill names that belong in
+  `DST_DIR` (one per portable source dir) — the single source of truth
+  reused by both the drift check and the prune so they cannot diverge.
+- `_orphaned_ported_dirs(expected)` walks `DST_DIR` and returns ported
+  skill dirs whose name is not in `expected`, skipping host-specific
+  complement dirs (`claude-`/`codex-` prefixed) which this porter never
+  manages.
+- `drifted_skills()` appends each orphan's `SKILL.md` to its result, so
+  `--check` and the CI parity test go red on an orphan.
+- `main()`'s re-port branch `shutil.rmtree`s each orphan after porting.
