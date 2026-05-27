@@ -1,7 +1,7 @@
 ---
 title: skills-source-rewrite-regex-eats-blank-lines-above-the-key
 summary: "`_write_skills_source` rewrites the `skills_source:` key in config.yaml with a `re.MULTILINE` regex whose `[#\\s]*` char class matches newlines, so it back-consumes blank-line separators (and a preceding comment line's body) above the key. This contradicts the function's own docstring promise to preserve comments and ordering, and runs unconditionally on every `goc upgrade` / mode switch."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T13:25:03Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero (both cases preserve surrounding blank lines / comment bodies)
   - [ ] TDD: a regression test asserts `_write_skills_source` leaves blank-line separators and a preceding comment line intact when rewriting the key
   - [ ] MECHANICAL: the regex char class no longer matches `\n` (e.g. `[ \t]*` for leading whitespace, comment handled explicitly), and the docstring's "preserves comments and ordering" claim is true again
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `_write_skills_source` regex eats blank-line separators above the key
