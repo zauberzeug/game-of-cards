@@ -7,7 +7,11 @@ description: Daily-style deck read — list active and impeded cards (carrying a
 
 If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
 
+If the first Context block warns that local is **behind upstream**, say so at the top of your report and treat every section below as possibly stale — closures and status changes pushed to the remote will not appear until the user pulls.
+
 ## Context
+
+!`git fetch --quiet 2>/dev/null; behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo 0); [ "${behind:-0}" -gt 0 ] && echo "⚠️ Local is $behind commit(s) behind upstream — pull before trusting the deck view below; closures landed on the remote will not appear." || echo "✓ Local is current with upstream (or no upstream configured)."`
 
 !`goc --status active -v`
 
@@ -19,10 +23,12 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 Scrum's **Daily Scrum** (Schwaber & Sutherland) condensed to three
 questions: what's running, what's stuck, what's new? This skill collapses
-`scan-deck` + `git log` + manual `log.md` reading into one read.
+a remote-sync check, `scan-deck`, and the deck's structured closure
+record (`closed_at`) into one read.
 
-**Read-only** — this skill never mutates card state. It is safe to invoke
-at any time, as often as needed.
+**Read-only** — this skill never mutates card state (the `git fetch` in
+Context updates only remote-tracking refs, not your working tree or any
+card). It is safe to invoke at any time, as often as needed.
 
 ## Section 1 — In flight
 
@@ -41,19 +47,38 @@ status.
 
 ## Section 3 — Closed since yesterday
 
-Show closures from `log.md` files within the last 24 hours:
+List cards whose engine-maintained `closed_at` falls within the last 24
+hours. Read the structured record — **not** file mtime. A `find … -newer
+… -mmin` scan is git-blind: a pull/merge/clone writes the deck directory
+and every `log.md` at one instant, giving them identical mtimes, so a
+strict `-newer` test matches nothing and standup falsely reports
+"Nothing closed" right after a sync lands the day's work. `closed_at` is
+the timestamp the engine sets on close, so it is immune to that and
+uniformly covers `done` / `disproved` / `superseded`.
 
 ```bash
-# Find log.md files modified in the last 24h, grep for closure entries
-find .game-of-cards/deck -name "log.md" -newer .game-of-cards/deck -mmin -1440 2>/dev/null | \
-  while read f; do
-    title=$(basename "$(dirname "$f")")
-    grep -E "^(closed|done|disproved|superseded)" "$f" | tail -1 | \
-      sed "s/^/$title: /"
-  done
+goc --json --status all 2>/dev/null | python3 -c "
+import json, sys, datetime
+cards = json.load(sys.stdin)
+now = datetime.datetime.now(datetime.timezone.utc)
+def parse(s):
+    if not s: return None
+    try: d = datetime.datetime.fromisoformat(s.replace('Z','+00:00'))
+    except Exception:
+        try: d = datetime.datetime.strptime(s[:10], '%Y-%m-%d')
+        except Exception: return None
+    return d.replace(tzinfo=datetime.timezone.utc) if d.tzinfo is None else d
+recent = [c for c in cards if (d := parse(c.get('closed_at'))) and 0 <= (now - d).total_seconds() <= 86400]
+recent.sort(key=lambda c: c['closed_at'])
+for c in recent:
+    print(f\"{c['title']}: {c['status']} — {(c.get('summary') or '')[:70]}\")
+print(f\"({len(recent)} closed in last 24h)\" if recent else 'Nothing closed in the last 24h.')
+" 2>/dev/null || true
 ```
 
-If none: "Nothing closed in the last 24h."
+If none match, report "Nothing closed in the last 24h." When the count
+is large (a batch sync), summarize by theme rather than listing every
+line.
 
 ## Section 4 — Waiting on you
 
@@ -88,6 +113,8 @@ goc 2>/dev/null | head -5 || true
 ## Output format
 
 ```
+⚠️ Behind upstream by <N> — pull first; view may be stale.   (only if the sync check warned)
+
 ## In flight
 - <title> (claimed by <worker>, <N>h): <one-line summary>
 
@@ -95,7 +122,8 @@ goc 2>/dev/null | head -5 || true
 - <title> [waiting_on: <reason>{ until <date>}]: <one-line reason>
 
 ## Closed since yesterday
-- <title>: closed — <one-line what-changed>
+- <title>: <status> — <one-line what-changed>
+  (or, for a large batch: "<N> closed — <theme>: a, b, c; <theme>: d, e")
 
 ## Waiting on you
 - <title> [decision]: <decision question, ≤80 chars>
@@ -104,7 +132,8 @@ goc 2>/dev/null | head -5 || true
 - <title> (value: <N>): <one-line summary>
 ```
 
-Sections with no entries are omitted. Total output ≤ 40 lines.
+Sections with no entries are omitted. Total output ≤ 40 lines. The sync
+warning, if present, always goes first — never bury a stale-data caveat.
 
 ## Cross-references
 
