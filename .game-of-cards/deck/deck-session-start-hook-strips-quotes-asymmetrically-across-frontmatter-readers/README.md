@@ -1,20 +1,20 @@
 ---
 title: deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers
 summary: "`goc/templates/hooks/deck_session_start.py` re-implements YAML-lite frontmatter parsing for four fields (`status`, `human_gate`, `waiting_on`, `waiting_until`). Two of the four readers strip outer quotes from the parsed value (`_card_waiting_on` line 65 and `_card_waiting_until` line 81 both call `.strip().strip('\"').strip(\"'\")`), the other two do not (`_card_status` line 33 and `_card_human_gate` line 49 call only `.strip()`). The asymmetry is latent today because `_yaml_inline` in `goc/engine.py:229-239` only quotes scalars containing colons, hashes, brackets, etc. — none of the enum values for `status` or `human_gate` trigger that path. If a future migration or schema change ever emits a quoted form (e.g. `status: \"active\"`), the SessionStart hook would silently classify every active card as non-active, suppressing the reminder that the recently-closed `session-start-hook-shows-gated-active-cards-as-resumable` and `session-start-hook-frames-waiting-on-active-cards-as-resumable` cards just restored. Unverified because the defect does not fire on current emitter output."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-29T21:51:11Z"
-closed_at: null
+closed_at: "2026-05-29T21:56:15Z"
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, unverified, infra]
+tags: [bug, verified, infra]
 definition_of_done: |
-  - [ ] EMPIRICAL: `deck/<title>/reproduce.py` constructs a temp deck with one card whose frontmatter uses quoted-form `status: "active"` and `human_gate: "decision"`, invokes the SessionStart hook on it, and prints whether the card was classified as resumable / parked / impeded vs. silently dropped. Promotion to a confirmed defect requires the reproduce.py to demonstrate misclassification.
-  - [ ] MECHANICAL: align the four readers — either all four strip outer quotes (symmetric defensive coding, matches `waiting_on` / `waiting_until`) or none do (symmetric trust in the engine's bare-form contract). Update `goc/templates/hooks/deck_session_start.py:33` and `:49` to match the chosen convention.
-  - [ ] PROCESS: re-sync plugin mirrors (`python scripts/sync_plugin_assets.py`) and re-run the OpenClaw TypeScript port if the hook's behavior changed (the TS reimpl lives in `openclaw-plugin/index.ts`).
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+  - [x] EMPIRICAL: `deck/<title>/reproduce.py` constructs a temp deck with one card whose frontmatter uses quoted-form `status: "active"` and `human_gate: "decision"`, invokes the SessionStart hook on it, and prints whether the card was classified as resumable / parked / impeded vs. silently dropped. Promotion to a confirmed defect requires the reproduce.py to demonstrate misclassification.
+  - [x] MECHANICAL: align the four readers — either all four strip outer quotes (symmetric defensive coding, matches `waiting_on` / `waiting_until`) or none do (symmetric trust in the engine's bare-form contract). Update `goc/templates/hooks/deck_session_start.py:33` and `:49` to match the chosen convention.
+  - [x] PROCESS: re-sync plugin mirrors (`python scripts/sync_plugin_assets.py`) and re-run the OpenClaw TypeScript port if the hook's behavior changed (the TS reimpl lives in `openclaw-plugin/index.ts`).
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 worker: {who: "claude[bot]", where: main}
 ---
 

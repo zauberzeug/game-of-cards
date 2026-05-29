@@ -191,9 +191,9 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
     let waitingUntil = "";
     for (const line of m[1].split("\n")) {
       if (line.startsWith("status:")) {
-        status = line.split(":", 2)[1].trim();
+        status = stripQuotes(line.split(":", 2)[1].trim());
       } else if (line.startsWith("human_gate:")) {
-        const val = line.split(":", 2)[1].trim();
+        const val = stripQuotes(line.split(":", 2)[1].trim());
         if (val) humanGate = val;
       } else if (line.startsWith("waiting_on:")) {
         waitingOn = stripQuotes(line.split(":", 2)[1].trim());
