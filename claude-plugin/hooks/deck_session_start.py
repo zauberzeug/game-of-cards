@@ -15,7 +15,6 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
-_IMPEDED_WAITING_ON = frozenset({"external", "resource", "deferred"})
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
@@ -113,13 +112,17 @@ def _parse_waiting_until(value: str) -> datetime | None:
 def _is_impeded(readme: Path) -> bool:
     """Card carries an active impediment overlay.
 
-    Mirrors `goc.engine.waiting_impedes` across the four-cell
-    `waiting_on` × `waiting_until` matrix at full UTC timestamp
-    precision (matching `engine._waiting_until_instant`):
+    Mirrors `goc.engine.waiting_impedes` across the full
+    `waiting_on` × `waiting_until` matrix at UTC timestamp precision
+    (matching `engine._waiting_until_instant`). The engine gates on
+    `reason is not None` — any non-None reason (canonical *or* a
+    typo'd / hand-edited value that has not yet been through
+    `goc validate`) impedes unless `waiting_until` is elapsed:
 
-    - `waiting_on` set, no `waiting_until` → impeded (open-ended wait).
-    - `waiting_on` set, future `waiting_until` → impeded.
-    - `waiting_on` set, elapsed `waiting_until` → NOT impeded
+    - any non-None `waiting_on`, no `waiting_until` → impeded
+      (open-ended wait).
+    - any non-None `waiting_on`, future `waiting_until` → impeded.
+    - any non-None `waiting_on`, elapsed `waiting_until` → NOT impeded
       (elapsed wait resurfaces the card; engine contract).
     - no `waiting_on`, future `waiting_until` → impeded (deferred wait).
     - no `waiting_on`, elapsed `waiting_until` → NOT impeded.
@@ -142,12 +145,12 @@ def _is_impeded(readme: Path) -> bool:
         if until_dt is None:
             until_unparseable = True
     until_future = until_dt is not None and until_dt > datetime.now(tz=timezone.utc)
-    if reason in _IMPEDED_WAITING_ON:
+    if reason is not None:
         # Elapsed waiting_until resurfaces the card even with a reason set.
         if until_dt is not None and not until_future:
             return False
         return True
-    if reason is None and until_dt is None:
+    if until_dt is None:
         return until_unparseable
     return until_future
 

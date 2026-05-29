@@ -118,7 +118,6 @@ function buildArgs(input: GocToolInput): string[] {
 // === Lifecycle-hook helpers (ported from claude-plugin/hooks/*.py) ===
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
-const IMPEDED_WAITING_ON = new Set(["external", "resource", "deferred"]);
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 
@@ -160,14 +159,16 @@ function parseWaitingUntil(value: string): Date | null {
 }
 
 function isImpeded(waitingOn: string, waitingUntil: string, now: Date): boolean {
-  // Mirrors goc.engine.waiting_impedes across the four-cell waiting_on ×
+  // Mirrors goc.engine.waiting_impedes across the waiting_on ×
   // waiting_until matrix at full UTC timestamp precision (matching
-  // engine._waiting_until_instant). An elapsed waiting_until resurfaces
-  // the card even when waiting_on is also set (engine contract). A
-  // present-but-unparseable waiting_until with no waiting_on hits the
-  // engine's `until_unparseable` backstop (impede, don't silently
-  // un-defer) — `goc validate` is the upstream net; this is the
-  // read-time guard for pre-validate / hand-edited decks.
+  // engine._waiting_until_instant). The engine gates on `reason is not
+  // None` — any non-empty waitingOn (canonical *or* hand-edited /
+  // typo'd) impedes unless waitingUntil is elapsed. An elapsed
+  // waitingUntil resurfaces the card even when waitingOn is set
+  // (engine contract). A present-but-unparseable waitingUntil with no
+  // waitingOn hits the engine's `until_unparseable` backstop (impede,
+  // don't silently un-defer) — `goc validate` is the upstream net;
+  // this is the read-time guard for pre-validate / hand-edited decks.
   let untilDt: Date | null = null;
   let untilUnparseable = false;
   if (waitingUntil !== "") {
@@ -175,11 +176,11 @@ function isImpeded(waitingOn: string, waitingUntil: string, now: Date): boolean 
     if (untilDt === null) untilUnparseable = true;
   }
   const untilFuture = untilDt !== null && untilDt.getTime() > now.getTime();
-  if (IMPEDED_WAITING_ON.has(waitingOn)) {
+  if (waitingOn !== "") {
     if (untilDt !== null && !untilFuture) return false;
     return true;
   }
-  if (waitingOn === "" && untilDt === null) return untilUnparseable;
+  if (untilDt === null) return untilUnparseable;
   return untilFuture;
 }
 
