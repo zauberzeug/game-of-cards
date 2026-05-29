@@ -1,7 +1,7 @@
 ---
 title: goc-decide-accepts-decisions-on-already-closed-cards
 summary: "`goc decide` only guards on `human_gate != 'none'`, never on `status in TERMINAL_STATUSES`. A closed card (`done` / `disproved` / `superseded`) whose gate was left raised by `goc done` is silently mutated — a `## Decision` section is appended to the closed README, `human_gate` is lowered to `none`, and the success line announces `any agent can now claim this card`. Mirrors the existing guards in `_cmd_done` (engine.py:3244) and `_cmd_status` (engine.py:3983)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T15:27:59Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero (defect no longer fires — the script asserts non-zero exit from `goc decide` and an unchanged README on the closed fixture).
   - [ ] MECHANICAL: `uv run goc validate` is clean.
   - [ ] PROCESS: cross-link the existing sibling card `goc-done-marks-cards-done-without-clearing-or-checking-human-gate` in this card's log.md and consider whether a shared terminal-status guard helper is warranted (decline if two call-sites is too small; note the decision in log.md either way).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc decide` accepts decisions on already-closed cards
