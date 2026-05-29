@@ -64,9 +64,16 @@ v8`. `v7` is the highest floating major that resolves, and it already
 runs on Node 24. `actions/checkout` *does* publish a floating `v6`, so
 `@v6` is correct there.
 
-Both are low-risk infrastructure actions used with basic options only
-(clone the repo; install uv), so the major bump carries no behavioural
-change for our usage.
+`checkout@v6` carries no behavioural change for our usage. `setup-uv@v7`
+does: it installs a newer default `uv`, and newer `uv` refuses
+`uv pip install -e .` into a non-virtual environment without `--system`
+(`error: No virtual environment found for Python 3.12 ... pass --system`).
+This surfaced a latent drift — `ci.yml` ran the bare `uv pip install -e .`
+while **AGENTS.md already documents the CI install as
+`uv pip install --system -e .`** ("what CI does"). The fix realigns
+`ci.yml:43` with the documented command. The `uv sync`-based workflows
+(`pull-card.yml`, `audit-deck.yml`) are unaffected — `uv sync` manages
+its own `.venv`.
 
 ## Scope note — what is deliberately left out
 

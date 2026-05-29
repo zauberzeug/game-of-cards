@@ -40,6 +40,22 @@ Lesson: `releases/latest` gives the newest *release*, not the newest
 *floating major*. For a floating-major pin, verify the `vN` git ref
 actually exists (`gh api repos/<o>/<r>/git/refs/tags/vN`) before using it.
 
+## 2026-05-29 — second-order fix: newer uv needs --system
+
+After the `@v7` re-pin, CI (`d2c1b5f`) got *past* the action steps
+(Set up job ✓, checkout@v6 ✓, Install uv ✓) but then failed at "Install
+package": `error: No virtual environment found for Python 3.12 ... pass
+--system`. `setup-uv@v7` ships a newer default `uv` that no longer allows
+`uv pip install` into the system env implicitly. AGENTS.md already
+documents the CI install as `uv pip install --system -e .`, but
+`ci.yml:43` had drifted to the bare form (which only worked under the old
+permissive uv). Added `--system` to `ci.yml:43` to realign with the docs
+and the new uv contract. `uv sync` workflows are unaffected.
+
+Lesson: a setup-uv major bump is not behaviourally inert — it changes the
+bundled uv version, which can change `uv pip` semantics. Verify the
+downstream uv commands, not just that the action resolves.
+
 Separately observed (NOT caused by this card): `main` CI was already red
 before this change — the prior push (`b1499b5`, old pins) failed at "Run
 regression tests", a real test failure unrelated to the action pins.
