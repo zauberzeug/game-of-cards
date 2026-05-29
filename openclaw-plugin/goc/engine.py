@@ -4153,7 +4153,7 @@ def _cmd_new(args):
     for advancer in advanced_by:
         _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
     print(f"created {card_dir.relative_to(REPO_ROOT)}/")
-    print(f"Next: edit deck/{title}/README.md to fill the body and DoD; then ask your agent to implement the card.")
+    print(f"Next: edit {card_dir.relative_to(REPO_ROOT)}/README.md to fill the body and DoD; then ask your agent to implement the card.")
 
 
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
