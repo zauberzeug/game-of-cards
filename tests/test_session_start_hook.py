@@ -252,6 +252,55 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
         # Elapsed wait re-enters the queue (engine.waiting_impedes contract).
         self.assertFalse(self.hook._is_impeded(p))
 
+    def test_is_impeded_false_for_waiting_on_with_elapsed_waiting_until(self):
+        """Case A of the four-cell matrix: reason set + elapsed date → not impeded.
+
+        Engine contract (`goc.engine.waiting_impedes`, AGENTS.md three-axis
+        stuck model): an elapsed `waiting_until` resurfaces the card even
+        when `waiting_on` is also set. The hook must agree with the engine
+        on this cell; otherwise an agent-resumable card is misframed as
+        `Impeded active card(s) — agent cannot resume` at session start.
+        """
+        for value in ("external", "resource", "deferred"):
+            p = Path(
+                tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name
+            )
+            p.write_text(
+                f"---\nstatus: active\nwaiting_on: {value}\n"
+                "waiting_until: 2000-01-01\n---\nbody\n",
+                encoding="utf-8",
+            )
+            self.assertFalse(
+                self.hook._is_impeded(p),
+                f"waiting_on: {value} + elapsed waiting_until should resurface",
+            )
+
+    def test_case_a_card_appears_under_resumable_not_impeded(self):
+        """End-to-end: a `status: active, human_gate: none, waiting_on: external,
+        waiting_until: <past>` card must be partitioned under the resumable
+        line, not the impediment line.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            deck = project / ".game-of-cards" / "deck"
+            deck.mkdir(parents=True)
+            self._write_card(
+                deck,
+                "case-a-elapsed",
+                "status: active\nhuman_gate: none\n"
+                "waiting_on: external\nwaiting_until: 2000-01-01",
+            )
+            out = self._run_hook(project)
+        resumable_lines = [
+            line for line in out.splitlines() if "resume or close" in line
+        ]
+        self.assertEqual(len(resumable_lines), 1, out)
+        self.assertIn("case-a-elapsed", resumable_lines[0])
+        impeded_lines = [
+            line for line in out.splitlines() if "waiting_on" in line
+        ]
+        self.assertEqual(impeded_lines, [], out)
+
     def test_is_impeded_false_when_no_overlay(self):
         p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
         p.write_text("---\nstatus: active\n---\nbody\n", encoding="utf-8")
