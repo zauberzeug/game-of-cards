@@ -23,6 +23,7 @@ definition_of_done: |
   - [ ] Child `remove-blocked-from-status-enum-and-migrate-existing-cards` closed.
   - [x] AGENTS.md + card-schema/advance-card/deck skills describe the three-axis model (progress status / derived dependency readiness / stored impediment overlay).
 worker: {who: "claude[bot]", where: main}
+waiting_on: deferred
 ---
 
 # `blocked` is one generic status where the literature uses several distinct mechanisms
