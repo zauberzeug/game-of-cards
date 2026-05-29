@@ -504,7 +504,8 @@ class Card:
 
     @property
     def tags(self) -> list[str]:
-        return self.frontmatter.get("tags") or []
+        v = self.frontmatter.get("tags")
+        return v if isinstance(v, list) else []
 
     @property
     def created(self) -> str:

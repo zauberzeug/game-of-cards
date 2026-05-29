@@ -1,20 +1,20 @@
 ---
 title: tags-property-iterates-bare-string-tags-character-by-character
 summary: "The `Card.tags` property returns `frontmatter.get('tags') or []` with no isinstance guard. A hand-edited bare-string `tags: bug` then flows into the render path (line 2171, `','.join(t.tags[:4])` → `'b,u,g'`) and the tag-filter (line 1921, `tag in t.tags` substring-matches via Python's string `in`). Same root-cause family as the recently-closed `compute-values-iterates-non-list-advances-character-by-character` and `repair-edges-misses-half-edge-when-inverse-side-is-a-bare-string`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T05:34:42Z"
-closed_at: null
+closed_at: 2026-05-29T05:40:08Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (renders the bare-string tag verbatim instead of `b,u,g`, and `goc --tag b` does NOT match a card whose only tag string is `bug`).
-  - [ ] MECHANICAL: `Card.tags` (or its single consumer site) coerces a non-list value to `[]` (or to `[value]` if the value is a non-empty string) BEFORE returning, mirroring the `isinstance(..., list)` guard added in `bd03d91` for `find_half_edges` and earlier for `compute_values`.
-  - [ ] TDD: a regression test under `tests/` covers a card whose frontmatter has `tags: bug` (bare string) — both render and filter paths must behave as if the field were `[]` (or as if it were a single-element list, depending on the chosen coercion; record the choice in log.md).
-  - [ ] MECHANICAL: plugin mirrors synced (`python scripts/sync_plugin_assets.py --check` green).
+  - [x] TDD: reproduce.py exits zero (renders the bare-string tag verbatim instead of `b,u,g`, and `goc --tag b` does NOT match a card whose only tag string is `bug`).
+  - [x] MECHANICAL: `Card.tags` (or its single consumer site) coerces a non-list value to `[]` (or to `[value]` if the value is a non-empty string) BEFORE returning, mirroring the `isinstance(..., list)` guard added in `bd03d91` for `find_half_edges` and earlier for `compute_values`.
+  - [x] TDD: a regression test under `tests/` covers a card whose frontmatter has `tags: bug` (bare string) — both render and filter paths must behave as if the field were `[]` (or as if it were a single-element list, depending on the chosen coercion; record the choice in log.md).
+  - [x] MECHANICAL: plugin mirrors synced (`python scripts/sync_plugin_assets.py --check` green).
 worker: {who: "claude[bot]", where: main}
 ---
 
