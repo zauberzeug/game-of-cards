@@ -21,7 +21,7 @@ definition_of_done: |
   - [ ] If (c): file an issue upstream at OpenClaw's tracker; reference this card and the smoke card; capture the issue URL here
   - [ ] Smoke retest with whatever fix lands: subagent invocation in a clean session sees and successfully calls `goc` (e.g., a `goc show <title>` or `goc validate` returns the expected output)
   - [ ] `uv run goc validate` passes
-worker:
+worker: null
 ---
 
 # OpenClaw subagent spawn doesn't project plugin tools

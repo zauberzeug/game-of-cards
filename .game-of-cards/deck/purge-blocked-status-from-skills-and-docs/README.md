@@ -13,7 +13,7 @@ status: done
 stage: null
 contribution: medium
 created: "2026-05-26T12:11:27Z"
-closed_at: 2026-05-26T13:21:02Z
+closed_at: "2026-05-26T13:21:02Z"
 human_gate: none
 advances:
   - remove-blocked-from-status-enum-and-migrate-existing-cards

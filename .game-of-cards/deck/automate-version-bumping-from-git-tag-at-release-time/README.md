@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: medium
 created: 2026-05-10
-closed_at: 2026-05-11T13:25:06Z
+closed_at: "2026-05-11T13:25:06Z"
 human_gate: none
 advances:
   - release-workflow-leaves-plugin-manifest-version-stale-on-main

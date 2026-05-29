@@ -1,11 +1,11 @@
 ---
 title: clarify-agent-unblockable-blocked-cards
-summary: Clarify in the GoC skills/schema that `status: blocked` does not imply a human gate. Cards can be blocked by external/upstream conditions while remaining `human_gate: none` when an agent can periodically re-check and unblock them autonomously.
+summary: "Clarify in the GoC skills/schema that `status: blocked` does not imply a human gate. Cards can be blocked by external/upstream conditions while remaining `human_gate: none` when an agent can periodically re-check and unblock them autonomously."
 status: done
 stage: null
 contribution: medium
 created: 2026-05-11
-closed_at: 2026-05-11T05:26:38Z
+closed_at: "2026-05-11T05:26:38Z"
 human_gate: none
 advances: []
 advanced_by: []

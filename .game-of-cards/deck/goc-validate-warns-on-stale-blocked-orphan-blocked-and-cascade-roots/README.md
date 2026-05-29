@@ -1,6 +1,6 @@
 ---
 title: goc-validate-warns-on-stale-blocked-orphan-blocked-and-cascade-roots
-summary: |
+summary: |-
   `goc validate` enforces schema and DAG integrity but not state coherence:
   it never flags a `status: blocked` card whose `advanced_by` blockers are
   all closed (stale-blocked), whose `advanced_by` is empty with the real
@@ -12,7 +12,7 @@ status: done
 stage: null
 contribution: medium
 created: "2026-05-21T08:29:31Z"
-closed_at: 2026-05-21T08:36:48Z
+closed_at: "2026-05-21T08:36:48Z"
 human_gate: none
 advances: []
 advanced_by: []

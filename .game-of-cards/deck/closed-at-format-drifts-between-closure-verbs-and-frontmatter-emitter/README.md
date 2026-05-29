@@ -1,21 +1,22 @@
 ---
 title: closed-at-format-drifts-between-closure-verbs-and-frontmatter-emitter
 summary: "The closure verbs (`goc done`, `goc done --bundle`, `goc status X disproved|superseded`) write `closed_at` unquoted via `mutate_frontmatter_field`. `emit_frontmatter` re-emits the same value quoted because `_YAML_NEEDS_QUOTE` matches the colons in the timestamp. 251 cards in this repo carry the bare form; the next `goc decide` / `goc migrate-list-style` rewrites every one of them on a closed_at-only edit."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T10:16:55Z"
-closed_at: null
+closed_at: "2026-05-29T11:16:03Z"
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, api-contract, unverified]
+tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero before the fix (drift demonstrated) and continues to exit zero after, but with both writer paths emitting the same line (drift line == False after fix).
-  - [ ] TDD: a regression test asserts `mutate_frontmatter_field(text, "closed_at", _utc_now_iso())` yields a line byte-identical to what `emit_frontmatter` would produce for the same value.
-  - [ ] MECHANICAL: the closure-verb paths (`_cmd_done`, `_cmd_done_bundle`, the `disproved` / `superseded` write in `do_status`) and any other call site of `mutate_frontmatter_field` for a colon-bearing value either route the value through `_yaml_inline` first or document the intentional bare form.
-  - [ ] PROCESS: a single migration pass normalizes the 251 bare-quoted `closed_at` lines in this repo so the dogfood deck stops trapping the next emitter rewrite in a 251-card diff. (Bundle the migration with the fix commit or as a follow-up commit explicitly tagged `[sync auto]`.)
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `uv run goc migrate-list-style --dry-run` reports zero `closed_at`-only rewrites on the dogfood deck.
+  - [x] TDD: `reproduce.py` exits zero before the fix (drift demonstrated) and continues to exit zero after, but with both writer paths emitting the same line (drift line == False after fix).
+  - [x] TDD: a regression test asserts `mutate_frontmatter_field(text, "closed_at", _utc_now_iso())` yields a line byte-identical to what `emit_frontmatter` would produce for the same value.
+  - [x] MECHANICAL: the closure-verb paths (`_cmd_done`, `_cmd_done_bundle`, the `disproved` / `superseded` write in `do_status`) and any other call site of `mutate_frontmatter_field` for a colon-bearing value either route the value through `_yaml_inline` first or document the intentional bare form.
+  - [x] PROCESS: a single migration pass normalizes the 251 bare-quoted `closed_at` lines in this repo so the dogfood deck stops trapping the next emitter rewrite in a 251-card diff. (Bundle the migration with the fix commit or as a follow-up commit explicitly tagged `[sync auto]`.)
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `uv run goc migrate-list-style --dry-run` reports zero `closed_at`-only rewrites on the dogfood deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `closed_at` format drifts between closure verbs and the frontmatter emitter

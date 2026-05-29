@@ -5,7 +5,7 @@ status: superseded
 stage: null
 contribution: medium
 created: 2026-05-07
-closed_at: 2026-05-08T05:18:46Z
+closed_at: "2026-05-08T05:18:46Z"
 human_gate: session
 advances:
   - ship-game-of-cards-as-cross-agent-cli

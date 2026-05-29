@@ -1,11 +1,13 @@
 ---
 title: goc-decide-omits-blank-line-before-following-section-heading
-summary: "When `goc decide` replaces an existing `## Decision required` section with `## Decision`, the new block ends in a single `\n` while the regex's positive lookahead leaves the next `## ` heading attached on the very next line. Markdown emerges malformed: `*Reasoning:* X` runs straight into `## NextSection`."
+summary: |-
+  When `goc decide` replaces an existing `## Decision required` section with `## Decision`, the new block ends in a single `
+  ` while the regex's positive lookahead leaves the next `## ` heading attached on the very next line. Markdown emerges malformed: `*Reasoning:* X` runs straight into `## NextSection`.
 status: done
 stage: null
 contribution: medium
 created: "2026-05-29T07:36:02Z"
-closed_at: 2026-05-29T07:42:12Z
+closed_at: "2026-05-29T07:42:12Z"
 human_gate: none
 advances: []
 advanced_by: []

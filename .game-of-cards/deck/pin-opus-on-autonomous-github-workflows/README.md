@@ -1,6 +1,6 @@
 ---
 title: pin-opus-on-autonomous-github-workflows
-summary: Pin Opus 4.7 on the autonomous claude-code-action workflows so cron-driven implementation work doesn't silently fall back to Sonnet.
+summary: "Pin Opus 4.7 on the autonomous claude-code-action workflows so cron-driven implementation work doesn't silently fall back to Sonnet."
 status: done
 stage: null
 contribution: medium

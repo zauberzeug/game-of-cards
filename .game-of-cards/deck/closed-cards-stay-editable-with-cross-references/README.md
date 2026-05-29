@@ -1,11 +1,11 @@
 ---
 title: closed-cards-stay-editable-with-cross-references
-summary: Endorse amending closed cards (README dashboard or `log.md` journal) when new evidence surfaces post-close, with a required cross-reference back from the original to the new card. Update the deck, finish-card, and card-schema skill bodies and the consumer-facing CLAUDE_GOC / AGENTS_GOC templates so the principle ships. Closure is not frozenness — the deck's durable value depends on each closed card staying as a live entry-point to the full learning thread.
+summary: "Endorse amending closed cards (README dashboard or `log.md` journal) when new evidence surfaces post-close, with a required cross-reference back from the original to the new card. Update the deck, finish-card, and card-schema skill bodies and the consumer-facing CLAUDE_GOC / AGENTS_GOC templates so the principle ships. Closure is not frozenness — the deck's durable value depends on each closed card staying as a live entry-point to the full learning thread."
 status: done
 stage: null
 contribution: medium
 created: "2026-05-17T03:36:17Z"
-closed_at: 2026-05-17T08:50:31Z
+closed_at: "2026-05-17T08:50:31Z"
 human_gate: none
 advances: []
 advanced_by: []
