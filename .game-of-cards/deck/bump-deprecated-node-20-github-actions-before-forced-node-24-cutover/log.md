@@ -26,5 +26,23 @@ majors. The artifact actions had a breaking v4 rewrite and bumping them
 touches the OIDC publishing path — out of scope here, to be handled in a
 follow-up before the 2026-09-16 Node-20 removal if they start warning.
 
-Last DoD item (CI reaches a real step on the bumped pins) verified after
-push: `ci.yml` runs on push to main.
+## 2026-05-29 — correction: setup-uv@v8 does not resolve
+
+First push (`809bdd8`) failed CI at "Set up job":
+`Unable to resolve action astral-sh/setup-uv@v8, unable to find version v8`.
+The releases API's `latest` (`v8.1.0`) is a release tag, but
+`astral-sh/setup-uv` only publishes floating major tags `v5`/`v6`/`v7`
+— there is no moving `v8`. Re-pinned all 5 setup-uv occurrences to `@v7`
+(confirmed `using: node24` at that tag). `actions/checkout` *does*
+publish a floating `v6`, so `@v6` was correct and stayed.
+
+Lesson: `releases/latest` gives the newest *release*, not the newest
+*floating major*. For a floating-major pin, verify the `vN` git ref
+actually exists (`gh api repos/<o>/<r>/git/refs/tags/vN`) before using it.
+
+Separately observed (NOT caused by this card): `main` CI was already red
+before this change — the prior push (`b1499b5`, old pins) failed at "Run
+regression tests", a real test failure unrelated to the action pins.
+This card's DoD item 5 only requires CI to *resolve the pins and reach a
+real step*; the pre-existing test failure is out of scope and worth a
+separate card.

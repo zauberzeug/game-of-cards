@@ -12,7 +12,7 @@ advanced_by: []
 tags: [story, infra]
 definition_of_done: |
   - [x] MECHANICAL: every `actions/checkout@v4` pin bumped to `@v6` across `.github/workflows/`
-  - [x] MECHANICAL: every `astral-sh/setup-uv@v5` pin bumped to `@v8` across `.github/workflows/`
+  - [x] MECHANICAL: every `astral-sh/setup-uv@v5` pin bumped to `@v7` across `.github/workflows/`
   - [x] MECHANICAL: `grep -rn "checkout@v4\|setup-uv@v5" .github/workflows/` returns no matches
   - [x] PROCESS: all workflow files still parse as valid YAML after the edit
   - [ ] PROCESS: a CI run on the bump triggers and reaches a real step (not a YAML/parse failure), confirming the new pins resolve
@@ -48,16 +48,25 @@ action families pinned to Node-20 majors across every workflow.
 
 ## Fix
 
-Bump both pins to their current Node-24 majors (verified via the GitHub
-releases API on 2026-05-29):
+Bump both pins to the current **floating Node-24 major tag** (not a SHA
+pin — matches the existing convention in these workflows). Both runtimes
+confirmed `using: node24` at the pinned tag:
 
-- `actions/checkout@v4` → `actions/checkout@v6` (latest `v6.0.2`)
-- `astral-sh/setup-uv@v5` → `astral-sh/setup-uv@v8` (latest `v8.1.0`)
+- `actions/checkout@v4` → `actions/checkout@v6` (floating `v6` tag exists)
+- `astral-sh/setup-uv@v5` → `astral-sh/setup-uv@v7`
+
+**Why `setup-uv@v7`, not `@v8`:** the releases API reports `v8.1.0` as
+the newest release, but `astral-sh/setup-uv` does **not** publish a
+floating `v8` major tag (only `v5`/`v6`/`v7` moving majors plus exact
+`v8.x.x` tags). A first attempt at `@v8` failed CI at "Set up job" with
+`Unable to resolve action astral-sh/setup-uv@v8, unable to find version
+v8`. `v7` is the highest floating major that resolves, and it already
+runs on Node 24. `actions/checkout` *does* publish a floating `v6`, so
+`@v6` is correct there.
 
 Both are low-risk infrastructure actions used with basic options only
 (clone the repo; install uv), so the major bump carries no behavioural
-change for our usage. Floating to the major tag (not a SHA pin) matches
-the existing convention in these workflows.
+change for our usage.
 
 ## Scope note — what is deliberately left out
 
