@@ -1,23 +1,23 @@
 ---
 title: session-start-hook-misreads-same-day-datetime-waiting-until-as-not-impeded
 summary: "SessionStart hook `_is_impeded` compares `waiting_until` at date-level coarseness (`date.fromisoformat(until[:10]) > date.today()`), but the engine's `waiting_impedes` compares at full timestamp precision since the datetime-shape extension. For a card with `waiting_on` set and `waiting_until: <today>THH:MM:SSZ` still in the future (same-day datetime), the engine reports impeded (card hidden from `goc --ready`) but the hook reports not-impeded — the agent is told to `resume or close before starting new work` on a card `pull-card` cannot pull. The OpenClaw TypeScript port duplicates the same date-level comparison. Sibling-sweep finding on top of just-closed `session-start-hook-impeded-check-ignores-elapsed-waiting-until` — that fix mirrored engine semantics for the elapsed case at date level; this card refutes the docstring claim that date-level coarseness suffices, since the engine honors datetime-shape values at full precision."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T09:50:13Z"
-closed_at: null
+closed_at: 2026-05-29T09:58:40Z
 human_gate: none
 advances: []
 advanced_by:
   - session-start-hook-impeded-check-ignores-elapsed-waiting-until
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: `_is_impeded` in `goc/templates/hooks/deck_session_start.py` compares `waiting_until` at full timestamp precision (matches `engine.waiting_impedes` / `_waiting_until_instant` semantics) — a same-day datetime `YYYY-MM-DDTHH:MM:SSZ` whose instant is still in the future is reported impeded; one in the past is not.
-  - [ ] TDD: a regression test in `tests/test_session_start_hook.py` exercises the cell `waiting_on: external, waiting_until: <today>THH:MM:SSZ` (HH:MM:SS strictly after the comparison instant) on a `status: active, human_gate: none` card and asserts the hook returns True (impeded). A second case at `<today>T00:00:00Z` (elapsed instant within today) asserts the hook returns False (resurfaces). The test pins `today=` via a freezable clock or by injecting both sides of the boundary so it doesn't rot at midnight.
-  - [ ] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
-  - [ ] MECHANICAL: the OpenClaw TypeScript port in `openclaw-plugin/index.ts` (`isImpeded` / `parseIsoDate`) is updated to match — full timestamp precision, not UTC-midnight coarseness. The misleading comment `UTC midnight comparison — matches the Python hook's date-level coarseness` is removed; the new comment names the engine contract being mirrored.
-  - [ ] MECHANICAL: the docstring claim in `_is_impeded` that "a date-level comparison suffices" is corrected — it does NOT suffice for datetime-shape values, only for date-shape ones.
-  - [ ] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
+  - [x] MECHANICAL: `_is_impeded` in `goc/templates/hooks/deck_session_start.py` compares `waiting_until` at full timestamp precision (matches `engine.waiting_impedes` / `_waiting_until_instant` semantics) — a same-day datetime `YYYY-MM-DDTHH:MM:SSZ` whose instant is still in the future is reported impeded; one in the past is not.
+  - [x] TDD: a regression test in `tests/test_session_start_hook.py` exercises the cell `waiting_on: external, waiting_until: <today>THH:MM:SSZ` (HH:MM:SS strictly after the comparison instant) on a `status: active, human_gate: none` card and asserts the hook returns True (impeded). A second case at `<today>T00:00:00Z` (elapsed instant within today) asserts the hook returns False (resurfaces). The test pins `today=` via a freezable clock or by injecting both sides of the boundary so it doesn't rot at midnight.
+  - [x] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
+  - [x] MECHANICAL: the OpenClaw TypeScript port in `openclaw-plugin/index.ts` (`isImpeded` / `parseIsoDate`) is updated to match — full timestamp precision, not UTC-midnight coarseness. The misleading comment `UTC midnight comparison — matches the Python hook's date-level coarseness` is removed; the new comment names the engine contract being mirrored.
+  - [x] MECHANICAL: the docstring claim in `_is_impeded` that "a date-level comparison suffices" is corrected — it does NOT suffice for datetime-shape values, only for date-shape ones.
+  - [x] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 

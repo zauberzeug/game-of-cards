@@ -11,12 +11,13 @@ import json
 import os
 import re
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
 _IMPEDED_WAITING_ON = frozenset({"external", "resource", "deferred"})
-_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
 
 def _card_status(readme: Path) -> str | None:
@@ -82,11 +83,39 @@ def _card_waiting_until(readme: Path) -> str | None:
     return None
 
 
+def _parse_waiting_until(value: str) -> datetime | None:
+    """Parse `waiting_until` into a UTC instant, or None if unparseable.
+
+    Mirrors `goc.engine._waiting_until_instant`: a bare date
+    `YYYY-MM-DD` becomes midnight UTC of that day, so date-only
+    deferrals clear at the start of their named day; a datetime
+    `YYYY-MM-DDTHH:MM:SSZ` is honored at full precision so a same-day
+    future timestamp does not collapse to "today" and clear early. The
+    hook re-implements the engine helper (rather than importing it) so
+    it has no package dependency and runs from any working tree shape.
+    """
+    if _ISO_DATETIME_UTC_RE.match(value):
+        try:
+            return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            return None
+    if _ISO_DATE_RE.match(value):
+        try:
+            d = date.fromisoformat(value)
+        except ValueError:
+            return None
+        return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    return None
+
+
 def _is_impeded(readme: Path) -> bool:
     """Card carries an active impediment overlay.
 
     Mirrors `goc.engine.waiting_impedes` across the four-cell
-    `waiting_on` × `waiting_until` matrix at date-level coarseness:
+    `waiting_on` × `waiting_until` matrix at full UTC timestamp
+    precision (matching `engine._waiting_until_instant`):
 
     - `waiting_on` set, no `waiting_until` → impeded (open-ended wait).
     - `waiting_on` set, future `waiting_until` → impeded.
@@ -95,22 +124,19 @@ def _is_impeded(readme: Path) -> bool:
     - no `waiting_on`, future `waiting_until` → impeded (deferred wait).
     - no `waiting_on`, elapsed `waiting_until` → NOT impeded.
 
-    The engine compares at full timestamp precision; this hook only
-    needs an active-yes/no bucket so a date-level comparison suffices.
+    Date-level coarseness does NOT suffice for the datetime-shape
+    values the engine accepts since the `_waiting_until_instant`
+    extension: a same-day future `YYYY-MM-DDTHH:MM:SSZ` is impeded by
+    the engine, and a date-truncated comparison would round it to
+    today and clear the wait early.
     """
     reason = _card_waiting_on(readme)
     until = _card_waiting_until(readme)
-    until_parsed = False
-    until_future = False
-    if until and _ISO_DATE_RE.match(until):
-        try:
-            until_future = date.fromisoformat(until[:10]) > date.today()
-            until_parsed = True
-        except ValueError:
-            pass
+    until_dt = _parse_waiting_until(until) if until else None
+    until_future = until_dt is not None and until_dt > datetime.now(tz=timezone.utc)
     if reason in _IMPEDED_WAITING_ON:
         # Elapsed waiting_until resurfaces the card even with a reason set.
-        if until_parsed and not until_future:
+        if until_dt is not None and not until_future:
             return False
         return True
     return until_future
