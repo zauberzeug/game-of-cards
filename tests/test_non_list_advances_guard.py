@@ -77,6 +77,29 @@ class NonListAdvancesGuardTest(unittest.TestCase):
         b = _card("b")
         self.assertFalse(engine._would_create_advance_cycle([a, b], "a", "b"))
 
+    def test_find_half_edges_treats_non_list_inverse_as_empty(self) -> None:
+        # `find_half_edges` walks the neighbour's inverse field after the
+        # outer guard; a bare-string inverse must not fall back to Python's
+        # substring `in` (which silently affirms a reverse edge that does
+        # not structurally exist).
+        a = _card("acard", advances=["bcard"])
+        b = _card("bcard", advanced_by="acard-suffix-that-contains-acard")
+        edges = engine.find_half_edges([a, b])
+        self.assertEqual(len(edges), 1)
+        self.assertEqual(edges[0].src, "acard")
+        self.assertEqual(edges[0].field, "advances")
+        self.assertEqual(edges[0].ref, "bcard")
+        self.assertEqual(edges[0].inverse, "advanced_by")
+
+    def test_find_half_edges_treats_exact_match_bare_string_as_empty(self) -> None:
+        # Even an exact-match bare string is not a list; the structural
+        # invariant requires the inverse to be a list, not a scalar.
+        a = _card("acard", advances=["bcard"])
+        b = _card("bcard", advanced_by="acard")
+        edges = engine.find_half_edges([a, b])
+        self.assertEqual(len(edges), 1)
+        self.assertEqual(edges[0].ref, "bcard")
+
 
 if __name__ == "__main__":
     unittest.main()

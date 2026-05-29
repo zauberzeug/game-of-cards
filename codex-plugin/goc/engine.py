@@ -1301,6 +1301,8 @@ def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
                 if other is None:
                     continue
                 inverse_list = other.frontmatter.get(inverse) or []
+                if not isinstance(inverse_list, list):
+                    inverse_list = []
                 if t.title not in inverse_list:
                     half_edges.append(HalfEdge(t.title, field, ref, inverse))
     return half_edges
