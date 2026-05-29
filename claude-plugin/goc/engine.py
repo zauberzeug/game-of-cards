@@ -1947,9 +1947,19 @@ def filter_cards(
     if since:
         out = [t for t in out if t.closed_at and str(t.closed_at) >= since]
     if advances:
-        out = [t for t in out if advances in (t.frontmatter.get("advances") or [])]
+        out = [
+            t
+            for t in out
+            if isinstance(t.frontmatter.get("advances"), list)
+            and advances in t.frontmatter["advances"]
+        ]
     if advanced_by:
-        out = [t for t in out if advanced_by in (t.frontmatter.get("advanced_by") or [])]
+        out = [
+            t
+            for t in out
+            if isinstance(t.frontmatter.get("advanced_by"), list)
+            and advanced_by in t.frontmatter["advanced_by"]
+        ]
     if worker:
         needle = worker.lower()
         out = [t for t in out if needle in _worker_who(t.frontmatter.get("worker")).lower()]
