@@ -1,7 +1,7 @@
 ---
 title: advances-and-advanced-by-cli-filters-substring-match-bare-string-scalars
 summary: "`filter_cards` (engine.py:1949-1952) uses Python's `in` operator on `t.frontmatter.get('advances')` / `t.frontmatter.get('advanced_by')` without coercing to list, so a bare-string scalar value silently switches `in` from list-membership to substring-matching. Same sibling shape as the recently-patched supersedes/dependency_blockers/compute_values/tags walkers, this time reaching the public `goc --advances <title>` / `goc --advanced-by <title>` CLI surface. A query token that is a substring of any card's scalar edge value produces a false positive."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T06:15:22Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test in `tests/` asserts that `--advances <title>` / `--advanced-by <title>` filters treat a non-list edge value as no membership at all, mirroring the `isinstance(..., list)` guard the recent walker fixes added in `dependency_blockers`, `compute_values`, the supersession cycle walkers, and the `tags` property.
   - [ ] MECHANICAL: the two unguarded `in` comparisons at `goc/engine.py:1950` and `goc/engine.py:1952` coerce the frontmatter value to a list before the membership test (or call a shared list-coercion helper consistent with the existing walker fixes).
   - [ ] PROCESS: full regression suite green (`uv run python -m unittest discover -s tests`); plugin mirrors synced if `engine.py` changed (pre-commit `sync-plugin-assets`).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `--advances` and `--advanced-by` CLI filters substring-match bare-string edge scalars
