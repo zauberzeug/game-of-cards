@@ -1,7 +1,7 @@
 ---
 title: session-start-hook-frames-waiting-on-active-cards-as-resumable
 summary: "SessionStart hook (`deck_session_start.py`) partitions active cards by `human_gate` only — the partner fix to closed sibling [session-start-hook-shows-gated-active-cards-as-resumable](../session-start-hook-shows-gated-active-cards-as-resumable/). A `status: active` card with `human_gate: none` but `waiting_on: external|resource|deferred` (or a future `waiting_until`) is still impeded and not agent-resumable, yet the hook tells the agent to `resume or close` it. The three-axis stuck model in AGENTS.md says these axes compose; the hook collapses them."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T09:22:32Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
   - [ ] MECHANICAL: the OpenClaw TypeScript port of this hook in `openclaw-plugin/index.ts` is updated to match — same `waiting_on` filtering semantics. (The OpenClaw hook is hand-ported, not auto-synced; verify by re-reading `index.ts` after the change.)
   - [ ] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # SessionStart hook frames `waiting_on` active cards as resumable
