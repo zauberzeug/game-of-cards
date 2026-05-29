@@ -4554,6 +4554,15 @@ def _cmd_decide(args):
     no_commit = args.no_commit
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
+    if t.status in TERMINAL_STATUSES:
+        print(
+            f"ERROR: {title}: status is {t.status!r} (terminal); "
+            f"`goc decide` records a *pending* decision — terminal cards "
+            f"cannot be re-decided. To replace a recorded decision, file "
+            f"a new card and link it via `goc status <old> superseded --by <new>`.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     if t.human_gate == "none":
         print(
             f"ERROR: {title}: gate already 'none' (no decision pending)",

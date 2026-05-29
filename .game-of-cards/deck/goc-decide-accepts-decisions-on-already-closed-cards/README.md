@@ -1,21 +1,21 @@
 ---
 title: goc-decide-accepts-decisions-on-already-closed-cards
 summary: "`goc decide` only guards on `human_gate != 'none'`, never on `status in TERMINAL_STATUSES`. A closed card (`done` / `disproved` / `superseded`) whose gate was left raised by `goc done` is silently mutated — a `## Decision` section is appended to the closed README, `human_gate` is lowered to `none`, and the success line announces `any agent can now claim this card`. Mirrors the existing guards in `_cmd_done` (engine.py:3244) and `_cmd_status` (engine.py:3983)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T15:27:59Z"
-closed_at: null
+closed_at: "2026-05-29T15:34:07Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: a regression test in `tests/` exercises `goc decide <closed-card>` and asserts a non-zero exit + an unchanged README.
-  - [ ] MECHANICAL: `_cmd_decide` (engine.py:4548) rejects cards whose `status` is in `TERMINAL_STATUSES`, with an error message that mirrors `_cmd_done` (engine.py:3244-3250) and `_cmd_status` (engine.py:3983-3989).
-  - [ ] TDD: `reproduce.py` exits zero (defect no longer fires — the script asserts non-zero exit from `goc decide` and an unchanged README on the closed fixture).
-  - [ ] MECHANICAL: `uv run goc validate` is clean.
-  - [ ] PROCESS: cross-link the existing sibling card `goc-done-marks-cards-done-without-clearing-or-checking-human-gate` in this card's log.md and consider whether a shared terminal-status guard helper is warranted (decline if two call-sites is too small; note the decision in log.md either way).
+  - [x] TDD: a regression test in `tests/` exercises `goc decide <closed-card>` and asserts a non-zero exit + an unchanged README.
+  - [x] MECHANICAL: `_cmd_decide` (engine.py:4548) rejects cards whose `status` is in `TERMINAL_STATUSES`, with an error message that mirrors `_cmd_done` (engine.py:3244-3250) and `_cmd_status` (engine.py:3983-3989).
+  - [x] TDD: `reproduce.py` exits zero (defect no longer fires — the script asserts non-zero exit from `goc decide` and an unchanged README on the closed fixture).
+  - [x] MECHANICAL: `uv run goc validate` is clean.
+  - [x] PROCESS: cross-link the existing sibling card `goc-done-marks-cards-done-without-clearing-or-checking-human-gate` in this card's log.md and consider whether a shared terminal-status guard helper is warranted (decline if two call-sites is too small; note the decision in log.md either way).
 worker: {who: "claude[bot]", where: main}
 ---
 
