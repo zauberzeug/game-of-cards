@@ -1,22 +1,22 @@
 ---
 title: session-start-hook-treats-non-canonical-waiting-on-as-not-impeded
 summary: "The session-start hook re-implementations of `waiting_impedes` (Python `goc/templates/hooks/deck_session_start.py:_is_impeded` and TS `openclaw-plugin/index.ts:isImpeded`) gate impediment on enum membership (`waiting_on in {external, resource, deferred}`) where the engine gates on `reason is not None`. A hand-edited card with a typo'd or invented reason (e.g. `waiting_on: externl`) plus no `waiting_until` is reported impeded by the engine but resumable by both hooks. Same drift class as the just-closed `session-start-hook-treats-malformed-bare-waiting-until-as-not-impeded`; this is the sibling matrix cell."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T23:49:14Z"
-closed_at: null
+closed_at: "2026-05-29T23:56:19Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` constructs a card with `waiting_on: externl` (any non-canonical reason) and no `waiting_until`, then shows that `engine.waiting_impedes` returns True while `deck_session_start._is_impeded` returns False — fails before fix, passes after.
-  - [ ] TDD: same reproducer covers the `waiting_on: <non-canonical>` + unparseable `waiting_until` cell (engine True, Python hook False) so both drifted cells are pinned by the test.
-  - [ ] TDD: fix in `goc/templates/hooks/deck_session_start.py` `_is_impeded` mirrors the engine: when `reason is not None` (any non-None value, not just `_IMPEDED_WAITING_ON` members), treat as impeded unless `waiting_until` is elapsed.
-  - [ ] TDD: same fix ported into `openclaw-plugin/index.ts` `isImpeded` — `IMPEDED_WAITING_ON.has(waitingOn)` widens to `waitingOn !== ""` (any non-empty reason).
-  - [ ] TDD: no behavior change for canonical reasons (external / resource / deferred), bare-`until` paths, elapsed-`until` resurfacing, the `until_unparseable` backstop with no reason, or the all-empty cell.
-  - [ ] PROCESS: pre-commit `sync-plugin-assets` regenerates the Claude-Code / Codex plugin mirrors of `deck_session_start.py` from the template; CI parity stays green.
+  - [x] TDD: `reproduce.py` constructs a card with `waiting_on: externl` (any non-canonical reason) and no `waiting_until`, then shows that `engine.waiting_impedes` returns True while `deck_session_start._is_impeded` returns False — fails before fix, passes after.
+  - [x] TDD: same reproducer covers the `waiting_on: <non-canonical>` + unparseable `waiting_until` cell (engine True, Python hook False) so both drifted cells are pinned by the test.
+  - [x] TDD: fix in `goc/templates/hooks/deck_session_start.py` `_is_impeded` mirrors the engine: when `reason is not None` (any non-None value, not just `_IMPEDED_WAITING_ON` members), treat as impeded unless `waiting_until` is elapsed.
+  - [x] TDD: same fix ported into `openclaw-plugin/index.ts` `isImpeded` — `IMPEDED_WAITING_ON.has(waitingOn)` widens to `waitingOn !== ""` (any non-empty reason).
+  - [x] TDD: no behavior change for canonical reasons (external / resource / deferred), bare-`until` paths, elapsed-`until` resurfacing, the `until_unparseable` backstop with no reason, or the all-empty cell.
+  - [x] PROCESS: pre-commit `sync-plugin-assets` regenerates the Claude-Code / Codex plugin mirrors of `deck_session_start.py` from the template; CI parity stays green.
 worker: {who: "claude[bot]", where: main}
 ---
 

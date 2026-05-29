@@ -326,6 +326,33 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
         p.write_text("---\nstatus: active\n---\nbody\n", encoding="utf-8")
         self.assertFalse(self.hook._is_impeded(p))
 
+    def test_is_impeded_true_for_non_canonical_waiting_on(self):
+        """Sibling cell to the canonical-enum cases: a hand-edited or typo'd
+        `waiting_on` reason (any string outside {external, resource, deferred})
+        must still impede, mirroring the engine's `reason is not None` gate.
+
+        `goc.engine.waiting_impedes` falls through to "any non-None reason →
+        impeded" at `engine.py:1793-1795`. The validator at `engine.py:1232`
+        rejects non-canonical values at load time, but the hook runs on
+        pre-validate / hand-edited decks (it reads README.md directly with
+        its own mini-frontmatter parser, bypassing the loader).
+        """
+        for value, until in (
+            ("externl", None),
+            ("customer-call", '"not-a-date"'),
+        ):
+            p = Path(
+                tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name
+            )
+            front = f"status: active\nwaiting_on: {value}\n"
+            if until is not None:
+                front += f"waiting_until: {until}\n"
+            p.write_text(f"---\n{front}---\nbody\n", encoding="utf-8")
+            self.assertTrue(
+                self.hook._is_impeded(p),
+                f"non-canonical waiting_on={value!r} must still impede",
+            )
+
     def test_four_card_matrix_only_a_appears_under_resumable(self):
         """DoD fixture: (a) plain active, (b) waiting_on: external,
         (c) waiting_on: deferred + future waiting_until, (d) human_gate: decision.

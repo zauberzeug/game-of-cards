@@ -111,6 +111,18 @@ test("waiting_on=external with malformed waiting_until is impeded", () => {{
   // detect any regression that would weaken that branch.
   assert.strictEqual(isImpeded("external", "2026-99-99", NOW), true);
 }});
+
+// Non-canonical waiting_on matrix — sibling cells to the canonical-enum
+// cases. The engine's `waiting_impedes` gates on `reason is not None`, so
+// any hand-edited or typo'd reason must impede mirroring the engine, since
+// the hook reads README.md directly and runs before `goc validate`.
+test("non-canonical waiting_on with no waiting_until is impeded", () => {{
+  assert.strictEqual(isImpeded("externl", "", NOW), true);
+}});
+
+test("non-canonical waiting_on with malformed waiting_until is impeded", () => {{
+  assert.strictEqual(isImpeded("customer-call", "not-a-date", NOW), true);
+}});
 """
 
 
@@ -130,7 +142,6 @@ class OpenclawIsImpededMatrixTest(unittest.TestCase):
         src = INDEX_TS.read_text(encoding="utf-8")
         extracted = "\n\n".join(
             [
-                _extract_const_line(src, "IMPEDED_WAITING_ON"),
                 _extract_const_line(src, "ISO_DATE_RE"),
                 _extract_const_line(src, "ISO_DATETIME_UTC_RE"),
                 _extract_top_level_function(src, "parseWaitingUntil"),
