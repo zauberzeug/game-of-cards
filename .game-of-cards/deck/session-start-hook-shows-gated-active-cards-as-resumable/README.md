@@ -1,21 +1,22 @@
 ---
 title: session-start-hook-shows-gated-active-cards-as-resumable
 summary: "SessionStart hook (`deck_session_start.py`) lists every `status: active` card with the same `resume or close before starting new work` framing — even cards parked behind `human_gate: session` or `human_gate: decision`, which the agent cannot resume (only the human can lower the gate). The hook ignores `human_gate` entirely, conflating agent-resumable work with human-blocked parked work."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T08:06:58Z"
-closed_at: null
+closed_at: 2026-05-29T09:18:43Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: `deck_session_start.py` distinguishes agent-resumable active cards (`human_gate: none`) from human-parked active cards (`human_gate: decision` or `session`). Either filter the parked ones out of the reminder, or label them separately so the agent does not read `resume or close` advice for cards it cannot resume.
-  - [ ] TDD: a unit/regression test exercises the hook on a fixture deck containing (a) one `status: active`, `human_gate: none` card, (b) one `status: active`, `human_gate: decision` card, (c) one `status: active`, `human_gate: session` card. The test asserts the hook's output matches the chosen framing — at minimum the `gate: none` card is the only one labeled as resumable.
-  - [ ] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
-  - [ ] MECHANICAL: the OpenClaw TypeScript port of this hook in `openclaw-plugin/index.ts` is updated to match — same `human_gate` filtering semantics. (The OpenClaw hook is hand-ported, not auto-synced; verify by re-reading `index.ts` after the change.)
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] MECHANICAL: `deck_session_start.py` distinguishes agent-resumable active cards (`human_gate: none`) from human-parked active cards (`human_gate: decision` or `session`). Either filter the parked ones out of the reminder, or label them separately so the agent does not read `resume or close` advice for cards it cannot resume.
+  - [x] TDD: a unit/regression test exercises the hook on a fixture deck containing (a) one `status: active`, `human_gate: none` card, (b) one `status: active`, `human_gate: decision` card, (c) one `status: active`, `human_gate: session` card. The test asserts the hook's output matches the chosen framing — at minimum the `gate: none` card is the only one labeled as resumable.
+  - [x] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
+  - [x] MECHANICAL: the OpenClaw TypeScript port of this hook in `openclaw-plugin/index.ts` is updated to match — same `human_gate` filtering semantics. (The OpenClaw hook is hand-ported, not auto-synced; verify by re-reading `index.ts` after the change.)
+  - [x] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # SessionStart hook flags gated active cards with the same "resume" framing as truly resumable ones

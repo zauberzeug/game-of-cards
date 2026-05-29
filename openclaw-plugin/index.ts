@@ -117,7 +117,12 @@ function buildArgs(input: GocToolInput): string[] {
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
 
-async function findActiveCards(deckDir: string): Promise<string[]> {
+interface ActiveCard {
+  name: string;
+  humanGate: string;
+}
+
+async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
   let entries: string[];
   try {
     const dirents = await readdir(deckDir, { withFileTypes: true });
@@ -128,7 +133,7 @@ async function findActiveCards(deckDir: string): Promise<string[]> {
   } catch {
     return [];
   }
-  const active: string[] = [];
+  const active: ActiveCard[] = [];
   for (const name of entries) {
     const readme = resolve(deckDir, name, "README.md");
     let text: string;
@@ -139,12 +144,17 @@ async function findActiveCards(deckDir: string): Promise<string[]> {
     }
     const m = FRONTMATTER_RE.exec(text);
     if (!m) continue;
+    let status: string | null = null;
+    let humanGate = "none";
     for (const line of m[1].split("\n")) {
       if (line.startsWith("status:")) {
-        if (line.split(":", 2)[1].trim() === "active") active.push(name);
-        break;
+        status = line.split(":", 2)[1].trim();
+      } else if (line.startsWith("human_gate:")) {
+        const val = line.split(":", 2)[1].trim();
+        if (val) humanGate = val;
       }
     }
+    if (status === "active") active.push({ name, humanGate });
   }
   return active;
 }
@@ -357,8 +367,20 @@ export default definePluginEntry({
       sessionProjectDir = projectDir;
       const deckDir = await resolveDeckDir(projectDir);
       const active = await findActiveCards(deckDir);
-      if (active.length > 0) {
-        const message = `[GoC] Active card(s): ${active.join(", ")} — resume or close before starting new work.`;
+      const resumable = active.filter((c) => c.humanGate === "none").map((c) => c.name);
+      const parked = active.filter((c) => c.humanGate !== "none").map((c) => c.name);
+      const messages: string[] = [];
+      if (resumable.length > 0) {
+        messages.push(
+          `[GoC] Active card(s): ${resumable.join(", ")} — resume or close before starting new work.`,
+        );
+      }
+      if (parked.length > 0) {
+        messages.push(
+          `[GoC] Parked active card(s) (awaiting human): ${parked.join(", ")} — agent cannot resume.`,
+        );
+      }
+      for (const message of messages) {
         if (typeof ctx?.notify === "function") {
           ctx.notify(message);
         } else if (typeof ctx?.appendSystemContext === "function") {
