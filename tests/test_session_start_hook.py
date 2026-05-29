@@ -174,3 +174,156 @@ class SessionStartHookGatedActiveCardsTest(unittest.TestCase):
             self._make_card(deck, "done-card", "done", "none")
             out = self._run_hook(project)
         self.assertEqual(out, "")
+
+
+class SessionStartHookWaitingOnTest(unittest.TestCase):
+    """The hook must not label `waiting_on`/`waiting_until`-impeded active cards as resumable.
+
+    Three-axis stuck model from AGENTS.md: `human_gate` (decision/session) and
+    the `waiting_on` impediment overlay compose. A `status: active,
+    human_gate: none` card with `waiting_on: external|resource|deferred` (or a
+    future `waiting_until`) is impeded and not agent-resumable, even though
+    the prior partition only checked `human_gate`.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _write_card(self, deck_dir: Path, name: str, frontmatter: str) -> None:
+        card = deck_dir / name
+        card.mkdir(parents=True)
+        body = f"---\n{frontmatter.strip()}\n---\nbody\n"
+        (card / "README.md").write_text(body, encoding="utf-8")
+
+    def _run_hook(self, project_dir: Path) -> str:
+        buf = io.StringIO()
+        stdin = io.StringIO(json.dumps({"cwd": str(project_dir)}))
+        with mock.patch.object(sys, "stdin", stdin), redirect_stdout(buf):
+            rc = self.hook.main()
+        self.assertEqual(rc, 0)
+        return buf.getvalue()
+
+    def test_waiting_on_reader_returns_none_when_absent(self):
+        p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
+        p.write_text("---\nstatus: active\n---\nbody\n", encoding="utf-8")
+        self.assertIsNone(self.hook._card_waiting_on(p))
+
+    def test_waiting_on_reader_returns_value(self):
+        p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
+        p.write_text(
+            "---\nstatus: active\nwaiting_on: external\n---\nbody\n", encoding="utf-8"
+        )
+        self.assertEqual(self.hook._card_waiting_on(p), "external")
+
+    def test_waiting_until_reader_strips_quotes(self):
+        p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
+        p.write_text(
+            '---\nstatus: active\nwaiting_until: "2099-01-01"\n---\nbody\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(self.hook._card_waiting_until(p), "2099-01-01")
+
+    def test_is_impeded_true_for_each_waiting_on_value(self):
+        for value in ("external", "resource", "deferred"):
+            p = Path(
+                tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name
+            )
+            p.write_text(
+                f"---\nstatus: active\nwaiting_on: {value}\n---\nbody\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(self.hook._is_impeded(p), f"waiting_on: {value}")
+
+    def test_is_impeded_true_for_future_waiting_until(self):
+        p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
+        p.write_text(
+            "---\nstatus: active\nwaiting_until: 2099-01-01\n---\nbody\n",
+            encoding="utf-8",
+        )
+        self.assertTrue(self.hook._is_impeded(p))
+
+    def test_is_impeded_false_for_past_waiting_until_without_waiting_on(self):
+        p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
+        p.write_text(
+            "---\nstatus: active\nwaiting_until: 2000-01-01\n---\nbody\n",
+            encoding="utf-8",
+        )
+        # Elapsed wait re-enters the queue (engine.waiting_impedes contract).
+        self.assertFalse(self.hook._is_impeded(p))
+
+    def test_is_impeded_false_when_no_overlay(self):
+        p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
+        p.write_text("---\nstatus: active\n---\nbody\n", encoding="utf-8")
+        self.assertFalse(self.hook._is_impeded(p))
+
+    def test_four_card_matrix_only_a_appears_under_resumable(self):
+        """DoD fixture: (a) plain active, (b) waiting_on: external,
+        (c) waiting_on: deferred + future waiting_until, (d) human_gate: decision.
+        Only (a) is framed as resumable.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            deck = project / ".game-of-cards" / "deck"
+            deck.mkdir(parents=True)
+            self._write_card(deck, "a-plain", "status: active\nhuman_gate: none")
+            self._write_card(
+                deck,
+                "b-external",
+                "status: active\nhuman_gate: none\nwaiting_on: external",
+            )
+            self._write_card(
+                deck,
+                "c-deferred-future",
+                "status: active\nhuman_gate: none\n"
+                "waiting_on: deferred\nwaiting_until: 2099-01-01",
+            )
+            self._write_card(
+                deck, "d-gated", "status: active\nhuman_gate: decision"
+            )
+            out = self._run_hook(project)
+
+        resumable_lines = [
+            line for line in out.splitlines() if "resume or close" in line
+        ]
+        self.assertEqual(len(resumable_lines), 1, out)
+        self.assertIn("a-plain", resumable_lines[0])
+        self.assertNotIn("b-external", resumable_lines[0])
+        self.assertNotIn("c-deferred-future", resumable_lines[0])
+        self.assertNotIn("d-gated", resumable_lines[0])
+
+        # b and c are impeded; d is gate-parked. Both kinds get "agent cannot resume."
+        not_resumable = "\n".join(
+            line for line in out.splitlines() if "agent cannot resume" in line
+        )
+        self.assertIn("b-external", not_resumable)
+        self.assertIn("c-deferred-future", not_resumable)
+        self.assertIn("d-gated", not_resumable)
+
+    def test_impeded_bucket_distinct_from_gate_bucket(self):
+        """When both kinds of parked cards exist, they emit distinct lines.
+
+        Diagnostic granularity matches the engine's elsewhere distinction
+        between awaiting-human and impediment-overlay reasons.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            deck = project / ".game-of-cards" / "deck"
+            deck.mkdir(parents=True)
+            self._write_card(
+                deck, "gated", "status: active\nhuman_gate: decision"
+            )
+            self._write_card(
+                deck,
+                "impeded",
+                "status: active\nhuman_gate: none\nwaiting_on: external",
+            )
+            out = self._run_hook(project)
+        gate_lines = [line for line in out.splitlines() if "awaiting human" in line]
+        impeded_lines = [line for line in out.splitlines() if "waiting_on" in line]
+        self.assertEqual(len(gate_lines), 1, out)
+        self.assertEqual(len(impeded_lines), 1, out)
+        self.assertIn("gated", gate_lines[0])
+        self.assertNotIn("impeded", gate_lines[0])
+        self.assertIn("impeded", impeded_lines[0])
+        self.assertNotIn("gated", impeded_lines[0])

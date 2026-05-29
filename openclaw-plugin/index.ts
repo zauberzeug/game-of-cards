@@ -116,10 +116,29 @@ function buildArgs(input: GocToolInput): string[] {
 // === Lifecycle-hook helpers (ported from claude-plugin/hooks/*.py) ===
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
+const IMPEDED_WAITING_ON = new Set(["external", "resource", "deferred"]);
+const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})/;
 
 interface ActiveCard {
   name: string;
   humanGate: string;
+  impeded: boolean;
+}
+
+function stripQuotes(s: string): string {
+  return s.replace(/^["']|["']$/g, "");
+}
+
+function isFutureIsoDate(value: string, today: Date): boolean {
+  const m = ISO_DATE_RE.exec(value);
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  // UTC midnight comparison — matches the Python hook's date-level coarseness.
+  const until = Date.UTC(y, mo - 1, d);
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return until > todayUtc;
 }
 
 async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
@@ -133,6 +152,7 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
   } catch {
     return [];
   }
+  const today = new Date();
   const active: ActiveCard[] = [];
   for (const name of entries) {
     const readme = resolve(deckDir, name, "README.md");
@@ -146,15 +166,25 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
     if (!m) continue;
     let status: string | null = null;
     let humanGate = "none";
+    let waitingOn = "";
+    let waitingUntil = "";
     for (const line of m[1].split("\n")) {
       if (line.startsWith("status:")) {
         status = line.split(":", 2)[1].trim();
       } else if (line.startsWith("human_gate:")) {
         const val = line.split(":", 2)[1].trim();
         if (val) humanGate = val;
+      } else if (line.startsWith("waiting_on:")) {
+        waitingOn = stripQuotes(line.split(":", 2)[1].trim());
+      } else if (line.startsWith("waiting_until:")) {
+        waitingUntil = stripQuotes(line.split(":", 2)[1].trim());
       }
     }
-    if (status === "active") active.push({ name, humanGate });
+    if (status !== "active") continue;
+    const impeded =
+      IMPEDED_WAITING_ON.has(waitingOn) ||
+      (waitingUntil !== "" && isFutureIsoDate(waitingUntil, today));
+    active.push({ name, humanGate, impeded });
   }
   return active;
 }
@@ -341,17 +371,27 @@ export default definePluginEntry({
       sessionProjectDir = projectDir;
       const deckDir = await resolveDeckDir(projectDir);
       const active = await findActiveCards(deckDir);
-      const resumable = active.filter((c) => c.humanGate === "none").map((c) => c.name);
-      const parked = active.filter((c) => c.humanGate !== "none").map((c) => c.name);
+      const resumable = active
+        .filter((c) => c.humanGate === "none" && !c.impeded)
+        .map((c) => c.name);
+      const parkedGate = active
+        .filter((c) => !c.impeded && c.humanGate !== "none")
+        .map((c) => c.name);
+      const impeded = active.filter((c) => c.impeded).map((c) => c.name);
       const messages: string[] = [];
       if (resumable.length > 0) {
         messages.push(
           `[GoC] Active card(s): ${resumable.join(", ")} — resume or close before starting new work.`,
         );
       }
-      if (parked.length > 0) {
+      if (parkedGate.length > 0) {
         messages.push(
-          `[GoC] Parked active card(s) (awaiting human): ${parked.join(", ")} — agent cannot resume.`,
+          `[GoC] Parked active card(s) (awaiting human): ${parkedGate.join(", ")} — agent cannot resume.`,
+        );
+      }
+      if (impeded.length > 0) {
+        messages.push(
+          `[GoC] Impeded active card(s) (waiting_on): ${impeded.join(", ")} — agent cannot resume.`,
         );
       }
       for (const message of messages) {
