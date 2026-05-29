@@ -56,6 +56,21 @@ Lesson: a setup-uv major bump is not behaviourally inert — it changes the
 bundled uv version, which can change `uv pip` semantics. Verify the
 downstream uv commands, not just that the action resolves.
 
+## 2026-05-29 — third fix: --system hits externally-managed /usr; use a venv
+
+`uv pip install --system -e .` then failed with `The interpreter at /usr
+is externally managed ... Virtual environments were not considered due to
+the --system flag`. The GHA runner's system Python is PEP-668 managed, so
+`--system` is the wrong lever. Reverted `--system` and instead set
+`activate-environment: true` on the `setup-uv@v7` step — it creates and
+activates a `.venv` (exported via GITHUB_PATH/GITHUB_ENV for the whole
+job), so `uv pip install -e .` targets the venv and the later bare
+`goc --version` / `goc validate` steps resolve the console script.
+
+Note (out of scope, deferred): AGENTS.md line ~25 still documents the CI
+install as `uv pip install --system -e .`. With the venv model that
+comment is now stale; worth a doc touch-up but not blocking this card.
+
 Separately observed (NOT caused by this card): `main` CI was already red
 before this change — the prior push (`b1499b5`, old pins) failed at "Run
 regression tests", a real test failure unrelated to the action pins.
