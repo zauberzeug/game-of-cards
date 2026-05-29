@@ -4802,7 +4802,11 @@ def _cmd_migrate_list_style(args):
         if not readme.exists():
             continue
         original = readme.read_text()
-        fm, body = parse_frontmatter(original)
+        try:
+            fm, body = parse_frontmatter(original)
+        except FrontmatterError as exc:
+            print(f"WARNING: {card_dir.name}: {exc}", file=sys.stderr)
+            continue
         if not fm:
             continue
         rewritten = emit_frontmatter(fm, body=body)
