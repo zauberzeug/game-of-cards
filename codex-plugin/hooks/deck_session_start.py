@@ -123,6 +123,9 @@ def _is_impeded(readme: Path) -> bool:
       (elapsed wait resurfaces the card; engine contract).
     - no `waiting_on`, future `waiting_until` → impeded (deferred wait).
     - no `waiting_on`, elapsed `waiting_until` → NOT impeded.
+    - present-but-unparseable `waiting_until` with no `waiting_on` →
+      impeded (engine's `until_unparseable` backstop: err on the side
+      of hiding pre-validate / hand-edited decks).
 
     Date-level coarseness does NOT suffice for the datetime-shape
     values the engine accepts since the `_waiting_until_instant`
@@ -132,13 +135,20 @@ def _is_impeded(readme: Path) -> bool:
     """
     reason = _card_waiting_on(readme)
     until = _card_waiting_until(readme)
-    until_dt = _parse_waiting_until(until) if until else None
+    until_unparseable = False
+    until_dt: datetime | None = None
+    if until:
+        until_dt = _parse_waiting_until(until)
+        if until_dt is None:
+            until_unparseable = True
     until_future = until_dt is not None and until_dt > datetime.now(tz=timezone.utc)
     if reason in _IMPEDED_WAITING_ON:
         # Elapsed waiting_until resurfaces the card even with a reason set.
         if until_dt is not None and not until_future:
             return False
         return True
+    if reason is None and until_dt is None:
+        return until_unparseable
     return until_future
 
 

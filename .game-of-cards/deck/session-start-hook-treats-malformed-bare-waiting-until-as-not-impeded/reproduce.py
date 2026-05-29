@@ -91,9 +91,9 @@ def main() -> int:
 
     if engine_verdict and not hook_verdict:
         print("DEFECT FIRES: engine hides the card from queues, hook announces it as resumable.")
-        return 0
+        return 1
     print("Defect did not fire — engine and hook agree.")
-    return 1
+    return 0
 
 
 if __name__ == "__main__":

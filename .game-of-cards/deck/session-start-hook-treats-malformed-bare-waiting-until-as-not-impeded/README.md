@@ -1,21 +1,21 @@
 ---
 title: session-start-hook-treats-malformed-bare-waiting-until-as-not-impeded
 summary: "The session-start hook re-implementations of `waiting_impedes` (Python `goc/templates/hooks/deck_session_start.py:_is_impeded` and TS `openclaw-plugin/index.ts:isImpeded`) drifted from the engine's malformed-`waiting_until` safety backstop. For a bare deferral (no `waiting_on`) with an unparseable `waiting_until`, the engine reports impeded=True (err on the side of hiding) while both hook helpers report False, so the session-start announcement frames such cards as resumable while the queue has already deferred them. Same root-cause as `waiting-impedes-treats-malformed-waiting-until-as-no-impediment` (done), which only patched the engine."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T23:09:40Z"
-closed_at: null
+closed_at: "2026-05-29T23:23:29Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` constructs a card with no `waiting_on` and `waiting_until: "not-a-date"`, then shows that `engine.waiting_impedes` returns True while `deck_session_start._is_impeded` (and the TS `isImpeded` predicate translated to a unit test) returns False — fails before fix, passes after.
-  - [ ] TDD: fix in `goc/templates/hooks/deck_session_start.py` `_is_impeded` mirrors the engine's `until_unparseable` backstop: when `until` is present-but-unparseable and `reason is None`, return True (treat as impeded) instead of falling through to `until_future` (which is False).
-  - [ ] TDD: same fix ported into `openclaw-plugin/index.ts` `isImpeded` so the TS twin matches the engine. Add a Node unit test covering the bare-deferral malformed-date case.
-  - [ ] TDD: no behavior change for valid future/elapsed dates, the bare-reason path, the reason-plus-future path, the reason-plus-elapsed path, or the reason-plus-malformed-date path (which already returns True correctly in both hooks via the `IMPEDED_WAITING_ON` branch).
-  - [ ] PROCESS: pre-commit `sync-plugin-assets` regenerates the Claude-Code / Codex plugin mirrors of `deck_session_start.py` from the template; CI parity stays green.
+  - [x] TDD: `reproduce.py` constructs a card with no `waiting_on` and `waiting_until: "not-a-date"`, then shows that `engine.waiting_impedes` returns True while `deck_session_start._is_impeded` (and the TS `isImpeded` predicate translated to a unit test) returns False — fails before fix, passes after.
+  - [x] TDD: fix in `goc/templates/hooks/deck_session_start.py` `_is_impeded` mirrors the engine's `until_unparseable` backstop: when `until` is present-but-unparseable and `reason is None`, return True (treat as impeded) instead of falling through to `until_future` (which is False).
+  - [x] TDD: same fix ported into `openclaw-plugin/index.ts` `isImpeded` so the TS twin matches the engine. Add a Node unit test covering the bare-deferral malformed-date case.
+  - [x] TDD: no behavior change for valid future/elapsed dates, the bare-reason path, the reason-plus-future path, the reason-plus-elapsed path, or the reason-plus-malformed-date path (which already returns True correctly in both hooks via the `IMPEDED_WAITING_ON` branch).
+  - [x] PROCESS: pre-commit `sync-plugin-assets` regenerates the Claude-Code / Codex plugin mirrors of `deck_session_start.py` from the template; CI parity stays green.
 worker: {who: "claude[bot]", where: main}
 ---
 

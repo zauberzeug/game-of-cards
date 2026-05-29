@@ -2469,12 +2469,18 @@ function parseWaitingUntil(value) {
   return null;
 }
 function isImpeded(waitingOn, waitingUntil, now) {
-  const untilDt = waitingUntil !== "" ? parseWaitingUntil(waitingUntil) : null;
+  let untilDt = null;
+  let untilUnparseable = false;
+  if (waitingUntil !== "") {
+    untilDt = parseWaitingUntil(waitingUntil);
+    if (untilDt === null) untilUnparseable = true;
+  }
   const untilFuture = untilDt !== null && untilDt.getTime() > now.getTime();
   if (IMPEDED_WAITING_ON.has(waitingOn)) {
     if (untilDt !== null && !untilFuture) return false;
     return true;
   }
+  if (waitingOn === "" && untilDt === null) return untilUnparseable;
   return untilFuture;
 }
 async function findActiveCards(deckDir) {
