@@ -1,7 +1,7 @@
 ---
 title: goc-new-next-hint-points-at-stale-deck-path-not-game-of-cards-deck
 summary: "`goc new` prints a `Next: edit deck/<title>/README.md ...` hint that points at the legacy `deck/` directory, not the canonical `.game-of-cards/deck/` where the card was actually written one line earlier. Any agent that follows the hint hits ENOENT. Regression after the deck relocation."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T13:26:01Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/engine.py:4156` rewritten to use `card_dir.relative_to(REPO_ROOT)/` (mirroring the `created` line directly above)
   - [ ] TDD: `uv run python -m unittest discover -s tests` green
   - [ ] MECHANICAL: `pre-commit run --all-files` green (plugin mirrors stay in sync)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc new` "Next:" hint points at the stale `deck/` path
