@@ -1,7 +1,7 @@
 ---
 title: repair-edges-misses-half-edge-when-inverse-side-is-a-bare-string
 summary: "`find_half_edges` guards its OUTER walk against non-list `advances`/`advanced_by` but not the INNER `inverse_list` it pulls from the neighbour card. When the neighbour's inverse field is a hand-edited bare string, the `if t.title not in inverse_list` becomes a substring check — a substring hit silently passes a missing reverse edge. `goc repair-edges` then reports `No half-edges found.` for an asymmetric pair. Same root-cause family as the closed `compute-values-iterates-non-list-advances-character-by-character` fix; this is the unfixed inner-walker sibling."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-29T05:11:41Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — a deck with `A.advances=[B]` and `B.advanced_by: "<string>"` reports the missing reverse half from `find_half_edges` instead of an empty list. Regression test lands in `tests/`.
   - [ ] MECHANICAL: `goc/engine.py` `find_half_edges` (engine.py:1290) wraps `inverse_list = other.frontmatter.get(inverse) or []` with the same `isinstance(..., list)` guard already applied to the outer `v` at engine.py:1297 (treat a non-list inverse as an empty edge set).
   - [ ] MECHANICAL: plugin mirrors synced; `uv run goc validate` clean on this repo's deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `find_half_edges` substring-matches a non-list inverse side
