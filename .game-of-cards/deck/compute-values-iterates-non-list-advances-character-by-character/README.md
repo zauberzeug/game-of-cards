@@ -1,7 +1,7 @@
 ---
 title: compute-values-iterates-non-list-advances-character-by-character
 summary: "`compute_values` iterates `frontmatter['advances']` without an `isinstance(..., list)` guard, so a hand-edited bare-string `advances: bcard` is walked character-by-character on the always-run render path: each char becomes a phantom edge target. Result is spurious per-char dangling-edge warnings on every `goc` / `goc --board` call plus a silently inflated priority value, and `goc validate` does not gate the render path."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T14:01:31Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test in tests/ asserts `compute_values` treats a non-list `advances` (and `advanced_by`, exercised by the cycle walkers) as an empty edge set, matching `find_half_edges` and `validate_card`.
   - [ ] MECHANICAL: the `for dest in ... or []` loop at goc/engine.py:1836 (and the parallel walkers in `value_for` / the cycle detectors that read the same field) guards the value with `isinstance(..., list)` before iterating, mirroring the guard already present at engine.py:1297.
   - [ ] PROCESS: full regression suite green (`uv run python -m unittest discover -s tests`); plugin mirrors synced if engine.py changed (pre-commit `sync-plugin-assets`).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `compute_values` iterates a non-list `advances` field character-by-character
