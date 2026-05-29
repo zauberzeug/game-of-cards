@@ -1,7 +1,7 @@
 ---
 title: session-start-hook-treats-malformed-bare-waiting-until-as-not-impeded
 summary: "The session-start hook re-implementations of `waiting_impedes` (Python `goc/templates/hooks/deck_session_start.py:_is_impeded` and TS `openclaw-plugin/index.ts:isImpeded`) drifted from the engine's malformed-`waiting_until` safety backstop. For a bare deferral (no `waiting_on`) with an unparseable `waiting_until`, the engine reports impeded=True (err on the side of hiding) while both hook helpers report False, so the session-start announcement frames such cards as resumable while the queue has already deferred them. Same root-cause as `waiting-impedes-treats-malformed-waiting-until-as-no-impediment` (done), which only patched the engine."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T23:09:40Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: same fix ported into `openclaw-plugin/index.ts` `isImpeded` so the TS twin matches the engine. Add a Node unit test covering the bare-deferral malformed-date case.
   - [ ] TDD: no behavior change for valid future/elapsed dates, the bare-reason path, the reason-plus-future path, the reason-plus-elapsed path, or the reason-plus-malformed-date path (which already returns True correctly in both hooks via the `IMPEDED_WAITING_ON` branch).
   - [ ] PROCESS: pre-commit `sync-plugin-assets` regenerates the Claude-Code / Codex plugin mirrors of `deck_session_start.py` from the template; CI parity stays green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Session-start hook treats malformed bare `waiting_until` as not-impeded
