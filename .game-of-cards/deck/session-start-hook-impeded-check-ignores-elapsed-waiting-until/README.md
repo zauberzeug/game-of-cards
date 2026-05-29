@@ -1,7 +1,7 @@
 ---
 title: session-start-hook-impeded-check-ignores-elapsed-waiting-until
 summary: "SessionStart hook `_is_impeded` returns True whenever `waiting_on` is in {external, resource, deferred}, without consulting `waiting_until`. The engine's `waiting_impedes` returns False for the same card if `waiting_until` is in the past — the documented contract is that an elapsed `waiting_until` re-surfaces the card. A `status: active, human_gate: none, waiting_on: external, waiting_until: <past>` card is therefore framed under `Impeded active card(s) — agent cannot resume` even though `pull-card` / `goc --ready` consider it workable. Sibling-sweep finding on top of just-closed `session-start-hook-frames-waiting-on-active-cards-as-resumable`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T09:34:55Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
   - [ ] MECHANICAL: the OpenClaw TypeScript port in `openclaw-plugin/index.ts` is updated to match — same elapsed-`waiting_until` semantics. (Hand-ported, not auto-synced; verify by re-reading `index.ts` after the change.)
   - [ ] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # SessionStart hook `_is_impeded` ignores elapsed `waiting_until` when `waiting_on` is set
