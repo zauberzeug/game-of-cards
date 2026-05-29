@@ -1,24 +1,25 @@
 ---
 title: skill-prose-still-calls-queue-impact-sorted-after-impact-contribution-rename
 summary: "Sibling drift after `next-card-impact-ladder-references-nonexistent-frontmatter-field` closed: that fix renamed the `impact: <level>` frontmatter examples to `contribution: <level>` but left the prose calling the engine's sort 'impact-sorted', 'Impact ladder', and 'sorted by impact desc' across three skill bodies. The engine has no `impact` concept — it sorts by GRPW value built from `CONTRIBUTION_RANK` over the `contribution` field."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T12:05:24Z"
-closed_at: null
+closed_at: "2026-05-29T13:12:53Z"
 human_gate: none
 advances:
   - next-card-impact-ladder-references-nonexistent-frontmatter-field
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `uv run python deck/skill-prose-still-calls-queue-impact-sorted-after-impact-contribution-rename/reproduce.py` exits zero (all five drift hits gone; engine 'impact' token count stays at zero)
-  - [ ] MECHANICAL: `goc/templates/skills/next-card/SKILL.md` lines 21, 45, 137 rewritten — "impact-sorted queue" → "value-sorted queue"; "sorted by impact desc" → "sorted by value desc"; "impact, why it's the highest-leverage" → "contribution, why it's the highest-leverage"
-  - [ ] MECHANICAL: `goc/templates/skills/deck/SKILL.md:130` "(impact-sorted)" → "(value-sorted)"
-  - [ ] MECHANICAL: `goc/templates/skills/audit-deck/SKILL.md:67` "Impact ladder" → "Contribution ladder" (matches the sibling rename in next-card)
-  - [ ] MECHANICAL: `scripts/sync_plugin_assets.py` regenerates `.claude/skills/`, `.codex/skills/`, `claude-plugin/skills/`, `codex-plugin/skills/`; `uv run python scripts/sync_plugin_assets.py --check` exits zero
-  - [ ] MECHANICAL: `python3 scripts/port_skills_to_openclaw.py` re-ported and `--check` exits zero
-  - [ ] PROCESS: `uv run goc validate` clean
+  - [x] TDD: `uv run python deck/skill-prose-still-calls-queue-impact-sorted-after-impact-contribution-rename/reproduce.py` exits zero (all five drift hits gone; engine 'impact' token count stays at zero)
+  - [x] MECHANICAL: `goc/templates/skills/next-card/SKILL.md` lines 21, 45, 137 rewritten — "impact-sorted queue" → "value-sorted queue"; "sorted by impact desc" → "sorted by value desc"; "impact, why it's the highest-leverage" → "contribution, why it's the highest-leverage"
+  - [x] MECHANICAL: `goc/templates/skills/deck/SKILL.md:130` "(impact-sorted)" → "(value-sorted)"
+  - [x] MECHANICAL: `goc/templates/skills/audit-deck/SKILL.md:67` "Impact ladder" → "Contribution ladder" (matches the sibling rename in next-card)
+  - [x] MECHANICAL: `scripts/sync_plugin_assets.py` regenerates `.claude/skills/`, `.codex/skills/`, `claude-plugin/skills/`, `codex-plugin/skills/`; `uv run python scripts/sync_plugin_assets.py --check` exits zero
+  - [x] MECHANICAL: `python3 scripts/port_skills_to_openclaw.py` re-ported and `--check` exits zero
+  - [x] PROCESS: `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Skill prose still describes the queue sort as "impact" after the impact→contribution rename

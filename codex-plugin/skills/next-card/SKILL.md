@@ -17,7 +17,7 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 Kanban's **pull principle** (Anderson): work is taken when capacity is
 ready, not pushed by a planner. The runner — human or autonomous loop
-— pulls one card at a time, top of the impact-sorted queue, gated by
+— pulls one card at a time, top of the value-sorted queue, gated by
 the autonomy ladder so a cron run cannot accidentally land a
 research-impacting decision unsupervised. The deck is the queue; this
 skill is the picker.
@@ -41,7 +41,7 @@ start-gate; hard waits are expressed via `waiting_on` /
 
 ## Selection criteria
 
-`goc` lists open cards sorted by impact desc
+`goc` lists open cards sorted by value desc
 then created asc. The top entry is the auto-pick candidate, subject
 to the autonomy gate below.
 
@@ -133,7 +133,7 @@ the human comes back.
 A single recommendation with:
 
 - **Slug + one-line subject** of the recommended card.
-- **2-line rationale** — impact, why it's the highest-leverage open
+- **2-line rationale** — contribution, why it's the highest-leverage open
   pick, any advanced_by edges that matter.
 - **Next-step pointer**: typically "Run `Skill(advance-card) <title>
   active` to claim, then work it." If gated `decision` or `session`,
