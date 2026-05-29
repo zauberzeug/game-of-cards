@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-29T17:38:41Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - parked-active-cards-are-missing-from-goc-ready-leverage-line
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
