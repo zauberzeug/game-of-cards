@@ -23,7 +23,7 @@ import subprocess
 import sys
 import unicodedata
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import argparse
@@ -1321,6 +1321,8 @@ def detect_advance_cycles(cards: list[Card]) -> list[str]:
             if t is None:
                 continue
             advanced_by = t.frontmatter.get("advanced_by") or []
+            if not isinstance(advanced_by, list):
+                continue
             for b in advanced_by:
                 if b == start.title and cur != start.title:
                     errors.append(f"{start.title}: advanced_by: cycle detected through {cur} → {b}")
@@ -1346,7 +1348,10 @@ def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) ->
         card = by_title.get(cur)
         if card is None:
             continue
-        for a in card.frontmatter.get("advances") or []:
+        advances = card.frontmatter.get("advances") or []
+        if not isinstance(advances, list):
+            continue
+        for a in advances:
             if a == advancer:
                 return True
             stack.append(a)
@@ -1814,6 +1819,11 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
     per-card-rank fallback — on a (validate-failing) cyclic deck the
     cycle members get values that depend on `cards`/`advances` list
     order — so it must not be relied on as one.
+    The `isinstance(..., list)` guard before the descendant walk
+    mirrors `find_half_edges` / `validate_card`: a hand-edited bare-string
+    `advances` value is treated as an empty edge set, not iterated
+    character-by-character (which would emit phantom dangling-edge
+    warnings and reach the cycle branch via a chance self-match).
     Unknown advances targets are skipped for the priority math AND
     surfaced once per (card, target) pair as a stderr warning — silent
     skipping let edge rot degrade the value walk unnoticed. Run
@@ -1833,7 +1843,10 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
             return (own, ["cycle"])
         in_progress.add(title)
         best = (0.0, [])
-        for dest in t.frontmatter.get("advances") or []:
+        advances = t.frontmatter.get("advances") or []
+        if not isinstance(advances, list):
+            advances = []
+        for dest in advances:
             if dest not in by_title:
                 key = (title, dest)
                 if key not in _DANGLING_ADVANCES_WARNED:
@@ -1948,6 +1961,71 @@ def parse_since_filter(value: str | None) -> str | None:
         print("goc: error: --since: expected YYYY-MM-DD", file=sys.stderr)
         sys.exit(2)
     return value
+
+
+_CLOSED_SINCE_WINDOW_RE = re.compile(r"^(\d+)([hdw])$")
+
+
+def parse_closed_since(value: str | None, *, now: datetime | None = None) -> datetime | None:
+    """Resolve --closed-since WINDOW to a UTC threshold datetime.
+
+    Accepts `<N>h`, `<N>d`, `<N>w` relative windows, or an absolute
+    `YYYY-MM-DD` ISO date (interpreted as midnight UTC). Returns the
+    inclusive lower bound: cards whose `closed_at >= threshold` pass.
+    """
+    if value is None:
+        return None
+    base = now if now is not None else datetime.now(tz=timezone.utc)
+    m = _CLOSED_SINCE_WINDOW_RE.match(value)
+    if m:
+        n = int(m.group(1))
+        unit = m.group(2)
+        if n <= 0:
+            print(
+                "goc: error: --closed-since: window must be a positive integer "
+                "(e.g. 24h, 7d, 2w)",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        hours = {"h": n, "d": n * 24, "w": n * 24 * 7}[unit]
+        return base - timedelta(hours=hours)
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
+        try:
+            d = date.fromisoformat(value)
+        except ValueError:
+            print(
+                "goc: error: --closed-since: expected <N>[h|d|w] or YYYY-MM-DD",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    print(
+        "goc: error: --closed-since: expected <N>[h|d|w] or YYYY-MM-DD",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
+def _closed_at_instant(value: object) -> datetime | None:
+    """Parse a card's `closed_at` (date or datetime) into a UTC datetime."""
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, date):
+        return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+    s = str(value).strip()
+    if not s:
+        return None
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            d = date.fromisoformat(s[:10])
+        except ValueError:
+            return None
+        return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
 
 def validate_tag_filters(tags: list[str]) -> list[str] | None:
@@ -2156,17 +2234,44 @@ def render_table(
     return "\n".join(out_lines)
 
 
+SLIM_JSON_KEYS = (
+    "title",
+    "status",
+    "human_gate",
+    "contribution",
+    "value",
+    "tags",
+    "closed_at",
+    "waiting_on",
+)
+
+
 def render_json(
     cards: list[Card],
     values: dict[str, tuple[float, list[str]]] | None = None,
     by_title: dict[str, Card] | None = None,
+    slim: bool = False,
 ) -> str:
     if values is None:
         values = compute_values(cards)
     if by_title is None:
         by_title = {t.title: t for t in cards}
-    return json.dumps(
-        [
+    if slim:
+        records = [
+            {
+                "title": t.title,
+                "status": t.status,
+                "human_gate": t.human_gate,
+                "contribution": t.contribution,
+                "value": values.get(t.title, (0.0, []))[0],
+                "tags": t.tags,
+                "closed_at": str(t.closed_at) if t.closed_at else None,
+                "waiting_on": t.waiting_on,
+            }
+            for t in cards
+        ]
+    else:
+        records = [
             {
                 "title": t.title,
                 "summary": t.summary,
@@ -2194,10 +2299,8 @@ def render_json(
                 "dod_freeform": t.dod_freeform,
             }
             for t in cards
-        ],
-        indent=2,
-        default=str,
-    )
+        ]
+    return json.dumps(records, indent=2, default=str)
 
 
 def _display_width(text: str) -> int:
@@ -2279,6 +2382,43 @@ def render_board(
     return "\n".join(out)
 
 
+def render_leverage_line(
+    ready: list[Card],
+    all_cards: list[Card],
+    *,
+    values: dict[str, tuple[float, list[str]]] | None = None,
+) -> str:
+    """One-line leverage comparison after a pull-card pick.
+
+    Format: `Pulling <title> (value <N>). Highest gated card: <title>
+    (value <M>, gate <kind>).` Returns the empty string when no open
+    gated card exists outside the ready set (per the spec, the line is
+    omitted when there's nothing to compare against) or when the ready
+    set is itself empty (no pick to announce).
+    """
+    if not ready:
+        return ""
+    if values is None:
+        values = compute_values(all_cards)
+    open_gated = [
+        t for t in all_cards
+        if t.status == "open"
+        and t.human_gate in ("decision", "session")
+        and not waiting_impedes(t)
+    ]
+    if not open_gated:
+        return ""
+    gated_top = sort_default(open_gated, values=values)[0]
+    pulled = ready[0]
+    pulled_value = values.get(pulled.title, (0.0, []))[0]
+    gated_value = values.get(gated_top.title, (0.0, []))[0]
+    return (
+        f"Pulling {pulled.title} (value {pulled_value:.1f}). "
+        f"Highest gated card: {gated_top.title} "
+        f"(value {gated_value:.1f}, gate {gated_top.human_gate})."
+    )
+
+
 def render_active_notice(
     cards: list[Card],
     *,
@@ -2347,6 +2487,15 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Shortcut for --status done.")
     parser.add_argument("--since", default=None,
                         help="With --done: filter on closed_at >= YYYY-MM-DD.")
+    parser.add_argument("--closed-since", dest="closed_since", default=None,
+                        metavar="WINDOW",
+                        help="Filter to cards whose closed_at falls within "
+                        "WINDOW (e.g. 24h, 7d, 2w) or since YYYY-MM-DD. "
+                        "Auto-extends --status to 'all' when set.")
+    parser.add_argument("--waiting", action="store_true",
+                        help="Filter to cards carrying a waiting_on overlay.")
+    parser.add_argument("--slim", action="store_true",
+                        help=f"With --json: emit only {', '.join(SLIM_JSON_KEYS)}.")
     parser.add_argument("--advances", default=None,
                         help="Filter to cards that advance this title.")
     parser.add_argument("--advanced-by", dest="advanced_by", default=None,
@@ -2390,7 +2539,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # done
     p_done = subparsers.add_parser("done", help="Flip status → done; set closed_at; enforce DoD-checkbox rule.")
-    p_done.add_argument("title")
+    p_done.add_argument("titles", nargs="+",
+                        help="One card title, or multiple titles with --bundle.")
+    p_done.add_argument("--bundle", action="store_true",
+                        help="Close multiple cards in one invocation: shared attestation "
+                        "block + per-card Bundled-with cross-references. Preserves the "
+                        "per-card unchecked-DoD refusal.")
     p_done.add_argument("--force", action="store_true",
                         help="Bypass DoD enforcement (free-form prose DoDs).")
 
@@ -2603,10 +2757,11 @@ def _cmd_default(args):
     if args.done_flag and args.status_flag is not None:
         print("goc: error: pass only one of --done / --status", file=sys.stderr)
         sys.exit(2)
+    closed_since_threshold = parse_closed_since(getattr(args, "closed_since", None))
     if args.done_flag:
         status = "done"
     elif args.status_flag is None:
-        status = "open"
+        status = "all" if closed_since_threshold is not None else "open"
     else:
         status = args.status_flag
     status_filter_explicit = bool(args.done_flag or args.status_flag is not None)
@@ -2631,6 +2786,14 @@ def _cmd_default(args):
         ready=args.ready,
         by_title=full_by_title,
     )
+    if closed_since_threshold is not None:
+        filtered = [
+            t for t in filtered
+            if (dt := _closed_at_instant(t.closed_at)) is not None
+            and dt >= closed_since_threshold
+        ]
+    if getattr(args, "waiting", False):
+        filtered = [t for t in filtered if t.waiting_on is not None]
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values)
     if args.board:
@@ -2642,11 +2805,18 @@ def _cmd_default(args):
             )
         )
     elif args.as_json:
-        print(render_json(filtered, values=full_values, by_title=full_by_title))
+        print(render_json(
+            filtered, values=full_values, by_title=full_by_title,
+            slim=getattr(args, "slim", False),
+        ))
     else:
         out = render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
         active_notice = render_active_notice(cards, values=full_values) if status == "open" else ""
-        lines = [part for part in (active_notice, out) if part]
+        leverage = (
+            render_leverage_line(filtered, cards, values=full_values)
+            if args.ready else ""
+        )
+        lines = [part for part in (active_notice, out, leverage) if part]
         if lines:
             print("\n".join(lines))
 
@@ -2994,8 +3164,21 @@ def _cmd_quality_pass(args):
 
 def _cmd_done(args):
     """Flip status → done; set closed_at; enforce DoD-checkbox rule."""
-    title = args.title
+    titles = args.titles
     force = args.force
+    if args.bundle:
+        if len(titles) < 2:
+            print("goc: error: --bundle requires at least 2 titles", file=sys.stderr)
+            sys.exit(2)
+        _cmd_done_bundle(titles, force)
+        return
+    if len(titles) != 1:
+        print(
+            "goc: error: pass one title (or use --bundle with multiple titles)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    title = titles[0]
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
     if t.dod_freeform and not force:
@@ -3023,6 +3206,93 @@ def _cmd_done(args):
     (card_dir / "README.md").write_text(text)
     print(f"{title}: {prior} → done")
     print("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
+
+
+def _format_bundle_attestation_block(timestamp: str, titles: list[str]) -> str:
+    members = "\n".join(f"  - {t}" for t in titles)
+    return (
+        f"## Closure verification ({timestamp}) — bundled\n"
+        f"\n"
+        f"- Bundle members:\n{members}\n"
+        f"- DoD enforcement: PASS — per-card unchecked-box count was 0 for every member.\n"
+        f"- Closed via: `goc done --bundle`\n"
+    )
+
+
+def _format_bundle_closure_entry(timestamp: str, others: list[str]) -> str:
+    siblings = ", ".join(others) if others else "(none)"
+    return (
+        f"## {timestamp} — Closure (bundled)\n"
+        f"\n"
+        f"- **Bundled with**: {siblings}\n"
+    )
+
+
+def _cmd_done_bundle(titles: list[str], force: bool) -> None:
+    """Atomically close a set of cards with shared attestation + cross-refs.
+
+    Preserves per-card DoD enforcement: any unchecked box on any card aborts
+    the bundle before mutating disk.
+    """
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for title in titles:
+        if title in seen:
+            print(f"goc: error: --bundle: duplicate title {title!r}", file=sys.stderr)
+            sys.exit(2)
+        seen.add(title)
+        deduped.append(title)
+    plan: list[tuple[str, Path, str, "Card"]] = []
+    for title in deduped:
+        card_dir = DECK_DIR / title
+        t = load_card_or_exit(card_dir, title)
+        if t.dod_freeform and not force:
+            print(
+                f"ERROR: {title}: free-form DoD; use --force to bypass enforcement",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.dod_open > 0:
+            print(
+                f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; refusing bundled close",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.status == "done":
+            print(
+                f"ERROR: {title}: already done; --bundle refuses to re-close",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.status in TERMINAL_STATUSES:
+            print(
+                f"ERROR: {title}: status is {t.status!r} (terminal); "
+                f"use the supersede/disprove workflow — --bundle cannot overwrite terminal states",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        plan.append((title, card_dir, t.status, t))
+    for title, _, _, _ in plan:
+        _enforce_closure_on_integration_or_exit(title)
+    now = _utc_now_iso()
+    bundle_titles = [title for title, _, _, _ in plan]
+    attestation_block = _format_bundle_attestation_block(now, bundle_titles)
+    for title, card_dir, prior, _ in plan:
+        log_path = card_dir / "log.md"
+        others = [other for other in bundle_titles if other != title]
+        closure_entry = _format_bundle_closure_entry(now, others)
+        existing = log_path.read_text() if log_path.exists() else ""
+        appendix = attestation_block + "\n" + closure_entry
+        log_path.write_text(
+            (existing.rstrip() + "\n\n" + appendix) if existing.strip() else appendix
+        )
+        text = (card_dir / "README.md").read_text()
+        text = mutate_frontmatter_field(text, "status", "done")
+        text = mutate_frontmatter_field(text, "closed_at", now)
+        (card_dir / "README.md").write_text(text)
+        print(f"{title}: {prior} → done")
+    print(f"\nBundled close: {len(plan)} cards.")
+    print("Next: commit the closures together.")
 
 
 # ────────────────────────────────────────────────────────────────────────────

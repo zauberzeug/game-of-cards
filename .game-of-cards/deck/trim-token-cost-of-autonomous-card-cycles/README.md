@@ -1,25 +1,26 @@
 ---
 title: trim-token-cost-of-autonomous-card-cycles
 summary: "The methodology was designed for a deliberate, human-paced regime where the briefing in each skill is the point. In the autonomous-agent regime (50+ cards/day), that same briefing is re-loaded on every invocation and dominates token spend. This umbrella collapses five small, mechanical, gate:none fixes that trim that overhead — lighter `goc --json` endpoints, `goc done --bundle`, plugin-mirror diff compression in review, a leverage-comparison line in pull-card, and a codified reachability convention for parser/emitter cards. Two larger, methodology-shape items (audit-deck umbrella extension; lean/full skill stratification) are filed separately as session-gated cards."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-28T04:00:04Z"
-closed_at: null
+closed_at: 2026-05-29T04:37:04Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: `goc --json` gains `--closed-since <window>`, `--slim`, and `--waiting` filters. `--closed-since 24h` returns only cards whose `closed_at` falls in the window. `--slim` strips body/large fields, keeping title/status/gate/contribution/value/tags/closed_at/waiting_on. `--waiting` returns only cards carrying a `waiting_on` overlay. Each is independently testable; combining `--closed-since` + `--slim` works.
-  - [ ] MECHANICAL: standup SKILL.md migrates its Section 3 to use `goc --json --closed-since 24h --slim` (replacing the inline 339KB full-deck JSON dump it currently pulls). Re-run the standup reproducer; passes.
-  - [ ] MECHANICAL: `goc done --bundle <title-A> <title-B> [...]` closes multiple cards in one invocation, writing one shared attestation block (referencing all titles), one `closed_at` per card, and one log.md closure entry per card with `Bundled with:` cross-references populated automatically. Refuses if any card has unchecked DoD boxes; the existing per-card DoD enforcement is preserved. finish-card SKILL.md is updated to document the affordance.
-  - [ ] MECHANICAL: plugin-mirror diffs are collapsed in the review surface. A `.gitattributes` entry marks `claude-plugin/goc/**`, `codex-plugin/goc/**`, `openclaw-plugin/goc/**`, `.claude/skills/**`, `.codex/skills/**`, `claude-plugin/skills/**`, `codex-plugin/skills/**` as `linguist-generated` so GitHub PR review collapses them by default. AGENTS.md's "Plugin assets are auto-synced" section documents a `[sync auto]` commit-subject convention for bulk-mirror commits.
-  - [ ] MECHANICAL: `pull-card` prints a one-line leverage comparison after picking. Format: `Pulling <title> (value <N>). Highest gated card: <title> (value <M>, gate <kind>).` Emitted by the engine verb pull-card invokes (so the data is computed once); the skill body is updated to interpret the new line. When no gated cards exist, the line is omitted.
-  - [ ] MECHANICAL: audit-deck SKILL.md and create-card SKILL.md codify a soft reachability-naming convention for parser/emitter/serializer/storage-layer cards — the `## Why it matters` section must name a path that produces the offending input (e.g. "the emitter produces this string," "a one-shot-authored card produces it," or a concrete consumer flow). This is descriptive of current good practice; the convention makes it explicit so future audit passes don't drift.
-  - [ ] EMPIRICAL: a representative autonomous-card cycle re-run after these changes shows a measurable Context-shipment reduction. Capture: `goc --json --closed-since 24h --slim` bytes vs the current 339 KB `goc --json --status all` payload. Both numbers recorded in `log.md`.
-  - [ ] PROCESS: only `goc/`, `goc/templates/`, `.gitattributes`, and `AGENTS.md` are hand-edited; `python scripts/sync_plugin_assets.py --check` passes (mirrors regenerated, no drift).
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] MECHANICAL: `goc --json` gains `--closed-since <window>`, `--slim`, and `--waiting` filters. `--closed-since 24h` returns only cards whose `closed_at` falls in the window. `--slim` strips body/large fields, keeping title/status/gate/contribution/value/tags/closed_at/waiting_on. `--waiting` returns only cards carrying a `waiting_on` overlay. Each is independently testable; combining `--closed-since` + `--slim` works.
+  - [x] MECHANICAL: standup SKILL.md migrates its Section 3 to use `goc --json --closed-since 24h --slim` (replacing the inline 339KB full-deck JSON dump it currently pulls). Re-run the standup reproducer; passes.
+  - [x] MECHANICAL: `goc done --bundle <title-A> <title-B> [...]` closes multiple cards in one invocation, writing one shared attestation block (referencing all titles), one `closed_at` per card, and one log.md closure entry per card with `Bundled with:` cross-references populated automatically. Refuses if any card has unchecked DoD boxes; the existing per-card DoD enforcement is preserved. finish-card SKILL.md is updated to document the affordance.
+  - [x] MECHANICAL: plugin-mirror diffs are collapsed in the review surface. A `.gitattributes` entry marks `claude-plugin/goc/**`, `codex-plugin/goc/**`, `openclaw-plugin/goc/**`, `.claude/skills/**`, `.codex/skills/**`, `claude-plugin/skills/**`, `codex-plugin/skills/**` as `linguist-generated` so GitHub PR review collapses them by default. AGENTS.md's "Plugin assets are auto-synced" section documents a `[sync auto]` commit-subject convention for bulk-mirror commits.
+  - [x] MECHANICAL: `pull-card` prints a one-line leverage comparison after picking. Format: `Pulling <title> (value <N>). Highest gated card: <title> (value <M>, gate <kind>).` Emitted by the engine verb pull-card invokes (so the data is computed once); the skill body is updated to interpret the new line. When no gated cards exist, the line is omitted.
+  - [x] MECHANICAL: audit-deck SKILL.md and create-card SKILL.md codify a soft reachability-naming convention for parser/emitter/serializer/storage-layer cards — the `## Why it matters` section must name a path that produces the offending input (e.g. "the emitter produces this string," "a one-shot-authored card produces it," or a concrete consumer flow). This is descriptive of current good practice; the convention makes it explicit so future audit passes don't drift.
+  - [x] EMPIRICAL: a representative autonomous-card cycle re-run after these changes shows a measurable Context-shipment reduction. Capture: `goc --json --closed-since 24h --slim` bytes vs the current 339 KB `goc --json --status all` payload. Both numbers recorded in `log.md`.
+  - [x] PROCESS: only `goc/`, `goc/templates/`, `.gitattributes`, and `AGENTS.md` are hand-edited; `python scripts/sync_plugin_assets.py --check` passes (mirrors regenerated, no drift).
+  - [x] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # trim-token-cost-of-autonomous-card-cycles

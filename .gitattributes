@@ -1,0 +1,13 @@
+# Plugin-mirror trees are byte-for-byte regenerated from the source-of-truth
+# by `scripts/sync_plugin_assets.py` (run as a pre-commit hook + CI tripwire).
+# The diff content is duplication of changes already visible in `goc/` or
+# `goc/templates/skills/`; marking these paths `linguist-generated` tells
+# GitHub's review surface to collapse them by default, so reviewers see the
+# authored change once instead of N times across the mirrors.
+claude-plugin/goc/** linguist-generated=true
+codex-plugin/goc/** linguist-generated=true
+openclaw-plugin/goc/** linguist-generated=true
+claude-plugin/skills/** linguist-generated=true
+codex-plugin/skills/** linguist-generated=true
+.claude/skills/** linguist-generated=true
+.codex/skills/** linguist-generated=true

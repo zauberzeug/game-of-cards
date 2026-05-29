@@ -213,6 +213,15 @@ proposal, DoD:
 - **Why it matters** — connect to a real symptom (an unexplained
   drift, a Sprint that "tied" unexpectedly, a metric that
   plateaus). Cross-link other cards as `[<title>](../<title>/)`.
+  **For parser / emitter / serializer / storage-layer defects, name
+  the reachability path that produces the offending input** — e.g.
+  "the frontmatter emitter at `engine.py:NNN` writes this string when
+  a card has `closed_at: null`," or "a one-shot-authored card supplied
+  this header verbatim," or the concrete consumer flow (`goc done →
+  finish-card sync → ...`). Reachability is what separates a real
+  defect from a theoretical one; without it, a reader six months
+  later cannot tell whether the affected shape is actually produced
+  in shipping or only hypothetically possible.
 - **Fix** (fix proposal) — concrete code change with file:line. **Do
   NOT apply the fix.** When the gate is `decision`, this collapses
   into the `## Decision required` section. Rewrite the proposal as

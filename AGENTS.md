@@ -256,6 +256,18 @@ auto-synced: `claude-plugin/hooks/hooks.json`, `claude-plugin/bin/goc`,
 `codex-plugin/bin/goc`, `codex-plugin/README.md`, and
 `.agents/plugins/marketplace.json`.
 
+The mirror trees (`claude-plugin/goc/**`, `codex-plugin/goc/**`,
+`openclaw-plugin/goc/**`, `claude-plugin/skills/**`,
+`codex-plugin/skills/**`, `.claude/skills/**`, `.codex/skills/**`) are
+marked `linguist-generated=true` in `.gitattributes` so GitHub collapses
+them in PR review by default — reviewers see each authored change once
+in its source-of-truth, not N times across the mirrors. When a commit's
+diff is mostly the mechanical mirror regeneration, prefix the subject
+with `[sync auto]` so local readers (`git show`, log skimming) can skip
+it with the same confidence the GitHub UI provides; reserve `[sync auto]`
+for commits where the only authored change is the templates the mirrors
+were regenerated from.
+
 ### OpenClaw plugin payload — same engine, different host shape
 
 A second plugin payload lives at `openclaw-plugin/` for [OpenClaw](https://openclaw.ai),

@@ -183,13 +183,13 @@ jobs:
       release_version: ${{ steps.version.outputs.release_version }}
       mode: ${{ steps.version.outputs.mode }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # hatch-vcs reads `git describe --tags`; fetch full history + tags.
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.12'
 
@@ -447,10 +447,10 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv (Path A pre-install of goc)
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.12'
 
@@ -595,7 +595,7 @@ jobs:
       id-token: write  # OIDC for npm trusted publishing
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Node
         uses: actions/setup-node@v4

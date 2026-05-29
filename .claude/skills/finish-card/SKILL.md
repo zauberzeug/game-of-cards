@@ -225,10 +225,21 @@ For free-form prose DoDs (zero `[ ]` AND zero `[x]` boxes
 detected), `done` requires `--force` to bypass enforcement — but
 prefer adding checkboxes over forcing.
 
-**Bundled closures** (one fix resolves multiple cards): run
-`goc attest <title>` then `goc done <title>` for each.
-Each gets its own `closed_at` and its own attestation block.
-Cite the sibling slugs in each body's log entry.
+**Bundled closures** (one fix resolves multiple cards):
+
+```bash
+goc done --bundle <title-A> <title-B> [<title-C> ...]
+```
+
+`--bundle` enforces the unchecked-DoD refusal on every member before
+mutating disk (any failure aborts the bundle), then writes one shared
+`## Closure verification (TIMESTAMP) — bundled` block plus a
+`## TIMESTAMP — Closure (bundled)` entry with `Bundled with:`
+cross-references into every member's `log.md`, and flips each card
+to `done` with the same `closed_at`. Use this in place of running
+`goc attest` + `goc done` once per card when the closures genuinely
+share an attestation. For mixed-attestation closures (different
+verification per card), keep the per-card flow.
 
 ## Step 7 — project-specific post-close action
 
