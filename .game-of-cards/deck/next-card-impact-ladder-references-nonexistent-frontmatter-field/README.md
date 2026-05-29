@@ -1,7 +1,7 @@
 ---
 title: next-card-impact-ladder-references-nonexistent-frontmatter-field
 summary: "`next-card`'s Impact ladder section documents `impact: high | medium | low` as a frontmatter field, but the schema declares `contribution` and no `impact` field exists in `schema.yaml` or the engine. A filer following the example writes a card the validator rejects (missing required `contribution`) or silently accepts as junk."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-29T11:56:14Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/skills/pull-card/SKILL.md:123` "picked because impact:high" example replaced with `contribution:high` so the bad-pattern callout doesn't propagate the wrong field name
   - [ ] MECHANICAL: `scripts/sync_plugin_assets.py` regenerates `.claude/skills/`, `.codex/skills/`, `claude-plugin/skills/`, `codex-plugin/skills/` mirrors of next-card and pull-card; `python scripts/sync_plugin_assets.py --check` exits zero
   - [ ] PROCESS: `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # next-card-impact-ladder-references-nonexistent-frontmatter-field
