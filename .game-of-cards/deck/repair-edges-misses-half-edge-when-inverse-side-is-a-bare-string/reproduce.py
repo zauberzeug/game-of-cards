@@ -63,9 +63,9 @@ def main() -> int:
         print("DEFECT: substring match silently passed the inner check.")
         print("Expected: 1 half-edge for acard.advances=[bcard] (reverse missing).")
         print("Actual:   0 half-edges (the 'acard' substring matches the bare string).")
-        return 0
+        return 1
     print("Fix landed: half-edge correctly reported.")
-    return 1
+    return 0
 
 
 if __name__ == "__main__":
