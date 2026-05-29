@@ -127,7 +127,7 @@ claims and implements per the recorded decision.
 
 | Verb | What it does |
 |---|---|
-| `goc` | Show the open queue (impact-sorted). |
+| `goc` | Show the open queue (value-sorted). |
 | `goc --board` | Multi-column kanban view. A `⏳` after an open card's `[contribution]` marker means "not ready to pull" — either a derived dependency-block (a non-terminal `advanced_by` prereq) or an active impediment overlay (`waiting_on` / future `waiting_until`). No `⏳` ⇒ pullable. |
 | `goc --status done --since YYYY-MM-DD` | Recently closed cards. |
 | `goc new <title>` | Scaffold a new card under `.game-of-cards/deck/<title>/`. |

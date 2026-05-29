@@ -59,7 +59,7 @@ flagged and ignored.
   `goc --status disproved` for the candidate's
   identifying string. Re-promote only with new evidence (cited
   code changed since the rebuttal date).
-- **Hunt the big thing first.** Impact ladder: `high` outranks
+- **Hunt the big thing first.** Contribution ladder: `high` outranks
   `medium` outranks `low`. Doc claims that contradict an
   authoritative source are `contribution: high` + `tags: [documentation]`,
   NOT low.
