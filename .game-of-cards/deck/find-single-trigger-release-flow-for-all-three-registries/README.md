@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: medium
 created: 2026-05-11
-closed_at: 2026-05-11T04:19:57Z
+closed_at: "2026-05-11T04:19:57Z"
 human_gate: session
 advances:
   - auto-publish-npm-and-clawhub-on-tag-push

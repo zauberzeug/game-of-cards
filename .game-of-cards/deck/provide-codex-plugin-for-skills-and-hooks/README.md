@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: low
 created: 2026-05-05
-closed_at: 2026-05-18T04:37:13Z
+closed_at: "2026-05-18T04:37:13Z"
 human_gate: none
 advances:
   - support-external-game-of-cards-state-location

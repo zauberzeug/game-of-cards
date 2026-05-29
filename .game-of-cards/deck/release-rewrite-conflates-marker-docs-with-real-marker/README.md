@@ -1,11 +1,11 @@
 ---
 title: release-rewrite-conflates-marker-docs-with-real-marker
-summary: The release version-rewrite script's AGENTS.md regex matches not only the real `<!-- BEGIN GOC v… -->` block opener but also documentation that mentions the marker syntax in prose. Once AGENTS.md gained doc references to the marker, every release dispatch fails at the "Rewrite version literals" step with "expected 1 replacement(s), made 3".
+summary: "The release version-rewrite script's AGENTS.md regex matches not only the real `<!-- BEGIN GOC v… -->` block opener but also documentation that mentions the marker syntax in prose. Once AGENTS.md gained doc references to the marker, every release dispatch fails at the \"Rewrite version literals\" step with \"expected 1 replacement(s), made 3\"."
 status: done
 stage: null
 contribution: medium
 created: "2026-05-19T17:48:17Z"
-closed_at: 2026-05-19T17:59:24Z
+closed_at: "2026-05-19T17:59:24Z"
 human_gate: none
 advances: []
 advanced_by: []

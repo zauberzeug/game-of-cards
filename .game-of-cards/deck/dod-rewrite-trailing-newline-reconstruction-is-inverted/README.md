@@ -5,7 +5,7 @@ status: disproved
 stage: null
 contribution: low
 created: "2026-05-27T01:54:46Z"
-closed_at: 2026-05-27T02:07:12Z
+closed_at: "2026-05-27T02:07:12Z"
 human_gate: none
 advances: []
 advanced_by: []

@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: medium
 created: "2026-05-11T13:17:27Z"
-closed_at: 2026-05-11T13:53:39Z
+closed_at: "2026-05-11T13:53:39Z"
 human_gate: none
 advances:
   - release-workflow-skips-dogfood-version-markers

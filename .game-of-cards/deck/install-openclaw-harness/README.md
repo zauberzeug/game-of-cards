@@ -5,7 +5,7 @@ status: superseded
 stage: null
 contribution: medium
 created: 2026-05-04
-closed_at: 2026-05-09T05:00:13Z
+closed_at: "2026-05-09T05:00:13Z"
 human_gate: none
 advances: []
 advanced_by: []

@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: medium
 created: "2026-05-27T08:15:13Z"
-closed_at: 2026-05-27T08:21:30Z
+closed_at: "2026-05-27T08:21:30Z"
 human_gate: none
 advances: []
 advanced_by: []

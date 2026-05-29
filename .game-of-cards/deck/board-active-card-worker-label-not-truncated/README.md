@@ -1,11 +1,11 @@
 ---
 title: board-active-card-worker-label-not-truncated
-summary: "Keep board card titles visible when worker labels are appended to kanban cells."
+summary: Keep board card titles visible when worker labels are appended to kanban cells.
 status: done
 stage: null
 contribution: medium
 created: "2026-05-18T04:41:30Z"
-closed_at: 2026-05-18T04:43:11Z
+closed_at: "2026-05-18T04:43:11Z"
 human_gate: none
 advances: []
 advanced_by: []

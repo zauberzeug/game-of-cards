@@ -1,11 +1,11 @@
 ---
 title: yaml-lite-truncates-flow-collection-with-hash-in-quoted-element
-summary: "yaml_lite's `_strip_comment` only enters quote-tracking mode when the *whole* value starts with a quote. An inline flow collection starts with `[` or `{`, so quote-tracking stays off and a ` #` inside a quoted element is treated as a comment and stripped — corrupting `tags: [\"a #b\", c]` to `['[\"a']` and silently dropping `worker: {who: x, where: \"br #1\"}` to `{}`. goc's own emitter produces these exact strings, so a card written by goc round-trips to data loss on reload."
+summary: "\"yaml_lite's `_strip_comment` only enters quote-tracking mode when the *whole* value starts with a quote. An inline flow collection starts with `[` or `{`, so quote-tracking stays off and a ` #` inside a quoted element is treated as a comment and stripped — corrupting `tags: [\\\"a"
 status: done
 stage: null
 contribution: medium
 created: "2026-05-27T09:34:08Z"
-closed_at: 2026-05-27T09:39:53Z
+closed_at: "2026-05-27T09:39:53Z"
 human_gate: none
 advances: []
 advanced_by: []

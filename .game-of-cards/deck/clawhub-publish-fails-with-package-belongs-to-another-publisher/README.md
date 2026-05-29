@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: high
 created: 2026-05-10
-closed_at: 2026-05-14T04:54:03Z
+closed_at: "2026-05-14T04:54:03Z"
 human_gate: none
 advances:
   - publish-openclaw-plugin

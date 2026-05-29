@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: low
 created: 2026-05-09
-closed_at: 2026-05-26T13:12:36Z
+closed_at: "2026-05-26T13:12:36Z"
 human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace

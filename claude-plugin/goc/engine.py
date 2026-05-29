@@ -3252,7 +3252,7 @@ def _cmd_done(args):
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", "done")
-    text = mutate_frontmatter_field(text, "closed_at", now)
+    text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(now))
     (card_dir / "README.md").write_text(text)
     print(f"{title}: {prior} → done")
     print("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
@@ -3338,7 +3338,7 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
         )
         text = (card_dir / "README.md").read_text()
         text = mutate_frontmatter_field(text, "status", "done")
-        text = mutate_frontmatter_field(text, "closed_at", now)
+        text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(now))
         (card_dir / "README.md").write_text(text)
         print(f"{title}: {prior} → done")
     print(f"\nBundled close: {len(plan)} cards.")
@@ -3998,7 +3998,7 @@ def _cmd_status(args):
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
     if new_status in TERMINAL_STATUSES:
-        text = mutate_frontmatter_field(text, "closed_at", _utc_now_iso())
+        text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(_utc_now_iso()))
     if new_status == "active":
         text = _auto_populate_worker(text, t, worker_who, worker_where)
     (card_dir / "README.md").write_text(text)
