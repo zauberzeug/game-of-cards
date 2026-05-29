@@ -31,6 +31,22 @@ def _card_status(readme: Path) -> str | None:
     return None
 
 
+def _card_human_gate(readme: Path) -> str:
+    """Return the frontmatter `human_gate` value, defaulting to 'none'."""
+    try:
+        text = readme.read_text(encoding="utf-8")
+    except OSError:
+        return "none"
+    m = _FRONTMATTER_RE.match(text)
+    if not m:
+        return "none"
+    for line in m.group(1).splitlines():
+        if line.startswith("human_gate:"):
+            val = line.split(":", 1)[1].strip()
+            return val or "none"
+    return "none"
+
+
 def _project_dir_from_hook_input() -> str:
     try:
         data = json.load(sys.stdin)
@@ -55,19 +71,27 @@ def main() -> int:
         else:
             return 0
 
-    active_cards = []
+    resumable = []
+    parked = []
     for card_dir in sorted(deck_dir.iterdir()):
         if not card_dir.is_dir():
             continue
         readme = card_dir / "README.md"
         if not readme.is_file():
             continue
-        if _card_status(readme) == "active":
-            active_cards.append(card_dir.name)
+        if _card_status(readme) != "active":
+            continue
+        if _card_human_gate(readme) == "none":
+            resumable.append(card_dir.name)
+        else:
+            parked.append(card_dir.name)
 
-    if active_cards:
-        cards_str = ", ".join(active_cards)
+    if resumable:
+        cards_str = ", ".join(resumable)
         print(f"[GoC] Active card(s): {cards_str} — resume or close before starting new work.")
+    if parked:
+        cards_str = ", ".join(parked)
+        print(f"[GoC] Parked active card(s) (awaiting human): {cards_str} — agent cannot resume.")
     return 0
 
 
