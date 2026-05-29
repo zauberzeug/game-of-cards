@@ -37,6 +37,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
+          # Create + activate a .venv so `uv pip install -e .` and the
+          # bare `goc` console-script checks below resolve. Newer uv
+          # (bundled by setup-uv v7) refuses a non-venv `uv pip install`
+          # on GHA's externally-managed system Python.
+          activate-environment: true
           python-version: ${{ matrix.python-version }}
 
       - name: Install package

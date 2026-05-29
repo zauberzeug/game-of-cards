@@ -40,9 +40,57 @@ Lesson: `releases/latest` gives the newest *release*, not the newest
 *floating major*. For a floating-major pin, verify the `vN` git ref
 actually exists (`gh api repos/<o>/<r>/git/refs/tags/vN`) before using it.
 
+## 2026-05-29 — second-order fix: newer uv needs --system
+
+After the `@v7` re-pin, CI (`d2c1b5f`) got *past* the action steps
+(Set up job ✓, checkout@v6 ✓, Install uv ✓) but then failed at "Install
+package": `error: No virtual environment found for Python 3.12 ... pass
+--system`. `setup-uv@v7` ships a newer default `uv` that no longer allows
+`uv pip install` into the system env implicitly. AGENTS.md already
+documents the CI install as `uv pip install --system -e .`, but
+`ci.yml:43` had drifted to the bare form (which only worked under the old
+permissive uv). Added `--system` to `ci.yml:43` to realign with the docs
+and the new uv contract. `uv sync` workflows are unaffected.
+
+Lesson: a setup-uv major bump is not behaviourally inert — it changes the
+bundled uv version, which can change `uv pip` semantics. Verify the
+downstream uv commands, not just that the action resolves.
+
+## 2026-05-29 — third fix: --system hits externally-managed /usr; use a venv
+
+`uv pip install --system -e .` then failed with `The interpreter at /usr
+is externally managed ... Virtual environments were not considered due to
+the --system flag`. The GHA runner's system Python is PEP-668 managed, so
+`--system` is the wrong lever. Reverted `--system` and instead set
+`activate-environment: true` on the `setup-uv@v7` step — it creates and
+activates a `.venv` (exported via GITHUB_PATH/GITHUB_ENV for the whole
+job), so `uv pip install -e .` targets the venv and the later bare
+`goc --version` / `goc validate` steps resolve the console script.
+
+Note (out of scope, deferred): AGENTS.md line ~25 still documents the CI
+install as `uv pip install --system -e .`. With the venv model that
+comment is now stale; worth a doc touch-up but not blocking this card.
+
 Separately observed (NOT caused by this card): `main` CI was already red
 before this change — the prior push (`b1499b5`, old pins) failed at "Run
 regression tests", a real test failure unrelated to the action pins.
 This card's DoD item 5 only requires CI to *resolve the pins and reach a
 real step*; the pre-existing test failure is out of scope and worth a
 separate card.
+
+## 2026-05-29T04:46:31Z — Closure
+
+- **What changed**: `.github/workflows/*.yml` — bumped all 14 Node-20 action pins (9 `actions/checkout@v4`→`@v6`, 5 `astral-sh/setup-uv@v5`→`@v7`); `ci.yml` switched to a setup-uv-activated `.venv` (`activate-environment: true`, plain `uv pip install -e .`) to satisfy newer uv.
+- **Verification**: CI run d8a4b9d completed/success — all 4 Python matrix jobs (3.10–3.13) green on Node 24. Post-edit grep for old pins returns nothing; all 7 workflows parse as valid YAML.
+- **Audit**: PASS — no principle touched, mechanical/infra fix (CI runner-runtime currency).
+- **Project impact**: n/a (CI infra; no user-facing or deck-state change).
+- **Tests**: regression suite green within CI (4/4 matrix jobs passed); no new tests required for a workflow-pin bump.
+- **Bundled with**: n/a
+
+## Closure verification (2026-05-29T04:46:35Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-05-29 — Closure' present
