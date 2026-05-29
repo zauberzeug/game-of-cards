@@ -1,7 +1,7 @@
 ---
 title: deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers
 summary: "`goc/templates/hooks/deck_session_start.py` re-implements YAML-lite frontmatter parsing for four fields (`status`, `human_gate`, `waiting_on`, `waiting_until`). Two of the four readers strip outer quotes from the parsed value (`_card_waiting_on` line 65 and `_card_waiting_until` line 81 both call `.strip().strip('\"').strip(\"'\")`), the other two do not (`_card_status` line 33 and `_card_human_gate` line 49 call only `.strip()`). The asymmetry is latent today because `_yaml_inline` in `goc/engine.py:229-239` only quotes scalars containing colons, hashes, brackets, etc. — none of the enum values for `status` or `human_gate` trigger that path. If a future migration or schema change ever emits a quoted form (e.g. `status: \"active\"`), the SessionStart hook would silently classify every active card as non-active, suppressing the reminder that the recently-closed `session-start-hook-shows-gated-active-cards-as-resumable` and `session-start-hook-frames-waiting-on-active-cards-as-resumable` cards just restored. Unverified because the defect does not fire on current emitter output."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-29T21:51:11Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: align the four readers — either all four strip outer quotes (symmetric defensive coding, matches `waiting_on` / `waiting_until`) or none do (symmetric trust in the engine's bare-form contract). Update `goc/templates/hooks/deck_session_start.py:33` and `:49` to match the chosen convention.
   - [ ] PROCESS: re-sync plugin mirrors (`python scripts/sync_plugin_assets.py`) and re-run the OpenClaw TypeScript port if the hook's behavior changed (the TS reimpl lives in `openclaw-plugin/index.ts`).
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `deck_session_start.py` strips quotes asymmetrically across frontmatter readers
