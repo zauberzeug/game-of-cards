@@ -11,9 +11,12 @@ import json
 import os
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
+_IMPEDED_WAITING_ON = frozenset({"external", "resource", "deferred"})
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
 
 
 def _card_status(readme: Path) -> str | None:
@@ -47,6 +50,59 @@ def _card_human_gate(readme: Path) -> str:
     return "none"
 
 
+def _card_waiting_on(readme: Path) -> str | None:
+    """Return the frontmatter `waiting_on` value, or None if absent/blank."""
+    try:
+        text = readme.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    m = _FRONTMATTER_RE.match(text)
+    if not m:
+        return None
+    for line in m.group(1).splitlines():
+        if line.startswith("waiting_on:"):
+            val = line.split(":", 1)[1].strip().strip('"').strip("'")
+            return val or None
+    return None
+
+
+def _card_waiting_until(readme: Path) -> str | None:
+    """Return the frontmatter `waiting_until` raw value, or None if absent."""
+    try:
+        text = readme.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    m = _FRONTMATTER_RE.match(text)
+    if not m:
+        return None
+    for line in m.group(1).splitlines():
+        if line.startswith("waiting_until:"):
+            val = line.split(":", 1)[1].strip().strip('"').strip("'")
+            return val or None
+    return None
+
+
+def _is_impeded(readme: Path) -> bool:
+    """Card carries an active impediment overlay.
+
+    True iff `waiting_on` ∈ {external, resource, deferred}, OR
+    `waiting_until` parses as a date strictly after today (UTC). Mirrors
+    the read-time wait predicate in `goc.engine.waiting_impedes` at the
+    coarseness this line-based parser can afford — the engine compares at
+    full timestamp precision, but the hook only needs an active-yes/no
+    bucket so a date-level comparison is sufficient.
+    """
+    if _card_waiting_on(readme) in _IMPEDED_WAITING_ON:
+        return True
+    until = _card_waiting_until(readme)
+    if until and _ISO_DATE_RE.match(until):
+        try:
+            return date.fromisoformat(until[:10]) > date.today()
+        except ValueError:
+            return False
+    return False
+
+
 def _project_dir_from_hook_input() -> str:
     try:
         data = json.load(sys.stdin)
@@ -72,7 +128,8 @@ def main() -> int:
             return 0
 
     resumable = []
-    parked = []
+    parked_gate = []
+    impeded = []
     for card_dir in sorted(deck_dir.iterdir()):
         if not card_dir.is_dir():
             continue
@@ -81,17 +138,23 @@ def main() -> int:
             continue
         if _card_status(readme) != "active":
             continue
-        if _card_human_gate(readme) == "none":
-            resumable.append(card_dir.name)
+        gate = _card_human_gate(readme)
+        if _is_impeded(readme):
+            impeded.append(card_dir.name)
+        elif gate != "none":
+            parked_gate.append(card_dir.name)
         else:
-            parked.append(card_dir.name)
+            resumable.append(card_dir.name)
 
     if resumable:
         cards_str = ", ".join(resumable)
         print(f"[GoC] Active card(s): {cards_str} — resume or close before starting new work.")
-    if parked:
-        cards_str = ", ".join(parked)
+    if parked_gate:
+        cards_str = ", ".join(parked_gate)
         print(f"[GoC] Parked active card(s) (awaiting human): {cards_str} — agent cannot resume.")
+    if impeded:
+        cards_str = ", ".join(impeded)
+        print(f"[GoC] Impeded active card(s) (waiting_on): {cards_str} — agent cannot resume.")
     return 0
 
 
