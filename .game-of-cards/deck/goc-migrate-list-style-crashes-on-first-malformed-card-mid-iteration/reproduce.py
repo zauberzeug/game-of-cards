@@ -12,7 +12,10 @@ with a Python traceback instead of warning-and-continuing on card-b.
 
 After the fix is applied (wrap parse_frontmatter in a FrontmatterError net
 inside `_cmd_migrate_list_style`), both runs exit 0 and the broken card
-surfaces as a single `WARNING:` line on stderr.
+surfaces as a single `WARNING:` line on stderr. This reproducer exits 0
+when the fix is in place (no FrontmatterError traceback, both runs zero,
+warning surfaced for the broken card, valid card-a reported as rewritten)
+and exits 1 if any of those properties fail.
 """
 
 from __future__ import annotations
@@ -119,9 +122,22 @@ def main() -> int:
         print()
 
         broken_traceback = "FrontmatterError" in err or "FrontmatterError" in err2
+        both_zero = rc == 0 and rc2 == 0
+        warning_surfaced = (
+            "WARNING: card-b:" in err and "WARNING: card-b:" in err2
+        )
+        valid_rewritten = "card-a" in out and "card-a" in out2
         print(f"defect fires (FrontmatterError reached stderr): {broken_traceback}")
-        print(f"both runs exit zero: {rc == 0 and rc2 == 0}")
-        return 0 if broken_traceback else 1
+        print(f"both runs exit zero: {both_zero}")
+        print(f"warning surfaced for card-b on both runs: {warning_surfaced}")
+        print(f"valid card-a reported in both runs: {valid_rewritten}")
+        ok = (
+            not broken_traceback
+            and both_zero
+            and warning_surfaced
+            and valid_rewritten
+        )
+        return 0 if ok else 1
 
 
 if __name__ == "__main__":
