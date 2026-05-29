@@ -477,7 +477,6 @@ def _dod_box_indices(lines: list[str]) -> list[int]:
 # "DoD method tags" for the vocabulary. Detection is line-anchored, matching
 # the DOD_*_BOX predicates above.
 DOD_METHOD_TAGS = ("TDD", "EMPIRICAL", "MECHANICAL", "PROCESS")
-DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
 DOD_TAGGED_BOX = re.compile(
     r"^[ \t]*- \[[ xX]\] (?:" + "|".join(DOD_METHOD_TAGS) + r"): "
 )
