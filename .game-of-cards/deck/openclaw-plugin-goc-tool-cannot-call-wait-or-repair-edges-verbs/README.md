@@ -1,20 +1,21 @@
 ---
 title: openclaw-plugin-goc-tool-cannot-call-wait-or-repair-edges-verbs
 summary: "The OpenClaw plugin exposes `goc` as a registered tool whose `verb` parameter is constrained to a typebox literal-union built from `GOC_VERBS` (`openclaw-plugin/index.ts:46-61`). That list enumerates 14 verbs but omits `wait` and `repair-edges`, both of which exist in `goc/engine.py` (added at lines 2649 and 2687). OpenClaw subagents calling the tool with `verb: \"wait\"` or `verb: \"repair-edges\"` are rejected at input validation — so the entire stored-impediment-overlay axis of the documented three-axis stuck model, and the half-edge repair flow, are unreachable from the OpenClaw integration."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T16:04:37Z"
-closed_at: null
+closed_at: "2026-05-29T16:10:28Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, meta-fix, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits non-zero on a clean checkout (the assertion that `GOC_VERBS` contains every engine subparser fails because `wait` and `repair-edges` are missing) and exits zero after the fix.
-  - [ ] MECHANICAL: `openclaw-plugin/index.ts:46-61` `GOC_VERBS` lists every verb registered by `_build_parser` in `goc/engine.py`, in the same order as the argparse `subparsers.add_parser(...)` calls (current source-of-truth ordering: `validate`, `quality-pass`, `done`, `attest`, `status`, `new`, `wait`, `advance`, `unadvance`, `repair-edges`, `move`, `decide`, `triage`, `show`, `migrate`, `migrate-list-style`).
-  - [ ] MECHANICAL: `openclaw-plugin/dist/index.js` regenerated via `npm run build` (or whatever the plugin's documented build command is) so the compiled `GOC_VERBS` array shipped to consumers matches the TS source.
-  - [ ] PROCESS: closure log records whether a drift-guard test was added (a small unit test that parses the engine's `subparsers` and asserts equality with the TS literal-union) or explicitly deferred to a follow-up — silent re-drift is what made this defect possible.
+  - [x] TDD: `reproduce.py` exits non-zero on a clean checkout (the assertion that `GOC_VERBS` contains every engine subparser fails because `wait` and `repair-edges` are missing) and exits zero after the fix.
+  - [x] MECHANICAL: `openclaw-plugin/index.ts:46-61` `GOC_VERBS` lists every verb registered by `_build_parser` in `goc/engine.py`, in the same order as the argparse `subparsers.add_parser(...)` calls (current source-of-truth ordering: `validate`, `quality-pass`, `done`, `attest`, `status`, `new`, `wait`, `advance`, `unadvance`, `repair-edges`, `move`, `decide`, `triage`, `show`, `migrate`, `migrate-list-style`).
+  - [x] MECHANICAL: `openclaw-plugin/dist/index.js` regenerated via `npm run build` (or whatever the plugin's documented build command is) so the compiled `GOC_VERBS` array shipped to consumers matches the TS source.
+  - [x] PROCESS: closure log records whether a drift-guard test was added (a small unit test that parses the engine's `subparsers` and asserts equality with the TS literal-union) or explicitly deferred to a follow-up — silent re-drift is what made this defect possible.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw plugin `goc` tool cannot call the `wait` or `repair-edges` verbs

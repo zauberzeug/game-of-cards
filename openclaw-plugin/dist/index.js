@@ -866,7 +866,7 @@ function BigInt(options = {}) {
 }
 
 // node_modules/@sinclair/typebox/build/esm/type/number/number.mjs
-function Number(options = {}) {
+function Number2(options = {}) {
   return {
     ...options,
     [Kind]: "Number",
@@ -882,7 +882,7 @@ function String(options = {}) {
 // node_modules/@sinclair/typebox/build/esm/type/template-literal/syntax.mjs
 function* FromUnion(syntax) {
   const trim = syntax.trim().replace(/"|'/g, "");
-  return trim === "boolean" ? yield Boolean2() : trim === "number" ? yield Number() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String() : yield (() => {
+  return trim === "boolean" ? yield Boolean2() : trim === "number" ? yield Number2() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String() : yield (() => {
     const literals = trim.split("|").map((literal) => Literal(literal.trim()));
     return literals.length === 0 ? Never() : literals.length === 1 ? literals[0] : UnionEvaluated(literals);
   })();
@@ -1288,7 +1288,7 @@ var includePatternProperties = false;
 
 // node_modules/@sinclair/typebox/build/esm/type/keyof/keyof.mjs
 function KeyOfPropertyKeysToRest(T) {
-  return T.map((L) => L === "[number]" ? Number() : Literal(L));
+  return T.map((L) => L === "[number]" ? Number2() : Literal(L));
 }
 function KeyOf(T, options = {}) {
   if (IsMappedResult(T)) {
@@ -1616,14 +1616,14 @@ function IsObjectUint8ArrayLike(schema) {
   return IsObjectArrayLike(schema);
 }
 function IsObjectFunctionLike(schema) {
-  const length = Number();
+  const length = Number2();
   return IsObjectPropertyCount(schema, 0) || IsObjectPropertyCount(schema, 1) && "length" in schema.properties && IntoBooleanResult(Visit3(schema.properties["length"], length)) === ExtendsResult.True;
 }
 function IsObjectConstructorLike(schema) {
   return IsObjectPropertyCount(schema, 0);
 }
 function IsObjectArrayLike(schema) {
-  const length = Number();
+  const length = Number2();
   return IsObjectPropertyCount(schema, 0) || IsObjectPropertyCount(schema, 1) && "length" in schema.properties && IntoBooleanResult(Visit3(schema.properties["length"], length)) === ExtendsResult.True;
 }
 function IsObjectPromiseLike(schema) {
@@ -1660,7 +1660,7 @@ function FromPromise3(left, right) {
   return IsStructuralRight(right) ? StructuralRight(left, right) : type_exports.IsObject(right) && IsObjectPromiseLike(right) ? ExtendsResult.True : !type_exports.IsPromise(right) ? ExtendsResult.False : IntoBooleanResult(Visit3(left.item, right.item));
 }
 function RecordKey(schema) {
-  return PatternNumberExact in schema.patternProperties ? Number() : PatternStringExact in schema.patternProperties ? String() : Throw("Unknown record key pattern");
+  return PatternNumberExact in schema.patternProperties ? Number2() : PatternStringExact in schema.patternProperties ? String() : Throw("Unknown record key pattern");
 }
 function RecordValue(schema) {
   return PatternNumberExact in schema.patternProperties ? schema.patternProperties[PatternNumberExact] : PatternStringExact in schema.patternProperties ? schema.patternProperties[PatternStringExact] : Throw("Unable to get record value schema");
@@ -2340,7 +2340,7 @@ __export(type_exports3, {
   Never: () => Never,
   Not: () => Not,
   Null: () => Null,
-  Number: () => Number,
+  Number: () => Number2,
   Object: () => Object2,
   Omit: () => Omit,
   Optional: () => Optional,
@@ -2390,8 +2390,10 @@ var GOC_VERBS = [
   "attest",
   "status",
   "new",
+  "wait",
   "advance",
   "unadvance",
+  "repair-edges",
   "move",
   "decide",
   "triage",
@@ -2445,6 +2447,32 @@ function buildArgs(input) {
   return [...flagTokens, input.verb, ...input.args ?? []];
 }
 var FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
+var IMPEDED_WAITING_ON = /* @__PURE__ */ new Set(["external", "resource", "deferred"]);
+var ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+var ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+function stripQuotes(s) {
+  return s.replace(/^["']|["']$/g, "");
+}
+function parseWaitingUntil(value) {
+  if (ISO_DATETIME_UTC_RE.test(value)) {
+    const t = Date.parse(value);
+    return Number.isNaN(t) ? null : new Date(t);
+  }
+  if (ISO_DATE_RE.test(value)) {
+    const t = Date.parse(`${value}T00:00:00Z`);
+    return Number.isNaN(t) ? null : new Date(t);
+  }
+  return null;
+}
+function isImpeded(waitingOn, waitingUntil, now) {
+  const untilDt = waitingUntil !== "" ? parseWaitingUntil(waitingUntil) : null;
+  const untilFuture = untilDt !== null && untilDt.getTime() > now.getTime();
+  if (IMPEDED_WAITING_ON.has(waitingOn)) {
+    if (untilDt !== null && !untilFuture) return false;
+    return true;
+  }
+  return untilFuture;
+}
 async function findActiveCards(deckDir) {
   let entries;
   try {
@@ -2453,6 +2481,7 @@ async function findActiveCards(deckDir) {
   } catch {
     return [];
   }
+  const now = /* @__PURE__ */ new Date();
   const active = [];
   for (const name of entries) {
     const readme = resolve(deckDir, name, "README.md");
@@ -2464,12 +2493,25 @@ async function findActiveCards(deckDir) {
     }
     const m = FRONTMATTER_RE.exec(text);
     if (!m) continue;
+    let status = null;
+    let humanGate = "none";
+    let waitingOn = "";
+    let waitingUntil = "";
     for (const line of m[1].split("\n")) {
       if (line.startsWith("status:")) {
-        if (line.split(":", 2)[1].trim() === "active") active.push(name);
-        break;
+        status = line.split(":", 2)[1].trim();
+      } else if (line.startsWith("human_gate:")) {
+        const val = line.split(":", 2)[1].trim();
+        if (val) humanGate = val;
+      } else if (line.startsWith("waiting_on:")) {
+        waitingOn = stripQuotes(line.split(":", 2)[1].trim());
+      } else if (line.startsWith("waiting_until:")) {
+        waitingUntil = stripQuotes(line.split(":", 2)[1].trim());
       }
     }
+    if (status !== "active") continue;
+    const impeded = isImpeded(waitingOn, waitingUntil, now);
+    active.push({ name, humanGate, impeded });
   }
   return active;
 }
@@ -2617,8 +2659,26 @@ ${stderrJoined}` : "")).trim() || `goc ${params.verb} returned exit ${result.exi
       sessionProjectDir = projectDir;
       const deckDir = await resolveDeckDir(projectDir);
       const active = await findActiveCards(deckDir);
-      if (active.length > 0) {
-        const message = `[GoC] Active card(s): ${active.join(", ")} \u2014 resume or close before starting new work.`;
+      const resumable = active.filter((c) => c.humanGate === "none" && !c.impeded).map((c) => c.name);
+      const parkedGate = active.filter((c) => !c.impeded && c.humanGate !== "none").map((c) => c.name);
+      const impeded = active.filter((c) => c.impeded).map((c) => c.name);
+      const messages = [];
+      if (resumable.length > 0) {
+        messages.push(
+          `[GoC] Active card(s): ${resumable.join(", ")} \u2014 resume or close before starting new work.`
+        );
+      }
+      if (parkedGate.length > 0) {
+        messages.push(
+          `[GoC] Parked active card(s) (awaiting human): ${parkedGate.join(", ")} \u2014 agent cannot resume.`
+        );
+      }
+      if (impeded.length > 0) {
+        messages.push(
+          `[GoC] Impeded active card(s) (waiting_on): ${impeded.join(", ")} \u2014 agent cannot resume.`
+        );
+      }
+      for (const message of messages) {
         if (typeof ctx?.notify === "function") {
           ctx.notify(message);
         } else if (typeof ctx?.appendSystemContext === "function") {
