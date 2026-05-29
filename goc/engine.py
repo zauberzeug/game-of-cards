@@ -361,8 +361,18 @@ def extract_decision_required_section(body: str) -> str | None:
 
 
 def replace_or_append_decision(body: str, decision: str, reasoning: str, today: str) -> str:
-    """Replace `## Decision required` with `## Decision`, or append a new section."""
-    block = f"## Decision\n\n*Resolved {today}:* {decision}\n\n*Reasoning:* {reasoning}\n"
+    """Replace `## Decision required` with `## Decision`, or append a new section.
+
+    The replace branch's regex stops at the lookahead `(?=^## |\\Z)` — it does
+    not consume the next `## ` heading, but it does consume the blank line
+    that previously separated the deliberation from that heading. The block
+    therefore ends in `\\n\\n` so the result keeps a blank line before any
+    following section. The append branch's leading `\\n\\n` already gives the
+    new block its own separator from prior content; the trailing `\\n\\n` then
+    leaves a single trailing blank line at end-of-file, matching the
+    prevailing convention.
+    """
+    block = f"## Decision\n\n*Resolved {today}:* {decision}\n\n*Reasoning:* {reasoning}\n\n"
     if DECISION_REQUIRED_RE.search(body):
         return DECISION_REQUIRED_RE.sub(lambda _: block, body, count=1)
     return body.rstrip("\n") + "\n\n" + block
