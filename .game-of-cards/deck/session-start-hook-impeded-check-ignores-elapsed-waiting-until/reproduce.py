@@ -1,9 +1,11 @@
 """Reproducer: SessionStart hook `_is_impeded` vs engine `waiting_impedes`.
 
 The engine treats an elapsed `waiting_until` as re-surfacing the card even
-when a `waiting_on` reason is set (engine.py:1763-1765 / 1797-1798). The
-hook short-circuits on `waiting_on` and never inspects `waiting_until`, so
-Case A diverges.
+when a `waiting_on` reason is set (engine.py:1763-1765 / 1797-1798). Pre-fix,
+the hook short-circuited on `waiting_on` and never inspected `waiting_until`,
+so Case A diverged. Post-fix, all four cells agree — this script now
+double-checks that agreement on demand (the canonical regression coverage
+lives in tests/test_session_start_hook.py).
 """
 
 from __future__ import annotations
@@ -78,10 +80,10 @@ div_d = scenario(
     f"{BASE}\nwaiting_until: 2000-01-01",
 )
 
-# Defect signature: Case A diverges, B/C/D agree.
-assert div_a, "Expected Case A to diverge (hook over-reports impediment)"
+# Post-fix invariant: all four cells agree.
+assert not div_a, "Case A should agree post-fix (both not impeded — elapsed wait resurfaces)"
 assert not div_b, "Case B should agree (both impeded)"
 assert not div_c, "Case C should agree (both impeded)"
 assert not div_d, "Case D should agree (both not impeded)"
 
-print("Defect reproduced: only Case A diverges (elapsed waiting_until + waiting_on).")
+print("Post-fix: all four cells of the waiting_on × waiting_until matrix agree.")

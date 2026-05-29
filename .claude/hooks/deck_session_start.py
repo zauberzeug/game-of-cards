@@ -85,22 +85,35 @@ def _card_waiting_until(readme: Path) -> str | None:
 def _is_impeded(readme: Path) -> bool:
     """Card carries an active impediment overlay.
 
-    True iff `waiting_on` ∈ {external, resource, deferred}, OR
-    `waiting_until` parses as a date strictly after today (UTC). Mirrors
-    the read-time wait predicate in `goc.engine.waiting_impedes` at the
-    coarseness this line-based parser can afford — the engine compares at
-    full timestamp precision, but the hook only needs an active-yes/no
-    bucket so a date-level comparison is sufficient.
+    Mirrors `goc.engine.waiting_impedes` across the four-cell
+    `waiting_on` × `waiting_until` matrix at date-level coarseness:
+
+    - `waiting_on` set, no `waiting_until` → impeded (open-ended wait).
+    - `waiting_on` set, future `waiting_until` → impeded.
+    - `waiting_on` set, elapsed `waiting_until` → NOT impeded
+      (elapsed wait resurfaces the card; engine contract).
+    - no `waiting_on`, future `waiting_until` → impeded (deferred wait).
+    - no `waiting_on`, elapsed `waiting_until` → NOT impeded.
+
+    The engine compares at full timestamp precision; this hook only
+    needs an active-yes/no bucket so a date-level comparison suffices.
     """
-    if _card_waiting_on(readme) in _IMPEDED_WAITING_ON:
-        return True
+    reason = _card_waiting_on(readme)
     until = _card_waiting_until(readme)
+    until_parsed = False
+    until_future = False
     if until and _ISO_DATE_RE.match(until):
         try:
-            return date.fromisoformat(until[:10]) > date.today()
+            until_future = date.fromisoformat(until[:10]) > date.today()
+            until_parsed = True
         except ValueError:
+            pass
+    if reason in _IMPEDED_WAITING_ON:
+        # Elapsed waiting_until resurfaces the card even with a reason set.
+        if until_parsed and not until_future:
             return False
-    return False
+        return True
+    return until_future
 
 
 def _project_dir_from_hook_input() -> str:

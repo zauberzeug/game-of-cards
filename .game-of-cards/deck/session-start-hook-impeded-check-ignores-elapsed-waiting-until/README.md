@@ -1,21 +1,21 @@
 ---
 title: session-start-hook-impeded-check-ignores-elapsed-waiting-until
 summary: "SessionStart hook `_is_impeded` returns True whenever `waiting_on` is in {external, resource, deferred}, without consulting `waiting_until`. The engine's `waiting_impedes` returns False for the same card if `waiting_until` is in the past — the documented contract is that an elapsed `waiting_until` re-surfaces the card. A `status: active, human_gate: none, waiting_on: external, waiting_until: <past>` card is therefore framed under `Impeded active card(s) — agent cannot resume` even though `pull-card` / `goc --ready` consider it workable. Sibling-sweep finding on top of just-closed `session-start-hook-frames-waiting-on-active-cards-as-resumable`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T09:34:55Z"
-closed_at: null
+closed_at: 2026-05-29T09:41:13Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: `_is_impeded` in `goc/templates/hooks/deck_session_start.py` mirrors `engine.waiting_impedes` semantics for the four-cell `waiting_on` × `waiting_until` matrix. Specifically, a `waiting_on` reason alongside an elapsed (past) `waiting_until` is NOT impeded — it resurfaces.
-  - [ ] TDD: a regression test in `tests/test_session_start_hook.py` exercises the cell `waiting_on: external, waiting_until: <past>` on a `status: active, human_gate: none` card and asserts the hook does NOT print the `Impeded active card(s)` line for it. (The existing matrix test only covers `waiting_until` alone and future `waiting_until` + `waiting_on`.)
-  - [ ] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
-  - [ ] MECHANICAL: the OpenClaw TypeScript port in `openclaw-plugin/index.ts` is updated to match — same elapsed-`waiting_until` semantics. (Hand-ported, not auto-synced; verify by re-reading `index.ts` after the change.)
-  - [ ] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
+  - [x] MECHANICAL: `_is_impeded` in `goc/templates/hooks/deck_session_start.py` mirrors `engine.waiting_impedes` semantics for the four-cell `waiting_on` × `waiting_until` matrix. Specifically, a `waiting_on` reason alongside an elapsed (past) `waiting_until` is NOT impeded — it resurfaces.
+  - [x] TDD: a regression test in `tests/test_session_start_hook.py` exercises the cell `waiting_on: external, waiting_until: <past>` on a `status: active, human_gate: none` card and asserts the hook does NOT print the `Impeded active card(s)` line for it. (The existing matrix test only covers `waiting_until` alone and future `waiting_until` + `waiting_on`.)
+  - [x] MECHANICAL: all four file copies updated in lockstep (source-of-truth + auto-synced mirrors): `goc/templates/hooks/deck_session_start.py`, `.claude/hooks/deck_session_start.py`, `claude-plugin/hooks/deck_session_start.py`, `codex-plugin/hooks/deck_session_start.py`. The byte-for-byte mirror tripwire in CI catches drift if any are missed.
+  - [x] MECHANICAL: the OpenClaw TypeScript port in `openclaw-plugin/index.ts` is updated to match — same elapsed-`waiting_until` semantics. (Hand-ported, not auto-synced; verify by re-reading `index.ts` after the change.)
+  - [x] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 

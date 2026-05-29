@@ -129,16 +129,33 @@ function stripQuotes(s: string): string {
   return s.replace(/^["']|["']$/g, "");
 }
 
-function isFutureIsoDate(value: string, today: Date): boolean {
+interface ParsedIsoDate {
+  parsed: boolean;
+  future: boolean;
+}
+
+function parseIsoDate(value: string, today: Date): ParsedIsoDate {
   const m = ISO_DATE_RE.exec(value);
-  if (!m) return false;
+  if (!m) return { parsed: false, future: false };
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
   // UTC midnight comparison — matches the Python hook's date-level coarseness.
   const until = Date.UTC(y, mo - 1, d);
   const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  return until > todayUtc;
+  return { parsed: true, future: until > todayUtc };
+}
+
+function isImpeded(waitingOn: string, waitingUntil: string, today: Date): boolean {
+  // Mirrors goc/templates/hooks/deck_session_start.py:_is_impeded across the
+  // four-cell waiting_on × waiting_until matrix. An elapsed waiting_until
+  // resurfaces the card even when waiting_on is also set (engine contract).
+  const until = waitingUntil !== "" ? parseIsoDate(waitingUntil, today) : { parsed: false, future: false };
+  if (IMPEDED_WAITING_ON.has(waitingOn)) {
+    if (until.parsed && !until.future) return false;
+    return true;
+  }
+  return until.future;
 }
 
 async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
@@ -181,9 +198,7 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
       }
     }
     if (status !== "active") continue;
-    const impeded =
-      IMPEDED_WAITING_ON.has(waitingOn) ||
-      (waitingUntil !== "" && isFutureIsoDate(waitingUntil, today));
+    const impeded = isImpeded(waitingOn, waitingUntil, today);
     active.push({ name, humanGate, impeded });
   }
   return active;
