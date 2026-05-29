@@ -1,19 +1,19 @@
 ---
 title: goc-status-json-slim-omits-waiting-until
 summary: "`goc --json --slim` emits `waiting_on` but never `waiting_until`, so a machine consumer of slim records sees a card is impeded without learning whether the wait is bare/elapsed (surfaced as an SLE escalation) or future-dated (hides the card from queues). The full `--json` record was fixed by [goc-json-omits-the-waiting-on-and-waiting-until-impediment-fields](../goc-json-omits-the-waiting-on-and-waiting-until-impediment-fields/); the slim variant — added shortly after to trim token cost of autonomous cycles — copied only half of the overlay."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T21:02:02Z"
-closed_at: null
+closed_at: "2026-05-29T21:06:04Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — slim record for a card with `waiting_until` set includes the field with the stored value.
-  - [ ] TDD: a regression test in `tests/` asserts that `render_json(..., slim=True)` emits both `waiting_on` and `waiting_until` (and that a card without the overlay emits them as `null`).
-  - [ ] MECHANICAL: `SLIM_JSON_KEYS` (`goc/engine.py:2286`) gains `waiting_until`; the slim record dict (`goc/engine.py:2309`) emits `"waiting_until": t.waiting_until`. Plugin mirrors synced; `uv run goc validate` clean.
+  - [x] TDD: `reproduce.py` exits zero — slim record for a card with `waiting_until` set includes the field with the stored value.
+  - [x] TDD: a regression test in `tests/` asserts that `render_json(..., slim=True)` emits both `waiting_on` and `waiting_until` (and that a card without the overlay emits them as `null`).
+  - [x] MECHANICAL: `SLIM_JSON_KEYS` (`goc/engine.py:2286`) gains `waiting_until`; the slim record dict (`goc/engine.py:2309`) emits `"waiting_until": t.waiting_until`. Plugin mirrors synced; `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
