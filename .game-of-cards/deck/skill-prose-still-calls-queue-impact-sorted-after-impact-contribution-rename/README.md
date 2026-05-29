@@ -1,7 +1,7 @@
 ---
 title: skill-prose-still-calls-queue-impact-sorted-after-impact-contribution-rename
 summary: "Sibling drift after `next-card-impact-ladder-references-nonexistent-frontmatter-field` closed: that fix renamed the `impact: <level>` frontmatter examples to `contribution: <level>` but left the prose calling the engine's sort 'impact-sorted', 'Impact ladder', and 'sorted by impact desc' across three skill bodies. The engine has no `impact` concept — it sorts by GRPW value built from `CONTRIBUTION_RANK` over the `contribution` field."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T12:05:24Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `scripts/sync_plugin_assets.py` regenerates `.claude/skills/`, `.codex/skills/`, `claude-plugin/skills/`, `codex-plugin/skills/`; `uv run python scripts/sync_plugin_assets.py --check` exits zero
   - [ ] MECHANICAL: `python3 scripts/port_skills_to_openclaw.py` re-ported and `--check` exits zero
   - [ ] PROCESS: `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Skill prose still describes the queue sort as "impact" after the impact→contribution rename
