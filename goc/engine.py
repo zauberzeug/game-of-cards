@@ -1522,6 +1522,8 @@ def validate_epic_edge_direction(cards: list[Card]) -> list[BlockerWarning]:
         if c.status in TERMINAL_STATUSES:
             continue
         targets = c.frontmatter.get("advances") or []
+        if not isinstance(targets, list):
+            continue
         resolved = [by_title[t] for t in targets if t in by_title]
         if len(resolved) < BACKWARDS_EPIC_MIN_TARGETS:
             continue
@@ -1591,7 +1593,10 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
     # appears in card.advanced_by.
     unblocks: dict[str, list[str]] = {c.title: [] for c in cards}
     for c in cards:
-        for prereq in c.frontmatter.get("advanced_by") or []:
+        prereqs = c.frontmatter.get("advanced_by") or []
+        if not isinstance(prereqs, list):
+            continue
+        for prereq in prereqs:
             if prereq in unblocks:
                 unblocks[prereq].append(c.title)
 
@@ -1599,6 +1604,8 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
         if c.status != "blocked":
             continue
         blockers = c.frontmatter.get("advanced_by") or []
+        if not isinstance(blockers, list):
+            blockers = []
         if not blockers:
             if c.human_gate == "none":
                 warnings.append(BlockerWarning(
@@ -1690,7 +1697,10 @@ def dependency_blockers(card: Card, by_title: dict[str, Card]) -> list[str]:
     a blocker until the validator reconciles it).
     """
     blockers: list[str] = []
-    for prereq in card.frontmatter.get("advanced_by") or []:
+    prereqs = card.frontmatter.get("advanced_by") or []
+    if not isinstance(prereqs, list):
+        return []
+    for prereq in prereqs:
         upstream = by_title.get(prereq)
         if upstream is None or upstream.status not in TERMINAL_STATUSES:
             blockers.append(prereq)
@@ -2087,7 +2097,10 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
 
     def live_direct(t: Card) -> int:
         n = 0
-        for dest in t.frontmatter.get("advances") or []:
+        advances = t.frontmatter.get("advances") or []
+        if not isinstance(advances, list):
+            return 0
+        for dest in advances:
             dc = by_title.get(dest)
             if dc is None:
                 continue
@@ -3717,6 +3730,8 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
     name = check["name"]
     if name == "advanced-by-closed":
         advanced_by = card.frontmatter.get("advanced_by") or []
+        if not isinstance(advanced_by, list):
+            advanced_by = []
         if not advanced_by:
             return True, "no advanced_by edges"
         by_title = {c.title: c for c in all_cards}

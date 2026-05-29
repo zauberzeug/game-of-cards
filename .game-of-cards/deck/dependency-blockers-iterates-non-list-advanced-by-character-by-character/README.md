@@ -1,20 +1,20 @@
 ---
 title: dependency-blockers-iterates-non-list-advanced-by-character-by-character
 summary: "`dependency_blockers` (engine.py:1693) iterates `frontmatter['advanced_by']` without an `isinstance(..., list)` guard, so a hand-edited bare-string scalar is walked character-by-character — each character becomes a phantom blocker. Reachable on every `goc -v`, `goc --json`, and `goc --board` invocation (the verbose `awaiting:` line, the JSON `awaiting`/`dependency_awaiting` fields, and the board ⏳ glyph). Same root-cause shape as the recently-fixed `compute_values` / `supersedes` / `tags` walkers; three sibling read-time consumers carry the same unguarded pattern."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T06:03:10Z"
-closed_at: null
+closed_at: 2026-05-29T06:09:27Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a card with a bare-string `advanced_by: "abc"` returns `[]` from `dependency_blockers` (not `['a','b','c']`), and `dependency_blocked` returns False.
-  - [ ] TDD: a regression test in tests/ asserts the read-time consumers treat a non-list `advanced_by` / `advances` as an empty edge set, mirroring the guard already present in `compute_values` (engine.py:1864) and the supersession cycle walkers (engine.py:1336, 1395).
-  - [ ] MECHANICAL: the four unguarded sites add an `isinstance(..., list)` guard before iterating: `dependency_blockers` (engine.py:1693), `live_direct` inside `_live_edge_count` (engine.py:2090), `_run_derived_check`'s `advanced-by-closed` branch (engine.py:3719), and `validate_blocker_coherence`'s `unblocks` builder (engine.py:1594). The other two sibling sites — the over-broad-epic detector (engine.py:1524) and `validate_blocker_coherence`'s blocker enumerator (engine.py:1601) — are only reached for `status: blocked` cards (a status on its way out) but receive the same guard for consistency.
-  - [ ] PROCESS: full regression suite green (`uv run python -m unittest discover -s tests`); plugin mirrors synced if engine.py changed (pre-commit `sync-plugin-assets`).
+  - [x] TDD: reproduce.py exits zero — a card with a bare-string `advanced_by: "abc"` returns `[]` from `dependency_blockers` (not `['a','b','c']`), and `dependency_blocked` returns False.
+  - [x] TDD: a regression test in tests/ asserts the read-time consumers treat a non-list `advanced_by` / `advances` as an empty edge set, mirroring the guard already present in `compute_values` (engine.py:1864) and the supersession cycle walkers (engine.py:1336, 1395).
+  - [x] MECHANICAL: the four unguarded sites add an `isinstance(..., list)` guard before iterating: `dependency_blockers` (engine.py:1693), `live_direct` inside `_live_edge_count` (engine.py:2090), `_run_derived_check`'s `advanced-by-closed` branch (engine.py:3719), and `validate_blocker_coherence`'s `unblocks` builder (engine.py:1594). The other two sibling sites — the over-broad-epic detector (engine.py:1524) and `validate_blocker_coherence`'s blocker enumerator (engine.py:1601) — are only reached for `status: blocked` cards (a status on its way out) but receive the same guard for consistency.
+  - [x] PROCESS: full regression suite green (`uv run python -m unittest discover -s tests`); plugin mirrors synced if engine.py changed (pre-commit `sync-plugin-assets`).
 worker: {who: "claude[bot]", where: main}
 ---
 
