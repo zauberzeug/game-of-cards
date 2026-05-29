@@ -1,21 +1,21 @@
 ---
 title: vendored-hooks-bake-uv-into-claude-settings-breaking-pipx-only-installs
 summary: "`goc install --local-skills` writes `.claude/settings.json` hook commands like `uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py`, forcing every Claude Code session to have `uv` on PATH. README documents `pipx install game-of-cards` as a valid install path that does NOT bring `uv`, so a pipx-only consumer's SessionStart, UserPromptSubmit, and Stop hooks all crash with `uv: not found` on every session. The hook scripts are stdlib-only (no `import goc`), so `python3` would work identically — and the plugin path already uses `python3 ${CLAUDE_PLUGIN_ROOT}/hooks/...` in `claude-plugin/hooks/hooks.json`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T13:40:26Z"
-closed_at: null
+closed_at: "2026-05-29T13:46:29Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — with `uv` removed from PATH, the rendered hook command `python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py` (post-fix) runs the hook cleanly, whereas the pre-fix `uv run python …` command fails with `uv: not found`.
-  - [ ] MECHANICAL: `GOC_CLAUDE_HOOKS` in `goc/install.py` (currently lines 539-543) drops the `uv run ` prefix and registers `python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/<script>.py` — matching the plugin payload at `claude-plugin/hooks/hooks.json`.
-  - [ ] MECHANICAL: the three test cases in `tests/test_install.py` that pin the hook command string (lines 187, 802, 806, 832, 862, 866, 886) update to the new `python3 …` shape; no test still asserts the `uv run python` literal.
-  - [ ] MECHANICAL: this repo's own `.claude/settings.json` is regenerated (or hand-edited) to the new shape so the dogfood install matches what consumers get.
-  - [ ] PROCESS: `uv run goc validate --quiet` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` clean.
+  - [x] TDD: `reproduce.py` exits zero — with `uv` removed from PATH, the rendered hook command `python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py` (post-fix) runs the hook cleanly, whereas the pre-fix `uv run python …` command fails with `uv: not found`.
+  - [x] MECHANICAL: `GOC_CLAUDE_HOOKS` in `goc/install.py` (currently lines 539-543) drops the `uv run ` prefix and registers `python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/<script>.py` — matching the plugin payload at `claude-plugin/hooks/hooks.json`.
+  - [x] MECHANICAL: the three test cases in `tests/test_install.py` that pin the hook command string (lines 187, 802, 806, 832, 862, 866, 886) update to the new `python3 …` shape; no test still asserts the `uv run python` literal.
+  - [x] MECHANICAL: this repo's own `.claude/settings.json` is regenerated (or hand-edited) to the new shape so the dogfood install matches what consumers get.
+  - [x] PROCESS: `uv run goc validate --quiet` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -76,15 +76,16 @@ embeds `uv` for no functional reason.
 
 ## Empirical evidence
 
-Run `reproduce.py` from a clean checkout (or any environment where
-`uv` is not on the simulated PATH):
+Pre-fix, `reproduce.py` asserted that the vendored command failed
+without `uv` on PATH (`rc=127, uv: not found`). Post-fix, the same
+script asserts the rendered command runs cleanly:
 
 ```
 $ uv run python .game-of-cards/deck/vendored-hooks-bake-uv-into-claude-settings-breaking-pipx-only-installs/reproduce.py
-hook scripts use only stdlib: deck_session_start.py, deck_prompt_router.py, pattern_generalization_check.py
+hook scripts use only stdlib: deck_prompt_router.py, deck_session_start.py, pattern_generalization_check.py
 plugin hooks already use python3 — no uv: ['python3 ${CLAUDE_PLUGIN_ROOT}/hooks/deck_session_start.py', 'python3 ${CLAUDE_PLUGIN_ROOT}/hooks/deck_prompt_router.py', 'python3 ${CLAUDE_PLUGIN_ROOT}/hooks/pattern_generalization_check.py']
-vendored install bakes uv: SessionStart=uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py UserPromptSubmit=uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py Stop=uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py
-without uv on PATH the vendored command fails: rc=127 stderr='/bin/sh: 1: uv: not found\n'
+vendored install uses python3: SessionStart=python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py UserPromptSubmit=python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py Stop=python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py
+without uv on PATH the vendored command runs cleanly: rc=0
 ```
 
 ## Why it matters

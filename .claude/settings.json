@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py"
           }
         ]
       }

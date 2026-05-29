@@ -184,7 +184,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 for h in group.get("hooks", [])
             ]
             self.assertIn(
-                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py",
+                "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py",
                 stop_cmds,
             )
 
@@ -799,11 +799,11 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 for h in group.get("hooks", [])
             ]
             self.assertIn(
-                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+                "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
                 session_cmds,
             )
             self.assertIn(
-                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
+                "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
                 prompt_cmds,
             )
 
@@ -829,7 +829,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 for h in group.get("hooks", [])
             ]
             self.assertIn(
-                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+                "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
                 session_cmds,
             )
 
@@ -859,11 +859,11 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 "theme": "dark",
                 "hooks": {
                     "SessionStart": [
-                        {"hooks": [{"type": "command", "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"}]},
+                        {"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"}]},
                         {"hooks": [{"type": "command", "command": "echo user-hook"}]},
                     ],
                     "UserPromptSubmit": [
-                        {"hooks": [{"type": "command", "command": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py"}]},
+                        {"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py"}]},
                     ],
                     "PreToolUse": [
                         {"hooks": [{"type": "command", "command": "echo pre"}]},
@@ -883,7 +883,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 for h in group.get("hooks", [])
             ]
             self.assertNotIn(
-                "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+                "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
                 session_cmds,
             )
             self.assertIn("echo user-hook", session_cmds)
