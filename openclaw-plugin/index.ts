@@ -117,7 +117,8 @@ function buildArgs(input: GocToolInput): string[] {
 
 const FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
 const IMPEDED_WAITING_ON = new Set(["external", "resource", "deferred"]);
-const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})/;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 
 interface ActiveCard {
   name: string;
@@ -129,33 +130,34 @@ function stripQuotes(s: string): string {
   return s.replace(/^["']|["']$/g, "");
 }
 
-interface ParsedIsoDate {
-  parsed: boolean;
-  future: boolean;
+function parseWaitingUntil(value: string): Date | null {
+  // Mirrors goc.engine._waiting_until_instant: a bare date YYYY-MM-DD is
+  // midnight UTC of that day; a datetime YYYY-MM-DDTHH:MM:SSZ is honored
+  // at full precision so a same-day future timestamp does not collapse
+  // to "today" and clear early.
+  if (ISO_DATETIME_UTC_RE.test(value)) {
+    const t = Date.parse(value);
+    return Number.isNaN(t) ? null : new Date(t);
+  }
+  if (ISO_DATE_RE.test(value)) {
+    const t = Date.parse(`${value}T00:00:00Z`);
+    return Number.isNaN(t) ? null : new Date(t);
+  }
+  return null;
 }
 
-function parseIsoDate(value: string, today: Date): ParsedIsoDate {
-  const m = ISO_DATE_RE.exec(value);
-  if (!m) return { parsed: false, future: false };
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  // UTC midnight comparison — matches the Python hook's date-level coarseness.
-  const until = Date.UTC(y, mo - 1, d);
-  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  return { parsed: true, future: until > todayUtc };
-}
-
-function isImpeded(waitingOn: string, waitingUntil: string, today: Date): boolean {
-  // Mirrors goc/templates/hooks/deck_session_start.py:_is_impeded across the
-  // four-cell waiting_on × waiting_until matrix. An elapsed waiting_until
-  // resurfaces the card even when waiting_on is also set (engine contract).
-  const until = waitingUntil !== "" ? parseIsoDate(waitingUntil, today) : { parsed: false, future: false };
+function isImpeded(waitingOn: string, waitingUntil: string, now: Date): boolean {
+  // Mirrors goc.engine.waiting_impedes across the four-cell waiting_on ×
+  // waiting_until matrix at full UTC timestamp precision (matching
+  // engine._waiting_until_instant). An elapsed waiting_until resurfaces
+  // the card even when waiting_on is also set (engine contract).
+  const untilDt = waitingUntil !== "" ? parseWaitingUntil(waitingUntil) : null;
+  const untilFuture = untilDt !== null && untilDt.getTime() > now.getTime();
   if (IMPEDED_WAITING_ON.has(waitingOn)) {
-    if (until.parsed && !until.future) return false;
+    if (untilDt !== null && !untilFuture) return false;
     return true;
   }
-  return until.future;
+  return untilFuture;
 }
 
 async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
@@ -169,7 +171,7 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
   } catch {
     return [];
   }
-  const today = new Date();
+  const now = new Date();
   const active: ActiveCard[] = [];
   for (const name of entries) {
     const readme = resolve(deckDir, name, "README.md");
@@ -198,7 +200,7 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
       }
     }
     if (status !== "active") continue;
-    const impeded = isImpeded(waitingOn, waitingUntil, today);
+    const impeded = isImpeded(waitingOn, waitingUntil, now);
     active.push({ name, humanGate, impeded });
   }
   return active;

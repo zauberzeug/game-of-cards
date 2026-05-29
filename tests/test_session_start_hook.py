@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -348,6 +349,65 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
         self.assertIn("b-external", not_resumable)
         self.assertIn("c-deferred-future", not_resumable)
         self.assertIn("d-gated", not_resumable)
+
+    def test_same_day_future_datetime_waiting_until_is_impeded(self):
+        """Same-day future `waiting_until: <today>THH:MM:SSZ` is impeded.
+
+        The engine compares `waiting_until` at full UTC timestamp precision
+        (`engine._waiting_until_instant`); the hook must agree. A date-level
+        truncation would round a 23:59:59Z timestamp to "today" and clear
+        the wait early. Both sides of the boundary (future instant vs.
+        elapsed start-of-day instant) are pinned against a fixed `now`
+        injected through `datetime.now` so the test does not rot at midnight.
+        """
+        # Pin the clock to a known UTC instant well after midnight so the
+        # `<today>T00:00:00Z` case is unambiguously elapsed.
+        pinned_now = datetime(2026, 5, 29, 12, 0, 0, tzinfo=timezone.utc)
+        today_iso = pinned_now.date().isoformat()
+        future_same_day = f"{today_iso}T23:59:59Z"
+        elapsed_today_start = f"{today_iso}T00:00:00Z"
+
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):  # type: ignore[override]
+                if tz is None:
+                    return pinned_now.replace(tzinfo=None)
+                return pinned_now.astimezone(tz)
+
+        with mock.patch.object(self.hook, "datetime", FrozenDateTime):
+            future_card = Path(
+                tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".md", delete=False
+                ).name
+            )
+            future_card.write_text(
+                "---\nstatus: active\nhuman_gate: none\n"
+                f"waiting_on: external\nwaiting_until: {future_same_day}\n"
+                "---\nbody\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(
+                self.hook._is_impeded(future_card),
+                "same-day future datetime waiting_until must be impeded "
+                "(engine compares at full UTC timestamp precision)",
+            )
+
+            elapsed_card = Path(
+                tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".md", delete=False
+                ).name
+            )
+            elapsed_card.write_text(
+                "---\nstatus: active\nhuman_gate: none\n"
+                f"waiting_on: external\nwaiting_until: {elapsed_today_start}\n"
+                "---\nbody\n",
+                encoding="utf-8",
+            )
+            self.assertFalse(
+                self.hook._is_impeded(elapsed_card),
+                "elapsed same-day datetime waiting_until must resurface "
+                "(engine contract: elapsed instant clears the wait)",
+            )
 
     def test_impeded_bucket_distinct_from_gate_bucket(self):
         """When both kinds of parked cards exist, they emit distinct lines.

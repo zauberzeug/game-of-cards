@@ -5,9 +5,10 @@ status: done
 stage: null
 contribution: medium
 created: "2026-05-29T09:34:55Z"
-closed_at: 2026-05-29T09:41:13Z
+closed_at: "2026-05-29T09:41:13Z"
 human_gate: none
-advances: []
+advances:
+  - session-start-hook-misreads-same-day-datetime-waiting-until-as-not-impeded
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
