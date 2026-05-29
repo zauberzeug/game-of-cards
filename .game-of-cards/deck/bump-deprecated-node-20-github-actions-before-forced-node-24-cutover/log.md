@@ -77,3 +77,20 @@ regression tests", a real test failure unrelated to the action pins.
 This card's DoD item 5 only requires CI to *resolve the pins and reach a
 real step*; the pre-existing test failure is out of scope and worth a
 separate card.
+
+## 2026-05-29T04:46:31Z — Closure
+
+- **What changed**: `.github/workflows/*.yml` — bumped all 14 Node-20 action pins (9 `actions/checkout@v4`→`@v6`, 5 `astral-sh/setup-uv@v5`→`@v7`); `ci.yml` switched to a setup-uv-activated `.venv` (`activate-environment: true`, plain `uv pip install -e .`) to satisfy newer uv.
+- **Verification**: CI run d8a4b9d completed/success — all 4 Python matrix jobs (3.10–3.13) green on Node 24. Post-edit grep for old pins returns nothing; all 7 workflows parse as valid YAML.
+- **Audit**: PASS — no principle touched, mechanical/infra fix (CI runner-runtime currency).
+- **Project impact**: n/a (CI infra; no user-facing or deck-state change).
+- **Tests**: regression suite green within CI (4/4 matrix jobs passed); no new tests required for a workflow-pin bump.
+- **Bundled with**: n/a
+
+## Closure verification (2026-05-29T04:46:35Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-05-29 — Closure' present

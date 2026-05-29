@@ -1,11 +1,11 @@
 ---
 title: bump-deprecated-node-20-github-actions-before-forced-node-24-cutover
 summary: "GitHub flagged actions/checkout@v4 and astral-sh/setup-uv@v5 as running on the deprecated Node 20 runtime, which the runner force-migrates to Node 24 on 2026-06-02. Bump both pins (and the other Node-20 actions/* pins) to their current Node-24 majors across all workflows so CI keeps working past the cutover."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T04:31:06Z"
-closed_at: null
+closed_at: 2026-05-29T04:46:38Z
 human_gate: none
 advances: []
 advanced_by: []
@@ -15,7 +15,7 @@ definition_of_done: |
   - [x] MECHANICAL: every `astral-sh/setup-uv@v5` pin bumped to `@v7` across `.github/workflows/`
   - [x] MECHANICAL: `grep -rn "checkout@v4\|setup-uv@v5" .github/workflows/` returns no matches
   - [x] PROCESS: all workflow files still parse as valid YAML after the edit
-  - [ ] PROCESS: a CI run on the bump triggers and reaches a real step (not a YAML/parse failure), confirming the new pins resolve
+  - [x] PROCESS: CI run d8a4b9d is fully green on the new pins — all 4 Python matrix jobs (3.10–3.13) pass with checkout@v6 + setup-uv@v7 on Node 24
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -65,15 +65,17 @@ runs on Node 24. `actions/checkout` *does* publish a floating `v6`, so
 `@v6` is correct there.
 
 `checkout@v6` carries no behavioural change for our usage. `setup-uv@v7`
-does: it installs a newer default `uv`, and newer `uv` refuses
-`uv pip install -e .` into a non-virtual environment without `--system`
-(`error: No virtual environment found for Python 3.12 ... pass --system`).
-This surfaced a latent drift — `ci.yml` ran the bare `uv pip install -e .`
-while **AGENTS.md already documents the CI install as
-`uv pip install --system -e .`** ("what CI does"). The fix realigns
-`ci.yml:43` with the documented command. The `uv sync`-based workflows
-(`pull-card.yml`, `audit-deck.yml`) are unaffected — `uv sync` manages
-its own `.venv`.
+does: it bundles a newer default `uv` that refuses `uv pip install` into
+a non-virtual environment (the GHA runner's system Python is PEP-668
+externally-managed, so `--system` is also rejected). Applied fix in
+`ci.yml`: set `activate-environment: true` on the `setup-uv@v7` step so
+it creates and activates a `.venv` for the whole job (exported via
+`GITHUB_PATH`/`GITHUB_ENV`); `uv pip install -e .` then targets that venv
+and the later bare `goc --version` / `goc validate` steps resolve the
+console script. The `uv sync`-based workflows (`pull-card.yml`,
+`audit-deck.yml`) were unaffected — `uv sync` manages its own `.venv`.
+(The interim `--system` attempt and the `@v8`-doesn't-resolve dead-end
+are recorded in `log.md`.)
 
 ## Scope note — what is deliberately left out
 
