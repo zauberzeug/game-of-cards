@@ -1,7 +1,7 @@
 ---
 title: goc-decide-omits-blank-line-before-following-section-heading
 summary: "When `goc decide` replaces an existing `## Decision required` section with `## Decision`, the new block ends in a single `\n` while the regex's positive lookahead leaves the next `## ` heading attached on the very next line. Markdown emerges malformed: `*Reasoning:* X` runs straight into `## NextSection`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T07:36:02Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: an end-to-end test runs `goc decide` on a card whose body contains `## Decision required` followed by `## Notes`, then re-reads the file and asserts the resulting markdown round-trips through a basic renderer with the headings separated.
   - [ ] MECHANICAL: `replace_or_append_decision` in `goc/engine.py` emits a trailing blank line so the next `## ` heading is properly separated; the append branch remains clean (no double-blank).
   - [ ] MECHANICAL: existing tests pass (`uv run python -m unittest discover -s tests`); plugin mirrors are re-synced.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc decide` glues the new Decision block to the next section heading
