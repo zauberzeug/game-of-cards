@@ -8,7 +8,8 @@ created: "2026-05-29T20:04:05Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - goc-move-leaves-cross-reference-rewrites-uncommitted
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: `deck/<title>/reproduce.py` exits zero and asserts that after `goc repair-edges --apply` the modified card README is committed (HEAD advanced, working tree clean), matching `goc advance --by` behavior on the same fixture.
