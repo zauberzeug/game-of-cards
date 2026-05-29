@@ -101,5 +101,36 @@ class NonListAdvancesGuardTest(unittest.TestCase):
         self.assertEqual(edges[0].ref, "bcard")
 
 
+class TagsPropertyGuardTest(unittest.TestCase):
+    """`Card.tags` must coerce a non-list frontmatter value to `[]` so the
+    render path (`",".join(t.tags[:4])`) and the filter path
+    (`tag in t.tags`) don't iterate characters or substring-match. Same
+    root-cause family as `compute_values` / `find_half_edges` — see
+    closed siblings `compute-values-iterates-non-list-advances-…` and
+    `repair-edges-misses-half-edge-when-inverse-side-is-a-bare-string`."""
+
+    def test_bare_string_tags_renders_as_empty_not_character_by_character(self) -> None:
+        card = _card("a", tags="bug")
+        rendered = ",".join(card.tags[:4])
+        self.assertEqual(rendered, "")
+
+    def test_bare_string_tags_does_not_substring_match_in_filter(self) -> None:
+        card = _card("a", tags="bug")
+        # The filter site does `tag in t.tags`; with the guard, `tags` is
+        # `[]` and no single-character query matches.
+        self.assertFalse(all(tag in card.tags for tag in ["b"]))
+        self.assertFalse(all(tag in card.tags for tag in ["bug"]))
+
+    def test_other_non_list_tags_values_coerce_to_empty(self) -> None:
+        for bad in (None, "bug", 42, {"not": "a list"}):
+            with self.subTest(bad=bad):
+                card = _card("a", tags=bad)
+                self.assertEqual(card.tags, [])
+
+    def test_list_tags_pass_through_unchanged(self) -> None:
+        card = _card("a", tags=["bug", "api-contract"])
+        self.assertEqual(card.tags, ["bug", "api-contract"])
+
+
 if __name__ == "__main__":
     unittest.main()
