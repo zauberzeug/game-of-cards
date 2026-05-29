@@ -52,3 +52,26 @@ Children filed: `derive-dependency-readiness-instead-of-storing-blocked-status`,
 `add-waiting-overlay-with-reason-and-until-date`,
 `remove-blocked-from-status-enum-and-migrate-existing-cards` (the last
 advanced_by the first two; breaking, lands last).
+
+## 2026-05-29: ticked DoD items 1, 2, 3, 5
+
+Items 1-3 were already objectively true but unchecked: the design is
+recorded in the body's `## Decision` section; the
+`derive-dependency-readiness-instead-of-storing-blocked-status` and
+`add-waiting-overlay-with-reason-and-until-date` children both closed
+with full DoD.
+
+Item 5 ("AGENTS.md + card-schema/advance-card/deck skills describe the
+three-axis model") was only partially true — the three skills cover it
+in depth, but `AGENTS_GOC.md` (and the dogfooded `AGENTS.md`) only
+mentioned the model implicitly via the `purge-blocked-status-from-skills-and-docs`
+removal pass. Added a "Three-axis 'stuck' model" paragraph to
+`goc/templates/AGENTS_GOC.md` and mirrored it into this repo's
+`AGENTS.md` marker block, naming the three axes and pointing to
+`Skill(card-schema)` for the predicate.
+
+Item 4 (child `remove-blocked-from-status-enum-and-migrate-existing-cards`
+closed) still pending — that child is itself an aggregation epic
+waiting on the session-gated breaking-change grandchild
+`remove-blocked-from-the-status-enum-and-validator`. This epic stays
+open until the release boundary lands.
