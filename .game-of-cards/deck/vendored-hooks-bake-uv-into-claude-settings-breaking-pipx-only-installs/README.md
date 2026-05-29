@@ -1,7 +1,7 @@
 ---
 title: vendored-hooks-bake-uv-into-claude-settings-breaking-pipx-only-installs
 summary: "`goc install --local-skills` writes `.claude/settings.json` hook commands like `uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py`, forcing every Claude Code session to have `uv` on PATH. README documents `pipx install game-of-cards` as a valid install path that does NOT bring `uv`, so a pipx-only consumer's SessionStart, UserPromptSubmit, and Stop hooks all crash with `uv: not found` on every session. The hook scripts are stdlib-only (no `import goc`), so `python3` would work identically — and the plugin path already uses `python3 ${CLAUDE_PLUGIN_ROOT}/hooks/...` in `claude-plugin/hooks/hooks.json`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T13:40:26Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the three test cases in `tests/test_install.py` that pin the hook command string (lines 187, 802, 806, 832, 862, 866, 886) update to the new `python3 …` shape; no test still asserts the `uv run python` literal.
   - [ ] MECHANICAL: this repo's own `.claude/settings.json` is regenerated (or hand-edited) to the new shape so the dogfood install matches what consumers get.
   - [ ] PROCESS: `uv run goc validate --quiet` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Vendored hooks bake `uv` into `.claude/settings.json`, breaking pipx-only installs
