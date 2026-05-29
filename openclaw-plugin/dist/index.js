@@ -2453,6 +2453,10 @@ var ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 function stripQuotes(s) {
   return s.replace(/^["']|["']$/g, "");
 }
+function frontmatterTail(line) {
+  const i = line.indexOf(":");
+  return i < 0 ? "" : line.slice(i + 1).trim();
+}
 function parseWaitingUntil(value) {
   if (ISO_DATETIME_UTC_RE.test(value)) {
     const t = Date.parse(value);
@@ -2499,14 +2503,14 @@ async function findActiveCards(deckDir) {
     let waitingUntil = "";
     for (const line of m[1].split("\n")) {
       if (line.startsWith("status:")) {
-        status = line.split(":", 2)[1].trim();
+        status = stripQuotes(frontmatterTail(line));
       } else if (line.startsWith("human_gate:")) {
-        const val = line.split(":", 2)[1].trim();
+        const val = stripQuotes(frontmatterTail(line));
         if (val) humanGate = val;
       } else if (line.startsWith("waiting_on:")) {
-        waitingOn = stripQuotes(line.split(":", 2)[1].trim());
+        waitingOn = stripQuotes(frontmatterTail(line));
       } else if (line.startsWith("waiting_until:")) {
-        waitingUntil = stripQuotes(line.split(":", 2)[1].trim());
+        waitingUntil = stripQuotes(frontmatterTail(line));
       }
     }
     if (status !== "active") continue;
