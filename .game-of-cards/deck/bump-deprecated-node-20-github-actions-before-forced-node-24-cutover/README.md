@@ -11,10 +11,10 @@ advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: every `actions/checkout@v4` pin bumped to `@v6` across `.github/workflows/`
-  - [ ] MECHANICAL: every `astral-sh/setup-uv@v5` pin bumped to `@v8` across `.github/workflows/`
-  - [ ] MECHANICAL: `grep -rn "checkout@v4\|setup-uv@v5" .github/workflows/` returns no matches
-  - [ ] PROCESS: all workflow files still parse as valid YAML after the edit
+  - [x] MECHANICAL: every `actions/checkout@v4` pin bumped to `@v6` across `.github/workflows/`
+  - [x] MECHANICAL: every `astral-sh/setup-uv@v5` pin bumped to `@v8` across `.github/workflows/`
+  - [x] MECHANICAL: `grep -rn "checkout@v4\|setup-uv@v5" .github/workflows/` returns no matches
+  - [x] PROCESS: all workflow files still parse as valid YAML after the edit
   - [ ] PROCESS: a CI run on the bump triggers and reaches a real step (not a YAML/parse failure), confirming the new pins resolve
 worker: {who: Rodja Trappe, where: main}
 ---
