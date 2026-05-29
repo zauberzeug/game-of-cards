@@ -22,7 +22,7 @@ is no separate "framework" repo.
 
 ```bash
 uv sync                            # install dev environment
-uv pip install --system -e .       # editable install (what CI does)
+uv pip install -e .                # editable install into the project venv (what CI does)
 uv run goc --help                  # exercise the CLI from source
 uv run goc validate                # check every card's frontmatter
 uv run python -m unittest discover -s tests  # run the regression suite

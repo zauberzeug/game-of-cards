@@ -1,11 +1,11 @@
 ---
 title: agents-md-documents-removed-system-flag-as-the-ci-install
 summary: "AGENTS.md's Common-commands list documents the editable install as `uv pip install --system -e .` labelled '(what CI does)', but ci.yml no longer uses --system: it now installs into a setup-uv-activated .venv via plain `uv pip install -e .`. Update the line so the documented CI recipe matches reality."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-29T04:54:00Z"
-closed_at: null
+closed_at: 2026-05-29T04:54:50Z
 human_gate: none
 advances: []
 advanced_by: []
