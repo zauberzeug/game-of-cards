@@ -21,6 +21,7 @@ definition_of_done: |
   - [x] Child `purge-blocked-status-from-skills-and-docs` closed (advance-card/card-schema/deck/AGENTS rewrite to the three-axis model + plugin sync; autonomous-pull-safe).
   - [ ] Child `remove-blocked-from-the-status-enum-and-validator` closed (the breaking enum removal; `human_gate: session`, release-coordinated, lands last).
   - [ ] After all three: no card has `status: blocked`, the enum value is gone, docs match the code, plugin mirrors are synced, and `goc validate` is clean.
+waiting_on: deferred
 ---
 
 # Remove `blocked` from the status enum and migrate existing cards
