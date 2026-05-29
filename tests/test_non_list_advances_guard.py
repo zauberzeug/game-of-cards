@@ -132,5 +132,59 @@ class TagsPropertyGuardTest(unittest.TestCase):
         self.assertEqual(card.tags, ["bug", "api-contract"])
 
 
+class SupersedesWalkersGuardTest(unittest.TestCase):
+    """Three engine walkers — `validate_supersedes_targets`,
+    `detect_supersedes_cycles`, and `_would_create_supersedes_cycle` — must
+    treat a non-list `supersedes` / `superseded_by` frontmatter value as
+    structurally absent rather than iterating it character-by-character.
+    Same root-cause family as the advances/tags guards above."""
+
+    def test_validate_supersedes_targets_flags_bare_string_supersedes(self) -> None:
+        # Card `a` has `supersedes: "nonexistent"` (bare string). Card `n`
+        # has the single-character title that the buggy char-by-char walk
+        # would silently match against. Post-fix: the validator reports
+        # the bare-string shape with its value, naming 'nonexistent'.
+        a = _card("a", supersedes="nonexistent")
+        n = _card("n")
+        n.frontmatter["status"] = "superseded"
+        errors = engine.validate_supersedes_targets([a, n])
+        self.assertTrue(
+            any("nonexistent" in e for e in errors),
+            f"expected bare-string value reported; got {errors!r}",
+        )
+        self.assertTrue(
+            any("must be a list" in e for e in errors),
+            f"expected list-shape error; got {errors!r}",
+        )
+
+    def test_validate_supersedes_targets_list_pass_through_unchanged(self) -> None:
+        # Proper list shape with a dangling target that exists but isn't
+        # `status: superseded` still reports the original integrity error.
+        a = _card("a", supersedes=["b"])
+        b = _card("b")  # status: open, not superseded
+        errors = engine.validate_supersedes_targets([a, b])
+        self.assertTrue(
+            any("not status: superseded" in e for e in errors),
+            f"expected typed-pointer integrity error; got {errors!r}",
+        )
+
+    def test_detect_supersedes_cycles_ignores_non_list_superseded_by(self) -> None:
+        # Bare-string `superseded_by` must not crash or emit a spurious
+        # cycle from char-by-char iteration.
+        card = _card("a", superseded_by="abc")
+        errors = engine.detect_supersedes_cycles([card])
+        self.assertEqual(errors, [])
+
+    def test_would_create_supersedes_cycle_ignores_non_list_superseded_by(self) -> None:
+        # _would_create_supersedes_cycle walks `superseded_by` from the
+        # successor; a bare-string value must be treated as no outgoing
+        # edges, not as a sequence of single-character successors.
+        a = _card("a")
+        b = _card("b", superseded_by="aaa")
+        self.assertFalse(
+            engine._would_create_supersedes_cycle([a, b], "a", "b")
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

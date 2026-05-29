@@ -1275,7 +1275,16 @@ def validate_supersedes_targets(cards: list[Card]) -> list[str]:
     by_title = {t.title: t for t in cards}
     errors: list[str] = []
     for t in cards:
-        for ref in t.frontmatter.get("supersedes") or []:
+        refs = t.frontmatter.get("supersedes") or []
+        if not isinstance(refs, list):
+            errors.append(
+                f"{t.title}: supersedes: must be a list, got "
+                f"{type(refs).__name__} value={refs!r}; a bare-string "
+                f"scalar is iterated character-by-character and silently "
+                f"matches single-character titles"
+            )
+            continue
+        for ref in refs:
             target = by_title.get(ref)
             if target is None:
                 continue
@@ -1383,6 +1392,8 @@ def detect_supersedes_cycles(cards: list[Card]) -> list[str]:
             if t is None:
                 continue
             superseded_by = t.frontmatter.get("superseded_by") or []
+            if not isinstance(superseded_by, list):
+                continue
             for b in superseded_by:
                 if b == start.title and cur != start.title:
                     errors.append(f"{start.title}: superseded_by: cycle detected through {cur} → {b}")
@@ -1410,7 +1421,10 @@ def _would_create_supersedes_cycle(cards: list[Card], title: str, successor: str
         card = by_title.get(cur)
         if card is None:
             continue
-        for s in card.frontmatter.get("superseded_by") or []:
+        succs = card.frontmatter.get("superseded_by") or []
+        if not isinstance(succs, list):
+            continue
+        for s in succs:
             if s == title:
                 return True
             stack.append(s)
