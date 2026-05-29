@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-29T18:26:12Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - goc-status-active-discards-worker-overrides-when-target-already-active
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
