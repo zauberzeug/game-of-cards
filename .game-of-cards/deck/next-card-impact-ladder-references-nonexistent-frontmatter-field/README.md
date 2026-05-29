@@ -8,7 +8,8 @@ created: "2026-05-29T11:56:14Z"
 closed_at: "2026-05-29T12:01:20Z"
 human_gate: none
 advances: []
-advanced_by: []
+advanced_by:
+  - skill-prose-still-calls-queue-impact-sorted-after-impact-contribution-rename
 tags: [bug, documentation]
 definition_of_done: |
   - [x] TDD: reproduce.py exits zero (the four documented `impact:` field-name occurrences in `goc/templates/skills/next-card/SKILL.md` are gone; every documented field name resolves against `schema.yaml`)
