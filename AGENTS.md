@@ -427,6 +427,23 @@ with a forward pointer (dated `log.md` append; optional `> Later
 evidence:` line atop the README). See `Skill(finish-card)` "After
 closure" for the format.
 
+**Three-axis "stuck" model.** A card that isn't moving fails for one
+of three independent reasons, each with its own resolution mechanism:
+(1) **progress status** — `open → active → done/disproved/superseded`
+(no `blocked` peer; the status field doesn't model waits); (2) **derived
+dependency-readiness** — a non-terminal `advanced_by` prereq is
+computed at read time, self-clears when the prereq closes, and shows
+as `⏳` on the board (advisory display only — does not hide a card
+from `pull-card` / `next-card`); (3) **stored impediment overlay** —
+`waiting_on` ∈ {`external`, `resource`, `deferred`} plus optional
+`waiting_until` (ISO date), set via `goc wait <title> --reason <r>
+[--until <date>]` and cleared with `--clear`. A future `waiting_until`
+hides the card from queues; an elapsed one is surfaced by `goc
+validate` as an SLE escalation. The overlay composes alongside
+`human_gate` (decision/session waits) — a card may be `status: active`
+AND carry `waiting_on`. See `Skill(card-schema)` "Three-axis stuck
+model" for the full predicate.
+
 **The deck is both a scheduler and a record.** The scheduler axis
 walks `advances` edges across live cards to compose priority; the
 record axis walks edges that include closed cards so a cold reader

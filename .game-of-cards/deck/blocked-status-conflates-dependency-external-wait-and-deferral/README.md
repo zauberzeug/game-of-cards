@@ -17,11 +17,12 @@ advanced_by:
   - make-advances-gate-closure-not-the-pull-queue
 tags: [epic, api-contract, documentation]
 definition_of_done: |
-  - [ ] Agreed design recorded in this body (done — see "## Decision").
-  - [ ] Child `derive-dependency-readiness-instead-of-storing-blocked-status` closed.
-  - [ ] Child `add-waiting-overlay-with-reason-and-until-date` closed.
+  - [x] Agreed design recorded in this body (done — see "## Decision").
+  - [x] Child `derive-dependency-readiness-instead-of-storing-blocked-status` closed.
+  - [x] Child `add-waiting-overlay-with-reason-and-until-date` closed.
   - [ ] Child `remove-blocked-from-status-enum-and-migrate-existing-cards` closed.
-  - [ ] AGENTS.md + card-schema/advance-card/deck skills describe the three-axis model (progress status / derived dependency readiness / stored impediment overlay).
+  - [x] AGENTS.md + card-schema/advance-card/deck skills describe the three-axis model (progress status / derived dependency readiness / stored impediment overlay).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `blocked` is one generic status where the literature uses several distinct mechanisms
