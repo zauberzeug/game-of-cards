@@ -252,5 +252,59 @@ class DependencyBlockersGuardTest(unittest.TestCase):
         self.assertEqual(warnings, [])
 
 
+class FilterCardsEdgeGuardTest(unittest.TestCase):
+    """`filter_cards` implements the public `goc --advances <title>` /
+    `goc --advanced-by <title>` CLI surface. The two `in` membership
+    tests must treat a non-list edge value as an empty edge set,
+    matching the rest of the walker-fix family — otherwise Python's
+    `in` silently switches to substring-matching on a bare-string
+    scalar."""
+
+    def test_advances_filter_treats_bare_string_as_no_membership(self) -> None:
+        scalar = _card("scalar-card", advances="foo-card-extended")
+        list_c = _card("list-card", advances=["foo-card-extended"])
+        # Substring query that is NOT a real title: bare-string scalar
+        # used to false-positive via Python substring `in`.
+        self.assertEqual(
+            engine.filter_cards(
+                [scalar, list_c], status=None, advances="foo"
+            ),
+            [],
+        )
+        # Full-title query: only the list-shaped card matches; the
+        # scalar shape is treated as structurally absent.
+        match = engine.filter_cards(
+            [scalar, list_c], status=None, advances="foo-card-extended"
+        )
+        self.assertEqual([c.title for c in match], ["list-card"])
+
+    def test_advanced_by_filter_treats_bare_string_as_no_membership(self) -> None:
+        scalar = _card("scalar-card", advanced_by="foo-card-extended")
+        list_c = _card("list-card", advanced_by=["foo-card-extended"])
+        self.assertEqual(
+            engine.filter_cards(
+                [scalar, list_c], status=None, advanced_by="foo"
+            ),
+            [],
+        )
+        match = engine.filter_cards(
+            [scalar, list_c], status=None, advanced_by="foo-card-extended"
+        )
+        self.assertEqual([c.title for c in match], ["list-card"])
+
+    def test_other_non_list_edge_shapes_coerce_to_empty(self) -> None:
+        for bad in (None, "abc", 42, {"not": "a list"}):
+            with self.subTest(bad=bad):
+                card = _card("a", advances=bad, advanced_by=bad)
+                self.assertEqual(
+                    engine.filter_cards([card], status=None, advances="a"),
+                    [],
+                )
+                self.assertEqual(
+                    engine.filter_cards([card], status=None, advanced_by="a"),
+                    [],
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
