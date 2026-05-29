@@ -57,24 +57,23 @@ the timestamp the engine sets on close, so it is immune to that and
 uniformly covers `done` / `disproved` / `superseded`.
 
 ```bash
-goc --json --status all 2>/dev/null | python3 -c "
-import json, sys, datetime
-cards = json.load(sys.stdin)
-now = datetime.datetime.now(datetime.timezone.utc)
-def parse(s):
-    if not s: return None
-    try: d = datetime.datetime.fromisoformat(s.replace('Z','+00:00'))
-    except Exception:
-        try: d = datetime.datetime.strptime(s[:10], '%Y-%m-%d')
-        except Exception: return None
-    return d.replace(tzinfo=datetime.timezone.utc) if d.tzinfo is None else d
-recent = [c for c in cards if (d := parse(c.get('closed_at'))) and 0 <= (now - d).total_seconds() <= 86400]
-recent.sort(key=lambda c: c['closed_at'])
-for c in recent:
-    print(f\"{c['title']}: {c['status']} — {(c.get('summary') or '')[:70]}\")
-print(f\"({len(recent)} closed in last 24h)\" if recent else 'Nothing closed in the last 24h.')
+goc --json --closed-since 24h --slim 2>/dev/null | python3 -c "
+import json, sys
+cards = sorted(json.load(sys.stdin), key=lambda c: c.get('closed_at') or '')
+for c in cards:
+    print(f\"{c['title']}: {c['status']}\")
+print(f\"({len(cards)} closed in last 24h)\" if cards else 'Nothing closed in the last 24h.')
 " 2>/dev/null || true
 ```
+
+`--closed-since 24h` does the date-window filter inside the engine
+(reading the structured `closed_at` record, not file mtime — a
+pull/merge/clone writes every `log.md` at one instant and a
+`-newer`-mtime scan falsely reports "Nothing closed"). `--slim` strips
+body/large fields so the Context block ships kilobytes instead of the
+multi-hundred-KB full-deck JSON. The title-by-status output is enough
+for the standup format; expand the window or drop `--slim` if you need
+summaries.
 
 If none match, report "Nothing closed in the last 24h." When the count
 is large (a batch sync), summarize by theme rather than listing every

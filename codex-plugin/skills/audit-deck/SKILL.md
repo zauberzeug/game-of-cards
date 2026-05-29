@@ -156,9 +156,20 @@ For each confirmed candidate:
 2. **Disproved-dedup grep.** Before drafting `reproduce.py`, grep
    the candidate's identifying string against existing disproved
    bodies. If a rebuttal exists, re-read it.
-3. **Hand to `Skill(create-card)`** for the actual filing
+3. **Name the reachability path in `## Why it matters`.** For
+   parser / emitter / serializer / storage-layer defects, the
+   body must name a path that produces the offending input —
+   "the emitter at `engine.py:NNN` writes this," "a
+   one-shot-authored card produced it," or the concrete consumer
+   flow that surfaces the bug. Without a reachability path, a card
+   describes a theoretical defect; with one, the next reader can
+   tell whether the input shape actually flows through shipping
+   code (or is only hypothetically possible). This convention is
+   already current good practice — making it explicit here keeps
+   audits from drifting back into theoretical-bug territory.
+4. **Hand to `Skill(create-card)`** for the actual filing
    (title, scaffold, body, DoD, `reproduce.py`).
-4. **Sibling sweep after confirmation.** Grep for the same
+5. **Sibling sweep after confirmation.** Grep for the same
    root-cause shape in adjacent modules. File every confirmed
    sibling as a separate card. If the sweep would produce a 4th
    instance of an already-catalogued family, file the
