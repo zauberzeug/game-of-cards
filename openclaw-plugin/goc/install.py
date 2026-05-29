@@ -537,9 +537,9 @@ def _should_use_local_skills(agent: str, *, local_skills: bool) -> bool:
 
 
 GOC_CLAUDE_HOOKS: dict[str, str] = {
-    "SessionStart": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
-    "UserPromptSubmit": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
-    "Stop": "uv run python ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py",
+    "SessionStart": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+    "UserPromptSubmit": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_prompt_router.py",
+    "Stop": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pattern_generalization_check.py",
 }
 
 _HOOK_FILE_RE = re.compile(r"\$\{CLAUDE_PROJECT_DIR\}/(.+?\.py)")

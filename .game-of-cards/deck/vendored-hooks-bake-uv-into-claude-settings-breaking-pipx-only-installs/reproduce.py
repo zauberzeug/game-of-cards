@@ -1,13 +1,18 @@
-"""Reproduce: vendored install bakes `uv` into hook commands.
+"""Reproduce: vendored install no longer bakes `uv` into hook commands.
 
-Confirms three facts and prints one observed failure:
+Pre-fix, `GOC_CLAUDE_HOOKS` registered `uv run python …` for every
+hook event, which fails for pipx-only consumers (no `uv` on PATH).
+Post-fix, the registrations use plain `python3 …` and run cleanly
+without `uv`.
+
+Confirms:
 
 1. Hook scripts at `goc/templates/hooks/*.py` import only stdlib.
 2. Plugin hooks at `claude-plugin/hooks/hooks.json` use plain `python3`.
-3. Vendored install registers `uv run python ...` via
-   `GOC_CLAUDE_HOOKS` in `goc/install.py`.
-4. Stripping `uv` from PATH and running the vendored command fails
-   with `uv: not found` (rc=127).
+3. Vendored install registers `python3 ...` via `GOC_CLAUDE_HOOKS`
+   in `goc/install.py` — matching the plugin payload.
+4. With `uv` stripped from PATH, the rendered `python3 …` command
+   runs cleanly (rc=0).
 """
 
 from __future__ import annotations
@@ -63,8 +68,9 @@ def main() -> int:
     from goc.install import GOC_CLAUDE_HOOKS  # noqa: E402
 
     vendored = {event: cmd for event, cmd in GOC_CLAUDE_HOOKS.items()}
-    assert all(cmd.startswith("uv run python ") for cmd in vendored.values()), vendored
-    print("vendored install bakes uv: " + " ".join(f"{e}={c}" for e, c in vendored.items()))
+    assert all(cmd.startswith("python3 ") for cmd in vendored.values()), vendored
+    assert not any("uv" in cmd.split() for cmd in vendored.values()), vendored
+    print("vendored install uses python3: " + " ".join(f"{e}={c}" for e, c in vendored.items()))
 
     session_cmd = GOC_CLAUDE_HOOKS["SessionStart"]
     env = {k: v for k, v in os.environ.items() if k != "PATH"}
@@ -73,20 +79,18 @@ def main() -> int:
     proc = subprocess.run(
         ["/bin/sh", "-c", session_cmd],
         env=env,
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         check=False,
     )
-    assert proc.returncode != 0, (
-        f"expected vendored hook to fail without uv on PATH; rc={proc.returncode}, "
+    assert proc.returncode == 0, (
+        f"expected vendored hook to run cleanly without uv on PATH; rc={proc.returncode}, "
         f"stdout={proc.stdout!r} stderr={proc.stderr!r}"
     )
-    assert "uv" in proc.stderr.lower() or "uv" in proc.stdout.lower(), (
-        f"expected 'uv' in failure output; stderr={proc.stderr!r}"
-    )
     print(
-        f"without uv on PATH the vendored command fails: "
-        f"rc={proc.returncode} stderr={proc.stderr!r}"
+        f"without uv on PATH the vendored command runs cleanly: "
+        f"rc={proc.returncode}"
     )
 
     return 0
