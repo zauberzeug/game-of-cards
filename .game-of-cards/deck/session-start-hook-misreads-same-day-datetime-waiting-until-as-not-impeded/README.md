@@ -1,7 +1,7 @@
 ---
 title: session-start-hook-misreads-same-day-datetime-waiting-until-as-not-impeded
 summary: "SessionStart hook `_is_impeded` compares `waiting_until` at date-level coarseness (`date.fromisoformat(until[:10]) > date.today()`), but the engine's `waiting_impedes` compares at full timestamp precision since the datetime-shape extension. For a card with `waiting_on` set and `waiting_until: <today>THH:MM:SSZ` still in the future (same-day datetime), the engine reports impeded (card hidden from `goc --ready`) but the hook reports not-impeded — the agent is told to `resume or close before starting new work` on a card `pull-card` cannot pull. The OpenClaw TypeScript port duplicates the same date-level comparison. Sibling-sweep finding on top of just-closed `session-start-hook-impeded-check-ignores-elapsed-waiting-until` — that fix mirrored engine semantics for the elapsed case at date level; this card refutes the docstring claim that date-level coarseness suffices, since the engine honors datetime-shape values at full precision."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-29T09:50:13Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the OpenClaw TypeScript port in `openclaw-plugin/index.ts` (`isImpeded` / `parseIsoDate`) is updated to match — full timestamp precision, not UTC-midnight coarseness. The misleading comment `UTC midnight comparison — matches the Python hook's date-level coarseness` is removed; the new comment names the engine contract being mirrored.
   - [ ] MECHANICAL: the docstring claim in `_is_impeded` that "a date-level comparison suffices" is corrected — it does NOT suffice for datetime-shape values, only for date-shape ones.
   - [ ] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # SessionStart hook `_is_impeded` misreads a same-day datetime `waiting_until` as not impeded
