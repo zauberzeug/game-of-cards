@@ -31,7 +31,7 @@ def _card_status(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("status:"):
-            return line.split(":", 1)[1].strip()
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
     return None
 
 
@@ -46,7 +46,7 @@ def _card_human_gate(readme: Path) -> str:
         return "none"
     for line in m.group(1).splitlines():
         if line.startswith("human_gate:"):
-            val = line.split(":", 1)[1].strip()
+            val = line.split(":", 1)[1].strip().strip('"').strip("'")
             return val or "none"
     return "none"
 
