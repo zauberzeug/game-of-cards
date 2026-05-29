@@ -1,7 +1,7 @@
 ---
 title: trim-token-cost-of-autonomous-card-cycles
 summary: "The methodology was designed for a deliberate, human-paced regime where the briefing in each skill is the point. In the autonomous-agent regime (50+ cards/day), that same briefing is re-loaded on every invocation and dominates token spend. This umbrella collapses five small, mechanical, gate:none fixes that trim that overhead — lighter `goc --json` endpoints, `goc done --bundle`, plugin-mirror diff compression in review, a leverage-comparison line in pull-card, and a codified reachability convention for parser/emitter cards. Two larger, methodology-shape items (audit-deck umbrella extension; lean/full skill stratification) are filed separately as session-gated cards."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-28T04:00:04Z"
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: a representative autonomous-card cycle re-run after these changes shows a measurable Context-shipment reduction. Capture: `goc --json --closed-since 24h --slim` bytes vs the current 339 KB `goc --json --status all` payload. Both numbers recorded in `log.md`.
   - [ ] PROCESS: only `goc/`, `goc/templates/`, `.gitattributes`, and `AGENTS.md` are hand-edited; `python scripts/sync_plugin_assets.py --check` passes (mirrors regenerated, no drift).
   - [ ] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # trim-token-cost-of-autonomous-card-cycles
