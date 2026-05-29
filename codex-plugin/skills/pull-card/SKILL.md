@@ -120,7 +120,7 @@ queue empty; filed <new-title>
 ```
 
 Don't narrate context — no "round N", no "via /loop", no "picked
-because impact:high". The commit message and closure log already say
+because contribution:high". The commit message and closure log already say
 what happened. The report is the index, not the story.
 
 ## Pairs naturally with
