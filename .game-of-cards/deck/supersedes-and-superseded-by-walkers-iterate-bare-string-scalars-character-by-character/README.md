@@ -1,7 +1,7 @@
 ---
 title: supersedes-and-superseded-by-walkers-iterate-bare-string-scalars-character-by-character
 summary: "Three engine walkers (`validate_supersedes_targets`, `detect_supersedes_cycles`, `_would_create_supersedes_cycle`) iterate `supersedes` / `superseded_by` frontmatter values without an `isinstance(x, list)` guard. A hand-edited card with a bare-string `supersedes: <slug>` (instead of a list) makes the loops walk the string character-by-character; any one-character title in the deck silently matches and lets dangling pointers slip past `goc validate`. Same family as the just-closed tags / inverse-half-edge fixes."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T05:48:30Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `validate_supersedes_targets` (engine.py:1278), `detect_supersedes_cycles` (engine.py:1385), and `_would_create_supersedes_cycle` (engine.py:1413) each guard their iteration with `if not isinstance(v, list): continue` (or equivalent), matching the pattern already present in `detect_advance_cycles` (engine.py:1326) and `_would_create_advance_cycle` (engine.py:1354).
   - [ ] TDD: a regression test in `tests/` exercises the bare-string `supersedes` path and asserts validation flags it (mirroring `test_card_tags.py` / `test_find_half_edges.py` shape from the sibling fixes).
   - [ ] MECHANICAL: `uv run goc validate` clean; `pre-commit run --all-files` clean (plugin mirrors auto-sync).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `supersedes` and `superseded_by` walkers iterate bare-string scalars character-by-character
