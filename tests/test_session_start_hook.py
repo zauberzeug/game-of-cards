@@ -302,6 +302,25 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
         ]
         self.assertEqual(impeded_lines, [], out)
 
+    def test_is_impeded_true_for_bare_deferral_with_malformed_waiting_until(self):
+        """Engine `until_unparseable` backstop: a present-but-unparseable
+        `waiting_until` with no `waiting_on` must be treated as impeded.
+
+        `goc.engine.waiting_impedes` errs on the side of hiding when the
+        date is unreadable (covered by `validate_waiting_overlay` upstream,
+        but `waiting_impedes` runs on pre-validate / hand-edited decks).
+        Without this mirror in the hook, the engine hides the card from
+        queues while the hook frames it as resumable — see the prior fix
+        `waiting-impedes-treats-malformed-waiting-until-as-no-impediment`
+        for the engine half.
+        """
+        p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
+        p.write_text(
+            "---\nstatus: active\nwaiting_until: 2026-99-99\n---\nbody\n",
+            encoding="utf-8",
+        )
+        self.assertTrue(self.hook._is_impeded(p))
+
     def test_is_impeded_false_when_no_overlay(self):
         p = Path(tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name)
         p.write_text("---\nstatus: active\n---\nbody\n", encoding="utf-8")

@@ -163,13 +163,23 @@ function isImpeded(waitingOn: string, waitingUntil: string, now: Date): boolean 
   // Mirrors goc.engine.waiting_impedes across the four-cell waiting_on ×
   // waiting_until matrix at full UTC timestamp precision (matching
   // engine._waiting_until_instant). An elapsed waiting_until resurfaces
-  // the card even when waiting_on is also set (engine contract).
-  const untilDt = waitingUntil !== "" ? parseWaitingUntil(waitingUntil) : null;
+  // the card even when waiting_on is also set (engine contract). A
+  // present-but-unparseable waiting_until with no waiting_on hits the
+  // engine's `until_unparseable` backstop (impede, don't silently
+  // un-defer) — `goc validate` is the upstream net; this is the
+  // read-time guard for pre-validate / hand-edited decks.
+  let untilDt: Date | null = null;
+  let untilUnparseable = false;
+  if (waitingUntil !== "") {
+    untilDt = parseWaitingUntil(waitingUntil);
+    if (untilDt === null) untilUnparseable = true;
+  }
   const untilFuture = untilDt !== null && untilDt.getTime() > now.getTime();
   if (IMPEDED_WAITING_ON.has(waitingOn)) {
     if (untilDt !== null && !untilFuture) return false;
     return true;
   }
+  if (waitingOn === "" && untilDt === null) return untilUnparseable;
   return untilFuture;
 }
 
