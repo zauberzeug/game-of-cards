@@ -186,5 +186,71 @@ class SupersedesWalkersGuardTest(unittest.TestCase):
         )
 
 
+class DependencyBlockersGuardTest(unittest.TestCase):
+    """Four read-time consumers walk `advanced_by` / `advances` outside the
+    `goc validate` gate: `dependency_blockers`, the `live_direct` closure
+    inside `sort_default`, the `_run_derived_check` `advanced-by-closed`
+    branch, and `validate_blocker_coherence`'s `unblocks` builder. Each must
+    treat a non-list value as an empty edge set, matching `compute_values`
+    and the supersession cycle walkers. Two `status: blocked`-only sites
+    (the over-broad-epic detector and the blocker enumerator) receive the
+    same guard for consistency."""
+
+    def test_dependency_blockers_treats_bare_string_advanced_by_as_empty(self) -> None:
+        victim = _card("victim", advanced_by="abc")
+        self.assertEqual(engine.dependency_blockers(victim, by_title={}), [])
+        self.assertFalse(engine.dependency_blocked(victim, by_title={}))
+
+    def test_dependency_blockers_handles_other_non_list_shapes(self) -> None:
+        for bad in (None, "abc", 42, {"not": "a list"}):
+            with self.subTest(bad=bad):
+                victim = _card("victim", advanced_by=bad)
+                self.assertEqual(engine.dependency_blockers(victim, by_title={}), [])
+
+    def test_sort_default_live_direct_ignores_bare_string_advances(self) -> None:
+        # `live_direct` is the tiebreak counter inside `sort_default`. A
+        # bare-string `advances` must not inflate the count via phantom
+        # single-character matches against deck-resident titles.
+        a = _card("a", advances="bc")
+        b = _card("b")
+        c = _card("c")
+        # Sort is stable on ties; the assertion is that `a` does not get
+        # bumped above `b`/`c` because of phantom live-edge counts.
+        cards = engine.sort_default([a, b, c])
+        # All three cards have the same value (no live edges) and same
+        # created timestamp; the original list order is preserved.
+        self.assertEqual([t.title for t in cards], ["a", "b", "c"])
+
+    def test_run_derived_check_treats_bare_string_advanced_by_as_no_edges(self) -> None:
+        # The `advanced-by-closed` derived check gates `goc done`. A
+        # bare-string `advanced_by` must not silently pass via Python's
+        # truthy-non-empty-string + character-by-character walk.
+        victim = _card("victim", advanced_by="abc")
+        ok, detail = engine._run_derived_check(
+            {"name": "advanced-by-closed"}, victim, [victim], today="2026-05-29"
+        )
+        self.assertTrue(ok)
+        self.assertIn("no advanced_by edges", detail)
+
+    def test_validate_blocker_coherence_ignores_bare_string_advanced_by(self) -> None:
+        # The `unblocks` reverse-adjacency builder iterates every card's
+        # `advanced_by`. A bare-string value must not register phantom
+        # single-character edges; the function must produce no warnings
+        # for a deck where the only edge is bogus.
+        a = _card("a", advanced_by="abc")
+        warnings = engine.validate_blocker_coherence([a])
+        self.assertEqual(warnings, [])
+
+    def test_validate_epic_edge_direction_ignores_bare_string_advances(self) -> None:
+        # The over-broad-epic detector iterates `advances`. A bare-string
+        # value must produce no warnings from phantom single-character
+        # resolved-target matches.
+        a = _card("a", advances="bc")
+        b = _card("b")
+        c = _card("c")
+        warnings = engine.validate_epic_edge_direction([a, b, c])
+        self.assertEqual(warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()
