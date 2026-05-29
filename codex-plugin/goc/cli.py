@@ -7,6 +7,7 @@ Registered as `goc = "goc.cli:main"` in pyproject.toml.
 
 from __future__ import annotations
 
+import signal
 import sys
 
 from goc import __version__
@@ -25,6 +26,15 @@ from goc.install import (
 
 def main() -> None:
     """Console-script entry point."""
+    # Restore default SIGPIPE disposition so `goc ... | head` exits cleanly
+    # instead of leaking a `BrokenPipeError` traceback at interpreter
+    # shutdown. Guarded for Windows (no SIGPIPE) and non-main threads
+    # (signal.signal raises ValueError off the main thread).
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except (AttributeError, ValueError):
+        pass
+
     argv = sys.argv[1:]
 
     # --version / -V before any other parsing

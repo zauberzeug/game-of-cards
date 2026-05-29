@@ -1,20 +1,20 @@
 ---
 title: goc-leaks-brokenpipeerror-when-stdout-pipe-closes-early
 summary: "When `goc` writes to a stdout pipe whose consumer closes early (e.g. `goc --done | head`), the process prints a Python `BrokenPipeError` traceback to stderr at interpreter shutdown because `cli.py` does not install a SIGPIPE handler. Output to the consumer is correct; the noise is purely a missing-handler artifact, but it pollutes terminals and breaks `set -e` / `set -o pipefail` shell pipelines and `grep -q` short-circuits."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-29T07:47:02Z"
-closed_at: null
+closed_at: 2026-05-29T07:52:15Z
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: a regression test runs `goc --done` (or any large-output verb) through a closed pipe and asserts stderr contains no `BrokenPipeError` traceback.
-  - [ ] MECHANICAL: `goc/cli.py:main` installs a SIGPIPE handler (`signal.signal(signal.SIGPIPE, signal.SIG_DFL)`) or wraps stdout writes such that early pipe close exits cleanly without a Python-level traceback.
-  - [ ] MECHANICAL: `uv run goc --done | head -3` produces only the requested rows on stdout and an empty stderr.
-  - [ ] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green.
+  - [x] TDD: a regression test runs `goc --done` (or any large-output verb) through a closed pipe and asserts stderr contains no `BrokenPipeError` traceback.
+  - [x] MECHANICAL: `goc/cli.py:main` installs a SIGPIPE handler (`signal.signal(signal.SIGPIPE, signal.SIG_DFL)`) or wraps stdout writes such that early pipe close exits cleanly without a Python-level traceback.
+  - [x] MECHANICAL: `uv run goc --done | head -3` produces only the requested rows on stdout and an empty stderr.
+  - [x] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green.
 worker: {who: "claude[bot]", where: main}
 ---
 
