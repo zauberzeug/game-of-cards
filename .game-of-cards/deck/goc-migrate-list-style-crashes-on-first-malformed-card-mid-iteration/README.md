@@ -1,7 +1,7 @@
 ---
 title: goc-migrate-list-style-crashes-on-first-malformed-card-mid-iteration
 summary: "`goc migrate-list-style` calls `parse_frontmatter` without a `FrontmatterError` net, so a single card with an unterminated `---` opener or invalid YAML aborts the bulk rewrite mid-deck with a Python traceback. Three sibling deck-walkers (`load_all_cards`, `_cmd_show`, `load_card_or_exit`) already catch and continue/diagnose — `_cmd_migrate_list_style` is the outlier."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T17:53:48Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_cmd_migrate_list_style` in `goc/engine.py` wraps `parse_frontmatter(original)` in a `try/except FrontmatterError` net that mirrors `load_all_cards` at engine.py:625-631 — emit `WARNING: <card_dir.name>: <exc>` to stderr and `continue`.
   - [ ] PROCESS: sibling sweep — grep for every other direct `parse_frontmatter(` call site in `goc/engine.py` and confirm each is either inside the four already-netted sites (`load_card` → `load_all_cards`, `_cmd_show`, `load_card_or_exit`, `validate_deck_directories`) or in a context where the raise is the documented contract. File a follow-up card per unnetted site discovered.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc migrate-list-style` crashes on the first malformed card mid-iteration
