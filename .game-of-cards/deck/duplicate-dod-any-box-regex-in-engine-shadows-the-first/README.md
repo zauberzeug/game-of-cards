@@ -1,7 +1,7 @@
 ---
 title: duplicate-dod-any-box-regex-in-engine-shadows-the-first
 summary: "`goc/engine.py` defines `DOD_ANY_BOX` at line 464 and again, byte-identical, at line 480. The second assignment silently shadows the first; an edit to one is a no-op until the duplicate is also touched. Two independent commits each introduced one definition without noticing the other. No current behavioral bug, but it's a documented trap for future regex edits (e.g. adding `re.MULTILINE` to align with sibling `DOD_OPEN_BOX` / `DOD_DONE_BOX`)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T17:25:26Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test asserts `goc.engine` source contains exactly one `DOD_ANY_BOX = re.compile` line, so a future re-introduction trips the suite.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green.
   - [ ] PROCESS: `uv run goc validate` is clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Duplicate `DOD_ANY_BOX` regex in engine — second definition shadows the first
