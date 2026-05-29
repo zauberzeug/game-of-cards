@@ -6,7 +6,9 @@ never risks shadowing the real goc package via Python's cwd-first import search.
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -219,6 +221,53 @@ class OpenClawSkillPortDriftTest(unittest.TestCase):
         for skill_dir in porter._portable_skill_dirs():
             src = skill_dir / "SKILL.md"
             self.assertEqual(porter.render_skill(src), porter.render_skill(src))
+
+
+class OpenClawToolVerbSurfaceTest(unittest.TestCase):
+    """OpenClaw exposes `goc` as a registered tool whose `verb` parameter is a
+    typed literal-union built from `GOC_VERBS` in `openclaw-plugin/index.ts`.
+    A verb that exists in the engine but is absent from that list is
+    unreachable from the OpenClaw integration. Catch the drift here so the
+    next added subparser does not silently bypass the plugin surface.
+    """
+
+    GOC_VERBS_RE = re.compile(
+        r"const\s+GOC_VERBS\s*=\s*\[([^\]]*)\]\s*as\s+const",
+        re.MULTILINE,
+    )
+
+    @staticmethod
+    def _engine_verbs() -> list[str]:
+        parser = eng._build_parser()
+        for action in parser._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                return list(action.choices.keys())
+        raise RuntimeError("could not locate subparsers on the goc parser")
+
+    @classmethod
+    def _ts_verbs(cls) -> list[str]:
+        text = (ROOT / "openclaw-plugin" / "index.ts").read_text(encoding="utf-8")
+        m = cls.GOC_VERBS_RE.search(text)
+        if not m:
+            raise RuntimeError("GOC_VERBS literal not found in openclaw-plugin/index.ts")
+        return [
+            token.strip().strip('"').strip("'")
+            for token in m.group(1).split(",")
+            if token.strip()
+        ]
+
+    def test_ts_verbs_match_engine_subparsers(self) -> None:
+        engine_verbs = self._engine_verbs()
+        ts_verbs = self._ts_verbs()
+        self.assertEqual(
+            engine_verbs, ts_verbs,
+            msg=(
+                "openclaw-plugin/index.ts:GOC_VERBS drifted from goc/engine.py "
+                "subparsers. Update the TS literal-union (and re-run "
+                "`npm run build` inside openclaw-plugin/) so the tool surface "
+                "matches every verb registered by _build_parser."
+            ),
+        )
 
 
 if __name__ == "__main__":
