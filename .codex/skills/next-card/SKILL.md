@@ -45,18 +45,18 @@ start-gate; hard waits are expressed via `waiting_on` /
 then created asc. The top entry is the auto-pick candidate, subject
 to the autonomy gate below.
 
-### Impact ladder
+### Contribution ladder
 
 `high` outranks `medium` outranks `low`. Tags refine:
 
-- **`impact: high`** — wrong algorithm vs. cited literature, silent
+- **`contribution: high`** — wrong algorithm vs. cited literature, silent
   state corruption, broken public API, default config that
   contradicts the science. Doc claims that contradict an authoritative
-  source — `tags: [documentation]` + `impact: high` is the high-impact
+  source — `tags: [documentation]` + `contribution: high` is the high-impact
   doc-quality slot. Treat these as load-bearing.
-- **`impact: medium`** — tolerance creep, vacuous assertions, tests
+- **`contribution: medium`** — tolerance creep, vacuous assertions, tests
   that pass for the wrong reason, missing guard rails.
-- **`impact: low`** — README pinned-metric stale, docstring documents
+- **`contribution: low`** — README pinned-metric stale, docstring documents
   removed flag, stale references.
 
 ### Effort / independence / reversibility
