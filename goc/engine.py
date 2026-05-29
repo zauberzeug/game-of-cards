@@ -1321,6 +1321,8 @@ def detect_advance_cycles(cards: list[Card]) -> list[str]:
             if t is None:
                 continue
             advanced_by = t.frontmatter.get("advanced_by") or []
+            if not isinstance(advanced_by, list):
+                continue
             for b in advanced_by:
                 if b == start.title and cur != start.title:
                     errors.append(f"{start.title}: advanced_by: cycle detected through {cur} → {b}")
@@ -1346,7 +1348,10 @@ def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) ->
         card = by_title.get(cur)
         if card is None:
             continue
-        for a in card.frontmatter.get("advances") or []:
+        advances = card.frontmatter.get("advances") or []
+        if not isinstance(advances, list):
+            continue
+        for a in advances:
             if a == advancer:
                 return True
             stack.append(a)
@@ -1814,6 +1819,11 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
     per-card-rank fallback — on a (validate-failing) cyclic deck the
     cycle members get values that depend on `cards`/`advances` list
     order — so it must not be relied on as one.
+    The `isinstance(..., list)` guard before the descendant walk
+    mirrors `find_half_edges` / `validate_card`: a hand-edited bare-string
+    `advances` value is treated as an empty edge set, not iterated
+    character-by-character (which would emit phantom dangling-edge
+    warnings and reach the cycle branch via a chance self-match).
     Unknown advances targets are skipped for the priority math AND
     surfaced once per (card, target) pair as a stderr warning — silent
     skipping let edge rot degrade the value walk unnoticed. Run
@@ -1833,7 +1843,10 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
             return (own, ["cycle"])
         in_progress.add(title)
         best = (0.0, [])
-        for dest in t.frontmatter.get("advances") or []:
+        advances = t.frontmatter.get("advances") or []
+        if not isinstance(advances, list):
+            advances = []
+        for dest in advances:
             if dest not in by_title:
                 key = (title, dest)
                 if key not in _DANGLING_ADVANCES_WARNED:
