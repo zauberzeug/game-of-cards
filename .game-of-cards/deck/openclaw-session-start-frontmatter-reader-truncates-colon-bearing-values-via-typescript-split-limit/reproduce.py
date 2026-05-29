@@ -82,13 +82,13 @@ def main() -> int:
     print("# 3) Engine-contract divergence for the bare-deferral case")
     print('  card frontmatter: status: active / waiting_until: 2030-01-01T00:00:00Z / waiting_on absent')
     print("  engine.waiting_impedes(card)  -> True  (card hidden from queues)")
-    if js_parses:
+    if len(matches) == 0:
         print("  ts.isImpeded(...) (post-fix)   -> True  (matches engine)")
     else:
         print("  ts.isImpeded(...) (pre-fix)    -> False (BUG: surfaces as resumable)")
 
     print()
-    if len(matches) == 0 and js_parses:
+    if len(matches) == 0:
         print("VERDICT: post-fix. All four readers capture the full tail. exit 0.")
         return 0
     print(

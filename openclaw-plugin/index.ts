@@ -132,6 +132,17 @@ function stripQuotes(s: string): string {
   return s.replace(/^["']|["']$/g, "");
 }
 
+function frontmatterTail(line: string): string {
+  // Mirrors the Python sibling's `split(":", 1)[1]` semantic in
+  // `goc/templates/hooks/deck_session_start.py` — return everything after
+  // the first `:`. JS `String.prototype.split(sep, limit)` truncates the
+  // result array to `limit` elements (it does NOT cap the number of
+  // splits), so `split(":", 2)[1]` drops everything past the second
+  // colon and corrupts colon-bearing values like ISO datetimes.
+  const i = line.indexOf(":");
+  return i < 0 ? "" : line.slice(i + 1).trim();
+}
+
 function parseWaitingUntil(value: string): Date | null {
   // Mirrors goc.engine._waiting_until_instant: a bare date YYYY-MM-DD is
   // midnight UTC of that day; a datetime YYYY-MM-DDTHH:MM:SSZ is honored
@@ -191,14 +202,14 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
     let waitingUntil = "";
     for (const line of m[1].split("\n")) {
       if (line.startsWith("status:")) {
-        status = stripQuotes(line.split(":", 2)[1].trim());
+        status = stripQuotes(frontmatterTail(line));
       } else if (line.startsWith("human_gate:")) {
-        const val = stripQuotes(line.split(":", 2)[1].trim());
+        const val = stripQuotes(frontmatterTail(line));
         if (val) humanGate = val;
       } else if (line.startsWith("waiting_on:")) {
-        waitingOn = stripQuotes(line.split(":", 2)[1].trim());
+        waitingOn = stripQuotes(frontmatterTail(line));
       } else if (line.startsWith("waiting_until:")) {
-        waitingUntil = stripQuotes(line.split(":", 2)[1].trim());
+        waitingUntil = stripQuotes(frontmatterTail(line));
       }
     }
     if (status !== "active") continue;

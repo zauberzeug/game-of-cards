@@ -1,21 +1,21 @@
 ---
 title: openclaw-session-start-frontmatter-reader-truncates-colon-bearing-values-via-typescript-split-limit
 summary: "The OpenClaw session-start hook's frontmatter reader at `openclaw-plugin/index.ts:192-202` calls `line.split(\":\", 2)[1]` for status / human_gate / waiting_on / waiting_until. TypeScript's `String.prototype.split(sep, limit)` truncates the result *array* to `limit` elements — it does NOT cap the number of splits the way Python's `str.split(sep, maxsplit)` does. So `\"waiting_until: 2026-06-15T12:00:00Z\".split(\":\", 2)` yields `[\"waiting_until\", \" 2026-06-15T12\"]` — everything past the second colon is dropped. The downstream `parseWaitingUntil` then fails both ISO regexes and returns null, and a card with a bare datetime-form `waiting_until` (no `waiting_on` reason) is misclassified as resumable instead of impeded. The Python sibling at `goc/templates/hooks/deck_session_start.py:81` correctly uses `split(\":\", 1)` (maxsplit=1) and reads `[1]`, capturing the full tail. The TS port copied the Python literal `2` without translating split-limit semantics. Today only `waiting_until` carries colon-bearing values; status / human_gate / waiting_on are latent fragility against any future colon-bearing enum or migration shape."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T22:50:29Z"
-closed_at: null
+closed_at: "2026-05-29T22:56:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (post-fix, a `status: active` card with bare datetime-form `waiting_until` is classified as impeded; pre-fix exits non-zero showing the card incorrectly classified as resumable).
-  - [ ] MECHANICAL: all four `line.split(":", 2)[1].trim()` call sites in `openclaw-plugin/index.ts:192-202` switched to a semantic that captures the full post-`:` tail (e.g. `line.slice(line.indexOf(":") + 1).trim()` or a shared helper that mirrors Python `split(":", 1)[1]`). The comment / docstring above the loop names the engine contract being mirrored.
-  - [ ] PROCESS: cross-reference recorded — this card cites the closed siblings `session-start-hook-misreads-same-day-datetime-waiting-until-as-not-impeded` and `deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers` (both touched the same four readers; this is the next instance in the family).
-  - [ ] MECHANICAL: `npx tsc --noEmit` from `openclaw-plugin/` is clean, and `uv run python -m unittest discover -s tests` stays green.
-  - [ ] PROCESS: a generalization check: confirm no other TS file in the tree uses `.split(<sep>, N)[N-1]` expecting Python-style maxsplit semantics on a colon-bearing input. If found, file siblings.
+  - [x] TDD: reproduce.py exits zero (post-fix, a `status: active` card with bare datetime-form `waiting_until` is classified as impeded; pre-fix exits non-zero showing the card incorrectly classified as resumable).
+  - [x] MECHANICAL: all four `line.split(":", 2)[1].trim()` call sites in `openclaw-plugin/index.ts:192-202` switched to a semantic that captures the full post-`:` tail (e.g. `line.slice(line.indexOf(":") + 1).trim()` or a shared helper that mirrors Python `split(":", 1)[1]`). The comment / docstring above the loop names the engine contract being mirrored.
+  - [x] PROCESS: cross-reference recorded — this card cites the closed siblings `session-start-hook-misreads-same-day-datetime-waiting-until-as-not-impeded` and `deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers` (both touched the same four readers; this is the next instance in the family).
+  - [x] MECHANICAL: `npx tsc --noEmit` from `openclaw-plugin/` is clean, and `uv run python -m unittest discover -s tests` stays green.
+  - [x] PROCESS: a generalization check: confirm no other TS file in the tree uses `.split(<sep>, N)[N-1]` expecting Python-style maxsplit semantics on a colon-bearing input. If found, file siblings.
 worker: {who: "claude[bot]", where: main}
 ---
 
