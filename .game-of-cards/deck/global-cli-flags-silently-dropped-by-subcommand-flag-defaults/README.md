@@ -1,7 +1,7 @@
 ---
 title: global-cli-flags-silently-dropped-by-subcommand-flag-defaults
 summary: "Several `goc` subcommands re-register a global flag's `dest` with a hard default in their own subparser. Argparse silently overwrites the parent value, so `goc --status done quality-pass`, `goc --done quality-pass`, `goc --contribution high new <title>`, and `goc --worker alice triage` all behave as if the user had not passed the global flag. The `--done` help text claims it is a `Shortcut for --status done` — for `quality-pass` neither form works."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-30T03:18:42Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded — which remedy was chosen (drop subparser dups / `default=argparse.SUPPRESS` / post-parse merge / distinct dests) and why
   - [ ] MECHANICAL: every sibling `dest=` collision identified by a grep sweep of `_build_parser` has the remedy applied uniformly
   - [ ] TDD: `reproduce.py` exits zero
+worker: {who: "claude[bot]", where: main}
 ---
 
 # global-cli-flags-silently-dropped-by-subcommand-flag-defaults
