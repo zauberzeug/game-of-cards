@@ -1,7 +1,7 @@
 ---
 title: card-schema-skill-bundled-schema-omits-supersedes-superseded-by-and-worker
 summary: "The card-schema skill bundles a copy of `schema.yaml` at `goc/templates/skills/card-schema/schema.yaml`, but it has drifted from the authoritative `goc/schema.yaml`: three optional fields — `supersedes`, `superseded_by`, `worker` — are missing from the skill's `optional_fields` list. The drift is replicated across four downstream mirrors (claude-plugin, codex-plugin, vendored `.claude/skills/`, vendored `.codex/skills/`) by the auto-sync, so every consumer of the bundled schema reference reads the wrong field list. No test enforces parity with the engine schema."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T10:59:18Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py` run; the four downstream mirror copies (`claude-plugin/skills/card-schema/schema.yaml`, `codex-plugin/skills/card-schema/schema.yaml`, `.claude/skills/card-schema/schema.yaml`, `.codex/skills/card-schema/schema.yaml`) all match the source-of-truth template byte-for-byte afterwards.
   - [ ] TDD: a regression test under `tests/` asserts `goc/schema.yaml` and `goc/templates/skills/card-schema/schema.yaml` agree on `required_fields`, `optional_fields`, all `*_values` enums, `canonical_tags`, `title_pattern`, and `schema_version` — drift in either direction fails the test.
   - [ ] PROCESS: `uv run goc validate` clean across the dogfood deck; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The card-schema skill ships a stale schema reference
