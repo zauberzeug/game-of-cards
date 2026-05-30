@@ -2722,7 +2722,8 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
   goc new child-card --advances parent-card
-  goc new child-card --advanced-by parent-card""",
+  goc new child-card --advanced-by parent-card
+  goc new child-card --advances parent-card --commit""",
     )
     p_new.add_argument("title")
     p_new.add_argument("--contribution", choices=schema.contribution_values,
@@ -2737,6 +2738,12 @@ def _build_parser() -> argparse.ArgumentParser:
                        help="Worker designation — person, machine, or capability tag.")
     p_new.add_argument("--allow-jargon", action="store_true",
                        help="Bypass the title-antipattern check (rare; used by migration tools).")
+    p_new.add_argument("--commit", action="store_true",
+                       help="Commit the new card and any --advances/--advanced-by endpoints atomically "
+                            "(recommended for wired filings; default is no-commit so the "
+                            "scaffold-then-fill-in workflow is unchanged).")
+    p_new.add_argument("--no-commit", action="store_true",
+                       help="Skip auto-commit (the default for goc new).")
 
     # wait
     p_wait = subparsers.add_parser(
@@ -4231,6 +4238,9 @@ def _cmd_new(args):
     tags = args.tags
     worker = args.worker
     allow_jargon = args.allow_jargon
+    commit = args.commit
+    no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     advances = _unique_preserving_order(args.advances or [])
     advanced_by = _unique_preserving_order(args.advanced_by or [])
     schema = load_schema()
@@ -4288,6 +4298,14 @@ def _cmd_new(args):
         _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
     print(f"created {card_dir.relative_to(REPO_ROOT)}/")
     print(f"Next: edit {card_dir.relative_to(REPO_ROOT)}/README.md to fill the body and DoD; then ask your agent to implement the card.")
+    # Default for `goc new` is NO commit so the scaffold-then-fill-in
+    # workflow is unchanged; --commit is the opt-in for wired filings so
+    # the new card's edge writes to existing endpoints don't linger as
+    # ambient ` M` in the worktree (the half-edge defect).
+    if _commit_override(commit, no_commit) is True:
+        commit_targets = [card_dir, *(DECK_DIR / t for t in advances + advanced_by)]
+        if _git_auto_commit(commit_targets, f"deck: new {title}"):
+            print("  committed")
 
 
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:

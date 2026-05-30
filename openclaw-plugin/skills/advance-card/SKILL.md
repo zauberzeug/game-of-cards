@@ -302,8 +302,9 @@ goc advance <title> --by <other>
 # Retract a value-flow edge:
 goc unadvance <title> --by <other>
 
-# At filing time, both sides at once:
-goc new <child-title> --advances <epic-title>
+# At filing time, both sides at once (--commit so the new card AND
+# the epic's edge mutation land in one atomic commit):
+goc new <child-title> --advances <epic-title> --commit
 ```
 
 `goc advance` / `unadvance` maintain the bidirectional invariant

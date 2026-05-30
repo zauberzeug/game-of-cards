@@ -1,21 +1,33 @@
-"""Reproduce: `goc new <child> --advances <parent>` leaves the parent
-card's README as uncommitted ` M` in the worktree.
+"""Verify the fix for the half-edge defect on `goc new --advances`.
 
-Empirical proof for
-goc-new-with-advances-leaves-parent-card-mutation-uncommitted.
+The original defect: `goc new <child> --advances <parent>` writes the
+parent's `advanced_by` edge to disk but never commits it, leaving the
+parent README as ambient ` M` in the worktree. An agent that follows
+AGENTS.md's explicit-pathspec rule and commits only the new card
+directory ships a half-edge.
 
-The script scaffolds a throwaway repo, installs goc into it, files a
-parent and a wired child, and prints `git status --porcelain`.
+The fix (Option C from the card body): `goc new` gained `--commit` /
+`--no-commit` flags matching the sibling edge verbs. Default remains
+no-commit so today's scaffold-then-fill-in workflow is unchanged;
+the canonical wired-filing path (recommended in
+`Skill(create-card)` Step 4) uses `--commit` so both the new card
+directory and the wired endpoint(s) land in a single atomic commit
+and no half-edge can be shipped.
 
-Expected output (the bug):
+This script scaffolds a throwaway repo, installs goc into it, files
+a parent (committed), then files a wired child with `--commit` and
+prints `git status --porcelain`.
 
-  ?? .game-of-cards/deck/parent-card/             # after `goc new parent-card`
-  ----- after parent commit + child filing -----
-   M .game-of-cards/deck/parent-card/README.md    # the half-edge in flight
-  ?? .game-of-cards/deck/child-card/
+Expected output (the fix in place):
 
-Exit code 0 = bug reproduced (parent README appears as modified after
-the child filing). Exit code 1 = parent README is clean (bug fixed).
+  ----- after `goc new child-card --advances parent-card --commit` -----
+  (empty — the worktree is clean: both endpoints landed in one
+  atomic commit; no half-edge can be shipped by a subsequent
+  explicit-pathspec commit)
+
+Exit code 0 = fix in place (worktree clean after wired filing).
+Exit code 1 = defect still fires (parent README modified, or new
+card untracked).
 """
 
 import os
@@ -59,31 +71,34 @@ def main() -> int:
 
         _run(["uv", "--project", str(REPO), "run", "--quiet", "--no-sync",
               "goc", "new", "parent-card"], cwd=tmp)
-        print("--- after `goc new parent-card` ---")
-        print(_run(["git", "status", "--porcelain"], cwd=tmp).stdout, end="")
         _run(["git", "add", "-A"], cwd=tmp)
         _run(["git", "commit", "-q", "-m", "parent"], cwd=tmp)
 
         _run(["uv", "--project", str(REPO), "run", "--quiet", "--no-sync",
-              "goc", "new", "child-card", "--advances", "parent-card"],
+              "goc", "new", "child-card",
+              "--advances", "parent-card", "--commit"],
              cwd=tmp)
         status = _run(["git", "status", "--porcelain"], cwd=tmp).stdout
-        print("--- after `goc new child-card --advances parent-card` ---")
-        print(status, end="")
+        print("--- after `goc new child-card --advances parent-card --commit` ---")
+        print(status if status else "(clean)")
 
-        # Bug condition: parent README appears as modified (` M ...`).
-        parent_modified = any(
-            line.startswith(" M") and "parent-card/README.md" in line
-            for line in status.splitlines()
+        # Fix condition: the worktree is clean — both the new card
+        # directory AND the parent README's edge mutation landed in one
+        # atomic commit. No `M` on the parent README, no untracked
+        # child-card directory.
+        parent_dirty = any(
+            "parent-card/README.md" in line for line in status.splitlines()
         )
-        if parent_modified:
-            print("\nBUG REPRODUCED: parent README hangs as ` M` "
-                  "(half-edge in flight; an agent committing only "
-                  "the new child dir ships a half-edge).")
-            return 0
-        else:
-            print("\nFIXED: parent README is clean after child filing.")
+        child_untracked = any(
+            "child-card" in line for line in status.splitlines()
+        )
+        if parent_dirty or child_untracked:
+            print("\nDEFECT STILL FIRES: worktree is not clean after "
+                  "`goc new ... --commit`.")
             return 1
+        print("\nFIX IN PLACE: worktree is clean — both endpoints "
+              "committed atomically, no half-edge can be shipped.")
+        return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

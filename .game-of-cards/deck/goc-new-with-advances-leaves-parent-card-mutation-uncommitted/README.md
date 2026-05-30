@@ -1,21 +1,21 @@
 ---
 title: goc-new-with-advances-leaves-parent-card-mutation-uncommitted
 summary: "`goc new <child> --advances <parent>` writes the parent's `advanced_by` edge to disk but never commits it, leaving the parent README as ambient `M` in the worktree. An agent that follows AGENTS.md's explicit-pathspec rule and commits only the new card directory ships a half-edge — exactly the integrity defect `goc repair-edges` exists to clean up."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T16:21:00Z"
-closed_at: null
+closed_at: "2026-05-30T14:28:38Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `tests/test_new_wires_edges.py` adds a case asserting that after `goc new child --advances parent` returns, `git status --porcelain` is clean for the parent card path (no ` M` on `<deck>/parent/README.md`)
-  - [ ] TDD: same test asserts the new card directory is either tracked by the same commit OR explicitly left untracked, matching the chosen option below
-  - [ ] EMPIRICAL: reproduce.py exits zero (defect no longer fires)
-  - [ ] MECHANICAL: `goc new --help` lists `--commit` / `--no-commit` if the chosen option introduces them, matching the flag surface of `goc advance` / `goc unadvance` / `goc wait` / `goc decide`
-  - [ ] PROCESS: `Skill(create-card)` Step 4 examples and `card-schema` "Coordinating cards" reference reflect the new commit semantics (no manual `git add` follow-up implied by the example flow)
+  - [x] TDD: `tests/test_new_wires_edges.py` adds a case asserting that after `goc new child --advances parent --commit` returns, `git status --porcelain` is clean for the parent card path (no ` M` on `<deck>/parent/README.md`) — `test_new_with_commit_flag_commits_both_endpoints_and_new_card`
+  - [x] TDD: same test asserts the new card directory is tracked by the same commit (Option C with `--commit`); a sibling `test_new_default_does_not_commit` pins the default-leaves-it-untracked branch of the contract
+  - [x] EMPIRICAL: reproduce.py exits zero (defect no longer fires) — verified by running it locally
+  - [x] MECHANICAL: `goc new --help` lists `--commit` / `--no-commit`, matching the flag surface of `goc advance` / `goc unadvance` / `goc wait` / `goc decide`
+  - [x] PROCESS: `Skill(create-card)` Step 4 examples and `Skill(advance-card)` "Verbs" reference now recommend `--commit` for wired filings, removing the implicit manual `git add` follow-up
 worker: {who: "claude[bot]", where: main}
 ---
 

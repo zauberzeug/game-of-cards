@@ -57,3 +57,34 @@ option).
 ## 2026-05-30T13:56:48Z: decision recorded
 
 Option C: add --commit/--no-commit flags to goc new (matching the sibling edge verbs' flag surface), default no-commit so today's scaffold-then-fill-in behavior is unchanged; create-card Step 4 recommends --commit for wired filings — preserves the zero-default-surprise scaffold workflow that is the point of goc new while giving agents an explicit opt-in to close the half-edge; the maintainer accepts that skill-body guidance is the enforcement surface for the common case. Gate decision → none.
+
+
+## 2026-05-30: fix landed
+
+Implemented Option C: `goc new` gained `--commit` / `--no-commit`
+flags matching the four sibling edge verbs' flag surface (`advance`,
+`unadvance`, `wait`, `decide`). Default remains no-commit so today's
+scaffold-then-fill-in workflow is unchanged.
+
+- argparse (`goc/engine.py` p_new): added `--commit` / `--no-commit`
+  with help text that documents the default explicitly. New example
+  added to the help epilog: `goc new child-card --advances parent-card --commit`.
+- `_cmd_new`: parsed the flags through `_validate_commit_flags`
+  (fail fast on the conflict, BEFORE any disk write — verified by
+  `test_new_commit_and_no_commit_mutually_exclusive`) and gated the
+  commit block behind `_commit_override(...) is True`. The commit
+  bundles `card_dir` plus every wired endpoint (`advances` +
+  `advanced_by`) under a `deck: new <title>` message.
+- Skill template guidance: `Skill(create-card)` Step 4's example
+  shows `--commit` on its own line; the rationale paragraph below
+  it now explains the half-edge consequence of forgetting the flag
+  under AGENTS.md's explicit-pathspec rule. `Skill(advance-card)`
+  "Verbs" reference updated to match.
+
+Regression coverage: `tests/test_new_wires_edges.py` gained three
+cases — `test_new_with_commit_flag_commits_both_endpoints_and_new_card`
+(the positive contract), `test_new_default_does_not_commit` (pins
+Option C's default-no-commit branch), and
+`test_new_commit_and_no_commit_mutually_exclusive` (pre-disk-write
+abort on flag conflict). `reproduce.py` now exits 0 against the
+fixed CLI. Full 312-test suite green.
