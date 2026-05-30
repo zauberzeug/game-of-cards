@@ -175,6 +175,27 @@ the `.goc-version` sentinel are rewritten by the release workflow
 (see release section above), so they're also out of scope for the
 pre-commit sync.
 
+### `.game-of-cards/` ownership model and `goc upgrade` contract
+
+Per-file ownership determines how each file under `.game-of-cards/`
+behaves on `goc upgrade`:
+
+| Ownership | Files | Engine behavior on upgrade |
+|---|---|---|
+| **user-owned** | the 6 content stubs (`canonical-tags.md`, `domain-vocabulary.md`, `domain-examples.md`, `file-path-map.md`, `tooling-conventions.md`, `documentation-conventions.md`) + `hooks/*.md` | absent → scaffold blank stub; identical → no-op; diverged → **preserve** (never overwrite) |
+| **evolving** | `README.md`, `config.yaml` | same engine behavior (never overwrite); the `Skill(upgrade)` reconciliation pass offers a 2-way LLM merge of upstream changes into the local copy |
+| **goc-owned** | the marker-bounded block in `AGENTS.md` / `CLAUDE.md` / `CLAUDE.local.md` | regenerated wholesale via `_append_marker_block` (the contract is "do not edit between the markers") |
+
+`goc upgrade`'s safety is unconditional — the engine never destroys
+authored content under `.game-of-cards/`, regardless of whether an
+agent is present. The new `Skill(upgrade)` runs the engine and then
+reads the engine's machine-readable divergence report (printed after
+the sentinel `GoC project-state divergence report (JSON):`) to drive
+LLM reconciliation of the *evolving* files where real upstream
+changes need a judgment call. Headless / CI / scripted upgrades
+(e.g., the `--keep-local-skills` path) preserve content with no agent
+in the loop.
+
 ### `skills_source` — which install path owns `.claude/skills/`
 
 `.game-of-cards/config.yaml` holds a `skills_source` key, written by

@@ -1256,6 +1256,13 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             f" (status={status_value!r}, closed_at={closed_at!r})"
         )
 
+    summary_value = fm.get("summary")
+    if summary_value is not None:
+        if not isinstance(summary_value, str):
+            errors.append(f"{t.title}: summary: must be a string")
+        elif not summary_value.strip():
+            errors.append(f"{t.title}: summary: must not be empty or whitespace-only")
+
     worker = fm.get("worker")
     if worker is not None:
         if isinstance(worker, str):
@@ -4188,7 +4195,6 @@ def _cmd_new(args):
     now = _utc_now_iso()
     fm = {
         "title": title,
-        "summary": "",
         "status": "open",
         "stage": None,
         "contribution": contribution,

@@ -734,7 +734,16 @@ def _plan_upgrade_writes(
     local_skills_agents: frozenset[str] = frozenset(),
     briefing_target: str = DEFAULT_BRIEFING_TARGET,
 ) -> list[PlannedWrite]:
-    """Compute the list of writes the upgrader will perform."""
+    """Compute the list of writes the upgrader will perform.
+
+    Project-state `.game-of-cards/` files are labeled with the ownership-aware
+    `create` / `unchanged` / `preserved` actions rather than the blanket
+    `sync`, so a dry-run truthfully reports which authored files will be
+    preserved on the real run vs which absent files will be scaffolded.
+    """
+
+    classifications = _user_owned_classifications(target, templates)
+    config_root = target / ".game-of-cards"
 
     writes: list[PlannedWrite] = []
     for write in _plan_writes(
@@ -746,6 +755,16 @@ def _plan_upgrade_writes(
     ):
         if write.path.name == "log.md":
             continue
+        if write.category == "project-state":
+            try:
+                rel = write.path.relative_to(config_root)
+            except ValueError:
+                rel = None
+            if rel is not None and rel in classifications:
+                writes.append(
+                    PlannedWrite(write.owner, classifications[rel], write.path, write.category)
+                )
+                continue
         action = "sync" if write.action == "write" else write.action
         writes.append(PlannedWrite(write.owner, action, write.path, write.category))
     return writes
@@ -787,8 +806,100 @@ def _copy_tree(src: Path, dst: Path, *, skip_existing: set[Path] | None = None) 
         shutil.copy2(asset, target)
 
 
-def _sync_game_of_cards_config(target: Path, templates: Path, *, migrate_legacy: bool = False) -> None:
-    """Sync `.game-of-cards/` assets, preserving migrated closure config."""
+# Files under `.game-of-cards/` that are "evolving" — goc ships real content
+# that may change across versions, AND the consumer is allowed to customize.
+# On upgrade the engine still preserves the consumer's bytes (deterministic
+# safety), but the divergence report tags these so the `upgrade` skill knows
+# to offer a 2-way LLM reconcile rather than just "kept yours".
+# Every other shipped file is "user-owned" (a content stub or workflow hook
+# whose template ships permanently blank).
+_EVOLVING_USER_OWNED_FILES = frozenset({Path("README.md"), Path("config.yaml")})
+
+# Sentinel marker the `upgrade` skill greps for in stdout to extract the
+# JSON divergence report. Single-line JSON on the line immediately after.
+_DIVERGENCE_REPORT_MARKER = "GoC project-state divergence report (JSON):"
+
+
+def _classify_user_owned_file(template: Path, dest: Path) -> str:
+    """Classify a `.game-of-cards/` file against its shipped template.
+
+    Returns one of: `create` (destination absent), `unchanged` (byte-identical),
+    or `preserved` (diverged — never overwrite on upgrade).
+    """
+
+    if not dest.exists():
+        return "create"
+    try:
+        return "unchanged" if dest.read_bytes() == template.read_bytes() else "preserved"
+    except OSError:
+        return "preserved"
+
+
+def _user_owned_classifications(target: Path, templates: Path) -> dict[Path, str]:
+    """Map each shipped `.game-of-cards/<rel>` to its `create`/`unchanged`/`preserved` label."""
+
+    src = templates / "game_of_cards"
+    result: dict[Path, str] = {}
+    if not src.exists():
+        return result
+    for asset in src.rglob("*"):
+        if asset.is_dir() or "__pycache__" in asset.parts:
+            continue
+        rel = asset.relative_to(src)
+        dest = target / ".game-of-cards" / rel
+        result[rel] = _classify_user_owned_file(asset, dest)
+    return result
+
+
+def _emit_divergence_report(
+    classifications: dict[Path, str], templates_src: Path
+) -> None:
+    """Print a single-line JSON divergence report after a sentinel marker.
+
+    The `upgrade` skill parses the JSON on the line immediately after the
+    marker to drive the reconciliation pass. Safety does NOT depend on this
+    report — the engine has already preserved every diverged file before the
+    report is emitted.
+    """
+
+    files = []
+    for rel in sorted(classifications):
+        ownership = "evolving" if rel in _EVOLVING_USER_OWNED_FILES else "user-owned"
+        files.append(
+            {
+                "path": rel.as_posix(),
+                "status": classifications[rel],
+                "ownership": ownership,
+            }
+        )
+    payload = {
+        "version": 1,
+        "templates_root": str(templates_src),
+        "files": files,
+    }
+    print(_DIVERGENCE_REPORT_MARKER)
+    print(json.dumps(payload))
+
+
+def _sync_game_of_cards_config(
+    target: Path,
+    templates: Path,
+    *,
+    migrate_legacy: bool = False,
+    emit_report: bool = False,
+) -> None:
+    """Sync `.game-of-cards/` assets without ever overwriting authored content.
+
+    Per file: absent → scaffold from template; identical to template → no-op
+    (existing bytes left in place); diverged → preserve, do NOT overwrite.
+    This is the unconditional safety guarantee — it holds for every consumer
+    (CI runs, headless cron, agent sessions) regardless of whether the
+    `upgrade` skill is in the loop.
+
+    When `emit_report=True`, after the sync prints a sentinel-marked JSON
+    divergence report the `upgrade` skill consumes to drive its reconciliation
+    pass (2-way reconcile for evolving files, confirmation for user-owned).
+    """
 
     config_dst = target / ".game-of-cards"
     config_dst.mkdir(parents=True, exist_ok=True)
@@ -796,8 +907,18 @@ def _sync_game_of_cards_config(target: Path, templates: Path, *, migrate_legacy:
     legacy_config = target / ".claude" / "deck-config.yaml"
     if migrate_legacy and not config_file.exists() and legacy_config.exists():
         shutil.copy2(legacy_config, config_file)
-    skip_existing = {Path("config.yaml")} if migrate_legacy else set()
-    _copy_tree(templates / "game_of_cards", config_dst, skip_existing=skip_existing)
+
+    src = templates / "game_of_cards"
+    classifications = _user_owned_classifications(target, templates)
+    for rel, status in classifications.items():
+        if status != "create":
+            continue
+        dest = config_dst / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src / rel, dest)
+
+    if emit_report:
+        _emit_divergence_report(classifications, src)
 
 
 def _frontmatter_value(text: str, key: str) -> str:
@@ -1398,7 +1519,7 @@ def upgrade(
         replace = agent in local_skills_agents
         _sync_agent_harness(target, templates, agent, guidance_only=guidance_only, replace_skills=replace)
 
-    _sync_game_of_cards_config(target, templates, migrate_legacy=True)
+    _sync_game_of_cards_config(target, templates, migrate_legacy=True, emit_report=True)
     # Pin the resolved mode so future runs don't re-detect host state.
     if "claude" in agents:
         _write_skills_source(target, claude_skills_mode)

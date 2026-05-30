@@ -1,26 +1,27 @@
 ---
 title: goc-upgrade-overwrites-authored-game-of-cards-content-stubs-and-hooks
 summary: "`goc upgrade` blind-copies the bundled `templates/game_of_cards/` tree over a consuming repo's `.game-of-cards/` project state, silently destroying authored content in the 12 content stubs + `hooks/*.md` and in `README.md`. Only `config.yaml` is spared (a one-file `skip_existing` carve-out). Fix in two layers: make the engine non-destructive and ownership-aware (preserve diverged files, scaffold only absent ones, emit a divergence report), and add a dedicated `upgrade` skill that does LLM-driven integration of evolving content (README, config) while confirming preservation of user-owned stubs. AGENTS.md/CLAUDE.md marker-merge already does the right thing and stays unchanged."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T12:47:43Z"
-closed_at: null
+closed_at: "2026-05-30T13:43:01Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero today; after the fix it exits non-zero (authored `canonical-tags.md` and `hooks/create-card.md` content survive a real cross-version `goc upgrade`)
-  - [ ] TDD: regression test — a repo that authored content into every one of the 12 user-owned stubs/hooks keeps all of it across `goc upgrade`; an absent stub is still scaffolded (new-in-version files appear); an untouched (pristine/comment-only) stub may be refreshed
-  - [ ] MECHANICAL: engine upgrade path no longer blind-copies user-owned `.game-of-cards/` files. Per file: absent → scaffold; byte-identical to shipped template → no-op; diverged → preserve, do NOT overwrite. `_sync_game_of_cards_config`'s `skip_existing={config.yaml}` carve-out is generalized to the whole user-owned surface
-  - [ ] MECHANICAL: the engine emits a machine-readable divergence report (which `.game-of-cards/` files diverged from stock, and the shipped template content for the evolving ones) that the `upgrade` skill can consume; safety does not depend on an agent being present (headless/CI runs preserve content with no prompt)
-  - [ ] MECHANICAL: dry-run plan accuracy — `_plan_upgrade_writes` / `_print_plan` label each `.game-of-cards/` file `create` / `unchanged` / `preserved (diverged)` instead of the misleading blanket `sync`; `config.yaml` is no longer reported as a write when it is in fact preserved
-  - [ ] PROCESS: new dedicated `upgrade` skill under `goc/templates/skills/upgrade/` (host-agnostic; auto-synced to the plugin mirrors like every other skill). It runs the engine upgrade, reads the divergence report, and for the evolving-content files (`README.md`, `config.yaml`) does a 2-way LLM reconcile of upstream changes into the local copy, asking the user when ambiguous; for user-owned stub divergences it confirms "kept yours, nothing upstream"; for the AGENTS.md/CLAUDE.md GoC block it summarizes what methodology guidance changed (informational, not a merge)
-  - [ ] MECHANICAL: AGENTS.md / CLAUDE.md marker-merge (`_append_marker_block`, `_sync_methodology_blocks`) is unchanged — verified the existing marker/strip regression tests still pass (do not regress the bugs closed by the `append-marker-block-*` / `strip-goc-block-*` family)
-  - [ ] PROCESS: `.game-of-cards/README.md` (the shipped hook-point catalogue) gets a documented ownership rule — it is goc-owned reference docs but flagged "customizable per repo", so the `upgrade` skill reconciles it rather than the engine clobbering it
-  - [ ] MECHANICAL: CLAUDE.md / AGENTS.md guidance updated — document the per-file ownership model (regenerate goc-owned, preserve user-owned, reconcile evolving) and the new `upgrade` skill
-  - [ ] PROCESS: `uv run goc validate` passes; full `unittest` suite passes; `python scripts/sync_plugin_assets.py --check` and the OpenClaw porter `--check` stay green (new skill mirrors regenerated)
+  - [x] TDD: reproduce.py exits zero today; after the fix it exits non-zero (authored `canonical-tags.md` and `hooks/create-card.md` content survive a real cross-version `goc upgrade`)
+  - [x] TDD: regression test — a repo that authored content into every one of the 12 user-owned stubs/hooks keeps all of it across `goc upgrade`; an absent stub is still scaffolded (new-in-version files appear); an untouched (pristine/comment-only) stub may be refreshed
+  - [x] MECHANICAL: engine upgrade path no longer blind-copies user-owned `.game-of-cards/` files. Per file: absent → scaffold; byte-identical to shipped template → no-op; diverged → preserve, do NOT overwrite. `_sync_game_of_cards_config`'s `skip_existing={config.yaml}` carve-out is generalized to the whole user-owned surface
+  - [x] MECHANICAL: the engine emits a machine-readable divergence report (which `.game-of-cards/` files diverged from stock, and the shipped template content for the evolving ones) that the `upgrade` skill can consume; safety does not depend on an agent being present (headless/CI runs preserve content with no prompt)
+  - [x] MECHANICAL: dry-run plan accuracy — `_plan_upgrade_writes` / `_print_plan` label each `.game-of-cards/` file `create` / `unchanged` / `preserved (diverged)` instead of the misleading blanket `sync`; `config.yaml` is no longer reported as a write when it is in fact preserved
+  - [x] PROCESS: new dedicated `upgrade` skill under `goc/templates/skills/upgrade/` (host-agnostic; auto-synced to the plugin mirrors like every other skill). It runs the engine upgrade, reads the divergence report, and for the evolving-content files (`README.md`, `config.yaml`) does a 2-way LLM reconcile of upstream changes into the local copy, asking the user when ambiguous; for user-owned stub divergences it confirms "kept yours, nothing upstream"; for the AGENTS.md/CLAUDE.md GoC block it summarizes what methodology guidance changed (informational, not a merge)
+  - [x] MECHANICAL: AGENTS.md / CLAUDE.md marker-merge (`_append_marker_block`, `_sync_methodology_blocks`) is unchanged — verified the existing marker/strip regression tests still pass (do not regress the bugs closed by the `append-marker-block-*` / `strip-goc-block-*` family)
+  - [x] PROCESS: `.game-of-cards/README.md` (the shipped hook-point catalogue) gets a documented ownership rule — it is goc-owned reference docs but flagged "customizable per repo", so the `upgrade` skill reconciles it rather than the engine clobbering it
+  - [x] MECHANICAL: CLAUDE.md / AGENTS.md guidance updated — document the per-file ownership model (regenerate goc-owned, preserve user-owned, reconcile evolving) and the new `upgrade` skill
+  - [x] PROCESS: `uv run goc validate` passes; full `unittest` suite passes; `python scripts/sync_plugin_assets.py --check` and the OpenClaw porter `--check` stay green (new skill mirrors regenerated)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc upgrade` overwrites authored `.game-of-cards/` content stubs and hooks
