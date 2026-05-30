@@ -5,15 +5,13 @@ description: Hunt for one previously-undocumented defect, derivation gap, doc dr
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
-`goc`
+Before running the body of this skill, the agent should see current deck state. Run these via the `goc` tool (top-level filters like `--status` / `--tag` / `--worker` map to the tool's `flags` parameter; the subcommand maps to `verb`). For bare-queue listings with no subcommand, shell out via the `exec` tool:
 
-`goc --done`
-
-`goc --status disproved`
-
-`goc --tag unverified`
-
-`cat .game-of-cards/hooks/audit-deck.md 2>/dev/null || true`
+- `goc`
+- `goc --done`
+- `goc --status disproved`
+- `goc --tag unverified`
+- `cat .game-of-cards/hooks/audit-deck.md 2>/dev/null || true`
 
 # Audit
 

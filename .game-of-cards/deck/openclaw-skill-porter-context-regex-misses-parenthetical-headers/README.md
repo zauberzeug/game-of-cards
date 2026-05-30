@@ -1,21 +1,21 @@
 ---
 title: openclaw-skill-porter-context-regex-misses-parenthetical-headers
 summary: "`scripts/port_skills_to_openclaw.py`'s `CONTEXT_BLOCK_RE` requires a bare `## Context\\n\\n` header, so any Context section whose heading carries a parenthetical qualifier (`## Context (read but distrust …)`, `## Context (project-local extension)`) is silently skipped. The host-neutral `Run these via the goc tool …` paragraph is never injected — the ported skills under `openclaw-plugin/skills/{audit-deck,refine-deck}/SKILL.md` end up with bare backticked commands and no instruction for an OpenClaw agent on how to obtain that context. The porter's idempotence drift guard does not catch this: the wrong output is stable, so re-port is a no-op."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T01:49:53Z"
-closed_at: null
+closed_at: "2026-05-30T01:56:07Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero on a fixed checkout — currently exits 1 because `CONTEXT_BLOCK_RE` matches 3 of 5 Context-bearing source skills; the fix makes it match all 5.
-  - [ ] MECHANICAL: `CONTEXT_BLOCK_RE` accepts an arbitrary suffix on the `## Context` heading line (e.g. `r"## Context\b[^\n]*\n\n((?:!`[^`]+`\n\n?)+)"`), and the replacement preserves the original heading verbatim (so `## Context (project-local extension)` round-trips, not collapses to `## Context`).
-  - [ ] MECHANICAL: `python scripts/port_skills_to_openclaw.py` re-ports `openclaw-plugin/skills/audit-deck/SKILL.md` and `openclaw-plugin/skills/refine-deck/SKILL.md` with the host-neutral guidance paragraph + bulleted command list under the Context heading; diff reviewed and committed.
-  - [ ] MECHANICAL: `python scripts/port_skills_to_openclaw.py --check` is green (porter is idempotent over the new output).
-  - [ ] PROCESS: a regression test under `tests/` asserts that every source skill containing `## Context` produces a ported output whose Context section contains the guidance paragraph (catches the next variation of the same regex-too-narrow drift).
+  - [x] TDD: `reproduce.py` exits zero on a fixed checkout — currently exits 1 because `CONTEXT_BLOCK_RE` matches 3 of 5 Context-bearing source skills; the fix makes it match all 5.
+  - [x] MECHANICAL: `CONTEXT_BLOCK_RE` accepts an arbitrary suffix on the `## Context` heading line (e.g. `r"## Context\b[^\n]*\n\n((?:!`[^`]+`\n\n?)+)"`), and the replacement preserves the original heading verbatim (so `## Context (project-local extension)` round-trips, not collapses to `## Context`).
+  - [x] MECHANICAL: `python scripts/port_skills_to_openclaw.py` re-ports `openclaw-plugin/skills/audit-deck/SKILL.md` and `openclaw-plugin/skills/refine-deck/SKILL.md` with the host-neutral guidance paragraph + bulleted command list under the Context heading; diff reviewed and committed.
+  - [x] MECHANICAL: `python scripts/port_skills_to_openclaw.py --check` is green (porter is idempotent over the new output).
+  - [x] PROCESS: a regression test under `tests/` asserts that every source skill containing `## Context` produces a ported output whose Context section contains the guidance paragraph (catches the next variation of the same regex-too-narrow drift).
 worker: {who: "claude[bot]", where: main}
 ---
 

@@ -5,7 +5,9 @@ description: Deck hygiene pass — retag stale cards, prune 90-day unverified pa
 
 ## Context (project-local extension)
 
-`cat .game-of-cards/hooks/refine-deck.md 2>/dev/null || true`
+Before running the body of this skill, the agent should see current deck state. Run these via the `goc` tool (top-level filters like `--status` / `--tag` / `--worker` map to the tool's `flags` parameter; the subcommand maps to `verb`). For bare-queue listings with no subcommand, shell out via the `exec` tool:
+
+- `cat .game-of-cards/hooks/refine-deck.md 2>/dev/null || true`
 
 # Refine the deck
 

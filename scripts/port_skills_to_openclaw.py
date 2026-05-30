@@ -82,18 +82,24 @@ PREFLIGHT_RE = re.compile(
 # the same logical line (or ! on its own line followed by a command in
 # fenced code).
 CONTEXT_BLOCK_RE = re.compile(
-    r"## Context\n\n((?:!`[^`]+`\n\n?)+)",
+    r"^(## Context\b[^\n]*)\n\n((?:!`[^`]+`\n\n?)+)",
     re.MULTILINE,
 )
 
 
 def transform_context_block(match: re.Match[str]) -> str:
-    """Replace the embedded-execution context with a host-neutral note."""
-    raw = match.group(1)
+    """Replace the embedded-execution context with a host-neutral note.
+
+    The original heading (including any parenthetical qualifier like
+    `## Context (project-local extension)`) is preserved verbatim so a
+    reader of the ported skill sees the same framing as the source.
+    """
+    heading = match.group(1)
+    raw = match.group(2)
     commands = re.findall(r"!`([^`]+)`", raw)
     bullet = "\n".join(f"- `{cmd}`" for cmd in commands)
     return (
-        "## Context\n\n"
+        f"{heading}\n\n"
         "Before running the body of this skill, the agent should see current "
         "deck state. Run these via the `goc` tool (top-level filters like "
         "`--status` / `--tag` / `--worker` map to the tool's `flags` "
