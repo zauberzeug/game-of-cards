@@ -1,23 +1,23 @@
 ---
 title: global-cli-flags-silently-dropped-by-subcommand-flag-defaults
 summary: "Several `goc` subcommands re-register a global flag's `dest` with a hard default in their own subparser. Argparse silently overwrites the parent value, so `goc --status done quality-pass`, `goc --done quality-pass`, `goc --contribution high new <title>`, and `goc --worker alice triage` all behave as if the user had not passed the global flag. The `--done` help text claims it is a `Shortcut for --status done` — for `quality-pass` neither form works."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T03:18:42Z"
-closed_at: null
+closed_at: "2026-05-30T16:53:40Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: regression test asserts `parser.parse_args(["--status", "done", "quality-pass"]).status_flag == "done"`
-  - [ ] TDD: regression test asserts `parser.parse_args(["--done", "quality-pass"])` causes `_cmd_quality_pass` to filter to `status == "done"` cards
-  - [ ] TDD: regression test asserts `parser.parse_args(["--contribution", "high", "new", "<t>"]).contribution == "high"` (not silently coerced to the subparser default)
-  - [ ] TDD: regression test asserts `parser.parse_args(["--worker", "alice", "triage"]).worker == "alice"`
-  - [ ] PROCESS: decision recorded — which remedy was chosen (drop subparser dups / `default=argparse.SUPPRESS` / post-parse merge / distinct dests) and why
-  - [ ] MECHANICAL: every sibling `dest=` collision identified by a grep sweep of `_build_parser` has the remedy applied uniformly
-  - [ ] TDD: `reproduce.py` exits zero
+  - [x] TDD: regression test asserts `parser.parse_args(["--status", "done", "quality-pass"]).status_flag == "done"`
+  - [x] TDD: regression test asserts `parser.parse_args(["--done", "quality-pass"])` causes `_cmd_quality_pass` to filter to `status == "done"` cards
+  - [x] TDD: regression test asserts `parser.parse_args(["--contribution", "high", "new", "<t>"]).contribution == "high"` (not silently coerced to the subparser default)
+  - [x] TDD: regression test asserts `parser.parse_args(["--worker", "alice", "triage"]).worker == "alice"`
+  - [x] PROCESS: decision recorded — which remedy was chosen (drop subparser dups / `default=argparse.SUPPRESS` / post-parse merge / distinct dests) and why
+  - [x] MECHANICAL: every sibling `dest=` collision identified by a grep sweep of `_build_parser` has the remedy applied uniformly
+  - [x] TDD: `reproduce.py` exits zero
 worker: {who: "claude[bot]", where: main}
 ---
 

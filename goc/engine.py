@@ -2715,8 +2715,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # quality-pass
     p_qp = subparsers.add_parser("quality-pass", help="Surface engineer-jargon titles + missing summaries.")
-    p_qp.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES), default="open",
-                      help="Filter by status (default: open).")
+    p_qp.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES),
+                      default=argparse.SUPPRESS,
+                      help="Filter by status (overrides global --status; default: open).")
     p_qp.add_argument("--llm", action="store_true", default=False,
                       help="Also run a Sonnet-batched summary+DoD audit.")
     p_qp.add_argument("--no-llm", dest="llm", action="store_false",
@@ -2775,15 +2776,24 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_new.add_argument("title")
     p_new.add_argument("--contribution", choices=schema.contribution_values,
-                       default="medium" if "medium" in schema.contribution_values else schema.contribution_values[0])
+                       default=argparse.SUPPRESS,
+                       help="Contribution level (overrides global --contribution; default: medium).")
     p_new.add_argument("--gate", choices=schema.human_gate_values, default=schema.human_gate_default)
-    p_new.add_argument("--tag", dest="tags", action="append", default=[])
-    p_new.add_argument("--advances", action="append", default=[], metavar="TITLE",
+    # --tag, --worker share `dest` with global filters; SUPPRESS lets the
+    # parent value flow through when the subparser flag isn't passed.
+    p_new.add_argument("--tag", dest="tags", action="append", default=argparse.SUPPRESS,
+                       help="Card tag (repeatable; overrides global --tag).")
+    # --advances and --advanced-by collide with global *filters* of the
+    # same name but with incompatible types (global = single-value
+    # filter; new = list of titles to wire). Use distinct dests so the
+    # parent string can't silently coerce into the wiring list.
+    p_new.add_argument("--advances", dest="advances_wire", action="append", default=[], metavar="TITLE",
                        help="Wire the new card as advancing TITLE (repeatable).")
-    p_new.add_argument("--advanced-by", dest="advanced_by", action="append", default=[], metavar="TITLE",
+    p_new.add_argument("--advanced-by", dest="advanced_by_wire", action="append", default=[], metavar="TITLE",
                        help="Wire TITLE as advancing the new card (repeatable).")
-    p_new.add_argument("--worker", default=None,
-                       help="Worker designation — person, machine, or capability tag.")
+    p_new.add_argument("--worker", default=argparse.SUPPRESS,
+                       help="Worker designation (overrides global --worker / $GOC_WORKER; "
+                            "person, machine, or capability tag).")
     p_new.add_argument("--allow-jargon", action="store_true",
                        help="Bypass the title-antipattern check (rare; used by migration tools).")
     p_new.add_argument("--commit", action="store_true",
@@ -2865,10 +2875,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # triage
     p_triage = subparsers.add_parser("triage", help="List parked cards (gate ≠ none), grouped by gate, oldest-first.")
-    p_triage.add_argument("--json", dest="as_json", action="store_true",
-                          help="Emit JSON for Q&A consumers.")
-    p_triage.add_argument("--worker", default=os.environ.get("GOC_WORKER"),
-                          help="Filter parked cards by worker.who (substring match).")
+    p_triage.add_argument("--json", dest="as_json", action="store_true", default=argparse.SUPPRESS,
+                          help="Emit JSON for Q&A consumers (overrides global --json).")
+    p_triage.add_argument("--worker", default=argparse.SUPPRESS,
+                          help="Filter parked cards by worker.who (substring match; "
+                               "overrides global --worker / $GOC_WORKER).")
 
     # show
     p_show = subparsers.add_parser("show", help="Print full README.md to stdout.")
@@ -3289,7 +3300,11 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
 
 def _cmd_quality_pass(args):
     """Surface engineer-jargon titles + missing summaries across the existing deck."""
-    status_flag = args.status_flag
+    status_flag = getattr(args, "status_flag", None)
+    if getattr(args, "done_flag", False) and status_flag is None:
+        status_flag = "done"
+    if status_flag is None:
+        status_flag = "open"
     llm = args.llm
     limit = args.limit
     dry_run = args.dry_run
@@ -4299,7 +4314,10 @@ def _validate_new_edge_flags(
 def _cmd_new(args):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
     title = args.title
-    contribution = args.contribution
+    schema = load_schema()
+    contribution = args.contribution or (
+        "medium" if "medium" in schema.contribution_values else schema.contribution_values[0]
+    )
     gate = args.gate
     tags = args.tags
     worker = args.worker
@@ -4307,9 +4325,8 @@ def _cmd_new(args):
     commit = args.commit
     no_commit = args.no_commit
     _validate_commit_flags(commit, no_commit)
-    advances = _unique_preserving_order(args.advances or [])
-    advanced_by = _unique_preserving_order(args.advanced_by or [])
-    schema = load_schema()
+    advances = _unique_preserving_order(args.advances_wire or [])
+    advanced_by = _unique_preserving_order(args.advanced_by_wire or [])
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(title)
         if antipatterns_hit:
