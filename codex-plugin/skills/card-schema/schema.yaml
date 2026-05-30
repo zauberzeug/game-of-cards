@@ -12,7 +12,10 @@ optional_fields:
   - closed_at
   - advances
   - advanced_by
+  - supersedes
+  - superseded_by
   - tags
+  - worker
   - waiting_on
   - waiting_until
 title_pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
