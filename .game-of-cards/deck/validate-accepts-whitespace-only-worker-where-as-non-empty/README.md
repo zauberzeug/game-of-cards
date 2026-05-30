@@ -1,21 +1,21 @@
 ---
 title: validate-accepts-whitespace-only-worker-where-as-non-empty
 summary: "`goc validate` accepts `worker: {who: alice, where: \"   \"}` as valid. The mapping branch of the worker validator checks `where` is a string but never checks it's non-whitespace, while the sibling `who` sub-key and the bare-string branch both reject whitespace-only. Second instance of the same defect shape as [validate-accepts-whitespace-only-worker-as-non-empty](../validate-accepts-whitespace-only-worker-as-non-empty/), which fixed the bare-string and `who` branches but missed `where`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T13:11:50Z"
-closed_at: null
+closed_at: "2026-05-30T13:14:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: regression test asserts `goc validate` rejects `worker: {who: alice, where: "   "}` with stderr containing `worker: 'where' must be a non-empty, non-whitespace string`
-  - [ ] TDD: existing whitespace-worker tests still pass (bare string, mapping `who`, valid `where`)
-  - [ ] TDD: `reproduce.py` exits zero after fix (defect no longer fires)
-  - [ ] MECHANICAL: `goc/engine.py` `where`-validation branch mirrors the `who` strip-check
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
+  - [x] TDD: regression test asserts `goc validate` rejects `worker: {who: alice, where: "   "}` with stderr containing `worker: 'where' must be a non-empty, non-whitespace string`
+  - [x] TDD: existing whitespace-worker tests still pass (bare string, mapping `who`, valid `where`)
+  - [x] TDD: `reproduce.py` exits zero after fix (defect no longer fires)
+  - [x] MECHANICAL: `goc/engine.py` `where`-validation branch mirrors the `who` strip-check
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

@@ -1266,8 +1266,12 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
                 errors.append(f"{t.title}: worker: mapping must have a 'who' key")
             elif not isinstance(worker.get("who"), str) or not worker["who"].strip():
                 errors.append(f"{t.title}: worker: 'who' must be a non-empty, non-whitespace string")
-            if "where" in worker and not isinstance(worker.get("where"), str):
-                errors.append(f"{t.title}: worker: 'where' must be a string")
+            if "where" in worker and (
+                not isinstance(worker.get("where"), str) or not worker["where"].strip()
+            ):
+                errors.append(
+                    f"{t.title}: worker: 'where' must be a non-empty, non-whitespace string"
+                )
         else:
             errors.append(f"{t.title}: worker: must be a string or mapping with 'who'")
 

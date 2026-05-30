@@ -90,6 +90,19 @@ class ValidateWorkerWhitespaceTest(unittest.TestCase):
                 result.stderr,
             )
 
+    def test_mapping_with_whitespace_where_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _write_card(cwd, "ws-where", 'worker: {who: alice, where: "  "}')
+
+            result = _run_validate(cwd)
+
+            self.assertNotEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+            self.assertIn(
+                "ws-where: worker: 'where' must be a non-empty, non-whitespace string",
+                result.stderr,
+            )
+
     def test_valid_worker_string_still_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
