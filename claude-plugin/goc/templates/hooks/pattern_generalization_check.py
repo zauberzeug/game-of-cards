@@ -23,18 +23,51 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import sys
 from pathlib import Path
 
 CODE_MUTATING_TOOLS = frozenset({"Edit", "Write", "NotebookEdit"})
-# Match `git commit ...` (any form) and the staging forms that mutate the
-# index broadly: `git add -A`, `git add -p`, `git add -u`, `git add .`.
-# Deliberately reject the pathspec-separator form `git add -- <path>` and
-# bare `git add <path>` — those stage explicit paths and are documented
-# in AGENTS.md as the safe parallel-agent staging idiom.
-_BASH_COMMIT_RE = re.compile(
-    r"\bgit\s+commit\b|\bgit\s+add\s+(?:-[A-Za-z]|\.)"
+
+# Broad-staging flags for `git add`: short single-letter forms plus their
+# long-form aliases documented in `git-add(1)`. The bare `.` pathspec is
+# handled separately as a non-flag token.
+_BROAD_STAGING_FLAGS = frozenset(
+    {"-A", "-p", "-u", "--all", "--update", "--patch"}
 )
+
+
+def _is_broad_git_mutation(cmd: str) -> bool:
+    """Return True iff `cmd` is a broad index-mutating git invocation.
+
+    Matches `git commit ...` (any form) and `git add` with one of the
+    broad-staging flags in :data:`_BROAD_STAGING_FLAGS` or the bare `.`
+    pathspec. Deliberately rejects `git add -- <path>` and `git add <path>`
+    — those stage explicit paths and are the parallel-agent-safe idiom
+    documented in AGENTS.md.
+
+    The matcher tokenizes via :func:`shlex.split` and inspects tokens by
+    equality, so future git long-form alias additions can be picked up by
+    extending :data:`_BROAD_STAGING_FLAGS` without re-deriving regex
+    alternations.
+    """
+    try:
+        tokens = shlex.split(cmd, comments=False, posix=True)
+    except ValueError:
+        return False
+    if len(tokens) < 2 or tokens[0] != "git":
+        return False
+    if tokens[1] == "commit":
+        return True
+    if tokens[1] != "add":
+        return False
+    for tok in tokens[2:]:
+        if tok == "--":
+            # Pathspec separator: explicit paths follow, not broad staging.
+            return False
+        if tok == "." or tok in _BROAD_STAGING_FLAGS:
+            return True
+    return False
 
 REMINDER = (
     "[GoC | pattern-check] Before yielding: did your recent change touch a pattern "
@@ -105,7 +138,7 @@ def _is_code_mutating(tool_name: str, entry: dict) -> bool:
             if not isinstance(block, dict) or block.get("name") != "Bash":
                 continue
             cmd = (block.get("input") or {}).get("command", "")
-            if _BASH_COMMIT_RE.search(cmd):
+            if _is_broad_git_mutation(cmd):
                 return True
     return False
 

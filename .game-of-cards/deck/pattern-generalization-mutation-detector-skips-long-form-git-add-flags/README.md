@@ -1,21 +1,21 @@
 ---
 title: pattern-generalization-mutation-detector-skips-long-form-git-add-flags
 summary: "After the substring→regex rewrite, the pattern-generalization stop hook's matcher `git\\s+add\\s+(?:-[A-Za-z]|\\.)` accepts only short single-letter staging flags (-A, -p, -u) or `.`. The long-form aliases documented in `git-add(1)` — `git add --all`, `--update`, `--patch` — are not matched, so a turn whose only mutating action is `git add --all foo/` bypasses the generalization self-assessment prompt entirely."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T08:00:18Z"
-closed_at: null
+closed_at: "2026-05-30T17:00:19Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (mutation detector returns True on synthetic transcripts whose only Bash call is `git add --all foo`, `--update`, or `--patch`)
-  - [ ] TDD: the same script still returns True on the short-flag forms `-A`, `-p`, `-u`, `.` and on `git commit ...` (positive baseline preserved); still returns False on `git add -- foo.py` and bare `git add foo.py` (negative baseline preserved)
-  - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` `_BASH_COMMIT_RE` extends the alternation to cover the documented long-form aliases (e.g. `(?:-[A-Za-z]|--(?:all|update|patch)|\.)`); `claude-plugin/hooks/`, `codex-plugin/hooks/`, and `openclaw-plugin/index.ts` mirror updated via the sync + porter scripts
-  - [ ] PROCESS: tests/test_pattern_generalization_hook.py adds regression rows for the three long-form flags
-  - [ ] PROCESS: closure logged in log.md with the reproduce.py before/after output
+  - [x] TDD: reproduce.py exits zero (mutation detector returns True on synthetic transcripts whose only Bash call is `git add --all foo`, `--update`, or `--patch`)
+  - [x] TDD: the same script still returns True on the short-flag forms `-A`, `-p`, `-u`, `.` and on `git commit ...` (positive baseline preserved); still returns False on `git add -- foo.py` and bare `git add foo.py` (negative baseline preserved)
+  - [x] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` replaced `_BASH_COMMIT_RE` with a tokenized `shlex.split` parser (`_is_broad_git_mutation` matches `{-A,-p,-u,--all,--update,--patch,.}` per the recorded decision); `claude-plugin/hooks/`, `codex-plugin/hooks/`, and `openclaw-plugin/index.ts` mirror updated via the sync + porter scripts
+  - [x] PROCESS: tests/test_pattern_generalization_hook.py adds regression rows for the three long-form flags
+  - [x] PROCESS: closure logged in log.md with the reproduce.py before/after output
 worker: {who: "claude[bot]", where: main}
 ---
 

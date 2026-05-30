@@ -69,6 +69,15 @@ class PatternGeneralizationMatcherTest(unittest.TestCase):
     def test_git_add_dot_is_mutation(self):
         self.assertTrue(self._had_mutation("git add ."))
 
+    def test_git_add_long_all_is_mutation(self):
+        self.assertTrue(self._had_mutation("git add --all foo/"))
+
+    def test_git_add_long_update_is_mutation(self):
+        self.assertTrue(self._had_mutation("git add --update"))
+
+    def test_git_add_long_patch_is_mutation(self):
+        self.assertTrue(self._had_mutation("git add --patch"))
+
     # --- negative cases: must NOT fire -------------------------------------
 
     def test_git_add_pathspec_separator_is_not_mutation(self):

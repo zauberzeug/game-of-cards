@@ -296,15 +296,83 @@ const PATTERN_REMINDER =
   'If no generalization is warranted, respond "no generalization needed" and stop.';
 
 const CODE_MUTATING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
-// Match `git commit ...` and the staging forms that mutate the index broadly
-// (`git add -A`, `git add -p`, `git add -u`, `git add .`). Deliberately reject
-// the pathspec-separator form `git add -- <path>` and bare `git add <path>`:
-// those stage explicit paths and are the documented safe parallel-agent
-// staging idiom in AGENTS.md.
-const BASH_COMMIT_PATTERNS = [
-  /\bgit\s+commit\b/,
-  /\bgit\s+add\s+(?:-[A-Za-z]|\.)/,
-];
+
+// Broad-staging flags for `git add`: short single-letter forms plus their
+// long-form aliases documented in `git-add(1)`. The bare `.` pathspec is
+// handled separately as a non-flag token.
+const BROAD_STAGING_FLAGS = new Set([
+  "-A",
+  "-p",
+  "-u",
+  "--all",
+  "--update",
+  "--patch",
+]);
+
+// Minimal shell tokenizer mirroring `shlex.split(..., posix=True)` for the
+// command strings we care about: handles single/double quotes and
+// backslash escapes. Returns null on unbalanced quotes so the caller can
+// fall through to "not a mutation".
+function shellSplit(s: string): string[] | null {
+  const tokens: string[] = [];
+  let current = "";
+  let started = false;
+  let inSingle = false;
+  let inDouble = false;
+  let escaped = false;
+  for (const ch of s) {
+    if (escaped) {
+      current += ch;
+      started = true;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && !inSingle) {
+      escaped = true;
+      continue;
+    }
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      started = true;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      started = true;
+      continue;
+    }
+    if (!inSingle && !inDouble && /\s/.test(ch)) {
+      if (started) {
+        tokens.push(current);
+        current = "";
+        started = false;
+      }
+      continue;
+    }
+    current += ch;
+    started = true;
+  }
+  if (inSingle || inDouble) return null;
+  if (started) tokens.push(current);
+  return tokens;
+}
+
+// Match `git commit ...` (any form) and `git add` with one of the broad-
+// staging flags in BROAD_STAGING_FLAGS or the bare `.` pathspec.
+// Deliberately reject `git add -- <path>` and bare `git add <path>`: those
+// stage explicit paths and are the documented safe parallel-agent staging
+// idiom in AGENTS.md.
+function isBroadGitMutation(cmd: string): boolean {
+  const tokens = shellSplit(cmd);
+  if (!tokens || tokens.length < 2 || tokens[0] !== "git") return false;
+  if (tokens[1] === "commit") return true;
+  if (tokens[1] !== "add") return false;
+  for (const tok of tokens.slice(2)) {
+    if (tok === "--") return false;
+    if (tok === "." || BROAD_STAGING_FLAGS.has(tok)) return true;
+  }
+  return false;
+}
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -510,7 +578,7 @@ export default definePluginEntry({
         if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;
         if (tc?.name === "exec" || tc?.name === "Bash") {
           const cmd = (tc?.params?.command ?? tc?.params?.cmd ?? "") as string;
-          return BASH_COMMIT_PATTERNS.some((re) => re.test(cmd));
+          return isBroadGitMutation(cmd);
         }
         return false;
       });
