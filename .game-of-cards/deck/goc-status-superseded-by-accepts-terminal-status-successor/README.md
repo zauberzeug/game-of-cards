@@ -1,7 +1,7 @@
 ---
 title: goc-status-superseded-by-accepts-terminal-status-successor
 summary: "`goc status <X> superseded --by <Y>` accepts a successor whose status is already terminal (done, disproved, superseded). The CLI at engine.py:3966-3968 only confirms <Y>'s directory loads; it never inspects `<Y>.status`. `goc validate` does not catch the dead-end link because `validate_supersedes_targets` (engine.py:1276) enforces the reverse direction only. A cold reader walking the forward routing pointer from <X> lands on another terminal card with no live work."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-29T20:12:41Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] PROCESS: decide the fix path — CLI guard in `_cmd_status` only, OR CLI guard plus a symmetric validator (e.g. `validate_superseded_by_targets`) that catches existing dead-end links during `goc validate`. Record reasoning in log.md. (Note: the sibling card `superseded-status-without-by-leaves-no-forward-routing-pointer` faces the same fix-path pick and should be resolved consistently — pick one approach for both.)
   - [ ] TDD: a regression test in `tests/` exercises the chosen guard for each terminal status (done, disproved, superseded) on the successor.
   - [ ] MECHANICAL: `goc validate` clean across the deck; plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); pre-commit clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc status <X> superseded --by <Y>` accepts a terminal-status successor
