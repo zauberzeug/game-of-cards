@@ -20,7 +20,14 @@ import sys
 from pathlib import Path
 
 CODE_MUTATING_TOOLS = frozenset({"Edit", "Write"})
-BASH_COMMIT_TOKENS = ("git commit", "git add -", "git add .")
+# Match `git commit ...` (any form) and the staging forms that mutate the
+# index broadly: `git add -A`, `git add -p`, `git add -u`, `git add .`.
+# Deliberately reject the pathspec-separator form `git add -- <path>` and
+# bare `git add <path>` — those stage explicit paths and are documented
+# in AGENTS.md as the safe parallel-agent staging idiom.
+_BASH_COMMIT_RE = re.compile(
+    r"\bgit\s+commit\b|\bgit\s+add\s+(?:-[A-Za-z]|\.)"
+)
 
 REMINDER = (
     "[GoC | pattern-check] Before yielding: did your recent change touch a pattern "
@@ -70,7 +77,7 @@ def _is_code_mutating(tool_name: str, entry: dict) -> bool:
             if not isinstance(block, dict) or block.get("name") != "Bash":
                 continue
             cmd = (block.get("input") or {}).get("command", "")
-            if any(tok in cmd for tok in BASH_COMMIT_TOKENS):
+            if _BASH_COMMIT_RE.search(cmd):
                 return True
     return False
 

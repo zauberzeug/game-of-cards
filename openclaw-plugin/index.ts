@@ -290,7 +290,15 @@ const PATTERN_REMINDER =
   'If no generalization is warranted, respond "no generalization needed" and stop.';
 
 const CODE_MUTATING_TOOLS = new Set(["Edit", "Write"]);
-const BASH_COMMIT_PATTERNS = [/\bgit\s+commit\b/, /\bgit\s+add\s+[-.]/];
+// Match `git commit ...` and the staging forms that mutate the index broadly
+// (`git add -A`, `git add -p`, `git add -u`, `git add .`). Deliberately reject
+// the pathspec-separator form `git add -- <path>` and bare `git add <path>`:
+// those stage explicit paths and are the documented safe parallel-agent
+// staging idiom in AGENTS.md.
+const BASH_COMMIT_PATTERNS = [
+  /\bgit\s+commit\b/,
+  /\bgit\s+add\s+(?:-[A-Za-z]|\.)/,
+];
 
 async function pathExists(p: string): Promise<boolean> {
   try {
