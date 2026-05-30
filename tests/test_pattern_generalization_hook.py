@@ -49,6 +49,21 @@ class PatternGeneralizationMatcherTest(unittest.TestCase):
     def _had_mutation(self, cmd: str) -> bool:
         return self.hook._had_code_mutation(str(self._transcript(cmd)))
 
+    def _transcript_for_tool(self, tool_name: str) -> Path:
+        entry = {
+            "role": "assistant",
+            "content": [{"type": "tool_use", "name": tool_name, "input": {}}],
+        }
+        fh = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
+        )
+        fh.write(json.dumps(entry) + "\n")
+        fh.close()
+        return Path(fh.name)
+
+    def _had_tool_mutation(self, tool_name: str) -> bool:
+        return self.hook._had_code_mutation(str(self._transcript_for_tool(tool_name)))
+
     # --- positive cases: should still fire ---------------------------------
 
     def test_git_commit_with_pathspec_is_mutation(self):
@@ -69,6 +84,15 @@ class PatternGeneralizationMatcherTest(unittest.TestCase):
     def test_git_add_dot_is_mutation(self):
         self.assertTrue(self._had_mutation("git add ."))
 
+    def test_edit_tool_is_mutation(self):
+        self.assertTrue(self._had_tool_mutation("Edit"))
+
+    def test_write_tool_is_mutation(self):
+        self.assertTrue(self._had_tool_mutation("Write"))
+
+    def test_notebook_edit_tool_is_mutation(self):
+        self.assertTrue(self._had_tool_mutation("NotebookEdit"))
+
     # --- negative cases: must NOT fire -------------------------------------
 
     def test_git_add_pathspec_separator_is_not_mutation(self):
@@ -83,6 +107,9 @@ class PatternGeneralizationMatcherTest(unittest.TestCase):
 
     def test_git_add_pathspec_with_multiple_paths_is_not_mutation(self):
         self.assertFalse(self._had_mutation("git add -- foo.py bar.py"))
+
+    def test_read_tool_is_not_mutation(self):
+        self.assertFalse(self._had_tool_mutation("Read"))
 
 
 if __name__ == "__main__":

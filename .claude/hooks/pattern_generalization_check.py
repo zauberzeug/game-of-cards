@@ -1,7 +1,8 @@
 """Stop hook — prompt agent to file generalization cards for pattern instances.
 
-Fires only on turns that included code-mutating tool calls (Edit or Write, or
-Bash containing a git-commit). Injects a system reminder asking the agent to
+Fires only on turns that included code-mutating tool calls (Edit, Write,
+or NotebookEdit, or Bash containing a git-commit). Injects a system reminder
+asking the agent to
 self-assess whether the change is an instance of a broader pattern that warrants
 its own generalization card.
 
@@ -19,7 +20,7 @@ import re
 import sys
 from pathlib import Path
 
-CODE_MUTATING_TOOLS = frozenset({"Edit", "Write"})
+CODE_MUTATING_TOOLS = frozenset({"Edit", "Write", "NotebookEdit"})
 # Match `git commit ...` (any form) and the staging forms that mutate the
 # index broadly: `git add -A`, `git add -p`, `git add -u`, `git add .`.
 # Deliberately reject the pathspec-separator form `git add -- <path>` and
