@@ -1,7 +1,7 @@
 ---
 title: pattern-generalization-stop-hook-reminder-never-reaches-the-agent
 summary: "The pattern-generalization Stop hook prints its reminder to stdout and returns 0. For a Claude Code Stop hook, exit-0 stdout is shown only to the user in transcript mode — it is NOT injected into the model's context. So the agent never sees the self-assessment prompt and the hook has been inert (for its stated purpose) since it shipped. The sibling SessionStart / UserPromptSubmit hooks use the same print()+return-0 idiom correctly, because those hook types DO inject stdout into context — the Stop hook copied an idiom that does not transfer."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-26T20:20:14Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the fix lands in `goc/templates/hooks/pattern_generalization_check.py` and the plugin/consumer mirrors are re-synced (pre-commit `sync-plugin-assets` + `port_skills_to_openclaw` where applicable).
   - [ ] MECHANICAL: AGENTS.md / card-schema or wherever the hook's behavior is documented matches the chosen mechanism.
   - [ ] TDD: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Pattern-generalization Stop hook reminder never reaches the agent
