@@ -13,6 +13,7 @@ advanced_by:
   - frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror
   - claude-settings-nested-hooks-shapes-bypass-the-top-level-isinstance-guard
   - pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries
+  - claude-settings-group-hooks-list-and-items-bypass-nested-isinstance-guards
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (shared `load_mapping_or_warn` helper that wraps json.loads / yaml.safe_load and routes every user-editable load through it), B (per-callsite `isinstance(_, dict)` guard at each remaining site), or C (status-quo per-site whack-a-mole). Record the decision in log.md with the rationale. See `## Decision required` below.
