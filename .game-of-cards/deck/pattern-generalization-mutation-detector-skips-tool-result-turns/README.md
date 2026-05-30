@@ -1,21 +1,21 @@
 ---
 title: pattern-generalization-mutation-detector-skips-tool-result-turns
 summary: "`_had_code_mutation` in `pattern_generalization_check.py` walks the transcript backwards and `break`s on the first `role: user` entry that has no `tool_use` blocks, AFTER any assistant entry has been seen. Claude Code wraps every `tool_result` in a `role: user` message, so the loop breaks on the tool_result instead of crossing back through it to the actual `tool_use`. Any turn that ends with an assistant text reply (the typical Edit-then-explain shape) trips the break BEFORE the loop reaches the Edit, and `_had_code_mutation` returns False — the reminder is suppressed. The hook only fires when the LAST entry of the most recent assistant turn is itself a `tool_use` block with no subsequent text reply, which is the minority case. Compounds the already-filed [pattern-generalization-stop-hook-reminder-never-reaches-the-agent](../pattern-generalization-stop-hook-reminder-never-reaches-the-agent/) (channel bug, which incorrectly claims `_had_code_mutation correctly fires on code-mutating turns`): even if the channel is fixed, the detector itself misfires on the common Edit-then-text shape."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T01:39:17Z"
-closed_at: null
+closed_at: "2026-05-30T16:39:25Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] PROCESS: Decision recorded in the body's `## Decision required` section (skip-tool-result-user-entries vs other boundary signal) and the gate lowered.
-  - [ ] TDD: `reproduce.py` exits zero — both the realistic Edit-then-text shape AND the no-tool-mutation baseline are detected correctly.
-  - [ ] MECHANICAL: The fix lands in `goc/templates/hooks/pattern_generalization_check.py` and the plugin/consumer mirrors are re-synced (pre-commit `sync-plugin-assets` regenerates `.claude/hooks/`, `claude-plugin/hooks/`, `codex-plugin/hooks/`).
-  - [ ] MECHANICAL: The OpenClaw TS port in `openclaw-plugin/index.ts` is audited for the same misfire and patched if it carries the same boundary logic.
-  - [ ] TDD: A regression test in `tests/` pins the realistic Edit-then-text transcript shape to `_had_code_mutation == True`.
+  - [x] PROCESS: Decision recorded in the body's `## Decision required` section (skip-tool-result-user-entries vs other boundary signal) and the gate lowered.
+  - [x] TDD: `reproduce.py` exits zero — both the realistic Edit-then-text shape AND the no-tool-mutation baseline are detected correctly.
+  - [x] MECHANICAL: The fix lands in `goc/templates/hooks/pattern_generalization_check.py` and the plugin/consumer mirrors are re-synced (pre-commit `sync-plugin-assets` regenerates `.claude/hooks/`, `claude-plugin/hooks/`, `codex-plugin/hooks/`).
+  - [x] MECHANICAL: The OpenClaw TS port in `openclaw-plugin/index.ts` is audited for the same misfire and patched if it carries the same boundary logic.
+  - [x] TDD: A regression test in `tests/` pins the realistic Edit-then-text transcript shape to `_had_code_mutation == True`.
 worker: {who: "claude[bot]", where: main}
 ---
 

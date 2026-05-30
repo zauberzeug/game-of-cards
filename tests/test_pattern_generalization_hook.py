@@ -128,5 +128,77 @@ class CodeMutatingToolSetTest(unittest.TestCase):
         self.assertFalse(self._had_mutation_for_tool("Read"))
 
 
+class ToolResultBoundaryTest(unittest.TestCase):
+    """The backward walk must cross tool_result user entries to reach the prior tool_use.
+
+    Claude Code wraps every tool_result in a role=user message. A realistic
+    Edit-then-explain turn ends with an assistant text reply preceded by a
+    tool_result wrapper preceded by the tool_use; treating that tool_result
+    as the prior-turn boundary suppresses the reminder on the typical shape.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _transcript(self, entries: list[dict]) -> Path:
+        fh = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
+        )
+        fh.write("\n".join(json.dumps(e) for e in entries))
+        fh.close()
+        return Path(fh.name)
+
+    def test_edit_then_tool_result_then_text_is_mutation(self):
+        entries = [
+            {"message": {"role": "user", "content": "please fix"}},
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "tool_use", "name": "Edit", "input": {"file_path": "/x"}}
+                    ],
+                }
+            },
+            {
+                "message": {
+                    "role": "user",
+                    "content": [
+                        {"type": "tool_result", "tool_use_id": "x", "content": "ok"}
+                    ],
+                }
+            },
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": "Done."}],
+                }
+            },
+        ]
+        self.assertTrue(self.hook._had_code_mutation(str(self._transcript(entries))))
+
+    def test_prior_user_prompt_is_a_real_boundary(self):
+        """A user entry with non-tool_result content still stops the walk so
+        a mutation in an earlier turn does not bleed into this turn's check."""
+        entries = [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "tool_use", "name": "Edit", "input": {"file_path": "/old"}}
+                    ],
+                }
+            },
+            {"message": {"role": "user", "content": "now do something else"}},
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": "Sure."}],
+                }
+            },
+        ]
+        self.assertFalse(self.hook._had_code_mutation(str(self._transcript(entries))))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -74,6 +74,27 @@ def _extract_tool_names(entry: dict) -> list[str]:
     ]
 
 
+def _is_tool_result_only(entry: dict) -> bool:
+    """True for a role=user entry whose content is a non-empty list of all tool_result blocks.
+
+    Claude Code wraps every tool_result in a role=user message. Such entries
+    are continuations of the assistant's tool-using turn, not the prior user
+    prompt, so the backward walk in `_had_code_mutation` must not treat them
+    as the turn boundary.
+    """
+    if isinstance(entry.get("message"), dict):
+        msg = entry["message"]
+        role, content = msg.get("role"), msg.get("content", [])
+    else:
+        role, content = entry.get("role"), entry.get("content", [])
+
+    if role != "user" or not isinstance(content, list) or not content:
+        return False
+    return all(
+        isinstance(b, dict) and b.get("type") == "tool_result" for b in content
+    )
+
+
 def _is_code_mutating(tool_name: str, entry: dict) -> bool:
     if tool_name in CODE_MUTATING_TOOLS:
         return True
@@ -120,7 +141,7 @@ def _had_code_mutation(transcript_path: str) -> bool:
             # Determine role to know when we've crossed into the prior user turn
             msg = entry.get("message", entry)
             role = msg.get("role") if isinstance(msg, dict) else entry.get("role")
-            if role == "user" and found_assistant:
+            if role == "user" and found_assistant and not _is_tool_result_only(entry):
                 break
             if role == "assistant":
                 found_assistant = True
