@@ -1,21 +1,21 @@
 ---
 title: validate-accepts-whitespace-only-summary-as-non-empty
 summary: "`goc validate` accepts `summary: \"   \"` (whitespace-only) and `summary: \"\"` (empty), while `goc quality-pass` already treats both as a Missing-summary quality issue (via `(c.summary or \"\").strip()` at `engine.py:3198`). The two surfaces disagree about what counts as a present summary. Mirror the worker validation fix shape into `summary`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T13:24:18Z"
-closed_at: null
+closed_at: "2026-05-30T13:28:50Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: regression test rejects `summary: "   "` and `summary: ""` with a message of shape `<title>: summary: must not be empty or whitespace-only`, mirroring the worker test in `tests/test_validate_worker_whitespace.py`
-  - [ ] TDD: regression test confirms a normal `summary: "real text"` still passes
-  - [ ] TDD: `reproduce.py` exits non-zero (defect no longer fires)
-  - [ ] MECHANICAL: `validate_card` in `goc/engine.py` rejects whitespace-only and empty `summary` (mirrors the worker block at `engine.py:1259-1276`)
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
+  - [x] TDD: regression test rejects `summary: "   "` and `summary: ""` with a message of shape `<title>: summary: must not be empty or whitespace-only`, mirroring the worker test in `tests/test_validate_worker_whitespace.py`
+  - [x] TDD: regression test confirms a normal `summary: "real text"` still passes
+  - [x] TDD: `reproduce.py` exits non-zero (defect no longer fires)
+  - [x] MECHANICAL: `validate_card` in `goc/engine.py` rejects whitespace-only and empty `summary` (mirrors the worker block at `engine.py:1259-1276`); `_cmd_new` no longer scaffolds `summary: ""` so fresh cards omit the optional field rather than tripping the new check
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
