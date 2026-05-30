@@ -12,6 +12,7 @@ advanced_by:
   - canonical-tags-loader-iterates-bare-string-scalar-character-by-character
   - goc-unadvance-rewrites-bare-string-edge-field-as-character-list
   - goc-validate-crashes-with-typeerror-on-non-string-element-in-tags-list
+  - render-json-emits-bare-string-edge-fields-as-json-strings-not-lists
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (loader-time shape rejection), B (centralized `_field_as_list` helper routing all reads), or C (continue per-consumer guards) — record in log.md with the rationale. See `## Decision required` below.
