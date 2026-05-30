@@ -1,7 +1,7 @@
 ---
 title: openclaw-skill-porter-context-regex-misses-parenthetical-headers
 summary: "`scripts/port_skills_to_openclaw.py`'s `CONTEXT_BLOCK_RE` requires a bare `## Context\\n\\n` header, so any Context section whose heading carries a parenthetical qualifier (`## Context (read but distrust …)`, `## Context (project-local extension)`) is silently skipped. The host-neutral `Run these via the goc tool …` paragraph is never injected — the ported skills under `openclaw-plugin/skills/{audit-deck,refine-deck}/SKILL.md` end up with bare backticked commands and no instruction for an OpenClaw agent on how to obtain that context. The porter's idempotence drift guard does not catch this: the wrong output is stable, so re-port is a no-op."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T01:49:53Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `python scripts/port_skills_to_openclaw.py` re-ports `openclaw-plugin/skills/audit-deck/SKILL.md` and `openclaw-plugin/skills/refine-deck/SKILL.md` with the host-neutral guidance paragraph + bulleted command list under the Context heading; diff reviewed and committed.
   - [ ] MECHANICAL: `python scripts/port_skills_to_openclaw.py --check` is green (porter is idempotent over the new output).
   - [ ] PROCESS: a regression test under `tests/` asserts that every source skill containing `## Context` produces a ported output whose Context section contains the guidance paragraph (catches the next variation of the same regex-too-narrow drift).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw skill porter Context regex misses parenthetical headers
