@@ -85,5 +85,48 @@ class PatternGeneralizationMatcherTest(unittest.TestCase):
         self.assertFalse(self._had_mutation("git add -- foo.py bar.py"))
 
 
+class CodeMutatingToolSetTest(unittest.TestCase):
+    """Pin `CODE_MUTATING_TOOLS` membership.
+
+    The hand-enumerated set has historically lagged Claude Code's mutating
+    tool surface (e.g., omitted ``NotebookEdit``). These rows assert every
+    canonical mutator fires the generalization reminder, and the canonical
+    read-only tool does not.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _transcript_for_tool(self, tool_name: str) -> Path:
+        entry = {
+            "role": "assistant",
+            "content": [
+                {"type": "tool_use", "name": tool_name, "input": {}}
+            ],
+        }
+        fh = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
+        )
+        fh.write(json.dumps(entry) + "\n")
+        fh.close()
+        return Path(fh.name)
+
+    def _had_mutation_for_tool(self, tool_name: str) -> bool:
+        return self.hook._had_code_mutation(str(self._transcript_for_tool(tool_name)))
+
+    def test_edit_is_mutation(self):
+        self.assertTrue(self._had_mutation_for_tool("Edit"))
+
+    def test_write_is_mutation(self):
+        self.assertTrue(self._had_mutation_for_tool("Write"))
+
+    def test_notebook_edit_is_mutation(self):
+        self.assertTrue(self._had_mutation_for_tool("NotebookEdit"))
+
+    def test_read_is_not_mutation(self):
+        self.assertFalse(self._had_mutation_for_tool("Read"))
+
+
 if __name__ == "__main__":
     unittest.main()

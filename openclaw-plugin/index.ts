@@ -289,7 +289,7 @@ const PATTERN_REMINDER =
   "If yes, file a generalization card via goc verb='new' before stopping. " +
   'If no generalization is warranted, respond "no generalization needed" and stop.';
 
-const CODE_MUTATING_TOOLS = new Set(["Edit", "Write"]);
+const CODE_MUTATING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
 // Match `git commit ...` and the staging forms that mutate the index broadly
 // (`git add -A`, `git add -p`, `git add -u`, `git add .`). Deliberately reject
 // the pathspec-separator form `git add -- <path>` and bare `git add <path>`:

@@ -1,21 +1,21 @@
 ---
 title: pattern-generalization-mutation-detector-skips-notebookedit-tool-calls
 summary: "The pattern-generalization stop hook's `CODE_MUTATING_TOOLS` set lists only `Edit` and `Write`. Claude Code's `NotebookEdit` tool — the canonical mutator for Jupyter notebook cells — is absent, so an assistant turn whose only mutating action is a `NotebookEdit` call bypasses the generalization self-assessment prompt entirely. Same gap mirrored in the OpenClaw TS port."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T08:30:36Z"
-closed_at: null
+closed_at: "2026-05-30T08:54:33Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (mutation detector returns True on a synthetic transcript whose only assistant tool call is a `NotebookEdit` invocation)
-  - [ ] TDD: the same script still returns True on the existing `Edit` / `Write` / `Bash git commit` baseline (positive baseline preserved) and still returns False on a read-only-tools-only turn (negative baseline preserved)
-  - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` `CODE_MUTATING_TOOLS` extends to `frozenset({"Edit", "Write", "NotebookEdit"})`; `claude-plugin/hooks/` and `codex-plugin/hooks/` mirrors regenerated via the sync script; `openclaw-plugin/index.ts` `CODE_MUTATING_TOOLS` mirror updated by hand (it is hand-ported, not auto-synced)
-  - [ ] PROCESS: tests/test_pattern_generalization_hook.py adds a regression row for `NotebookEdit`
-  - [ ] PROCESS: closure logged in log.md with the reproduce.py before/after output
+  - [x] TDD: reproduce.py exits zero (mutation detector returns True on a synthetic transcript whose only assistant tool call is a `NotebookEdit` invocation)
+  - [x] TDD: the same script still returns True on the existing `Edit` / `Write` / `Bash git commit` baseline (positive baseline preserved) and still returns False on a read-only-tools-only turn (negative baseline preserved)
+  - [x] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` `CODE_MUTATING_TOOLS` extends to `frozenset({"Edit", "Write", "NotebookEdit"})`; `claude-plugin/hooks/` and `codex-plugin/hooks/` mirrors regenerated via the sync script; `openclaw-plugin/index.ts` `CODE_MUTATING_TOOLS` mirror updated by hand (it is hand-ported, not auto-synced)
+  - [x] PROCESS: tests/test_pattern_generalization_hook.py adds a regression row for `NotebookEdit`
+  - [x] PROCESS: closure logged in log.md with the reproduce.py before/after output
 worker: {who: "claude[bot]", where: main}
 ---
 
