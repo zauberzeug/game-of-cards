@@ -32,7 +32,7 @@ Usage:
 The rewrite is surgical: each match is anchored on enough surrounding context
 that bumping a real release version cannot collide with unrelated `"version"`
 fields (e.g. transitive-dep entries inside package-lock.json). The script
-fails loudly on any expected-vs-actual mismatch — versions are too important
+validates input format before writing any file — versions are too important
 to silently no-op.
 """
 
@@ -43,6 +43,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+_VERSION_PATTERN = re.compile(r"\A\d+\.\d+\.\d+\Z")
 
 
 def _replace(path: Path, pattern: str, replacement: str, expected: int) -> None:
@@ -58,6 +60,12 @@ def _replace(path: Path, pattern: str, replacement: str, expected: int) -> None:
 
 
 def rewrite_all(version: str) -> None:
+    if not _VERSION_PATTERN.match(version):
+        sys.exit(
+            f"ERROR: invalid version {version!r}: expected X.Y.Z "
+            f"(three dot-separated non-negative integers)."
+        )
+
     # goc/__init__.py — `__version__ = "..."` Python literal.
     _replace(
         ROOT / "goc" / "__init__.py",
