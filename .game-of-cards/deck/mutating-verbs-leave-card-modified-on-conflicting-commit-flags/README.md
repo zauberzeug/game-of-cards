@@ -1,7 +1,7 @@
 ---
 title: mutating-verbs-leave-card-modified-on-conflicting-commit-flags
 summary: "Five mutating verbs (`status`, `advance`, `unadvance`, `wait`, `decide`) write the card's README (and `decide` also writes `log.md`) BEFORE calling `_commit_override`, which `sys.exit(2)`s when both `--commit` and `--no-commit` are passed. Result: a CLI usage error corrupts on-disk card state and skips the auto-commit, so the mutation lands unattested. Fix: validate flag conflicts before any disk write."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T10:42:40Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_commit_override` (or an equivalent early guard) is called BEFORE the first `write_text` / `_mutate_pair` in each of `_cmd_status`, `_cmd_wait`, `_cmd_advance`, `_cmd_unadvance`, `_cmd_decide`
   - [ ] PROCESS: regression test added to `tests/` covering the flag-conflict ordering invariant for at least one verb (parametrized over the five if practical)
   - [ ] PROCESS: `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Mutating verbs leave card modified on conflicting `--commit` / `--no-commit`
