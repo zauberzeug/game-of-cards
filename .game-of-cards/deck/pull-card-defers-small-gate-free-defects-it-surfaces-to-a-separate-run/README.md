@@ -1,22 +1,22 @@
 ---
 title: pull-card-defers-small-gate-free-defects-it-surfaces-to-a-separate-run
 summary: "When a pull-card session surfaces a small, `human_gate: none`, mechanically-clear defect (during its work or on an empty queue), the skill files a card and exits — leaving the fix for a *separate* fresh-context run to rediscover, reload, and close minutes later. The session that found the defect already had the code in context, so the second run is pure overhead. Add an explicit fix-through path: file the card (preserving the record + TDD test), then claim → implement → close it in the SAME session when it clears a small/mechanical/gate-free threshold. `audit-deck`'s 'flag, don't fix' breadth-hunt is untouched."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T12:28:30Z"
-closed_at: null
+closed_at: "2026-05-30T12:32:32Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: `goc/templates/skills/pull-card/SKILL.md` gains an explicit fix-through path defining the eligibility threshold (all of: `human_gate: none` / no decision; mechanically clear + bounded single-site diff; NOT a sibling/architectural meta-fix; closely related to the context already loaded) and the action (file the card via `Skill(create-card)`, then claim → implement → close in the same session). The card is still created — record axis + DoD/TDD test preserved.
-  - [ ] MECHANICAL: the "Queue empty" bullet in pull-card's "When to stop without finishing" stops saying "file one card … then exit. The next invocation can work it" unconditionally; instead it routes fix-through-eligible findings to the fix-through path and only files-and-exits when the finding is NOT eligible (decision-class, cross-cutting, or unrelated to loaded context).
-  - [ ] MECHANICAL: the body states the explicit non-goals — (a) `audit-deck` stays "flag, don't fix" (breadth-first spike, unchanged); (b) fix-through does NOT mean "drain the whole queue in one run" — at most the entangled small defect(s) plus the pulled card, then exit so fresh context stays the default per the workflow's one-pull-per-run intent.
-  - [ ] MECHANICAL: the change lands in the source-of-truth template only; `python scripts/sync_plugin_assets.py` regenerates the claude/codex/.claude/.codex mirrors and `python3 scripts/port_skills_to_openclaw.py` re-ports the OpenClaw skill, all staged.
-  - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both report no drift; `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
-  - [ ] PROCESS: decision provenance (Rodja chose "fix-through, keep the card" over inline-no-card / overhead-only / defer) recorded in `log.md`.
+  - [x] MECHANICAL: `goc/templates/skills/pull-card/SKILL.md` gains an explicit fix-through path defining the eligibility threshold (all of: `human_gate: none` / no decision; mechanically clear + bounded single-site diff; NOT a sibling/architectural meta-fix; closely related to the context already loaded) and the action (file the card via `Skill(create-card)`, then claim → implement → close in the same session). The card is still created — record axis + DoD/TDD test preserved.
+  - [x] MECHANICAL: the "Queue empty" bullet in pull-card's "When to stop without finishing" stops saying "file one card … then exit. The next invocation can work it" unconditionally; instead it routes fix-through-eligible findings to the fix-through path and only files-and-exits when the finding is NOT eligible (decision-class, cross-cutting, or unrelated to loaded context).
+  - [x] MECHANICAL: the body states the explicit non-goals — (a) `audit-deck` stays "flag, don't fix" (breadth-first spike, unchanged); (b) fix-through does NOT mean "drain the whole queue in one run" — at most the entangled small defect(s) plus the pulled card, then exit so fresh context stays the default per the workflow's one-pull-per-run intent.
+  - [x] MECHANICAL: the change lands in the source-of-truth template only; `python scripts/sync_plugin_assets.py` regenerates the claude/codex/.claude/.codex mirrors and `python3 scripts/port_skills_to_openclaw.py` re-ports the OpenClaw skill, all staged.
+  - [x] PROCESS: `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both report no drift; `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+  - [x] PROCESS: decision provenance (Rodja chose "fix-through, keep the card" over inline-no-card / overhead-only / defer) recorded in `log.md`.
 worker: {who: Rodja Trappe, where: main}
 ---
 

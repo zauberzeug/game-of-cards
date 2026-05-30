@@ -61,11 +61,61 @@ Then:
 
 The card body is the briefing the original filer wrote. Trust it.
 
+## Fixing what you surface (fix-through)
+
+A pull-card session routinely *surfaces* new defects while working its
+card — a sibling bug in the same function, an adjacent one-liner, a
+missing guard — or finds one when the queue is empty. The reflex
+inherited from `Skill(audit-deck)` is "flag, don't fix": file a card
+and leave it. **But that reflex is audit's, not the worker's.** A
+session that already has the relevant code loaded and the diagnosis
+done is the *cheapest* place to land a small fix; deferring it to a
+separate fresh-context run that must rediscover, reload, and re-diagnose
+is pure overhead.
+
+So **fix it through** — file the card, then claim → implement → close
+it in the same session — when **all** of these hold:
+
+- **Gate-free.** It would file at `human_gate: none`: the fix is
+  determined, with no decision or taste call between credible
+  alternatives.
+- **Small and single-site.** The fix is mechanically clear and bounded
+  — rule of thumb, ~one source file plus its regression test. If it
+  fans out across modules, it is not fix-through.
+- **Not a meta-fix.** It is not the Nth instance of a root-cause shape
+  that should become one architectural card (the audit-deck
+  sibling-sweep rule). Four instances of one shape is a deliberate
+  decision — file it, don't inline it.
+- **Close to loaded context.** It lives in code this session already
+  has in focus. A defect spotted in a far-off module is fixed better by
+  a fresh run with *that* module loaded — file it and move on.
+
+**Always file the card** (`Skill(create-card)`), even when you fix it
+seconds later. The card is the record axis, and its DoD carries the TDD
+contract — the regression test that proves the fix. Fix-through removes
+the wasted second *run*, not the card. Each fix-through finding is its
+own card and its own commit, kept separate from the card you pulled.
+
+When a finding does **not** clear the bar — it needs a decision, fans
+out across the codebase, is a meta-fix family, or sits far from your
+loaded context — file it and leave it in the queue. The fresh-context
+separation earns its cost there.
+
+**Fix-through is not "drain the queue."** Close the card you pulled
+plus at most the small defect(s) it entangled, then exit. One pull per
+run, with fresh context as the default, stays the operating rhythm
+(`/loop` and the cloud `pull-card` workflow re-trigger for the next
+card) — fix-through just stops you from leaving a small, ready fix on
+the floor for a second run to trip over.
+
 ## When to stop without finishing
 
-- **Queue empty.** No ready cards. Invoke
-  `Skill(audit-deck)` to file one new card from emergent codebase
-  observations, then exit. The next invocation can work it.
+- **Queue empty.** No ready cards. Invoke `Skill(audit-deck)` to file
+  one new card from emergent codebase observations. If that finding is
+  **fix-through-eligible** (see "Fixing what you surface" above), work
+  it to close in this same session instead of exiting. Otherwise — a
+  decision-class, cross-cutting, or meta-fix finding — file it and exit;
+  the next invocation can work it.
 
 - **Decision-class question — try the project-specific consultation
   BEFORE raising the gate.** The body reveals the card needs a
@@ -117,6 +167,12 @@ or
 
 ```
 queue empty; filed <new-title>
+```
+
+or, when you fixed through a finding you surfaced:
+
+```
+closed <pulled-title>; fixed-through <surfaced-title>: <one-line>
 ```
 
 Don't narrate context — no "round N", no "via /loop", no "picked
