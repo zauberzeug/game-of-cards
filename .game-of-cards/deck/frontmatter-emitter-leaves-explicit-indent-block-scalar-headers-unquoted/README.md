@@ -1,7 +1,7 @@
 ---
 title: frontmatter-emitter-leaves-explicit-indent-block-scalar-headers-unquoted
 summary: "`emit_frontmatter`'s quote-trigger gates on the frozenset `_YAML_BLOCK_TOKENS = {'|', '|-', '|+', '>', '>-', '>+'}`, but the vendored parser's `_BLOCK_INDICATOR_RE = ^\\|(\\d+)?([-+]?)$` also accepts explicit-indent variants `|2`, `|3`, `|2-`, `|2+`, `|10`, etc. A scalar field whose value is one of those tokens is emitted bare, then re-parsed as a literal block scalar with the indicated indent and empty content — silent data loss on round-trip."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-30T04:32:33Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: fix lands in `goc/engine.py` near `_YAML_BLOCK_TOKENS` / `_yaml_inline`; no behavior change for already-correctly-quoted values.
   - [ ] TDD: `uv run python -m unittest discover -s tests` passes.
   - [ ] TDD: `uv run goc validate` passes on this repo's deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter leaves explicit-indent block-scalar headers unquoted
