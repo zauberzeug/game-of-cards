@@ -686,6 +686,16 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
         )
         return
 
+    # Events that were already empty before the strip pass are
+    # user-authored placeholders the function never touched; the cleanup
+    # below must skip them so it only removes events the function itself
+    # emptied. Without this snapshot, an upgrade-time `goc upgrade`
+    # cleanup deletes user state it has no business deleting.
+    preexisting_empty = {
+        event for event, value in hooks.items()
+        if isinstance(value, list) and not value
+    }
+
     changed = False
     for event in list(hooks.keys()):
         event_value = hooks[event]
@@ -743,6 +753,8 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
         hooks[event] = new_groups
 
     for event in list(hooks.keys()):
+        if event in preexisting_empty:
+            continue
         if isinstance(hooks[event], list) and not hooks[event]:
             del hooks[event]
             changed = True

@@ -1,21 +1,21 @@
 ---
 title: goc-upgrade-cleanup-deletes-user-authored-empty-hook-event-lists
 summary: "`_strip_goc_settings_entries` (goc/install.py:745-748) unconditionally deletes every empty hook-event list in `.claude/settings.json`, including user-authored placeholders the strip pass never touched. Reachable through `goc upgrade` when switching a repo from vendored to plugin-mode skills (`_strip_claude_vendored_harness`). Violates the cleanup contract that only GoC-managed entries are removed."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T21:35:51Z"
-closed_at: null
+closed_at: "2026-05-30T21:40:41Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (user-authored empty event list survives the strip pass)
-  - [ ] TDD: regression test in tests/ exercises an empty user-authored event alongside a GoC-managed event (the GoC entry is stripped; the user entry survives)
-  - [ ] MECHANICAL: `_strip_goc_settings_entries` only deletes hook events whose final value differs from the pre-strip value (i.e. only events the function itself emptied)
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (user-authored empty event list survives the strip pass)
+  - [x] TDD: regression test in tests/ exercises an empty user-authored event alongside a GoC-managed event (the GoC entry is stripped; the user entry survives)
+  - [x] MECHANICAL: `_strip_goc_settings_entries` only deletes hook events whose final value differs from the pre-strip value (i.e. only events the function itself emptied)
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

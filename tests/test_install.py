@@ -890,6 +890,53 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             # UserPromptSubmit emptied → removed
             self.assertNotIn("UserPromptSubmit", result["hooks"])
 
+    def test_strip_goc_settings_entries_preserves_user_authored_empty_event_lists(self) -> None:
+        """A hook event the user authored as an empty placeholder (e.g.
+        `"MyUserEvent": []`) must survive the strip pass. The cleanup loop
+        should only delete events the function itself emptied — not ones
+        that were empty before the strip began. Sibling of the
+        emptied-by-us deletion path already covered above.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {
+                "hooks": {
+                    # GoC-managed; sole hook → emptied → must be removed.
+                    "SessionStart": [
+                        {"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"}]},
+                    ],
+                    # User-authored placeholder; already empty → must survive.
+                    "MyUserEvent": [],
+                },
+            }
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            # GoC-emptied event removed by the cleanup pass.
+            self.assertNotIn("SessionStart", result.get("hooks", {}))
+            # User-authored empty placeholder preserved.
+            self.assertEqual([], result["hooks"]["MyUserEvent"])
+
+    def test_strip_goc_settings_entries_preserves_lone_user_authored_empty_event(self) -> None:
+        """When the strip pass finds no GoC entries to remove (e.g. a repo
+        whose only `hooks` entry is a user-authored empty placeholder),
+        nothing should change. The previous behavior wiped the entire
+        `hooks` key, silently deleting user state.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {"hooks": {"MyUserEvent": []}}
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            self.assertEqual({"MyUserEvent": []}, result.get("hooks"))
+
     def test_merge_claude_settings_handles_non_dict_json_shapes(self) -> None:
         """Settings file containing valid JSON of a non-dict shape (`null`,
         list, string, number) must not crash `_merge_claude_settings`; the
