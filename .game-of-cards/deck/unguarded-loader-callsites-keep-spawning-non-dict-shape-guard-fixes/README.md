@@ -53,6 +53,11 @@ traceback with no recovery path for the user.
    `isinstance(_, dict)` / `isinstance(_, list)` guards. Closed
    2026-05-30 under Approach B (per-callsite guard, consistent with
    precedent #2).
+4. [`claude-settings-group-hooks-list-and-items-bypass-nested-isinstance-guards`](../claude-settings-group-hooks-list-and-items-bypass-nested-isinstance-guards/)
+   — same pair, one layer deeper still: `hooks[event][i]["hooks"]` and
+   the dict items inside it now also carry `isinstance(_, list)` /
+   `isinstance(_, dict)` guards. Closed 2026-05-30 under Approach B
+   precedent (per-callsite guard).
 
 ## Outstanding unguarded callsites
 

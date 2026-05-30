@@ -617,10 +617,35 @@ def _merge_claude_settings(settings_path: Path) -> None:
             )
             hooks[event] = []
             event_hooks = hooks[event]
+        for group in event_hooks:
+            if not isinstance(group, dict):
+                continue
+            if "hooks" not in group:
+                continue
+            group_hooks = group["hooks"]
+            if not isinstance(group_hooks, list):
+                backup = _ensure_backup()
+                print(
+                    f"  warning: {settings_path} hooks.{event}[].hooks is "
+                    f"{type(group_hooks).__name__} (expected list); backed it "
+                    f"up to {backup.name} and reset to []. Merge your value "
+                    f"back in by hand.",
+                    file=sys.stderr,
+                )
+                group["hooks"] = []
+            elif any(not isinstance(h, dict) for h in group_hooks):
+                backup = _ensure_backup()
+                print(
+                    f"  warning: {settings_path} hooks.{event}[].hooks contains "
+                    f"non-object items; backed it up to {backup.name}. The "
+                    f"non-object items are preserved verbatim.",
+                    file=sys.stderr,
+                )
         already = any(
-            any(h.get("command") == command for h in group.get("hooks", []))
+            isinstance(h, dict) and h.get("command") == command
             for group in event_hooks
-            if isinstance(group, dict)
+            if isinstance(group, dict) and isinstance(group.get("hooks"), list)
+            for h in group["hooks"]
         )
         if not already:
             event_hooks.append({"hooks": [{"type": "command", "command": command}]})
@@ -677,11 +702,42 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
             if not isinstance(group, dict):
                 new_groups.append(group)
                 continue
-            filtered = [h for h in group.get("hooks", []) if h.get("command") not in goc_commands]
-            if len(filtered) != len(group.get("hooks", [])):
+            if "hooks" not in group:
+                new_groups.append(group)
+                continue
+            group_hooks = group["hooks"]
+            if not isinstance(group_hooks, list):
+                print(
+                    f"  warning: {settings_path} hooks.{event}[].hooks is "
+                    f"{type(group_hooks).__name__} (expected list); leaving "
+                    f"this group untouched (GoC hook entries not removed for "
+                    f"this group).",
+                    file=sys.stderr,
+                )
+                new_groups.append(group)
+                continue
+            filtered: list = []
+            non_dicts: list = []
+            removed_any = False
+            for h in group_hooks:
+                if not isinstance(h, dict):
+                    non_dicts.append(h)
+                    continue
+                if h.get("command") in goc_commands:
+                    removed_any = True
+                    continue
+                filtered.append(h)
+            if non_dicts:
+                print(
+                    f"  warning: {settings_path} hooks.{event}[].hooks contains "
+                    f"non-object items; preserving them verbatim.",
+                    file=sys.stderr,
+                )
+            if removed_any:
                 changed = True
-            if filtered:
-                new_groups.append({**group, "hooks": filtered})
+            new_hooks = filtered + non_dicts
+            if new_hooks:
+                new_groups.append({**group, "hooks": new_hooks})
         if new_groups != event_value:
             changed = True
         hooks[event] = new_groups

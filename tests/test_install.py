@@ -1020,6 +1020,128 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 # char-exploded into a list of single-character strings.
                 self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
 
+    def test_merge_claude_settings_handles_non_dict_group_hooks_shapes(self) -> None:
+        """Layer-4 guard: `hooks[event][i]["hooks"]` may itself be a wrong
+        shape (`str`, `int`, `dict`, or list with non-dict items). Merge must
+        back up the original bytes, sanitize the offending sub-value, and
+        proceed — not raise `AttributeError`/`TypeError`.
+        """
+        from goc.install import _merge_claude_settings
+
+        session_cmd = "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"
+
+        # group["hooks"] is non-list scalar / dict.
+        for inner_val in ('"oops"', "42", '{"x": 1}', "null"):
+            body = (
+                '{"hooks": {"SessionStart": [{"hooks": ' + inner_val + '}]}}'
+            )
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged["hooks"]["SessionStart"], list, msg=f"input={body!r}")
+                session_cmds = [
+                    h.get("command")
+                    for group in merged["hooks"]["SessionStart"]
+                    if isinstance(group, dict) and isinstance(group.get("hooks"), list)
+                    for h in group["hooks"]
+                    if isinstance(h, dict)
+                ]
+                self.assertIn(session_cmd, session_cmds, msg=f"input={body!r}")
+                # Original bytes preserved in a backup sibling.
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+        # group["hooks"] is a list with non-dict items mixed in.
+        body = (
+            '{"hooks": {"SessionStart": [{"hooks": ['
+            '{"type": "command", "command": "echo user-hook"}, "literal"'
+            ']}]}}'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings_path.write_text(body + "\n")
+
+            _merge_claude_settings(settings_path)
+
+            merged = json.loads(settings_path.read_text())
+            # Original bytes preserved in a backup sibling.
+            backups = list(Path(tmp).glob("settings.json.*.bak"))
+            self.assertEqual(1, len(backups), msg=f"backups={backups}")
+            self.assertEqual(body + "\n", backups[0].read_text())
+            # User's dict hook AND the non-dict "literal" survive verbatim;
+            # GoC's hook is appended as a new group.
+            session_groups = merged["hooks"]["SessionStart"]
+            self.assertEqual(2, len(session_groups))
+            self.assertEqual(
+                [{"type": "command", "command": "echo user-hook"}, "literal"],
+                session_groups[0]["hooks"],
+            )
+            self.assertEqual(
+                [{"type": "command", "command": session_cmd}],
+                session_groups[1]["hooks"],
+            )
+
+    def test_strip_goc_settings_entries_handles_non_dict_group_hooks_shapes(self) -> None:
+        """Layer-4 guard for strip: when `hooks[event][i]["hooks"]` is a
+        wrong shape, strip must leave the file untouched (no char-explode);
+        when it is a list with non-dict items mixed with a GoC command, the
+        non-dict items survive verbatim and only the GoC command is removed.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        # group["hooks"] is non-list — file left untouched byte-for-byte.
+        for inner_val in ('"oops"', "42", '{"x": 1}', "null"):
+            body = (
+                '{"hooks": {"SessionStart": [{"hooks": ' + inner_val + '}]}}'
+            )
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched — specifically, the inner value is NOT
+                # char-exploded into a list of single-character strings.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
+        # group["hooks"] is a list with non-dict items + a GoC command:
+        # strip the GoC command, preserve the non-dict items verbatim.
+        session_cmd = "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"
+        settings: dict = {
+            "hooks": {
+                "SessionStart": [
+                    {"hooks": [
+                        {"type": "command", "command": session_cmd},
+                        "literal",
+                        {"type": "command", "command": "echo user-hook"},
+                    ]},
+                ],
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings_path.write_text(json.dumps(settings, indent=2))
+
+            _strip_goc_settings_entries(settings_path)
+
+            result = json.loads(settings_path.read_text())
+            session_groups = result["hooks"]["SessionStart"]
+            self.assertEqual(1, len(session_groups))
+            # GoC's command removed; user's dict hook and the non-dict
+            # "literal" both preserved verbatim.
+            self.assertEqual(
+                [
+                    {"type": "command", "command": "echo user-hook"},
+                    "literal",
+                ],
+                session_groups[0]["hooks"],
+            )
+
     # ── Bootstrap wrapper ─────────────────────────────────────────────────────
 
     def test_bootstrap_wrapper_reports_missing_and_old_cli_and_execs_current_cli(self) -> None:

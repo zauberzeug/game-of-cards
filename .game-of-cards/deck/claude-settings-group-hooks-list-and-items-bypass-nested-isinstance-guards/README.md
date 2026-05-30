@@ -1,22 +1,22 @@
 ---
 title: claude-settings-group-hooks-list-and-items-bypass-nested-isinstance-guards
 summary: "The closed sibling `claude-settings-nested-hooks-shapes-bypass-the-top-level-isinstance-guard` guarded `hooks` and `hooks[event]` but stopped one layer short. Inside `hooks[event][i]`, the inner `hooks` field and its items are still trusted blindly: a `.claude/settings.json` shaped `{\"hooks\": {\"SessionStart\": [{\"hooks\": \"oops\"}]}}` crashes `_merge_claude_settings` and `_strip_goc_settings_entries` with `AttributeError: 'str' object has no attribute 'get'`; an `int` value at the same key raises `TypeError: 'int' object is not iterable`. Same loader-family root cause, one layer deeper than the closed sibling."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T18:15:03Z"
-closed_at: null
+closed_at: "2026-05-30T18:22:13Z"
 human_gate: none
 advances:
   - unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every layer-4 sub-shape (`group.hooks: "string"`, `group.hooks: 42`, `group.hooks: {"x": 1}`, `group.hooks: [..., "literal", ...]`) surfaces a coherent warning and the function either skips the offending value or coerces it to a safe default; no `AttributeError` or `TypeError` escapes from `_merge_claude_settings` or `_strip_goc_settings_entries`.
-  - [ ] TDD: a regression test in `tests/test_install.py` constructs `.claude/settings.json` for each non-list `group["hooks"]` shape AND a list-with-non-dict-item shape, runs both merge and strip, and asserts (a) no exception escapes, (b) the user's original file is preserved verbatim (or backed up) — strip MUST NOT silently rewrite a wrong-shape inner value.
-  - [ ] MECHANICAL: `_merge_claude_settings` adds `isinstance(group.get("hooks"), list)` and `isinstance(h, dict)` guards at `install.py:620-624` (the `already = any(...)` block). `_strip_goc_settings_entries` adds the symmetric guards at `install.py:680-684` (the `filtered = [...]` comprehension). Both follow the closed sibling's backup-and-warn / warn-and-skip pattern.
-  - [ ] PROCESS: append a note to the meta-fix parent `unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes` body confirming this layer-4 callsite is also fixed under Approach B precedent (counts toward "approach B per-callsite-guard" tally).
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] TDD: `reproduce.py` exits zero — every layer-4 sub-shape (`group.hooks: "string"`, `group.hooks: 42`, `group.hooks: {"x": 1}`, `group.hooks: [..., "literal", ...]`) surfaces a coherent warning and the function either skips the offending value or coerces it to a safe default; no `AttributeError` or `TypeError` escapes from `_merge_claude_settings` or `_strip_goc_settings_entries`.
+  - [x] TDD: a regression test in `tests/test_install.py` constructs `.claude/settings.json` for each non-list `group["hooks"]` shape AND a list-with-non-dict-item shape, runs both merge and strip, and asserts (a) no exception escapes, (b) the user's original file is preserved verbatim (or backed up) — strip MUST NOT silently rewrite a wrong-shape inner value.
+  - [x] MECHANICAL: `_merge_claude_settings` adds `isinstance(group.get("hooks"), list)` and `isinstance(h, dict)` guards at `install.py:620-624` (the `already = any(...)` block). `_strip_goc_settings_entries` adds the symmetric guards at `install.py:680-684` (the `filtered = [...]` comprehension). Both follow the closed sibling's backup-and-warn / warn-and-skip pattern.
+  - [x] PROCESS: append a note to the meta-fix parent `unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes` body confirming this layer-4 callsite is also fixed under Approach B precedent (counts toward "approach B per-callsite-guard" tally).
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
