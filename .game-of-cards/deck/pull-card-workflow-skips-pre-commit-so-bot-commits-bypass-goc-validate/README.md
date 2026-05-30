@@ -6,19 +6,51 @@ stage: null
 contribution: medium
 created: "2026-05-30T09:09:34Z"
 closed_at: null
-human_gate: none
+human_gate: decision
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
   - [ ] EMPIRICAL: `deck/<title>/reproduce.py` exits non-zero today (confirms `pull-card.yml` has no `pre-commit install`/run step and that an invalid-tag card exists in history) and exits zero after the fix (the workflow gains a pre-commit gate before the agent commits).
   - [ ] MECHANICAL: `.github/workflows/pull-card.yml` runs `pre-commit` before the bot pushes — either install the git hook (`uv run pre-commit install`) before the `Pull one card` step, or add an explicit `uv run pre-commit run --files <staged>` / `uv run goc validate` step after the agent step that fails the job on drift.
-  - [ ] MECHANICAL: Fix the latent invalid tag in `.game-of-cards/deck/deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers/README.md`: change `tags: [bug, verified, infra]` to either `[bug, infra]` (drop the unverified flag once verified — the canonical convention) or add a project-local `verified` tag in `.game-of-cards/canonical-tags.md`. The closure commit message already states the defect was empirically verified, so simple removal is the natural read.
+  - [x] MECHANICAL: Fix the latent invalid tag in `.game-of-cards/deck/deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers/README.md`: change `tags: [bug, verified, infra]` to either `[bug, infra]` (drop the unverified flag once verified — the canonical convention) or add a project-local `verified` tag in `.game-of-cards/canonical-tags.md`. The closure commit message already states the defect was empirically verified, so simple removal is the natural read.
   - [ ] PROCESS: `uv run goc validate` exits 0 on the repo deck after both fixes land. Plugin mirrors stay in sync (`python scripts/sync_plugin_assets.py --check` clean).
 ---
 
 # `pull-card.yml` bypasses pre-commit hooks, letting the bot land frontmatter
 that `.pre-commit-config.yaml` would have rejected
+
+## Decision required (2026-05-30)
+
+The autonomous bot attempted to land the fix and discovered a second-order
+obstacle: the GitHub App that runs `pull-card.yml` cannot push commits that
+modify files under `.github/workflows/`. GitHub rejected the push with:
+
+```
+! [remote rejected] main -> main (refusing to allow a GitHub App to create or
+update workflow `.github/workflows/pull-card.yml` without `workflows` permission)
+```
+
+This means **the bot cannot fix its own workflow**. The tag-drop half of this
+card (the only piece the bot could push) has been applied; the workflow-edit
+half waits for a human commit.
+
+The human needs to either:
+
+1. **Just push the one-line workflow change manually.** Apply the proposed
+   `Install pre-commit hooks` step under `Prepare Python environment` (see
+   "Fix proposal" below) and push from a local checkout. Then re-claim the
+   card (status remains `open`, gate stays `decision` until this is decided)
+   and close it on the next pull.
+2. **Provision a PAT with `workflow` permission** for the bot and rewire
+   `pull-card.yml` to use it for the push step. This unblocks future
+   workflow-self-edits but adds a long-lived secret to the repo — a real
+   trust trade-off worth deciding on its own. If chosen, file as a separate
+   card (this card stays scoped to the pre-commit gate itself).
+
+Recommendation: option (1) for this card, and consider whether option (2)
+warrants its own follow-up card. The bot pulled the Andon cord rather than
+silently leaving the workflow file changed-but-unpushed in working tree.
 
 ## Location
 

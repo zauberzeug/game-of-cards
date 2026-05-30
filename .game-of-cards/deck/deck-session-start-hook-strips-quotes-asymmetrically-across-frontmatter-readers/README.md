@@ -9,7 +9,7 @@ closed_at: "2026-05-29T21:56:15Z"
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, verified, infra]
+tags: [bug, infra]
 definition_of_done: |
   - [x] EMPIRICAL: `deck/<title>/reproduce.py` constructs a temp deck with one card whose frontmatter uses quoted-form `status: "active"` and `human_gate: "decision"`, invokes the SessionStart hook on it, and prints whether the card was classified as resumable / parked / impeded vs. silently dropped. Promotion to a confirmed defect requires the reproduce.py to demonstrate misclassification.
   - [x] MECHANICAL: align the four readers — either all four strip outer quotes (symmetric defensive coding, matches `waiting_on` / `waiting_until`) or none do (symmetric trust in the engine's bare-form contract). Update `goc/templates/hooks/deck_session_start.py:33` and `:49` to match the chosen convention.
