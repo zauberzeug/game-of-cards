@@ -1,7 +1,7 @@
 ---
 title: pattern-generalization-mutation-detector-skips-notebookedit-tool-calls
 summary: "The pattern-generalization stop hook's `CODE_MUTATING_TOOLS` set lists only `Edit` and `Write`. Claude Code's `NotebookEdit` tool — the canonical mutator for Jupyter notebook cells — is absent, so an assistant turn whose only mutating action is a `NotebookEdit` call bypasses the generalization self-assessment prompt entirely. Same gap mirrored in the OpenClaw TS port."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T08:30:36Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` `CODE_MUTATING_TOOLS` extends to `frozenset({"Edit", "Write", "NotebookEdit"})`; `claude-plugin/hooks/` and `codex-plugin/hooks/` mirrors regenerated via the sync script; `openclaw-plugin/index.ts` `CODE_MUTATING_TOOLS` mirror updated by hand (it is hand-ported, not auto-synced)
   - [ ] PROCESS: tests/test_pattern_generalization_hook.py adds a regression row for `NotebookEdit`
   - [ ] PROCESS: closure logged in log.md with the reproduce.py before/after output
+worker: {who: zoe-cron, where: hourly-goc-pull-card}
 ---
 
 # pattern-generalization-mutation-detector-skips-notebookedit-tool-calls
