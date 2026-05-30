@@ -51,3 +51,20 @@ is the structural guard that prevents the family from spawning siblings.
 ## 2026-05-30T13:57:04Z: decision recorded
 
 Both paths: (b) rewire _apply_summary_rewrite to parse->mutate->emit_frontmatter (matching _apply_dod_rewrite) to stop the live data loss locally, PLUS (a) add a multi-line refusal branch in _yaml_inline alongside the float-refusal and a ratchet test asserting no other caller bypasses emit_frontmatter with free-form input — this is a silent data-corruption bug so (b) is needed immediately as the minimal local fix, while (a) is the structural boundary guard that prevents the documented recurring bug family from spawning siblings via any other bypassing caller. Gate decision → none.
+
+## 2026-05-30T16:34:46Z — Closure
+
+- **What changed**: `goc/engine.py:232-244` — `_yaml_inline` now raises `FrontmatterError` on any string with a newline (fix (a), the structural boundary guard parallel to the float-refusal branch). `goc/engine.py:3196-3206` — `_apply_summary_rewrite` now parses the README, mutates the `summary` field on the frontmatter dict, and re-emits through `emit_frontmatter`, matching the `_apply_dod_rewrite` pattern (fix (b), the live data-loss fix). Plugin-mirror engine.py copies (`claude-plugin/goc/engine.py`, `codex-plugin/goc/engine.py`, `openclaw-plugin/goc/engine.py`) re-synced from source.
+- **Verification**: `reproduce.py` exits 0 with two checks — `_apply_summary_rewrite(card, "Line one.\nLine two.")` writes a `summary: |-` block-scalar README whose parse round-trips every frontmatter field and the two-line summary intact; `_yaml_inline("Line one.\nLine two.")` raises `FrontmatterError` as expected.
+- **Audit**: PASS — no rubric configured (project hook empty); mechanical fix at the frontmatter-emitter boundary.
+- **Project impact**: n/a.
+- **Tests**: 316 passed / 0 failed / 0 xfailed.
+- **Bundled with**: none.
+
+## Closure verification (2026-05-30T16:35:06Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-05-30 — Closure' present

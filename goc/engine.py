@@ -230,6 +230,17 @@ def _yaml_inline(value) -> str:
             "store the value as a string or int."
         )
     s = str(value)
+    if "\n" in s:
+        # The inline emitter has no double-quoted escape for raw newlines that
+        # round-trips through the vendored parser, and emitting bare destroys
+        # every frontmatter field below this one (the trailing lines are read
+        # as top-level non-key text and end the mapping early). The caller must
+        # route multi-line values through `emit_frontmatter`, which detects
+        # them and uses literal-block style (`|-`) — see the docstring above.
+        raise FrontmatterError(
+            "multi-line frontmatter values are not supported by _yaml_inline; "
+            "route the field through emit_frontmatter (block-scalar `|-`) instead."
+        )
     if (
         _YAML_NEEDS_QUOTE.search(s)
         or _parser_coerces_scalar(s)
@@ -3190,11 +3201,17 @@ def _render_verdict(verdict: dict) -> bool:
 
 
 def _apply_summary_rewrite(card: Card, new_summary: str) -> None:
-    """In-place YAML-safe rewrite of the `summary:` field on this card's README.md."""
+    """In-place YAML-safe rewrite of the `summary:` field on this card's README.md.
+
+    Routes through `emit_frontmatter` (same pattern as `_apply_dod_rewrite`) so
+    a multi-line LLM-authored summary emits as a `|-` block scalar instead of
+    a bare unquoted value that would destroy every frontmatter field below it.
+    """
     readme = card.path / "README.md"
     text = readme.read_text()
-    rewritten = mutate_frontmatter_field(text, "summary", _yaml_inline(new_summary))
-    readme.write_text(rewritten)
+    fm, body = parse_frontmatter(text)
+    fm["summary"] = new_summary
+    readme.write_text(emit_frontmatter(fm, body=body))
 
 
 def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:

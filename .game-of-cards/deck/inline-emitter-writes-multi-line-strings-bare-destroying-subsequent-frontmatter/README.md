@@ -1,21 +1,21 @@
 ---
 title: inline-emitter-writes-multi-line-strings-bare-destroying-subsequent-frontmatter
 summary: "`_yaml_inline` documents (engine.py:208-209) that \"Multi-line strings are NOT supported here — emit_frontmatter detects them and uses literal-block style (`|-`) instead,\" but does not enforce the contract: its quote-trigger set (`_YAML_NEEDS_QUOTE`, `_parser_coerces_scalar`, `_YAML_BLOCK_TOKENS`, `_YAML_INDICATOR_FIRST`, `s != s.strip()`) contains no newline test, so a multi-line value falls through to a bare unquoted emit at `engine.py:239`. `_apply_summary_rewrite` (engine.py:3053-3058) feeds the result straight into `mutate_frontmatter_field` without going through `emit_frontmatter`, so any multi-line summary the human accepts via `goc quality-pass --llm` writes `summary: line1\\nline2` to disk — and `line2` (plus every frontmatter field below it) becomes garbage outside any key. The next `parse_frontmatter` silently drops `status`, `contribution`, `tags`, etc.; subsequent `goc validate` reports the card as missing required fields with no hint that the rewrite is the cause."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T23:38:41Z"
-closed_at: null
+closed_at: "2026-05-30T16:35:09Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] PROCESS: decide between (a) `_yaml_inline` refuses multi-line input — raises `FrontmatterError`, parallel to the existing float-refusal branch (engine.py:219-227) — and the caller falls back to a full re-emit through `emit_frontmatter`, or (b) the `_apply_summary_rewrite` caller stops bypassing `emit_frontmatter` and instead re-emits the whole frontmatter so a multi-line summary goes out as a `|-` block (the same path `_apply_dod_rewrite` already takes at engine.py:3077-3078). Record the call in log.md. See `## Decision required` below.
-  - [ ] TDD: `deck/<title>/reproduce.py` exits zero — a card with `status`, `contribution`, `tags` after `summary` survives a `_apply_summary_rewrite(card, "Line one.\nLine two.")` call: every field is still present in the parsed frontmatter, and the summary's two lines round-trip.
-  - [ ] TDD: a sibling assertion confirms `_yaml_inline` no longer falls through to a bare unquoted multi-line emit (under choice (a): raises; under choice (b): unreached on this caller path because `_apply_summary_rewrite` no longer routes through it for multi-line input).
-  - [ ] MECHANICAL: `uv run goc validate` passes on the modified deck.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green.
+  - [x] PROCESS: decide between (a) `_yaml_inline` refuses multi-line input — raises `FrontmatterError`, parallel to the existing float-refusal branch (engine.py:219-227) — and the caller falls back to a full re-emit through `emit_frontmatter`, or (b) the `_apply_summary_rewrite` caller stops bypassing `emit_frontmatter` and instead re-emits the whole frontmatter so a multi-line summary goes out as a `|-` block (the same path `_apply_dod_rewrite` already takes at engine.py:3077-3078). Record the call in log.md. See `## Decision required` below.
+  - [x] TDD: `deck/<title>/reproduce.py` exits zero — a card with `status`, `contribution`, `tags` after `summary` survives a `_apply_summary_rewrite(card, "Line one.\nLine two.")` call: every field is still present in the parsed frontmatter, and the summary's two lines round-trip.
+  - [x] TDD: a sibling assertion confirms `_yaml_inline` no longer falls through to a bare unquoted multi-line emit (under choice (a): raises; under choice (b): unreached on this caller path because `_apply_summary_rewrite` no longer routes through it for multi-line input).
+  - [x] MECHANICAL: `uv run goc validate` passes on the modified deck.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
