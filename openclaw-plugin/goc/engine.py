@@ -977,6 +977,34 @@ def validate_hook_registration() -> list[str]:
     return errors
 
 
+class _DeepDircmp(filecmp.dircmp):
+    """`filecmp.dircmp` variant that compares file contents (`shallow=False`).
+
+    The stdlib default declares two files identical when their size, mtime,
+    and mode match; a same-length hand-edit to a plugin-mirror file then
+    slips past the tripwire (a fresh `git checkout` stamps every working-tree
+    file with the same mtime, so the false-same hit is routine on CI). The
+    sibling `scripts/sync_plugin_assets.py` already passes `shallow=False`;
+    this subclass aligns the engine's directory walk with that contract.
+    Subdirectories propagate via `self.__class__` in `phase4`.
+    """
+
+    def phase3(self):
+        same, diff, funny = filecmp.cmpfiles(
+            self.left, self.right, self.common_files, shallow=False
+        )
+        self.same_files = same
+        self.diff_files = diff
+        self.funny_files = funny
+
+    methodmap = dict(
+        filecmp.dircmp.methodmap,
+        same_files=phase3,
+        diff_files=phase3,
+        funny_files=phase3,
+    )
+
+
 def validate_plugin_mirror_parity() -> list[str]:
     """Check that plugin/ mirrors match their source-of-truth trees byte-for-byte.
 
@@ -1182,7 +1210,7 @@ def validate_plugin_mirror_parity() -> list[str]:
             if not dst.exists():
                 errors.append(f"plugin mirror: {dst_rel} missing; copy from {src_rel}")
                 continue
-            diffs = _walk(filecmp.dircmp(src, dst), src_rel, dst_rel, exclude=exclude)
+            diffs = _walk(_DeepDircmp(src, dst), src_rel, dst_rel, exclude=exclude)
             if diffs:
                 errors.append(
                     f"plugin mirror drift: {src_rel} vs {dst_rel}: " + ", ".join(diffs)

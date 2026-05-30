@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import re
 import tempfile
 import unittest
@@ -118,6 +119,35 @@ class PluginMirrorParityTest(unittest.TestCase):
     def test_real_repo_passes(self) -> None:
         errors = _check(ROOT)
         self.assertEqual([], errors, msg=f"plugin mirror drift in the repo itself: {errors}")
+
+    def test_same_length_same_mtime_drift_is_detected(self) -> None:
+        """Regression: a hand-edit that preserves length and mtime must still
+        be flagged. `filecmp.dircmp`'s default `shallow=True` would report
+        such a pair as identical; the engine's directory walk uses
+        `_DeepDircmp` to force content comparison so the verdict matches
+        `scripts/sync_plugin_assets.py --check`.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _sync_tree(cwd)
+
+            src = cwd / "goc" / "__init__.py"
+            dst = cwd / "claude-plugin" / "goc" / "__init__.py"
+
+            # Same length, different content, same mtime — the exact
+            # signature a shallow `filecmp.dircmp` walks past silently.
+            replacement = "X" * len(src.read_text())
+            dst.write_text(replacement)
+            self.assertEqual(src.stat().st_size, dst.stat().st_size)
+            stamp = 1_735_689_600  # 2025-01-01T00:00:00Z
+            os.utime(src, (stamp, stamp))
+            os.utime(dst, (stamp, stamp))
+
+            errors = _check(cwd)
+            self.assertTrue(
+                any("claude-plugin/goc" in e and "__init__.py" in e and "differs" in e for e in errors),
+                msg=f"expected same-length/same-mtime content drift to be flagged, got: {errors}",
+            )
 
     def test_drift_inside_excluded_subpaths_is_ignored(self) -> None:
         """The bundled engine's deep mirror deliberately omits
