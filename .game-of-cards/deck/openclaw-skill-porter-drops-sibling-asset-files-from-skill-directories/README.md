@@ -1,7 +1,7 @@
 ---
 title: openclaw-skill-porter-drops-sibling-asset-files-from-skill-directories
 summary: "scripts/port_skills_to_openclaw.py only walks `SKILL.md` and ignores every sibling file in a skill directory. card-schema/schema.yaml ships to claude-plugin, codex-plugin, .claude/skills/, and .codex/skills/ but is silently absent from openclaw-plugin/skills/card-schema/. The drift guard reads the same SKILL.md-only path, so CI does not flag the desync."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-29T21:37:45Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: drifted_skills() detects sibling-asset drift — hand-mutate openclaw-plugin/skills/card-schema/schema.yaml, then `python scripts/port_skills_to_openclaw.py --check` exits 1 and names the drifted path
   - [ ] MECHANICAL: openclaw-plugin/skills/card-schema/schema.yaml committed (was never present)
   - [ ] PROCESS: AGENTS.md's "OpenClaw plugin payload" section names the sibling-asset coverage so a future reader cannot conclude the porter is SKILL.md-only by design
+worker: {who: "claude[bot]", where: main}
 ---
 
 # openclaw-skill-porter-drops-sibling-asset-files-from-skill-directories
