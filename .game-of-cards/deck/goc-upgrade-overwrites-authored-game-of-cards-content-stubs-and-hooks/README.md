@@ -1,7 +1,7 @@
 ---
 title: goc-upgrade-overwrites-authored-game-of-cards-content-stubs-and-hooks
 summary: "`goc upgrade` blind-copies the bundled `templates/game_of_cards/` tree over a consuming repo's `.game-of-cards/` project state, silently destroying authored content in the 12 content stubs + `hooks/*.md` and in `README.md`. Only `config.yaml` is spared (a one-file `skip_existing` carve-out). Fix in two layers: make the engine non-destructive and ownership-aware (preserve diverged files, scaffold only absent ones, emit a divergence report), and add a dedicated `upgrade` skill that does LLM-driven integration of evolving content (README, config) while confirming preservation of user-owned stubs. AGENTS.md/CLAUDE.md marker-merge already does the right thing and stays unchanged."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-30T12:47:43Z"
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] PROCESS: `.game-of-cards/README.md` (the shipped hook-point catalogue) gets a documented ownership rule — it is goc-owned reference docs but flagged "customizable per repo", so the `upgrade` skill reconciles it rather than the engine clobbering it
   - [ ] MECHANICAL: CLAUDE.md / AGENTS.md guidance updated — document the per-file ownership model (regenerate goc-owned, preserve user-owned, reconcile evolving) and the new `upgrade` skill
   - [ ] PROCESS: `uv run goc validate` passes; full `unittest` suite passes; `python scripts/sync_plugin_assets.py --check` and the OpenClaw porter `--check` stay green (new skill mirrors regenerated)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc upgrade` overwrites authored `.game-of-cards/` content stubs and hooks
