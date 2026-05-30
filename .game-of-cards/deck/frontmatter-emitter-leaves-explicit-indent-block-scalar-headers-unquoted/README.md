@@ -1,21 +1,22 @@
 ---
 title: frontmatter-emitter-leaves-explicit-indent-block-scalar-headers-unquoted
 summary: "`emit_frontmatter`'s quote-trigger gates on the frozenset `_YAML_BLOCK_TOKENS = {'|', '|-', '|+', '>', '>-', '>+'}`, but the vendored parser's `_BLOCK_INDICATOR_RE = ^\\|(\\d+)?([-+]?)$` also accepts explicit-indent variants `|2`, `|3`, `|2-`, `|2+`, `|10`, etc. A scalar field whose value is one of those tokens is emitted bare, then re-parsed as a literal block scalar with the indicated indent and empty content — silent data loss on round-trip."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T04:32:33Z"
-closed_at: null
+closed_at: "2026-05-30T04:38:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a scalar value of `|2`, `|3`, `|2-`, `|2+`, and `|10` each survives an `emit_frontmatter` -> `parse_frontmatter` round-trip unchanged.
-  - [ ] TDD: the quote-trigger predicate quotes any scalar that matches the parser's `_BLOCK_INDICATOR_RE` (bare `|` and the explicit-indent set are both covered).
-  - [ ] MECHANICAL: fix lands in `goc/engine.py` near `_YAML_BLOCK_TOKENS` / `_yaml_inline`; no behavior change for already-correctly-quoted values.
-  - [ ] TDD: `uv run python -m unittest discover -s tests` passes.
-  - [ ] TDD: `uv run goc validate` passes on this repo's deck.
+  - [x] TDD: reproduce.py exits zero — a scalar value of `|2`, `|3`, `|2-`, `|2+`, and `|10` each survives an `emit_frontmatter` -> `parse_frontmatter` round-trip unchanged.
+  - [x] TDD: the quote-trigger predicate quotes any scalar that matches the parser's `_BLOCK_INDICATOR_RE` (bare `|` and the explicit-indent set are both covered).
+  - [x] MECHANICAL: fix lands in `goc/engine.py` near `_YAML_BLOCK_TOKENS` / `_yaml_inline`; no behavior change for already-correctly-quoted values.
+  - [x] TDD: `uv run python -m unittest discover -s tests` passes.
+  - [x] TDD: `uv run goc validate` passes on this repo's deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter leaves explicit-indent block-scalar headers unquoted

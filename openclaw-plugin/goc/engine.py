@@ -179,7 +179,11 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 # are already caught anywhere by _YAML_NEEDS_QUOTE.
 _YAML_INDICATOR_FIRST = frozenset("&*")
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
-_YAML_BLOCK_TOKENS = frozenset({"|", "|-", "|+", ">", ">-", ">+"})
+# Covers both bare-indicator forms (`|`, `|-`, `>+`) and the explicit-indent
+# forms the vendored parser's `_BLOCK_INDICATOR_RE` accepts (`|2`, `|3`,
+# `|10`, `|2-`, `|2+`). Coupled by shape to `yaml._BLOCK_INDICATOR_RE` so the
+# emitter's quote-trigger cannot drift from the parser's recognizer.
+_YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>[-+]?)$")
 
 
 def _parser_coerces_scalar(s: str) -> bool:
@@ -229,7 +233,7 @@ def _yaml_inline(value) -> str:
     if (
         _YAML_NEEDS_QUOTE.search(s)
         or _parser_coerces_scalar(s)
-        or s in _YAML_BLOCK_TOKENS
+        or bool(_YAML_BLOCK_HEADER_RE.match(s))
         or (s and s[0] in _YAML_INDICATOR_FIRST)
         or s != s.strip()
     ):
