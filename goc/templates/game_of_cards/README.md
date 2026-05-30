@@ -45,6 +45,23 @@ hook-point in its workflow. Same injection syntax as content stubs:
 | `hooks/pull-card.md` | `pull-card` | Lazy-Andon trial: when a parked question can be resolved by a project rubric instead of raising the gate |
 | `hooks/audit-deck.md` | `audit-deck` | Phase 0 priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
 
+## Per-file ownership and `goc upgrade` behavior
+
+Files under this directory fall into three ownership categories,
+each with a different upgrade contract:
+
+| Category | Files | `goc upgrade` behavior |
+|---|---|---|
+| **user-owned** | the 6 content stubs (`canonical-tags.md`, `domain-vocabulary.md`, `domain-examples.md`, `file-path-map.md`, `tooling-conventions.md`, `documentation-conventions.md`) + `hooks/*.md` | absent → scaffold blank stub; identical to template → no-op; diverged → **preserve** (never overwrite authored content) |
+| **evolving** | `README.md` (this file, the hook-point catalogue), `config.yaml` | same engine behavior — never overwrite — but the `upgrade` skill offers a 2-way reconcile so real upstream changes (new hook-points documented here, new config keys) can land where the user wants them |
+| **goc-owned (managed elsewhere)** | the marker-bounded block in `AGENTS.md` / `CLAUDE.md` | regenerated wholesale on every upgrade (the contract is "do not edit between the markers") |
+
+The engine guarantee is unconditional: `goc upgrade` never destroys
+authored content under `.game-of-cards/`, with or without an agent
+in the loop (`Skill(upgrade)` is the reconciliation pass; running
+upgrade without it still preserves everything). See `Skill(upgrade)`
+for the reconciliation contract.
+
 ## Authoring guidelines
 
 - **Empty stub = generic flow.** The skills are designed so an empty
