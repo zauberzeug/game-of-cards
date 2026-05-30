@@ -1540,5 +1540,51 @@ class KickoffStage4StripSnippetTest(unittest.TestCase):
                 self.assertNotIn("--no-agents-md", text)
 
 
+class AppendPrecommitHookWorktreeTest(unittest.TestCase):
+    """Regression: `_append_precommit_hook` must treat a git worktree as
+    a git checkout. In a worktree `<repo>/.git` is a *file* (containing
+    `gitdir: …`), not a directory — the previous `is_dir()` guard
+    silently skipped the pre-commit install in any worktree."""
+
+    def _init_main_repo(self, path: Path) -> None:
+        subprocess.run(["git", "init", "-q"], cwd=path, check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(path), "config", "user.email", "x@x.com"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(path), "config", "user.name", "x"], check=True, capture_output=True)
+        (path / "README").write_text("init\n")
+        subprocess.run(["git", "-C", str(path), "add", "README"], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(path), "commit", "-qm", "init"], check=True, capture_output=True)
+
+    def test_append_precommit_hook_writes_in_worktree(self) -> None:
+        from goc.install import _append_precommit_hook  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            main_repo = root / "main"
+            worktree = root / "worktree"
+            main_repo.mkdir()
+            self._init_main_repo(main_repo)
+            subprocess.run(
+                ["git", "-C", str(main_repo), "worktree", "add", "-q", "-b", "branch", str(worktree)],
+                check=True, capture_output=True,
+            )
+
+            self.assertTrue((worktree / ".git").is_file())
+            self.assertFalse((worktree / ".git").is_dir())
+
+            target = worktree / ".pre-commit-config.yaml"
+            _append_precommit_hook(target)
+
+            self.assertTrue(target.is_file(), msg=f"{target} was not written")
+            self.assertIn("id: goc-validate", target.read_text())
+
+    def test_append_precommit_hook_skips_when_not_a_git_checkout(self) -> None:
+        from goc.install import _append_precommit_hook  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / ".pre-commit-config.yaml"
+            _append_precommit_hook(target)
+            self.assertFalse(target.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
