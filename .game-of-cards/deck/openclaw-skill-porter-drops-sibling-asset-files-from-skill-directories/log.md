@@ -18,3 +18,21 @@ Open sub-questions Option A inherits:
 ## 2026-05-30T13:56:58Z: decision recorded
 
 Option A: extend the porter to walk skill_dir.rglob('*') — port SKILL.md via render_skill and copy every other file verbatim (excluding __pycache__/*.pyc, mirroring _iter_skill_assets); extend drifted_skills() and the orphan check symmetrically for siblings — aligns the OpenClaw porter with the four other plugin consumers that already walk full trees, honors the cross-host parity promise, and gives future sibling assets coverage for free instead of re-litigating this card each time a skill grows a companion file. Gate decision → none.
+
+
+## 2026-05-30T15:00:00Z — Closure
+
+- **What changed**: `scripts/port_skills_to_openclaw.py` — `drifted_skills()` and `main()` now walk `skill_dir.rglob("*")` (excluding `__pycache__`/`*.pyc`) and copy/verify every sibling asset verbatim alongside the rendered `SKILL.md`. New `port_sibling` + `_iter_skill_siblings` helpers mirror `goc/install._iter_skill_assets`. `openclaw-plugin/skills/card-schema/schema.yaml` committed (previously missing).
+- **Verification**: reproduce.py exits with "OK: porter copied every sibling"; `python scripts/port_skills_to_openclaw.py --check` reports zero drift; hand-mutating `openclaw-plugin/skills/card-schema/schema.yaml` flips `--check` to exit 1 naming the drifted path.
+- **Audit**: PASS — no rubric configured; mechanical fix
+- **Project impact**: n/a
+- **Tests**: 316 passed / 0 failed (`uv run python -m unittest discover -s tests`), plugin-mirror parity 15/15
+- **Bundled with**: n/a
+
+## Closure verification (2026-05-30T16:29:33Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 4/4 ticked
+- [x] log-md-closure-entry — '## 2026-05-30 — Closure' present

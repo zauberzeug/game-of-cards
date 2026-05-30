@@ -315,23 +315,31 @@ shape from Claude Code's:
 |---|---|
 | `openclaw-plugin/goc/` | `goc/` (engine, schema, templates — auto-synced) |
 | `openclaw-plugin/skills/<name>/SKILL.md` | `goc/templates/skills/<name>/SKILL.md` (hand-ported with invocation-neutral edits via `scripts/port_skills_to_openclaw.py`) |
+| `openclaw-plugin/skills/<name>/<sibling>` | `goc/templates/skills/<name>/<sibling>` (any non-`SKILL.md` file in the source skill dir — copied verbatim, no host-neutral rewrite, `__pycache__`/`*.pyc` excluded mirroring `goc/install._iter_skill_assets`) |
 
 The auto-synced engine pair (`goc -> openclaw-plugin/goc`) is enforced
 by the same byte-for-byte tripwire as the Claude one. Skills are NOT
 auto-synced into the commit — they go through the porting script, whose
 output is reviewed and committed by hand (unlike the claude/codex
 mirrors, the porter applies non-trivial normalization worth eyeballing).
-To re-port (e.g., after editing a source skill), re-run
-`python3 scripts/port_skills_to_openclaw.py` and review the diff.
+The same script handles sibling asset files (e.g.
+`card-schema/schema.yaml`) by verbatim copy, matching the full-tree walk
+the other four plugin consumers (`goc install`, the claude/codex sync,
+the in-repo `.claude/skills/` and `.codex/skills/` mirrors) already do.
+To re-port (e.g., after editing a source skill or adding a sibling
+asset), re-run `python3 scripts/port_skills_to_openclaw.py` and review
+the diff.
 
 The port is deterministic, so a drift guard keeps it honest even though
 it is not auto-staged: `scripts/port_skills_to_openclaw.py --check`
 re-ports into memory and fails on any difference from the committed
-`openclaw-plugin/skills/`. The same comparison is enforced in CI by
+`openclaw-plugin/skills/`. The check covers SKILL.md content, sibling
+assets (missing, extra, or content-mismatched), and orphaned ported
+skill dirs symmetrically. The same comparison is enforced in CI by
 `tests/test_plugin_mirror_parity.py` (it calls the porter's
 `drifted_skills()` from the regression-test suite), so a template edit
-that is not followed by a re-port turns the build red instead of rotting
-silently. The guard lives in a test, not a `ci.yml` step, because the
+or sibling addition that is not followed by a re-port turns the build
+red instead of rotting silently. The guard lives in a test, not a `ci.yml` step, because the
 autonomous bot's `GITHUB_TOKEN` cannot edit files under
 `.github/workflows/`. The porter is idempotent — re-running `--check`
 immediately after a re-port is always green.

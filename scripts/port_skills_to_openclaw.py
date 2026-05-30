@@ -148,6 +148,31 @@ def port_skill(src: Path, dst: Path) -> None:
     dst.write_text(render_skill(src), encoding="utf-8")
 
 
+def port_sibling(src: Path, dst: Path) -> None:
+    """Copy a non-SKILL.md sibling asset verbatim — no host-neutral rewrite."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+
+
+def _iter_skill_siblings(skill_dir: Path) -> list[Path]:
+    """Sibling asset paths under skill_dir, excluding SKILL.md and __pycache__.
+
+    Mirrors `goc/install._iter_skill_assets`'s exclusion (`__pycache__`) so the
+    porter's coverage matches what `goc install` already copies to consumer
+    repos.
+    """
+    out: list[Path] = []
+    for asset in sorted(skill_dir.rglob("*")):
+        if asset.is_dir():
+            continue
+        if asset.name == "SKILL.md":
+            continue
+        if "__pycache__" in asset.parts or asset.suffix == ".pyc":
+            continue
+        out.append(asset)
+    return out
+
+
 def _portable_skill_dirs() -> list[Path]:
     """Source skill dirs that port to OpenClaw (host-specific complements excluded)."""
     dirs = []
@@ -199,18 +224,49 @@ def drifted_skills() -> list[Path]:
 
     A non-empty result means a template was edited without re-running the
     porter (or a ported file was hand-edited), OR a ported skill dir has lost
-    its source (an orphan). The list is the set of dst paths a re-port would
-    rewrite or remove. Reused by the porter's own `--check` and by the CI
-    regression test so both read the same definition of drift.
+    its source (an orphan), OR a sibling asset (anything beside `SKILL.md`)
+    is missing, extra, or differs byte-for-byte. The list is the set of dst
+    paths a re-port would rewrite, add, or remove. Reused by the porter's
+    own `--check` and by the CI regression test so both read the same
+    definition of drift.
     """
     expected = _expected_dst_names()
     drifted: list[Path] = []
     for skill_dir in _portable_skill_dirs():
-        dst = DST_DIR / skill_dir.name / "SKILL.md"
+        dst_skill_dir = DST_DIR / skill_dir.name
+
+        dst = dst_skill_dir / "SKILL.md"
         rendered = render_skill(skill_dir / "SKILL.md")
         actual = dst.read_text(encoding="utf-8") if dst.is_file() else None
         if actual != rendered:
             drifted.append(dst)
+
+        # Sibling assets: src-only (missing in dst), content mismatch,
+        # and dst-only (extra) all count as drift.
+        src_siblings = {
+            asset.relative_to(skill_dir): asset
+            for asset in _iter_skill_siblings(skill_dir)
+        }
+        dst_siblings: dict[Path, Path] = {}
+        if dst_skill_dir.is_dir():
+            for asset in sorted(dst_skill_dir.rglob("*")):
+                if asset.is_dir() or asset.name == "SKILL.md":
+                    continue
+                if "__pycache__" in asset.parts or asset.suffix == ".pyc":
+                    continue
+                dst_siblings[asset.relative_to(dst_skill_dir)] = asset
+
+        for rel, src_asset in src_siblings.items():
+            dst_asset = dst_skill_dir / rel
+            if not dst_asset.is_file():
+                drifted.append(dst_asset)
+                continue
+            if dst_asset.read_bytes() != src_asset.read_bytes():
+                drifted.append(dst_asset)
+        for rel, dst_asset in dst_siblings.items():
+            if rel not in src_siblings:
+                drifted.append(dst_asset)
+
     drifted.extend(orphan / "SKILL.md" for orphan in _orphaned_ported_dirs(expected))
     return drifted
 
@@ -243,9 +299,32 @@ def main(argv: list[str] | None = None) -> int:
     DST_DIR.mkdir(parents=True, exist_ok=True)
     expected = _expected_dst_names()
     ported = 0
+    siblings_copied = 0
+    siblings_pruned = 0
     for skill_dir in _portable_skill_dirs():
-        port_skill(skill_dir / "SKILL.md", DST_DIR / skill_dir.name / "SKILL.md")
+        dst_skill_dir = DST_DIR / skill_dir.name
+        port_skill(skill_dir / "SKILL.md", dst_skill_dir / "SKILL.md")
         ported += 1
+
+        src_siblings = {
+            asset.relative_to(skill_dir): asset
+            for asset in _iter_skill_siblings(skill_dir)
+        }
+        for rel, src_asset in src_siblings.items():
+            port_sibling(src_asset, dst_skill_dir / rel)
+            siblings_copied += 1
+
+        # Prune dst-only siblings (sibling renamed or removed in source) so
+        # the OpenClaw payload tracks the source-of-truth exactly.
+        if dst_skill_dir.is_dir():
+            for asset in sorted(dst_skill_dir.rglob("*")):
+                if asset.is_dir() or asset.name == "SKILL.md":
+                    continue
+                if "__pycache__" in asset.parts or asset.suffix == ".pyc":
+                    continue
+                if asset.relative_to(dst_skill_dir) not in src_siblings:
+                    asset.unlink()
+                    siblings_pruned += 1
 
     # Prune orphaned ported skill dirs (source renamed or removed) so a stale
     # skill can't ship to OpenClaw consumers undetected.
@@ -258,6 +337,10 @@ def main(argv: list[str] | None = None) -> int:
         if d.is_dir() and any(d.name.startswith(p) for p in HOST_PREFIXES)
     ]
     print(f"ported {ported} skills to {DST_DIR.relative_to(ROOT)}")
+    if siblings_copied:
+        print(f"copied {siblings_copied} sibling asset(s) verbatim")
+    if siblings_pruned:
+        print(f"pruned {siblings_pruned} stale sibling asset(s)")
     if orphans:
         print(f"pruned {len(orphans)} orphaned ported skill dir(s): {', '.join(o.name for o in orphans)}")
     if skipped:
