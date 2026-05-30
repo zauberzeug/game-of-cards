@@ -1,7 +1,7 @@
 ---
 title: goc-new-with-advances-leaves-parent-card-mutation-uncommitted
 summary: "`goc new <child> --advances <parent>` writes the parent's `advanced_by` edge to disk but never commits it, leaving the parent README as ambient `M` in the worktree. An agent that follows AGENTS.md's explicit-pathspec rule and commits only the new card directory ships a half-edge — exactly the integrity defect `goc repair-edges` exists to clean up."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-29T16:21:00Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: reproduce.py exits zero (defect no longer fires)
   - [ ] MECHANICAL: `goc new --help` lists `--commit` / `--no-commit` if the chosen option introduces them, matching the flag surface of `goc advance` / `goc unadvance` / `goc wait` / `goc decide`
   - [ ] PROCESS: `Skill(create-card)` Step 4 examples and `card-schema` "Coordinating cards" reference reflect the new commit semantics (no manual `git add` follow-up implied by the example flow)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-new-with-advances-leaves-parent-card-mutation-uncommitted
