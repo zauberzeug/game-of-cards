@@ -1,7 +1,7 @@
 ---
 title: pattern-generalization-mutation-detector-skips-long-form-git-add-flags
 summary: "After the substring→regex rewrite, the pattern-generalization stop hook's matcher `git\\s+add\\s+(?:-[A-Za-z]|\\.)` accepts only short single-letter staging flags (-A, -p, -u) or `.`. The long-form aliases documented in `git-add(1)` — `git add --all`, `--update`, `--patch` — are not matched, so a turn whose only mutating action is `git add --all foo/` bypasses the generalization self-assessment prompt entirely."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-30T08:00:18Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` `_BASH_COMMIT_RE` extends the alternation to cover the documented long-form aliases (e.g. `(?:-[A-Za-z]|--(?:all|update|patch)|\.)`); `claude-plugin/hooks/`, `codex-plugin/hooks/`, and `openclaw-plugin/index.ts` mirror updated via the sync + porter scripts
   - [ ] PROCESS: tests/test_pattern_generalization_hook.py adds regression rows for the three long-form flags
   - [ ] PROCESS: closure logged in log.md with the reproduce.py before/after output
+worker: {who: "claude[bot]", where: main}
 ---
 
 # pattern-generalization-mutation-detector-skips-long-form-git-add-flags
