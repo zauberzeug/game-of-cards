@@ -1,21 +1,21 @@
 ---
 title: mutating-verbs-leave-card-modified-on-conflicting-commit-flags
 summary: "Five mutating verbs (`status`, `advance`, `unadvance`, `wait`, `decide`) write the card's README (and `decide` also writes `log.md`) BEFORE calling `_commit_override`, which `sys.exit(2)`s when both `--commit` and `--no-commit` are passed. Result: a CLI usage error corrupts on-disk card state and skips the auto-commit, so the mutation lands unattested. Fix: validate flag conflicts before any disk write."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T10:42:40Z"
-closed_at: null
+closed_at: "2026-05-30T10:50:27Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero (the README hash equals the pre-call hash after `goc wait <title> --reason external --commit --no-commit` exits 2)
-  - [ ] TDD: equivalent assertion for `goc status`, `goc advance`, `goc unadvance`, `goc decide` — all five verbs must leave the card untouched on flag conflict
-  - [ ] MECHANICAL: `_commit_override` (or an equivalent early guard) is called BEFORE the first `write_text` / `_mutate_pair` in each of `_cmd_status`, `_cmd_wait`, `_cmd_advance`, `_cmd_unadvance`, `_cmd_decide`
-  - [ ] PROCESS: regression test added to `tests/` covering the flag-conflict ordering invariant for at least one verb (parametrized over the five if practical)
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: `reproduce.py` exits zero (the README hash equals the pre-call hash after `goc wait <title> --reason external --commit --no-commit` exits 2)
+  - [x] TDD: equivalent assertion for `goc status`, `goc advance`, `goc unadvance`, `goc decide` — all five verbs must leave the card untouched on flag conflict
+  - [x] MECHANICAL: `_commit_override` (or an equivalent early guard) is called BEFORE the first `write_text` / `_mutate_pair` in each of `_cmd_status`, `_cmd_wait`, `_cmd_advance`, `_cmd_unadvance`, `_cmd_decide`
+  - [x] PROCESS: regression test added to `tests/` covering the flag-conflict ordering invariant for at least one verb (parametrized over the five if practical)
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

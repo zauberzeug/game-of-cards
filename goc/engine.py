@@ -3429,6 +3429,15 @@ def _coerce_config_bool(value, *, default: bool) -> bool:
     return bool(value)
 
 
+def _validate_commit_flags(commit: bool, no_commit: bool) -> None:
+    """Exit 2 on mutually-exclusive --commit / --no-commit BEFORE any disk
+    write. Mutating verbs must call this at entry so a flag-conflict error
+    can never leave a card half-mutated on disk without an auto-commit."""
+    if commit and no_commit:
+        print("ERROR: pass only one of --commit / --no-commit", file=sys.stderr)
+        sys.exit(2)
+
+
 def _commit_override(commit: bool, no_commit: bool) -> bool | None:
     if commit and no_commit:
         print("ERROR: pass only one of --commit / --no-commit", file=sys.stderr)
@@ -3959,6 +3968,7 @@ def _cmd_status(args):
     new_status = args.new_status
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     worker_who = args.worker_who
     worker_where = args.worker_where
     successor = args.superseded_by
@@ -4322,6 +4332,7 @@ def _cmd_wait(args):
     impeded. `--clear` drops both fields; otherwise `--reason` and/or
     `--until` set the overlay.
     """
+    _validate_commit_flags(args.commit, args.no_commit)
     title = args.title
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
@@ -4394,6 +4405,7 @@ def _cmd_advance(args):
     advancer = args.advancer
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     if title == advancer:
         print("ERROR: cannot advance a card with itself", file=sys.stderr)
         sys.exit(2)
@@ -4415,6 +4427,7 @@ def _cmd_unadvance(args):
     advancer = args.advancer
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     _mutate_pair(title, advancer, "advanced_by", "advances", add=False)
     print(f"unadvance: {title}.advanced_by -= {advancer}; {advancer}.advances -= {title}")
     commit_policy = _commit_override(commit, no_commit)
@@ -4560,6 +4573,7 @@ def _cmd_decide(args):
     reasoning = args.reasoning
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
     if t.status in TERMINAL_STATUSES:
