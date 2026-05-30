@@ -1,21 +1,21 @@
 ---
 title: superseded-status-without-by-leaves-no-forward-routing-pointer
 summary: "`goc status <card> superseded` accepts no `--by` argument and the card lands with `status: superseded` and no `superseded_by` link. `goc validate` reports OK because the check at engine.py:1255-1260 only enforces the inverse direction (non-empty `superseded_by` implies `status: superseded`), not the contract that AGENTS.md describes as set atomically. Cold readers following the forward routing pointer have nowhere to go."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T15:13:43Z"
-closed_at: null
+closed_at: "2026-05-30T14:20:56Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `deck/<title>/reproduce.py` exits zero and asserts that `goc status <card> superseded` with no `--by` is rejected (or that the resulting card fails `goc validate` with a `superseded_by required` error).
-  - [ ] PROCESS: decide fix path — CLI input guard (require `--by` when `new_status == "superseded"`), validator check (`status: superseded` requires non-empty `superseded_by`), or both. Record reasoning in log.md.
-  - [ ] TDD: a regression test in `tests/` exercises the chosen guard.
-  - [ ] MECHANICAL: `goc validate` clean across the deck; plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); pre-commit clean.
-  - [ ] PROCESS: confirm `goc done <card>` and `_cmd_status` agree on the invariant — `done` already auto-commits closure data, but `superseded` should not be reachable without a successor.
+  - [x] TDD: `deck/<title>/reproduce.py` exits zero and asserts that `goc status <card> superseded` with no `--by` is rejected (or that the resulting card fails `goc validate` with a `superseded_by required` error).
+  - [x] PROCESS: decide fix path — CLI input guard (require `--by` when `new_status == "superseded"`), validator check (`status: superseded` requires non-empty `superseded_by`), or both. Record reasoning in log.md.
+  - [x] TDD: a regression test in `tests/` exercises the chosen guard.
+  - [x] MECHANICAL: `goc validate` clean across the deck; plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); pre-commit clean.
+  - [x] PROCESS: confirm `goc done <card>` and `_cmd_status` agree on the invariant — `done` already auto-commits closure data, but `superseded` should not be reachable without a successor.
 worker: {who: "claude[bot]", where: main}
 ---
 

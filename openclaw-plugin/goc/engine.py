@@ -1344,6 +1344,11 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             f"{t.title}: superseded_by: non-empty requires status: superseded "
             f"(status={status_value!r})"
         )
+    if status_value == "superseded" and not superseded_by:
+        errors.append(
+            f"{t.title}: status: superseded requires non-empty superseded_by "
+            f"(forward routing pointer; set via `goc status {t.title} superseded --by <new>`)"
+        )
 
     return errors
 
@@ -4072,6 +4077,14 @@ def _cmd_status(args):
         print(
             f"ERROR: --by is only valid with new_status=superseded "
             f"(got new_status={new_status!r})",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if new_status == "superseded" and successor is None:
+        print(
+            f"ERROR: status superseded requires --by <successor> "
+            f"(the typed forward routing pointer; without it a cold reader "
+            f"landing on {title!r} has nowhere to go)",
             file=sys.stderr,
         )
         sys.exit(2)
