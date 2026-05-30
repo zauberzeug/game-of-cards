@@ -222,6 +222,33 @@ class OpenClawSkillPortDriftTest(unittest.TestCase):
             src = skill_dir / "SKILL.md"
             self.assertEqual(porter.render_skill(src), porter.render_skill(src))
 
+    def test_every_context_section_carries_host_neutral_guidance(self) -> None:
+        """Every source skill with a `## Context` heading must produce a port
+        whose Context section contains the host-neutral guidance paragraph.
+
+        Catches the next "regex too narrow" variant of the parenthetical-header
+        drift — if a new heading shape (e.g. `## Context — qualifier`) escapes
+        `CONTEXT_BLOCK_RE`, the port falls through to bare backticks and this
+        test fails.
+        """
+        porter = _load_porter()
+        marker = "Before running the body of this skill"
+        offenders: list[str] = []
+        for skill_dir in porter._portable_skill_dirs():
+            src = skill_dir / "SKILL.md"
+            if "## Context" not in src.read_text(encoding="utf-8"):
+                continue
+            if marker not in porter.render_skill(src):
+                offenders.append(skill_dir.name)
+        self.assertEqual(
+            [], offenders,
+            msg=(
+                "Source skills with a `## Context` heading whose ported "
+                "output is missing the host-neutral guidance paragraph "
+                "(CONTEXT_BLOCK_RE failed to match): " + ", ".join(offenders)
+            ),
+        )
+
 
 class OpenClawToolVerbSurfaceTest(unittest.TestCase):
     """OpenClaw exposes `goc` as a registered tool whose `verb` parameter is a
