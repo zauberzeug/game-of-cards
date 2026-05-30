@@ -1,20 +1,20 @@
 ---
 title: claude-md-briefing-emits-closure-paragraph-twice
 summary: "`goc install --briefing-target CLAUDE.md` writes the `**Closure is not frozenness.**` paragraph into the briefing block twice. The paragraph is byte-identical in both `goc/templates/AGENTS_GOC.md` (line 24-28) and `goc/templates/CLAUDE_GOC.md` (line 15-19), and `_briefing_body` concatenates the two templates without dedup when `briefing_target == \"CLAUDE.md\"`. AGENTS.md and CLAUDE.local.md briefing targets are unaffected (they emit AGENTS_GOC.md alone). User-visible result: a CLAUDE.md sole-home install carries a redundant duplicate paragraph in the marker-bounded GoC briefing block."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-30T01:02:44Z"
-closed_at: null
+closed_at: "2026-05-30T01:07:49Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the briefing body returned by `goc.install._briefing_body(templates, "CLAUDE.md")` contains exactly one occurrence of the phrase `Closure is not frozenness.`.
-  - [ ] TDD: a regression test under `tests/` exercises `_briefing_body` across the three briefing targets (AGENTS.md / CLAUDE.md / CLAUDE.local.md) and asserts the paragraph count is exactly one in each.
-  - [ ] MECHANICAL: the duplicate paragraph is removed from `goc/templates/CLAUDE_GOC.md` (or, equivalently, `_briefing_body` is taught to deduplicate); the chosen approach is documented in `log.md`.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green.
+  - [x] TDD: `reproduce.py` exits zero — the briefing body returned by `goc.install._briefing_body(templates, "CLAUDE.md")` contains exactly one occurrence of the phrase `Closure is not frozenness.`.
+  - [x] TDD: a regression test under `tests/` exercises `_briefing_body` across the three briefing targets (AGENTS.md / CLAUDE.md / CLAUDE.local.md) and asserts the paragraph count is exactly one in each.
+  - [x] MECHANICAL: the duplicate paragraph is removed from `goc/templates/CLAUDE_GOC.md` (or, equivalently, `_briefing_body` is taught to deduplicate); the chosen approach is documented in `log.md`.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -69,21 +69,20 @@ host-specific surface), so its presence in CLAUDE_GOC.md violates the
 "Claude-specific extras" contract and is the duplication's
 root cause.
 
-## Empirical evidence
+## Empirical evidence (post-fix)
 
 `uv run python deck/claude-md-briefing-emits-closure-paragraph-twice/reproduce.py`:
 
 ```
 AGENTS.md       : 1 occurrence(s) of "Closure is not frozenness"
-CLAUDE.md       : 2 occurrence(s) of "Closure is not frozenness"
+CLAUDE.md       : 1 occurrence(s) of "Closure is not frozenness"
 CLAUDE.local.md : 1 occurrence(s) of "Closure is not frozenness"
 
-DEFECT PRESENT — CLAUDE.md briefing carries the paragraph twice.
+DEFECT ABSENT — CLAUDE.md briefing carries the paragraph exactly once.
 ```
 
-Exit code 1 (defect present). The AGENTS.md and CLAUDE.local.md
-targets are clean — only the CLAUDE.md sole-home target double-prints
-the paragraph.
+Exit code 0 (defect absent). All three briefing targets now emit the
+paragraph exactly once.
 
 ## Why it matters
 
