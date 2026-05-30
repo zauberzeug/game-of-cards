@@ -49,3 +49,25 @@ enforced consistently.
 ## 2026-05-30T13:56:52Z: decision recorded
 
 Option B: CLI guard in _cmd_status refuses a terminal --by successor, PLUS a new symmetric validator validate_superseded_by_targets that errors on any terminal superseded_by target — mirrors the 'Both' decision recorded on the sibling card superseded-status-without-by-leaves-no-forward-routing-pointer, keeping the supersession invariant enforced consistently across the pair; the CLI guard blocks the input boundary while the validator catches existing and hand-edited dead-end links. Gate decision → none.
+
+## 2026-05-30T14:38:50Z: fix landed
+
+Implemented Option B (CLI guard + symmetric validator):
+
+- **CLI guard** (`goc/engine.py` `_cmd_status`, right after the existing successor existence check): the loaded successor card's `status` is now inspected; if it sits in `TERMINAL_STATUSES` (`done`, `disproved`, `superseded`) the command exits 2 with `ERROR: --by '<title>' has status '<status>' (terminal); supersession routing must land on a live card ...`. Sits between the existing "`--by` is the same card" guard and the `load_all_cards()` body, so the supersession transition can never reach the README/edge writes when the successor is terminal.
+
+- **Symmetric validator** (`goc/engine.py` `validate_superseded_by_targets`): walks every card's `superseded_by` list and reports each entry whose target's `status` is in `TERMINAL_STATUSES`. Registered next to `validate_supersedes_targets` in the `_cmd_validate` dispatch chain so it runs on every `goc validate` invocation. Mirrors the existing `supersedes` check on the other end of the link.
+
+Regression test: `tests/test_superseded_by_must_be_live.py` (four cases — CLI refusal for each of `done`/`disproved`/`superseded` successors, plus a validator case on a hand-crafted card whose `superseded_by` already points at a `done` card). All four pass; the full 316-test suite is green.
+
+Reproducer now exits 0 after asserting that every terminal successor is rejected with stderr naming the terminal status (BEFORE: exit 0 with three "(no stderr)" rows; AFTER: exit 0 with three exit-code-2 rows whose stderr mentions `terminal`).
+
+### Surfaced data drift (intentional)
+
+The new validator surfaces one pre-existing dead-end forward link, exactly the class of drift the decision wanted to expose:
+
+- `frontmatter-emitter-does-not-quote-integer-looking-string-scalars` (`status: superseded`) → `frontmatter-emitter-does-not-quote-integer-null-or-case-variant-boolean-values` (`status: done`).
+
+This is left in place for separate deck-data hygiene; the validator now flags it on every `goc validate` so a cold reader knows the chain terminates at a closed card. Other validator errors visible on `main` (orphan `status: superseded` with empty `superseded_by`, a `human_gate: session` on terminal cards, and one half-edge) are pre-existing and unrelated to this fix — confirmed by `git stash; goc validate; git stash pop` producing the identical set minus the one new dead-end above.
+
+Plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); `claude-plugin/goc/engine.py`, `codex-plugin/goc/engine.py`, and `openclaw-plugin/goc/engine.py` updated in lockstep.

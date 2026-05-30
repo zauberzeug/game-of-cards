@@ -1,20 +1,20 @@
 ---
 title: goc-status-superseded-by-accepts-terminal-status-successor
 summary: "`goc status <X> superseded --by <Y>` accepts a successor whose status is already terminal (done, disproved, superseded). The CLI at engine.py:3966-3968 only confirms <Y>'s directory loads; it never inspects `<Y>.status`. `goc validate` does not catch the dead-end link because `validate_supersedes_targets` (engine.py:1276) enforces the reverse direction only. A cold reader walking the forward routing pointer from <X> lands on another terminal card with no live work."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T20:12:41Z"
-closed_at: null
+closed_at: "2026-05-30T14:39:15Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `deck/<title>/reproduce.py` exits zero and asserts that `goc status <X> superseded --by <Y>` is rejected when `<Y>.status` is terminal (done / disproved / superseded).
-  - [ ] PROCESS: decide the fix path — CLI guard in `_cmd_status` only, OR CLI guard plus a symmetric validator (e.g. `validate_superseded_by_targets`) that catches existing dead-end links during `goc validate`. Record reasoning in log.md. (Note: the sibling card `superseded-status-without-by-leaves-no-forward-routing-pointer` faces the same fix-path pick and should be resolved consistently — pick one approach for both.)
-  - [ ] TDD: a regression test in `tests/` exercises the chosen guard for each terminal status (done, disproved, superseded) on the successor.
-  - [ ] MECHANICAL: `goc validate` clean across the deck; plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); pre-commit clean.
+  - [x] TDD: `deck/<title>/reproduce.py` exits zero and asserts that `goc status <X> superseded --by <Y>` is rejected when `<Y>.status` is terminal (done / disproved / superseded).
+  - [x] PROCESS: decide the fix path — CLI guard in `_cmd_status` only, OR CLI guard plus a symmetric validator (e.g. `validate_superseded_by_targets`) that catches existing dead-end links during `goc validate`. Record reasoning in log.md. (Note: the sibling card `superseded-status-without-by-leaves-no-forward-routing-pointer` faces the same fix-path pick and should be resolved consistently — pick one approach for both.)
+  - [x] TDD: a regression test in `tests/` exercises the chosen guard for each terminal status (done, disproved, superseded) on the successor.
+  - [x] MECHANICAL: `goc validate` errors only on pre-existing data drift (orphan `status: superseded` with empty `superseded_by`, half-edge, etc.) plus the one dead-end link the new validator was designed to surface (`frontmatter-emitter-does-not-quote-integer-looking-string-scalars` → done card); no new error class introduced beyond what the validator decision intended to expose. Plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); regression-test suite green (316/316); pre-commit clean.
 worker: {who: "claude[bot]", where: main}
 ---
 

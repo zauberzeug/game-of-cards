@@ -1398,6 +1398,43 @@ def validate_supersedes_targets(cards: list[Card]) -> list[str]:
     return errors
 
 
+def validate_superseded_by_targets(cards: list[Card]) -> list[str]:
+    """Enforce that every card in `superseded_by` points at a live card
+    (status: open or active).
+
+    The record axis treats `superseded_by` as the typed forward routing
+    pointer from a superseded card to the live work that replaced it. A
+    pointer landing on a terminal card (done, disproved, superseded) is a
+    dead end — a cold reader walking the link arrives at something with no
+    remaining work, defeating the read-pattern guarantee that supersession
+    routes forward to live work. Symmetric to `validate_supersedes_targets`.
+    """
+    by_title = {t.title: t for t in cards}
+    errors: list[str] = []
+    for t in cards:
+        refs = t.frontmatter.get("superseded_by") or []
+        if not isinstance(refs, list):
+            errors.append(
+                f"{t.title}: superseded_by: must be a list, got "
+                f"{type(refs).__name__} value={refs!r}; a bare-string "
+                f"scalar is iterated character-by-character and silently "
+                f"matches single-character titles"
+            )
+            continue
+        for ref in refs:
+            target = by_title.get(ref)
+            if target is None:
+                continue
+            if target.status in TERMINAL_STATUSES:
+                errors.append(
+                    f"{t.title}: superseded_by: '{ref}' has status "
+                    f"{target.status!r} (terminal); the forward routing "
+                    f"pointer must land on a live card (status: open or "
+                    f"active)"
+                )
+    return errors
+
+
 def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
     """Return structured advances↔advanced_by asymmetries."""
     half_edges: list[HalfEdge] = []
@@ -3022,6 +3059,9 @@ def _cmd_validate(args):
     for e in validate_supersedes_targets(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
+    for e in validate_superseded_by_targets(cards):
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
     if errors:
         sys.exit(1)
 
@@ -4100,7 +4140,16 @@ def _cmd_status(args):
         sys.exit(2)
     if successor is not None:
         successor_dir = DECK_DIR / successor
-        load_card_or_exit(successor_dir, successor)
+        successor_card = load_card_or_exit(successor_dir, successor)
+        if successor_card.status in TERMINAL_STATUSES:
+            print(
+                f"ERROR: --by {successor!r} has status {successor_card.status!r} "
+                f"(terminal); supersession routing must land on a live card "
+                f"(status: open or active) so a cold reader walking the "
+                f"forward pointer arrives at work that can still be acted on",
+                file=sys.stderr,
+            )
+            sys.exit(2)
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
     prior = t.status
