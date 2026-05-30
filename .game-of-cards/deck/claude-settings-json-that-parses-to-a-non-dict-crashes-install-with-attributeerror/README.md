@@ -1,7 +1,7 @@
 ---
 title: claude-settings-json-that-parses-to-a-non-dict-crashes-install-with-attributeerror
 summary: "When `.claude/settings.json` is valid JSON but parses to a non-dict (`null`, a list, a bare string/number), both `_merge_claude_settings` and `_strip_goc_settings_entries` call `dict` methods on the parsed value (`.setdefault`, `.get`) and crash with a raw `AttributeError` traceback. Same point-away-from-the-problem failure the closed sibling `frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror` eliminated for the YAML frontmatter parser, in a code path the closed `install-overwrites-malformed-claude-settings-json-instead-of-merging` fix only covered for `JSONDecodeError`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T17:14:06Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: a regression test in `tests/` covers each non-dict shape (`null`, `[]`, `"string"`, `42`) against both `_merge_claude_settings` and `_strip_goc_settings_entries` and asserts no `AttributeError` escapes.
   - [ ] MECHANICAL: the non-dict guard lives in or just after the `json.loads` block in both `_merge_claude_settings` (`goc/install.py:567`) and `_strip_goc_settings_entries` (`goc/install.py:596`); behavior matches the existing `JSONDecodeError` path (backup + warn for the merge function, warn + early return for the strip function).
   - [ ] EMPIRICAL: `goc install` and `goc upgrade --agents claude` both complete cleanly against a repo whose `.claude/settings.json` is `null`, with the original bytes preserved in a `.bak` sibling.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `.claude/settings.json` that parses to a non-dict crashes install with `AttributeError`
