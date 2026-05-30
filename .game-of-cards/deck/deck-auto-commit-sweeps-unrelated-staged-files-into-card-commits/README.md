@@ -1,7 +1,7 @@
 ---
 title: deck-auto-commit-sweeps-unrelated-staged-files-into-card-commits
 summary: "`_git_auto_commit` stages and diff-checks with explicit pathspecs, then runs `git commit -m <msg>` with NO pathspec — so any unrelated file a parallel agent had staged is bundled into the deck commit. Violates AGENTS.md's Parallel-Agent Commit Safety contract verbatim. Reachable from every status-flip verb (`goc status`, `goc done`, `goc wait`, `goc advance`, `goc unadvance`, `goc decide`)."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-30T09:40:17Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a new regression test in `tests/` drives `_git_auto_commit` against a repo with an unrelated staged file and asserts the file is absent from `git show --name-only HEAD`.
   - [ ] MECHANICAL: `engine.py:3409` invokes `git commit` with an explicit pathspec (`["git", "commit", "-m", message, "--", *paths]`) so it can only commit the card paths it was given.
   - [ ] PROCESS: `uv run goc validate` is clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Deck auto-commit sweeps unrelated staged files into card commits
