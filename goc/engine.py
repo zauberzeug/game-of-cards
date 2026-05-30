@@ -3406,7 +3406,7 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         )
         if diff_check.returncode == 0:
             return False
-        subprocess.run(["git", "commit", "-m", message], check=True, cwd=git_cwd)
+        subprocess.run(["git", "commit", "-m", message, "--", *paths], check=True, cwd=git_cwd)
         return True
     except subprocess.CalledProcessError as e:
         print(f"  (auto-commit failed: {e})", file=sys.stderr)

@@ -1,20 +1,20 @@
 ---
 title: deck-auto-commit-sweeps-unrelated-staged-files-into-card-commits
 summary: "`_git_auto_commit` stages and diff-checks with explicit pathspecs, then runs `git commit -m <msg>` with NO pathspec — so any unrelated file a parallel agent had staged is bundled into the deck commit. Violates AGENTS.md's Parallel-Agent Commit Safety contract verbatim. Reachable from every status-flip verb (`goc status`, `goc done`, `goc wait`, `goc advance`, `goc unadvance`, `goc decide`)."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T09:40:17Z"
-closed_at: null
+closed_at: "2026-05-30T09:46:04Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero on a clean checkout (co-agent staged file is NOT in the resulting card commit).
-  - [ ] TDD: a new regression test in `tests/` drives `_git_auto_commit` against a repo with an unrelated staged file and asserts the file is absent from `git show --name-only HEAD`.
-  - [ ] MECHANICAL: `engine.py:3409` invokes `git commit` with an explicit pathspec (`["git", "commit", "-m", message, "--", *paths]`) so it can only commit the card paths it was given.
-  - [ ] PROCESS: `uv run goc validate` is clean.
+  - [x] TDD: `reproduce.py` exits zero on a clean checkout (co-agent staged file is NOT in the resulting card commit).
+  - [x] TDD: a new regression test in `tests/` drives `_git_auto_commit` against a repo with an unrelated staged file and asserts the file is absent from `git show --name-only HEAD`.
+  - [x] MECHANICAL: `engine.py:3409` invokes `git commit` with an explicit pathspec (`["git", "commit", "-m", message, "--", *paths]`) so it can only commit the card paths it was given.
+  - [x] PROCESS: `uv run goc validate` is clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
