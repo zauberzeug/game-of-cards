@@ -2659,7 +2659,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Set or clear the impediment overlay (waiting_on + waiting_until).",
     )
     p_wait.add_argument("title")
-    p_wait.add_argument("--reason", choices=["external", "resource", "deferred"], default=None,
+    p_wait.add_argument("--reason", choices=schema.waiting_on_values, default=None,
                         help="Exogenous wait reason. Composes with --until.")
     p_wait.add_argument("--until", default=None,
                         help="ISO date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ) the wait is expected to clear. "

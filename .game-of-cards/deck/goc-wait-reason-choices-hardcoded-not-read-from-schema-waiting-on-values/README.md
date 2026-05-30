@@ -1,19 +1,19 @@
 ---
 title: goc-wait-reason-choices-hardcoded-not-read-from-schema-waiting-on-values
 summary: "`p_wait.add_argument(\"--reason\", choices=[\"external\", \"resource\", \"deferred\"], …)` at `engine.py:2662` hardcodes the same list that `schema.yaml:27` already defines as `waiting_on_values`. Every other enum-typed CLI arg in `_build_parser` reads from `schema.*` (contribution, human_gate, status). The validator at `_cmd_wait` does read `schema.waiting_on_values`. Adding a new value to schema.yaml would silently fail at the argparse layer while the validator accepted it — a schema-source-of-truth drift that the project's architecture explicitly tries to prevent."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-30T09:41:52Z"
-closed_at: null
+closed_at: "2026-05-30T09:50:45Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, unverified]
 definition_of_done: |
-  - [ ] MECHANICAL: `engine.py:2662` reads from `schema.waiting_on_values` (matching the pattern at `engine.py:2643-2645`).
-  - [ ] TDD: a regression test asserts the `--reason` argparse choices equal `schema.waiting_on_values`.
-  - [ ] PROCESS: `uv run goc validate` is clean.
+  - [x] MECHANICAL: `engine.py:2662` reads from `schema.waiting_on_values` (matching the pattern at `engine.py:2643-2645`).
+  - [x] TDD: a regression test asserts the `--reason` argparse choices equal `schema.waiting_on_values`.
+  - [x] PROCESS: `uv run goc validate` is clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
