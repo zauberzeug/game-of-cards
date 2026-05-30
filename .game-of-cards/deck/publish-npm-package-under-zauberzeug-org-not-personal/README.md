@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-10
 closed_at: 2026-05-10
-human_gate: session
+human_gate: none
 advances:
   - publish-openclaw-plugin
   - auto-publish-npm-and-clawhub-on-tag-push

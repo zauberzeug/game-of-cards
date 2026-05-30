@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-04
 closed_at: 2026-05-05
-human_gate: session
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]

@@ -242,6 +242,18 @@ discussion. If an agent can periodically check the wait and
 proceed when the external condition changes, the gate stays `none`
 and the wait lives in the `waiting_on` overlay.
 
+**Decide ↔ close symmetry.** `goc decide` refuses to run on a card
+whose gate is already `none` (no decision pending), and the four
+terminal-close paths (`goc done`, `goc done --bundle`,
+`goc status <t> disproved`, `goc status <t> superseded`) symmetrically
+refuse when `human_gate != none` and tell the operator to run
+`goc decide` first. The validator enforces the same invariant — a card
+with `status` in `{done, disproved, superseded}` AND
+`human_gate != none` is a frontmatter contradiction — so a hand-edited
+deck that lands in that state is surfaced by CI rather than silently
+shipping a closed card whose `## Decision required` body is still
+advertising an open pick.
+
 Default for new cards created via `goc new`: `decision`.
 Auto-agents (audit-deck, next-card reclassification) should pick a more
 specific gate when the body content makes the choice clear (mechanical

@@ -1,21 +1,21 @@
 ---
 title: goc-done-marks-cards-done-without-clearing-or-checking-human-gate
 summary: "`goc done`, `goc done --bundle`, and `goc status <t> disproved|superseded` flip a card to a terminal state without inspecting or clearing `human_gate`. A parked card carrying `human_gate: decision` and an unresolved `## Decision required` body section can be closed silently, and `goc validate` accepts the contradictory frontmatter."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T14:01:25Z"
-closed_at: null
+closed_at: "2026-05-30T14:16:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: decision recorded on this card (refuse vs auto-lower vs validator-only) before any code edit lands
-  - [ ] TDD: `uv run python .game-of-cards/deck/goc-done-marks-cards-done-without-clearing-or-checking-human-gate/reproduce.py` exits non-zero on a clean checkout (the chosen fix prevents the contradiction)
-  - [ ] TDD: `validate_card` (goc/engine.py:1160) rejects any card with `status` in `TERMINAL_STATUSES` AND `human_gate` ≠ `none`; regression test covers `done`, `disproved`, `superseded`
-  - [ ] TDD: focused test covers all four terminal entry points (`goc done <t>`, `goc done --bundle ...`, `goc status <t> disproved`, `goc status <t> superseded`) under the chosen contract
-  - [ ] MECHANICAL: `goc decide` continues to refuse cards whose gate is already `none` (engine.py:4557); the symmetry between decide ↔ close is documented in `Skill(card-schema)` if not already
+  - [x] PROCESS: decision recorded on this card (refuse vs auto-lower vs validator-only) before any code edit lands
+  - [x] TDD: `uv run python .game-of-cards/deck/goc-done-marks-cards-done-without-clearing-or-checking-human-gate/reproduce.py` exits non-zero on a clean checkout (the chosen fix prevents the contradiction)
+  - [x] TDD: `validate_card` (goc/engine.py:1160) rejects any card with `status` in `TERMINAL_STATUSES` AND `human_gate` ≠ `none`; regression test covers `done`, `disproved`, `superseded`
+  - [x] TDD: focused test covers all four terminal entry points (`goc done <t>`, `goc done --bundle ...`, `goc status <t> disproved`, `goc status <t> superseded`) under the chosen contract
+  - [x] MECHANICAL: `goc decide` continues to refuse cards whose gate is already `none` (engine.py:4557); the symmetry between decide ↔ close is documented in `Skill(card-schema)` if not already
 worker: {who: "claude[bot]", where: main}
 ---
 

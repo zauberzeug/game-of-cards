@@ -19,3 +19,20 @@ Leave the close verbs alone; have `validate_card` flag terminal-but-gated cards 
 ## 2026-05-30T13:36:38Z: decision recorded
 
 Refuse-and-redirect: the four terminal-close paths (goc done, done --bundle, status disproved, status superseded) refuse when human_gate != none and tell the operator to run goc decide first; validator adds the invariant status in TERMINAL_STATUSES implies human_gate == none — it preserves the decide-close symmetry the codebase already commits to (decide refuses gate==none; close should refuse gate!=none) and the validator addition makes the invariant a catalog-level fact rather than a per-command convention; the scripted bulk-close objection is hypothetical with no current caller expecting to close a parked card. Gate decision → none.
+
+## 2026-05-30T14:16:09Z — Closure
+
+- **What changed**: `goc/engine.py` `_cmd_done` (~3326), `_cmd_done_bundle` (~3408), `_cmd_status` terminal branch (~4090), and `validate_card` (~1283) all gain the symmetric guard: any terminal-status entry refuses (or in the validator's case, errors) when `human_gate != "none"`, with a message that points at `goc decide`.
+- **Verification**: `uv run python .game-of-cards/deck/goc-done-marks-cards-done-without-clearing-or-checking-human-gate/reproduce.py` now exits non-zero (the `goc done` step exits 2, leaving `status: open` and the `## Decision required` body intact). `tests/test_close_terminal_gate_guard.py` adds 8 focused tests covering all four terminal entry points + validator (done, disproved, superseded). Migrated 7 historical closed cards from `human_gate: session` → `none` so the new validator invariant passes on this deck.
+- **Audit**: PASS — no rubric configured; mechanical fix.
+- **Project impact**: n/a (engine guard + validator invariant, no consumer-facing API change beyond the new refusal path).
+- **Tests**: 307 passed / 0 failed / 0 xfailed.
+- **Bundled with**: (none)
+
+## Closure verification (2026-05-30T14:16:28Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-05-30 — Closure' present

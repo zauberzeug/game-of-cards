@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-07
 closed_at: 2026-05-08
-human_gate: session
+human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
   - restructure-comic-as-three-panels-and-add-audience-preamble

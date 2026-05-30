@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-11
 closed_at: "2026-05-11T04:19:57Z"
-human_gate: session
+human_gate: none
 advances:
   - auto-publish-npm-and-clawhub-on-tag-push
   - clawhub-publish-fails-with-package-belongs-to-another-publisher

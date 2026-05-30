@@ -1278,6 +1278,12 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             errors.append(f"{t.title}: closed_at: must be set when status={status_value}")
         if status_value == "done" and t.dod_open > 0:
             errors.append(f"{t.title}: definition_of_done: status=done with {t.dod_open} unchecked boxes")
+        gate_value = fm.get("human_gate")
+        if gate_value not in (None, "none"):
+            errors.append(
+                f"{t.title}: human_gate: must be 'none' when status={status_value} "
+                f"(got {gate_value!r}); run `goc decide` to resolve the gate before closing."
+            )
     elif closed_at is not None:
         errors.append(
             f"{t.title}: closed_at: must be null when status is non-terminal"
@@ -3330,6 +3336,14 @@ def _cmd_done(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if t.human_gate != "none":
+        print(
+            f"ERROR: {title}: human_gate is {t.human_gate!r}; "
+            f"run `goc decide {title} --decision <choice> --because <reason>` "
+            f"to lower the gate before closing.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -3400,6 +3414,14 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             print(
                 f"ERROR: {title}: status is {t.status!r} (terminal); "
                 f"use the supersede/disprove workflow — --bundle cannot overwrite terminal states",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.human_gate != "none":
+            print(
+                f"ERROR: {title}: human_gate is {t.human_gate!r}; "
+                f"run `goc decide {title} --decision <choice> --because <reason>` "
+                f"to lower the gate before closing.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -4076,6 +4098,14 @@ def _cmd_status(args):
         print(
             f"ERROR: {title}: status is {prior!r} (terminal);"
             f" terminal cards cannot be moved backward through `goc status`",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if new_status in TERMINAL_STATUSES and t.human_gate != "none":
+        print(
+            f"ERROR: {title}: human_gate is {t.human_gate!r}; "
+            f"run `goc decide {title} --decision <choice> --because <reason>` "
+            f"to lower the gate before closing into {new_status!r}.",
             file=sys.stderr,
         )
         sys.exit(2)
