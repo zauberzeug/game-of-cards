@@ -1,7 +1,7 @@
 ---
 title: superseded-status-without-by-leaves-no-forward-routing-pointer
 summary: "`goc status <card> superseded` accepts no `--by` argument and the card lands with `status: superseded` and no `superseded_by` link. `goc validate` reports OK because the check at engine.py:1255-1260 only enforces the inverse direction (non-empty `superseded_by` implies `status: superseded`), not the contract that AGENTS.md describes as set atomically. Cold readers following the forward routing pointer have nowhere to go."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-29T15:13:43Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: a regression test in `tests/` exercises the chosen guard.
   - [ ] MECHANICAL: `goc validate` clean across the deck; plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); pre-commit clean.
   - [ ] PROCESS: confirm `goc done <card>` and `_cmd_status` agree on the invariant — `done` already auto-commits closure data, but `superseded` should not be reachable without a successor.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Superseded status without `--by` leaves no forward routing pointer
