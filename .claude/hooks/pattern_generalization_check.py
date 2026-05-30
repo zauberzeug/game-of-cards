@@ -188,6 +188,9 @@ def main() -> int:
     except (json.JSONDecodeError, ValueError):
         return 0
 
+    if not isinstance(data, dict):
+        return 0
+
     if data.get("stop_hook_active"):
         return 0
 

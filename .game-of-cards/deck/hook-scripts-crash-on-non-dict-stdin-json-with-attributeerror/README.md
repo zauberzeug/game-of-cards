@@ -1,21 +1,21 @@
 ---
 title: hook-scripts-crash-on-non-dict-stdin-json-with-attributeerror
 summary: "Two of the three Claude/Codex lifecycle hooks shipped under `goc/templates/hooks/` parse stdin JSON and then call `.get(...)` on the result without an `isinstance(data, dict)` guard. The sibling `deck_session_start.py:163` already guards correctly, so the asymmetry is right there in the same directory. A harness payload that parses to a list, scalar, or `null` crashes `deck_prompt_router.py` and `pattern_generalization_check.py` with a raw `AttributeError` instead of returning 0 silently."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T17:31:31Z"
-closed_at: null
+closed_at: "2026-05-30T17:33:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero (both hooks now exit 0 cleanly on a non-dict stdin payload — list, scalar, `null` — instead of raising `AttributeError`).
-  - [ ] MECHANICAL: `goc/templates/hooks/deck_prompt_router.py` adds an `isinstance(data, dict)` guard after `json.load(sys.stdin)` mirroring the existing pattern at `deck_session_start.py:163`.
-  - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` adds the same guard before its first `data.get(...)` call.
-  - [ ] PROCESS: plugin mirrors (`claude-plugin/hooks/`, `codex-plugin/hooks/`) regenerate cleanly via the pre-commit `sync-plugin-assets` hook with the same guards applied.
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] TDD: `reproduce.py` exits zero (both hooks now exit 0 cleanly on a non-dict stdin payload — list, scalar, `null` — instead of raising `AttributeError`).
+  - [x] MECHANICAL: `goc/templates/hooks/deck_prompt_router.py` adds an `isinstance(data, dict)` guard after `json.load(sys.stdin)` mirroring the existing pattern at `deck_session_start.py:163`.
+  - [x] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` adds the same guard before its first `data.get(...)` call.
+  - [x] PROCESS: plugin mirrors (`claude-plugin/hooks/`, `codex-plugin/hooks/`) regenerate cleanly via the pre-commit `sync-plugin-assets` hook with the same guards applied.
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 

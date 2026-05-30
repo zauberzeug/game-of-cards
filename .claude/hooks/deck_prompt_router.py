@@ -74,6 +74,8 @@ def main() -> int:
         data = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         return 0
+    if not isinstance(data, dict):
+        return 0
     prompt = (data.get("prompt") or "").lower()
     if not prompt:
         return 0
