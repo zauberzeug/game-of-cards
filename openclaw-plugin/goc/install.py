@@ -561,12 +561,21 @@ def _merge_claude_settings(settings_path: Path) -> None:
     """
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings: dict = {}
+    original: str = ""
+    backup_path: Path | None = None
+
+    def _ensure_backup() -> Path:
+        nonlocal backup_path
+        if backup_path is None:
+            backup_path = _backup_unparseable_settings(settings_path, original)
+        return backup_path
+
     if settings_path.exists():
         original = settings_path.read_text()
         try:
             settings = json.loads(original)
         except json.JSONDecodeError as exc:
-            backup = _backup_unparseable_settings(settings_path, original)
+            backup = _ensure_backup()
             print(
                 f"  warning: {settings_path} is not valid JSON ({exc}); "
                 f"backed it up to {backup.name} before writing GoC hooks. "
@@ -574,7 +583,7 @@ def _merge_claude_settings(settings_path: Path) -> None:
                 file=sys.stderr,
             )
         if not isinstance(settings, dict):
-            backup = _backup_unparseable_settings(settings_path, original)
+            backup = _ensure_backup()
             print(
                 f"  warning: {settings_path} is valid JSON but not an object "
                 f"(got {type(settings).__name__}); backed it up to {backup.name} "
@@ -584,8 +593,30 @@ def _merge_claude_settings(settings_path: Path) -> None:
             settings = {}
 
     hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        backup = _ensure_backup()
+        print(
+            f"  warning: {settings_path} has a non-object `hooks` field "
+            f"(got {type(hooks).__name__}); backed it up to {backup.name} "
+            f"before writing GoC hooks. Merge your keys back in by hand.",
+            file=sys.stderr,
+        )
+        settings["hooks"] = {}
+        hooks = settings["hooks"]
+
     for event, command in GOC_CLAUDE_HOOKS.items():
-        event_hooks: list = hooks.setdefault(event, [])
+        event_hooks = hooks.setdefault(event, [])
+        if not isinstance(event_hooks, list):
+            backup = _ensure_backup()
+            print(
+                f"  warning: {settings_path} hooks.{event} is "
+                f"{type(event_hooks).__name__} (expected list); backed it up "
+                f"to {backup.name} and reset to []. Merge your value back in "
+                f"by hand.",
+                file=sys.stderr,
+            )
+            hooks[event] = []
+            event_hooks = hooks[event]
         already = any(
             any(h.get("command") == command for h in group.get("hooks", []))
             for group in event_hooks
@@ -621,10 +652,28 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
 
     goc_commands = set(GOC_CLAUDE_HOOKS.values())
     hooks = settings.get("hooks", {})
+    if not isinstance(hooks, dict):
+        print(
+            f"  warning: {settings_path} has a non-object `hooks` field "
+            f"(got {type(hooks).__name__}); leaving it untouched "
+            f"(GoC hook entries not removed).",
+            file=sys.stderr,
+        )
+        return
+
     changed = False
     for event in list(hooks.keys()):
+        event_value = hooks[event]
+        if not isinstance(event_value, list):
+            print(
+                f"  warning: {settings_path} hooks.{event} is "
+                f"{type(event_value).__name__} (expected list); leaving it "
+                f"untouched (GoC hook entries not removed for this event).",
+                file=sys.stderr,
+            )
+            continue
         new_groups: list = []
-        for group in hooks[event]:
+        for group in event_value:
             if not isinstance(group, dict):
                 new_groups.append(group)
                 continue
@@ -633,12 +682,12 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
                 changed = True
             if filtered:
                 new_groups.append({**group, "hooks": filtered})
-        if new_groups != hooks[event]:
+        if new_groups != event_value:
             changed = True
         hooks[event] = new_groups
 
     for event in list(hooks.keys()):
-        if not hooks[event]:
+        if isinstance(hooks[event], list) and not hooks[event]:
             del hooks[event]
             changed = True
 

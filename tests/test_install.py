@@ -932,6 +932,94 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 # File left untouched.
                 self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
 
+    def test_merge_claude_settings_handles_non_dict_nested_hooks_shapes(self) -> None:
+        """Wrong-shape nested `hooks` and `hooks[event]` values must surface a
+        coherent warning, back up the user's original bytes, and let the merge
+        proceed — not raise `AttributeError` from `setdefault`/`append` calls
+        on the wrong type. Mirrors the closed top-level sibling at the layer
+        below it.
+        """
+        from goc.install import _merge_claude_settings
+
+        # hooks is a non-dict scalar / list / null — entire field is reset.
+        for body in ('{"hooks": []}', '{"hooks": null}', '{"hooks": "oops"}', '{"hooks": 42}'):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged.get("hooks"), dict, msg=f"input={body!r}")
+                # GoC's three hook events are now wired.
+                self.assertIn("SessionStart", merged["hooks"], msg=f"input={body!r}")
+                self.assertIn("UserPromptSubmit", merged["hooks"], msg=f"input={body!r}")
+                self.assertIn("Stop", merged["hooks"], msg=f"input={body!r}")
+                # Original bytes preserved in a single backup sibling.
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+        # hooks is a dict but hooks[event] is the wrong shape — only that
+        # event's value is reset; user data is preserved in a backup.
+        for event_val in ('"oops"', "42", "null", '{"x": 1}'):
+            body = '{"hooks": {"SessionStart": ' + event_val + '}}'
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged["hooks"]["SessionStart"], list, msg=f"input={body!r}")
+                # The GoC hook for SessionStart is registered.
+                session_cmds = [
+                    h.get("command")
+                    for group in merged["hooks"]["SessionStart"]
+                    for h in group.get("hooks", [])
+                ]
+                self.assertIn(
+                    "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+                    session_cmds,
+                    msg=f"input={body!r}",
+                )
+                # Backup preserved (single .bak even if multiple wrong-shape
+                # event values triggered a reset).
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+    def test_strip_goc_settings_entries_handles_non_dict_nested_hooks_shapes(self) -> None:
+        """`_strip_goc_settings_entries` must NOT char-explode a wrong-shape
+        nested value into a list of characters. When `hooks` itself is non-dict
+        or `hooks[event]` is non-list, leave the file untouched and warn.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        # hooks itself is a non-dict shape.
+        for body in ('{"hooks": []}', '{"hooks": null}', '{"hooks": "oops"}', '{"hooks": 42}'):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
+        # hooks[event] is non-list (the silent-char-explode regression).
+        for event_val in ('"oops"', "42", "null", '{"x": 1}'):
+            body = '{"hooks": {"SessionStart": ' + event_val + '}}'
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched — specifically, the event value is NOT
+                # char-exploded into a list of single-character strings.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
     # ── Bootstrap wrapper ─────────────────────────────────────────────────────
 
     def test_bootstrap_wrapper_reports_missing_and_old_cli_and_execs_current_cli(self) -> None:

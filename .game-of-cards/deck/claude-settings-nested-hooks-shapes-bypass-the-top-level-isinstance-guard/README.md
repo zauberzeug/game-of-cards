@@ -1,22 +1,22 @@
 ---
 title: claude-settings-nested-hooks-shapes-bypass-the-top-level-isinstance-guard
 summary: "The closed sibling `claude-settings-json-that-parses-to-a-non-dict-crashes-install-with-attributeerror` only guarded the top-level shape of `.claude/settings.json`. The nested `hooks` field and the per-event `hooks[event]` list are still trusted blindly. A user-edited `{\"hooks\": []}` crashes `goc install` with `AttributeError: 'list' object has no attribute 'setdefault'`; a `{\"hooks\": {\"SessionStart\": \"oops\"}}` crashes merge or — worse — silently rewrites the file as `{\"SessionStart\": [\"o\",\"o\",\"p\",\"s\"]}` on `goc install --strip`. Same loader-family root cause, one layer deeper."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T17:59:55Z"
-closed_at: null
+closed_at: "2026-05-30T18:09:43Z"
 human_gate: none
 advances:
   - unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — all three sub-shapes (`hooks: []`, `hooks: null`, `hooks.<event>: "string"`) now surface a coherent warning and either skip the offending file or coerce it to a safe default, instead of raising `AttributeError` or silently char-exploding a string into a list.
-  - [ ] TDD: a regression test in `tests/` constructs a `.claude/settings.json` for each non-dict nested shape and asserts (a) no `AttributeError` escapes, (b) the user's original file is preserved verbatim (or backed up) — strip MUST NOT rewrite a wrong-shape event value into a list of characters.
-  - [ ] MECHANICAL: `_merge_claude_settings` guards `hooks` (line 586) and `hooks[event]` (line 588) for `isinstance(_, dict)` / `isinstance(_, list)` respectively, mirroring the closed sibling's backup-and-warn pattern at the top level. `_strip_goc_settings_entries` adds the symmetric guards at lines 623 and 627.
-  - [ ] PROCESS: append a note to the meta-fix parent `unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes` body confirming this nested-callsite layer is also fixed (and counts toward the meta-fix's "approach B per-callsite-guard" tally if/when Approach A consolidation is reconsidered).
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] TDD: reproduce.py exits zero — all three sub-shapes (`hooks: []`, `hooks: null`, `hooks.<event>: "string"`) now surface a coherent warning and either skip the offending file or coerce it to a safe default, instead of raising `AttributeError` or silently char-exploding a string into a list.
+  - [x] TDD: a regression test in `tests/` constructs a `.claude/settings.json` for each non-dict nested shape and asserts (a) no `AttributeError` escapes, (b) the user's original file is preserved verbatim (or backed up) — strip MUST NOT rewrite a wrong-shape event value into a list of characters.
+  - [x] MECHANICAL: `_merge_claude_settings` guards `hooks` (line 586) and `hooks[event]` (line 588) for `isinstance(_, dict)` / `isinstance(_, list)` respectively, mirroring the closed sibling's backup-and-warn pattern at the top level. `_strip_goc_settings_entries` adds the symmetric guards at lines 623 and 627.
+  - [x] PROCESS: append a note to the meta-fix parent `unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes` body confirming this nested-callsite layer is also fixed (and counts toward the meta-fix's "approach B per-callsite-guard" tally if/when Approach A consolidation is reconsidered).
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 

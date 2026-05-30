@@ -1,16 +1,10 @@
-"""Reproduce the nested-hooks-shape defects in `_merge_claude_settings` and
-`_strip_goc_settings_entries`.
+"""Exercise the three nested-hooks-shape sub-defects in `_merge_claude_settings`
+and `_strip_goc_settings_entries`. Pre-fix the script crashed with raw
+`AttributeError` on shapes #1 and #2 and silently char-exploded a string into a
+list on shape #3; post-fix all three surface a coherent warning and either
+coerce to a safe default (merge path) or leave the file untouched (strip path).
 
-The closed sibling `claude-settings-json-that-parses-to-a-non-dict-crashes-
-install-with-attributeerror` guards the TOP-LEVEL shape of
-`.claude/settings.json`. This script exercises three nested shapes that get
-past that guard:
-
-  1. `{"hooks": []}` — merge crashes with AttributeError (list has no setdefault).
-  2. `{"hooks": {"SessionStart": "oops"}}` — merge crashes with AttributeError
-     (str has no append).
-  3. Same shape under the strip path — *no* crash, but the user's "oops" string
-     is silently rewritten as `["o", "o", "p", "s"]`.
+The script exits zero only when every shape behaves as designed post-fix.
 """
 
 from __future__ import annotations
@@ -40,54 +34,79 @@ def _write(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload))
 
 
-def main() -> None:
+def main() -> int:
+    failures: list[str] = []
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
 
-        # Shape #1: hooks is a list (merge path)
+        # Shape #1: hooks is a list (merge path) — must not crash; file
+        # coerced to a valid GoC-hooks dict and original bytes backed up.
         s1 = root / "s1" / "settings.json"
         _write(s1, {"hooks": []})
-        print("shape #1: hooks is a list")
+        print("shape #1: hooks is a list (merge path)")
         try:
             _merge_claude_settings(s1)
-            print("  merge result: OK (no exception)")
+            merged = json.loads(s1.read_text())
+            if not isinstance(merged.get("hooks"), dict):
+                failures.append("shape #1: hooks not coerced to dict")
+            if not list(s1.parent.glob("settings.json.*.bak")):
+                failures.append("shape #1: no backup file created")
+            print("  merge result: OK")
         except AttributeError as e:
+            failures.append(f"shape #1: AttributeError {e}")
             print(f"  merge result: CRASH — AttributeError: {e}")
         print()
 
-        # Shape #2: hooks.SessionStart is a string (merge path)
+        # Shape #2: hooks.SessionStart is a string (merge path) — must not
+        # crash; event value reset to [] with a backup; GoC hook then added.
         s2 = root / "s2" / "settings.json"
         _write(s2, {"hooks": {"SessionStart": "oops"}})
         print("shape #2: hooks.SessionStart is a string (merge path)")
         try:
             _merge_claude_settings(s2)
-            print("  merge result: OK (no exception)")
+            merged = json.loads(s2.read_text())
+            event_value = merged.get("hooks", {}).get("SessionStart")
+            if not isinstance(event_value, list):
+                failures.append("shape #2: event value not coerced to list")
+            backups = list(s2.parent.glob("settings.json.*.bak"))
+            if not backups:
+                failures.append("shape #2: no backup file created")
+            elif '"oops"' not in backups[0].read_text():
+                failures.append("shape #2: backup missing original 'oops' value")
+            print("  merge result: OK")
         except AttributeError as e:
+            failures.append(f"shape #2: AttributeError {e}")
             print(f"  merge result: CRASH — AttributeError: {e}")
         print()
 
-        # Shape #3: hooks.SessionStart is a string (strip path) — silent corruption
+        # Shape #3: hooks.SessionStart is a string (strip path) — must NOT
+        # char-explode the string; file is left untouched and a warning is
+        # surfaced.
         s3 = root / "s3" / "settings.json"
-        original = {"hooks": {"SessionStart": "oops"}}
-        _write(s3, original)
+        _write(s3, {"hooks": {"SessionStart": "oops"}})
         before = s3.read_text()
-        print("shape #3: hooks.SessionStart is a string (strip path) — SILENT CORRUPTION")
+        print("shape #3: hooks.SessionStart is a string (strip path)")
         try:
             _strip_goc_settings_entries(s3)
-            print("  strip result: OK (no exception)")
             after = s3.read_text()
+            if before != after:
+                failures.append(
+                    f"shape #3: strip rewrote file (before={before!r}, after={after!r})"
+                )
             print(f"  file before strip: {before}")
             print(f"  file after strip:  {after}")
-            after_obj = json.loads(after)
-            event_value = after_obj.get("hooks", {}).get("SessionStart")
-            if isinstance(event_value, list) and event_value == ["o", "o", "p", "s"]:
-                print(
-                    '  --> the user\'s "oops" string was char-exploded into a list '
-                    "with no warning"
-                )
         except AttributeError as e:
+            failures.append(f"shape #3: AttributeError {e}")
             print(f"  strip result: CRASH — AttributeError: {e}")
+
+    if failures:
+        print()
+        print("FAIL:")
+        for line in failures:
+            print(f"  - {line}")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

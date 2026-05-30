@@ -46,6 +46,13 @@ Same root cause both times: a loader returns "valid but wrong shape",
 the caller blindly calls a dict method, the result is a raw Python
 traceback with no recovery path for the user.
 
+3. [`claude-settings-nested-hooks-shapes-bypass-the-top-level-isinstance-guard`](../claude-settings-nested-hooks-shapes-bypass-the-top-level-isinstance-guard/)
+   — same `_merge_claude_settings` / `_strip_goc_settings_entries` pair,
+   one layer deeper: `hooks` and `hooks[event]` now also carry
+   `isinstance(_, dict)` / `isinstance(_, list)` guards. Closed
+   2026-05-30 under Approach B (per-callsite guard, consistent with
+   precedent #2).
+
 ## Outstanding unguarded callsites
 
 A `grep -n "json.loads\|yaml.safe_load" goc/*.py` against the current
