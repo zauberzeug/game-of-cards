@@ -1,19 +1,19 @@
 ---
 title: float-opus-alias-on-autonomous-github-workflows
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-30T19:23:28Z"
-closed_at: null
+closed_at: "2026-05-30T19:24:50Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, story]
 definition_of_done: |
-  - [ ] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model opus` (not a pinned version) in `claude_args`.
-  - [ ] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model opus` (not a pinned version) in `claude_args`.
-  - [ ] PROCESS: closed card `pin-opus-on-autonomous-github-workflows` amended with a forward pointer (README `> Later evidence:` line + dated `log.md` entry) recording that its "explicit pin over auto-rolling alias" preference was reversed and why.
-  - [ ] PROCESS: skill bodies remain runtime-agnostic (no `model:` frontmatter, no model name in skill markdown) — unchanged by this card.
+  - [x] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model opus` (not a pinned version) in `claude_args`.
+  - [x] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model opus` (not a pinned version) in `claude_args`.
+  - [x] PROCESS: closed card `pin-opus-on-autonomous-github-workflows` amended with a forward pointer (README `> Later evidence:` line + dated `log.md` entry) recording that its "explicit pin over auto-rolling alias" preference was reversed and why.
+  - [x] PROCESS: skill bodies remain runtime-agnostic (no `model:` frontmatter, no model name in skill markdown) — unchanged by this card.
 worker: {who: Rodja Trappe, where: main}
 ---
 

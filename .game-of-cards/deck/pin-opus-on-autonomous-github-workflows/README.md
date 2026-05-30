@@ -20,6 +20,12 @@ worker: {who: Rodja Trappe, where: main}
 
 # pin-opus-on-autonomous-github-workflows
 
+> Later evidence (2026-05-30): the explicit-pin preference recorded
+> below was reversed. Both workflows now use the floating `--model opus`
+> alias so autonomous runs auto-pick the strongest Opus without a manual
+> bump each release. See
+> [float-opus-alias-on-autonomous-github-workflows](../float-opus-alias-on-autonomous-github-workflows/).
+
 The autonomous queue-drainer (`pull-card.yml`) and the daily audit
 filer (`audit-deck.yml`) both invoke `anthropics/claude-code-action@v1`
 without specifying a model. The action's hardcoded default is Sonnet,
