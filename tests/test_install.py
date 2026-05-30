@@ -937,6 +937,67 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assertEqual({"MyUserEvent": []}, result.get("hooks"))
 
+    def test_strip_goc_settings_entries_preserves_user_authored_empty_hook_groups(self) -> None:
+        """A user-authored hook *group* with `hooks: []` (e.g.
+        `{"matcher": "startup", "hooks": []}`) must survive the strip pass.
+        The per-group gate at the bottom of the filter must only drop groups
+        whose `hooks` list the function itself emptied, not ones that were
+        empty before the strip began. Sibling of the event-level guard
+        already covered above, one layer deeper.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {
+                "hooks": {
+                    "SessionStart": [
+                        # GoC-managed group; only hook command is GoC-owned
+                        # → filter empties it → must be dropped.
+                        {"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"}]},
+                        # User-authored placeholder group; already empty → must survive.
+                        {"matcher": "startup", "hooks": []},
+                    ],
+                },
+            }
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            # User-authored placeholder group preserved verbatim;
+            # GoC-managed group dropped.
+            self.assertEqual(
+                [{"matcher": "startup", "hooks": []}],
+                result["hooks"]["SessionStart"],
+            )
+
+    def test_strip_goc_settings_entries_preserves_lone_user_authored_empty_group(self) -> None:
+        """When the strip pass finds no GoC entries to remove (a repo whose
+        only group under an event is a user-authored placeholder with
+        `hooks: []`), nothing should change. The previous behavior dropped
+        the group, then cleared the event, then wiped the entire `hooks`
+        key — silently deleting user state.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {
+                "hooks": {
+                    "SessionStart": [
+                        {"matcher": "startup", "hooks": []},
+                    ],
+                },
+            }
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            self.assertEqual(
+                {"SessionStart": [{"matcher": "startup", "hooks": []}]},
+                result.get("hooks"),
+            )
+
     def test_merge_claude_settings_handles_non_dict_json_shapes(self) -> None:
         """Settings file containing valid JSON of a non-dict shape (`null`,
         list, string, number) must not crash `_merge_claude_settings`; the

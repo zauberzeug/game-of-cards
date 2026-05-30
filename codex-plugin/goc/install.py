@@ -746,7 +746,11 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
             if removed_any:
                 changed = True
             new_hooks = filtered + non_dicts
-            if new_hooks:
+            # Preserve user-authored placeholder groups whose `hooks` list
+            # was already empty before the filter ran (the strip pass did
+            # not produce that emptiness). Mirrors the event-level guard
+            # via `preexisting_empty` above.
+            if new_hooks or not group_hooks:
                 new_groups.append({**group, "hooks": new_hooks})
         if new_groups != event_value:
             changed = True

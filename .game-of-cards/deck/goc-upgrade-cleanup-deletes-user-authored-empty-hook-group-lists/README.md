@@ -1,21 +1,21 @@
 ---
 title: goc-upgrade-cleanup-deletes-user-authored-empty-hook-group-lists
 summary: "`_strip_goc_settings_entries` (goc/install.py:749) drops every hook *group* whose `hooks: []` ends up empty after filtering — including user-authored placeholder groups the strip pass never touched. Parallel defect to the just-closed event-level case (`goc-upgrade-cleanup-deletes-user-authored-empty-hook-event-lists`), one layer deeper. Reachable through `goc upgrade` switching a repo from vendored to plugin-mode skills."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T22:29:09Z"
-closed_at: null
+closed_at: "2026-05-30T22:32:17Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (user-authored empty group survives the strip pass)
-  - [ ] TDD: regression test in tests/ exercises a user-authored `{"matcher": "X", "hooks": []}` placeholder alongside a GoC-managed group (the GoC entry is stripped; the user group survives)
-  - [ ] MECHANICAL: `_strip_goc_settings_entries` only removes hook groups whose `hooks` list it itself emptied (i.e. it must snapshot pre-existing empty groups before the filter, mirroring the event-level fix)
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (user-authored empty group survives the strip pass)
+  - [x] TDD: regression test in tests/ exercises a user-authored `{"matcher": "X", "hooks": []}` placeholder alongside a GoC-managed group (the GoC entry is stripped; the user group survives)
+  - [x] MECHANICAL: `_strip_goc_settings_entries` only removes hook groups whose `hooks` list it itself emptied (i.e. it must snapshot pre-existing empty groups before the filter, mirroring the event-level fix)
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
