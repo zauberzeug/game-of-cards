@@ -890,6 +890,48 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             # UserPromptSubmit emptied → removed
             self.assertNotIn("UserPromptSubmit", result["hooks"])
 
+    def test_merge_claude_settings_handles_non_dict_json_shapes(self) -> None:
+        """Settings file containing valid JSON of a non-dict shape (`null`,
+        list, string, number) must not crash `_merge_claude_settings`; the
+        original bytes are preserved in a timestamped `.bak` sibling and a
+        warning is printed, matching the existing `JSONDecodeError` branch.
+        """
+        from goc.install import _merge_claude_settings
+
+        for body in ("null", "[]", '"hello"', "42"):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                # The settings file is rewritten with a valid GoC-hooks dict.
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged, dict, msg=f"input={body!r}")
+                self.assertIn("hooks", merged, msg=f"input={body!r}")
+                # Original bytes preserved in a `.bak` sibling.
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+    def test_strip_goc_settings_entries_handles_non_dict_json_shapes(self) -> None:
+        """`_strip_goc_settings_entries` must warn and return — not crash —
+        when the file is valid JSON but parses to a non-dict, mirroring the
+        existing `JSONDecodeError` branch's behavior. The original bytes
+        stay on disk (the strip path does not back up).
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        for body in ("null", "[]", '"hello"', "42"):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
     # ── Bootstrap wrapper ─────────────────────────────────────────────────────
 
     def test_bootstrap_wrapper_reports_missing_and_old_cli_and_execs_current_cli(self) -> None:

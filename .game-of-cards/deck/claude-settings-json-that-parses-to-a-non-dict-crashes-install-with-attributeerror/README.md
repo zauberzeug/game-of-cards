@@ -1,21 +1,21 @@
 ---
 title: claude-settings-json-that-parses-to-a-non-dict-crashes-install-with-attributeerror
 summary: "When `.claude/settings.json` is valid JSON but parses to a non-dict (`null`, a list, a bare string/number), both `_merge_claude_settings` and `_strip_goc_settings_entries` call `dict` methods on the parsed value (`.setdefault`, `.get`) and crash with a raw `AttributeError` traceback. Same point-away-from-the-problem failure the closed sibling `frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror` eliminated for the YAML frontmatter parser, in a code path the closed `install-overwrites-malformed-claude-settings-json-instead-of-merging` fix only covered for `JSONDecodeError`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T17:14:06Z"
-closed_at: null
+closed_at: "2026-05-30T17:19:48Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — every non-mapping JSON shape (`null`, top-level list, bare string, bare number) in `.claude/settings.json` is handled coherently by `_merge_claude_settings` and `_strip_goc_settings_entries` instead of raising `AttributeError`.
-  - [ ] TDD: when `.claude/settings.json` parses to a non-dict, the original bytes are preserved (a timestamped `.bak` sibling is written by `_merge_claude_settings`, matching the existing malformed-JSON branch) and a warning is printed to stderr naming the backup.
-  - [ ] TDD: a regression test in `tests/` covers each non-dict shape (`null`, `[]`, `"string"`, `42`) against both `_merge_claude_settings` and `_strip_goc_settings_entries` and asserts no `AttributeError` escapes.
-  - [ ] MECHANICAL: the non-dict guard lives in or just after the `json.loads` block in both `_merge_claude_settings` (`goc/install.py:567`) and `_strip_goc_settings_entries` (`goc/install.py:596`); behavior matches the existing `JSONDecodeError` path (backup + warn for the merge function, warn + early return for the strip function).
-  - [ ] EMPIRICAL: `goc install` and `goc upgrade --agents claude` both complete cleanly against a repo whose `.claude/settings.json` is `null`, with the original bytes preserved in a `.bak` sibling.
+  - [x] TDD: reproduce.py exits zero — every non-mapping JSON shape (`null`, top-level list, bare string, bare number) in `.claude/settings.json` is handled coherently by `_merge_claude_settings` and `_strip_goc_settings_entries` instead of raising `AttributeError`.
+  - [x] TDD: when `.claude/settings.json` parses to a non-dict, the original bytes are preserved (a timestamped `.bak` sibling is written by `_merge_claude_settings`, matching the existing malformed-JSON branch) and a warning is printed to stderr naming the backup.
+  - [x] TDD: a regression test in `tests/` covers each non-dict shape (`null`, `[]`, `"string"`, `42`) against both `_merge_claude_settings` and `_strip_goc_settings_entries` and asserts no `AttributeError` escapes.
+  - [x] MECHANICAL: the non-dict guard lives in or just after the `json.loads` block in both `_merge_claude_settings` (`goc/install.py:567`) and `_strip_goc_settings_entries` (`goc/install.py:596`); behavior matches the existing `JSONDecodeError` path (backup + warn for the merge function, warn + early return for the strip function).
+  - [x] EMPIRICAL: `goc install` and `goc upgrade --agents claude` both complete cleanly against a repo whose `.claude/settings.json` is `null`, with the original bytes preserved in a `.bak` sibling.
 worker: {who: "claude[bot]", where: main}
 ---
 

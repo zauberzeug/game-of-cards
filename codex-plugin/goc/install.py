@@ -573,6 +573,15 @@ def _merge_claude_settings(settings_path: Path) -> None:
                 f"Merge your keys back in by hand.",
                 file=sys.stderr,
             )
+        if not isinstance(settings, dict):
+            backup = _backup_unparseable_settings(settings_path, original)
+            print(
+                f"  warning: {settings_path} is valid JSON but not an object "
+                f"(got {type(settings).__name__}); backed it up to {backup.name} "
+                f"before writing GoC hooks. Merge your keys back in by hand.",
+                file=sys.stderr,
+            )
+            settings = {}
 
     hooks = settings.setdefault("hooks", {})
     for event, command in GOC_CLAUDE_HOOKS.items():
@@ -598,6 +607,14 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
         print(
             f"  warning: {settings_path} is not valid JSON ({exc}); "
             f"leaving it untouched (GoC hook entries not removed).",
+            file=sys.stderr,
+        )
+        return
+    if not isinstance(settings, dict):
+        print(
+            f"  warning: {settings_path} is valid JSON but not an object "
+            f"(got {type(settings).__name__}); leaving it untouched "
+            f"(GoC hook entries not removed).",
             file=sys.stderr,
         )
         return
