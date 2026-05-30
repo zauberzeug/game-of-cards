@@ -1,7 +1,7 @@
 ---
 title: pattern-generalization-mutation-detector-fires-on-pathspec-separator-staging
 summary: "The pattern-generalization stop hook's BASH_COMMIT_TOKENS substring `\"git add -\"` matches the pathspec-separator form `git add -- <path>` — the canonical defensive staging idiom. Turns that only stage a file (no Edit/Write, no commit) trigger the generalization self-assessment reminder, training the agent to ignore it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T07:46:12Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` matcher anchors the staging-flag check (e.g. regex `git\s+add\s+-[A-Za-z]` or token list excluding the bare `git add -`); `claude-plugin/hooks/`, `codex-plugin/hooks/`, and `openclaw-plugin/index.ts` mirror updated via the sync script
   - [ ] PROCESS: tests/ adds a regression case for the `git add -- <path>` non-mutation path
   - [ ] PROCESS: closure logged in log.md with the reproduce.py before/after output
+worker: {who: "claude[bot]", where: main}
 ---
 
 # pattern-generalization-mutation-detector-fires-on-pathspec-separator-staging
