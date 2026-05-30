@@ -8,7 +8,9 @@ string as individual tags.
 """
 
 import sys
+import tempfile
 from pathlib import Path
+from unittest import mock
 
 
 def _repo_root() -> Path:
@@ -22,13 +24,12 @@ def _repo_root() -> Path:
 
 sys.path.insert(0, str(_repo_root()))
 
-from goc.engine import _FENCED_YAML  # noqa: E402
-from goc._vendor import yaml_lite as yaml  # noqa: E402
+from goc import engine  # noqa: E402
 
 
-# Simulates one `canonical-tags.md` whose fenced YAML block uses bare-scalar
-# form for `canonical_tags`. This is the shape a user reaches for when they
-# only need one tag and assume YAML's "a list of one is a scalar" idiom.
+# A `canonical-tags.md` whose fenced YAML block uses bare-scalar form for
+# `canonical_tags`. This is the shape a user reaches for when they only
+# need one tag and assume YAML's "a list of one is a scalar" idiom.
 CANONICAL_TAGS_MD = """\
 ```yaml
 canonical_tags: my-tag
@@ -36,23 +37,17 @@ canonical_tags: my-tag
 """
 
 
-def _simulate_loader(text: str) -> set[str]:
-    """Inline reproduction of the buggy loop body in
-    `_load_consuming_repo_tags` (engine.py:455-458). Kept verbatim so the
-    repro stays accurate even if the engine adds the guard.
-    """
-    out: set[str] = set()
-    for match in _FENCED_YAML.finditer(text):
-        block = yaml.safe_load(match.group(1)) or {}
-        out.update(block.get("canonical_tags") or [])
-    return out
+with tempfile.TemporaryDirectory() as tmp:
+    game_dir = Path(tmp) / ".game-of-cards"
+    game_dir.mkdir()
+    (game_dir / "canonical-tags.md").write_text(CANONICAL_TAGS_MD)
+    with mock.patch.object(engine, "DECK_ROOT", Path(tmp)):
+        loaded = engine._load_consuming_repo_tags()
 
-
-loaded = _simulate_loader(CANONICAL_TAGS_MD)
-print(f"Bare-string input: 'canonical_tags: my-tag'")
+print("Bare-string input: 'canonical_tags: my-tag'")
 print(f"Loaded canonical_tags set: {sorted(loaded)}")
 print(f"Number of tags: {len(loaded)}")
-print(f"Expected: 1 tag ('my-tag')")
+print("Expected: 1 tag ('my-tag') or 0 tags (silent drop)")
 
 if loaded == {"my-tag"}:
     print("FIXED: scalar coerced to one-element list.")

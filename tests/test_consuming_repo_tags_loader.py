@@ -1,0 +1,64 @@
+"""Regression: `_load_consuming_repo_tags` must treat a non-list
+`canonical_tags` block value as structurally absent, not iterate it
+character-by-character. Same root-cause family as the closed siblings
+on card frontmatter list fields, but on the canonical-tags.md
+deck-extension surface.
+"""
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from goc import engine
+
+
+class ConsumingRepoTagsLoaderGuardTest(unittest.TestCase):
+    def _run_with_canonical_tags_md(self, body: str) -> set[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            game_dir = Path(tmp) / ".game-of-cards"
+            game_dir.mkdir()
+            (game_dir / "canonical-tags.md").write_text(body)
+            with mock.patch.object(engine, "DECK_ROOT", Path(tmp)):
+                return engine._load_consuming_repo_tags()
+
+    def test_bare_string_canonical_tags_does_not_split_into_chars(self) -> None:
+        loaded = self._run_with_canonical_tags_md(
+            "```yaml\ncanonical_tags: my-tag\n```\n"
+        )
+        # Buggy behavior produced {'-', 'a', 'g', 'm', 't', 'y'}; the
+        # guard drops the malformed shape silently.
+        self.assertEqual(loaded, set())
+
+    def test_canonical_list_form_passes_through_unchanged(self) -> None:
+        loaded = self._run_with_canonical_tags_md(
+            "```yaml\ncanonical_tags:\n  - my-tag\n  - other-tag\n```\n"
+        )
+        self.assertEqual(loaded, {"my-tag", "other-tag"})
+
+    def test_other_non_list_canonical_tags_shapes_coerce_to_empty(self) -> None:
+        # Each malformed shape under test: a YAML scalar, a YAML mapping,
+        # and a YAML int. All must be ignored, not iterated.
+        for body, label in (
+            ("```yaml\ncanonical_tags: just-a-string\n```\n", "scalar"),
+            ("```yaml\ncanonical_tags:\n  nested: mapping\n```\n", "mapping"),
+            ("```yaml\ncanonical_tags: 42\n```\n", "int"),
+        ):
+            with self.subTest(shape=label):
+                self.assertEqual(self._run_with_canonical_tags_md(body), set())
+
+    def test_multiple_blocks_accumulate_only_valid_lists(self) -> None:
+        # One well-formed block, one malformed bare-string block. The
+        # accumulator must keep the valid block's entries and drop the
+        # bad one — not poison the set with single characters.
+        body = (
+            "```yaml\ncanonical_tags:\n  - good-tag\n```\n"
+            "\n"
+            "```yaml\ncanonical_tags: bad-tag\n```\n"
+        )
+        self.assertEqual(self._run_with_canonical_tags_md(body), {"good-tag"})
+
+
+if __name__ == "__main__":
+    unittest.main()

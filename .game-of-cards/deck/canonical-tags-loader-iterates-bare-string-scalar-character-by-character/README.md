@@ -1,21 +1,21 @@
 ---
 title: canonical-tags-loader-iterates-bare-string-scalar-character-by-character
 summary: "`_load_consuming_repo_tags()` in `goc/engine.py:457` reads project-local tags from a consuming repo's `.game-of-cards/canonical-tags.md`, then does `out.update(block.get('canonical_tags') or [])` with no `isinstance(..., list)` guard. A user who writes `canonical_tags: my-tag` (bare scalar, not a list) makes `set.update()` iterate the string character-by-character, adding individual chars as canonical tags. Same antipattern shape as the four closed sibling cards on card-frontmatter fields, but on the deck-extension surface — neither approach A (parse_frontmatter shape rejection) nor approach B (centralized `_field_as_list` helper on card frontmatter) in the open meta-fix card would cover this site, because the canonical-tags file does not flow through `parse_frontmatter` at all."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T04:56:35Z"
-closed_at: null
+closed_at: "2026-05-30T05:01:59Z"
 human_gate: none
 advances:
   - bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `_load_consuming_repo_tags()` called against a `canonical-tags.md` whose block contains `canonical_tags: my-tag` returns either `{"my-tag"}` (coerce single scalar to one-element list) or `set()` (reject malformed shape silently), but NOT a set of single characters.
-  - [ ] MECHANICAL: `_load_consuming_repo_tags()` (engine.py:455-457) guards the `out.update` call with `isinstance(..., list)` (or routes through a shared shape-coercing helper), matching the pattern already present in the four closed sibling sites.
-  - [ ] TDD: regression test in `tests/` covers both the bare-string scalar case and the canonical list case (mirroring `test_card_tags.py` / `test_find_half_edges.py` shape from the sibling fixes).
-  - [ ] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `pre-commit run --all-files` clean (plugin mirrors auto-sync).
+  - [x] TDD: `reproduce.py` exits zero — `_load_consuming_repo_tags()` called against a `canonical-tags.md` whose block contains `canonical_tags: my-tag` returns either `{"my-tag"}` (coerce single scalar to one-element list) or `set()` (reject malformed shape silently), but NOT a set of single characters.
+  - [x] MECHANICAL: `_load_consuming_repo_tags()` (engine.py:455-457) guards the `out.update` call with `isinstance(..., list)` (or routes through a shared shape-coercing helper), matching the pattern already present in the four closed sibling sites.
+  - [x] TDD: regression test in `tests/` covers both the bare-string scalar case and the canonical list case (mirroring `test_card_tags.py` / `test_find_half_edges.py` shape from the sibling fixes).
+  - [x] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `pre-commit run --all-files` clean (plugin mirrors auto-sync).
 worker: {who: "claude[bot]", where: main}
 ---
 

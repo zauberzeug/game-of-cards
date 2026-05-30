@@ -454,7 +454,10 @@ def _load_consuming_repo_tags() -> set[str]:
     out: set[str] = set()
     for match in _FENCED_YAML.finditer(extension_file.read_text()):
         block = yaml.safe_load(match.group(1)) or {}
-        out.update(block.get("canonical_tags") or [])
+        value = block.get("canonical_tags") or []
+        if not isinstance(value, list):
+            continue
+        out.update(value)
     return out
 
 
