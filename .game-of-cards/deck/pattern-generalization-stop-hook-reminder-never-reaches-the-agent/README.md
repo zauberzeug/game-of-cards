@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: "2026-05-26T20:20:14Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
@@ -105,35 +105,9 @@ while the deck's documentation (and the originating card's DoD item:
 the hook's prompt explicitly says so"*) claims it is handled. Silent
 doc/behavior drift on a methodology mechanism.
 
-## Decision required
+## Decision
 
-The defect is certain; the fix has a genuine fork because making the
-hook functional reverses a deliberate prior decision. The originating
-card's recorded design was **A+B+A**: *"lightweight prompt-only Stop
-hook … reminder-only (no stop-block)"*, with reasoning that the low
-false-positive cost came precisely from *"no forced action."* But on
-Claude Code, "reminder reaches the agent" and "does not block the stop"
-are mutually exclusive for a Stop hook. So a human must pick:
+*Resolved 2026-05-30T13:36:33Z:* Block-the-stop: make the hook functional by switching to exit code 2 with REMINDER on stderr (or JSON {decision:block,reason:REMINDER})
 
-1. **Block-the-stop (make it functional).** Switch to exit code `2`
-   with `REMINDER` on stderr (or JSON `{"decision":"block","reason":
-   REMINDER}`). The existing `stop_hook_active` guard (line 123) already
-   prevents an infinite re-block loop. Cost: forces one continuation
-   turn on every code-mutating stop — exactly the "forced action" the
-   original decision chose to avoid. Benefit: the hook does what its
-   card says.
-2. **Drop the hook.** Accept that a non-blocking generalization nudge
-   cannot be delivered on Claude Code's Stop event, remove the hook and
-   its registration, and rely on the UserPromptSubmit router + agent
-   discipline instead. Cost: the automated nudge is gone (but it was
-   never actually firing).
-3. **Accept transcript-only + re-document.** Keep `print()+return 0`,
-   but rewrite the hook's docstring and AGENTS/card-schema docs to state
-   honestly that this is a *user-facing transcript note*, not an
-   agent-facing prompt. Cost: the originating card's intent (agent
-   self-assesses) is formally abandoned; lowest churn.
+*Reasoning:* the existing stop_hook_active guard makes the re-block loop safe and the false-positive cost is just one continuation turn per code-mutating stop, so the hook finally delivers the agent-facing nudge its card promises instead of being silently inert
 
-Recommendation: option 1 if the team still wants the automated nudge
-(the `stop_hook_active` guard makes the loop safe and the FP cost is one
-extra turn), else option 2. Option 3 only if forcing a continuation turn
-is judged too costly and the team is content to drop the automation.
