@@ -1,7 +1,7 @@
 ---
 title: goc-upgrade-cleanup-deletes-user-authored-empty-hook-event-lists
 summary: "`_strip_goc_settings_entries` (goc/install.py:745-748) unconditionally deletes every empty hook-event list in `.claude/settings.json`, including user-authored placeholders the strip pass never touched. Reachable through `goc upgrade` when switching a repo from vendored to plugin-mode skills (`_strip_claude_vendored_harness`). Violates the cleanup contract that only GoC-managed entries are removed."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T21:35:51Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_strip_goc_settings_entries` only deletes hook events whose final value differs from the pre-strip value (i.e. only events the function itself emptied)
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
   - [ ] PROCESS: `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc upgrade` cleanup deletes user-authored empty hook-event lists
