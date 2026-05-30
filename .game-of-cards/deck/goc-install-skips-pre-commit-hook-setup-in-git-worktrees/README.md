@@ -1,7 +1,7 @@
 ---
 title: goc-install-skips-pre-commit-hook-setup-in-git-worktrees
 summary: "`goc install` skips the `.pre-commit-config.yaml` setup whenever it runs inside a git worktree. The guard at `goc/install.py:944` tests `(target.parent / \".git\").is_dir()`, but in a git worktree `.git` is a *file* (containing `gitdir: …`), not a directory — so `is_dir()` returns False and the function returns early. The worktree is unambiguously a git checkout (an `exists()` test would correctly accept it)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T01:20:53Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the guard at `goc/install.py:944` no longer rejects worktrees (use `exists()` rather than `is_dir()`, or detect the `gitdir:` file form explicitly).
   - [ ] TDD: a regression test in `tests/` covers the worktree shape (e.g. set up a temp worktree, call `_append_precommit_hook`, assert the file lands).
   - [ ] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc install skips pre-commit hook setup in git worktrees
