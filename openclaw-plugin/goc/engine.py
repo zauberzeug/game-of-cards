@@ -772,6 +772,41 @@ def _now_instant(today: "date | datetime | None") -> datetime:
     return datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
 
 
+def _format_waiting_until_for_message(value) -> str:
+    """Echo the stored `waiting_until` shape for operator-facing messages.
+
+    Bare date (string `YYYY-MM-DD` or `date` instance) stays rendered as
+    `YYYY-MM-DD`. Datetime (string `YYYY-MM-DDTHH:MM:SSZ` or `datetime`
+    instance) is rendered as its stored UTC instant. The validator's
+    rendered output thus agrees with the read guard's full-timestamp
+    predicate, all the way through to what the operator reads.
+    """
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str) and _ISO_DATETIME_UTC_RE.match(value):
+        return value
+    return _date_part(value)
+
+
+def _format_elapsed(delta: timedelta) -> str:
+    """Render an elapsed wait at the coarsest precision that does not lie.
+
+    Under one hour → minutes (`Nm`). Under one day → hours (`Nh`).
+    Otherwise → days (`Nd`). Floors to the chosen unit. Matches the
+    granularity the docstring at `validate_waiting_overlay` promises the
+    read guard preserves: a sub-day overrun is reported as such, not
+    collapsed to `0d ago`.
+    """
+    total = int(delta.total_seconds())
+    if total < 3600:
+        return f"{total // 60}m"
+    if total < 86400:
+        return f"{total // 3600}h"
+    return f"{total // 86400}d"
+
+
 LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")
 ADVANCE_REL_FIELDS = frozenset({"advances", "advanced_by"})
 SUPERSEDE_REL_FIELDS = frozenset({"supersedes", "superseded_by"})
@@ -1493,8 +1528,8 @@ def validate_waiting_overlay(cards: list[Card], *, today: "date | datetime | Non
         warnings.append(BlockerWarning(
             "WAITING_OVERDUE",
             c.title,
-            f"waiting_on={reason} waiting_until={until_dt.date().isoformat()} "
-            f"elapsed {(now - until_dt).days}d ago — re-triage or clear",
+            f"waiting_on={reason} waiting_until={_format_waiting_until_for_message(until)} "
+            f"elapsed {_format_elapsed(now - until_dt)} ago — re-triage or clear",
         ))
     return warnings
 

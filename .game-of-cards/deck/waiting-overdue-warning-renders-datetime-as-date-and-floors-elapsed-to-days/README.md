@@ -1,21 +1,21 @@
 ---
 title: waiting-overdue-warning-renders-datetime-as-date-and-floors-elapsed-to-days
 summary: "`validate_waiting_overlay` decides overdue-ness at full datetime precision but renders the `WAITING_OVERDUE` warning with `until_dt.date().isoformat()` (drops the time) and `(now - until_dt).days` (floors sub-24h elapses to `0d`). A card deferred to `2026-05-30T23:00:00Z` checked at `2026-05-31T00:30:00Z` is reported as `waiting_until=2026-05-30 elapsed 0d ago` — the operator cannot see which datetime was stored, and the elapsed counter is `0d` for everything <24h overdue. The docstring promises full-timestamp parity with the read guard; the predicate keeps that promise but the rendered message breaks it."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T11:51:09Z"
-closed_at: null
+closed_at: "2026-05-30T12:34:01Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero and asserts the rendered `WAITING_OVERDUE` message echoes the stored timestamp shape (datetime when stored as datetime, date when stored as date) and shows sub-day elapse with hour granularity.
-  - [ ] TDD: the existing `WAITING_OVERDUE`-message tests still pass for the bare-date case (no regression on the date-only deferral display).
-  - [ ] MECHANICAL: `goc/engine.py` `validate_waiting_overlay` render at lines 1493-1498 stops calling `until_dt.date().isoformat()` and stops using `(now - until_dt).days` as the only elapsed precision.
-  - [ ] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
-  - [ ] PROCESS: plugin mirrors re-synced by pre-commit; CI's `python scripts/sync_plugin_assets.py --check` stays green.
+  - [x] TDD: `reproduce.py` exits zero and asserts the rendered `WAITING_OVERDUE` message echoes the stored timestamp shape (datetime when stored as datetime, date when stored as date) and shows sub-day elapse with hour granularity.
+  - [x] TDD: the existing `WAITING_OVERDUE`-message tests still pass for the bare-date case (no regression on the date-only deferral display).
+  - [x] MECHANICAL: `goc/engine.py` `validate_waiting_overlay` render at lines 1493-1498 stops calling `until_dt.date().isoformat()` and stops using `(now - until_dt).days` as the only elapsed precision.
+  - [x] PROCESS: `uv run goc validate` passes; `uv run python -m unittest discover -s tests` passes.
+  - [x] PROCESS: plugin mirrors re-synced by pre-commit; CI's `python scripts/sync_plugin_assets.py --check` stays green.
 worker: {who: "claude[bot]", where: main}
 ---
 
