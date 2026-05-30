@@ -1,21 +1,21 @@
 ---
 title: pattern-generalization-stop-hook-reminder-never-reaches-the-agent
 summary: "The pattern-generalization Stop hook prints its reminder to stdout and returns 0. For a Claude Code Stop hook, exit-0 stdout is shown only to the user in transcript mode — it is NOT injected into the model's context. So the agent never sees the self-assessment prompt and the hook has been inert (for its stated purpose) since it shipped. The sibling SessionStart / UserPromptSubmit hooks use the same print()+return-0 idiom correctly, because those hook types DO inject stdout into context — the Stop hook copied an idiom that does not transfer."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-26T20:20:14Z"
-closed_at: null
+closed_at: "2026-05-30T14:10:01Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] PROCESS: Decision recorded (block-the-stop vs drop-the-hook vs accept-transcript-only) in the body's `## Decision required` section and gate lowered.
-  - [ ] TDD: reproduce.py exits zero (the chosen output mechanism is asserted to reach the agent for the block path, or the hook is removed for the drop path).
-  - [ ] MECHANICAL: the fix lands in `goc/templates/hooks/pattern_generalization_check.py` and the plugin/consumer mirrors are re-synced (pre-commit `sync-plugin-assets` + `port_skills_to_openclaw` where applicable).
-  - [ ] MECHANICAL: AGENTS.md / card-schema or wherever the hook's behavior is documented matches the chosen mechanism.
-  - [ ] TDD: `uv run goc validate` passes.
+  - [x] PROCESS: Decision recorded (block-the-stop vs drop-the-hook vs accept-transcript-only) in the body's `## Decision required` section and gate lowered.
+  - [x] TDD: reproduce.py exits zero (the chosen output mechanism is asserted to reach the agent for the block path, or the hook is removed for the drop path).
+  - [x] MECHANICAL: the fix lands in `goc/templates/hooks/pattern_generalization_check.py` and the plugin/consumer mirrors are re-synced (pre-commit `sync-plugin-assets` + `port_skills_to_openclaw` where applicable).
+  - [x] MECHANICAL: AGENTS.md / card-schema or wherever the hook's behavior is documented matches the chosen mechanism.
+  - [x] TDD: `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 

@@ -1,11 +1,18 @@
 """Stop hook — prompt agent to file generalization cards for pattern instances.
 
 Fires only on turns that included code-mutating tool calls (Edit, Write, or
-NotebookEdit, or Bash containing a git-commit). Injects a system reminder
-asking the agent to self-assess whether the change is an instance of a broader
-pattern that warrants its own generalization card.
+NotebookEdit, or Bash containing a git-commit). Blocks the stop and feeds the
+agent a reminder asking it to self-assess whether the change is an instance of
+a broader pattern that warrants its own generalization card.
 
-Design A+B+A: lightweight prompt-only / code-mutating-turns only / reminder-only.
+Claude Code's Stop event has no non-blocking channel to the model: exit-0
+stdout is shown only in the user's transcript view, never injected into
+context. To reach the agent, the hook must block — exit code 2 with the
+reminder on stderr (Claude Code feeds stderr back to the model on a block).
+The host's own `stop_hook_active` flag (checked below) prevents an infinite
+re-block loop: the second Stop after the agent's continuation turn carries
+`stop_hook_active: true` and is a no-op.
+
 Opt-out per-repo in .game-of-cards/config.yaml:
   hooks:
     pattern_generalization_check: false
@@ -139,7 +146,8 @@ def main() -> int:
         return 0
 
     if _had_code_mutation(transcript_path):
-        print(REMINDER)
+        print(REMINDER, file=sys.stderr)
+        return 2
 
     return 0
 
