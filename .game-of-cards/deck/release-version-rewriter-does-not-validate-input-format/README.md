@@ -1,20 +1,20 @@
 ---
 title: release-version-rewriter-does-not-validate-input-format
 summary: "`scripts/release_rewrite_versions.py` accepts any non-empty argv[1] as the version and writes all eight publish/dogfood targets (six JSON/Python literal patterns, the `.goc-version` full-file write, AND the AGENTS.md marker) without validating the format. Empirically confirmed (see reproduce.py): passing `1.0` succeeds with exit 0 and mutates every target. The script's docstring promises it 'fails loudly on any expected-vs-actual mismatch — versions are too important to silently no-op,' but the only `\\d+\\.\\d+\\.\\d+` regex (the AGENTS.md pattern) anchors on the OLD value being replaced, not the new value being written — so it never validates input format."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-30T12:43:43Z"
-closed_at: null
+closed_at: "2026-05-30T12:50:33Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — a malformed-version dispatch leaves zero files mutated (script rejects up front)
-  - [ ] TDD: `rewrite_all` raises / `main` returns non-zero with a clear error message naming the expected format BEFORE any `_replace` or `.goc-version` write fires
-  - [ ] TDD: valid release-mode inputs (`1.2.3`), dry-run mode (`0.99.0`), and tag-recovery mode (existing semver tag) still succeed end-to-end — regression tested against the format `re.fullmatch(r"\d+\.\d+\.\d+", version)`
-  - [ ] MECHANICAL: the script docstring's "fails loudly … silently no-op" sentence is left in place (it is now accurate) or strengthened to "validates input format before writing any file"
+  - [x] TDD: `reproduce.py` exits zero — a malformed-version dispatch leaves zero files mutated (script rejects up front)
+  - [x] TDD: `rewrite_all` raises / `main` returns non-zero with a clear error message naming the expected format BEFORE any `_replace` or `.goc-version` write fires
+  - [x] TDD: valid release-mode inputs (`1.2.3`), dry-run mode (`0.99.0`), and tag-recovery mode (existing semver tag) still succeed end-to-end — regression tested against the format `re.fullmatch(r"\d+\.\d+\.\d+", version)`
+  - [x] MECHANICAL: the script docstring's "fails loudly … silently no-op" sentence is left in place (it is now accurate) or strengthened to "validates input format before writing any file"
 worker: {who: "claude[bot]", where: main}
 ---
 

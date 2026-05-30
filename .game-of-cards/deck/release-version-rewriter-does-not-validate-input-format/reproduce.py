@@ -80,28 +80,25 @@ def main() -> int:
         print()
 
         # Verdict: the defect is "no input format validation." A correctly
-        # guarded rewriter would refuse a malformed version with a non-zero
-        # exit code AND zero file mutations. Anything else confirms the gap.
+        # guarded rewriter refuses a malformed version with a non-zero exit
+        # code AND zero file mutations. Repo convention: exit 0 == post-fix.
         total_files = len(TARGETS) + 1   # +1 for AGENTS.md
-        if result.returncode == 0 and len(mutated) == total_files:
-            print(
-                f"DEFECT CONFIRMED: rewriter exited 0 (silent success) after "
-                f"mutating ALL {total_files} target files with malformed input "
-                f"{MALFORMED_VERSION!r}. The docstring's 'fails loudly on any "
-                "expected-vs-actual mismatch' contract does not hold — the "
-                "script has no input format validation at all."
-            )
-            return 0
         if result.returncode != 0 and len(mutated) == 0:
             print(
-                "FIX APPLIED: rewriter rejected malformed input before "
-                "writing any file. Defect resolved."
+                "VERDICT: post-fix. Rewriter rejected malformed input before "
+                "writing any file. exit 0."
             )
-            return 1   # reproduce.py exits non-zero once the defect is fixed
+            return 0
+        if result.returncode == 0 and len(mutated) == total_files:
+            print(
+                f"VERDICT: pre-fix. Rewriter exited 0 (silent success) after "
+                f"mutating ALL {total_files} target files with malformed input "
+                f"{MALFORMED_VERSION!r}. exit 1."
+            )
+            return 1
         print(
-            f"PARTIAL: rewriter exited {result.returncode} after mutating "
-            f"{len(mutated)} of {total_files} files. The defect surface is "
-            "either narrower than expected or a fix is in flight."
+            f"VERDICT: partial. Rewriter exited {result.returncode} after "
+            f"mutating {len(mutated)} of {total_files} files. exit 1."
         )
         return 1
 
