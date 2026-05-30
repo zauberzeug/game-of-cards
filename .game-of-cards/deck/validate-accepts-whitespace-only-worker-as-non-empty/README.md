@@ -1,20 +1,20 @@
 ---
 title: validate-accepts-whitespace-only-worker-as-non-empty
 summary: "`goc validate` accepts `worker: \" \"` (a whitespace-only string) and `worker: {who: \" \"}` (whitespace-only `who` in the mapping form) as if they were non-empty. The validator predicate `not worker` / `not worker[\"who\"]` catches `\"\"` but not `\" \"`, so the validator violates its own stated rule (\"must not be an empty string\"). Reachable via `goc new --worker \" \"` and `goc status <t> active --worker-who \" \"`."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-30T13:02:01Z"
-closed_at: null
+closed_at: "2026-05-30T13:07:28Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `goc validate` rejects both `worker: " "` and `worker: {who: " "}` with a non-zero exit and an error message naming the offending card.
-  - [ ] TDD: regression test added under `tests/` covering both the bare-string and mapping forms of the whitespace-only worker check.
-  - [ ] MECHANICAL: the validator predicate in `goc/engine.py` rejects strings that are non-empty but consist only of whitespace (use `not worker.strip()` / `not worker["who"].strip()`).
-  - [ ] MECHANICAL: `uv run goc validate` clean on this repo's own deck after the fix; plugin mirrors synced.
+  - [x] TDD: reproduce.py exits zero — `goc validate` rejects both `worker: " "` and `worker: {who: " "}` with a non-zero exit and an error message naming the offending card.
+  - [x] TDD: regression test added under `tests/` covering both the bare-string and mapping forms of the whitespace-only worker check.
+  - [x] MECHANICAL: the validator predicate in `goc/engine.py` rejects strings that are non-empty but consist only of whitespace (use `not worker.strip()` / `not worker["who"].strip()`).
+  - [x] MECHANICAL: `uv run goc validate` clean on this repo's own deck after the fix; plugin mirrors synced.
 worker: {who: "claude[bot]", where: main}
 ---
 
