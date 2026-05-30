@@ -1,7 +1,7 @@
 ---
 title: canonical-tags-loader-iterates-bare-string-scalar-character-by-character
 summary: "`_load_consuming_repo_tags()` in `goc/engine.py:457` reads project-local tags from a consuming repo's `.game-of-cards/canonical-tags.md`, then does `out.update(block.get('canonical_tags') or [])` with no `isinstance(..., list)` guard. A user who writes `canonical_tags: my-tag` (bare scalar, not a list) makes `set.update()` iterate the string character-by-character, adding individual chars as canonical tags. Same antipattern shape as the four closed sibling cards on card-frontmatter fields, but on the deck-extension surface — neither approach A (parse_frontmatter shape rejection) nor approach B (centralized `_field_as_list` helper on card frontmatter) in the open meta-fix card would cover this site, because the canonical-tags file does not flow through `parse_frontmatter` at all."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T04:56:35Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_load_consuming_repo_tags()` (engine.py:455-457) guards the `out.update` call with `isinstance(..., list)` (or routes through a shared shape-coercing helper), matching the pattern already present in the four closed sibling sites.
   - [ ] TDD: regression test in `tests/` covers both the bare-string scalar case and the canonical list case (mirroring `test_card_tags.py` / `test_find_half_edges.py` shape from the sibling fixes).
   - [ ] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `pre-commit run --all-files` clean (plugin mirrors auto-sync).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `_load_consuming_repo_tags` iterates a bare-string `canonical_tags` scalar character-by-character
