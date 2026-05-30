@@ -1,21 +1,21 @@
 ---
 title: deck-prompt-router-missing-rename-update-change-delete-edit-verbs
 summary: "The shipping `deck_prompt_router.py` WORK_INITIATING list is missing the edit verbs `rename | update | change | delete | remove | move`, so prompts like `rename the button to Export` no longer fire the GoC reminder — the exact failure mode the closed card `prompt-hook-misses-rename-work-requests` (done 2026-05-05) claimed to have fixed. Root cause is a stale-tree merge: commit 33d000a (2026-05-05 08:27) introduced `deck_prompt_router.py` as a fresh copy of an older `user-prompt-submit.py` version, and commit 14864cc (2026-05-05 22:56) then added the rename verbs to the now-orphaned `user-prompt-submit.py`. Commit 8277962 (2026-05-09) deleted the orphan, taking the fix with it. The closed card's DoD never re-checked the renamed file."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T02:15:24Z"
-closed_at: null
+closed_at: "2026-05-30T16:45:32Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the canonical AGENTS examples (`rename the button to Export`, `add a CSV export`, `fix the auth bug`) AND four sibling edit verbs (`update the timeout to 30s`, `change the default port`, `delete the legacy module`, `move the helper to utils/`) all fire the GoC reminder.
-  - [ ] TDD: existing regression cases stay green — exploration prompts that today are silent (`we should review the recent commits`) remain silent.
-  - [ ] MECHANICAL: the same verb additions land in the OpenClaw plugin's TypeScript port at `openclaw-plugin/index.ts` so the three-host parity is restored.
-  - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py --check` clean (the hook file ships in three plugin payloads + the `.claude/hooks/` dogfood copy).
-  - [ ] PROCESS: amend the closed card `prompt-hook-misses-rename-work-requests` with a forward pointer to this card per AGENTS.md's "Closure is not frozenness" rule — append to its `log.md` documenting the regression and the date.
+  - [x] TDD: `reproduce.py` exits zero — the canonical AGENTS examples (`rename the button to Export`, `add a CSV export`, `fix the auth bug`) AND four sibling edit verbs (`update the timeout to 30s`, `change the default port`, `delete the legacy module`, `move the helper to utils/`) all fire the GoC reminder.
+  - [x] TDD: existing regression cases stay green — exploration prompts that today are silent (`we should review the recent commits`) remain silent.
+  - [x] MECHANICAL: the same verb additions land in the OpenClaw plugin's TypeScript port at `openclaw-plugin/index.ts` so the three-host parity is restored.
+  - [x] MECHANICAL: `python scripts/sync_plugin_assets.py --check` clean (the hook file ships in three plugin payloads + the `.claude/hooks/` dogfood copy).
+  - [x] PROCESS: amend the closed card `prompt-hook-misses-rename-work-requests` with a forward pointer to this card per AGENTS.md's "Closure is not frozenness" rule — append to its `log.md` documenting the regression and the date.
 worker: {who: "claude[bot]", where: main}
 ---
 

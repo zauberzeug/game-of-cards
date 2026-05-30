@@ -241,14 +241,20 @@ async function resolveDeckDir(projectDir: string): Promise<string> {
 }
 
 // Patterns mirror goc/templates/hooks/deck_prompt_router.py exactly.
+// WORK_VERBS is the single source-of-truth verb list — keep in sync with the
+// Python hook's WORK_VERBS constant.
+const WORK_VERBS =
+  "add|build|change|create|delete|extract|fix|implement|" +
+  "introduce|move|refactor|remove|rename|update|write";
+
 const WORK_INITIATING = [
-  /\blet'?s\s+(do|build|implement|make|add|create|fix|introduce|write|refactor)\b/i,
-  /\b(implement|build|introduce|refactor)\s+\w/i,
-  /\b(fix|add|create|write)\s+(a|an|the|this|that|some)\b/i,
+  new RegExp(String.raw`\blet'?s\s+(do|make|ship|${WORK_VERBS})\b`, "i"),
+  new RegExp(String.raw`\b(${WORK_VERBS})\s+\w`, "i"),
+  new RegExp(String.raw`\b(${WORK_VERBS})\s+(a|an|the|this|that|some)\b`, "i"),
   /\bi\s+(want|need)\s+(to|a|an|the|this)\b/i,
   /\bwe\s+(need|should|want)\s+to\b/i,
-  /\bcan\s+you\s+(add|fix|build|create|implement|introduce|write)\b/i,
-  /\bplease\s+(add|fix|build|create|implement|introduce|write)\b/i,
+  new RegExp(String.raw`\bcan\s+you\s+(${WORK_VERBS})\b`, "i"),
+  new RegExp(String.raw`\bplease\s+(${WORK_VERBS})\b`, "i"),
   /\bmake\s+it\s+(work|do|so|happen)\b/i,
   /\bship\s+(it|this|the)\b/i,
 ];

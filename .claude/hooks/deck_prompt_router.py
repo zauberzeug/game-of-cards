@@ -13,14 +13,24 @@ import json
 import re
 import sys
 
+# Edit-style work verbs — the single source-of-truth set referenced from every
+# WORK_INITIATING alternation site. Adding a verb here teaches the router about
+# a new edit shape with a one-line change. Splitting this across multiple
+# alternation sites caused the rename/update/change/delete/remove/move
+# regression: a verb added to one site, missing from the others.
+WORK_VERBS = (
+    "add|build|change|create|delete|extract|fix|implement|"
+    "introduce|move|refactor|remove|rename|update|write"
+)
+
 WORK_INITIATING = [
-    r"\blet'?s\s+(do|build|implement|make|add|create|fix|introduce|write|refactor)\b",
-    r"\b(implement|build|introduce|refactor)\s+\w",
-    r"\b(fix|add|create|write)\s+(a|an|the|this|that|some)\b",
+    rf"\blet'?s\s+(do|make|ship|{WORK_VERBS})\b",
+    rf"\b({WORK_VERBS})\s+\w",
+    rf"\b({WORK_VERBS})\s+(a|an|the|this|that|some)\b",
     r"\bi\s+(want|need)\s+(to|a|an|the|this)\b",
     r"\bwe\s+(need|should|want)\s+to\b",
-    r"\bcan\s+you\s+(add|fix|build|create|implement|introduce|write)\b",
-    r"\bplease\s+(add|fix|build|create|implement|introduce|write)\b",
+    rf"\bcan\s+you\s+({WORK_VERBS})\b",
+    rf"\bplease\s+({WORK_VERBS})\b",
     r"\bmake\s+it\s+(work|do|so|happen)\b",
     r"\bship\s+(it|this|the)\b",
 ]
