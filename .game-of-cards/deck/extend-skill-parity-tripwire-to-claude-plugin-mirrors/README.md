@@ -10,7 +10,8 @@ human_gate: none
 advances:
   - prevent-skill-rename-from-breaking-ci-silently
   - derive-claude-hook-manifest-from-templates
-advanced_by: []
+advanced_by:
+  - validate-plugin-mirror-parity-uses-shallow-filecmp-missing-content-drift
 tags: [bug, infra]
 definition_of_done: |
   - [x] `goc validate` (or a dedicated `goc validate --plugin-mirrors` sub-check) reproduces the CI byte-for-byte parity check across all four mirror pairs: `goc/templates/skills` ↔ `claude-plugin/skills`, the two hook scripts, and `goc` ↔ `claude-plugin/goc`

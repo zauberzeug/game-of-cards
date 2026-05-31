@@ -9,6 +9,11 @@ closed_at: "2026-05-06T03:10:37Z"
 human_gate: none
 advances: []
 advanced_by: []
+superseded_by:
+  - publish-claude-code-plugin
+  - publish-codex-plugin
+  - publish-openclaw-plugin
+supersedes: []
 tags: [story, infra]
 definition_of_done: |
   - [ ] Publication targets accepted for each plugin runtime

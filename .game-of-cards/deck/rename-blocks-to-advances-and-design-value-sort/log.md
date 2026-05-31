@@ -90,3 +90,7 @@ for the editorial work of adding `advances` edges the old `blocks`
 reading discouraged on the 279 graph-isolate cards. Without that,
 the GRPW algorithm's amplification pathway is structurally live but
 empirically dormant.
+
+## 2026-05-31T08:49:16Z: decision recorded
+
+Value-computation design shipped with the rename; clear the stale session gate — Card was closed done on 2026-05-03 after shipping the advances rename + GRPW value sort, but the session gate that fronted the value-computation design step was never lowered at close (predates the close-time gate guard). Gate session → none. (Post-closure gate repair on a done card — the card stays closed; this clears the dangling gate so `goc validate` passes.)

@@ -9,6 +9,9 @@ closed_at: "2026-05-09T05:00:13Z"
 human_gate: none
 advances: []
 advanced_by: []
+superseded_by:
+  - provide-openclaw-plugin-for-skills-and-hooks
+supersedes: []
 tags: [story, infra]
 definition_of_done: |
   - [ ] OpenClaw's current project-guidance file/path convention is verified from upstream docs or source before implementation and recorded in this card log

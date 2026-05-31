@@ -36,6 +36,8 @@ definition_of_done: |
   - [x] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback — confirmed by Rodja 2026-05-14: OpenClaw plugin installs cleanly
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
+supersedes:
+  - install-openclaw-harness
 ---
 
 # Provide an OpenClaw plugin for skills and hooks

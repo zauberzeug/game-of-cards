@@ -13,3 +13,20 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-05-31 — Closure' present
+
+## 2026-05-31 — Reversed by `goc-validate-requires-supersession-and-gate-states-no-verb-can-produce`
+
+The close-time guard `_enforce_no_inbound_superseded_by_or_exit` (and its
+helper `_inbound_superseded_by_holders`) introduced by this card were removed
+entirely, along with the test `test_close_with_inbound_superseded_by.py`
+(replaced by `test_close_succeeds_with_inbound_superseded_by.py`). The guard
+made the successor of *every* supersession permanently un-closeable: after
+`goc status A superseded --by B` (B live), `goc done B` was refused because
+`A.superseded_by` still pointed at B — but B is exactly the live work the
+supersession was created to track, and is meant to be completed. Landing on a
+`done` successor is the *resolution* of the supersession, not a dead end (and a
+`superseded` successor routes onward via its own pointer). Closing a
+supersession's successor is now allowed; `A` legitimately routes forward to the
+now-terminal `B`, and `goc validate` accepts the link. This was the deepest of
+the three guards in the family — the others only blocked unusual inputs, while
+this one broke the normal lifecycle. See the new card for the full rationale.

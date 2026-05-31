@@ -71,3 +71,21 @@ The new validator surfaces one pre-existing dead-end forward link, exactly the c
 This is left in place for separate deck-data hygiene; the validator now flags it on every `goc validate` so a cold reader knows the chain terminates at a closed card. Other validator errors visible on `main` (orphan `status: superseded` with empty `superseded_by`, a `human_gate: session` on terminal cards, and one half-edge) are pre-existing and unrelated to this fix — confirmed by `git stash; goc validate; git stash pop` producing the identical set minus the one new dead-end above.
 
 Plugin mirrors regenerated (`python scripts/sync_plugin_assets.py`); `claude-plugin/goc/engine.py`, `codex-plugin/goc/engine.py`, and `openclaw-plugin/goc/engine.py` updated in lockstep.
+
+## 2026-05-31 — Reversed by `goc-validate-requires-supersession-and-gate-states-no-verb-can-produce`
+
+The set-time `--by` terminal guard in `_cmd_status` and the liveness branch of
+`validate_superseded_by_targets` introduced by this card were both removed. A
+downstream consumer (goc 0.0.22) showed the "`superseded_by` must land on live
+work" invariant is wrong: a supersession's successor is meant to be
+*completed*, so the typed forward pointer legitimately terminates at a `done`
+card (the resolution) or routes onward through a `superseded` card's own
+pointer. The invariant also made the successor of every supersession
+permanently un-closeable (via the close-time guard from
+`closing-a-card-with-inbound-superseded-by-creates-dead-end-routing`) and
+contradicted the shipped AGENTS.md record-axis contract — integrity is
+"enforced regardless of either endpoint's status." The relaxed rule is
+referential-integrity-only ("target must exist"). The `frontmatter-emitter-…`
+dead-end this card's log noted above now validates cleanly. The symmetric
+`validate_supersedes_targets` (target-must-be-superseded) was left unchanged —
+it is a different, still-correct rule. See the new card for the full rationale.

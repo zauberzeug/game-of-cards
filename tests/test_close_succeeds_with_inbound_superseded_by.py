@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LIVE_SUCCESSOR_CARD = """\
 ---
 title: card-b
-summary: "Live successor of card-a; the target this close-time guard protects."
+summary: "Live successor of card-a — the work the supersession was created to track."
 status: open
 stage: null
 contribution: medium
@@ -83,7 +83,7 @@ definition_of_done: |
 THIRD_LIVE_CARD = """\
 ---
 title: card-c
-summary: "Fresh live successor for the `status superseded --by` path."
+summary: "Fresh successor for re-superseding card-b (the chain continues)."
 status: open
 stage: null
 contribution: medium
@@ -101,14 +101,16 @@ definition_of_done: |
 """
 
 
-class CloseWithInboundSupersededByTest(unittest.TestCase):
-    """All close-time verbs (`goc done`, `goc done --bundle`,
-    `goc status <X> disproved`, `goc status <X> superseded --by <new>`)
-    must refuse to close a card that another card still routes forward
-    to via `superseded_by`. Without this guard, the holder's typed
-    forward routing pointer lands on a terminal card — the dead-end
-    shape `validate_superseded_by_targets` catches reactively at read
-    time. The close-time guard prevents the dead end from ever landing."""
+class CloseSucceedsWithInboundSupersededByTest(unittest.TestCase):
+    """Closing the successor of a supersession is allowed. After
+    `goc status card-a superseded --by card-b`, `card-b` is the live work
+    that replaced `card-a`; it MUST be completable (`goc done card-b`),
+    abandonable (`goc status card-b disproved`), or itself re-superseded
+    (`goc status card-b superseded --by card-c`). The removed close-time
+    guard `_enforce_no_inbound_superseded_by_or_exit` used to make every
+    such successor permanently un-closeable. `card-a` legitimately keeps
+    routing forward to the now-terminal `card-b` — the record-axis walk
+    has reached the resolution, and `goc validate` accepts it."""
 
     def run_goc(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
@@ -133,61 +135,52 @@ class CloseWithInboundSupersededByTest(unittest.TestCase):
         self._write_card(cwd, "card-a", HOLDER_CARD)
         self._write_card(cwd, "card-b", LIVE_SUCCESSOR_CARD)
 
-    def _assert_rejected_naming_holder(
-        self,
-        result: subprocess.CompletedProcess[str],
-        b_readme: Path,
-        expected_status_in_msg: str,
-    ) -> None:
-        self.assertEqual(
-            2,
-            result.returncode,
-            msg=f"close should be rejected:\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
-        )
-        self.assertIn("card-a", result.stderr)
-        self.assertIn("superseded_by", result.stderr)
-        self.assertIn(expected_status_in_msg, result.stderr)
-        # card-b must remain live (status: open) — no partial mutation.
-        self.assertIn("status: open", b_readme.read_text())
+    def _deck(self, cwd: Path, title: str) -> Path:
+        return cwd / ".game-of-cards" / "deck" / title / "README.md"
 
-    def test_goc_done_refuses_when_inbound_superseded_by_holder_exists(self) -> None:
+    def test_goc_done_closes_the_successor_of_a_supersession(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             self._seed_holder_and_successor(cwd)
-            b_readme = cwd / ".game-of-cards" / "deck" / "card-b" / "README.md"
             result = self.run_goc(cwd, "done", "card-b")
-            self._assert_rejected_naming_holder(result, b_readme, "done")
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("status: done", self._deck(cwd, "card-b").read_text())
+            # card-a still routes forward to the now-done card-b.
+            self.assertIn("card-b", self._deck(cwd, "card-a").read_text())
+            validate = self.run_goc(cwd, "validate")
+            self.assertEqual(0, validate.returncode, msg=validate.stdout + validate.stderr)
 
-    def test_goc_done_bundle_refuses_when_member_has_inbound_holder(self) -> None:
+    def test_goc_done_bundle_closes_successor_with_unrelated_member(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             self._seed_holder_and_successor(cwd)
             self._write_card(cwd, "card-unrelated", UNRELATED_CARD)
-            b_readme = cwd / ".game-of-cards" / "deck" / "card-b" / "README.md"
-            unrelated_readme = cwd / ".game-of-cards" / "deck" / "card-unrelated" / "README.md"
             result = self.run_goc(cwd, "done", "--bundle", "card-b", "card-unrelated")
-            self._assert_rejected_naming_holder(result, b_readme, "done")
-            # Atomicity: the unrelated member must NOT have been partially closed.
-            self.assertIn("status: open", unrelated_readme.read_text())
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("status: done", self._deck(cwd, "card-b").read_text())
+            self.assertIn("status: done", self._deck(cwd, "card-unrelated").read_text())
 
-    def test_goc_status_disproved_refuses_when_inbound_holder_exists(self) -> None:
+    def test_goc_status_disproved_closes_the_successor(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             self._seed_holder_and_successor(cwd)
-            b_readme = cwd / ".game-of-cards" / "deck" / "card-b" / "README.md"
             result = self.run_goc(cwd, "status", "card-b", "disproved", "--no-commit")
-            self._assert_rejected_naming_holder(result, b_readme, "disproved")
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("status: disproved", self._deck(cwd, "card-b").read_text())
 
-    def test_goc_status_superseded_refuses_when_inbound_holder_exists(self) -> None:
+    def test_goc_status_superseded_re_supersedes_the_successor(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             self._seed_holder_and_successor(cwd)
             self._write_card(cwd, "card-c", THIRD_LIVE_CARD)
-            b_readme = cwd / ".game-of-cards" / "deck" / "card-b" / "README.md"
             result = self.run_goc(
                 cwd, "status", "card-b", "superseded", "--by", "card-c", "--no-commit"
             )
-            self._assert_rejected_naming_holder(result, b_readme, "superseded")
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("status: superseded", self._deck(cwd, "card-b").read_text())
+            # The chain card-a → card-b → card-c is internally consistent.
+            validate = self.run_goc(cwd, "validate")
+            self.assertEqual(0, validate.returncode, msg=validate.stdout + validate.stderr)
 
 
 if __name__ == "__main__":

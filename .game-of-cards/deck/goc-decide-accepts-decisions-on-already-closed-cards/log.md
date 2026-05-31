@@ -49,3 +49,20 @@ surfaces. Tests: `tests/test_decide_terminal_status_guard.py` covers
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-05-29 — Closure' present
+
+## 2026-05-31 — Partially reversed by `goc-validate-requires-supersession-and-gate-states-no-verb-can-produce`
+
+The blanket terminal-status refusal this card added to the head of `_cmd_decide`
+was removed. It created an unrepairable state: the validator *requires*
+`human_gate: none` on terminal cards, but `decide` is the only gate-lowering
+verb and it refused terminal cards outright — so a card that reached a terminal
+status while carrying a raised gate (older closure predating the gate guard, a
+hand-edit, or a `goc migrate` import) failed `goc validate` forever with no
+escape. `decide` is now the repair path: the "gate already none" guard runs
+first (covering every cleanly-closed card, which always carries `gate: none`),
+so the only terminal cards `decide` touches are the broken ones — and it
+repairs them by recording the resolving decision and lowering the gate while
+leaving the card closed. This card's original concern — no silent post-closure
+mutation of a *cleanly* closed card — is preserved by that gate-already-none
+guard. The fix was dogfooded on this very repo's deck (two terminal cards with
+stale gates repaired). See the new card for the full rationale.

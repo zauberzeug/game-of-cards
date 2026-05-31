@@ -1410,17 +1410,26 @@ def validate_supersedes_targets(cards: list[Card]) -> list[str]:
 
 
 def validate_superseded_by_targets(cards: list[Card]) -> list[str]:
-    """Enforce that every card in `superseded_by` points at a live card
-    (status: open or active).
+    """Type-guard `superseded_by`: it must be a list, not a bare string.
 
-    The record axis treats `superseded_by` as the typed forward routing
-    pointer from a superseded card to the live work that replaced it. A
-    pointer landing on a terminal card (done, disproved, superseded) is a
-    dead end — a cold reader walking the link arrives at something with no
-    remaining work, defeating the read-pattern guarantee that supersession
-    routes forward to live work. Symmetric to `validate_supersedes_targets`.
+    A bare-string scalar is iterated character-by-character and silently
+    matches single-character titles, so it earns a distinct diagnostic
+    rather than the generic "must be a list" message — symmetric with the
+    same guard in `validate_supersedes_targets`.
+
+    The forward routing target may carry ANY status. A supersession's
+    successor is the live work that replaces the old card, and that work
+    is *meant to be completed* — so a `superseded_by` pointer legitimately
+    lands on a `done` card (the replacement finished: the walk has reached
+    the resolution, not a dead end), a `superseded` card (the chain routes
+    onward through that card's own `superseded_by`), or a live
+    `open`/`active` card. Requiring a *live* target would make the
+    successor of every supersession permanently un-closeable and would
+    contradict the record-axis contract (AGENTS.md: edges are walked and
+    integrity enforced "regardless of either endpoint's status").
+    Referential integrity — the target must *exist* — is enforced
+    generically for every relationship field in `validate_card`.
     """
-    by_title = {t.title: t for t in cards}
     errors: list[str] = []
     for t in cards:
         refs = t.frontmatter.get("superseded_by") or []
@@ -1431,18 +1440,6 @@ def validate_superseded_by_targets(cards: list[Card]) -> list[str]:
                 f"scalar is iterated character-by-character and silently "
                 f"matches single-character titles"
             )
-            continue
-        for ref in refs:
-            target = by_title.get(ref)
-            if target is None:
-                continue
-            if target.status in TERMINAL_STATUSES:
-                errors.append(
-                    f"{t.title}: superseded_by: '{ref}' has status "
-                    f"{target.status!r} (terminal); the forward routing "
-                    f"pointer must land on a live card (status: open or "
-                    f"active)"
-                )
     return errors
 
 
@@ -1548,51 +1545,6 @@ def detect_supersedes_cycles(cards: list[Card]) -> list[str]:
                     errors.append(f"{start.title}: superseded_by: cycle detected through {cur} → {b}")
                 stack.append(b)
     return errors
-
-
-def _inbound_superseded_by_holders(cards: list[Card], title: str) -> list[str]:
-    """Return titles of cards that list `title` in their `superseded_by`.
-
-    Symmetric counterpart to `validate_superseded_by_targets`: that
-    validator catches dead-end forward pointers reactively at read time;
-    this helper lets close-time verbs (`done`, `done --bundle`, `status`
-    into a terminal state) refuse a transition that would *create* one.
-    Without this guard, closing the live successor of an existing
-    supersession orphans the holder's forward routing pointer onto a
-    terminal card — exactly the dead-end shape the set-time guard at
-    `_cmd_status` blocks for fresh supersessions.
-    """
-    holders: list[str] = []
-    for c in cards:
-        refs = c.frontmatter.get("superseded_by") or []
-        if not isinstance(refs, list):
-            continue
-        if title in refs:
-            holders.append(c.title)
-    return holders
-
-
-def _enforce_no_inbound_superseded_by_or_exit(title: str, new_status: str) -> None:
-    """Refuse a close into `new_status` if any live `superseded_by` edge points at `title`.
-
-    Called from every close-time path (`_cmd_done`, `_cmd_done_bundle`,
-    `_cmd_status` close-into-terminal). The error names the inbound
-    holder(s) so the user can resolve the supersession before retrying.
-    """
-    holders = _inbound_superseded_by_holders(load_all_cards(), title)
-    if not holders:
-        return
-    sample = ", ".join(holders[:3])
-    extra = "" if len(holders) <= 3 else f" (+{len(holders) - 3} more)"
-    print(
-        f"ERROR: {title}: closing into {new_status!r} would leave "
-        f"`{sample}.superseded_by` pointing at a terminal card{extra}; "
-        f"the forward routing pointer must land on live work (status: "
-        f"open or active). Resolve the inbound supersession(s) before "
-        f"closing {title}.",
-        file=sys.stderr,
-    )
-    sys.exit(2)
 
 
 def _would_create_supersedes_cycle(cards: list[Card], title: str, successor: str) -> bool:
@@ -3514,7 +3466,6 @@ def _cmd_done(args):
             file=sys.stderr,
         )
         sys.exit(2)
-    _enforce_no_inbound_superseded_by_or_exit(title, "done")
     _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -3597,8 +3548,6 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             )
             sys.exit(2)
         plan.append((title, card_dir, t.status, t))
-    for title, _, _, _ in plan:
-        _enforce_no_inbound_superseded_by_or_exit(title, "done")
     for title, _, _, _ in plan:
         _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
@@ -4278,16 +4227,13 @@ def _cmd_status(args):
         sys.exit(2)
     if successor is not None:
         successor_dir = DECK_DIR / successor
-        successor_card = load_card_or_exit(successor_dir, successor)
-        if successor_card.status in TERMINAL_STATUSES:
-            print(
-                f"ERROR: --by {successor!r} has status {successor_card.status!r} "
-                f"(terminal); supersession routing must land on a live card "
-                f"(status: open or active) so a cold reader walking the "
-                f"forward pointer arrives at work that can still be acted on",
-                file=sys.stderr,
-            )
-            sys.exit(2)
+        # Existence/loadability check only — the successor may carry any
+        # status. A supersession's successor is the work that replaces the
+        # old card and is meant to be completed, so the typed forward
+        # pointer may legitimately land on a terminal card (a `done`
+        # resolution, or a `superseded` card that routes onward). See
+        # `validate_superseded_by_targets` for the full rationale.
+        load_card_or_exit(successor_dir, successor)
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
     prior = t.status
@@ -4316,8 +4262,6 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
-    if new_status in TERMINAL_STATUSES:
-        _enforce_no_inbound_superseded_by_or_exit(title, new_status)
     if successor is not None and _would_create_supersedes_cycle(load_all_cards(), title, successor):
         print(
             f"ERROR: superseding {title} by {successor} would create a cycle in "
@@ -4892,7 +4836,19 @@ def _cmd_move(args):
 
 
 def _cmd_decide(args):
-    """Record a decision in the body + log; lower the human gate to `none`."""
+    """Record a decision in the body + log; lower the human gate to `none`.
+
+    On a non-terminal card this is the normal Andon-cord lowering — a
+    parked card becomes pullable. On a *terminal* card with a still-raised
+    gate it is the **repair** path for the `status: terminal` +
+    `human_gate != none` contradiction the validator flags. A cleanly
+    closed card always carries `gate: none` (the close-time verbs enforce
+    it), so the only terminal cards that get past the "gate already none"
+    guard below are the broken ones — older closures that predate the
+    gate guard, hand-edits, or `goc migrate` imports — whose dangling gate
+    must be cleared for `goc validate` to pass. The card stays closed; the
+    decision block documents the resolution for the record axis.
+    """
     title = args.title
     decision = args.decision
     reasoning = args.reasoning
@@ -4901,21 +4857,13 @@ def _cmd_decide(args):
     _validate_commit_flags(commit, no_commit)
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
-    if t.status in TERMINAL_STATUSES:
-        print(
-            f"ERROR: {title}: status is {t.status!r} (terminal); "
-            f"`goc decide` records a *pending* decision — terminal cards "
-            f"cannot be re-decided. To replace a recorded decision, file "
-            f"a new card and link it via `goc status <old> superseded --by <new>`.",
-            file=sys.stderr,
-        )
-        sys.exit(2)
     if t.human_gate == "none":
         print(
             f"ERROR: {title}: gate already 'none' (no decision pending)",
             file=sys.stderr,
         )
         sys.exit(2)
+    is_terminal = t.status in TERMINAL_STATUSES
     prior_gate = t.human_gate
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -4939,14 +4887,24 @@ def _cmd_decide(args):
             "decision below.\n\n"
             f"{archived}\n"
         )
-    entries.append(
-        f"## {now}: decision recorded\n\n"
-        f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
-    )
+    recorded_note = f"{decision} — {reasoning}. Gate {prior_gate} → none."
+    if is_terminal:
+        recorded_note += (
+            f" (Post-closure gate repair on a {t.status} card — the card "
+            f"stays closed; this clears the dangling gate so `goc validate` "
+            f"passes.)"
+        )
+    entries.append(f"## {now}: decision recorded\n\n{recorded_note}\n")
     sep = "\n\n" if existing.strip() else ""
     log_path.write_text(existing.rstrip("\n") + sep + "\n\n".join(entries))
     print(f"{title}: decision recorded; gate {prior_gate} → none")
-    print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
+    if is_terminal:
+        print(
+            f"Next: gate cleared on a {t.status} card — record-axis repair; "
+            f"the card stays closed and `goc validate` now passes."
+        )
+    else:
+        print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         decision_short = decision[:60] + ("…" if len(decision) > 60 else "")

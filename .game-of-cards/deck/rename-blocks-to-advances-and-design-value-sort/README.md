@@ -19,7 +19,7 @@ stage: null
 contribution: high
 created: 2026-05-03
 closed_at: 2026-05-03
-human_gate: session
+human_gate: none
 advances:
   - closed-card-relationship-edges-stay-first-class-in-the-deck-graph
 advanced_by: []
@@ -308,3 +308,10 @@ Net synthesis: **3-tier coarse contribution + GRPW with γ=0.7 +
 auditable `WHY` trace**. Three-axis convergence (`contribution`,
 `human_gate`, `tags`) matches the OSS-bot consensus (priority +
 kind/size + auto-triage gates).
+
+## Decision
+
+*Resolved 2026-05-31T08:49:16Z:* Value-computation design shipped with the rename; clear the stale session gate
+
+*Reasoning:* Card was closed done on 2026-05-03 after shipping the advances rename + GRPW value sort, but the session gate that fronted the value-computation design step was never lowered at close (predates the close-time gate guard)
+

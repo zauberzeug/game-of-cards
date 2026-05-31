@@ -6,12 +6,15 @@ stage: null
 contribution: medium
 created: 2026-05-07
 closed_at: "2026-05-08T05:18:46Z"
-human_gate: session
+human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
   - support-external-game-of-cards-state-location
 advanced_by:
   - rename-bootstrap-to-kickoff-as-onboarding-dialog
+superseded_by:
+  - rename-bootstrap-to-kickoff-as-onboarding-dialog
+supersedes: []
 tags: [story, infra]
 definition_of_done: |
   - [ ] Default plugin install does NOT touch AGENTS.md / CLAUDE.md / CLAUDE.local.md / pre-commit hooks; it only installs skills + hook scripts the plugin owns
@@ -63,3 +66,10 @@ Open design questions:
   current bootstrap skill (likely renamed to `Skill(game-of-cards)`)
 - `write-agentsmd-alongside-claudemd` (open) — the AGENTS.md merge
   itself; this card changes WHEN that runs, not WHAT it writes
+
+## Decision
+
+*Resolved 2026-05-31T08:49:16Z:* Superseded by rename-bootstrap-to-kickoff-as-onboarding-dialog; close out the stale session gate
+
+*Reasoning:* Card was closed as superseded on 2026-05-08 but its session gate was never lowered (predates the close-time gate guard). The merge-opt-in concern is fully absorbed by the kickoff skill; no decision remains pending
+

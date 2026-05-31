@@ -252,7 +252,12 @@ with `status` in `{done, disproved, superseded}` AND
 `human_gate != none` is a frontmatter contradiction — so a hand-edited
 deck that lands in that state is surfaced by CI rather than silently
 shipping a closed card whose `## Decision required` body is still
-advertising an open pick.
+advertising an open pick. Because the validator flags that contradiction,
+`goc decide` doubles as its **repair** verb: it lowers a still-raised gate
+even on an already-terminal card (recording the resolving decision, leaving
+the card closed). The only terminal cards it touches are the broken ones —
+a cleanly closed card already carries `gate: none`, so the "gate already
+none" refusal covers it.
 
 Default for new cards created via `goc new`: `decision`.
 Auto-agents (audit-deck, next-card reclassification) should pick a more
