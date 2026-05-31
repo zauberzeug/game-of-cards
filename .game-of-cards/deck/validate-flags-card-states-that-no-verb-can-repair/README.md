@@ -1,20 +1,22 @@
 ---
 title: validate-flags-card-states-that-no-verb-can-repair
 summary: "Generalization (spawned by `goc-validate-requires-supersession-and-gate-states-no-verb-can-produce`): `goc validate` enforces several frontmatter invariants for which no CLI verb can *repair* an offending card once it lands in the bad state. Two were just fixed (terminal `superseded_by` target; raised gate on a terminal card), but the shape recurs — other terminal-state invariants (e.g. `closed_at` set-iff-terminal, `superseded`⇒non-empty `superseded_by`) are only ever written by the close verbs, so a card that reaches the bad state via a hand-edit, a `goc migrate` import, or a bot commit that bypassed pre-commit has no repair path but `git`. The repair gap is systemic because the autonomous puller bypasses the pre-commit `goc validate` gate (`pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate`), so validator-red states accumulate on `main` silently. `goc repair-edges` is the lone proof that the repair-verb pattern is already valued — it just isn't generalized."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-31T08:58:10Z"
-closed_at: null
-human_gate: decision
+closed_at: "2026-05-31T09:35:31Z"
+human_gate: none
 advances: []
 advanced_by: []
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
-  - [ ] PROCESS: decision recorded in `## Decision required` — pick scope: (a) audit-only (enumerate every `goc validate` invariant and confirm a producing+repairing verb path exists, file per-gap cards), (b) extend `goc repair-edges` into a general `goc repair [--apply]` that fixes every *mechanically* repairable validator violation (half-edges, missing `closed_at`, etc.) and names the ones needing human judgment, or (c) a hybrid.
-  - [ ] MECHANICAL: enumerate the `goc validate` invariants (engine.py `validate_card` + the `validate_*` / `detect_*` functions) and, for each, record whether a non-`git` verb can both *produce* and *repair* the valid state. The enumeration is the deliverable regardless of which fix path is chosen.
-  - [ ] TDD: for each invariant the decision says should be repairable, a regression test asserts the repair verb takes a card from the validator-red state to green without reopening or otherwise corrupting it (model on `tests/test_decide_repairs_terminal_gate.py`).
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] PROCESS: decision recorded in `## Decision` — scope is **audit-only** (see Decision block + reasoning).
+  - [x] MECHANICAL: enumerate the `goc validate` invariants (engine.py `validate_card` + the `validate_*` / `detect_*` functions) and, for each, record whether a non-`git` verb can both *produce* and *repair* the valid state. Delivered as the `## Audit` table in this card's body.
+  - [x] TDD: N/A under the recorded audit-only decision — this card adds no repair code, so there is no repair verb to regression-test. Each spawned per-gap card carries its own `reproduce.py` + regression test for the repair it adds (e.g. `no-verb-can-fix-a-closed-at-that-contradicts-the-cards-status`, modeled on `tests/test_decide_repairs_terminal_gate.py`).
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] PROCESS: file the targeted mechanical-gap follow-up card and reference the already-open cards for the other actionable gaps (see `## Findings → disposition`).
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # `goc validate` flags card states that no verb can repair
@@ -84,15 +86,88 @@ Closing the bot-bypass hole itself — that is the separate open card
 This card is about ensuring that *when* a red state lands (by any route),
 the operator has a verb to fix it.
 
-## Decision required
+## Decision
 
-Pick the scope before implementing (see DoD PROCESS item):
+*Resolved 2026-05-31T09:32:46Z:* Audit-only: land the validator-invariant × repair-verb enumeration as a durable reference in this card; file targeted per-gap cards only where a repair verb is genuinely warranted (the mechanical closed_at gap), and point at the already-open cards for the rest
 
-1. **Audit-only** — enumerate the invariants and the producing/repairing
-   verb for each; file a per-gap card where no repair verb exists. Cheapest;
-   defers the build.
-2. **General `goc repair`** — extend `repair-edges` into a `goc repair
-   [--apply]` that fixes every mechanically-repairable violation and lists
-   the judgment-needing ones. Most user value; largest build.
-3. **Hybrid** — audit now, build `goc repair` incrementally as gaps are
-   confirmed.
+*Reasoning:* The audit shows most validator gaps need human judgment to repair (which successor / which tag / what summary), so a general goc repair would only mechanically auto-fix a minority while adding a large build; the enumeration plus a couple of targeted follow-ups is the higher-ROI, honest scope
+
+## Audit: every gating `goc validate` invariant × repair-verb coverage
+
+Source: `engine.py` `_cmd_validate` (the functions whose results
+`errors.append(...)` → `sys.exit(1)`). Verbs available:
+`new status done attest decide advance unadvance wait repair-edges move
+triage show quality-pass validate migrate` (+ `install`/`upgrade`).
+"Repaired by" = a non-`git` path that takes an already-violating card from
+red to green.
+
+### Repo/layout-structural
+
+| Invariant (validator) | Produced by | Repaired by | Gap |
+|---|---|---|---|
+| Dual deck tree present (`validate_deck_directories`) | `install` / `migrate` | manual dir move/merge | yes — structural, one-off |
+| Skill-dir parity (`validate_skill_dir_parity`) | `install --local-skills` | `goc upgrade --keep-local-skills` | no |
+| Plugin mirror parity (`validate_plugin_mirror_parity`) | sync script | `scripts/sync_plugin_assets.py` | no (a script, not a verb) |
+| Hook registration (`validate_hook_registration`) | `install` | `goc upgrade` | no |
+
+### Per-card frontmatter (`validate_card`)
+
+| Invariant | Produced by | Repaired by | Gap |
+|---|---|---|---|
+| `tags` all known | `new --tag` | — (no retag verb; `quality-pass` only *surfaces*) | yes — judgment (which tag?) |
+| terminal ⇒ `closed_at` set | close verbs | — (close verbs refuse already-terminal) | **yes — mechanical** |
+| non-terminal ⇒ `closed_at` null | — | — (`status open/active` no-ops, never clears the stray date) | **yes — mechanical** |
+| `done` ⇒ no unchecked DoD | `done` enforces | — (`done` refuses re-close) | yes — edge (tick boxes by hand) |
+| terminal ⇒ `human_gate: none` | close verbs | `goc decide` | no — **added by parent card** |
+| `summary` non-empty string | `new` | — (no summary-setter verb) | yes — judgment (what summary?) |
+| `worker` shape valid | `status active --worker-*` | `status active` (only on a reclaim) | partial |
+| `waiting_on`/`waiting_until` valid | `wait` | `goc wait --clear` | no |
+| rel-field self-ref / unknown title | `advance` / `new` (validated) | `goc unadvance` | no (mostly) |
+| non-empty `superseded_by` ⇒ `superseded` | `status superseded --by` | — | partial |
+| `superseded` ⇒ non-empty `superseded_by` | `status superseded --by` | **blocked** — `--by` no-ops on an already-`superseded` card | yes → existing card |
+
+### Relationship graph
+
+| Invariant | Produced by | Repaired by | Gap |
+|---|---|---|---|
+| No advance cycle (`detect_advance_cycles`) | — | `goc unadvance` | no |
+| No supersedes cycle (`detect_supersedes_cycles`) | — | — (no `unsupersede` verb) | yes |
+| Bidirectional edges (`validate_bidirectional_edges`) | — | `goc repair-edges --apply` | no — **the template** |
+| `supersedes` ⇒ target `superseded` (`validate_supersedes_targets`) | `status superseded --by` | — (no `unsupersede`) | yes |
+| `superseded_by` is a list (`validate_superseded_by_targets`) | — | — (hand-edit) | yes — rare type-coercion |
+
+(Advisory checks — `validate_blocker_coherence`, `validate_epic_edge_direction`,
+`validate_waiting_overlay`, `validate_dod_method_tags` — print warnings but do
+**not** gate exit, so they cannot produce a "permanent red"; out of scope here.)
+
+## Findings → disposition
+
+Of ~20 gating checks, ~8 already have a repair verb. The repair affordances
+that exist — `repair-edges`, `decide` (new), `wait --clear`, `unadvance`,
+`upgrade` — confirm the pattern is valued but applied piecemeal. The gaps
+sort into four buckets:
+
+1. **Mechanically auto-fixable, no verb → warrants a new verb.** The
+   `closed_at`-vs-`status` drift (both directions). Filed as a targeted
+   follow-up: `no-verb-can-fix-a-closed-at-that-contradicts-the-cards-status`.
+2. **Blocked by an existing bug.** `superseded` ⇒ non-empty `superseded_by`
+   has a *producing* verb (`status … --by`) that silently no-ops on an
+   already-`superseded` card — fixing that bug restores the repair path. No
+   new card: tracked by
+   [`goc-status-superseded-discards-by-override-when-target-already-superseded`](../goc-status-superseded-discards-by-override-when-target-already-superseded/).
+3. **Inverse-verb-shaped (an `unsupersede`/unwind verb).** Supersedes cycles,
+   wrong-status `supersedes` targets, and redirecting an existing
+   supersession all want a release/unwind affordance. The option is already
+   contemplated in the `--by`-no-op card's decision options, so it is left
+   there rather than duplicated.
+4. **Judgment-only by nature — no verb is warranted.** Unknown tag, empty
+   summary, unchecked DoD on a `done` card: there is no *mechanical* correct
+   value, so hand-editing (informed by `quality-pass`) is the honest repair.
+   Documented here so a future reader does not re-file them as "missing verb"
+   bugs.
+
+The systemic amplifier — the autonomous puller bypassing the pre-commit
+`goc validate` gate, which lets red states land on `main` unchecked — is
+out of scope and tracked by
+[`pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate`](../pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate/).
+
