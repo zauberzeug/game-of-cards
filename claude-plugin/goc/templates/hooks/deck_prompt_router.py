@@ -76,9 +76,10 @@ def main() -> int:
         return 0
     if not isinstance(data, dict):
         return 0
-    prompt = (data.get("prompt") or "").lower()
-    if not prompt:
+    prompt_raw = data.get("prompt")
+    if not isinstance(prompt_raw, str) or not prompt_raw:
         return 0
+    prompt = prompt_raw.lower()
     has_work = any(re.search(p, prompt) for p in WORK_INITIATING)
     has_exploration = any(re.search(p, prompt) for p in EXPLORATION)
     has_tooling = any(re.search(p, prompt) for p in TOOLING)

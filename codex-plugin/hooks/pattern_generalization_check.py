@@ -199,7 +199,7 @@ def main() -> int:
         return 0
 
     transcript_path = data.get("transcript_path", "")
-    if not transcript_path:
+    if not isinstance(transcript_path, str) or not transcript_path:
         return 0
 
     if _had_code_mutation(transcript_path):

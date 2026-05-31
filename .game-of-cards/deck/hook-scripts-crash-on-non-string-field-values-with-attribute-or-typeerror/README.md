@@ -1,21 +1,21 @@
 ---
 title: hook-scripts-crash-on-non-string-field-values-with-attribute-or-typeerror
 summary: "The closed predecessor `hook-scripts-crash-on-non-dict-stdin-json-with-attributeerror` added `isinstance(data, dict)` guards on the top-level stdin payload, but the hooks still trust that individual field values are strings. `deck_prompt_router.py:79` calls `.lower()` on `data.get(\"prompt\")` and `pattern_generalization_check.py:201,204` feeds `data.get(\"transcript_path\")` to `Path(...)` without an isinstance check. A harness payload like `{\"prompt\": 123}` or `{\"transcript_path\": 42}` (valid JSON, dict-shaped, documented key present, non-string value) raises `AttributeError` / `TypeError` and exits 1, polluting the agent view on every event and swallowing the hook's effect — the exact contract the predecessor card promised to restore."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-31T04:26:23Z"
-closed_at: null
+closed_at: "2026-05-31T04:28:37Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero (both hooks now exit 0 cleanly on a dict payload whose `prompt` / `transcript_path` field carries a non-string value, instead of raising `AttributeError` / `TypeError`).
-  - [ ] MECHANICAL: `goc/templates/hooks/deck_prompt_router.py` guards the `prompt` field with `isinstance(..., str)` before `.lower()`.
-  - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` guards the `transcript_path` field with `isinstance(..., str)` before `Path(...)`.
-  - [ ] PROCESS: plugin mirrors (`claude-plugin/hooks/`, `codex-plugin/hooks/`) regenerate cleanly via the pre-commit `sync-plugin-assets` hook with the same guards applied.
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] TDD: `reproduce.py` exits zero (both hooks now exit 0 cleanly on a dict payload whose `prompt` / `transcript_path` field carries a non-string value, instead of raising `AttributeError` / `TypeError`).
+  - [x] MECHANICAL: `goc/templates/hooks/deck_prompt_router.py` guards the `prompt` field with `isinstance(..., str)` before `.lower()`.
+  - [x] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` guards the `transcript_path` field with `isinstance(..., str)` before `Path(...)`.
+  - [x] PROCESS: plugin mirrors (`claude-plugin/hooks/`, `codex-plugin/hooks/`) regenerate cleanly via the pre-commit `sync-plugin-assets` hook with the same guards applied.
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
