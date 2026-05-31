@@ -1550,6 +1550,51 @@ def detect_supersedes_cycles(cards: list[Card]) -> list[str]:
     return errors
 
 
+def _inbound_superseded_by_holders(cards: list[Card], title: str) -> list[str]:
+    """Return titles of cards that list `title` in their `superseded_by`.
+
+    Symmetric counterpart to `validate_superseded_by_targets`: that
+    validator catches dead-end forward pointers reactively at read time;
+    this helper lets close-time verbs (`done`, `done --bundle`, `status`
+    into a terminal state) refuse a transition that would *create* one.
+    Without this guard, closing the live successor of an existing
+    supersession orphans the holder's forward routing pointer onto a
+    terminal card — exactly the dead-end shape the set-time guard at
+    `_cmd_status` blocks for fresh supersessions.
+    """
+    holders: list[str] = []
+    for c in cards:
+        refs = c.frontmatter.get("superseded_by") or []
+        if not isinstance(refs, list):
+            continue
+        if title in refs:
+            holders.append(c.title)
+    return holders
+
+
+def _enforce_no_inbound_superseded_by_or_exit(title: str, new_status: str) -> None:
+    """Refuse a close into `new_status` if any live `superseded_by` edge points at `title`.
+
+    Called from every close-time path (`_cmd_done`, `_cmd_done_bundle`,
+    `_cmd_status` close-into-terminal). The error names the inbound
+    holder(s) so the user can resolve the supersession before retrying.
+    """
+    holders = _inbound_superseded_by_holders(load_all_cards(), title)
+    if not holders:
+        return
+    sample = ", ".join(holders[:3])
+    extra = "" if len(holders) <= 3 else f" (+{len(holders) - 3} more)"
+    print(
+        f"ERROR: {title}: closing into {new_status!r} would leave "
+        f"`{sample}.superseded_by` pointing at a terminal card{extra}; "
+        f"the forward routing pointer must land on live work (status: "
+        f"open or active). Resolve the inbound supersession(s) before "
+        f"closing {title}.",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
 def _would_create_supersedes_cycle(cards: list[Card], title: str, successor: str) -> bool:
     """Return True if adding `title.superseded_by += successor` would cycle.
 
@@ -1878,8 +1923,38 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     "must wait to start" signal is the explicit impediment overlay
     (`waiting_on` / `waiting_until`). See `dependency_blockers` /
     `dependency_blocked`, which remain as advisory display only.
+
+    Paired with `card_is_workable_for_scheduler` — the queue axis vs.
+    the scheduler axis. A future axis added here must be added there in
+    the same edit; `tests/test_scheduler_workable_predicate_coupling.py`
+    fails loud on drift.
     """
     if card.status != "open":
+        return False
+    if card.human_gate != "none":
+        return False
+    if waiting_impedes(card):
+        return False
+    return True
+
+
+def card_is_workable_for_scheduler(card: Card) -> bool:
+    """True iff a descendant may amplify an ancestor's GRPW value.
+
+    Mirrors `card_is_ready` for the scheduler axis: `card_is_ready`
+    minus the `status == "open"` clause. `active` descendants stay
+    workable because the scheduler walks live work, not just queueable
+    work; a terminal, impediment-hidden, or human-gate-parked descendant
+    contributes zero to a live ancestor's priority and is pruned.
+
+    Consulted by both descendant-walk sites — `value_for` in
+    `compute_values` and `live_direct` in `sort_default` — so the
+    live-AND-workable rule is defined once. A future axis added to
+    `card_is_ready` must be added here in the same edit;
+    `tests/test_scheduler_workable_predicate_coupling.py` enforces this
+    invariant.
+    """
+    if card.status in TERMINAL_STATUSES:
         return False
     if card.human_gate != "none":
         return False
@@ -1963,17 +2038,22 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
 
     Live-and-workable descendants: a descendant is skipped from the
     value walk when it is either (a) terminal in status
-    (`done`/`disproved`/`superseded`) or (b) carrying an active
-    impediment overlay (`waiting_impedes` — a `waiting_on` reason or a
-    future `waiting_until`, the same guard that hides it from the pull
-    queue). The scheduler axis walks `advances` across *live, workable*
-    cards only (AGENTS.md "deck as scheduler vs record"). Completed work
-    can no longer be unblocked, and an impeded descendant cannot be
-    pulled for the duration of its wait, so neither may amplify a live
-    card's scheduling priority. Terminal edges belong to the record axis
-    instead; the impediment prune is self-clearing (an elapsed
-    `waiting_until` or a cleared `waiting_on` re-admits the descendant on
-    the next recompute, no manual action).
+    (`done`/`disproved`/`superseded`), (b) carrying an active impediment
+    overlay (`waiting_impedes` — a `waiting_on` reason or a future
+    `waiting_until`), or (c) parked behind a `human_gate` of `decision`
+    or `session`. The prune mirrors every gate in `card_is_ready` (the
+    pull-queue predicate) except its `status == "open"` clause —
+    `active` descendants stay workable for the scheduler axis. The
+    scheduler axis walks `advances` across *live, workable* cards only
+    (AGENTS.md "deck as scheduler vs record"). Completed work can no
+    longer be unblocked, an impeded descendant cannot be pulled for the
+    duration of its wait, and a gate-parked descendant cannot be pulled
+    until the human lowers the gate — so none may amplify a live card's
+    scheduling priority. Terminal edges belong to the record axis
+    instead; the impediment and human-gate prunes are self-clearing (an
+    elapsed `waiting_until`, a cleared `waiting_on`, or a `decide-card`
+    invocation re-admits the descendant on the next recompute, no manual
+    action).
 
     Switched from saturating-max (`max(own, γ·best)`) on 2026-05-03
     after the formula was identified as making native-high cards lose
@@ -2035,18 +2115,23 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
                     )
                 continue
             dest_card = by_title[dest]
-            if dest_card.status in TERMINAL_STATUSES or waiting_impedes(dest_card):
+            if not card_is_workable_for_scheduler(dest_card):
                 # Scheduler axis is live-AND-workable only (AGENTS.md "deck
-                # as scheduler vs record"): a terminal descendant can no
-                # longer be unblocked, and an impeded descendant (active
-                # `waiting_on` overlay, hidden from the queue by
-                # `card_is_ready`/`waiting_impedes`) cannot be pulled for the
-                # duration of its wait — so neither may amplify a live card's
-                # priority. The impediment prune is self-clearing: when a
-                # `waiting_until` elapses or `waiting_on` is cleared, the
-                # descendant re-enters the walk on the next recompute with no
-                # manual action. Terminal edges live on the record axis,
-                # walked elsewhere.
+                # as scheduler vs record"): the prune mirrors every gate in
+                # `card_is_ready` except the `status == "open"` clause
+                # (`active` descendants stay workable for the scheduler).
+                # A terminal descendant can no longer be unblocked; an
+                # impeded descendant (active `waiting_on` overlay) cannot be
+                # pulled for the duration of its wait; a `human_gate`-parked
+                # descendant (decision/session) cannot be pulled until the
+                # human lowers the gate. None of the three may amplify a live
+                # card's priority — `card_is_ready` already hides them from
+                # the queue, and the value walk follows. Both the
+                # impediment and human-gate prunes are self-clearing: when
+                # `waiting_until` elapses, `waiting_on` is cleared, or the
+                # gate is lowered via `decide-card`, the descendant re-enters
+                # the walk on the next recompute with no manual action.
+                # Terminal edges live on the record axis, walked elsewhere.
                 continue
             d_value, d_path = value_for(dest, in_progress)
             if d_value > best[0]:
@@ -2235,12 +2320,13 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
     - primary: highest computed value first (graph-amplified contribution)
     - tiebreak: more *live* direct downstream cards = unblock more flow now.
       Counts only `advances` targets the value walk would traverse — target
-      exists in `by_title`, status not terminal, and not impeded by an active
-      `waiting_on` overlay. A terminal or impeded downstream unblocks zero
-      flow now, so it contributes 0 — mirroring the prune `compute_values`
-      applies at engine.py:1751. (Without this, a card whose downstream is
-      fully closed would out-rank an equal-value card that unblocks no less
-      live flow, contradicting the tiebreak's own rationale.)
+      exists in `by_title`, status not terminal, not impeded by an active
+      `waiting_on` overlay, and not parked behind a non-`none` `human_gate`.
+      A terminal, impeded, or gate-parked downstream unblocks zero flow now,
+      so it contributes 0 — mirroring the prune `compute_values` applies in
+      `value_for`. (Without this, a card whose downstream is fully un-pullable
+      would out-rank an equal-value card that unblocks no less live flow,
+      contradicting the tiebreak's own rationale.)
     - final: oldest-created first (kanban WIP-aging discipline)
 
     `values` should be precomputed on the FULL deck (not the filtered
@@ -2263,7 +2349,7 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
             dc = by_title.get(dest)
             if dc is None:
                 continue
-            if dc.status in TERMINAL_STATUSES or waiting_impedes(dc):
+            if not card_is_workable_for_scheduler(dc):
                 continue
             n += 1
         return n
@@ -3428,6 +3514,7 @@ def _cmd_done(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    _enforce_no_inbound_superseded_by_or_exit(title, "done")
     _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -3510,6 +3597,8 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             )
             sys.exit(2)
         plan.append((title, card_dir, t.status, t))
+    for title, _, _, _ in plan:
+        _enforce_no_inbound_superseded_by_or_exit(title, "done")
     for title, _, _, _ in plan:
         _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
@@ -4210,6 +4299,8 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if new_status in TERMINAL_STATUSES:
+        _enforce_no_inbound_superseded_by_or_exit(title, new_status)
     if successor is not None and _would_create_supersedes_cycle(load_all_cards(), title, successor):
         print(
             f"ERROR: superseding {title} by {successor} would create a cycle in "

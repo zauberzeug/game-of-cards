@@ -19,6 +19,27 @@ _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
 
+def _frontmatter_tail(line: str) -> str:
+    """Return the comment-free, quote-stripped tail of a `key: value` line.
+
+    Mirrors the YAML 1.1/1.2 rule for inline comments on a bare scalar: a
+    `#` terminates the value only when preceded by whitespace (or at the
+    very start), so `status: active # note` yields `'active'` while
+    `status: foo#bar` yields `'foo#bar'`. The hook re-implements YAML
+    parsing for four enum/date fields so it has no package dependency;
+    routing all four readers through this helper keeps their treatment
+    of authored inline comments aligned.
+    """
+    tail = line.split(":", 1)[1]
+    i = 0
+    while i < len(tail):
+        if tail[i] == "#" and (i == 0 or tail[i - 1].isspace()):
+            tail = tail[:i]
+            break
+        i += 1
+    return tail.strip().strip('"').strip("'")
+
+
 def _card_status(readme: Path) -> str | None:
     """Return the frontmatter `status` value, or None if unreadable."""
     try:
@@ -30,7 +51,7 @@ def _card_status(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("status:"):
-            return line.split(":", 1)[1].strip().strip('"').strip("'")
+            return _frontmatter_tail(line)
     return None
 
 
@@ -45,8 +66,7 @@ def _card_human_gate(readme: Path) -> str:
         return "none"
     for line in m.group(1).splitlines():
         if line.startswith("human_gate:"):
-            val = line.split(":", 1)[1].strip().strip('"').strip("'")
-            return val or "none"
+            return _frontmatter_tail(line) or "none"
     return "none"
 
 
@@ -61,8 +81,7 @@ def _card_waiting_on(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("waiting_on:"):
-            val = line.split(":", 1)[1].strip().strip('"').strip("'")
-            return val or None
+            return _frontmatter_tail(line) or None
     return None
 
 
@@ -77,8 +96,7 @@ def _card_waiting_until(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("waiting_until:"):
-            val = line.split(":", 1)[1].strip().strip('"').strip("'")
-            return val or None
+            return _frontmatter_tail(line) or None
     return None
 
 
