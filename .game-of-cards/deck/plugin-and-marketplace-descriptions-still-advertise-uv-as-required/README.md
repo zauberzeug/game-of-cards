@@ -1,21 +1,21 @@
 ---
 title: plugin-and-marketplace-descriptions-still-advertise-uv-as-required
 summary: "The Claude Code plugin descriptions in `claude-plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` still claim 'requires uv on host PATH' even though the plugin wrapper switched to `python3 -m goc.cli` in commit 8d64a3f. The bin/goc script and AGENTS.md both document Python 3.10+ as the only host prerequisite — the marketplace-visible descriptions are stale and overstate the install prerequisites users see before installing."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-31T01:36:05Z"
-closed_at: null
+closed_at: "2026-05-31T01:38:35Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] MECHANICAL: `claude-plugin/.claude-plugin/plugin.json` description no longer mentions "requires uv on host PATH"; replacement names Python 3.10+ as the prerequisite.
-  - [ ] MECHANICAL: `.claude-plugin/marketplace.json` plugin description aligned with the same wording.
-  - [ ] EMPIRICAL: `grep -rn "requires uv" claude-plugin/ .claude-plugin/` returns no hits.
-  - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` still passes (these files are not auto-synced — drift guard only covers mirrored payloads).
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] MECHANICAL: `claude-plugin/.claude-plugin/plugin.json` description no longer mentions "requires uv on host PATH"; replacement names Python 3.10+ as the prerequisite.
+  - [x] MECHANICAL: `.claude-plugin/marketplace.json` plugin description aligned with the same wording.
+  - [x] EMPIRICAL: `grep -rn "requires uv" claude-plugin/ .claude-plugin/` returns no hits.
+  - [x] PROCESS: `python scripts/sync_plugin_assets.py --check` still passes (these files are not auto-synced — drift guard only covers mirrored payloads).
+  - [x] PROCESS: `uv run goc validate` introduces no new errors (deck has pre-existing unrelated errors; verified by comparing validate output with and without these edits — output is identical).
 worker: {who: "claude[bot]", where: main}
 ---
 
