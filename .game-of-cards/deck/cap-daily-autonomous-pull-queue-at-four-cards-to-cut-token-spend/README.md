@@ -1,17 +1,17 @@
 ---
 title: cap-daily-autonomous-pull-queue-at-four-cards-to-cut-token-spend
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-31T04:34:11Z"
-closed_at: null
+closed_at: "2026-05-31T04:35:04Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, story]
 definition_of_done: |
-  - [ ] MECHANICAL: `MAX_ITERATIONS` in `.github/workflows/pull-card.yml` is `'4'`, not `'8'`.
-  - [ ] MECHANICAL: every comment in `pull-card.yml` that names a specific iteration cap (e.g. "up to 8") matches the new value, or is phrased generically against `MAX_ITERATIONS`.
+  - [x] MECHANICAL: `MAX_ITERATIONS` in `.github/workflows/pull-card.yml` is `'4'`, not `'8'`.
+  - [x] MECHANICAL: every comment in `pull-card.yml` that names a specific iteration cap (e.g. "up to 8") matches the new value, or is phrased generically against `MAX_ITERATIONS`.
 worker: {who: Rodja Trappe, where: main}
 ---
 

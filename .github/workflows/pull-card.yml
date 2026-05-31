@@ -38,7 +38,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  MAX_ITERATIONS: '8'
+  MAX_ITERATIONS: '4'
 
 jobs:
   pull-card:
