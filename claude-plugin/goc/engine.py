@@ -1923,8 +1923,38 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     "must wait to start" signal is the explicit impediment overlay
     (`waiting_on` / `waiting_until`). See `dependency_blockers` /
     `dependency_blocked`, which remain as advisory display only.
+
+    Paired with `card_is_workable_for_scheduler` — the queue axis vs.
+    the scheduler axis. A future axis added here must be added there in
+    the same edit; `tests/test_scheduler_workable_predicate_coupling.py`
+    fails loud on drift.
     """
     if card.status != "open":
+        return False
+    if card.human_gate != "none":
+        return False
+    if waiting_impedes(card):
+        return False
+    return True
+
+
+def card_is_workable_for_scheduler(card: Card) -> bool:
+    """True iff a descendant may amplify an ancestor's GRPW value.
+
+    Mirrors `card_is_ready` for the scheduler axis: `card_is_ready`
+    minus the `status == "open"` clause. `active` descendants stay
+    workable because the scheduler walks live work, not just queueable
+    work; a terminal, impediment-hidden, or human-gate-parked descendant
+    contributes zero to a live ancestor's priority and is pruned.
+
+    Consulted by both descendant-walk sites — `value_for` in
+    `compute_values` and `live_direct` in `sort_default` — so the
+    live-AND-workable rule is defined once. A future axis added to
+    `card_is_ready` must be added here in the same edit;
+    `tests/test_scheduler_workable_predicate_coupling.py` enforces this
+    invariant.
+    """
+    if card.status in TERMINAL_STATUSES:
         return False
     if card.human_gate != "none":
         return False
@@ -2085,11 +2115,7 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
                     )
                 continue
             dest_card = by_title[dest]
-            if (
-                dest_card.status in TERMINAL_STATUSES
-                or waiting_impedes(dest_card)
-                or dest_card.human_gate != "none"
-            ):
+            if not card_is_workable_for_scheduler(dest_card):
                 # Scheduler axis is live-AND-workable only (AGENTS.md "deck
                 # as scheduler vs record"): the prune mirrors every gate in
                 # `card_is_ready` except the `status == "open"` clause
@@ -2323,11 +2349,7 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
             dc = by_title.get(dest)
             if dc is None:
                 continue
-            if (
-                dc.status in TERMINAL_STATUSES
-                or waiting_impedes(dc)
-                or dc.human_gate != "none"
-            ):
+            if not card_is_workable_for_scheduler(dc):
                 continue
             n += 1
         return n

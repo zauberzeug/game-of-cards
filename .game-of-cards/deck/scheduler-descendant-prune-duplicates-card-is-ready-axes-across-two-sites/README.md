@@ -1,21 +1,21 @@
 ---
 title: scheduler-descendant-prune-duplicates-card-is-ready-axes-across-two-sites
 summary: "`compute_values.value_for` (`engine.py:2083`) and `sort_default.live_direct` (`engine.py:2314`) each independently maintain a descendant-prune predicate that mirrors `card_is_ready`'s gates minus the `status == \"open\"` clause. Three sibling cards have now extended both sites in lockstep — terminal axis, impediment axis, human-gate axis. A fourth axis added to `card_is_ready` would silently leak through both prunes again. Extract a shared `card_is_workable_for_scheduler(card)` helper (or equivalent) so the live-AND-workable rule is defined once and the two sites cannot drift."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-31T02:16:18Z"
-closed_at: null
+closed_at: "2026-05-31T02:23:18Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [meta-fix, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: introduce a single predicate (helper function or named expression) that captures the "live-AND-workable scheduler descendant" rule — exactly `card_is_ready` minus the `status == "open"` clause, equivalently: not terminal AND not `waiting_impedes` AND `human_gate == "none"`. Both `value_for` (in `compute_values`) and `sort_default.live_direct` consult it; the conditional bodies of the two `continue` blocks contain no axis enumeration of their own.
-  - [ ] MECHANICAL: the helper lives next to `card_is_ready` (`engine.py:1913-1933`) so the two predicates read as a pair — `card_is_ready` for the queue axis, the new helper for the scheduler axis — and a reader updating one immediately sees the other.
-  - [ ] TDD: a unit test asserts the predicate-coupling invariant — for every `human_gate ∈ {none, decision, session}`, every `waiting_on ∈ {None, external, resource, deferred}`, and every `status ∈ {open, active, done, disproved, superseded}`, the new helper agrees with `card_is_ready` except when `status == "active"` (where the helper accepts and `card_is_ready` rejects). The test fails if a future axis is added to `card_is_ready` without being mirrored.
-  - [ ] TDD: the three existing reproduce.py scripts (`compute-values-inherits-value-through-done-and-superseded-descendants`, `compute-values-amplifies-priority-through-impeded-descendants`, `compute-values-amplifies-priority-through-human-gate-parked-descendants`) still exit 0 — the helper preserves the three closed siblings' behavior verbatim.
-  - [ ] MECHANICAL: plugin mirrors synced and `uv run goc validate` clean; full `uv run python -m unittest discover -s tests` clean.
+  - [x] MECHANICAL: introduce a single predicate (helper function or named expression) that captures the "live-AND-workable scheduler descendant" rule — exactly `card_is_ready` minus the `status == "open"` clause, equivalently: not terminal AND not `waiting_impedes` AND `human_gate == "none"`. Both `value_for` (in `compute_values`) and `sort_default.live_direct` consult it; the conditional bodies of the two `continue` blocks contain no axis enumeration of their own.
+  - [x] MECHANICAL: the helper lives next to `card_is_ready` (`engine.py:1913-1933`) so the two predicates read as a pair — `card_is_ready` for the queue axis, the new helper for the scheduler axis — and a reader updating one immediately sees the other.
+  - [x] TDD: a unit test asserts the predicate-coupling invariant — for every `human_gate ∈ {none, decision, session}`, every `waiting_on ∈ {None, external, resource, deferred}`, and every `status ∈ {open, active, done, disproved, superseded}`, the new helper agrees with `card_is_ready` except when `status == "active"` (where the helper accepts and `card_is_ready` rejects). The test fails if a future axis is added to `card_is_ready` without being mirrored.
+  - [x] TDD: the three existing reproduce.py scripts (`compute-values-inherits-value-through-done-and-superseded-descendants`, `compute-values-amplifies-priority-through-impeded-descendants`, `compute-values-amplifies-priority-through-human-gate-parked-descendants`) still exit 0 — the helper preserves the three closed siblings' behavior verbatim.
+  - [x] MECHANICAL: plugin mirrors synced and `uv run goc validate` clean; full `uv run python -m unittest discover -s tests` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
