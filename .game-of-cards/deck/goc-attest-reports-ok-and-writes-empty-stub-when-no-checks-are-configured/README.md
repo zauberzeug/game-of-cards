@@ -1,21 +1,21 @@
 ---
 title: goc-attest-reports-ok-and-writes-empty-stub-when-no-checks-are-configured
 summary: "`goc attest <title>` with both `layer_2_project_dod` and `layer_3_goc_dod` set to `[]` runs zero checks, prints `Attestation OK`, and still writes a bare `## Closure verification (TIMESTAMP)` header (no rows) to `log.md`. Subsequent calls append another empty header. The `log-md-closure-entry` derived check then sees a header and accepts closure as if attestation actually ran."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-31T03:54:51Z"
-closed_at: null
+closed_at: "2026-05-31T04:01:21Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero (defect no longer fires) — current behavior asserted, then re-asserted after the fix
-  - [ ] MECHANICAL: `_cmd_attest` refuses to attest (or no-ops without mutating `log.md`) when both layer config arrays are empty / unset; the chosen behavior is documented in this card's `## Fix` section
-  - [ ] TDD: a new regression test in `tests/` exercises empty-config attest and verifies log.md is untouched and the exit code matches the chosen contract
-  - [ ] MECHANICAL: `goc validate` passes
-  - [ ] PROCESS: `goc attest` ships its decision on whether "empty config" is an error or a no-op (one-line note in `_format_attestation_block` or a docstring)
+  - [x] TDD: `reproduce.py` exits zero (defect no longer fires) — current behavior asserted, then re-asserted after the fix
+  - [x] MECHANICAL: `_cmd_attest` refuses to attest (or no-ops without mutating `log.md`) when both layer config arrays are empty / unset; the chosen behavior is documented in this card's `## Fix` section
+  - [x] TDD: a new regression test in `tests/` exercises empty-config attest and verifies log.md is untouched and the exit code matches the chosen contract
+  - [x] MECHANICAL: `goc validate` passes
+  - [x] PROCESS: `goc attest` ships its decision on whether "empty config" is an error or a no-op (one-line note in `_format_attestation_block` or a docstring)
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -140,3 +140,14 @@ DoD's regression test asserts whichever was chosen.
 
 The fix is single-site (around `engine.py:4126-4180`) plus a regression
 test under `tests/`.
+
+### Chosen mechanism: refuse to attest (option 1)
+
+`_cmd_attest` now short-circuits with `ERROR: no closure checks
+configured ...` on stderr and exit code 2 when both `layer_2_project_dod`
+and `layer_3_goc_dod` are empty/unset. `log.md` is not touched. The
+docstring on `_cmd_attest` records the empty-config contract. Rationale:
+consistency with `goc done`'s "refuse when prerequisites are unmet"
+posture, and a loud failure surfaces a misconfigured deck instead of
+quietly satisfying downstream derived checks like `log-md-closure-entry`
+with a header that proves nothing.

@@ -1369,6 +1369,30 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("Layer-3 (GoC) checks", attest.stdout)
             self.assertIn("dod-100-percent", (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text())
 
+    def test_attest_refuses_when_both_layers_are_empty_and_leaves_log_untouched(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            config.write_text("layer_2_project_dod: []\nlayer_3_goc_dod: []\n")
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+
+            attest = self.run_goc(cwd, "attest", "smoke-card", "--non-interactive")
+
+            self.assertEqual(2, attest.returncode, msg=f"stdout:\n{attest.stdout}\n\nstderr:\n{attest.stderr}")
+            self.assertIn("no closure checks configured", attest.stderr)
+            self.assertNotIn("Attestation OK", attest.stdout)
+            log_path = cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md"
+            log_text = log_path.read_text() if log_path.exists() else ""
+            self.assertNotIn(
+                "## Closure verification",
+                log_text,
+                msg="log.md must not gain a Closure verification header when no checks are configured",
+            )
+
     def test_state_mutations_respect_auto_commit_config_and_cli_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

@@ -109,7 +109,19 @@ def main() -> int:
             and not has_rows
         )
         print(f"--- defect_present={defect_present} ---")
-        return 0
+        if defect_present:
+            print("VERDICT: pre-fix. goc attest wrote an empty closure stub.")
+            return 1
+        # Post-fix contract: refuse to attest (non-zero exit) and leave log.md untouched.
+        refused = result.returncode != 0 and not log_path.exists()
+        if refused:
+            print("VERDICT: post-fix. goc attest refused and left log.md untouched.")
+            return 0
+        print(
+            "VERDICT: unexpected state — neither defect nor documented post-fix contract. "
+            f"exit={result.returncode}, log_exists={log_path.exists()}"
+        )
+        return 1
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

@@ -4113,7 +4113,13 @@ def _format_attestation_block(today: str, results: list[dict]) -> str:
 
 
 def _cmd_attest(args):
-    """Run layer-2 + layer-3 closure checks; append "Closure verification" block to log.md."""
+    """Run layer-2 + layer-3 closure checks; append "Closure verification" block to log.md.
+
+    Empty-config contract: when both ``layer_2_project_dod`` and ``layer_3_goc_dod``
+    are empty/unset, refuse the call (non-zero exit, no log.md mutation). Writing
+    a bare ``## Closure verification`` header would satisfy the bundled
+    ``log-md-closure-entry`` derived check on content that proves nothing.
+    """
     title = args.title
     skips = args.skips
     non_interactive = args.non_interactive
@@ -4125,6 +4131,17 @@ def _cmd_attest(args):
     skips_set = set(skips)
     results: list[dict] = []
     any_failed = False
+
+    layer_2_checks = config.get("layer_2_project_dod") or []
+    layer_3_checks = config.get("layer_3_goc_dod") or []
+    if not layer_2_checks and not layer_3_checks:
+        print(
+            "ERROR: no closure checks configured (both layer_2_project_dod and "
+            "layer_3_goc_dod are empty in .game-of-cards/config.yaml). "
+            "goc attest refuses to run; configure at least one check or skip attestation.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     for layer_key, layer_num in [("layer_2_project_dod", 2), ("layer_3_goc_dod", 3)]:
         layer_checks = config.get(layer_key) or []
