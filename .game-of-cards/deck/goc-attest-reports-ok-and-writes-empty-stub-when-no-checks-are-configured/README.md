@@ -1,7 +1,7 @@
 ---
 title: goc-attest-reports-ok-and-writes-empty-stub-when-no-checks-are-configured
 summary: "`goc attest <title>` with both `layer_2_project_dod` and `layer_3_goc_dod` set to `[]` runs zero checks, prints `Attestation OK`, and still writes a bare `## Closure verification (TIMESTAMP)` header (no rows) to `log.md`. Subsequent calls append another empty header. The `log-md-closure-entry` derived check then sees a header and accepts closure as if attestation actually ran."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-31T03:54:51Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: a new regression test in `tests/` exercises empty-config attest and verifies log.md is untouched and the exit code matches the chosen contract
   - [ ] MECHANICAL: `goc validate` passes
   - [ ] PROCESS: `goc attest` ships its decision on whether "empty config" is an error or a no-op (one-line note in `_format_attestation_block` or a docstring)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc attest` reports OK and writes an empty closure-verification stub when no checks are configured
