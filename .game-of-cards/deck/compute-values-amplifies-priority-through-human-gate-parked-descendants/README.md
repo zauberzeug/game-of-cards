@@ -1,20 +1,21 @@
 ---
 title: compute-values-amplifies-priority-through-human-gate-parked-descendants
 summary: "`compute_values` prunes only `TERMINAL_STATUSES` and `waiting_impedes` descendants from the GRPW value walk; an `open` (or `active`) descendant carrying `human_gate: decision` or `human_gate: session` is hidden from the queue (`card_is_ready` → False at `engine.py:1929`) yet still amplifies its ancestor's scheduling priority up the `advances` chain. Third axis of the same `card_is_ready` predicate the two closed siblings already covered for the terminal and impediment axes — the human-gate axis was never extended."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-05-31T02:08:26Z"
-closed_at: null
+closed_at: "2026-05-31T02:14:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] PROCESS: decide whether a descendant hidden by `human_gate != none` should contribute to the scheduler value; record the decision + rationale in `log.md`, cross-referencing the deck-as-scheduler-vs-record contract in `AGENTS.md` and the precedents [compute-values-inherits-value-through-done-and-superseded-descendants](../compute-values-inherits-value-through-done-and-superseded-descendants/) (terminal axis) and [compute-values-amplifies-priority-through-impeded-descendants](../compute-values-amplifies-priority-through-impeded-descendants/) (impediment axis).
-  - [ ] TDD: `reproduce.py` exits zero — an ancestor of a `human_gate`-parked descendant no longer inherits that descendant's value when the chosen rule is "prune"; an ancestor of a ready (`human_gate: none`) descendant still does.
-  - [ ] MECHANICAL: if excluding, `value_for` and the `sort_default.live_direct` tiebreak count both skip descendants for which `dest.human_gate != "none"` (mirroring the existing `TERMINAL_STATUSES` / `waiting_impedes` prunes at `goc/engine.py:2083` and `goc/engine.py:2311`); the `compute_values` docstring states the predicate-aligned rule explicitly (every gate in `card_is_ready` participates in the prune).
-  - [ ] MECHANICAL: plugin mirrors synced and `uv run goc validate` clean.
+  - [x] PROCESS: decide whether a descendant hidden by `human_gate != none` should contribute to the scheduler value; record the decision + rationale in `log.md`, cross-referencing the deck-as-scheduler-vs-record contract in `AGENTS.md` and the precedents [compute-values-inherits-value-through-done-and-superseded-descendants](../compute-values-inherits-value-through-done-and-superseded-descendants/) (terminal axis) and [compute-values-amplifies-priority-through-impeded-descendants](../compute-values-amplifies-priority-through-impeded-descendants/) (impediment axis).
+  - [x] TDD: `reproduce.py` exits zero — an ancestor of a `human_gate`-parked descendant no longer inherits that descendant's value when the chosen rule is "prune"; an ancestor of a ready (`human_gate: none`) descendant still does.
+  - [x] MECHANICAL: if excluding, `value_for` and the `sort_default.live_direct` tiebreak count both skip descendants for which `dest.human_gate != "none"` (mirroring the existing `TERMINAL_STATUSES` / `waiting_impedes` prunes at `goc/engine.py:2083` and `goc/engine.py:2311`); the `compute_values` docstring states the predicate-aligned rule explicitly (every gate in `card_is_ready` participates in the prune).
+  - [x] MECHANICAL: plugin mirrors synced and `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `compute_values` amplifies priority through `human_gate`-parked descendants

@@ -2008,17 +2008,22 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
 
     Live-and-workable descendants: a descendant is skipped from the
     value walk when it is either (a) terminal in status
-    (`done`/`disproved`/`superseded`) or (b) carrying an active
-    impediment overlay (`waiting_impedes` — a `waiting_on` reason or a
-    future `waiting_until`, the same guard that hides it from the pull
-    queue). The scheduler axis walks `advances` across *live, workable*
-    cards only (AGENTS.md "deck as scheduler vs record"). Completed work
-    can no longer be unblocked, and an impeded descendant cannot be
-    pulled for the duration of its wait, so neither may amplify a live
-    card's scheduling priority. Terminal edges belong to the record axis
-    instead; the impediment prune is self-clearing (an elapsed
-    `waiting_until` or a cleared `waiting_on` re-admits the descendant on
-    the next recompute, no manual action).
+    (`done`/`disproved`/`superseded`), (b) carrying an active impediment
+    overlay (`waiting_impedes` — a `waiting_on` reason or a future
+    `waiting_until`), or (c) parked behind a `human_gate` of `decision`
+    or `session`. The prune mirrors every gate in `card_is_ready` (the
+    pull-queue predicate) except its `status == "open"` clause —
+    `active` descendants stay workable for the scheduler axis. The
+    scheduler axis walks `advances` across *live, workable* cards only
+    (AGENTS.md "deck as scheduler vs record"). Completed work can no
+    longer be unblocked, an impeded descendant cannot be pulled for the
+    duration of its wait, and a gate-parked descendant cannot be pulled
+    until the human lowers the gate — so none may amplify a live card's
+    scheduling priority. Terminal edges belong to the record axis
+    instead; the impediment and human-gate prunes are self-clearing (an
+    elapsed `waiting_until`, a cleared `waiting_on`, or a `decide-card`
+    invocation re-admits the descendant on the next recompute, no manual
+    action).
 
     Switched from saturating-max (`max(own, γ·best)`) on 2026-05-03
     after the formula was identified as making native-high cards lose
@@ -2080,18 +2085,27 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
                     )
                 continue
             dest_card = by_title[dest]
-            if dest_card.status in TERMINAL_STATUSES or waiting_impedes(dest_card):
+            if (
+                dest_card.status in TERMINAL_STATUSES
+                or waiting_impedes(dest_card)
+                or dest_card.human_gate != "none"
+            ):
                 # Scheduler axis is live-AND-workable only (AGENTS.md "deck
-                # as scheduler vs record"): a terminal descendant can no
-                # longer be unblocked, and an impeded descendant (active
-                # `waiting_on` overlay, hidden from the queue by
-                # `card_is_ready`/`waiting_impedes`) cannot be pulled for the
-                # duration of its wait — so neither may amplify a live card's
-                # priority. The impediment prune is self-clearing: when a
-                # `waiting_until` elapses or `waiting_on` is cleared, the
-                # descendant re-enters the walk on the next recompute with no
-                # manual action. Terminal edges live on the record axis,
-                # walked elsewhere.
+                # as scheduler vs record"): the prune mirrors every gate in
+                # `card_is_ready` except the `status == "open"` clause
+                # (`active` descendants stay workable for the scheduler).
+                # A terminal descendant can no longer be unblocked; an
+                # impeded descendant (active `waiting_on` overlay) cannot be
+                # pulled for the duration of its wait; a `human_gate`-parked
+                # descendant (decision/session) cannot be pulled until the
+                # human lowers the gate. None of the three may amplify a live
+                # card's priority — `card_is_ready` already hides them from
+                # the queue, and the value walk follows. Both the
+                # impediment and human-gate prunes are self-clearing: when
+                # `waiting_until` elapses, `waiting_on` is cleared, or the
+                # gate is lowered via `decide-card`, the descendant re-enters
+                # the walk on the next recompute with no manual action.
+                # Terminal edges live on the record axis, walked elsewhere.
                 continue
             d_value, d_path = value_for(dest, in_progress)
             if d_value > best[0]:
@@ -2280,12 +2294,13 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
     - primary: highest computed value first (graph-amplified contribution)
     - tiebreak: more *live* direct downstream cards = unblock more flow now.
       Counts only `advances` targets the value walk would traverse — target
-      exists in `by_title`, status not terminal, and not impeded by an active
-      `waiting_on` overlay. A terminal or impeded downstream unblocks zero
-      flow now, so it contributes 0 — mirroring the prune `compute_values`
-      applies at engine.py:1751. (Without this, a card whose downstream is
-      fully closed would out-rank an equal-value card that unblocks no less
-      live flow, contradicting the tiebreak's own rationale.)
+      exists in `by_title`, status not terminal, not impeded by an active
+      `waiting_on` overlay, and not parked behind a non-`none` `human_gate`.
+      A terminal, impeded, or gate-parked downstream unblocks zero flow now,
+      so it contributes 0 — mirroring the prune `compute_values` applies in
+      `value_for`. (Without this, a card whose downstream is fully un-pullable
+      would out-rank an equal-value card that unblocks no less live flow,
+      contradicting the tiebreak's own rationale.)
     - final: oldest-created first (kanban WIP-aging discipline)
 
     `values` should be precomputed on the FULL deck (not the filtered
@@ -2308,7 +2323,11 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
             dc = by_title.get(dest)
             if dc is None:
                 continue
-            if dc.status in TERMINAL_STATUSES or waiting_impedes(dc):
+            if (
+                dc.status in TERMINAL_STATUSES
+                or waiting_impedes(dc)
+                or dc.human_gate != "none"
+            ):
                 continue
             n += 1
         return n
