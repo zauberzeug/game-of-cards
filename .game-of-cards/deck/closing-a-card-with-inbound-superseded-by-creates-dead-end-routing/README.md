@@ -1,20 +1,20 @@
 ---
 title: closing-a-card-with-inbound-superseded-by-creates-dead-end-routing
 summary: "Close-time verbs (`goc done`, `goc done --bundle`, `goc status <X> disproved|superseded`) do not check whether the card being closed is the live target of another card's `superseded_by`. After such a close, the predecessor's forward routing pointer lands on a terminal card — exactly the dead-end shape the predecessor card `goc-status-superseded-by-accepts-terminal-status-successor` blocked at set-time. `goc validate` catches the violation reactively via `validate_superseded_by_targets` (engine.py:1412-1446), but the engine that just produced the violation issues no warning."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-05-31T00:07:55Z"
-closed_at: null
+closed_at: "2026-05-31T00:14:14Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `deck/<title>/reproduce.py` exits zero and asserts that close-time verbs (`goc done`, `goc done --bundle`, `goc status <X> disproved`, `goc status <X> superseded --by <new>`) are rejected when the card being closed is still listed as a live successor in another card's `superseded_by`.
-  - [ ] TDD: a regression test in `tests/` exercises the new close-time guard across all four close paths (`done`, `done --bundle`, `status disproved`, `status superseded --by`), and confirms the guard's error message points at the inbound holder so the user knows where to retract.
-  - [ ] MECHANICAL: the guard is implemented via a shared helper called from `_cmd_done`, `_cmd_done_bundle`, and `_cmd_status` (close-into-terminal path) so the three close-time sites share one implementation — no duplication for `goc validate` to later diverge from.
-  - [ ] PROCESS: regression-test suite green; `goc validate` clean (no new error class introduced beyond what the set-time validator already exposes); plugin mirrors regenerated via `python scripts/sync_plugin_assets.py`.
+  - [x] TDD: `deck/<title>/reproduce.py` exits zero and asserts that close-time verbs (`goc done`, `goc done --bundle`, `goc status <X> disproved`, `goc status <X> superseded --by <new>`) are rejected when the card being closed is still listed as a live successor in another card's `superseded_by`.
+  - [x] TDD: a regression test in `tests/` exercises the new close-time guard across all four close paths (`done`, `done --bundle`, `status disproved`, `status superseded --by`), and confirms the guard's error message points at the inbound holder so the user knows where to retract.
+  - [x] MECHANICAL: the guard is implemented via a shared helper called from `_cmd_done`, `_cmd_done_bundle`, and `_cmd_status` (close-into-terminal path) so the three close-time sites share one implementation — no duplication for `goc validate` to later diverge from.
+  - [x] PROCESS: regression-test suite green; `goc validate` clean (no new error class introduced beyond what the set-time validator already exposes); plugin mirrors regenerated via `python scripts/sync_plugin_assets.py`.
 worker: {who: "claude[bot]", where: main}
 ---
 

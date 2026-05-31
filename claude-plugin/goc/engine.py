@@ -1550,6 +1550,51 @@ def detect_supersedes_cycles(cards: list[Card]) -> list[str]:
     return errors
 
 
+def _inbound_superseded_by_holders(cards: list[Card], title: str) -> list[str]:
+    """Return titles of cards that list `title` in their `superseded_by`.
+
+    Symmetric counterpart to `validate_superseded_by_targets`: that
+    validator catches dead-end forward pointers reactively at read time;
+    this helper lets close-time verbs (`done`, `done --bundle`, `status`
+    into a terminal state) refuse a transition that would *create* one.
+    Without this guard, closing the live successor of an existing
+    supersession orphans the holder's forward routing pointer onto a
+    terminal card — exactly the dead-end shape the set-time guard at
+    `_cmd_status` blocks for fresh supersessions.
+    """
+    holders: list[str] = []
+    for c in cards:
+        refs = c.frontmatter.get("superseded_by") or []
+        if not isinstance(refs, list):
+            continue
+        if title in refs:
+            holders.append(c.title)
+    return holders
+
+
+def _enforce_no_inbound_superseded_by_or_exit(title: str, new_status: str) -> None:
+    """Refuse a close into `new_status` if any live `superseded_by` edge points at `title`.
+
+    Called from every close-time path (`_cmd_done`, `_cmd_done_bundle`,
+    `_cmd_status` close-into-terminal). The error names the inbound
+    holder(s) so the user can resolve the supersession before retrying.
+    """
+    holders = _inbound_superseded_by_holders(load_all_cards(), title)
+    if not holders:
+        return
+    sample = ", ".join(holders[:3])
+    extra = "" if len(holders) <= 3 else f" (+{len(holders) - 3} more)"
+    print(
+        f"ERROR: {title}: closing into {new_status!r} would leave "
+        f"`{sample}.superseded_by` pointing at a terminal card{extra}; "
+        f"the forward routing pointer must land on live work (status: "
+        f"open or active). Resolve the inbound supersession(s) before "
+        f"closing {title}.",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
 def _would_create_supersedes_cycle(cards: list[Card], title: str, successor: str) -> bool:
     """Return True if adding `title.superseded_by += successor` would cycle.
 
@@ -3428,6 +3473,7 @@ def _cmd_done(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    _enforce_no_inbound_superseded_by_or_exit(title, "done")
     _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -3510,6 +3556,8 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             )
             sys.exit(2)
         plan.append((title, card_dir, t.status, t))
+    for title, _, _, _ in plan:
+        _enforce_no_inbound_superseded_by_or_exit(title, "done")
     for title, _, _, _ in plan:
         _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
@@ -4210,6 +4258,8 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if new_status in TERMINAL_STATUSES:
+        _enforce_no_inbound_superseded_by_or_exit(title, new_status)
     if successor is not None and _would_create_supersedes_cycle(load_all_cards(), title, successor):
         print(
             f"ERROR: superseding {title} by {successor} would create a cycle in "
