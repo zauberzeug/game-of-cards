@@ -2,7 +2,7 @@
 #
 # Each run invokes Skill(audit-deck), which hunts the codebase for one
 # previously-undocumented defect (bug, doc drift, derivation gap,
-# architectural ugliness) and files it as a new card. The hourly
+# architectural ugliness) and files it as a new card. The daily
 # pull-card workflow then drains it.
 #
 # Required repository secret:
@@ -12,8 +12,8 @@ name: Audit Deck
 
 on:
   schedule:
-    # Run one audit-deck pass every day at 02:00 UTC.
-    - cron: '0 2 * * *'
+    # Run one audit-deck pass once a week, Mondays at 02:00 UTC.
+    - cron: '0 2 * * 1'
   workflow_dispatch:
 
 permissions:

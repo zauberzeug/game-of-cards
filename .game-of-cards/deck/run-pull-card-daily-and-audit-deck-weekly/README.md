@@ -1,18 +1,18 @@
 ---
 title: run-pull-card-daily-and-audit-deck-weekly
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-05-31T03:36:40Z"
-closed_at: null
+closed_at: "2026-05-31T03:37:41Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, story]
 definition_of_done: |
-  - [ ] MECHANICAL: `.github/workflows/pull-card.yml` cron is daily (`0 3 * * *`), not hourly; the schedule comment matches.
-  - [ ] MECHANICAL: `.github/workflows/audit-deck.yml` cron is weekly (`0 2 * * 1`), not daily; the schedule comment matches.
-  - [ ] MECHANICAL: the stale "hourly pull-card" reference in `audit-deck.yml`'s header comment is corrected to "daily".
+  - [x] MECHANICAL: `.github/workflows/pull-card.yml` cron is daily (`0 3 * * *`), not hourly; the schedule comment matches.
+  - [x] MECHANICAL: `.github/workflows/audit-deck.yml` cron is weekly (`0 2 * * 1`), not daily; the schedule comment matches.
+  - [x] MECHANICAL: the stale "hourly pull-card" reference in `audit-deck.yml`'s header comment is corrected to "daily".
 worker: {who: Rodja Trappe, where: main}
 ---
 

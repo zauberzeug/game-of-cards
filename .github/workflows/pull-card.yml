@@ -12,8 +12,11 @@ name: Pull Card
 
 on:
   schedule:
-    # Drain the autonomous queue once an hour.
-    - cron: '0 * * * *'
+    # Drain the autonomous queue once a day at 03:00 UTC (one hour after
+    # the weekly audit-deck slot, so a freshly-filed audit card is drained
+    # the same morning). A single tick still self-triggers up to
+    # MAX_ITERATIONS times to clear the backlog in one daily session.
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       iteration:
