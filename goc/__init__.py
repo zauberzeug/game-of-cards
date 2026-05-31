@@ -4,7 +4,7 @@ Distribution name on PyPI: `game-of-cards`.
 Import name + console script: `goc` (the pyyaml pattern).
 """
 
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 try:
     from importlib.metadata import PackageNotFoundError, version as _pkg_version
