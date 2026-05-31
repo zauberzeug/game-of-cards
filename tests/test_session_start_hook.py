@@ -90,6 +90,64 @@ class SessionStartHookTest(unittest.TestCase):
         self.assertEqual(self.hook._card_human_gate(p), "none")
 
 
+class SessionStartHookInlineCommentTest(unittest.TestCase):
+    """The four frontmatter readers must strip a trailing YAML `# comment`.
+
+    Regression for the latent defect where hand-authored inline comments on
+    `status`, `human_gate`, `waiting_on`, or `waiting_until` would leak into
+    the parsed value and silently misclassify the card.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _readme(self, content: str) -> Path:
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        )
+        tmp.write(content)
+        tmp.flush()
+        return Path(tmp.name)
+
+    def test_status_strips_trailing_comment(self):
+        p = self._readme("---\nstatus: active # resumable note\ntitle: t\n---\nbody\n")
+        self.assertEqual(self.hook._card_status(p), "active")
+
+    def test_human_gate_strips_trailing_comment(self):
+        p = self._readme(
+            "---\nstatus: active\nhuman_gate: decision # parked\ntitle: t\n---\nbody\n"
+        )
+        self.assertEqual(self.hook._card_human_gate(p), "decision")
+
+    def test_waiting_on_strips_trailing_comment(self):
+        p = self._readme(
+            "---\nstatus: active\nwaiting_on: external # see GH-123\ntitle: t\n---\nbody\n"
+        )
+        self.assertEqual(self.hook._card_waiting_on(p), "external")
+
+    def test_waiting_until_strips_trailing_comment(self):
+        p = self._readme(
+            "---\nstatus: active\nwaiting_until: 2026-06-05 # deferred\ntitle: t\n---\nbody\n"
+        )
+        self.assertEqual(self.hook._card_waiting_until(p), "2026-06-05")
+
+    def test_hash_inside_bare_value_is_preserved(self):
+        """YAML: `#` terminates a value only when preceded by whitespace.
+
+        A `#` glued to a non-whitespace character is part of the scalar — the
+        helper must not amputate `foo#bar` into `foo`.
+        """
+        p = self._readme("---\nstatus: foo#bar\ntitle: t\n---\nbody\n")
+        self.assertEqual(self.hook._card_status(p), "foo#bar")
+
+    def test_quoted_then_comment_unwraps_to_inner_value(self):
+        p = self._readme(
+            '---\nstatus: "active" # quoted then commented\ntitle: t\n---\nbody\n'
+        )
+        self.assertEqual(self.hook._card_status(p), "active")
+
+
 class SessionStartHookGatedActiveCardsTest(unittest.TestCase):
     """The hook must not label `human_gate != none` active cards as resumable.
 

@@ -138,8 +138,22 @@ function frontmatterTail(line: string): string {
   // result array to `limit` elements (it does NOT cap the number of
   // splits), so `split(":", 2)[1]` drops everything past the second
   // colon and corrupts colon-bearing values like ISO datetimes.
+  //
+  // Also strips a trailing YAML inline `# comment` from the bare scalar
+  // tail, mirroring `_frontmatter_tail` in the Python hook. YAML 1.1/1.2
+  // rule: a `#` terminates a bare scalar only when preceded by whitespace
+  // (or at the very start), so `status: active # note` yields `'active'`
+  // while `status: foo#bar` yields `'foo#bar'`.
   const i = line.indexOf(":");
-  return i < 0 ? "" : line.slice(i + 1).trim();
+  if (i < 0) return "";
+  let tail = line.slice(i + 1);
+  for (let j = 0; j < tail.length; j++) {
+    if (tail[j] === "#" && (j === 0 || /\s/.test(tail[j - 1]))) {
+      tail = tail.slice(0, j);
+      break;
+    }
+  }
+  return tail.trim();
 }
 
 function parseWaitingUntil(value: string): Date | null {
