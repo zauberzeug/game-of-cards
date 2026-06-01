@@ -1444,7 +1444,7 @@ def validate_superseded_by_targets(cards: list[Card]) -> list[str]:
 
 
 def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
-    """Return structured advances↔advanced_by asymmetries."""
+    """Return structured bidirectional-edge asymmetries (advances↔advanced_by, supersedes↔superseded_by)."""
     half_edges: list[HalfEdge] = []
     by_title = {t.title: t for t in cards}
     for t in cards:
@@ -2882,7 +2882,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # repair-edges
     p_repair_edges = subparsers.add_parser(
         "repair-edges",
-        help="Preview or repair asymmetric advances/advanced_by edges.",
+        help="Preview or repair asymmetric advances/advanced_by and supersedes/superseded_by edges.",
     )
     p_repair_edges.add_argument(
         "--apply",
@@ -4538,7 +4538,7 @@ def _print_structural_edge_problems(problems: list[tuple[HalfEdge, str]]) -> Non
 
 
 def _cmd_repair_edges(args):
-    """Preview or repair asymmetric advances/advanced_by half-edges."""
+    """Preview or repair asymmetric bidirectional half-edges (advances/advanced_by, supersedes/superseded_by)."""
     cards = load_all_cards()
     half_edges = find_half_edges(cards)
     if not half_edges:

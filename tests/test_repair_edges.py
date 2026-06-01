@@ -115,6 +115,33 @@ class RepairEdgesTest(unittest.TestCase):
             self.assertIn("c-card \u2192 a-card would create a cycle in the advances graph", result.stderr)
             self.assertNotIn("c-card", self.readme(cwd, "a-card"))
 
+    def test_repair_edges_help_names_both_relation_classes(self) -> None:
+        import argparse
+
+        from goc.engine import _build_parser, _cmd_repair_edges, find_half_edges
+
+        # The subparser help= string (rendered into `goc --help`'s subcommand
+        # listing) must name both relation classes so a user seeing
+        # validate's "Run 'goc repair-edges --apply' to fix." against a
+        # supersession half-edge can tell the verb covers their case.
+        parser = _build_parser()
+        subparsers_action = next(
+            a for a in parser._actions
+            if isinstance(a, argparse._SubParsersAction)
+        )
+        repair_help_text = next(
+            ca.help for ca in subparsers_action._choices_actions
+            if ca.dest == "repair-edges"
+        )
+        self.assertIn("supersedes", repair_help_text)
+        self.assertIn("advances", repair_help_text)
+
+        # Same coverage assertion against the function docstrings: future
+        # readers of the source must see the full scope, not just the
+        # advances/advanced_by half.
+        self.assertIn("supersedes", _cmd_repair_edges.__doc__ or "")
+        self.assertIn("supersedes", find_half_edges.__doc__ or "")
+
     def test_validate_suggests_repair_edges_for_half_edge_errors(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

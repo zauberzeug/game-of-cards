@@ -1,21 +1,21 @@
 ---
 title: repair-edges-help-and-docstrings-omit-supersession-half-edges-from-scope
 summary: `goc repair-edges --help` and the verb's docstrings claim the verb only handles `advances/advanced_by` half-edges, but the implementation walks every entry in `INVERSE_REL` (advances/advanced_by AND supersedes/superseded_by) and repairs supersession asymmetries just fine. A user reading `goc validate`'s "Run 'goc repair-edges --apply' to fix" against a supersession half-edge then `goc repair-edges --help` would assume the verb cannot help and try to repair by hand.
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-01T05:00:02Z"
-closed_at: null
+closed_at: "2026-06-01T05:04:01Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation, api-contract]
 definition_of_done: |
-  - [ ] TDD: regression test asserts `_build_parser`'s `repair-edges` help string names both relation classes (the two `advances/advanced_by` strings stop being authoritative).
-  - [ ] MECHANICAL: subcommand `help=` at `goc/engine.py:2885` mentions supersession scope.
-  - [ ] MECHANICAL: `_cmd_repair_edges` docstring at `goc/engine.py:4541` mentions supersession scope.
-  - [ ] MECHANICAL: `find_half_edges` docstring at `goc/engine.py:1447` mentions supersession scope (currently `"Return structured advances↔advanced_by asymmetries."`).
-  - [ ] PROCESS: log.md closure entry recorded.
+  - [x] TDD: regression test asserts `_build_parser`'s `repair-edges` help string names both relation classes (the two `advances/advanced_by` strings stop being authoritative).
+  - [x] MECHANICAL: subcommand `help=` at `goc/engine.py:2885` mentions supersession scope.
+  - [x] MECHANICAL: `_cmd_repair_edges` docstring at `goc/engine.py:4541` mentions supersession scope.
+  - [x] MECHANICAL: `find_half_edges` docstring at `goc/engine.py:1447` mentions supersession scope (currently `"Return structured advances↔advanced_by asymmetries."`).
+  - [x] PROCESS: log.md closure entry recorded.
 worker: {who: "claude[bot]", where: main}
 ---
 
