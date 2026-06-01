@@ -302,11 +302,13 @@ def _emit_worker(value) -> str:
 def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     """Render frontmatter as flat YAML matching the schema's example format.
 
-    `definition_of_done` always uses `|` block style. `advances` and
-    `advanced_by` use block-style lists (one `- item` per line) when non-empty;
-    empty lists still render as `[]`. `worker` emits as a flat string when only
-    `who` is set, or an inline mapping when `where` is also set. Other multi-line
-    strings use `|-` block style. Single-line strings are rendered inline.
+    `definition_of_done` always uses `|` block style. Every member of
+    `_BLOCK_LIST_FIELDS` — the four bidirectional-edge fields `advances`,
+    `advanced_by`, `supersedes`, and `superseded_by` — uses block-style lists
+    (one `- item` per line) when non-empty; empty lists still render as `[]`.
+    `worker` emits as a flat string when only `who` is set, or an inline
+    mapping when `where` is also set. Other multi-line strings use `|-` block
+    style. Single-line strings are rendered inline.
     """
     lines = ["---"]
     for key, value in fm.items():
@@ -2932,7 +2934,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # migrate-list-style
     p_mls = subparsers.add_parser("migrate-list-style",
-                                  help="Re-emit every card to convert advances/advanced_by to block-style lists.")
+                                  help="Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style.")
     p_mls.add_argument("--dry-run", action="store_true",
                        help="Show which cards would change without writing files.")
 
@@ -5096,7 +5098,7 @@ def _cmd_migrate(args):
 
 
 def _cmd_migrate_list_style(args):
-    """Re-emit every card to convert advances/advanced_by to block-style lists."""
+    """Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style."""
     dry_run = args.dry_run
     if not DECK_DIR.exists():
         print(f"ERROR: {DECK_DIR} does not exist", file=sys.stderr)
@@ -5122,7 +5124,7 @@ def _cmd_migrate_list_style(args):
                 readme.write_text(rewritten)
 
     if not changed:
-        print("All cards already use block-style for advances/advanced_by — nothing to do.")
+        print("All cards already use block-style for advances/advanced_by/supersedes/superseded_by — nothing to do.")
         return
 
     if dry_run:
