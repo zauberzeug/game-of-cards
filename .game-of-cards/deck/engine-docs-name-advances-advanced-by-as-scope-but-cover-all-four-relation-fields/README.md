@@ -1,7 +1,7 @@
 ---
 title: engine-docs-name-advances-advanced-by-as-scope-but-cover-all-four-relation-fields
 summary: Generalization of `repair-edges-help-and-docstrings-omit-supersession-half-edges-from-scope`. Multiple strings in `goc/engine.py` (and AGENTS.md) still say "advances/advanced_by" when describing scope, but the underlying code path now operates on every entry in `_BLOCK_LIST_FIELDS` / `INVERSE_REL` / `LIST_REL_FIELDS` — including `supersedes/superseded_by`. The `repair-edges` sweep fixed three of these; the remaining drift sites span `emit_frontmatter`, the `migrate-list-style` verb, and the AGENTS.md card-authoring rules.
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-01T05:05:32Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: AGENTS.md card-authoring section ("YAML format for list fields") generalizes the rule from `advances`/`advanced_by` to all bidirectional-edge list fields.
   - [ ] TDD: regression test asserts every user-facing scope string for these surfaces mentions `supersedes` (or names `_BLOCK_LIST_FIELDS` generically), so the next time a new relation class is added the drift fails CI.
   - [ ] PROCESS: log.md closure entry recorded.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # engine-docs-name-advances-advanced-by-as-scope-but-cover-all-four-relation-fields
