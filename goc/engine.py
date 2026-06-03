@@ -1828,12 +1828,22 @@ def validate_dod_method_tags(cards: list[Card]) -> list[BlockerWarning]:
 # ────────────────────────────────────────────────────────────────────────────
 # Filtering + sorting
 
-STATUS_VALUES = ("open", "active", "blocked", "done", "disproved", "superseded")
+# Enum membership/order constants derive from schema.yaml — the documented
+# single source of truth — so a value added to (or reordered in) the schema
+# flows here without a parallel literal edit. Hardcoding these is the drift
+# family closed by `schema-enum-surfaces-keep-drifting-into-hardcoded-literals`;
+# `tests/test_schema_enum_surface_parity.py` guards against re-introducing one.
+# TERMINAL_STATUSES is NOT a schema enum: "terminal" is a semantic subset
+# (closure-bearing statuses) the schema does not declare, so it stays a literal.
+_ENUM_SCHEMA = load_schema()
+STATUS_VALUES = tuple(_ENUM_SCHEMA.status_values)
 STATUS_FILTER_VALUES = (*STATUS_VALUES, "all")
 MUTABLE_STATUS_VALUES = tuple(status for status in STATUS_VALUES if status != "done")
 TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})
-CONTRIBUTION_ORDER = {"high": 0, "medium": 1, "low": 2}
-STAGE_ORDER = ["null", "alpha", "beta", "stable"]
+CONTRIBUTION_ORDER = {c: i for i, c in enumerate(_ENUM_SCHEMA.contribution_values)}
+# schema stage_values carries a YAML `null` first entry (the "no stage" state);
+# STAGE_ORDER renders it as the string "null" the CLI/filters compare against.
+STAGE_ORDER = ["null" if v is None else v for v in _ENUM_SCHEMA.stage_values]
 
 
 def dependency_blockers(card: Card, by_title: dict[str, Card]) -> list[str]:
@@ -1971,7 +1981,13 @@ def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bo
 # RCPSP literature precedent (Hartmann 1999) and the May 3 design
 # discussion. log-spaced ranks are RICE-derived (Intercom): a `high`
 # dominates three `medium`s when both reach the same downstream sink.
-CONTRIBUTION_RANK: dict[str, float] = {"high": 9.0, "medium": 3.0, "low": 1.0}
+# Log-spaced (base-3) ranks derived from contribution order: each level
+# dominates three of the next (a `high` outscores three `medium`s reaching
+# the same sink). Position 0 is the strongest, so rank = 3^(N-1-index) —
+# {high: 9.0, medium: 3.0, low: 1.0} for the shipped three-level enum.
+CONTRIBUTION_RANK: dict[str, float] = {
+    c: 3.0 ** (len(CONTRIBUTION_ORDER) - 1 - i) for c, i in CONTRIBUTION_ORDER.items()
+}
 GAMMA = 0.7
 
 
@@ -2710,13 +2726,13 @@ def _build_parser() -> argparse.ArgumentParser:
     # Global options (used when no subcommand is given)
     parser.add_argument("--tag", dest="tags", action="append", default=[], metavar="TAG",
                         help="Filter by tag (repeatable; AND).")
-    parser.add_argument("--contribution", choices=["high", "medium", "low"],
+    parser.add_argument("--contribution", choices=schema.contribution_values,
                         help="Filter by contribution level.")
     parser.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES), default=None,
                         help="One status, or 'all'. Default: open.")
     parser.add_argument("--stage", dest="stage_flag", default=None,
                         help="Stage filter; supports range like 'alpha-beta'.")
-    parser.add_argument("--human-gate", choices=["none", "decision", "session"],
+    parser.add_argument("--human-gate", choices=schema.human_gate_values,
                         help="Filter by human gate value.")
     parser.add_argument("--done", dest="done_flag", action="store_true",
                         help="Shortcut for --status done.")

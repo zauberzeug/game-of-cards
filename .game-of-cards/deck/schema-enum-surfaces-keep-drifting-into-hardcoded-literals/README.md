@@ -1,30 +1,30 @@
 ---
 title: schema-enum-surfaces-keep-drifting-into-hardcoded-literals
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-03T05:11:57Z"
-closed_at: null
+closed_at: "2026-06-03T05:19:40Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
-  - [ ] PROCESS: enumerate every surface in `goc/engine.py` (+ `install.py`) that
+  - [x] PROCESS: enumerate every surface in `goc/engine.py` (+ `install.py`) that
         re-states a `schema.yaml` enum as a literal — record the file:line list in
         this card's log.md.
-  - [ ] MECHANICAL: derive the remaining drift-prone literals from `load_schema()`
+  - [x] MECHANICAL: derive the remaining drift-prone literals from `load_schema()`
         where the value is membership/order that the schema already defines —
         candidates: `STATUS_VALUES` (engine.py:1831), `STAGE_ORDER` (1836),
         `CONTRIBUTION_ORDER`/`CONTRIBUTION_RANK` (1835/1974), and the `--status`
         argparse `choices` in `_build_parser`. Preserve current ordering byte-for-byte.
-  - [ ] TDD: add a parity guard test that fails if any enum-typed CLI `choices`,
+  - [x] TDD: add a parity guard test that fails if any enum-typed CLI `choices`,
         module-level ordering constant, or renderer column list diverges from the
         corresponding `schema.*` list — so the family stops recurring instance by
         instance.
-  - [ ] Behavior-preserving for the shipped schema (all existing tests green; no
+  - [x] Behavior-preserving for the shipped schema (all existing tests green; no
         output diff for the current six-status / three-contribution / three-gate enums).
-  - [ ] `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
