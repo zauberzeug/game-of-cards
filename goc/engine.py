@@ -2559,7 +2559,11 @@ def render_board(
 ) -> str:
     if values is None:
         values = compute_values(cards)
-    columns = ["open", "active", "blocked", "done", "disproved", "superseded"]
+    # Columns derive from the schema's status enum — the single source of
+    # truth — not a hardcoded literal. This keeps the board in lockstep with
+    # `status_values` (custom workflows, enum migrations) and never silently
+    # drops a card whose status the renderer "forgot" to list.
+    columns = list(load_schema().status_values)
     by_status: dict[str, list[Card]] = {c: [] for c in columns}
     if by_title is None:
         by_title = {t.title: t for t in cards}

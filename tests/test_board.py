@@ -5,7 +5,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +71,38 @@ class BoardRenderingTest(unittest.TestCase):
             for status in ("open", "active", "blocked", "done", "disproved", "superseded"):
                 self.assertIn(f"{status}-card", result.stdout)
 
+
+    def test_board_columns_derive_from_schema_status_values(self) -> None:
+        """A status the schema declares but the old hardcoded literal omitted
+        must still get a column and render its cards — the board reads its
+        status enum from `schema.status_values`, not a hardcoded list."""
+        from goc import engine
+
+        custom = replace(
+            engine.load_schema(),
+            status_values=[
+                "open", "active", "review", "blocked",
+                "done", "disproved", "superseded",
+            ],
+        )
+        card = engine.Card(
+            title="in-review-card",
+            path=Path("/tmp/in-review-card"),
+            frontmatter={
+                "title": "in-review-card",
+                "status": "review",
+                "contribution": "medium",
+                "human_gate": "none",
+            },
+            body="",
+            dod_open=0,
+            dod_done=0,
+        )
+        with mock.patch.object(engine, "load_schema", return_value=custom):
+            board = engine.render_board([card], max_rows=20, no_color=True)
+
+        self.assertIn("REVIEW", board)
+        self.assertIn("in-review-card", board)
 
     def test_board_preserves_title_when_worker_suffix_expands_cell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

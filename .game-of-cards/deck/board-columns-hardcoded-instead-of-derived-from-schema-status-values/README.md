@@ -1,25 +1,27 @@
 ---
 title: board-columns-hardcoded-instead-of-derived-from-schema-status-values
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-03T05:06:44Z"
-closed_at: null
+closed_at: "2026-06-03T05:10:08Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] EMPIRICAL: `reproduce.py` shows a card whose `status` is not in the
-        hardcoded list is silently dropped from `render_board` before the fix,
-        and appears after.
-  - [ ] `render_board` derives its columns from `load_schema().status_values`
+  - [x] EMPIRICAL: `reproduce.py` shows a schema-declared status (`review`)
+        that the legacy hardcoded list omitted is silently dropped from
+        `render_board` before the fix, and renders in its own column after.
+  - [x] `render_board` derives its columns from `load_schema().status_values`
         instead of the hardcoded `["open","active","blocked","done","disproved","superseded"]`.
-  - [ ] Behavior-preserving for the shipped schema: board output is byte-identical
-        for the current six-status enum (same column set, same order).
-  - [ ] TDD: a regression test asserts a card with a status outside the legacy
-        hardcoded set still renders on the board.
-  - [ ] `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] Behavior-preserving for the shipped schema: board output is byte-identical
+        for the current six-status enum (same column set, same order) —
+        `test_board_renders_every_status_column` still green.
+  - [x] TDD: a regression test asserts a card with a status outside the legacy
+        hardcoded set still renders on the board (`test_board_columns_derive_from_schema_status_values`,
+        confirmed red against the literal, green against the fix).
+  - [x] `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
