@@ -2457,7 +2457,7 @@ def render_table(
                 v = t.frontmatter.get(field) or []
                 if v:
                     out_lines.append(f"    {field}: {list(v)}")
-            dod = t.frontmatter.get("definition_of_done", "")
+            dod = t.frontmatter.get("definition_of_done") or ""
             for line in dod.splitlines():
                 out_lines.append(f"    {line.rstrip()}")
     return "\n".join(out_lines)

@@ -1,19 +1,19 @@
 ---
 title: verbose-table-render-crashes-on-card-with-empty-definition-of-done
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-03T04:37:18Z"
-closed_at: null
+closed_at: "2026-06-03T04:40:07Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — building a `Card` with `definition_of_done: None` and calling `render_table([card], verbose=2, no_color=True)` returns a string instead of raising `AttributeError`.
-  - [ ] MECHANICAL: `render_table`'s `verbose >= 2` DoD read uses the established `or ""` guard (matching the sibling reads at engine.py:1814, 3187, 3273, and the `LIST_REL_FIELDS` loop just above it), so a `None` DoD renders as a blank block.
-  - [ ] PROCESS: a regression test lands in `tests/` asserting the `-vv` render survives a `None` DoD.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green; `uv run goc validate` clean.
+  - [x] TDD: reproduce.py exits zero — building a `Card` with `definition_of_done: None` and calling `render_table([card], verbose=2, no_color=True)` returns a string instead of raising `AttributeError`.
+  - [x] MECHANICAL: `render_table`'s `verbose >= 2` DoD read uses the established `or ""` guard (matching the sibling reads at engine.py:1814, 3187, 3273, and the `LIST_REL_FIELDS` loop just above it), so a `None` DoD renders as a blank block.
+  - [x] PROCESS: a regression test lands in `tests/` asserting the `-vv` render survives a `None` DoD.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` stays green; `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
