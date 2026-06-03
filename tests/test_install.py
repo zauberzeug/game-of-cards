@@ -1545,6 +1545,24 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / "deck").exists(), "dry run must not remove legacy tree")
             self.assertFalse((cwd / ".game-of-cards" / "deck" / "legacy-card").exists())
 
+    def test_migrate_dry_run_announces_removal_for_identical_only_tree(self) -> None:
+        # When every legacy card is byte-identical to its canonical
+        # counterpart, the real `goc migrate` still rmtree's the legacy
+        # tree — so --dry-run must announce that deletion, not hide it.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_legacy_card(cwd)
+            canonical = self._make_canonical_deck(cwd)
+            (canonical / "legacy-card").mkdir()
+            (canonical / "legacy-card" / "README.md").write_text(self._LEGACY_CARD_FRONTMATTER)
+
+            result = self.run_goc(cwd, "migrate", "--dry-run")
+
+            self.assert_goc_ok(result)
+            self.assertIn("identical", result.stdout)
+            self.assertIn("Would remove legacy tree", result.stdout)
+            self.assertTrue((cwd / "deck").exists(), "dry run must not remove legacy tree")
+
     def test_migrate_no_legacy_reports_nothing_to_do(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

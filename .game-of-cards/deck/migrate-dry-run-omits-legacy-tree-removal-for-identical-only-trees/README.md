@@ -1,21 +1,21 @@
 ---
 title: migrate-dry-run-omits-legacy-tree-removal-for-identical-only-trees
 summary: "`goc migrate --dry-run` only previews the legacy-tree deletion when there are legacy-only cards to copy (`to_copy`) or the legacy dir is empty. When every legacy card is identical to its canonical counterpart (`to_copy == []`, `identical` non-empty), the dry-run hides the `Would remove legacy tree` line even though the real run unconditionally `rmtree`s the legacy tree — defeating the purpose of `--dry-run` for the one case where the only effect is a deletion."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-03T04:51:16Z"
-closed_at: null
+closed_at: "2026-06-03T04:55:08Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `goc migrate --dry-run` on an identical-only legacy tree prints a `Would remove legacy tree` line
-  - [ ] TDD: regression test asserts the dry-run preview includes the removal line when `to_copy == []` and `identical` is non-empty
-  - [ ] MECHANICAL: the dry-run guard at `engine.py` fires whenever the real run would reach `rmtree(legacy)` (i.e. includes the `identical` case)
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero — `goc migrate --dry-run` on an identical-only legacy tree prints a `Would remove legacy tree` line
+  - [x] TDD: regression test asserts the dry-run preview includes the removal line when `to_copy == []` and `identical` is non-empty
+  - [x] MECHANICAL: the dry-run guard at `engine.py` fires whenever the real run would reach `rmtree(legacy)` (i.e. includes the `identical` case)
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -112,5 +112,26 @@ identical-only case.
 
 ## Empirical evidence
 
-See `reproduce.py`. Run with `uv run python
-deck/migrate-dry-run-omits-legacy-tree-removal-for-identical-only-trees/reproduce.py`.
+`reproduce.py` builds a temp repo whose `.game-of-cards/deck/foo` and
+`deck/foo` are byte-identical, then runs `goc migrate --dry-run`.
+
+Before the fix (guard omitted `identical`):
+
+```
+Cards already in canonical tree (identical, will skip): 1
+Dry run — no changes made.
+
+dry-run announces 'Would remove legacy tree': False
+FAIL: dry-run hid the legacy-tree deletion.
+```
+
+After the fix (`if to_copy or identical or not legacy_dirs:`):
+
+```
+Cards already in canonical tree (identical, will skip): 1
+Would remove legacy tree: /tmp/.../deck
+Dry run — no changes made.
+
+dry-run announces 'Would remove legacy tree': True
+PASS: dry-run preview includes the legacy-tree removal it will perform.
+```

@@ -5077,7 +5077,12 @@ def _cmd_migrate(args):
             return
 
     if dry_run:
-        if to_copy or not legacy_dirs:
+        # Mirror the real run: it reaches `rmtree(legacy)` whenever
+        # `to_copy or identical` passes the confirm gate (or when the
+        # legacy tree is empty and falls through). Announce the removal
+        # in all of those cases so --dry-run never understates the
+        # deletion — in particular the identical-only case.
+        if to_copy or identical or not legacy_dirs:
             print(f"Would remove legacy tree: {legacy}")
         print("Dry run — no changes made.")
         return
