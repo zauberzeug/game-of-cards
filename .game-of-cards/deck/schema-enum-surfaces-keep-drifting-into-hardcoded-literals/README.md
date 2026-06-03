@@ -1,6 +1,6 @@
 ---
 title: schema-enum-surfaces-keep-drifting-into-hardcoded-literals
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-03T05:11:57Z"
@@ -25,6 +25,7 @@ definition_of_done: |
   - [ ] Behavior-preserving for the shipped schema (all existing tests green; no
         output diff for the current six-status / three-contribution / three-gate enums).
   - [ ] `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Schema enum surfaces keep drifting into hardcoded literals — close the family with a guard
