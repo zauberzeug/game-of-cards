@@ -1,21 +1,21 @@
 ---
 title: board-truncates-columns-to-max-rows-without-showing-how-many-are-hidden
 summary: "`goc --board` caps each status column at `--max-rows` (default 20) by slicing the sorted card list, but emits no indicator when a column held more cards than were shown. On a deck with 90 open cards the OPEN column renders exactly 20 rows and silently hides the other 70 — the reader has no signal that the column is truncated."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-04T05:12:17Z"
-closed_at: null
+closed_at: "2026-06-04T05:15:28Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (a column truncated by --max-rows renders a "+N more" indicator naming the hidden count)
-  - [ ] TDD: a column at or below the row cap renders no indicator (no false "+0 more")
-  - [ ] TDD: the indicator count equals (column card total − rows shown) for the truncated column
-  - [ ] MECHANICAL: the indicator row participates in column-width sizing so the grid stays aligned
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (a column truncated by --max-rows renders a "+N more" indicator naming the hidden count)
+  - [x] TDD: a column at or below the row cap renders no indicator (no false "+0 more")
+  - [x] TDD: the indicator count equals (column card total − rows shown) for the truncated column
+  - [x] MECHANICAL: the indicator row participates in column-width sizing so the grid stays aligned
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

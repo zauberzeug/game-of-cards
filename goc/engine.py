@@ -2586,8 +2586,11 @@ def render_board(
     for t in cards:
         if t.status in by_status:
             by_status[t.status].append(t)
+    hidden_by_status: dict[str, int] = {}
     for c in columns:
-        by_status[c] = sort_default(by_status[c], values=values)[:max_rows]
+        sorted_col = sort_default(by_status[c], values=values)
+        hidden_by_status[c] = max(0, len(sorted_col) - max_rows)
+        by_status[c] = sorted_col[:max_rows]
     def card_cell(t: Card) -> str:
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
@@ -2605,6 +2608,14 @@ def render_board(
     rendered_by_status: dict[str, list[str]] = {
         c: [card_cell(t) for t in by_status[c]] for c in columns
     }
+    # Surface the row cap rather than hiding it: every other capped list in
+    # the tool (render_active_notice, the tag-sample renderer, the validate
+    # report) advertises its overflow, so the board does too. The indicator
+    # is appended before col_widths is computed below, so it participates in
+    # width sizing and the grid stays aligned.
+    for c in columns:
+        if hidden_by_status[c] > 0:
+            rendered_by_status[c].append(f"… +{hidden_by_status[c]} more")
     col_widths = [
         max(
             20,
