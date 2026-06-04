@@ -148,6 +148,29 @@ class BlockScalarTest(unittest.TestCase):
         self.assertEqual(safe_load(text)["s"], "  - [ ] nested\n  - [ ] second\n")
 
 
+class FoldedScalarRejectionTest(unittest.TestCase):
+    """Folded scalars (`>`) are unsupported and must raise — for every
+    indicator variant, not just the bare `>`. The guard used to be an
+    exact-string `rest == ">"` check, so `>-`/`>+`/`>2`/… slipped past and
+    were returned as the literal header string, silently dropping every
+    field that followed."""
+
+    def test_bare_folded_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("s: >\n  folded text\n")
+
+    def test_strip_folded_raises_not_misparse(self):
+        # The headline defect: `>-` returned {'s': '>-'} and dropped `t`.
+        with self.assertRaises(ParseError):
+            safe_load("s: >-\n  x\nt: kept\n")
+
+    def test_all_folded_variants_raise(self):
+        for ind in (">", ">-", ">+", ">2", ">2-", ">2+", ">10-"):
+            doc = f"s: {ind}\n  folded one\n  folded two\nt: kept\n"
+            with self.assertRaises(ParseError, msg=f"{ind!r} should raise"):
+                safe_load(doc)
+
+
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):
         text = "tags:\n  - story\n  - infra\n"

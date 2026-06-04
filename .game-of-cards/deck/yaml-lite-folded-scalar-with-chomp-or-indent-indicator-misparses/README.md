@@ -6,19 +6,19 @@ summary: |-
   raises. Every folded variant carrying a chomping or explicit-indent
   indicator slips past, is returned as the literal header string, and
   silently drops every frontmatter field after it.
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-04T04:53:32Z"
-closed_at: null
+closed_at: "2026-06-04T04:57:15Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — every folded-scalar variant (`>`, `>-`, `>+`, `>2`, `>2-`, `>2+`) raises ParseError, none silently misparse
-  - [ ] TDD: a regression test asserts `safe_load("summary: >-\n  x")` raises ParseError, not `{'summary': '>-'}`
-  - [ ] MECHANICAL: the `rest == ">"` exact-string guard is replaced by a folded-indicator regex mirroring `_BLOCK_INDICATOR_RE`
+  - [x] TDD: reproduce.py exits zero — every folded-scalar variant (`>`, `>-`, `>+`, `>2`, `>2-`, `>2+`) raises ParseError, none silently misparse
+  - [x] TDD: a regression test asserts `safe_load("summary: >-\n  x")` raises ParseError, not `{'summary': '>-'}`
+  - [x] MECHANICAL: the `rest == ">"` exact-string guard is replaced by a folded-indicator regex mirroring `_BLOCK_INDICATOR_RE`
 worker: {who: "claude[bot]", where: main}
 ---
 
