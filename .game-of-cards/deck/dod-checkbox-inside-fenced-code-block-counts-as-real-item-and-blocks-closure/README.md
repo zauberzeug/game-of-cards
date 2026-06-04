@@ -1,7 +1,7 @@
 ---
 title: dod-checkbox-inside-fenced-code-block-counts-as-real-item-and-blocks-closure
 summary: "The DoD checkbox scanners (`count_dod_boxes`, `_dod_box_indices`, `untagged_dod_items` in `goc/engine.py`) match `^[ \\t]*- \\[ \\]` line-by-line with no notion of fenced code blocks. A `- [ ]` shown as an example inside a ```-fence within a card's `definition_of_done` is counted as a real unchecked item, so `goc done` (and `goc done --force`) refuses to close the card and the board shows an inflated `N/M` box count."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-04T05:31:55Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test in `tests/` exercises `count_dod_boxes`, `_dod_box_indices`, and `untagged_dod_items` against a DoD containing a fenced example checkbox and asserts all three agree on the non-fenced line set
   - [ ] MECHANICAL: the three DoD scanners share one fence-tracking helper so they cannot drift apart on fence handling
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # dod-checkbox-inside-fenced-code-block-counts-as-real-item-and-blocks-closure
