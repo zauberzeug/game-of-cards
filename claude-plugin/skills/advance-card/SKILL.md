@@ -1,7 +1,7 @@
 ---
 name: advance-card
 description: Mutate a card's status (open / active / disproved / superseded — everything except `done`), record relationship edges between cards (`goc advance` / `goc unadvance`), or set the impediment overlay (`goc wait`). AUTO-INVOKE when user says "I'll start on X", "I'm working on", "mark this disproved", "supersede with Z", "this is part of X", "make this depend on Y", "these should be linked", "should this be an edge or a tag?", "remove this dependency", "unlink these", or describes any non-done status change or relationship-modeling intent. For "this is blocked by Y" / "unblock", set or clear the impediment overlay with `goc wait` (Step 6) instead of flipping status. Status transitions and relationship edges are documented agreements (Kanban explicit policies, Anderson).
-argument-hint: <title> <new-status: active|open|disproved|superseded> [--by <other-title>]
+argument-hint: "<title> <new-status: active|open|disproved|superseded> [--by <other-title>]"
 ---
 
 ## Preflight

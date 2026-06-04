@@ -1067,6 +1067,14 @@ def _frontmatter_value(text: str, key: str) -> str:
         if not line.startswith(prefix):
             continue
         value = line[len(prefix) :].strip()
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            try:
+                decoded = json.loads(value)
+            except json.JSONDecodeError:
+                return value[1:-1]
+            return decoded if isinstance(decoded, str) else str(decoded)
+        if len(value) >= 2 and value[0] == value[-1] == "'":
+            return value[1:-1].replace("''", "'")
         if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
             return value[1:-1]
         return value

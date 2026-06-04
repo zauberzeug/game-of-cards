@@ -1,21 +1,21 @@
 ---
 title: skill-frontmatter-descriptions-break-yaml-loading
 summary: "Several shipped GoC skill templates contain unquoted frontmatter scalars with nested `: ` text, which strict YAML parsers reject before the skill body can load. Codex plugin-cache and agent-local copies can therefore skip `kickoff`, `advance-card`, `pull-card`, and `next-card` even though GoC's permissive YAML-lite parser accepts the same files."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-04T05:10:39Z"
-closed_at: null
+closed_at: "2026-06-04T05:19:00Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero, proving all shipped skill frontmatter avoids unquoted nested mapping-colon scalars.
-  - [ ] TDD: regression coverage in `tests/` scans source templates and generated skill payloads for the same strict-loader-invalid shape.
-  - [ ] MECHANICAL: fix the source-of-truth templates or generator so `kickoff`, `advance-card`, `pull-card`, and `next-card` frontmatter is strict YAML.
-  - [ ] MECHANICAL: run the plugin/dogfood sync so `claude-plugin/`, `codex-plugin/`, `.claude/skills/`, `.codex/skills/`, and OpenClaw skill ports reflect the fix.
-  - [ ] EMPIRICAL: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+  - [x] TDD: `reproduce.py` exits zero, proving all shipped skill frontmatter avoids unquoted nested mapping-colon scalars.
+  - [x] TDD: regression coverage in `tests/` scans source templates and generated skill payloads for the same strict-loader-invalid shape.
+  - [x] MECHANICAL: fix the source-of-truth templates or generator so `kickoff`, `advance-card`, `pull-card`, and `next-card` frontmatter is strict YAML.
+  - [x] MECHANICAL: run the plugin/dogfood sync so `claude-plugin/`, `codex-plugin/`, `.claude/skills/`, `.codex/skills/`, and OpenClaw skill ports reflect the fix.
+  - [x] EMPIRICAL: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -73,6 +73,12 @@ FAIL — strict skill-loader frontmatter hazards found:
   goc/templates/skills/pull-card/SKILL.md:3: description contains unquoted ': '
 ```
 
+Final reproduction after the fix:
+
+```text
+OK — shipped skill frontmatter avoids unquoted nested mapping-colon scalars.
+```
+
 ## Why it matters
 
 The reachability path is any host that reads GoC skills from the native skill
@@ -89,11 +95,14 @@ safe, not merely acceptable to GoC's internal YAML subset.
 
 ## Fix
 
-Quote the affected single-line frontmatter values in the source templates and
-add a regression guard that scans every shipped `SKILL.md` frontmatter surface
-for unquoted plain scalars containing `: `.
+The affected single-line frontmatter values are now quoted in the source
+templates, and `goc.install._frontmatter_value` decodes double-quoted scalar
+escapes so Codex frontmatter normalization preserves human-readable
+descriptions instead of double-escaping embedded quotes.
 
-After editing the source templates, run:
+The regression guard in `tests/test_skill_frontmatter_strict_yaml.py` scans
+every shipped `SKILL.md` frontmatter surface for unquoted plain scalars
+containing `: `. The generated mirrors were refreshed with:
 
 ```bash
 python3 scripts/sync_plugin_assets.py
