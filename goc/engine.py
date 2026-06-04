@@ -483,14 +483,41 @@ DOD_DONE_BOX = re.compile(r"^[ \t]*- \[x\]", re.MULTILINE | re.IGNORECASE)
 # agrees with DOD_OPEN_BOX + DOD_DONE_BOX on the same `[X]`/`[x]` set.
 DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
 
+# A ```- or ~~~-fenced code block inside the (block-scalar) definition_of_done
+# field shows checkbox lines as *examples*, not real DoD items. The scanners
+# below must skip those lines, otherwise an illustrative `- [ ]` inflates the
+# unchecked-box count and makes the card impossible to close.
+DOD_FENCE_DELIM = re.compile(r"^[ \t]*(?:`{3,}|~{3,})")
+
+
+def _dod_fenced_mask(lines: list[str]) -> list[bool]:
+    """Per-line flag: True when the line opens/closes or sits inside a fenced
+    code block, and so must not be treated as a DoD checkbox. All three DoD
+    scanners (count_dod_boxes, _dod_box_indices, untagged_dod_items) route
+    through this so they cannot drift apart on fence handling."""
+    mask: list[bool] = []
+    in_fence = False
+    for ln in lines:
+        if DOD_FENCE_DELIM.match(ln):
+            in_fence = not in_fence
+            mask.append(True)  # the fence delimiter line is never a checkbox
+        else:
+            mask.append(in_fence)
+    return mask
+
 
 def _dod_box_indices(lines: list[str]) -> list[int]:
     """0-based line indices of DoD checkbox lines, counted the same way the
     canonical box counter (DOD_OPEN_BOX + DOD_DONE_BOX) counts them — i.e.
-    case-insensitively. This is the index space LLM quality-pass verdicts
-    target, so the rewriter must agree with the counter on which lines are
-    boxes."""
-    return [i for i, ln in enumerate(lines) if DOD_ANY_BOX.match(ln)]
+    case-insensitively and skipping fenced-code-block lines. This is the index
+    space LLM quality-pass verdicts target, so the rewriter must agree with the
+    counter on which lines are boxes."""
+    fenced = _dod_fenced_mask(lines)
+    return [
+        i
+        for i, ln in enumerate(lines)
+        if not fenced[i] and DOD_ANY_BOX.match(ln)
+    ]
 
 # Method-class tags declare each DoD item's closure semantic with a one-token
 # colon-suffixed prefix (e.g. "- [ ] TDD: ..."). See Skill(card-schema)
@@ -592,7 +619,17 @@ def _worker_who(raw) -> str:
 def count_dod_boxes(dod_field: str) -> tuple[int, int]:
     if not isinstance(dod_field, str):
         return 0, 0
-    return len(DOD_OPEN_BOX.findall(dod_field)), len(DOD_DONE_BOX.findall(dod_field))
+    lines = dod_field.splitlines()
+    fenced = _dod_fenced_mask(lines)
+    open_n = done_n = 0
+    for ln, in_fence in zip(lines, fenced):
+        if in_fence:
+            continue
+        if DOD_DONE_BOX.match(ln):
+            done_n += 1
+        elif DOD_OPEN_BOX.match(ln):
+            open_n += 1
+    return open_n, done_n
 
 
 def untagged_dod_items(dod_field: str) -> list[str]:
@@ -603,10 +640,12 @@ def untagged_dod_items(dod_field: str) -> list[str]:
     """
     if not isinstance(dod_field, str):
         return []
+    lines = dod_field.splitlines()
+    fenced = _dod_fenced_mask(lines)
     return [
         line.strip()
-        for line in dod_field.splitlines()
-        if DOD_ANY_BOX.match(line) and not DOD_TAGGED_BOX.match(line)
+        for line, in_fence in zip(lines, fenced)
+        if not in_fence and DOD_ANY_BOX.match(line) and not DOD_TAGGED_BOX.match(line)
     ]
 
 
