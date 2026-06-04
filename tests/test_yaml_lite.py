@@ -242,6 +242,28 @@ class EscapedQuoteFlowSplitTest(unittest.TestCase):
         # double-quoted value must not terminate quote mode early.
         self.assertEqual(safe_load('k: "a\\"b"\n')["k"], 'a"b')
 
+    def test_strip_comment_honors_escaped_quote_before_hash(self):
+        # _strip_comment is the third sibling sharing the quote loop. An
+        # escaped quote inside a double-quoted scalar must not close quote
+        # mode, or a later ` #` is misread as a comment and the value is
+        # truncated. Regression for strip-comment-closes-double-quoted-
+        # scalar-on-backslash-escaped-quote.
+        self.assertEqual(safe_load('k: "a\\" b #c"\n')["k"], 'a" b #c')
+        # Guard: a `#` inside a balanced double-quoted scalar (with an
+        # escaped quote) is still preserved, and a bare unbalanced quote
+        # still strips its trailing comment.
+        self.assertEqual(safe_load('a: "x \\" y # z"\n')["a"], 'x " y # z')
+        self.assertEqual(safe_load("title: don't  # note\n")["title"], "don't")
+
+    def test_engine_round_trip_summary_with_quote_and_hash(self):
+        from goc import engine as e
+
+        summary = 'a " b #c'
+        text = e.emit_frontmatter(
+            {"title": "t", "status": "open", "summary": summary}, body="x"
+        )
+        self.assertEqual(e.parse_frontmatter(text)[0]["summary"], summary)
+
     def test_engine_round_trip_worker_with_quote(self):
         from goc import engine as e
 

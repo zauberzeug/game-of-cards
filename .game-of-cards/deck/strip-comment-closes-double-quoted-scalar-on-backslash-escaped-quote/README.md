@@ -1,19 +1,19 @@
 ---
 title: strip-comment-closes-double-quoted-scalar-on-backslash-escaped-quote
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-04T04:34:46Z"
-closed_at: null
+closed_at: "2026-06-04T04:38:07Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `emit_frontmatter({'summary': 'a " b #c', ...})` round-trips through `parse_frontmatter` unchanged, and `safe_load('k: "a\\" b #c"\n')` returns `{'k': 'a" b #c'}`. Fails before the fix, passes after.
-  - [ ] TDD: regression guard in tests/test_yaml_lite.py next to `test_block_key_with_escaped_quote_in_quoted_value` — a `#` inside a *balanced* double-quoted scalar that contains an escaped quote is preserved, and a bare value with an unbalanced lone quote still strips its trailing comment (`title: don't  # note` → `don't`).
-  - [ ] MECHANICAL: `_strip_comment` honors backslash escapes inside double-quoted strings (skip the char after a backslash when `in_q == '"'`), mirroring `_split_flow` and `_split_key`.
-  - [ ] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads).
+  - [x] TDD: reproduce.py exits zero — `emit_frontmatter({'summary': 'a " b #c', ...})` round-trips through `parse_frontmatter` unchanged, and `safe_load('k: "a\\" b #c"\n')` returns `{'k': 'a" b #c'}`. Fails before the fix, passes after.
+  - [x] TDD: regression guard in tests/test_yaml_lite.py next to `test_block_key_with_escaped_quote_in_quoted_value` — a `#` inside a *balanced* double-quoted scalar that contains an escaped quote is preserved, and a bare value with an unbalanced lone quote still strips its trailing comment (`title: don't  # note` → `don't`).
+  - [x] MECHANICAL: `_strip_comment` honors backslash escapes inside double-quoted strings (skip the char after a backslash when `in_q == '"'`), mirroring `_split_flow` and `_split_key`.
+  - [x] PROCESS: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads).
 worker: {who: "claude[bot]", where: main}
 ---
 

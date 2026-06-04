@@ -419,10 +419,15 @@ def _strip_comment(text: str) -> str:
     flow = text[:1] in ("[", "{")
     quoted = text[:1] in ('"', "'")
     in_q: str | None = None
+    escaped = False
     depth = 0
     for i, c in enumerate(text):
-        if in_q:
-            if c == in_q:
+        if escaped:
+            escaped = False
+        elif in_q:
+            if c == "\\" and in_q == '"':
+                escaped = True  # double-quoted YAML escapes the next char
+            elif c == in_q:
                 in_q = None
         elif flow and c in ("[", "{"):
             depth += 1
