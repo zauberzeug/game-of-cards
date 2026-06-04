@@ -302,11 +302,13 @@ def _emit_worker(value) -> str:
 def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     """Render frontmatter as flat YAML matching the schema's example format.
 
-    `definition_of_done` always uses `|` block style. `advances` and
-    `advanced_by` use block-style lists (one `- item` per line) when non-empty;
-    empty lists still render as `[]`. `worker` emits as a flat string when only
-    `who` is set, or an inline mapping when `where` is also set. Other multi-line
-    strings use `|-` block style. Single-line strings are rendered inline.
+    `definition_of_done` always uses `|` block style. Every member of
+    `_BLOCK_LIST_FIELDS` — the four bidirectional-edge fields `advances`,
+    `advanced_by`, `supersedes`, and `superseded_by` — uses block-style lists
+    (one `- item` per line) when non-empty; empty lists still render as `[]`.
+    `worker` emits as a flat string when only `who` is set, or an inline
+    mapping when `where` is also set. Other multi-line strings use `|-` block
+    style. Single-line strings are rendered inline.
     """
     lines = ["---"]
     for key, value in fm.items():
@@ -481,14 +483,41 @@ DOD_DONE_BOX = re.compile(r"^[ \t]*- \[x\]", re.MULTILINE | re.IGNORECASE)
 # agrees with DOD_OPEN_BOX + DOD_DONE_BOX on the same `[X]`/`[x]` set.
 DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
 
+# A ```- or ~~~-fenced code block inside the (block-scalar) definition_of_done
+# field shows checkbox lines as *examples*, not real DoD items. The scanners
+# below must skip those lines, otherwise an illustrative `- [ ]` inflates the
+# unchecked-box count and makes the card impossible to close.
+DOD_FENCE_DELIM = re.compile(r"^[ \t]*(?:`{3,}|~{3,})")
+
+
+def _dod_fenced_mask(lines: list[str]) -> list[bool]:
+    """Per-line flag: True when the line opens/closes or sits inside a fenced
+    code block, and so must not be treated as a DoD checkbox. All three DoD
+    scanners (count_dod_boxes, _dod_box_indices, untagged_dod_items) route
+    through this so they cannot drift apart on fence handling."""
+    mask: list[bool] = []
+    in_fence = False
+    for ln in lines:
+        if DOD_FENCE_DELIM.match(ln):
+            in_fence = not in_fence
+            mask.append(True)  # the fence delimiter line is never a checkbox
+        else:
+            mask.append(in_fence)
+    return mask
+
 
 def _dod_box_indices(lines: list[str]) -> list[int]:
     """0-based line indices of DoD checkbox lines, counted the same way the
     canonical box counter (DOD_OPEN_BOX + DOD_DONE_BOX) counts them — i.e.
-    case-insensitively. This is the index space LLM quality-pass verdicts
-    target, so the rewriter must agree with the counter on which lines are
-    boxes."""
-    return [i for i, ln in enumerate(lines) if DOD_ANY_BOX.match(ln)]
+    case-insensitively and skipping fenced-code-block lines. This is the index
+    space LLM quality-pass verdicts target, so the rewriter must agree with the
+    counter on which lines are boxes."""
+    fenced = _dod_fenced_mask(lines)
+    return [
+        i
+        for i, ln in enumerate(lines)
+        if not fenced[i] and DOD_ANY_BOX.match(ln)
+    ]
 
 # Method-class tags declare each DoD item's closure semantic with a one-token
 # colon-suffixed prefix (e.g. "- [ ] TDD: ..."). See Skill(card-schema)
@@ -590,7 +619,17 @@ def _worker_who(raw) -> str:
 def count_dod_boxes(dod_field: str) -> tuple[int, int]:
     if not isinstance(dod_field, str):
         return 0, 0
-    return len(DOD_OPEN_BOX.findall(dod_field)), len(DOD_DONE_BOX.findall(dod_field))
+    lines = dod_field.splitlines()
+    fenced = _dod_fenced_mask(lines)
+    open_n = done_n = 0
+    for ln, in_fence in zip(lines, fenced):
+        if in_fence:
+            continue
+        if DOD_DONE_BOX.match(ln):
+            done_n += 1
+        elif DOD_OPEN_BOX.match(ln):
+            open_n += 1
+    return open_n, done_n
 
 
 def untagged_dod_items(dod_field: str) -> list[str]:
@@ -601,10 +640,12 @@ def untagged_dod_items(dod_field: str) -> list[str]:
     """
     if not isinstance(dod_field, str):
         return []
+    lines = dod_field.splitlines()
+    fenced = _dod_fenced_mask(lines)
     return [
         line.strip()
-        for line in dod_field.splitlines()
-        if DOD_ANY_BOX.match(line) and not DOD_TAGGED_BOX.match(line)
+        for line, in_fence in zip(lines, fenced)
+        if not in_fence and DOD_ANY_BOX.match(line) and not DOD_TAGGED_BOX.match(line)
     ]
 
 
@@ -1444,7 +1485,7 @@ def validate_superseded_by_targets(cards: list[Card]) -> list[str]:
 
 
 def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
-    """Return structured advances↔advanced_by asymmetries."""
+    """Return structured bidirectional-edge asymmetries (advances↔advanced_by, supersedes↔superseded_by)."""
     half_edges: list[HalfEdge] = []
     by_title = {t.title: t for t in cards}
     for t in cards:
@@ -1826,12 +1867,22 @@ def validate_dod_method_tags(cards: list[Card]) -> list[BlockerWarning]:
 # ────────────────────────────────────────────────────────────────────────────
 # Filtering + sorting
 
-STATUS_VALUES = ("open", "active", "blocked", "done", "disproved", "superseded")
+# Enum membership/order constants derive from schema.yaml — the documented
+# single source of truth — so a value added to (or reordered in) the schema
+# flows here without a parallel literal edit. Hardcoding these is the drift
+# family closed by `schema-enum-surfaces-keep-drifting-into-hardcoded-literals`;
+# `tests/test_schema_enum_surface_parity.py` guards against re-introducing one.
+# TERMINAL_STATUSES is NOT a schema enum: "terminal" is a semantic subset
+# (closure-bearing statuses) the schema does not declare, so it stays a literal.
+_ENUM_SCHEMA = load_schema()
+STATUS_VALUES = tuple(_ENUM_SCHEMA.status_values)
 STATUS_FILTER_VALUES = (*STATUS_VALUES, "all")
 MUTABLE_STATUS_VALUES = tuple(status for status in STATUS_VALUES if status != "done")
 TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})
-CONTRIBUTION_ORDER = {"high": 0, "medium": 1, "low": 2}
-STAGE_ORDER = ["null", "alpha", "beta", "stable"]
+CONTRIBUTION_ORDER = {c: i for i, c in enumerate(_ENUM_SCHEMA.contribution_values)}
+# schema stage_values carries a YAML `null` first entry (the "no stage" state);
+# STAGE_ORDER renders it as the string "null" the CLI/filters compare against.
+STAGE_ORDER = ["null" if v is None else v for v in _ENUM_SCHEMA.stage_values]
 
 
 def dependency_blockers(card: Card, by_title: dict[str, Card]) -> list[str]:
@@ -1969,7 +2020,13 @@ def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bo
 # RCPSP literature precedent (Hartmann 1999) and the May 3 design
 # discussion. log-spaced ranks are RICE-derived (Intercom): a `high`
 # dominates three `medium`s when both reach the same downstream sink.
-CONTRIBUTION_RANK: dict[str, float] = {"high": 9.0, "medium": 3.0, "low": 1.0}
+# Log-spaced (base-3) ranks derived from contribution order: each level
+# dominates three of the next (a `high` outscores three `medium`s reaching
+# the same sink). Position 0 is the strongest, so rank = 3^(N-1-index) —
+# {high: 9.0, medium: 3.0, low: 1.0} for the shipped three-level enum.
+CONTRIBUTION_RANK: dict[str, float] = {
+    c: 3.0 ** (len(CONTRIBUTION_ORDER) - 1 - i) for c, i in CONTRIBUTION_ORDER.items()
+}
 GAMMA = 0.7
 
 
@@ -2455,7 +2512,7 @@ def render_table(
                 v = t.frontmatter.get(field) or []
                 if v:
                     out_lines.append(f"    {field}: {list(v)}")
-            dod = t.frontmatter.get("definition_of_done", "")
+            dod = t.frontmatter.get("definition_of_done") or ""
             for line in dod.splitlines():
                 out_lines.append(f"    {line.rstrip()}")
     return "\n".join(out_lines)
@@ -2557,15 +2614,22 @@ def render_board(
 ) -> str:
     if values is None:
         values = compute_values(cards)
-    columns = ["open", "active", "blocked", "done", "disproved", "superseded"]
+    # Columns derive from the schema's status enum — the single source of
+    # truth — not a hardcoded literal. This keeps the board in lockstep with
+    # `status_values` (custom workflows, enum migrations) and never silently
+    # drops a card whose status the renderer "forgot" to list.
+    columns = list(load_schema().status_values)
     by_status: dict[str, list[Card]] = {c: [] for c in columns}
     if by_title is None:
         by_title = {t.title: t for t in cards}
     for t in cards:
         if t.status in by_status:
             by_status[t.status].append(t)
+    hidden_by_status: dict[str, int] = {}
     for c in columns:
-        by_status[c] = sort_default(by_status[c], values=values)[:max_rows]
+        sorted_col = sort_default(by_status[c], values=values)
+        hidden_by_status[c] = max(0, len(sorted_col) - max_rows)
+        by_status[c] = sorted_col[:max_rows]
     def card_cell(t: Card) -> str:
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
@@ -2583,6 +2647,14 @@ def render_board(
     rendered_by_status: dict[str, list[str]] = {
         c: [card_cell(t) for t in by_status[c]] for c in columns
     }
+    # Surface the row cap rather than hiding it: every other capped list in
+    # the tool (render_active_notice, the tag-sample renderer, the validate
+    # report) advertises its overflow, so the board does too. The indicator
+    # is appended before col_widths is computed below, so it participates in
+    # width sizing and the grid stays aligned.
+    for c in columns:
+        if hidden_by_status[c] > 0:
+            rendered_by_status[c].append(f"… +{hidden_by_status[c]} more")
     col_widths = [
         max(
             20,
@@ -2704,13 +2776,13 @@ def _build_parser() -> argparse.ArgumentParser:
     # Global options (used when no subcommand is given)
     parser.add_argument("--tag", dest="tags", action="append", default=[], metavar="TAG",
                         help="Filter by tag (repeatable; AND).")
-    parser.add_argument("--contribution", choices=["high", "medium", "low"],
+    parser.add_argument("--contribution", choices=schema.contribution_values,
                         help="Filter by contribution level.")
     parser.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES), default=None,
                         help="One status, or 'all'. Default: open.")
     parser.add_argument("--stage", dest="stage_flag", default=None,
                         help="Stage filter; supports range like 'alpha-beta'.")
-    parser.add_argument("--human-gate", choices=["none", "decision", "session"],
+    parser.add_argument("--human-gate", choices=schema.human_gate_values,
                         help="Filter by human gate value.")
     parser.add_argument("--done", dest="done_flag", action="store_true",
                         help="Shortcut for --status done.")
@@ -2882,7 +2954,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # repair-edges
     p_repair_edges = subparsers.add_parser(
         "repair-edges",
-        help="Preview or repair asymmetric advances/advanced_by edges.",
+        help="Preview or repair asymmetric advances/advanced_by and supersedes/superseded_by edges.",
     )
     p_repair_edges.add_argument(
         "--apply",
@@ -2932,7 +3004,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # migrate-list-style
     p_mls = subparsers.add_parser("migrate-list-style",
-                                  help="Re-emit every card to convert advances/advanced_by to block-style lists.")
+                                  help="Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style.")
     p_mls.add_argument("--dry-run", action="store_true",
                        help="Show which cards would change without writing files.")
 
@@ -4538,7 +4610,7 @@ def _print_structural_edge_problems(problems: list[tuple[HalfEdge, str]]) -> Non
 
 
 def _cmd_repair_edges(args):
-    """Preview or repair asymmetric advances/advanced_by half-edges."""
+    """Preview or repair asymmetric bidirectional half-edges (advances/advanced_by, supersedes/superseded_by)."""
     cards = load_all_cards()
     half_edges = find_half_edges(cards)
     if not half_edges:
@@ -5075,7 +5147,12 @@ def _cmd_migrate(args):
             return
 
     if dry_run:
-        if to_copy or not legacy_dirs:
+        # Mirror the real run: it reaches `rmtree(legacy)` whenever
+        # `to_copy or identical` passes the confirm gate (or when the
+        # legacy tree is empty and falls through). Announce the removal
+        # in all of those cases so --dry-run never understates the
+        # deletion — in particular the identical-only case.
+        if to_copy or identical or not legacy_dirs:
             print(f"Would remove legacy tree: {legacy}")
         print("Dry run — no changes made.")
         return
@@ -5096,7 +5173,7 @@ def _cmd_migrate(args):
 
 
 def _cmd_migrate_list_style(args):
-    """Re-emit every card to convert advances/advanced_by to block-style lists."""
+    """Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style."""
     dry_run = args.dry_run
     if not DECK_DIR.exists():
         print(f"ERROR: {DECK_DIR} does not exist", file=sys.stderr)
@@ -5122,7 +5199,7 @@ def _cmd_migrate_list_style(args):
                 readme.write_text(rewritten)
 
     if not changed:
-        print("All cards already use block-style for advances/advanced_by — nothing to do.")
+        print("All cards already use block-style for advances/advanced_by/supersedes/superseded_by — nothing to do.")
         return
 
     if dry_run:

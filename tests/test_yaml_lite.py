@@ -148,6 +148,29 @@ class BlockScalarTest(unittest.TestCase):
         self.assertEqual(safe_load(text)["s"], "  - [ ] nested\n  - [ ] second\n")
 
 
+class FoldedScalarRejectionTest(unittest.TestCase):
+    """Folded scalars (`>`) are unsupported and must raise — for every
+    indicator variant, not just the bare `>`. The guard used to be an
+    exact-string `rest == ">"` check, so `>-`/`>+`/`>2`/… slipped past and
+    were returned as the literal header string, silently dropping every
+    field that followed."""
+
+    def test_bare_folded_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("s: >\n  folded text\n")
+
+    def test_strip_folded_raises_not_misparse(self):
+        # The headline defect: `>-` returned {'s': '>-'} and dropped `t`.
+        with self.assertRaises(ParseError):
+            safe_load("s: >-\n  x\nt: kept\n")
+
+    def test_all_folded_variants_raise(self):
+        for ind in (">", ">-", ">+", ">2", ">2-", ">2+", ">10-"):
+            doc = f"s: {ind}\n  folded one\n  folded two\nt: kept\n"
+            with self.assertRaises(ParseError, msg=f"{ind!r} should raise"):
+                safe_load(doc)
+
+
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):
         text = "tags:\n  - story\n  - infra\n"
@@ -241,6 +264,28 @@ class EscapedQuoteFlowSplitTest(unittest.TestCase):
         # _split_key shares the same quote loop; an escaped quote inside a
         # double-quoted value must not terminate quote mode early.
         self.assertEqual(safe_load('k: "a\\"b"\n')["k"], 'a"b')
+
+    def test_strip_comment_honors_escaped_quote_before_hash(self):
+        # _strip_comment is the third sibling sharing the quote loop. An
+        # escaped quote inside a double-quoted scalar must not close quote
+        # mode, or a later ` #` is misread as a comment and the value is
+        # truncated. Regression for strip-comment-closes-double-quoted-
+        # scalar-on-backslash-escaped-quote.
+        self.assertEqual(safe_load('k: "a\\" b #c"\n')["k"], 'a" b #c')
+        # Guard: a `#` inside a balanced double-quoted scalar (with an
+        # escaped quote) is still preserved, and a bare unbalanced quote
+        # still strips its trailing comment.
+        self.assertEqual(safe_load('a: "x \\" y # z"\n')["a"], 'x " y # z')
+        self.assertEqual(safe_load("title: don't  # note\n")["title"], "don't")
+
+    def test_engine_round_trip_summary_with_quote_and_hash(self):
+        from goc import engine as e
+
+        summary = 'a " b #c'
+        text = e.emit_frontmatter(
+            {"title": "t", "status": "open", "summary": summary}, body="x"
+        )
+        self.assertEqual(e.parse_frontmatter(text)[0]["summary"], summary)
 
     def test_engine_round_trip_worker_with_quote(self):
         from goc import engine as e

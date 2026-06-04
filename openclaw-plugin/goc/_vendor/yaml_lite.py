@@ -36,6 +36,10 @@ _INT_RE = re.compile(r"^-?\d+$")
 # Literal block scalar header: `|`, with an optional explicit indentation
 # indicator (`|2`) and an optional chomping indicator (`-` strip / `+` keep).
 _BLOCK_INDICATOR_RE = re.compile(r"^\|(\d+)?([-+]?)$")
+# Folded block scalar header: `>` with the same optional indent/chomp
+# indicators. Folded scalars are unsupported and must raise — this regex
+# catches every variant (`>-`, `>+`, `>2`, `>2-`, …), not just the bare `>`.
+_FOLDED_INDICATOR_RE = re.compile(r"^>(\d+)?([-+]?)$")
 _NULL_SET = frozenset(("null", "Null", "NULL", "~"))
 _TRUE_SET = frozenset(("true", "True", "TRUE", "yes", "Yes", "YES"))
 _FALSE_SET = frozenset(("false", "False", "FALSE", "no", "No", "NO"))
@@ -243,7 +247,7 @@ class _Parser:
             return self._parse_block_scalar(
                 parent_indent, chomp, explicit_indent=explicit_indent
             )
-        if rest == ">":
+        if _FOLDED_INDICATOR_RE.match(rest):
             raise ParseError(f"line {self._pos + 1}: folded scalars (>) not supported")
         if rest in ("&", "*") or rest.startswith("&") or rest.startswith("*"):
             raise ParseError(f"line {self._pos + 1}: anchors/aliases not supported")
@@ -419,10 +423,15 @@ def _strip_comment(text: str) -> str:
     flow = text[:1] in ("[", "{")
     quoted = text[:1] in ('"', "'")
     in_q: str | None = None
+    escaped = False
     depth = 0
     for i, c in enumerate(text):
-        if in_q:
-            if c == in_q:
+        if escaped:
+            escaped = False
+        elif in_q:
+            if c == "\\" and in_q == '"':
+                escaped = True  # double-quoted YAML escapes the next char
+            elif c == in_q:
                 in_q = None
         elif flow and c in ("[", "{"):
             depth += 1

@@ -110,6 +110,24 @@ The asymmetry between the add and remove paths is the most direct
 evidence the per-consumer-guard model is failing — even paired
 helpers in the same file drifted apart.
 
+But the guard `_add_to_list_field` "DOES carry" is not even safe: its
+`raise ValueError(f"{field}: not a list")` propagates uncaught and
+**crashes `goc repair-edges`** (both the dry-run diff path at
+`engine.py:_repair_edge_diff` and the `--apply` path via `_mutate_pair`)
+with a Python traceback. The trigger is exactly the half-edge that
+sibling #6 (`repair-edges-misses-half-edge-when-inverse-side-is-a-bare-string`)
+taught `find_half_edges` to *detect*: card A has `advances: [card-b]`
+while card B has a bare-string `advanced_by: card-a`. The detection fix
+now reports that half-edge as repairable, and the repair path then feeds
+the bare-string card into `_add_to_list_field`, whose "guard" turns the
+repair into a crash. So the per-consumer-guard model isn't merely
+incomplete (silent char-iteration on the unguarded sites) — on a guarded
+site it actively breaks a shipping verb, and two already-shipped fixes
+contradict each other. This is direct evidence against approach C
+(continue per-consumer guards): a load-time normalization/rejection
+(approach A) or a shared shape-coercing helper (approach B) would let
+`repair-edges` heal the half-edge instead of aborting on it.
+
 ## Reachability path
 
 `_remove_from_list_field` is called from `_mutate_pair` (engine.py:4181),

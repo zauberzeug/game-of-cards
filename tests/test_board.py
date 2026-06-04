@@ -5,7 +5,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +72,38 @@ class BoardRenderingTest(unittest.TestCase):
                 self.assertIn(f"{status}-card", result.stdout)
 
 
+    def test_board_columns_derive_from_schema_status_values(self) -> None:
+        """A status the schema declares but the old hardcoded literal omitted
+        must still get a column and render its cards — the board reads its
+        status enum from `schema.status_values`, not a hardcoded list."""
+        from goc import engine
+
+        custom = replace(
+            engine.load_schema(),
+            status_values=[
+                "open", "active", "review", "blocked",
+                "done", "disproved", "superseded",
+            ],
+        )
+        card = engine.Card(
+            title="in-review-card",
+            path=Path("/tmp/in-review-card"),
+            frontmatter={
+                "title": "in-review-card",
+                "status": "review",
+                "contribution": "medium",
+                "human_gate": "none",
+            },
+            body="",
+            dod_open=0,
+            dod_done=0,
+        )
+        with mock.patch.object(engine, "load_schema", return_value=custom):
+            board = engine.render_board([card], max_rows=20, no_color=True)
+
+        self.assertIn("REVIEW", board)
+        self.assertIn("in-review-card", board)
+
     def test_board_preserves_title_when_worker_suffix_expands_cell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
@@ -80,6 +114,65 @@ class BoardRenderingTest(unittest.TestCase):
             self.assertEqual(0, result.returncode, msg=result.stderr)
             self.assertIn("active-card [l] @Rodja Tr", result.stdout)
             self.assertNotIn("active [l] @Rodja Tr", result.stdout)
+
+    def _open_card(self, title: str):
+        from goc import engine
+
+        return engine.Card(
+            title=title,
+            path=Path(f"/tmp/{title}"),
+            frontmatter={
+                "title": title,
+                "status": "open",
+                "contribution": "medium",
+                "human_gate": "none",
+                "advances": [],
+                "advanced_by": [],
+                "tags": ["bug"],
+            },
+            body="",
+            dod_open=1,
+            dod_done=0,
+        )
+
+    def test_board_advertises_hidden_rows_when_truncated(self) -> None:
+        """A column with more cards than max_rows must surface the overflow
+        count, not silently slice the tail away."""
+        from goc import engine
+
+        cards = [self._open_card(f"card-{i:02d}") for i in range(25)]
+        board = engine.render_board(cards, max_rows=5, no_color=True)
+
+        self.assertIn("+20 more", board)
+
+        # Indicator count equals (total - rows shown).
+        open_rows = [
+            line.split(" | ")[0].strip()
+            for line in board.splitlines()[2:]
+            if line.split(" | ")[0].strip()
+        ]
+        self.assertEqual(5, sum(1 for r in open_rows if r.startswith("card-")))
+        self.assertEqual(1, sum(1 for r in open_rows if "more" in r))
+
+    def test_board_omits_indicator_when_not_truncated(self) -> None:
+        """A column at or below the cap must not emit a false '+0 more'."""
+        from goc import engine
+
+        cards = [self._open_card(f"card-{i:02d}") for i in range(5)]
+        board = engine.render_board(cards, max_rows=5, no_color=True)
+
+        self.assertNotIn("more", board)
+
+    def test_board_truncation_indicator_keeps_grid_aligned(self) -> None:
+        """The indicator row participates in width sizing — every rendered
+        row has identical display width."""
+        from goc import engine
+
+        cards = [self._open_card(f"card-{i:02d}") for i in range(25)]
+        board = engine.render_board(cards, max_rows=5, no_color=True)
+
+        widths = {engine._display_width(line) for line in board.splitlines()}
+        self.assertEqual(1, len(widths), msg=f"misaligned rows: {widths}")
 
     def test_board_rejects_negative_max_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
