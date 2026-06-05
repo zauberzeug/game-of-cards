@@ -1,19 +1,19 @@
 ---
 title: dod-scanners-treat-a-tilde-fence-as-closing-a-backtick-code-block
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-05T04:33:35Z"
-closed_at: null
+closed_at: "2026-06-05T04:36:48Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (the `~~~` line inside a backtick block no longer closes it; the real open item is counted)
-  - [ ] MECHANICAL: `_dod_fenced_mask` tracks the opening fence's character and minimum run length, closing the block only on a same-character fence with a run length >= the opener's (CommonMark §4.5)
-  - [ ] TDD: a regression test in `tests/` covers a mismatched-fence DoD (backtick block containing a `~~~` line, real open item after)
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (the `~~~` line inside a backtick block no longer closes it; the real open item is counted)
+  - [x] MECHANICAL: `_dod_fenced_mask` tracks the opening fence's character and minimum run length, closing the block only on a same-character fence with a run length >= the opener's (CommonMark §4.5)
+  - [x] TDD: a regression test in `tests/` covers a mismatched-fence DoD (backtick block containing a `~~~` line, real open item after)
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

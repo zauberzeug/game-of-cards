@@ -74,5 +74,70 @@ class DodFencedCheckboxTest(unittest.TestCase):
         self.assertEqual(count_dod_boxes(dod), (1, 1))
 
 
+class DodMismatchedFenceTest(unittest.TestCase):
+    """Per CommonMark §4.5, a fenced code block is closed only by a fence of the
+    *same* character with a run length >= the opener's. A `~~~` line shown as
+    text inside a ```-opened block (or a shorter same-character run) is content,
+    not a close. The shared mask must not toggle on such a line, otherwise it
+    desynchronizes and a genuine `- [ ]` item after the real closing fence is
+    hidden — letting `goc done` close a card with unfinished work.
+    """
+
+    # Backtick block illustrating a tilde fence, then a real open item after the
+    # genuine closing backtick fence.
+    DOD = (
+        "- [x] MECHANICAL: the one real, completed item\n"
+        "```\n"
+        "an alternate fence syntax looks like:\n"
+        "~~~\n"
+        "```\n"
+        "- [ ] TDD: a genuine unfinished item that MUST block closure\n"
+    )
+
+    def test_tilde_line_does_not_close_backtick_block(self) -> None:
+        from goc.engine import count_dod_boxes
+
+        # The `~~~` is content inside the backtick block; the real `- [ ]` after
+        # the closing ``` counts as one open box.
+        self.assertEqual(count_dod_boxes(self.DOD), (1, 1))
+
+    def test_box_indices_include_real_item_after_mismatched_fence(self) -> None:
+        from goc.engine import _dod_box_indices
+
+        lines = self.DOD.splitlines()
+        # Line 0 (done item) and line 5 (the real open item) are boxes; the
+        # tilde line inside the block is not.
+        self.assertEqual(_dod_box_indices(lines), [0, 5])
+
+    def test_shorter_same_char_run_does_not_close(self) -> None:
+        from goc.engine import count_dod_boxes
+
+        # A 4-backtick opener is not closed by a 3-backtick run; only the
+        # matching 4-backtick fence closes it. The real open item follows.
+        dod = (
+            "- [x] real done item\n"
+            "````\n"
+            "- [ ] illustrative ``` inside\n"
+            "```\n"
+            "- [ ] still illustrative\n"
+            "````\n"
+            "- [ ] TDD: a genuine unfinished item\n"
+        )
+        self.assertEqual(count_dod_boxes(dod), (1, 1))
+
+    def test_longer_run_still_closes(self) -> None:
+        from goc.engine import count_dod_boxes
+
+        # A 3-backtick opener is closed by a longer (4-backtick) same-char run.
+        dod = (
+            "- [x] real done item\n"
+            "```\n"
+            "- [ ] illustrative example\n"
+            "````\n"
+            "- [ ] TDD: a genuine unfinished item\n"
+        )
+        self.assertEqual(count_dod_boxes(dod), (1, 1))
+
+
 if __name__ == "__main__":
     unittest.main()

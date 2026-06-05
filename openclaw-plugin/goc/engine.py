@@ -487,22 +487,47 @@ DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
 # field shows checkbox lines as *examples*, not real DoD items. The scanners
 # below must skip those lines, otherwise an illustrative `- [ ]` inflates the
 # unchecked-box count and makes the card impossible to close.
-DOD_FENCE_DELIM = re.compile(r"^[ \t]*(?:`{3,}|~{3,})")
+DOD_FENCE_DELIM = re.compile(r"^[ \t]*((`{3,})|(~{3,}))")
 
 
 def _dod_fenced_mask(lines: list[str]) -> list[bool]:
     """Per-line flag: True when the line opens/closes or sits inside a fenced
     code block, and so must not be treated as a DoD checkbox. All three DoD
     scanners (count_dod_boxes, _dod_box_indices, untagged_dod_items) route
-    through this so they cannot drift apart on fence handling."""
+    through this so they cannot drift apart on fence handling.
+
+    Fence matching follows CommonMark §4.5: a block opened with a run of one
+    fence character (``` or ~~~) is closed only by a fence of the *same*
+    character whose run length is >= the opener's. A ``~~~`` line inside a
+    backtick block (or vice versa, or a shorter run) is content, not a close —
+    so it stays masked and the mask cannot desynchronize on mismatched fences.
+    """
     mask: list[bool] = []
-    in_fence = False
+    fence_char: str | None = None  # "`" or "~" while inside a block; None outside
+    fence_len = 0
     for ln in lines:
-        if DOD_FENCE_DELIM.match(ln):
-            in_fence = not in_fence
-            mask.append(True)  # the fence delimiter line is never a checkbox
+        m = DOD_FENCE_DELIM.match(ln)
+        if m:
+            run = m.group(1)
+            char = run[0]
+            length = len(run)
+            if fence_char is None:
+                # Opening fence: remember its character and run length.
+                fence_char = char
+                fence_len = length
+                mask.append(True)
+                continue
+            if char == fence_char and length >= fence_len:
+                # Matching closing fence.
+                fence_char = None
+                fence_len = 0
+                mask.append(True)
+                continue
+            # A fence delimiter that does not close the current block is just
+            # content inside it (e.g. an illustrative ~~~ in a backtick block).
+            mask.append(True)
         else:
-            mask.append(in_fence)
+            mask.append(fence_char is not None)
     return mask
 
 
