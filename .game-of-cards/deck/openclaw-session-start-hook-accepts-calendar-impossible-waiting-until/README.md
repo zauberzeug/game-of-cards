@@ -1,21 +1,21 @@
 ---
 title: openclaw-session-start-hook-accepts-calendar-impossible-waiting-until
 summary: "The OpenClaw plugin's TS port of `waiting_impedes` parses `waiting_until` with JS `Date.parse`, which rolls a calendar-impossible-but-ISO-shaped value like `2026-02-30` forward to a valid date instead of rejecting it. The Python engine rejects it (`_is_iso_date`) and keeps the card impeded; the TS port un-defers it, re-announcing a hidden card as resumable at session start. TS-port sibling of the closed engine fix."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-05T05:13:19Z"
-closed_at: null
+closed_at: "2026-06-05T05:16:46Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — the TS `isImpeded` agrees with the engine on a calendar-impossible `waiting_until` (`2026-02-30`) for both the bare-deferral and `waiting_on`-set cells.
-  - [ ] TDD: a calendar-impossible-but-ISO-shaped case (`2026-02-30`) is added to tests/test_openclaw_session_start_hook.py and asserts `isImpeded("", "2026-02-30", NOW) == true` and `isImpeded("external", "2026-02-30", NOW) == true`.
-  - [ ] TDD: no behavior change for genuinely valid date/datetime shapes — the existing matrix cells stay green.
-  - [ ] MECHANICAL: `parseWaitingUntil` in openclaw-plugin/index.ts rejects calendar-impossible dates (round-trips the parsed UTC Y-M-D against the input), mirroring the engine's `_is_iso_date` calendar check.
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] TDD: reproduce.py exits zero — the TS `isImpeded` agrees with the engine on a calendar-impossible `waiting_until` (`2026-02-30`) for both the bare-deferral and `waiting_on`-set cells.
+  - [x] TDD: a calendar-impossible-but-ISO-shaped case (`2026-02-30`) is added to tests/test_openclaw_session_start_hook.py and asserts `isImpeded("", "2026-02-30", NOW) == true` and `isImpeded("external", "2026-02-30", NOW) == true`.
+  - [x] TDD: no behavior change for genuinely valid date/datetime shapes — the existing matrix cells stay green.
+  - [x] MECHANICAL: `parseWaitingUntil` in openclaw-plugin/index.ts rejects calendar-impossible dates (round-trips the parsed UTC Y-M-D against the input), mirroring the engine's `_is_iso_date` calendar check.
+  - [x] PROCESS: `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
