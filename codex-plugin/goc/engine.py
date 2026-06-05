@@ -511,20 +511,26 @@ def _dod_fenced_mask(lines: list[str]) -> list[bool]:
             run = m.group(1)
             char = run[0]
             length = len(run)
+            # Text after the fence run. An opening fence may carry an info
+            # string (e.g. ```yaml); a *closing* fence may not (CommonMark
+            # §4.5) — it may be followed only by spaces or tabs.
+            trailing = ln[m.end():]
             if fence_char is None:
-                # Opening fence: remember its character and run length.
+                # Opening fence: remember its character and run length. Any
+                # info string after the run is ignored for masking purposes.
                 fence_char = char
                 fence_len = length
                 mask.append(True)
                 continue
-            if char == fence_char and length >= fence_len:
-                # Matching closing fence.
+            if char == fence_char and length >= fence_len and not trailing.strip():
+                # Matching closing fence (bare — no info string).
                 fence_char = None
                 fence_len = 0
                 mask.append(True)
                 continue
             # A fence delimiter that does not close the current block is just
-            # content inside it (e.g. an illustrative ~~~ in a backtick block).
+            # content inside it (e.g. an illustrative ~~~ in a backtick block,
+            # or a same-char run bearing an info string like ```yaml).
             mask.append(True)
         else:
             mask.append(fence_char is not None)

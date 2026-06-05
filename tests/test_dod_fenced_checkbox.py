@@ -138,6 +138,38 @@ class DodMismatchedFenceTest(unittest.TestCase):
         )
         self.assertEqual(count_dod_boxes(dod), (1, 1))
 
+    def test_info_string_fence_line_does_not_close_block(self) -> None:
+        from goc.engine import count_dod_boxes, _dod_box_indices
+
+        # Per CommonMark §4.5 a closing fence may not carry an info string. A
+        # ```yaml line inside a backtick block is content, not a close, so the
+        # illustrative `- [ ]` after it must stay masked.
+        dod = (
+            "- [x] MECHANICAL: the one real, completed item\n"
+            "```\n"
+            "an example block:\n"
+            "```yaml\n"
+            "- [ ] TDD: illustrative checkbox that must NOT count\n"
+            "```\n"
+        )
+        self.assertEqual(count_dod_boxes(dod), (0, 1))
+        # Only the real done item at line 0 is a box; the example is masked.
+        self.assertEqual(_dod_box_indices(dod.splitlines()), [0])
+
+    def test_bare_close_still_closes_then_real_item_counts(self) -> None:
+        from goc.engine import count_dod_boxes
+
+        # A bare ``` (no info string) is the genuine close; the info-string
+        # guard must not prevent a legitimate closing fence from closing.
+        dod = (
+            "- [x] real done item\n"
+            "```python\n"
+            "- [ ] illustrative example\n"
+            "```\n"
+            "- [ ] TDD: a genuine unfinished item after the close\n"
+        )
+        self.assertEqual(count_dod_boxes(dod), (1, 1))
+
 
 if __name__ == "__main__":
     unittest.main()

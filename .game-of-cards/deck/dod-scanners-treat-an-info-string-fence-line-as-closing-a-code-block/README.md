@@ -1,19 +1,19 @@
 ---
 title: dod-scanners-treat-an-info-string-fence-line-as-closing-a-code-block
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-05T04:50:01Z"
-closed_at: null
+closed_at: "2026-06-05T04:53:01Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — an `info-string` fence line inside an open block does not close it, and a genuine `- [ ]` after the real closing fence is counted.
-  - [ ] TDD: regression test asserting `count_dod_boxes` returns the open box for a DoD whose inner fence line carries an info string (e.g. a language tag).
-  - [ ] MECHANICAL: `_dod_fenced_mask` closing branch requires the post-run remainder to be whitespace-only (CommonMark §4.5), with an explanatory comment.
-  - [ ] MECHANICAL: existing fence regression tests still pass; opening fences keep their info string allowance.
+  - [x] TDD: reproduce.py exits zero — an `info-string` fence line inside an open block does not close it, and a genuine `- [ ]` after the real closing fence is counted.
+  - [x] TDD: regression test asserting `count_dod_boxes` returns the open box for a DoD whose inner fence line carries an info string (e.g. a language tag).
+  - [x] MECHANICAL: `_dod_fenced_mask` closing branch requires the post-run remainder to be whitespace-only (CommonMark §4.5), with an explanatory comment.
+  - [x] MECHANICAL: existing fence regression tests still pass; opening fences keep their info string allowance.
 worker: {who: "claude[bot]", where: main}
 ---
 
