@@ -1,7 +1,7 @@
 ---
 title: board-omits-pull-blocking-marker-for-human-gate-parked-cards
 summary: "`goc --board` paints no ⏳ marker on an open card parked behind `human_gate: decision`/`session`, so it reads as freely pullable when it is not. The board's `not_ready` predicate marks `dependency_blocked` (advisory) and `waiting_impedes` (hard block) but omits the third queue-hiding axis — `human_gate` — that both `card_is_ready` and `card_is_workable_for_scheduler` honor."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-06T05:06:15Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: the existing impediment/dependency markers still render (no regression for `waiting_impedes` / `dependency_blocked` cards).
   - [ ] MECHANICAL: the board's `not_ready` predicate (`goc/engine.py:2668`) gains the `human_gate != "none"` axis so it is coupled to `card_is_ready` / `card_is_workable_for_scheduler`.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # board omits the pull-blocking marker for human-gate-parked open cards
