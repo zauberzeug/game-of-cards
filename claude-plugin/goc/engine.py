@@ -3553,12 +3553,6 @@ def _cmd_done(args):
     title = titles[0]
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
-    if t.dod_freeform and not force:
-        print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
-        sys.exit(2)
-    if t.dod_open > 0:
-        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
-        sys.exit(2)
     prior = t.status
     if prior == "done":
         print(f"{title}: already done; closed_at unchanged")
@@ -3569,6 +3563,12 @@ def _cmd_done(args):
             f"use the supersede/disprove workflow — 'done' cannot overwrite terminal states",
             file=sys.stderr,
         )
+        sys.exit(2)
+    if t.dod_freeform and not force:
+        print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
+        sys.exit(2)
+    if t.dod_open > 0:
+        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
         sys.exit(2)
     if t.human_gate != "none":
         print(
@@ -3626,18 +3626,6 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
     for title in deduped:
         card_dir = DECK_DIR / title
         t = load_card_or_exit(card_dir, title)
-        if t.dod_freeform and not force:
-            print(
-                f"ERROR: {title}: free-form DoD; use --force to bypass enforcement",
-                file=sys.stderr,
-            )
-            sys.exit(2)
-        if t.dod_open > 0:
-            print(
-                f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; refusing bundled close",
-                file=sys.stderr,
-            )
-            sys.exit(2)
         if t.status == "done":
             print(
                 f"ERROR: {title}: already done; --bundle refuses to re-close",
@@ -3648,6 +3636,18 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             print(
                 f"ERROR: {title}: status is {t.status!r} (terminal); "
                 f"use the supersede/disprove workflow — --bundle cannot overwrite terminal states",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.dod_freeform and not force:
+            print(
+                f"ERROR: {title}: free-form DoD; use --force to bypass enforcement",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.dod_open > 0:
+            print(
+                f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; refusing bundled close",
                 file=sys.stderr,
             )
             sys.exit(2)
