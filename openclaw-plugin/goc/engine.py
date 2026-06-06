@@ -2665,8 +2665,17 @@ def render_board(
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
         live = t.status not in TERMINAL_STATUSES
+        # Mark a card not-pullable on the board whenever any queue-hiding
+        # axis fires. This mirrors `card_is_ready` /
+        # `card_is_workable_for_scheduler`: a human_gate parks an open card
+        # out of the pull queue just as hard as an impediment overlay, so it
+        # must carry the same ⏳. `dependency_blocked` stays included as an
+        # advisory "has an open prereq" hint (it does not hide the card from
+        # the queue, but the board flags it).
         not_ready = live and (
-            (t.status == "open" and dependency_blocked(t, by_title)) or waiting_impedes(t)
+            t.human_gate != "none"
+            or (t.status == "open" and dependency_blocked(t, by_title))
+            or waiting_impedes(t)
         )
         if not_ready:
             marker += " ⏳"

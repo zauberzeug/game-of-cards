@@ -1,20 +1,20 @@
 ---
 title: board-omits-pull-blocking-marker-for-human-gate-parked-cards
 summary: "`goc --board` paints no ⏳ marker on an open card parked behind `human_gate: decision`/`session`, so it reads as freely pullable when it is not. The board's `not_ready` predicate marks `dependency_blocked` (advisory) and `waiting_impedes` (hard block) but omits the third queue-hiding axis — `human_gate` — that both `card_is_ready` and `card_is_workable_for_scheduler` honor."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-06T05:06:15Z"
-closed_at: null
+closed_at: "2026-06-06T05:10:22Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py builds a deck with an open `human_gate: decision` card and a freely-pullable open card, renders the board, and asserts the gated card carries the ⏳ "not pullable" marker while the free card does not. Fails before the fix, passes after.
-  - [ ] TDD: the existing impediment/dependency markers still render (no regression for `waiting_impedes` / `dependency_blocked` cards).
-  - [ ] MECHANICAL: the board's `not_ready` predicate (`goc/engine.py:2668`) gains the `human_gate != "none"` axis so it is coupled to `card_is_ready` / `card_is_workable_for_scheduler`.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green.
+  - [x] TDD: reproduce.py builds a deck with an open `human_gate: decision` card and a freely-pullable open card, renders the board, and asserts the gated card carries the ⏳ "not pullable" marker while the free card does not. Fails before the fix, passes after.
+  - [x] TDD: the existing impediment/dependency markers still render (no regression for `waiting_impedes` / `dependency_blocked` cards). Covered by `tests/test_board.py::test_board_marks_human_gate_parked_card_not_pullable` (asserts impeded card keeps its ⏳, free card stays unmarked) + the full suite.
+  - [x] MECHANICAL: the board's `not_ready` predicate (`goc/engine.py:2668`) gains the `human_gate != "none"` axis so it is coupled to `card_is_ready` / `card_is_workable_for_scheduler`.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green.
 worker: {who: "claude[bot]", where: main}
 ---
 
