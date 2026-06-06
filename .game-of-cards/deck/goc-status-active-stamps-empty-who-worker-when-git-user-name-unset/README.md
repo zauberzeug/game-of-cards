@@ -1,20 +1,20 @@
 ---
 title: goc-status-active-stamps-empty-who-worker-when-git-user-name-unset
 summary: "`goc status <card> active` self-corrupts: when git `user.name` is unset but the tree is on a named branch, `_auto_populate_worker` writes `worker: {who: \"\", where: <branch>}` — a mapping `goc validate` rejects (`'who' must be a non-empty string`). The claim succeeds but immediately fails validation. Fix: skip stamping a worker when `who` is empty (a `where`-only worker is itself invalid)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-06T04:50:09Z"
-closed_at: null
+closed_at: "2026-06-06T04:55:28Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits 1 after the fix (no empty-`who` worker is stamped) — exits 0 on the unfixed engine
-  - [ ] TDD: a unit test in tests/ asserts `_auto_populate_worker` returns the card text UNCHANGED when `who` resolves empty and only a branch is known
-  - [ ] MECHANICAL: `uv run goc validate` clean; plugin mirrors synced (`python scripts/sync_plugin_assets.py --check`)
-  - [ ] PROCESS: closure entry in log.md records the chosen fix and why skipping (not where-only stamping) is forced
+  - [x] TDD: reproduce.py exits 1 after the fix (no empty-`who` worker is stamped) — exits 0 on the unfixed engine
+  - [x] TDD: a unit test in tests/ asserts `_auto_populate_worker` returns the card text UNCHANGED when `who` resolves empty and only a branch is known
+  - [x] MECHANICAL: `uv run goc validate` clean; plugin mirrors synced (`python scripts/sync_plugin_assets.py --check`)
+  - [x] PROCESS: closure entry in log.md records the chosen fix and why skipping (not where-only stamping) is forced
 worker: {who: "claude[bot]", where: main}
 ---
 

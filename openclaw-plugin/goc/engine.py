@@ -4287,11 +4287,16 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
         if where in ("", "HEAD"):
             where = None
 
-    if not who and not where:
+    # A worker mapping requires a non-empty `who`; a `where`-only worker is
+    # rejected by validate_card. So if `who` is unknown (e.g. git user.name is
+    # unset on a CI/container checkout) there is no valid worker to stamp — even
+    # when a branch is known — and we leave the card untouched rather than write
+    # an invalid `{who: "", where: <branch>}` that self-corrupts the card.
+    if not who:
         return text
 
     # Build the YAML inline value and mutate the frontmatter line-anchored.
-    who_yaml = _yaml_inline(who) if who else '""'
+    who_yaml = _yaml_inline(who)
     if where:
         where_yaml = _yaml_inline(where)
         worker_yaml = f"{{who: {who_yaml}, where: {where_yaml}}}"
