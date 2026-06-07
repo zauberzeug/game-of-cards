@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-04T05:10:39Z"
 closed_at: "2026-06-04T05:19:00Z"
 human_gate: none
-advances: []
+advances:
+  - release-fixed-skill-frontmatter-to-codex-plugin-cache
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
