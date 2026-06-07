@@ -2353,7 +2353,11 @@ def validate_tag_filters(tags: list[str]) -> list[str] | None:
     return list(tags)
 
 
-def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> list[Card]:
+def sort_default(
+    cards: list[Card],
+    values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
+) -> list[Card]:
     """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
 
     Key tuple: (-value, -live_direct_advances_count, age_days)
@@ -2369,16 +2373,23 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
       contradicting the tiebreak's own rationale.)
     - final: oldest-created first (kanban WIP-aging discipline)
 
-    `values` should be precomputed on the FULL deck (not the filtered
-    subset) so chains through filtered-out cards still amplify open cards.
-    If omitted, computed locally over `cards` — only correct when `cards`
-    IS the full deck. The live-edge tiebreak builds `by_title` from whatever
-    `cards` is passed; a dangling edge (target not in the subset) counts 0,
-    consistent with the value walk's dangling-edge drop at engine.py:1739.
+    Both axes must see the FULL deck, not the filtered subset being sorted.
+    `values` should be precomputed on the full deck so chains through
+    filtered-out cards still amplify open cards; pass `by_title` (the full
+    deck's title→Card lookup) for the same reason on the tiebreak axis — a
+    downstream card the *display filter* hid (e.g. an `active` target while
+    sorting the `open` column) is still live and still unblocks flow, so it
+    must count. Only a genuinely dangling edge — target absent from the whole
+    deck — counts 0, because `card_is_workable_for_scheduler` never sees it,
+    matching the value walk's dangling-edge drop at engine.py:1739. When
+    `by_title` is omitted it is built from `cards`, which is only correct
+    when `cards` IS the full deck; callers that sort a subset must thread
+    the full-deck lookup (every renderer already holds one as `full_by_title`).
     """
     if values is None:
         values = compute_values(cards)
-    by_title = {c.title: c for c in cards}
+    if by_title is None:
+        by_title = {c.title: c for c in cards}
 
     def live_direct(t: Card) -> int:
         n = 0
@@ -2658,7 +2669,7 @@ def render_board(
             by_status[t.status].append(t)
     hidden_by_status: dict[str, int] = {}
     for c in columns:
-        sorted_col = sort_default(by_status[c], values=values)
+        sorted_col = sort_default(by_status[c], values=values, by_title=by_title)
         hidden_by_status[c] = max(0, len(sorted_col) - max_rows)
         by_status[c] = sorted_col[:max_rows]
     def card_cell(t: Card) -> str:
@@ -2757,7 +2768,9 @@ def render_leverage_line(
     ]
     if not open_gated:
         return ""
-    gated_top = sort_default(open_gated, values=values)[0]
+    gated_top = sort_default(
+        open_gated, values=values, by_title={t.title: t for t in all_cards}
+    )[0]
     pulled = ready[0]
     pulled_value = values.get(pulled.title, (0.0, []))[0]
     gated_value = values.get(gated_top.title, (0.0, []))[0]
@@ -2777,7 +2790,11 @@ def render_active_notice(
 
     if values is None:
         values = compute_values(cards)
-    active = sort_default([t for t in cards if t.status == "active"], values=values)
+    active = sort_default(
+        [t for t in cards if t.status == "active"],
+        values=values,
+        by_title={t.title: t for t in cards},
+    )
     if not active:
         return ""
     shown = ", ".join(t.title for t in active[:3])
@@ -3170,7 +3187,7 @@ def _cmd_default(args):
     if getattr(args, "waiting", False):
         filtered = [t for t in filtered if t.waiting_on is not None]
     full_values = compute_values(cards)
-    filtered = sort_default(filtered, values=full_values)
+    filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
         board_cards = filtered if (status_filter_explicit or args.worker) else cards
         print(

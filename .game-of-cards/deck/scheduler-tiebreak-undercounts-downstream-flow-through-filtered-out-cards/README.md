@@ -1,10 +1,10 @@
 ---
 title: scheduler-tiebreak-undercounts-downstream-flow-through-filtered-out-cards
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-06-07T05:28:15Z"
-closed_at: null
+closed_at: "2026-06-07T05:33:57Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -16,10 +16,11 @@ summary: |
   equal-value cards on the board, the open queue, and the leverage line. The
   value axis already runs on the full deck; the tiebreak should too.
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (the tiebreak ranks the higher-live-flow card first)
-  - [ ] TDD: a regression test asserts sort_default orders equal-value cards by full-deck live_direct even when the downstream targets are absent from the sorted subset
-  - [ ] MECHANICAL: sort_default accepts the full-deck by_title; render_board, the leverage line, render_active_notice, and _cmd_default thread it (they already hold full_by_title)
-  - [ ] MECHANICAL: the sort_default docstring no longer equates a filtered-out-but-live target with a dangling edge
+  - [x] TDD: reproduce.py exits zero (the tiebreak ranks the higher-live-flow card first)
+  - [x] TDD: a regression test asserts sort_default orders equal-value cards by full-deck live_direct even when the downstream targets are absent from the sorted subset
+  - [x] MECHANICAL: sort_default accepts the full-deck by_title; render_board, the leverage line, render_active_notice, and _cmd_default thread it (they already hold full_by_title)
+  - [x] MECHANICAL: the sort_default docstring no longer equates a filtered-out-but-live target with a dangling edge
+worker: {who: "claude[bot]", where: main}
 ---
 
 # scheduler-tiebreak-undercounts-downstream-flow-through-filtered-out-cards
@@ -87,17 +88,21 @@ both `h-active-high` (active) and `l-active-low` (active);
 `h-active-high`. On the full deck the two open cards tie at value 9.3. A
 unblocks two live downstream cards, X unblocks one, so the tiebreak's own
 rationale says A first. Filtering to the open queue and sorting with full-deck
-values:
+values (post-fix output):
 
 ```
 values: {'h-active-high': 9.0, 'l-active-low': 1.0, 'a-open-two-live': 9.3, 'x-open-one-live': 9.3}
-buggy (subset by_title) order: ['x-open-one-live', 'a-open-two-live']
 live_direct full deck -> A: 2 X: 1
+subset-scoped order (no by_title): ['x-open-one-live', 'a-open-two-live']
+full-deck order: ['a-open-two-live', 'x-open-one-live']
+PASS: higher-live-flow card (A) ranked first
 ```
 
-Both `live_direct` values collapse to 0 in the subset (H and L are filtered
-out), so the tie falls through to `created` and the **older** X wins —
-exactly the inversion the tiebreak exists to prevent.
+The `subset-scoped order` line is the bug: both `live_direct` values collapse
+to 0 in the subset (H and L are filtered out), so the tie falls through to
+`created` and the **older** X wins. The `full-deck order` line is the fix:
+threading the full-deck `by_title` lets the tiebreak see A's two live
+downstream cards vs X's one, ranking A first.
 
 ## Why it matters
 

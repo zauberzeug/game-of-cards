@@ -50,15 +50,8 @@ def main() -> int:
     full = [A, X, H, L]
 
     values = engine.compute_values(full)
-    print("values:", {t: round(values[t][0], 1) for t in values})
-
-    # Simulate `goc --status open`: filter to the open subset, sort with
-    # full-deck values (exactly as _cmd_default does).
-    open_subset = [c for c in full if c.status == "open"]
-    order = [c.title for c in engine.sort_default(open_subset, values=values)]
-    print("order:", order)
-
     full_by_title = {c.title: c for c in full}
+    print("values:", {t: round(values[t][0], 1) for t in values})
 
     def live_direct(t):
         n = 0
@@ -69,6 +62,30 @@ def main() -> int:
         return n
 
     print("live_direct full deck -> A:", live_direct(A), "X:", live_direct(X))
+
+    # Filter to the open subset. The live downstream targets (H, L) are now
+    # absent from the sorted list, exactly as on `goc --status open`.
+    open_subset = [c for c in full if c.status == "open"]
+
+    # Subset-scoped tiebreak (the old call shape): both score 0 live flow and
+    # the tie falls through to age, so the *older* X wrongly wins.
+    buggy = [c.title for c in engine.sort_default(open_subset, values=values)]
+    print("subset-scoped order (no by_title):", buggy)
+
+    # Real call path: thread the full-deck by_title, exactly as _cmd_default,
+    # render_board, the leverage line, and render_active_notice now do.
+    try:
+        order = [
+            c.title
+            for c in engine.sort_default(
+                open_subset, values=values, by_title=full_by_title
+            )
+        ]
+    except TypeError:
+        print("FAIL: sort_default does not accept by_title — callers cannot "
+              "thread the full deck into the tiebreak")
+        return 1
+    print("full-deck order:", order)
 
     expected = ["a-open-two-live", "x-open-one-live"]
     if order == expected:
