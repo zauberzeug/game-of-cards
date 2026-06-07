@@ -2821,6 +2821,14 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Game of Cards deck CLI",
     )
 
+    # --version / -V: a first-class argparse action so it works at any
+    # top-level position (e.g. `goc --no-color --version`) and is listed
+    # in `goc --help`. argparse handles it during parse_args — before the
+    # dual-tree/legacy-tree guards in cli() — printing and exiting 0.
+    from goc import __version__
+    parser.add_argument("--version", "-V", action="version",
+                        version=f"goc, version {__version__}")
+
     # Global options (used when no subcommand is given)
     parser.add_argument("--tag", dest="tags", action="append", default=[], metavar="TAG",
                         help="Filter by tag (repeatable; AND).")

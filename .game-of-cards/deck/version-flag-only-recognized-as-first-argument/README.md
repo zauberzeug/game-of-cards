@@ -1,21 +1,22 @@
 ---
 title: version-flag-only-recognized-as-first-argument
 summary: "`goc --version` only prints the version when `--version` is the literal first argument. Any global flag ahead of it (`goc --no-color --version`) or its appearance after a subcommand falls through to the engine argparse parser, which has no `--version` action and exits 2 with `unrecognized arguments: --version`. The flag is also absent from `goc --help`. Register it as a proper argparse `action=\"version\"` on the main parser."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-06-07T05:11:45Z"
-closed_at: null
+closed_at: "2026-06-07T05:16:01Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `goc --no-color --version` and `goc --status all --version` print the version and exit 0 instead of argparse-erroring with exit 2.
-  - [ ] TDD: regression test asserts `--version` is honored when it is not the first token, and that it appears in `goc --help` output.
-  - [ ] MECHANICAL: `--version`/`-V` registered as an argparse `action="version"` on the engine main parser so it works at any top-level position and is listed in help.
-  - [ ] MECHANICAL: version string format preserved as `goc, version <X>`.
-  - [ ] `uv run goc validate` passes and the existing regression suite is green.
+  - [x] TDD: reproduce.py exits zero — `goc --no-color --version` and `goc --status all --version` print the version and exit 0 instead of argparse-erroring with exit 2.
+  - [x] TDD: regression test asserts `--version` is honored when it is not the first token, and that it appears in `goc --help` output.
+  - [x] MECHANICAL: `--version`/`-V` registered as an argparse `action="version"` on the engine main parser so it works at any top-level position and is listed in help.
+  - [x] MECHANICAL: version string format preserved as `goc, version <X>`.
+  - [x] `uv run goc validate` passes and the existing regression suite is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `--version` is only recognized as the first argument
