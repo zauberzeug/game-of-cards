@@ -2681,7 +2681,15 @@ def render_board(
             marker += " ⏳"
         who = _worker_who(t.frontmatter.get("worker"))
         if who:
-            marker += f" @{who[:8]}"
+            # Render the full worker identifier, not a fixed-width prefix.
+            # Columns auto-size to their widest rendered cell (see
+            # `col_widths` below), so a long `who` widens its column rather
+            # than overflowing — the same contract the title already enjoys
+            # (board-active-card-worker-label-not-truncated). A silent
+            # `who[:8]` slice would mangle common values like `claude[bot]`
+            # into `claude[b`, hiding coordination info the board exists to
+            # surface.
+            marker += f" @{who}"
         return f"{t.title}{marker}"
 
     rendered_by_status: dict[str, list[str]] = {

@@ -115,6 +115,24 @@ class BoardRenderingTest(unittest.TestCase):
             self.assertIn("active-card [l] @Rodja Tr", result.stdout)
             self.assertNotIn("active [l] @Rodja Tr", result.stdout)
 
+    def test_board_renders_full_worker_label_over_eight_chars(self) -> None:
+        """The worker suffix must render in full, not truncated to 8 chars.
+
+        Columns auto-size to their widest rendered cell, so a long `who`
+        like `claude[bot]` widens the column rather than overflowing. A
+        silent `who[:8]` slice would mangle it to `@claude[b`, hiding the
+        coordination info the board exists to surface.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "active-card", "active", worker='{who: "claude[bot]"}')
+
+            result = self.run_goc(cwd, "--board", "--no-color")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("@claude[bot]", result.stdout)
+            self.assertNotIn("@claude[b ", result.stdout)
+
     def _open_card(self, title: str):
         from goc import engine
 

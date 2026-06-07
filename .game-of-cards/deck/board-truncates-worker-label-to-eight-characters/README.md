@@ -1,20 +1,20 @@
 ---
 title: board-truncates-worker-label-to-eight-characters
-status: active
+status: done
 stage: null
 summary: The kanban board hard-caps the worker label to 8 characters (`claude[bot]` → `@claude[b`), silently hiding coordination info. The cap is a vestige of the old fixed-width board; columns now auto-size, so it serves no layout purpose.
 contribution: low
 created: "2026-06-07T04:42:29Z"
-closed_at: null
+closed_at: "2026-06-07T04:46:14Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: a regression test renders a board cell for a card whose worker `who` exceeds 8 characters (e.g. `claude[bot]`) and asserts the full identifier appears in the rendered cell — no silent truncation
-  - [ ] TDD: reproduce.py exits zero (the full worker label is present in the board output)
-  - [ ] MECHANICAL: the `who[:8]` slice at `goc/engine.py` `render_board.card_cell` renders the full `who` instead
-  - [ ] PROCESS: full regression suite (`uv run python -m unittest discover -s tests`) stays green
+  - [x] TDD: a regression test renders a board cell for a card whose worker `who` exceeds 8 characters (e.g. `claude[bot]`) and asserts the full identifier appears in the rendered cell — no silent truncation
+  - [x] TDD: reproduce.py exits zero (the full worker label is present in the board output)
+  - [x] MECHANICAL: the `who[:8]` slice at `goc/engine.py` `render_board.card_cell` renders the full `who` instead
+  - [x] PROCESS: full regression suite (`uv run python -m unittest discover -s tests`) stays green
 worker: {who: "claude[bot]", where: main}
 ---
 
