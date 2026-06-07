@@ -1353,10 +1353,19 @@ def _write_skills_source(target: Path, value: str) -> None:
     if not config_path.exists():
         return
     text = config_path.read_text()
-    pattern = re.compile(r"^[ \t]*#?[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
+    # Prefer the active (non-commented) key; fall back to un-commenting a
+    # commented example only when no active line exists. A single
+    # `#?`-optional pattern with `count=1` would rewrite whichever line
+    # comes first in document order, so a commented doc example preceding
+    # an active key gets un-commented while the real key is left stale —
+    # producing two conflicting `skills_source:` keys.
+    active_pat = re.compile(r"^[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
+    commented_pat = re.compile(r"^[ \t]*#[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
     replacement = f"skills_source: {value}"
-    if pattern.search(text):
-        new_text = pattern.sub(lambda _: replacement, text, count=1)
+    if active_pat.search(text):
+        new_text = active_pat.sub(lambda _: replacement, text, count=1)
+    elif commented_pat.search(text):
+        new_text = commented_pat.sub(lambda _: replacement, text, count=1)
     else:
         sep = "" if text.endswith("\n") else "\n"
         new_text = f"{text}{sep}\n{replacement}\n"
