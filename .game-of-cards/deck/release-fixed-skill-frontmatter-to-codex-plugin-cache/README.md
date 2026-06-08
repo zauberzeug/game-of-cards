@@ -1,7 +1,7 @@
 ---
 title: release-fixed-skill-frontmatter-to-codex-plugin-cache
 summary: "The strict-YAML skill frontmatter fix is present on `origin/main`, but Codex still loads the old unquoted payload from the versioned `game-of-cards/0.0.23` plugin cache. Ship a patch release so plugin managers receive a new version key whose skill files contain the fixed quoted frontmatter."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-06-07T08:25:25Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: A new patch release is dispatched from `origin/main` with a version greater than `0.0.23`, and the run URL / identifier is recorded in `log.md`.
   - [ ] EMPIRICAL: The release tag or checked-in release-bump commit contains quoted frontmatter for `kickoff`, `advance-card`, `pull-card`, and `next-card` in the plugin payload.
   - [ ] PROCESS: The closed source-fix card records a forward pointer to this release-propagation follow-up.
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Release fixed skill frontmatter to Codex plugin cache
