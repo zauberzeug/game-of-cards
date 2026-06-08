@@ -37,6 +37,16 @@ codex plugin marketplace add zauberzeug/game-of-cards
 codex plugin marketplace upgrade game-of-cards
 ```
 
+If Codex was previously using the shared `zauberzeug-claude`
+marketplace, remove that GoC plugin after the direct marketplace
+install. The shared marketplace can pin GoC to an older release even
+after this repository has published a fixed payload:
+
+```bash
+codex plugin add game-of-cards@game-of-cards
+codex plugin remove game-of-cards@zauberzeug-claude
+```
+
 Then open Codex's plugin browser:
 
 ```text

@@ -7,6 +7,15 @@
 - **Tests**: `uv run python -m unittest tests.test_skill_frontmatter_strict_yaml` passed; later full regression suite passed (`uv run python -m unittest discover -s tests`, 388 tests, 1 skipped).
 - **Bundled with**: clawhub-package-publishes-pre-rewrite-package-json
 
+## 2026-06-08T11:20:00Z — Later evidence
+
+Codex still warned about invalid GoC skill YAML on startup on a host
+where `game-of-cards@zauberzeug-claude` was enabled. The release itself
+was present (`v0.0.24` exists upstream), but the separate
+`zauberzeug-claude` marketplace snapshot pinned the GoC source to
+`v0.0.23`, keeping the old YAML-broken cache active. Follow-up:
+[codex-startup-loads-yaml-broken-plugin-cache](../codex-startup-loads-yaml-broken-plugin-cache/).
+
 ## Closure verification (2026-06-08T04:13:51Z)
 
 ### Layer-3 (GoC DoD)
