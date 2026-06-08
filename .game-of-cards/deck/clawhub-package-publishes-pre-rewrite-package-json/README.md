@@ -1,6 +1,6 @@
 ---
 title: clawhub-package-publishes-pre-rewrite-package-json
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-06-08T03:48:58Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] Release-workflow comments explain why `version:` alone is insufficient
   - [ ] Regression coverage catches a ClawHub job wired only to metadata override
   - [ ] Verification confirms PyPI/npm/tag are already version-correct while ClawHub payload source was stale
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # ClawHub package publishes pre-rewrite package.json
