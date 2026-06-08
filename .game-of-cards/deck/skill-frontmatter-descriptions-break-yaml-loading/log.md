@@ -14,3 +14,11 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-06-04 — Closure' present
+
+## 2026-06-07 — Later evidence
+
+Codex startup still sees the same invalid-YAML warning when loading the
+versioned `game-of-cards/0.0.23` plugin cache. Source and generated payloads
+on `origin/main` remain fixed; the remaining work is release/cache
+propagation, tracked by
+[release-fixed-skill-frontmatter-to-codex-plugin-cache](../release-fixed-skill-frontmatter-to-codex-plugin-cache/).
