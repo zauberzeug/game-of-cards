@@ -1,6 +1,6 @@
 ---
 title: bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
-summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:4172) has now surfaced — the family will keep recurring until the loader rejects the malformed shape at the source or every consumer routes through a shared shape-coercing helper."
+summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:4172) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:2552) have now surfaced — the family will keep recurring until the loader rejects the malformed shape at the source or every consumer routes through a shared shape-coercing helper."
 status: open
 stage: null
 contribution: medium
@@ -16,7 +16,7 @@ advanced_by:
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (loader-time shape rejection), B (centralized `_field_as_list` helper routing all reads), or C (continue per-consumer guards) — record in log.md with the rationale. See `## Decision required` below.
-  - [ ] MECHANICAL: implement the chosen approach. For A: extend `parse_frontmatter` / `Card` construction to reject (or coerce) non-list scalars on the schema's list-typed fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). For B: introduce a single helper and migrate every documented consumer (the six closed-sibling sites plus `_remove_from_list_field`) through it; a regression test asserts no `frontmatter.get("<list-field>") or []` pattern remains outside the helper. For C: just file the one outstanding sibling (`_remove_from_list_field`).
+  - [ ] MECHANICAL: implement the chosen approach. For A: extend `parse_frontmatter` / `Card` construction to reject (or coerce) non-list scalars on the schema's list-typed fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). For B: introduce a single helper and migrate every documented consumer (the six closed-sibling sites plus `_remove_from_list_field` and the `render_table` verbose `-vv` raw-dump loop, engine.py:2552-2556) through it; a regression test asserts no `frontmatter.get("<list-field>") or []` pattern remains outside the helper. For C: just file the one outstanding sibling (`_remove_from_list_field`).
   - [ ] TDD: a reproduce.py builds a card with `advanced_by: "A"` (bare scalar) and exercises `_remove_from_list_field` via `goc unadvance` — currently produces a list of single characters in the rewritten card; after the fix, either the load fails cleanly (A) or the helper treats the bare scalar as empty / shape-coerces (B). Same reproducer demonstrates the family is closed at the chosen layer.
   - [ ] PROCESS: cross-link the six closed siblings via `advanced_by` (or document them in the body) so a cold reader sees the family this card retires.
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
@@ -127,6 +127,35 @@ contradict each other. This is direct evidence against approach C
 (continue per-consumer guards): a load-time normalization/rejection
 (approach A) or a shared shape-coercing helper (approach B) would let
 `repair-edges` heal the half-edge instead of aborting on it.
+
+## An eighth unguarded site (surfaced by a later audit)
+
+`goc/engine.py:2552-2556` — the verbose (`-vv`) branch of
+`render_table` dumps every relationship field raw:
+
+```python
+if verbose >= 2:
+    for field in LIST_REL_FIELDS:          # advances, advanced_by, supersedes, superseded_by
+        v = t.frontmatter.get(field) or []
+        if v:
+            out_lines.append(f"    {field}: {list(v)}")   # list(v) on a bare string
+```
+
+This is a *distinct* site from sibling #3: that card patched the
+`dependency_blockers` "awaiting" line and the per-field renderers it
+named, but this `LIST_REL_FIELDS` raw-dump loop at `verbose >= 2`
+carries no `isinstance(v, list)` guard. On a card hand-edited to
+`advances: some-card` (bare scalar), `goc --status open -vv` renders:
+
+```text
+    advances: ['s', 'o', 'm', 'e', '-', 'c', 'a', 'r', 'd']
+```
+
+Reproduced directly against `LIST_REL_FIELDS` on 2026-06-08 — the
+char-list output above is verbatim. The display is read-only (no file
+corruption), so the impact is lower than the mutating siblings, but it
+is one more consumer that joins the family, and it must be on the
+migration checklist for whichever central fix (A or B) is chosen.
 
 ## Reachability path
 
