@@ -1,10 +1,10 @@
 ---
 title: emit-frontmatter-always-strips-trailing-newline-from-multi-line-string-fields
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-08T05:01:18Z"
-closed_at: null
+closed_at: "2026-06-08T05:05:14Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -19,11 +19,11 @@ summary: |
   unrelated-field mutation fired by any verb that re-emits frontmatter
   (`wait`, `decide`, `advance`, `migrate-list-style`, ...).
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — an authored `summary: |` clip block survives an emit->parse round-trip with its trailing newline AND its `|` indicator intact.
-  - [ ] TDD: a value with no trailing newline still emits `|-` and round-trips faithfully (the fix selects the indicator from the value, it does not blanket-switch to `|`).
-  - [ ] TDD: regression test added under tests/ covering both trailing-newline states for a multi-line string field through emit_frontmatter.
-  - [ ] MECHANICAL: the `emit_frontmatter` docstring no longer claims "Other multi-line strings use `|-`"; it documents the value-derived indicator choice.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+  - [x] TDD: reproduce.py exits zero — an authored `summary: |` clip block survives an emit->parse round-trip with its trailing newline AND its `|` indicator intact.
+  - [x] TDD: a value with no trailing newline still emits `|-` and round-trips faithfully (the fix selects the indicator from the value, it does not blanket-switch to `|`).
+  - [x] TDD: regression test added under tests/ covering both trailing-newline states for a multi-line string field through emit_frontmatter.
+  - [x] MECHANICAL: the `emit_frontmatter` docstring no longer claims "Other multi-line strings use `|-`"; it documents the value-derived indicator choice.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
 worker: {who: "claude[bot]", where: main}
 ---
 

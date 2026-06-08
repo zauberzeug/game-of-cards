@@ -297,6 +297,53 @@ class EscapedQuoteFlowSplitTest(unittest.TestCase):
         self.assertEqual(e.parse_frontmatter(text)[0]["worker"], worker)
 
 
+class BlockScalarIndicatorRoundTripTest(unittest.TestCase):
+    """emit_frontmatter must pick the chomp indicator from a multi-line string
+    value's own trailing-newline state, so the emit->parse round-trip is
+    faithful and an authored clip block (`summary: |`) is not silently flipped
+    to strip (`|-`) with its trailing newline dropped. Regression for
+    emit-frontmatter-always-strips-trailing-newline-from-multi-line-string-fields.
+    """
+
+    def test_authored_clip_block_summary_survives_reemit(self):
+        from goc import engine as e
+
+        authored = (
+            "---\n"
+            "title: x\n"
+            "summary: |\n"
+            "  line one\n"
+            "  line two\n"
+            "status: open\n"
+            "---\n\nbody\n"
+        )
+        fm, body = e.parse_frontmatter(authored)
+        self.assertEqual(fm["summary"], "line one\nline two\n")
+        reemitted = e.emit_frontmatter(fm, body=body)
+        # Indicator stays clip; value (with trailing newline) is preserved.
+        self.assertIn("summary: |\n", reemitted)
+        self.assertNotIn("summary: |-", reemitted)
+        self.assertEqual(e.parse_frontmatter(reemitted)[0]["summary"], fm["summary"])
+
+    def test_value_without_trailing_newline_emits_strip(self):
+        from goc import engine as e
+
+        fm = {"title": "y", "status": "open", "summary": "alpha\nbeta"}
+        out = e.emit_frontmatter(fm, body="x")
+        # No trailing newline -> strip indicator, faithful round-trip.
+        self.assertIn("summary: |-\n", out)
+        self.assertEqual(e.parse_frontmatter(out)[0]["summary"], "alpha\nbeta")
+
+    def test_reemit_is_idempotent_for_both_states(self):
+        from goc import engine as e
+
+        for summary in ("a\nb\n", "a\nb"):
+            fm = {"title": "t", "status": "open", "summary": summary}
+            once = e.emit_frontmatter(fm, body="x")
+            twice = e.emit_frontmatter(e.parse_frontmatter(once)[0], body="x")
+            self.assertEqual(once, twice, msg=f"non-idempotent for {summary!r}")
+
+
 class DeckRoundTripTest(unittest.TestCase):
     """Parse every README.md in the real deck and verify key fields are present."""
 

@@ -307,8 +307,10 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     `advanced_by`, `supersedes`, and `superseded_by` — uses block-style lists
     (one `- item` per line) when non-empty; empty lists still render as `[]`.
     `worker` emits as a flat string when only `who` is set, or an inline
-    mapping when `where` is also set. Other multi-line strings use `|-` block
-    style. Single-line strings are rendered inline.
+    mapping when `where` is also set. Other multi-line strings pick their block
+    chomp indicator from the value: `|` (clip) when the value ends in a newline,
+    `|-` (strip) when it does not, so the emit->parse round-trip is faithful.
+    Single-line strings are rendered inline.
     """
     lines = ["---"]
     for key, value in fm.items():
@@ -324,7 +326,14 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
             lines.append(f"{key}: {_emit_worker(value)}")
             continue
         if isinstance(value, str) and "\n" in value:
-            lines.extend(_emit_block_field(key, value, indicator="|-"))
+            # Pick the chomp indicator from the value's own trailing-newline
+            # state so the emit->parse round-trip is faithful: the parser reads
+            # a clip block (`|`) back with one trailing newline and a strip
+            # block (`|-`) back with none. Hard-coding `|-` silently dropped a
+            # trailing newline (and flipped an authored `|` to `|-`) on every
+            # re-emit of a clip-style field such as a multi-line `summary`.
+            indicator = "|" if value.endswith("\n") else "|-"
+            lines.extend(_emit_block_field(key, value, indicator=indicator))
             continue
         lines.append(f"{key}: {_yaml_inline(value)}")
     lines.append("---")
