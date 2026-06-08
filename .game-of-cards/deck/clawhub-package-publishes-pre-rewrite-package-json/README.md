@@ -1,19 +1,19 @@
 ---
 title: clawhub-package-publishes-pre-rewrite-package-json
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-06-08T03:48:58Z"
-closed_at: null
+closed_at: "2026-06-08T04:12:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] ClawHub publish job passes the post-rewrite release ref to the reusable workflow
-  - [ ] Release-workflow comments explain why `version:` alone is insufficient
-  - [ ] Regression coverage catches a ClawHub job wired only to metadata override
-  - [ ] Verification confirms PyPI/npm/tag are already version-correct while ClawHub payload source was stale
+  - [x] MECHANICAL: ClawHub publish job passes the post-rewrite release ref to the reusable workflow
+  - [x] PROCESS: Release-workflow comments explain why `version:` alone is insufficient
+  - [x] TDD: Regression coverage catches a ClawHub job wired only to metadata override
+  - [x] EMPIRICAL: Verification confirms PyPI/npm/tag are already version-correct while ClawHub payload source was stale
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -78,13 +78,14 @@ The resulting state is internally inconsistent: ClawHub can announce
 
 ## Fix
 
-Expose a build-job output that names the source ref ClawHub should
-package:
+`.github/workflows/release.yml` now exposes a build-job output that
+names the source ref ClawHub should package:
 
 - `vX.Y.Z` for real releases and tag-mode republishes
 - the workflow SHA for dry-run previews, where no tag is created
 
-Pass that ref to the ClawHub reusable workflow along with the existing
-metadata `version:` input. The metadata override remains useful, but
-the source ref must point at the post-rewrite tag so the actual bundle
-files match the advertised version.
+`publish-clawhub` passes that ref to the ClawHub reusable workflow
+along with the existing metadata `version:` input. The metadata
+override remains useful, but the source ref now points at the
+post-rewrite tag so the actual bundle files match the advertised
+version.

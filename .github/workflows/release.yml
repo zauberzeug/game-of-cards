@@ -48,15 +48,15 @@
 #     → publish-pypi, publish-npm, publish-clawhub: all OIDC trusted
 #       publishing, all in the same workflow_dispatch run.
 #
-# Why commit the rewrites back to main: three of the four publish
-# channels (PyPI, npm, ClawHub) get the correct version via build
-# artifacts or reusable-workflow input overrides. Claude Code's plugin
-# manager is the exception — it clones the marketplace repo and reads
-# `claude-plugin/.claude-plugin/plugin.json` directly from the git
-# tree. Without the commit-back, that file (and the four sibling
-# manifests) stayed frozen on main at whatever the *first* release
-# wrote, and Claude Code users saw a stale version label forever
-# after. See card `release-workflow-leaves-plugin-manifest-version-stale-on-main`.
+# Why commit the rewrites back to main: PyPI and npm publish from build
+# artifacts that have already been rewritten; ClawHub is explicitly told
+# to package the post-rewrite release tag; Claude Code's plugin manager
+# clones the marketplace repo and reads
+# `claude-plugin/.claude-plugin/plugin.json` directly from the git tree.
+# Without the commit-back, that file (and the four sibling manifests)
+# stayed frozen on main at whatever the *first* release wrote, and
+# plugin-manager users saw stale version labels forever after. See card
+# `release-workflow-leaves-plugin-manifest-version-stale-on-main`.
 #
 # Why single-event works for ClawHub: the ClawHub reusable workflow's
 # validator only checks `github.event_name == 'workflow_dispatch'` —
@@ -106,7 +106,9 @@
 #     `release: bump version literals to vX.Y.Z` under the
 #     github-actions[bot] identity, and tags that commit. After the
 #     workflow finishes, `git show vX.Y.Z:claude-plugin/.claude-plugin/plugin.json`
-#     reads the correct version, and so does the file on `main`.
+#     reads the correct version, so does the file on `main`, and
+#     ClawHub packages from that release tag rather than the original
+#     workflow-dispatch SHA.
 #   - Humans never edit version literals. The tripwire below fails the
 #     build if a human commits a version-literal change to main, but
 #     exempts the bot's own `release: bump version literals to v…`
@@ -122,17 +124,17 @@
 # (`find-single-trigger-release-flow-for-all-three-registries`) for the
 # constraint trail.
 #
-# ClawHub stale-package.json: the ClawHub reusable workflow checks out
-# `github.sha` (the commit the workflow_dispatch was triggered on) and
-# reads `openclaw-plugin/package.json` from that commit. Under the
-# version-input policy, that file still carries the *previous*
-# release's version literal (the build job rewrites literals in its
-# own checkout, but the ClawHub reusable workflow does its own
-# checkout and never sees the rewrite). Resolved by passing
-# `version: ${{ needs.build.outputs.release_version }}` to the
-# reusable workflow's `version` input — it overrides the on-disk
-# package.json version. Discovered on v0.0.14 with error
-# `ConvexError: Version 0.0.12 already exists`.
+# ClawHub stale-package.json: the ClawHub reusable workflow packages a
+# repository ref independently of the build job's checkout. Under the
+# version-input policy, the original workflow-dispatch SHA still carries
+# the *previous* release's version literal (the build job rewrites
+# literals in its own checkout, commits them, and tags that commit).
+# Passing only `version: ${{ needs.build.outputs.release_version }}`
+# fixes ClawHub registry metadata but does not rewrite the uploaded
+# bundle's `openclaw-plugin/package.json`. Therefore the build job also
+# exposes `clawhub_source_ref`, and `publish-clawhub` passes that ref so
+# the reusable workflow fetches `vX.Y.Z` for real publishes. The
+# `version:` override remains as the explicit metadata source.
 #
 # Security note for run: blocks below:
 #   workflow_dispatch inputs (`version`, `dry_run`) and other untrusted
@@ -177,11 +179,12 @@ jobs:
       # Exposed downstream so publish jobs can:
       #   - mode: gate on `tag` or `release` (a new tag created in this run)
       #   - release_version: pass to the ClawHub reusable workflow's
-      #     `version:` input, since that workflow checks out
-      #     `github.sha` and reads the stale on-disk `package.json`
-      #     (see ClawHub stale-package.json note in the header).
+      #     `version:` input as registry metadata.
+      #   - clawhub_source_ref: make the ClawHub reusable workflow package
+      #     the post-rewrite release tag instead of the workflow-dispatch SHA.
       release_version: ${{ steps.version.outputs.release_version }}
       mode: ${{ steps.version.outputs.mode }}
+      clawhub_source_ref: ${{ steps.clawhub_source_ref.outputs.ref }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -425,6 +428,27 @@ jobs:
           git push origin "v$RELEASE_VERSION"
           echo "::notice::Pushed tag v$RELEASE_VERSION -> $tagged_sha"
 
+      - name: Resolve ClawHub source ref
+        id: clawhub_source_ref
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.release_version }}
+          MODE: ${{ steps.version.outputs.mode }}
+        run: |
+          case "$MODE" in
+            release|tag)
+              ref="v$RELEASE_VERSION"
+              ;;
+            dry_run)
+              ref="$GITHUB_SHA"
+              ;;
+            *)
+              echo "::error::Unknown release mode: $MODE"
+              exit 1
+              ;;
+          esac
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "ClawHub source ref: $ref"
+
   smoke:
     # End-to-end smoke test that gates publishes on the plugin actually
     # working in a fresh consumer environment. Reuses the same Claude Code
@@ -657,20 +681,19 @@ jobs:
       contents: read
     uses: openclaw/clawhub/.github/workflows/package-publish.yml@v0.12.3
     with:
-      # `source_path` (not `source: ./openclaw-plugin`) — the server-side
-      # check "Trusted publish source ref must match the verified GitHub
-      # ref" rejects local-folder source strings. With source_path,
-      # source defaults to GITHUB_REPOSITORY@github.sha which matches
-      # the ref claim minted by the OIDC token.
+      # `source` + `ref` + `source_path` (not
+      # `source: ./openclaw-plugin`) — the server-side check "Trusted
+      # publish source ref must match the verified GitHub ref" rejects
+      # local-folder source strings. The reusable workflow still records
+      # the caller's verified GitHub ref for OIDC, but `ref` makes it
+      # fetch package files from the post-rewrite release tag in real
+      # publish modes.
+      source: ${{ github.repository }}
+      ref: ${{ needs.build.outputs.clawhub_source_ref }}
       source_path: openclaw-plugin
-      # Override the on-disk `package.json` version — the reusable
-      # workflow checks out the tagged commit, whose `package.json`
-      # still carries the previous release's literal (the workflow
-      # rewrites version literals at build time, but the ClawHub
-      # reusable workflow does its own checkout and never sees the
-      # rewrite). Without this override, the publish step fails with
-      # `ConvexError: Version 0.0.X already exists` (the previous
-      # release's number). `release_version` is computed by the build
-      # job from the tag ref.
+      # Keep the explicit metadata version even though the source ref now
+      # points at a rewritten tag. This makes the intended registry
+      # version unambiguous and covers ClawHub's metadata path separately
+      # from the bundle-file source path.
       version: ${{ needs.build.outputs.release_version }}
       dry_run: ${{ inputs.dry_run == true }}
