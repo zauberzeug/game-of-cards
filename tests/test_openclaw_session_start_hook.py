@@ -93,6 +93,26 @@ test("bare deferral with malformed waiting_until is impeded (engine backstop)", 
   assert.strictEqual(isImpeded("", "2026-99-99", NOW), true);
 }});
 
+test("bare deferral with calendar-impossible waiting_until is impeded", () => {{
+  // `2026-02-30` is regex-valid (\\d{{2}} month/day) but a calendar-impossible
+  // date. JS Date.parse rolls it forward to 2026-03-02 (past relative to NOW),
+  // which would silently un-defer the card; the engine's `_is_iso_date`
+  // rejects it (date.fromisoformat raises), so parseWaitingUntil must return
+  // null and isImpeded must hit the unparseable backstop. Regression for
+  // openclaw-session-start-hook-accepts-calendar-impossible-waiting-until.
+  assert.strictEqual(parseWaitingUntil("2026-02-30"), null);
+  assert.strictEqual(isImpeded("", "2026-02-30", NOW), true);
+}});
+
+test("waiting_on=external with calendar-impossible waiting_until is impeded", () => {{
+  assert.strictEqual(isImpeded("external", "2026-02-30", NOW), true);
+}});
+
+test("calendar-impossible datetime waiting_until is rejected", () => {{
+  // Datetime shape rolls forward too (2026-06-31T... -> 2026-07-01T...).
+  assert.strictEqual(parseWaitingUntil("2026-06-31T00:00:00Z"), null);
+}});
+
 // waiting_on-set matrix — should match the prior behavior, unaffected by this fix.
 test("waiting_on=external with no waiting_until is impeded", () => {{
   assert.strictEqual(isImpeded("external", "", NOW), true);

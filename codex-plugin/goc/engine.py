@@ -307,8 +307,10 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     `advanced_by`, `supersedes`, and `superseded_by` — uses block-style lists
     (one `- item` per line) when non-empty; empty lists still render as `[]`.
     `worker` emits as a flat string when only `who` is set, or an inline
-    mapping when `where` is also set. Other multi-line strings use `|-` block
-    style. Single-line strings are rendered inline.
+    mapping when `where` is also set. Other multi-line strings pick their block
+    chomp indicator from the value: `|` (clip) when the value ends in a newline,
+    `|-` (strip) when it does not, so the emit->parse round-trip is faithful.
+    Single-line strings are rendered inline.
     """
     lines = ["---"]
     for key, value in fm.items():
@@ -324,7 +326,14 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
             lines.append(f"{key}: {_emit_worker(value)}")
             continue
         if isinstance(value, str) and "\n" in value:
-            lines.extend(_emit_block_field(key, value, indicator="|-"))
+            # Pick the chomp indicator from the value's own trailing-newline
+            # state so the emit->parse round-trip is faithful: the parser reads
+            # a clip block (`|`) back with one trailing newline and a strip
+            # block (`|-`) back with none. Hard-coding `|-` silently dropped a
+            # trailing newline (and flipped an authored `|` to `|-`) on every
+            # re-emit of a clip-style field such as a multi-line `summary`.
+            indicator = "|" if value.endswith("\n") else "|-"
+            lines.extend(_emit_block_field(key, value, indicator=indicator))
             continue
         lines.append(f"{key}: {_yaml_inline(value)}")
     lines.append("---")
@@ -487,22 +496,53 @@ DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
 # field shows checkbox lines as *examples*, not real DoD items. The scanners
 # below must skip those lines, otherwise an illustrative `- [ ]` inflates the
 # unchecked-box count and makes the card impossible to close.
-DOD_FENCE_DELIM = re.compile(r"^[ \t]*(?:`{3,}|~{3,})")
+DOD_FENCE_DELIM = re.compile(r"^[ \t]*((`{3,})|(~{3,}))")
 
 
 def _dod_fenced_mask(lines: list[str]) -> list[bool]:
     """Per-line flag: True when the line opens/closes or sits inside a fenced
     code block, and so must not be treated as a DoD checkbox. All three DoD
     scanners (count_dod_boxes, _dod_box_indices, untagged_dod_items) route
-    through this so they cannot drift apart on fence handling."""
+    through this so they cannot drift apart on fence handling.
+
+    Fence matching follows CommonMark §4.5: a block opened with a run of one
+    fence character (``` or ~~~) is closed only by a fence of the *same*
+    character whose run length is >= the opener's. A ``~~~`` line inside a
+    backtick block (or vice versa, or a shorter run) is content, not a close —
+    so it stays masked and the mask cannot desynchronize on mismatched fences.
+    """
     mask: list[bool] = []
-    in_fence = False
+    fence_char: str | None = None  # "`" or "~" while inside a block; None outside
+    fence_len = 0
     for ln in lines:
-        if DOD_FENCE_DELIM.match(ln):
-            in_fence = not in_fence
-            mask.append(True)  # the fence delimiter line is never a checkbox
+        m = DOD_FENCE_DELIM.match(ln)
+        if m:
+            run = m.group(1)
+            char = run[0]
+            length = len(run)
+            # Text after the fence run. An opening fence may carry an info
+            # string (e.g. ```yaml); a *closing* fence may not (CommonMark
+            # §4.5) — it may be followed only by spaces or tabs.
+            trailing = ln[m.end():]
+            if fence_char is None:
+                # Opening fence: remember its character and run length. Any
+                # info string after the run is ignored for masking purposes.
+                fence_char = char
+                fence_len = length
+                mask.append(True)
+                continue
+            if char == fence_char and length >= fence_len and not trailing.strip():
+                # Matching closing fence (bare — no info string).
+                fence_char = None
+                fence_len = 0
+                mask.append(True)
+                continue
+            # A fence delimiter that does not close the current block is just
+            # content inside it (e.g. an illustrative ~~~ in a backtick block,
+            # or a same-char run bearing an info string like ```yaml).
+            mask.append(True)
         else:
-            mask.append(in_fence)
+            mask.append(fence_char is not None)
     return mask
 
 
@@ -2322,7 +2362,11 @@ def validate_tag_filters(tags: list[str]) -> list[str] | None:
     return list(tags)
 
 
-def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> list[Card]:
+def sort_default(
+    cards: list[Card],
+    values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
+) -> list[Card]:
     """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
 
     Key tuple: (-value, -live_direct_advances_count, age_days)
@@ -2338,16 +2382,23 @@ def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] |
       contradicting the tiebreak's own rationale.)
     - final: oldest-created first (kanban WIP-aging discipline)
 
-    `values` should be precomputed on the FULL deck (not the filtered
-    subset) so chains through filtered-out cards still amplify open cards.
-    If omitted, computed locally over `cards` — only correct when `cards`
-    IS the full deck. The live-edge tiebreak builds `by_title` from whatever
-    `cards` is passed; a dangling edge (target not in the subset) counts 0,
-    consistent with the value walk's dangling-edge drop at engine.py:1739.
+    Both axes must see the FULL deck, not the filtered subset being sorted.
+    `values` should be precomputed on the full deck so chains through
+    filtered-out cards still amplify open cards; pass `by_title` (the full
+    deck's title→Card lookup) for the same reason on the tiebreak axis — a
+    downstream card the *display filter* hid (e.g. an `active` target while
+    sorting the `open` column) is still live and still unblocks flow, so it
+    must count. Only a genuinely dangling edge — target absent from the whole
+    deck — counts 0, because `card_is_workable_for_scheduler` never sees it,
+    matching the value walk's dangling-edge drop at engine.py:1739. When
+    `by_title` is omitted it is built from `cards`, which is only correct
+    when `cards` IS the full deck; callers that sort a subset must thread
+    the full-deck lookup (every renderer already holds one as `full_by_title`).
     """
     if values is None:
         values = compute_values(cards)
-    by_title = {c.title: c for c in cards}
+    if by_title is None:
+        by_title = {c.title: c for c in cards}
 
     def live_direct(t: Card) -> int:
         n = 0
@@ -2627,21 +2678,38 @@ def render_board(
             by_status[t.status].append(t)
     hidden_by_status: dict[str, int] = {}
     for c in columns:
-        sorted_col = sort_default(by_status[c], values=values)
+        sorted_col = sort_default(by_status[c], values=values, by_title=by_title)
         hidden_by_status[c] = max(0, len(sorted_col) - max_rows)
         by_status[c] = sorted_col[:max_rows]
     def card_cell(t: Card) -> str:
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
         live = t.status not in TERMINAL_STATUSES
+        # Mark a card not-pullable on the board whenever any queue-hiding
+        # axis fires. This mirrors `card_is_ready` /
+        # `card_is_workable_for_scheduler`: a human_gate parks an open card
+        # out of the pull queue just as hard as an impediment overlay, so it
+        # must carry the same ⏳. `dependency_blocked` stays included as an
+        # advisory "has an open prereq" hint (it does not hide the card from
+        # the queue, but the board flags it).
         not_ready = live and (
-            (t.status == "open" and dependency_blocked(t, by_title)) or waiting_impedes(t)
+            t.human_gate != "none"
+            or (t.status == "open" and dependency_blocked(t, by_title))
+            or waiting_impedes(t)
         )
         if not_ready:
             marker += " ⏳"
         who = _worker_who(t.frontmatter.get("worker"))
         if who:
-            marker += f" @{who[:8]}"
+            # Render the full worker identifier, not a fixed-width prefix.
+            # Columns auto-size to their widest rendered cell (see
+            # `col_widths` below), so a long `who` widens its column rather
+            # than overflowing — the same contract the title already enjoys
+            # (board-active-card-worker-label-not-truncated). A silent
+            # `who[:8]` slice would mangle common values like `claude[bot]`
+            # into `claude[b`, hiding coordination info the board exists to
+            # surface.
+            marker += f" @{who}"
         return f"{t.title}{marker}"
 
     rendered_by_status: dict[str, list[str]] = {
@@ -2709,7 +2777,9 @@ def render_leverage_line(
     ]
     if not open_gated:
         return ""
-    gated_top = sort_default(open_gated, values=values)[0]
+    gated_top = sort_default(
+        open_gated, values=values, by_title={t.title: t for t in all_cards}
+    )[0]
     pulled = ready[0]
     pulled_value = values.get(pulled.title, (0.0, []))[0]
     gated_value = values.get(gated_top.title, (0.0, []))[0]
@@ -2729,7 +2799,11 @@ def render_active_notice(
 
     if values is None:
         values = compute_values(cards)
-    active = sort_default([t for t in cards if t.status == "active"], values=values)
+    active = sort_default(
+        [t for t in cards if t.status == "active"],
+        values=values,
+        by_title={t.title: t for t in cards},
+    )
     if not active:
         return ""
     shown = ", ".join(t.title for t in active[:3])
@@ -2772,6 +2846,14 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="goc",
         description="Game of Cards deck CLI",
     )
+
+    # --version / -V: a first-class argparse action so it works at any
+    # top-level position (e.g. `goc --no-color --version`) and is listed
+    # in `goc --help`. argparse handles it during parse_args — before the
+    # dual-tree/legacy-tree guards in cli() — printing and exiting 0.
+    from goc import __version__
+    parser.add_argument("--version", "-V", action="version",
+                        version=f"goc, version {__version__}")
 
     # Global options (used when no subcommand is given)
     parser.add_argument("--tag", dest="tags", action="append", default=[], metavar="TAG",
@@ -3114,7 +3196,7 @@ def _cmd_default(args):
     if getattr(args, "waiting", False):
         filtered = [t for t in filtered if t.waiting_on is not None]
     full_values = compute_values(cards)
-    filtered = sort_default(filtered, values=full_values)
+    filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
         board_cards = filtered if (status_filter_explicit or args.worker) else cards
         print(
@@ -3513,12 +3595,6 @@ def _cmd_done(args):
     title = titles[0]
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
-    if t.dod_freeform and not force:
-        print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
-        sys.exit(2)
-    if t.dod_open > 0:
-        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
-        sys.exit(2)
     prior = t.status
     if prior == "done":
         print(f"{title}: already done; closed_at unchanged")
@@ -3529,6 +3605,12 @@ def _cmd_done(args):
             f"use the supersede/disprove workflow — 'done' cannot overwrite terminal states",
             file=sys.stderr,
         )
+        sys.exit(2)
+    if t.dod_freeform and not force:
+        print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
+        sys.exit(2)
+    if t.dod_open > 0:
+        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
         sys.exit(2)
     if t.human_gate != "none":
         print(
@@ -3586,18 +3668,6 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
     for title in deduped:
         card_dir = DECK_DIR / title
         t = load_card_or_exit(card_dir, title)
-        if t.dod_freeform and not force:
-            print(
-                f"ERROR: {title}: free-form DoD; use --force to bypass enforcement",
-                file=sys.stderr,
-            )
-            sys.exit(2)
-        if t.dod_open > 0:
-            print(
-                f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; refusing bundled close",
-                file=sys.stderr,
-            )
-            sys.exit(2)
         if t.status == "done":
             print(
                 f"ERROR: {title}: already done; --bundle refuses to re-close",
@@ -3608,6 +3678,18 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             print(
                 f"ERROR: {title}: status is {t.status!r} (terminal); "
                 f"use the supersede/disprove workflow — --bundle cannot overwrite terminal states",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.dod_freeform and not force:
+            print(
+                f"ERROR: {title}: free-form DoD; use --force to bypass enforcement",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.dod_open > 0:
+            print(
+                f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; refusing bundled close",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -4256,11 +4338,16 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
         if where in ("", "HEAD"):
             where = None
 
-    if not who and not where:
+    # A worker mapping requires a non-empty `who`; a `where`-only worker is
+    # rejected by validate_card. So if `who` is unknown (e.g. git user.name is
+    # unset on a CI/container checkout) there is no valid worker to stamp — even
+    # when a branch is known — and we leave the card untouched rather than write
+    # an invalid `{who: "", where: <branch>}` that self-corrupts the card.
+    if not who:
         return text
 
     # Build the YAML inline value and mutate the frontmatter line-anchored.
-    who_yaml = _yaml_inline(who) if who else '""'
+    who_yaml = _yaml_inline(who)
     if where:
         where_yaml = _yaml_inline(where)
         worker_yaml = f"{{who: {who_yaml}, where: {where_yaml}}}"

@@ -36,3 +36,28 @@ Not filed as a standalone card: it is the Nth instance of this
 already-catalogued family with this meta-fix already open — per the
 audit sibling-sweep rule, evidence belongs on the architectural card,
 not a new per-consumer filing.
+
+## 2026-06-08 — Eighth unguarded site (no status change)
+
+An audit-deck sweep surfaced an eighth read-time consumer that
+iterates the list-typed fields without an `isinstance(v, list)`
+guard: the verbose (`-vv`) raw-dump loop in `render_table`
+(`engine.py:2552-2556`), which does `list(v)` over every
+`LIST_REL_FIELDS` value. On a card hand-edited to `advances:
+some-card` (bare scalar), `goc --status open -vv` renders
+`advances: ['s', 'o', 'm', 'e', '-', 'c', 'a', 'r', 'd']`.
+
+Reproduced verbatim on 2026-06-08 by exercising the loop directly
+against `LIST_REL_FIELDS`. Distinct from sibling #3
+(`dependency-blockers-iterates-non-list-advanced-by-...`), which
+patched the `dependency_blockers` "awaiting" line and the named
+per-field renderers but not this raw-dump loop. Display-only (no
+file corruption), so lower-impact than the mutating siblings, but
+one more consumer in the family.
+
+Body section "## An eighth unguarded site" and Option B's consumer
+list amended to record it. Not filed as a standalone sibling card —
+per the audit sibling-sweep rule, an Nth instance of an
+already-catalogued family with the meta-fix already open belongs on
+the architectural card, not a new per-consumer filing. Card stays at
+`human_gate: decision` pending the A/B/C choice.

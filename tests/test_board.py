@@ -115,6 +115,24 @@ class BoardRenderingTest(unittest.TestCase):
             self.assertIn("active-card [l] @Rodja Tr", result.stdout)
             self.assertNotIn("active [l] @Rodja Tr", result.stdout)
 
+    def test_board_renders_full_worker_label_over_eight_chars(self) -> None:
+        """The worker suffix must render in full, not truncated to 8 chars.
+
+        Columns auto-size to their widest rendered cell, so a long `who`
+        like `claude[bot]` widens the column rather than overflowing. A
+        silent `who[:8]` slice would mangle it to `@claude[b`, hiding the
+        coordination info the board exists to surface.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "active-card", "active", worker='{who: "claude[bot]"}')
+
+            result = self.run_goc(cwd, "--board", "--no-color")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("@claude[bot]", result.stdout)
+            self.assertNotIn("@claude[b ", result.stdout)
+
     def _open_card(self, title: str):
         from goc import engine
 
@@ -173,6 +191,42 @@ class BoardRenderingTest(unittest.TestCase):
 
         widths = {engine._display_width(line) for line in board.splitlines()}
         self.assertEqual(1, len(widths), msg=f"misaligned rows: {widths}")
+
+    def test_board_marks_human_gate_parked_card_not_pullable(self) -> None:
+        """An open card parked behind a human gate is not pullable
+        (`card_is_ready` False), so the board must paint it with the ⏳
+        not-pullable marker — just like the equally-un-pullable
+        `waiting_impedes` card — not render it identically to a freely
+        pullable card. Regression for the board's `not_ready` predicate
+        omitting the `human_gate` axis that `card_is_ready` /
+        `card_is_workable_for_scheduler` both reject on."""
+        from goc import engine
+
+        gated = self._open_card("gated-decision")
+        gated.frontmatter["human_gate"] = "decision"
+        impeded = self._open_card("impeded")
+        impeded.frontmatter["waiting_on"] = "external"
+        impeded.frontmatter["waiting_until"] = "2099-01-01"
+        free = self._open_card("free")
+        cards = [gated, impeded, free]
+        by_title = {c.title: c for c in cards}
+
+        # Preconditions: gated and impeded are not pullable; free is.
+        self.assertFalse(engine.card_is_ready(gated, by_title))
+        self.assertFalse(engine.card_is_ready(impeded, by_title))
+        self.assertTrue(engine.card_is_ready(free, by_title))
+
+        board = engine.render_board(cards, max_rows=20, no_color=True, by_title=by_title)
+
+        def open_cell(title: str) -> str:
+            for line in board.splitlines():
+                if line.startswith(title):
+                    return line.split("|")[0].rstrip()
+            self.fail(f"{title!r} not found on board")
+
+        self.assertIn("⏳", open_cell("gated-decision"))
+        self.assertIn("⏳", open_cell("impeded"))
+        self.assertNotIn("⏳", open_cell("free"))
 
     def test_board_rejects_negative_max_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

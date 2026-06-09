@@ -606,6 +606,45 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 "# top comment\n\nskills_source: plugin\n",
             )
 
+    def test_write_skills_source_rewrites_active_key_not_preceding_comment(self) -> None:
+        """Regression: prefer the active key over a preceding comment example.
+
+        A single `#?`-optional pattern with `count=1` rewrote whichever
+        `skills_source:` line came first in document order. When a commented
+        documentation example preceded the active key, the comment got
+        un-commented to the new value while the real active line was left
+        stale — producing two conflicting `skills_source:` keys and silently
+        dropping the requested mode switch.
+        """
+        from goc.install import _write_skills_source
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.parent.mkdir(parents=True)
+
+            # Commented doc example FIRST, active key SECOND: the active key
+            # must be rewritten, the comment must stay a comment, and there
+            # must be exactly one active `skills_source:` key.
+            config_path.write_text(
+                "# skills_source: auto\n\nskills_source: vendored\n"
+            )
+            _write_skills_source(cwd, "plugin")
+            result = config_path.read_text()
+            self.assertEqual(result, "# skills_source: auto\n\nskills_source: plugin\n")
+            active_keys = [
+                ln
+                for ln in result.splitlines()
+                if ln.lstrip().startswith("skills_source")
+                and not ln.lstrip().startswith("#")
+            ]
+            self.assertEqual(len(active_keys), 1)
+
+            # Comment-only config still un-comments to an active key.
+            config_path.write_text("# skills_source: auto\n")
+            _write_skills_source(cwd, "plugin")
+            self.assertEqual(config_path.read_text(), "skills_source: plugin\n")
+
     def test_plugin_mode_upgrade_preserves_non_goc_skills(self) -> None:
         """Regression: upgrade in plugin mode must not delete user-owned skills.
 

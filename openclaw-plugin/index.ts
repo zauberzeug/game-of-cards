@@ -161,15 +161,34 @@ function parseWaitingUntil(value: string): Date | null {
   // midnight UTC of that day; a datetime YYYY-MM-DDTHH:MM:SSZ is honored
   // at full precision so a same-day future timestamp does not collapse
   // to "today" and clear early.
+  //
+  // The regexes check shape only (`\d{2}` for month/day), so a
+  // calendar-impossible-but-shaped value like `2026-02-30` reaches
+  // Date.parse — which is lenient and ROLLS it forward (2026-02-30 ->
+  // 2026-03-02) instead of rejecting it. The engine parses with the real
+  // calendar (`date.fromisoformat` / `strptime` via `_is_iso_date`) and
+  // rejects these, so `_waiting_until_instant` returns None and
+  // `waiting_impedes` keeps the card impeded via its `until_unparseable`
+  // backstop. Round-trip the parsed UTC Y-M-D against the input's date
+  // prefix and return null on mismatch, matching the engine's strict
+  // calendar check (a rolled-forward instant would re-admit a deferred
+  // card to the queue — the bug this guards against).
+  let t: number;
   if (ISO_DATETIME_UTC_RE.test(value)) {
-    const t = Date.parse(value);
-    return Number.isNaN(t) ? null : new Date(t);
+    t = Date.parse(value);
+  } else if (ISO_DATE_RE.test(value)) {
+    t = Date.parse(`${value}T00:00:00Z`);
+  } else {
+    return null;
   }
-  if (ISO_DATE_RE.test(value)) {
-    const t = Date.parse(`${value}T00:00:00Z`);
-    return Number.isNaN(t) ? null : new Date(t);
-  }
-  return null;
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  const ymd =
+    `${String(d.getUTCFullYear()).padStart(4, "0")}-` +
+    `${String(d.getUTCMonth() + 1).padStart(2, "0")}-` +
+    `${String(d.getUTCDate()).padStart(2, "0")}`;
+  if (ymd !== value.slice(0, 10)) return null;
+  return d;
 }
 
 function isImpeded(waitingOn: string, waitingUntil: string, now: Date): boolean {

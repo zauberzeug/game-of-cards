@@ -189,6 +189,66 @@ class CloseTerminalGateGuardTest(unittest.TestCase):
             self.assertIn("human_gate is 'decision'", result.stderr)
             self.assertEqual(before, readme.read_text())
 
+    def test_done_reports_terminal_status_not_dod_for_terminal_card(self) -> None:
+        """A `disproved`/`superseded` card legitimately carries unchecked DoD
+        boxes. `goc done` must refuse it with the authoritative terminal-status
+        message, not the misleading 'unchecked DoD boxes' diagnostic — the
+        status guard outranks the DoD-completeness gate."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            body = (
+                CLOSED_BUT_GATED_CARD.replace("status: done", "status: disproved")
+                .replace("human_gate: decision", "human_gate: none")
+                .replace(
+                    "  - [x] PROCESS: closed with a stale gate",
+                    "  - [ ] PROCESS: never checked — card was disproved",
+                )
+            )
+            card_dir = self._write_card(cwd, "closed-but-gated", body)
+            readme = card_dir / "README.md"
+            before = readme.read_text()
+
+            result = self.run_goc(cwd, "done", "closed-but-gated")
+
+            self.assertEqual(2, result.returncode, msg=result.stderr)
+            self.assertIn("(terminal)", result.stderr)
+            self.assertNotIn("unchecked DoD boxes", result.stderr)
+            self.assertEqual(before, readme.read_text())
+
+    def test_done_bundle_reports_terminal_status_not_dod_for_terminal_card(self) -> None:
+        """The bundle path has the same guard-ordering contract: a terminal
+        member with open DoD boxes is refused with the terminal-status reason."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            good = (
+                PARKED_CARD.replace("title: parked-fixture", "title: card-good")
+                .replace("human_gate: decision", "human_gate: none")
+                .replace("# parked-fixture", "# card-good")
+                .replace(
+                    "## Decision required\n\nOption A vs Option B — pending human pick.\n",
+                    "",
+                )
+            )
+            bad = (
+                CLOSED_BUT_GATED_CARD.replace("title: closed-but-gated", "title: card-bad")
+                .replace("# closed-but-gated", "# card-bad")
+                .replace("status: done", "status: disproved")
+                .replace("human_gate: decision", "human_gate: none")
+                .replace(
+                    "  - [x] PROCESS: closed with a stale gate",
+                    "  - [ ] PROCESS: never checked — card was disproved",
+                )
+            )
+            self._write_card(cwd, "card-good", good)
+            self._write_card(cwd, "card-bad", bad)
+
+            result = self.run_goc(cwd, "done", "--bundle", "card-good", "card-bad")
+
+            self.assertEqual(2, result.returncode, msg=result.stderr)
+            self.assertIn("card-bad", result.stderr)
+            self.assertIn("(terminal)", result.stderr)
+            self.assertNotIn("unchecked DoD boxes", result.stderr)
+
     def test_validate_rejects_card_with_terminal_status_and_gate_raised(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
