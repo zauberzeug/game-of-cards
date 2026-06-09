@@ -1,21 +1,21 @@
 ---
 title: codex-plugin-skills-cannot-find-bundled-goc-cli
 summary: "The GoC plugin cache contains a working bundled `bin/goc` wrapper, but Codex skill execution does not put that wrapper on shell PATH. Downstream Codex agents therefore load the GoC skills successfully, then report that `goc` / `uv run goc` cannot spawn and fall back to editing deck files directly."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-05T10:37:14Z"
-closed_at: null
+closed_at: "2026-06-09T04:29:29Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduction covers a downstream repo with no global `goc` on PATH and no GoC package dependency where the plugin-cache wrapper works by absolute path.
-  - [ ] MECHANICAL: Codex-specific GoC skill guidance no longer implies that plugin-provided skills automatically deliver a shell-visible `goc` command.
-  - [ ] MECHANICAL: Codex command-resolution guidance gives agents an executable path that does not require creating a global `~/.local/bin/goc` shim.
-  - [ ] EMPIRICAL: downstream smoke in a non-GoC repo can run the bundled engine through the documented Codex path and no longer falls back to direct deck-file mutation.
-  - [ ] EMPIRICAL: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+  - [x] TDD: reproduction covers a downstream repo with no global `goc` on PATH and no GoC package dependency where the plugin-cache wrapper works by absolute path.
+  - [x] MECHANICAL: Codex-specific GoC skill guidance no longer implies that plugin-provided skills automatically deliver a shell-visible `goc` command.
+  - [x] MECHANICAL: Codex command-resolution guidance gives agents an executable path that does not require creating a global `~/.local/bin/goc` shim.
+  - [x] EMPIRICAL: downstream smoke in a non-GoC repo can run the bundled engine through the documented Codex path and no longer falls back to direct deck-file mutation.
+  - [x] EMPIRICAL: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -93,4 +93,11 @@ The remaining design choice is how a Codex-loaded skill should discover
 
 ## Artifacts
 
-- No reproducer yet.
+- `tests/test_codex_plugin_bundled_cli.py` — runs the bundled
+  `codex-plugin/bin/goc` wrapper and `PYTHONPATH=<root> python3 -m
+  goc.cli` from a non-GoC temp cwd (the reproduction), and asserts the
+  corrected `codex-kickoff` guidance.
+- `goc/templates/skills/codex-kickoff/SKILL.md` Stage 2 — rewritten
+  into a three-case command-resolution section (global / checkout /
+  plugin-only), deriving the plugin root from the skill's own loaded
+  path with `${PLUGIN_ROOT}` preferred when exported.

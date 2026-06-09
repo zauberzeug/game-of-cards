@@ -63,37 +63,61 @@ For local development against a checkout, use:
 codex plugin marketplace add ./path/to/game-of-cards
 ```
 
-## Stage 2 — know what the plugin provides
+## Stage 2 — resolve the `goc` command
 
 The Codex plugin supplies:
 
 - GoC skills from `goc/templates/skills/`, filtered for Codex and
   packaged under the plugin's `skills/` directory.
 - Lifecycle hooks under `hooks/hooks.json`.
-- A bundled `goc/` engine mirror and `bin/goc` wrapper for hosts or
-  future Codex builds that expose plugin binaries.
+- A bundled `goc/` engine mirror and a `bin/goc` wrapper that runs it.
 
-Codex does not currently document plugin `bin/` auto-PATH behavior.
-When a skill tells you to run `goc`, prefer the normal project command:
+Every GoC skill body is written with bare `goc ...` commands. Codex
+does **not** put a plugin's `bin/` directory on shell PATH, so in a
+plugin-only install `goc` is *not* a callable command even though the
+engine is bundled and working. Running a bare `goc ...` (or `uv run
+goc ...` outside a checkout) fails with `command not found` / `Failed
+to spawn: goc`, and the agent should NOT fall back to editing deck
+files by hand — that bypasses the schema, edge, and DoD contracts the
+engine enforces.
 
-```bash
-goc --help
-```
+Before running any `goc ...` line a skill gives you, resolve which of
+three cases you are in. Do **not** create a global `~/.local/bin/goc`
+shim — the engine is already bundled:
 
-Inside the `game-of-cards` source checkout itself, follow the repo
-guidance and translate bare `goc ...` examples to:
+1. **Global CLI on PATH** — `command -v goc` succeeds. Run `goc ...`
+   verbatim.
+2. **Game-of-Cards source checkout** — you are inside the
+   `game-of-cards` repo (a `pyproject.toml` naming `game-of-cards`
+   beside a `goc/` package). Translate every bare `goc ...` to
+   `uv run goc ...`, as the repo's `AGENTS.md` requires.
+3. **Codex plugin-only install** — neither of the above. The bundled
+   engine is reachable by absolute path; no global install is needed.
+   Resolve the plugin root, then call the bundled wrapper:
 
-```bash
-uv run goc ...
-```
+   ```bash
+   # The plugin root is the directory holding this plugin's skills/,
+   # hooks/, bin/, and bundled goc/ engine. You loaded THIS skill from
+   # <plugin-root>/skills/codex-kickoff/SKILL.md, so the plugin root is
+   # the grandparent of this skill's own directory. Codex also
+   # substitutes ${PLUGIN_ROOT} into plugin hook commands; prefer it
+   # when your shell already exports it.
+   PLUGIN_ROOT="${PLUGIN_ROOT:-<grandparent of this skill's directory>}"
 
-If neither command works, install the CLI with `pipx install
-game-of-cards` or use the plugin's bundled engine directly from a
-checked-out plugin payload:
+   "$PLUGIN_ROOT/bin/goc" --help
+   # If the wrapper is not executable in your sandbox, invoke the engine
+   # module directly — this is exactly what the wrapper does internally:
+   PYTHONPATH="$PLUGIN_ROOT" python3 -m goc.cli --help
+   ```
 
-```bash
-PYTHONPATH=/path/to/game-of-cards/codex-plugin python3 -m goc.cli --help
-```
+   Substitute that resolved invocation for every bare `goc ...` the
+   other skills tell you to run. As a last resort, if you cannot derive
+   the root from the skill path, the plugin cache lives under
+   `~/.codex/plugins/cache/*/game-of-cards/<version>/` — use the newest
+   version's `bin/goc` there.
+
+The `pipx install game-of-cards` recipe remains available when you want
+a real `goc` binary on PATH (case 1) instead of the bundled wrapper.
 
 ## Stage 3 — optional plugin hooks
 
