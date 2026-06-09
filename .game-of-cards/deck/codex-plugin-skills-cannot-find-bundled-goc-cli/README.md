@@ -1,21 +1,22 @@
 ---
 title: codex-plugin-skills-cannot-find-bundled-goc-cli
 summary: "The GoC plugin cache contains a working bundled `bin/goc` wrapper, but Codex skill execution does not put that wrapper on shell PATH. Downstream Codex agents therefore load the GoC skills successfully, then report that `goc` / `uv run goc` cannot spawn and fall back to editing deck files directly."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-06-05T10:37:14Z"
-closed_at: null
+closed_at: "2026-06-09T06:49:44Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduction covers a downstream repo with no global `goc` on PATH and no GoC package dependency where the plugin-cache wrapper works by absolute path.
-  - [ ] MECHANICAL: Codex-specific GoC skill guidance no longer implies that plugin-provided skills automatically deliver a shell-visible `goc` command.
-  - [ ] MECHANICAL: Codex command-resolution guidance gives agents an executable path that does not require creating a global `~/.local/bin/goc` shim.
-  - [ ] EMPIRICAL: downstream smoke in a non-GoC repo can run the bundled engine through the documented Codex path and no longer falls back to direct deck-file mutation.
-  - [ ] EMPIRICAL: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+  - [x] TDD: reproduction covers a downstream repo with no global `goc` on PATH and no GoC package dependency where the plugin-cache wrapper works by absolute path.
+  - [x] MECHANICAL: Codex-specific GoC skill guidance no longer implies that plugin-provided skills automatically deliver a shell-visible `goc` command.
+  - [x] MECHANICAL: Codex command-resolution guidance gives agents an executable path that does not require creating a global `~/.local/bin/goc` shim.
+  - [x] EMPIRICAL: downstream smoke in a non-GoC repo can run the bundled engine through the documented Codex path and no longer falls back to direct deck-file mutation.
+  - [x] EMPIRICAL: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Codex plugin skills cannot find bundled GoC CLI
@@ -71,25 +72,30 @@ sets `PYTHONPATH` to the plugin root explicitly.
 
 ## Fix direction
 
-Codex-specific skill guidance should distinguish three cases:
+Codex-specific skill guidance now distinguishes three cases:
 
 1. **Global CLI available**: use `goc ...`.
 2. **Game-of-Cards source checkout**: use `uv run goc ...` as this repo's
    `AGENTS.md` requires.
-3. **Codex plugin-only install**: use the plugin-bundled wrapper or
-   `PYTHONPATH=<plugin-root> python3 -m goc.cli ...`; do not assume plugin
-   `bin/` is on PATH.
+3. **Codex plugin-only install**: use the shipped
+   `<plugin-root>/skills/_goc-bootstrap.sh ...` helper, which invokes the
+   sibling `bin/goc` wrapper and therefore does not require a global shim or
+   shell-visible plugin `bin/`.
 
-The remaining design choice is how a Codex-loaded skill should discover
-`<plugin-root>` robustly. Possible routes:
+The Codex skill renderer injects a `## Codex GoC Command` resolver block into
+every generated Codex skill. The block tells agents to derive the plugin root
+from the loaded skill path when available, or locate the helper under
+`$HOME/.codex/plugins/cache` otherwise. `codex-plugin/skills/_goc-bootstrap.sh`
+is shipped as a real plugin payload file, and the bootstrap also works when
+executed from the plugin cache because it detects `../bin/goc` relative to its
+own path.
 
-- Codex exposes a plugin-root environment variable or manifest field the skill
-  can reference.
-- The Codex plugin payload ships a small helper instruction that derives the
-  root from the skill path shown in Codex's loaded-skill metadata.
-- The generic skills stay host-neutral, but Codex-specific guidance teaches the
-  model to use the absolute cached wrapper path when available.
+The engine's mirror-parity check and `scripts/sync_plugin_assets.py --check`
+both understand the Codex-rendered skill text plus the `_goc-bootstrap.sh`
+sidecar, so a future template edit cannot silently leave plugin skills stale.
 
 ## Artifacts
 
-- No reproducer yet.
+- `tests.test_install.ClaudeHarnessInstallTest.test_bootstrap_wrapper_execs_plugin_sibling_cli_without_path_goc`
+  covers a downstream repo with no `goc` on `PATH` and a fake plugin-cache
+  sibling `bin/goc`.

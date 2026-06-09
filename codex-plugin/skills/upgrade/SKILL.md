@@ -3,6 +3,29 @@ name: upgrade
 description: "Run `goc upgrade`, then read the engine's divergence report and drive an LLM-mediated reconciliation pass for evolving `.game-of-cards/` files (README, config) while confirming preservation of user-owned content stubs and hook files. AUTO-INVOKE when the user says \"upgrade goc\", \"pull the latest goc\", \"sync goc templates\", \"run goc upgrade\", or asks how to upgrade the GoC version in this repo. The engine's safety guarantee — never overwrite authored project state — holds with or without this skill; the skill exists to reconcile *evolving* upstream content into the local copy where the engine's \"preserve\" verdict alone leaves real upstream changes on the floor."
 ---
 
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
+
 # Upgrade GoC
 
 `goc upgrade` is deterministic and safe by construction — it never

@@ -1119,7 +1119,12 @@ def validate_plugin_mirror_parity() -> list[str]:
     in TypeScript inside `openclaw-plugin/index.ts`, so its deep mirror also
     omits `templates/hooks/*.py`.
     """
-    from goc.install import _frontmatter_value, deck_hook_scripts, skill_for_agent
+    from goc.install import (
+        CODEX_GOC_COMMAND_RESOLVER,
+        _frontmatter_value,
+        deck_hook_scripts,
+        skill_for_agent,
+    )
     claude_plugin_root = REPO_ROOT / "claude-plugin"
     codex_plugin_root = REPO_ROOT / "codex-plugin"
     openclaw_plugin_root = REPO_ROOT / "openclaw-plugin"
@@ -1250,7 +1255,7 @@ def validate_plugin_mirror_parity() -> list[str]:
                 "---",
             )
         )
-        return codex_frontmatter + body
+        return codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body
 
     def _validate_codex_skill_mirror(dst: Path) -> None:
         src = templates_root / "skills"
@@ -1283,6 +1288,13 @@ def validate_plugin_mirror_parity() -> list[str]:
             if "__pycache__" in dst_item.parts or dst_item.is_dir():
                 continue
             rel = dst_item.relative_to(dst)
+            if rel.as_posix() == "_goc-bootstrap.sh":
+                bootstrap_src = templates_root / "bootstrap" / "_goc-bootstrap.sh"
+                if not bootstrap_src.exists():
+                    diffs.append(f"{rel.as_posix()} (only in {dst_rel})")
+                elif dst_item.read_text() != bootstrap_src.read_text():
+                    diffs.append(f"{rel.as_posix()} (differs)")
+                continue
             if not rel.parts or rel.parts[0] not in eligible or not (src / rel).exists():
                 diffs.append(f"{rel.as_posix()} (only in {dst_rel})")
         if diffs:

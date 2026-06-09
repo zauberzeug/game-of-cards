@@ -35,7 +35,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from goc.install import _frontmatter_value, deck_hook_scripts, skill_for_agent  # noqa: E402
+from goc.install import (  # noqa: E402
+    CODEX_GOC_COMMAND_RESOLVER,
+    _frontmatter_value,
+    deck_hook_scripts,
+    skill_for_agent,
+)
 
 
 SyncPair = tuple[Path, Path, frozenset[str], frozenset[str]]
@@ -344,7 +349,7 @@ def _codex_skill_text(src: Path, *, skill_name: str) -> str:
             "---",
         )
     )
-    return codex_frontmatter + body
+    return codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body
 
 
 def _sync_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = frozenset()) -> list[Path]:
@@ -452,7 +457,16 @@ def _compute_changes() -> list[Path]:
             changed.extend(_sync_dir(src, dst, excludes, preserve_files))
         else:
             changed.extend(_sync_file(src, dst))
-    changed.extend(_sync_codex_skill_tree(ROOT / "codex-plugin" / "skills"))
+    changed.extend(
+        _sync_codex_skill_tree(
+            ROOT / "codex-plugin" / "skills",
+            preserve_files=frozenset({"_goc-bootstrap.sh"}),
+        )
+    )
+    changed.extend(_sync_file(
+        ROOT / "goc" / "templates" / "bootstrap" / "_goc-bootstrap.sh",
+        ROOT / "codex-plugin" / "skills" / "_goc-bootstrap.sh",
+    ))
     changed.extend(
         _sync_codex_skill_tree(
             ROOT / ".codex" / "skills",
@@ -502,7 +516,18 @@ def _check_changes() -> list[Path]:
         else:
             if not dst.exists() or not filecmp.cmp(src, dst, shallow=False):
                 out.append(dst)
-    out.extend(_check_codex_skill_tree(ROOT / "codex-plugin" / "skills"))
+    out.extend(_check_codex_skill_tree(
+        ROOT / "codex-plugin" / "skills",
+        preserve_files=frozenset({"_goc-bootstrap.sh"}),
+    ))
+    codex_bootstrap_src = ROOT / "goc" / "templates" / "bootstrap" / "_goc-bootstrap.sh"
+    codex_bootstrap_dst = ROOT / "codex-plugin" / "skills" / "_goc-bootstrap.sh"
+    if not codex_bootstrap_dst.exists() or not filecmp.cmp(
+        codex_bootstrap_src,
+        codex_bootstrap_dst,
+        shallow=False,
+    ):
+        out.append(ROOT / "codex-plugin" / "skills" / "_goc-bootstrap.sh")
     out.extend(
         _check_codex_skill_tree(
             ROOT / ".codex" / "skills",

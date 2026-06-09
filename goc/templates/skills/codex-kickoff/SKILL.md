@@ -70,30 +70,44 @@ The Codex plugin supplies:
 - GoC skills from `goc/templates/skills/`, filtered for Codex and
   packaged under the plugin's `skills/` directory.
 - Lifecycle hooks under `hooks/hooks.json`.
-- A bundled `goc/` engine mirror and `bin/goc` wrapper for hosts or
-  future Codex builds that expose plugin binaries.
+- A bundled `goc/` engine mirror, `bin/goc` wrapper, and
+  `skills/_goc-bootstrap.sh` helper that can invoke the bundled engine
+  even when Codex does not put plugin binaries on shell `PATH`.
 
 Codex does not currently document plugin `bin/` auto-PATH behavior.
-When a skill tells you to run `goc`, prefer the normal project command:
+When a skill tells you to run `goc`, resolve it in this order:
+
+1. Inside the `game-of-cards` source checkout, follow the repo guidance:
+
+   ```bash
+   uv run goc --help
+   ```
+
+2. If a normal project command is already available, use it:
 
 ```bash
 goc --help
 ```
 
-Inside the `game-of-cards` source checkout itself, follow the repo
-guidance and translate bare `goc ...` examples to:
+3. If this is a plugin-only Codex install, use the plugin helper. If the
+   loaded skill path shows the plugin root, run:
 
 ```bash
-uv run goc ...
+<plugin-root>/skills/_goc-bootstrap.sh --help
 ```
 
-If neither command works, install the CLI with `pipx install
-game-of-cards` or use the plugin's bundled engine directly from a
-checked-out plugin payload:
+   Otherwise locate it from the plugin cache:
 
 ```bash
-PYTHONPATH=/path/to/game-of-cards/codex-plugin python3 -m goc.cli --help
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
 ```
+
+For the rest of the skill, use that helper path in place of bare `goc`.
+Only install the CLI with `pipx install game-of-cards` or `uv tool
+install game-of-cards` when you are using vendored Codex skills without
+the plugin payload.
 
 ## Stage 3 — optional plugin hooks
 

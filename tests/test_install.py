@@ -259,8 +259,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("name: pull-card", codex_skill)
             self.assertIn("description: ", codex_skill)
             self.assertIn("# Pull a card", codex_skill)
+            self.assertIn("## Codex GoC Command", codex_skill)
             self.assertIn("!`goc", codex_skill)
-            self.assertNotIn("_goc-bootstrap.sh", codex_skill)
+            self.assertIn("_goc-bootstrap.sh", codex_skill)
             self.assertNotIn("CLAUDE_SKILL_DIR", codex_skill)
 
             self.assert_goc_ok(
@@ -1361,16 +1362,57 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertEqual("fake:show smoke-card\n", current.stdout)
             self.assertEqual("", current.stderr)
 
-    def test_skill_command_injections_call_goc_directly(self) -> None:
-        # Skills shell out to `goc` directly (not via a bootstrap shim) so
-        # plugin-installed skills don't trip Claude Code's bash-policy ban
-        # on executing scripts shipped from a plugin cache directory.
+    def test_bootstrap_wrapper_execs_plugin_sibling_cli_without_path_goc(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            downstream = tmp_path / "downstream"
+            plugin_root = tmp_path / "plugin-cache" / "game-of-cards" / "0.0.99"
+            downstream_deck = downstream / ".game-of-cards" / "deck"
+            downstream_deck.mkdir(parents=True)
+            (downstream_deck / ".goc-version").write_text(f"{self._goc_version()}\n")
+
+            skills_dir = plugin_root / "skills"
+            bin_dir = plugin_root / "bin"
+            skills_dir.mkdir(parents=True)
+            bin_dir.mkdir()
+            wrapper_src = ROOT / "goc" / "templates" / "bootstrap" / "_goc-bootstrap.sh"
+            wrapper = skills_dir / "_goc-bootstrap.sh"
+            shutil.copy2(wrapper_src, wrapper)
+            fake_goc = bin_dir / "goc"
+            fake_goc.write_text(
+                "#!/bin/sh\n"
+                f'if [ "$1" = "--version" ]; then echo "goc, version {self._goc_version()}"; exit 0; fi\n'
+                'printf "plugin:%s\\n" "$*"\n'
+            )
+            fake_goc.chmod(0o755)
+
+            env = os.environ.copy()
+            env["PATH"] = "/usr/bin:/bin"
+            result = subprocess.run(
+                [str(wrapper), "show", "smoke-card"],
+                cwd=downstream,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode)
+            self.assertEqual("plugin:show smoke-card\n", result.stdout)
+            self.assertEqual("", result.stderr)
+
+    def test_skill_command_injections_keep_claude_skills_direct_and_codex_skills_resolved(self) -> None:
+        # Claude skills shell out to `goc` directly so plugin-installed Claude
+        # skills don't trip Claude Code's bash-policy ban on executing scripts
+        # shipped from a plugin cache directory. Codex skills carry a resolver
+        # paragraph because Codex does not currently expose plugin bin/ on PATH.
         from goc.install import skill_for_agent
 
         roots = [
             (ROOT / "goc" / "templates" / "skills", None),
             (ROOT / ".claude" / "skills", "claude"),
             (ROOT / ".codex" / "skills", "codex"),
+            (ROOT / "codex-plugin" / "skills", "codex"),
         ]
         for root, agent in roots:
             for skill_name in SKILL_NAMES:
@@ -1378,8 +1420,14 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                     continue
                 skill = root / skill_name / "SKILL.md"
                 text = skill.read_text()
-                self.assertNotIn("_goc-bootstrap.sh", text, msg=str(skill))
                 self.assertNotIn("CLAUDE_SKILL_DIR", text, msg=str(skill))
+                if agent == "codex":
+                    self.assertIn("## Codex GoC Command", text, msg=str(skill))
+                    self.assertIn("_goc-bootstrap.sh", text, msg=str(skill))
+                elif skill_name == "codex-kickoff":
+                    self.assertIn("_goc-bootstrap.sh", text, msg=str(skill))
+                else:
+                    self.assertNotIn("_goc-bootstrap.sh", text, msg=str(skill))
 
     # ── Other install/upgrade tests ───────────────────────────────────────────
 
