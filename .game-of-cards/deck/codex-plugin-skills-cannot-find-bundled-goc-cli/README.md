@@ -1,7 +1,7 @@
 ---
 title: codex-plugin-skills-cannot-find-bundled-goc-cli
 summary: "The GoC plugin cache contains a working bundled `bin/goc` wrapper, but Codex skill execution does not put that wrapper on shell PATH. Downstream Codex agents therefore load the GoC skills successfully, then report that `goc` / `uv run goc` cannot spawn and fall back to editing deck files directly."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-05T10:37:14Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: Codex command-resolution guidance gives agents an executable path that does not require creating a global `~/.local/bin/goc` shim.
   - [ ] EMPIRICAL: downstream smoke in a non-GoC repo can run the bundled engine through the documented Codex path and no longer falls back to direct deck-file mutation.
   - [ ] EMPIRICAL: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Codex plugin skills cannot find bundled GoC CLI
