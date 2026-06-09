@@ -325,8 +325,10 @@ const DECK_REMINDER = [
 
 const PATTERN_REMINDER =
   "[GoC | pattern-check] Before yielding: did your recent change touch a pattern with broader applicability? " +
-  "If yes, file a generalization card via goc verb='new' before stopping. " +
-  'If no generalization is warranted, respond "no generalization needed" and stop.';
+  'If NO, respond "no generalization needed" and stop. ' +
+  "If YES, dedup first (scan the deck): if a generalization/root card already exists, " +
+  "CONNECT this instance to it (cross-reference or an advances edge) and name it — " +
+  "do not file a duplicate; only if none exists, file a new card via goc verb='new'.";
 
 const CODE_MUTATING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
 
