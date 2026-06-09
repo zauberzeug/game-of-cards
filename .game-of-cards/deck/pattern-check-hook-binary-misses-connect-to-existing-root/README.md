@@ -9,7 +9,7 @@ summary: |-
   exceeds deciding") and `create-card`'s dedup step warn against. Fix: reword the REMINDER to a
   three-branch form (no / dedup-then-connect / file) and sync the ~9 duplicated copies across host
   ports, then release.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-06T06:54:29Z"
@@ -24,6 +24,7 @@ definition_of_done: |
   - [ ] TDD: any test asserting the REMINDER text is updated to the new wording and asserts the three-branch structure (grep `tests/` for the assertion; if none exists, the reword is inspection-verified and this item is N/A — note which).
   - [ ] MECHANICAL: version bump + release so downstream repos (e.g. phasor-agents, currently on cached v0.0.23) pick up the new wording on the next `goc upgrade`.
   - [ ] PROCESS: (stretch — or file separately) the REMINDER is hand-synced across ~9 copies, a DRY smell; consider single-sourcing it (one module/const imported by every host port) so future wording changes touch one place. If deferred, file a follow-on card and cross-reference it here.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # pattern-check-hook-binary-misses-connect-to-existing-root
