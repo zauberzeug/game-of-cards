@@ -1,7 +1,7 @@
 ---
 title: codex-skill-sibling-sync-uses-text-copy-diverging-from-byte-exact-install
 summary: "`_sync_codex_skill_tree` copies non-`SKILL.md` sibling assets through a text round-trip (`read_text()` → `write_text()` at sync_plugin_assets.py:380,383), which LF-normalizes line endings. Every other mirror path copies siblings byte-for-byte: `goc install` via `shutil.copy2`, the OpenClaw porter, and the Claude dir-sync. So a CRLF (or otherwise text-round-trip-sensitive) sibling asset lands byte-exact via `goc install --codex` but LF-normalized in `.codex/skills/` and `codex-plugin/skills/` — and `_check_codex_skill_tree` compares text-to-text, so CI cannot detect the skew. Latent today (the one shipped sibling, `card-schema/schema.yaml`, is ASCII-LF)."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-10T04:40:20Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_check_codex_skill_tree` compares siblings byte-for-byte so install-vs-mirror skew is CI-detectable
   - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` passes and the dogfooded `.codex/skills/` + `codex-plugin/skills/` mirrors are byte-identical to a `goc install --codex` of the same templates
   - [ ] PROCESS: `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Codex skill-sibling sync uses text copy, diverging from byte-exact `goc install`
