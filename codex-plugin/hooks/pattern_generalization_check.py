@@ -71,9 +71,12 @@ def _is_broad_git_mutation(cmd: str) -> bool:
 
 REMINDER = (
     "[GoC | pattern-check] Before yielding: did your recent change touch a pattern "
-    "with broader applicability? If yes, file a generalization card via "
-    "Skill(create-card) before stopping. "
-    'If no generalization is warranted, respond "no generalization needed" and stop.'
+    "with broader applicability? If NO, respond "
+    '"no generalization needed" and stop. '
+    "If YES, dedup first (scan the deck): if a generalization/root card already "
+    "exists, CONNECT this instance to it (cross-reference or an advances edge) and "
+    "name it — do not file a duplicate; only if none exists, file a new card via "
+    "Skill(create-card)."
 )
 
 

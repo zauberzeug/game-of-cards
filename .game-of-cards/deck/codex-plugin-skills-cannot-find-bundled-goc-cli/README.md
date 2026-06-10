@@ -99,3 +99,14 @@ sidecar, so a future template edit cannot silently leave plugin skills stale.
 - `tests.test_install.ClaudeHarnessInstallTest.test_bootstrap_wrapper_execs_plugin_sibling_cli_without_path_goc`
   covers a downstream repo with no `goc` on `PATH` and a fake plugin-cache
   sibling `bin/goc`.
+- `tests/test_codex_plugin_bundled_cli.py` — runs the bundled
+  `codex-plugin/bin/goc` wrapper and `PYTHONPATH=<root> python3 -m
+  goc.cli` from a non-GoC temp cwd (the reproduction), and asserts the
+  corrected `codex-kickoff` guidance.
+- `goc/templates/skills/codex-kickoff/SKILL.md` Stage 2 — rewritten
+  into a three-case command-resolution section (global / checkout /
+  plugin-only); the plugin-only case leads with the shipped
+  `skills/_goc-bootstrap.sh` helper and also documents the direct
+  `"$PLUGIN_ROOT/bin/goc"` / `PYTHONPATH=<root> python3 -m goc.cli`
+  invocations the helper wraps, with `${PLUGIN_ROOT}` preferred when
+  exported.

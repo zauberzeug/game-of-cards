@@ -209,5 +209,33 @@ class ToolResultBoundaryTest(unittest.TestCase):
         self.assertFalse(self.hook._had_code_mutation(str(self._transcript(entries))))
 
 
+class ReminderWordingTest(unittest.TestCase):
+    """The REMINDER must offer the three-branch (no / connect / file) form.
+
+    The binary "file or don't" wording nudged toward the redundant-umbrella
+    anti-pattern: it had no branch for the mature-deck case where the pattern
+    is general but a root card already exists, so the right move is to CONNECT
+    the instance, not file a duplicate.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def test_no_branch_present(self):
+        self.assertIn('"no generalization needed"', self.hook.REMINDER)
+
+    def test_connect_to_existing_root_branch_present(self):
+        self.assertIn("CONNECT this instance", self.hook.REMINDER)
+        self.assertIn("do not file a duplicate", self.hook.REMINDER)
+
+    def test_file_branch_is_gated_on_none_existing(self):
+        self.assertIn("only if none exists", self.hook.REMINDER)
+        self.assertIn("Skill(create-card)", self.hook.REMINDER)
+
+    def test_dedup_first(self):
+        self.assertIn("dedup first", self.hook.REMINDER)
+
+
 if __name__ == "__main__":
     unittest.main()
