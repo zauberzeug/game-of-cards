@@ -1,19 +1,19 @@
 ---
 title: agent-workflows-pin-opus-instead-of-latest-fable-5-model
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-10T07:43:15Z"
-closed_at: null
+closed_at: "2026-06-10T07:45:27Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra]
 summary: "The two autonomous-agent GitHub Actions workflows (audit-deck, pull-card) pass `--model opus` to claude-code-action, pinning the agent to the Opus alias. Anthropic's latest and most capable model is Claude Fable 5 (`claude-fable-5`); the workflows should run on it."
 definition_of_done: |
-  - [ ] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model claude-fable-5` in `claude_args`
-  - [ ] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model claude-fable-5` in `claude_args`
-  - [ ] MECHANICAL: no other workflow passes a `--model` flag that still resolves to opus (`grep -rn 'model' .github/workflows/` audited)
+  - [x] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model claude-fable-5` in `claude_args`
+  - [x] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model claude-fable-5` in `claude_args`
+  - [x] MECHANICAL: no other workflow passes a `--model` flag that still resolves to opus (`grep -rn 'model' .github/workflows/` audited)
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -21,8 +21,8 @@ worker: {who: Rodja Trappe, where: main}
 
 ## Location
 
-- `.github/workflows/audit-deck.yml:77` — `--model opus`
-- `.github/workflows/pull-card.yml:104` — `--model opus`
+- `.github/workflows/audit-deck.yml:77` — `--model claude-fable-5` (was `--model opus`)
+- `.github/workflows/pull-card.yml:104` — `--model claude-fable-5` (was `--model opus`)
 
 ## What's outdated
 
@@ -49,9 +49,10 @@ The other claude-code-action consumers in `.github/` (`claude.yml`,
 pass no `--model` flag and inherit the action's default; they are
 intentionally left untouched.
 
-## Fix
+## Fix (applied)
 
-Replace `--model opus` with `--model claude-fable-5` in both
+Replaced `--model opus` with `--model claude-fable-5` in both
 `claude_args` blocks. `claude-fable-5` is the exact model ID (no date
 suffix); Claude Code's `--model` flag accepts full model IDs as well
-as aliases.
+as aliases. A `grep -rn -- "--model" .github/workflows/` audit
+confirms these are the only two model overrides in the workflow set.
