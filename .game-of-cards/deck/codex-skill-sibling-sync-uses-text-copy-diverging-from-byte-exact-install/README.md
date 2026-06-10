@@ -1,21 +1,21 @@
 ---
 title: codex-skill-sibling-sync-uses-text-copy-diverging-from-byte-exact-install
 summary: "`_sync_codex_skill_tree` copies non-`SKILL.md` sibling assets through a text round-trip (`read_text()` → `write_text()` at sync_plugin_assets.py:380,383), which LF-normalizes line endings. Every other mirror path copies siblings byte-for-byte: `goc install` via `shutil.copy2`, the OpenClaw porter, and the Claude dir-sync. So a CRLF (or otherwise text-round-trip-sensitive) sibling asset lands byte-exact via `goc install --codex` but LF-normalized in `.codex/skills/` and `codex-plugin/skills/` — and `_check_codex_skill_tree` compares text-to-text, so CI cannot detect the skew. Latent today (the one shipped sibling, `card-schema/schema.yaml`, is ASCII-LF)."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-10T04:40:20Z"
-closed_at: null
+closed_at: "2026-06-10T04:44:43Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: `deck/<title>/reproduce.py` shows `shutil.copy2` and `read_text()`→`write_text()` producing different bytes for a CRLF sibling (the copy-mode divergence)
-  - [ ] MECHANICAL: `_sync_codex_skill_tree` copies non-`SKILL.md` siblings byte-for-byte (e.g. `shutil.copy2`), matching `goc install`, the OpenClaw porter, and the Claude dir-sync
-  - [ ] MECHANICAL: `_check_codex_skill_tree` compares siblings byte-for-byte so install-vs-mirror skew is CI-detectable
-  - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` passes and the dogfooded `.codex/skills/` + `codex-plugin/skills/` mirrors are byte-identical to a `goc install --codex` of the same templates
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: `deck/<title>/reproduce.py` shows `shutil.copy2` and `read_text()`→`write_text()` producing different bytes for a CRLF sibling (the copy-mode divergence)
+  - [x] MECHANICAL: `_sync_codex_skill_tree` copies non-`SKILL.md` siblings byte-for-byte (e.g. `shutil.copy2`), matching `goc install`, the OpenClaw porter, and the Claude dir-sync
+  - [x] MECHANICAL: `_check_codex_skill_tree` compares siblings byte-for-byte so install-vs-mirror skew is CI-detectable
+  - [x] PROCESS: `python scripts/sync_plugin_assets.py --check` passes and the dogfooded `.codex/skills/` + `codex-plugin/skills/` mirrors are byte-identical to a `goc install --codex` of the same templates
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
