@@ -4222,6 +4222,11 @@ def _cmd_attest(args):
     are empty/unset, refuse the call (non-zero exit, no log.md mutation). Writing
     a bare ``## Closure verification`` header would satisfy the bundled
     ``log-md-closure-entry`` derived check on content that proves nothing.
+
+    All-skipped contract: the same refusal applies when checks ARE configured
+    but every one of them is covered by ``--skip`` — no check actually runs, so
+    the all-``[~] SKIPPED`` block proves exactly as little as the bare header.
+    "No check ran" is refused regardless of why none ran.
     """
     title = args.title
     skips = args.skips
@@ -4242,6 +4247,17 @@ def _cmd_attest(args):
             "ERROR: no closure checks configured (both layer_2_project_dod and "
             "layer_3_goc_dod are empty in .game-of-cards/config.yaml). "
             "goc attest refuses to run; configure at least one check or skip attestation.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    all_check_names = {c["name"] for c in layer_2_checks} | {c["name"] for c in layer_3_checks}
+    if all_check_names and all_check_names <= skips_set:
+        print(
+            "ERROR: every configured closure check was skipped via --skip "
+            f"({', '.join(sorted(all_check_names))}). goc attest refuses to write a "
+            "Closure verification block when no check actually runs; un-skip at "
+            "least one check.",
             file=sys.stderr,
         )
         sys.exit(2)

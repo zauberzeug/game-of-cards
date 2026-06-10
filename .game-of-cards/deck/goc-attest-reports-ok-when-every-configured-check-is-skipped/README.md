@@ -1,21 +1,21 @@
 ---
 title: goc-attest-reports-ok-when-every-configured-check-is-skipped
 summary: "`goc attest <title> --skip <name>` for every configured check runs zero real checks, records each as `{passed, skipped}`, prints `Attestation OK`, and writes a `## Closure verification` block whose rows are all `[~] SKIPPED`. The empty-config guard that refuses to write a block proving nothing only fires when both layer arrays are empty — not when checks exist but are all skipped, so the same `proves-nothing` outcome leaks through the skip path."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-10T05:14:06Z"
-closed_at: null
+closed_at: "2026-06-10T05:17:43Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` asserts current defect (exit 0, "Attestation OK", log.md gains an all-SKIPPED block), then is re-asserted to exit zero (defect no longer fires) after the fix
-  - [ ] MECHANICAL: `_cmd_attest` refuses to attest (non-zero exit, no `log.md` mutation) when every configured check across both layers is covered by `--skip`, mirroring the existing empty-config guard
-  - [ ] TDD: a new regression test in `tests/` exercises the all-skipped path and verifies log.md is untouched and the exit code matches the empty-config contract
-  - [ ] MECHANICAL: `goc validate` passes and the existing attest tests stay green
-  - [ ] PROCESS: the all-skipped contract is documented in `_cmd_attest`'s docstring alongside the empty-config contract
+  - [x] TDD: `reproduce.py` asserts current defect (exit 0, "Attestation OK", log.md gains an all-SKIPPED block), then is re-asserted to exit zero (defect no longer fires) after the fix
+  - [x] MECHANICAL: `_cmd_attest` refuses to attest (non-zero exit, no `log.md` mutation) when every configured check across both layers is covered by `--skip`, mirroring the existing empty-config guard
+  - [x] TDD: a new regression test in `tests/` exercises the all-skipped path and verifies log.md is untouched and the exit code matches the empty-config contract
+  - [x] MECHANICAL: `goc validate` passes and the existing attest tests stay green
+  - [x] PROCESS: the all-skipped contract is documented in `_cmd_attest`'s docstring alongside the empty-config contract
 worker: {who: "claude[bot]", where: main}
 ---
 
