@@ -379,14 +379,18 @@ def _sync_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = frozen
             continue
         dst_item = dst / rel
         dst_item.parent.mkdir(parents=True, exist_ok=True)
-        expected = (
-            _codex_skill_text(src_item, skill_name=rel.parts[0])
-            if src_item.name == "SKILL.md"
-            else src_item.read_text()
-        )
-        if not dst_item.exists() or dst_item.read_text() != expected:
-            dst_item.write_text(expected)
-            changed.append(dst_item)
+        if src_item.name == "SKILL.md":
+            expected = _codex_skill_text(src_item, skill_name=rel.parts[0])
+            if not dst_item.exists() or dst_item.read_text() != expected:
+                dst_item.write_text(expected)
+                changed.append(dst_item)
+        else:
+            # Non-SKILL.md siblings copy byte-for-byte (matching `goc install`,
+            # the OpenClaw porter, and the Claude dir-sync) so a CRLF or
+            # otherwise text-round-trip-sensitive asset is not LF-normalized.
+            if not dst_item.exists() or dst_item.read_bytes() != src_item.read_bytes():
+                shutil.copy2(src_item, dst_item)
+                changed.append(dst_item)
 
     # Prune empty orphan dirs (a skill dir whose source was removed or made
     # ineligible). Same rationale as `_sync_dir`: git masks empty dirs so they
@@ -420,13 +424,15 @@ def _check_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = froze
         if rel.parts[0] not in eligible:
             continue
         dst_item = dst / rel
-        expected = (
-            _codex_skill_text(src_item, skill_name=rel.parts[0])
-            if src_item.name == "SKILL.md"
-            else src_item.read_text()
-        )
-        if not dst_item.exists() or dst_item.read_text() != expected:
-            out.append(dst_item)
+        if src_item.name == "SKILL.md":
+            expected = _codex_skill_text(src_item, skill_name=rel.parts[0])
+            if not dst_item.exists() or dst_item.read_text() != expected:
+                out.append(dst_item)
+        else:
+            # Siblings compared by bytes so install-vs-mirror newline skew is
+            # CI-detectable (matching the byte-exact sync above).
+            if not dst_item.exists() or dst_item.read_bytes() != src_item.read_bytes():
+                out.append(dst_item)
 
     if dst.exists():
         for dst_item in sorted(dst.rglob("*")):

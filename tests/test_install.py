@@ -1480,6 +1480,85 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 msg="log.md must not gain a Closure verification header when no checks are configured",
             )
 
+    def test_attest_refuses_when_every_configured_check_is_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            config.write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod:\n"
+                "  - name: advanced-by-closed\n"
+                "    kind: derived\n"
+                "  - name: dod-100-percent\n"
+                "    kind: derived\n"
+                "  - name: log-md-closure-entry\n"
+                "    kind: derived\n"
+            )
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+
+            attest = self.run_goc(
+                cwd,
+                "attest",
+                "smoke-card",
+                "--skip",
+                "advanced-by-closed",
+                "--skip",
+                "dod-100-percent",
+                "--skip",
+                "log-md-closure-entry",
+                "--non-interactive",
+            )
+
+            self.assertEqual(2, attest.returncode, msg=f"stdout:\n{attest.stdout}\n\nstderr:\n{attest.stderr}")
+            self.assertIn("every configured closure check was skipped", attest.stderr)
+            self.assertNotIn("Attestation OK", attest.stdout)
+            log_path = cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md"
+            log_text = log_path.read_text() if log_path.exists() else ""
+            self.assertNotIn(
+                "## Closure verification",
+                log_text,
+                msg="log.md must not gain a Closure verification header when every check is skipped",
+            )
+
+    def test_attest_runs_when_only_some_checks_are_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            config.write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod:\n"
+                "  - name: advanced-by-closed\n"
+                "    kind: derived\n"
+                "  - name: dod-100-percent\n"
+                "    kind: derived\n"
+            )
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+            readme = cwd / ".game-of-cards" / "deck" / "smoke-card" / "README.md"
+            readme.write_text(readme.read_text().replace("- [ ] (replace with real criteria)", "- [x] closure ok"))
+
+            # One check skipped, one still runs — the guard must NOT fire.
+            attest = self.run_goc(
+                cwd,
+                "attest",
+                "smoke-card",
+                "--skip",
+                "advanced-by-closed",
+                "--non-interactive",
+            )
+
+            self.assert_goc_ok(attest)
+            self.assertIn("Attestation OK", attest.stdout)
+            log_text = (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text()
+            self.assertIn("## Closure verification", log_text)
+
     def test_state_mutations_respect_auto_commit_config_and_cli_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
