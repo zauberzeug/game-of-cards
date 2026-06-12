@@ -1,7 +1,7 @@
 ---
 title: agents-md-claims-bundled-engine-omits-hook-templates-it-now-ships
 summary: "AGENTS.md says the nested claude-plugin/goc/templates/ mirror 'deliberately omits templates/skills/ and the deck_prompt_router / deck_session_start hook templates'. Since commit 8277962 (derive hook manifest from templates/hooks/*.py) only templates/skills is excluded — the hook templates DO ship in the deep mirrors, and the sync script's own docstring states the opposite of AGENTS.md ('hook scripts are NOT excluded so the bundled engine can derive its hook list'). One-sentence doc fix."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-12T04:45:32Z"
@@ -13,6 +13,7 @@ tags: [documentation]
 definition_of_done: |
   - [ ] MECHANICAL: AGENTS.md's "deliberately omits" sentence names only `templates/skills/` (and, if it mentions hooks at all, says they are deliberately INCLUDED so the bundled engine can derive its hook list — matching the sync script's docstring).
   - [ ] MECHANICAL: `grep -n "deck_prompt_router.*hook templates" AGENTS.md` no longer claims the hook templates are omitted; `python scripts/sync_plugin_assets.py --check` stays green (AGENTS.md is not a synced mirror, this is just the no-collateral check).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # AGENTS.md claims the bundled engine omits hook templates it now ships
