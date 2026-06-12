@@ -257,12 +257,13 @@ principle, with Codex-specific frontmatter normalization for skills:
 The flat `claude-plugin/skills/` and `claude-plugin/hooks/` paths exist
 so Claude Code's plugin runtime auto-discovers them at the layout it
 expects. The nested `claude-plugin/goc/templates/...` mirrors the rest
-of the package (engine, schema, agents, game_of_cards templates, etc.)
-but **deliberately omits** `templates/skills/` and the
-`deck_prompt_router` / `deck_session_start` hook templates: the bundled
+of the package (engine, schema, agents, game_of_cards templates, hook
+templates — the bundled engine derives its hook list from
+`templates/hooks/*.py`, so those ARE included) but **deliberately
+omits** `templates/skills/`: the bundled
 engine refuses `--local-skills` on `goc install` and `--keep-local-skills`
 on `goc upgrade` (see `_is_plugin_context` in `goc/install.py`), so
-those templates are never read from inside the plugin payload. To
+the skill templates are never read from inside the plugin payload. To
 vendor skills into source control, install via `pipx install
 game-of-cards` instead — that path keeps the full template tree.
 
