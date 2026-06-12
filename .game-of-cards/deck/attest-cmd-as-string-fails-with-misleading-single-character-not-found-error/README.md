@@ -1,6 +1,6 @@
 ---
 title: attest-cmd-as-string-fails-with-misleading-single-character-not-found-error
-summary: "`_run_automated_check` reads `layer_2_project_dod[*].cmd` from `.game-of-cards/config.yaml` and passes it to `subprocess.run` without `shell=True`. A user who writes the natural YAML shorthand `cmd: \"pytest -q\"` (scalar string) hits `FileNotFoundError`, and the handler at `goc/engine.py:3758` formats the error as `f\"command not found: {cmd[0]}\"` — for a string, `cmd[0]` is the FIRST CHARACTER, so the message reads `command not found: p`. The contract that `cmd` must be a token list is undocumented in the template config and unvalidated in `load_deck_config`."
+summary: "`_run_automated_check` reads `layer_2_project_dod[*].cmd` from `.game-of-cards/config.yaml` and passes it to `subprocess.run` without `shell=True`. A user who writes the natural YAML shorthand `cmd: \"pytest -q\"` (scalar string) hits `FileNotFoundError`, and the handler at `goc/engine.py:3758` formats the error as `f\"command not found: {cmd[0]}\"` — for a string, `cmd[0]` is the FIRST CHARACTER, so the message reads `command not found: p`. The contract that `cmd` must be a token list is undocumented in the template config and unvalidated in `load_deck_config`. Same root cause, third symptom (2026-06-12): a check entry missing the `name` key crashes `goc attest` with a raw `KeyError: 'name'` traceback at `engine.py:4266` before any check runs — `name`/`kind`/`cmd` are all read by bare indexing with no shape gate."
 status: open
 stage: null
 contribution: medium
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/engine.py:_run_automated_check` no longer indexes `cmd[0]` against a string — either reject scalar-string `cmd` at load time with a clear shape error, or render the missing-cmd message from the original `cmd` value regardless of type.
   - [ ] MECHANICAL: `goc/templates/game_of_cards/config.yaml` shows at least one commented-out `layer_2_project_dod` example demonstrating the list shape (e.g. `cmd: ["pytest", "-q"]`).
   - [ ] TDD: a regression test under `tests/` exercises `_run_automated_check` (or `_cmd_attest`) with a scalar-string `cmd` and asserts the user sees the chosen contract — either a shape-validation error citing the cmd, or a `command not found: <full cmd>` message.
+  - [ ] TDD: a regression test covers a check entry missing required keys (`name`, `kind`, or `cmd` for `kind: automated`) — `goc attest` reports a clean shape error naming the offending entry and exits 2, instead of a raw `KeyError` traceback.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green; `uv run goc validate` is clean.
 ---
 
@@ -68,6 +69,31 @@ Two coupled defects in the same five-line handler:
    `f"command not found: {cmd[0]}"` — for a string, `cmd[0]` is the
    first character (`"p"`), so the message reads `command not found: p`.
    The user has no signal pointing at the shape mistake.
+
+### Third symptom, same root cause: missing keys crash with a raw KeyError (2026-06-12)
+
+The shape gate is missing for *every* required key, not just `cmd`'s
+type. `_cmd_attest` reads `c["name"]` at `goc/engine.py:4266`
+(`all_check_names = {c["name"] for c in layer_2_checks} | …`) plus
+`check["name"]` / `check["kind"]` at `:4283` / `:4296` by bare
+indexing. A check entry that lacks `name` (e.g. a typo'd
+`- description: …` entry) kills `goc attest` with an unhandled
+traceback before any check runs — instead of the clean `ERROR: … exit 2`
+the surrounding code uses for config problems:
+
+```
+  File ".../goc/engine.py", line 4266, in _cmd_attest
+    all_check_names = {c["name"] for c in layer_2_checks} | {c["name"] for c in layer_3_checks}
+                       ~^^^^^^^^
+KeyError: 'name'
+exit=1
+```
+
+(Sandbox: a temp deck with one valid check plus one nameless entry,
+`goc attest test-card --non-interactive`.) Whichever decision branch is
+picked below, the load-time validation it implies should require
+`name` + `kind` on every entry (and `cmd` for `kind: automated`), not
+only normalize `cmd`'s type.
 
 ## Empirical evidence
 
