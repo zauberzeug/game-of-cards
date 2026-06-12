@@ -1,7 +1,7 @@
 ---
 title: sync-plugin-assets-leaves-orphaned-hook-files-and-check-passes
 summary: "When a hook template under goc/templates/hooks/ is renamed or removed, the sync's single-file hook pairs are enumerated from the CURRENT template set, so the retired file is never pruned from the three flat hook mirrors (claude-plugin/hooks/, codex-plugin/hooks/, .claude/hooks/) and `--check` reports OK because it only compares pair-listed paths. The engine's validate_plugin_mirror_parity has the identical blind spot. Consumers keep executing the stale hook code that hooks.json still references — with every tripwire green. Skill DIRS got this exact fix already; the single-file hook pairs were left out."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-12T04:43:21Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: non-GoC files in the hook mirror dirs (claude-plugin/hooks/hooks.json, codex-plugin/hooks/hooks.json) survive the sync untouched (no over-eager prune).
   - [ ] TDD: `validate_plugin_mirror_parity` (goc/engine.py) flags a dst-only hook file in claude-plugin/hooks/ and codex-plugin/hooks/ as drift.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green; `uv run goc validate` is clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `sync_plugin_assets.py` leaves orphaned hook files in plugin mirrors, and `--check` passes anyway
