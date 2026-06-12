@@ -57,11 +57,18 @@ different template path, or generated state that has no src counterpart.
 def _build_sync_pairs() -> list[SyncPair]:
     """Compute (src, dst, excludes, preserve_files) pairs by deriving the hook list from templates/hooks/.
 
-    Plugin-specific files NOT touched by this sync (`claude-plugin/hooks/hooks.json`,
-    `claude-plugin/bin/`, `claude-plugin/pyproject.toml`,
-    `codex-plugin/.codex-plugin/plugin.json`, `codex-plugin/hooks/hooks.json`,
+    Plugin-specific files NOT touched by this sync (`claude-plugin/bin/`,
+    `claude-plugin/pyproject.toml`, `codex-plugin/.codex-plugin/plugin.json`,
     `codex-plugin/bin/`, `openclaw-plugin/index.ts`, `openclaw-plugin/package.json`,
     `openclaw-plugin/skills/`, etc.) are not in the pair list and stay untouched.
+    The hand-maintained `hooks.json` inside `claude-plugin/hooks/` and
+    `codex-plugin/hooks/` sits inside a synced directory, so it is protected
+    via `preserve_files` instead.
+
+    The flat hook mirrors (`claude-plugin/hooks/`, `codex-plugin/hooks/`,
+    `.claude/hooks/`) are directory syncs of `templates/hooks/` — NOT per-file
+    pairs enumerated from the current template set — so a renamed or retired
+    hook template is pruned from the mirrors and `--check` flags a stale copy.
 
     The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
     `--keep-local-skills` (see `_is_plugin_context` in goc/install.py), so it
@@ -104,15 +111,16 @@ def _build_sync_pairs() -> list[SyncPair]:
             frozenset(),
         )
     )
-    for name in hook_names:
-        pairs.append(
-            (
-                templates / "hooks" / name,
-                ROOT / "claude-plugin" / "hooks" / name,
-                frozenset(),
-                frozenset(),
-            )
+    pairs.append(
+        (
+            templates / "hooks",
+            ROOT / "claude-plugin" / "hooks",
+            frozenset(),
+            # `hooks.json` is hand-maintained plugin config (event → command
+            # mapping) with no src counterpart — the dir-sync must not prune it.
+            frozenset({"hooks.json"}),
         )
+    )
     pairs.append(
         (
             ROOT / "goc",
@@ -126,15 +134,14 @@ def _build_sync_pairs() -> list[SyncPair]:
     # Skills use Codex frontmatter normalization and are synced by the
     # specialized codex-skill tree functions below. Hook scripts and the bundled
     # engine are byte mirrors.
-    for name in hook_names:
-        pairs.append(
-            (
-                templates / "hooks" / name,
-                ROOT / "codex-plugin" / "hooks" / name,
-                frozenset(),
-                frozenset(),
-            )
+    pairs.append(
+        (
+            templates / "hooks",
+            ROOT / "codex-plugin" / "hooks",
+            frozenset(),
+            frozenset({"hooks.json"}),
         )
+    )
     pairs.append(
         (
             ROOT / "goc",
@@ -181,13 +188,12 @@ def _build_sync_pairs() -> list[SyncPair]:
             frozenset(),
         )
     )
-    for name in hook_names:
-        pairs.append(
-            (
-                templates / "hooks" / name,
-                ROOT / ".claude" / "hooks" / name,
-                frozenset(),
-                frozenset(),
+    pairs.append(
+        (
+            templates / "hooks",
+            ROOT / ".claude" / "hooks",
+            frozenset(),
+            frozenset(),
         )
     )
 

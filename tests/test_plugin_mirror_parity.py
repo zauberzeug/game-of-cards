@@ -149,6 +149,38 @@ class PluginMirrorParityTest(unittest.TestCase):
                 msg=f"expected same-length/same-mtime content drift to be flagged, got: {errors}",
             )
 
+    def test_stale_hook_file_in_claude_plugin_hooks_is_drift(self) -> None:
+        """A dst-only hook file (its template was renamed or retired) must
+        register as drift. The hook mirror used to be per-file pairs
+        enumerated from the CURRENT template set, which made stale copies
+        invisible; the dir comparison closes that blind spot.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _sync_tree(cwd)
+            (cwd / "claude-plugin" / "hooks" / "retired_hook.py").write_text("# stale\n")
+
+            errors = _check(cwd)
+            self.assertTrue(
+                any(
+                    "claude-plugin/hooks" in e
+                    and "retired_hook.py" in e
+                    and "only in" in e
+                    for e in errors
+                ),
+                msg=f"expected dst-only stale hook to be flagged, got: {errors}",
+            )
+
+    def test_hand_maintained_hooks_json_is_not_drift(self) -> None:
+        """`hooks.json` is plugin config with no template counterpart — its
+        presence in claude-plugin/hooks/ must not be reported as drift.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _sync_tree(cwd)
+            (cwd / "claude-plugin" / "hooks" / "hooks.json").write_text("{}\n")
+            self.assertEqual([], _check(cwd))
+
     def test_drift_inside_excluded_subpaths_is_ignored(self) -> None:
         """The bundled engine's deep mirror deliberately omits
         `templates/skills/`. Drift inside that excluded path must not be
@@ -164,6 +196,56 @@ class PluginMirrorParityTest(unittest.TestCase):
             (cwd / "claude-plugin" / "goc" / "templates" / "skills" / "stale-skill" / "SKILL.md").write_text("# stale\n")
 
             self.assertEqual([], _check(cwd))
+
+
+class CodexHookMirrorTest(unittest.TestCase):
+    """codex-plugin/hooks/ is the same whole-directory mirror of
+    goc/templates/hooks/ as the claude one: a dst-only stale hook is drift,
+    the hand-maintained hooks.json is not.
+    """
+
+    @staticmethod
+    def _codex_tree(cwd: Path) -> None:
+        hook_content = "# hook\n"
+        # Source of truth: package shell + one skill + one hook template.
+        (cwd / "goc" / "templates" / "skills" / "foo-skill").mkdir(parents=True)
+        (cwd / "goc" / "templates" / "skills" / "foo-skill" / "SKILL.md").write_text("# skill\n")
+        (cwd / "goc" / "templates" / "hooks").mkdir(parents=True)
+        (cwd / "goc" / "templates" / "hooks" / "deck_prompt_router.py").write_text(hook_content)
+        (cwd / "goc" / "__init__.py").write_text("# goc package\n")
+        # Codex payload: skills (no frontmatter → ported verbatim), flat hooks,
+        # deep engine mirror (templates/skills excluded from it).
+        (cwd / "codex-plugin" / "skills" / "foo-skill").mkdir(parents=True)
+        (cwd / "codex-plugin" / "skills" / "foo-skill" / "SKILL.md").write_text("# skill\n")
+        (cwd / "codex-plugin" / "hooks").mkdir(parents=True)
+        (cwd / "codex-plugin" / "hooks" / "deck_prompt_router.py").write_text(hook_content)
+        (cwd / "codex-plugin" / "goc" / "templates" / "hooks").mkdir(parents=True)
+        (cwd / "codex-plugin" / "goc" / "templates" / "hooks" / "deck_prompt_router.py").write_text(hook_content)
+        (cwd / "codex-plugin" / "goc" / "__init__.py").write_text("# goc package\n")
+
+    def test_in_sync_codex_tree_produces_no_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._codex_tree(cwd)
+            (cwd / "codex-plugin" / "hooks" / "hooks.json").write_text("{}\n")
+            self.assertEqual([], _check(cwd))
+
+    def test_stale_hook_file_in_codex_plugin_hooks_is_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._codex_tree(cwd)
+            (cwd / "codex-plugin" / "hooks" / "retired_hook.py").write_text("# stale\n")
+
+            errors = _check(cwd)
+            self.assertTrue(
+                any(
+                    "codex-plugin/hooks" in e
+                    and "retired_hook.py" in e
+                    and "only in" in e
+                    for e in errors
+                ),
+                msg=f"expected dst-only stale hook to be flagged, got: {errors}",
+            )
 
 
 class OpenClawPluginMirrorTest(unittest.TestCase):

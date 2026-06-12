@@ -1108,10 +1108,12 @@ def validate_plugin_mirror_parity() -> list[str]:
     mirror; fix is to run `python scripts/sync_plugin_assets.py` and commit
     the result. CI runs the same script with `--check`.
 
-    The hook pairs (flat `<plugin>/hooks/<name>.py` ↔ source
-    `goc/templates/hooks/<name>.py`) are enumerated from
-    `goc/templates/hooks/*.py` so adding a hook updates the parity check
-    automatically. Skills are excluded from the deep `goc/` mirror because
+    The flat hook mirrors (`<plugin>/hooks/` ↔ source `goc/templates/hooks/`)
+    are compared as whole directories — not per-file pairs enumerated from the
+    current template set — so adding a hook updates the parity check
+    automatically AND a stale dst-only copy of a renamed/retired hook
+    registers as drift. The hand-maintained `hooks.json` is excluded from
+    that comparison. Skills are excluded from the deep `goc/` mirror because
     plugin install paths refuse `--local-skills`, so the bundled engine
     never reads `templates/skills/`.
 
@@ -1202,27 +1204,28 @@ def validate_plugin_mirror_parity() -> list[str]:
         pairs.append(
             (templates_root / "skills", claude_plugin_root / "skills", non_claude_skills)
         )
-        for name in hook_names:
-            pairs.append(
-                (
-                    templates_root / "hooks" / name,
-                    claude_plugin_root / "hooks" / name,
-                    frozenset(),
-                )
+        # Whole-directory mirror (not per-file pairs from the current template
+        # set) so a dst-only stale hook file registers as drift. `hooks.json`
+        # is hand-maintained plugin config with no src counterpart — excluded.
+        pairs.append(
+            (
+                templates_root / "hooks",
+                claude_plugin_root / "hooks",
+                frozenset({"hooks.json"}),
             )
+        )
         pairs.append(
             (REPO_ROOT / "goc", claude_plugin_root / "goc", claude_goc_excludes)
         )
 
     if codex_plugin_root.exists():
-        for name in hook_names:
-            pairs.append(
-                (
-                    templates_root / "hooks" / name,
-                    codex_plugin_root / "hooks" / name,
-                    frozenset(),
-                )
+        pairs.append(
+            (
+                templates_root / "hooks",
+                codex_plugin_root / "hooks",
+                frozenset({"hooks.json"}),
             )
+        )
         pairs.append(
             (REPO_ROOT / "goc", codex_plugin_root / "goc", claude_goc_excludes)
         )

@@ -1,20 +1,20 @@
 ---
 title: sync-plugin-assets-leaves-orphaned-hook-files-and-check-passes
 summary: "When a hook template under goc/templates/hooks/ is renamed or removed, the sync's single-file hook pairs are enumerated from the CURRENT template set, so the retired file is never pruned from the three flat hook mirrors (claude-plugin/hooks/, codex-plugin/hooks/, .claude/hooks/) and `--check` reports OK because it only compares pair-listed paths. The engine's validate_plugin_mirror_parity has the identical blind spot. Consumers keep executing the stale hook code that hooks.json still references — with every tripwire green. Skill DIRS got this exact fix already; the single-file hook pairs were left out."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-12T04:43:21Z"
-closed_at: null
+closed_at: "2026-06-12T05:00:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — after a hook template is removed and sync runs, the corresponding file is gone from all three flat hook mirrors, and `--check` FAILs while a stale one remains.
-  - [ ] TDD: non-GoC files in the hook mirror dirs (claude-plugin/hooks/hooks.json, codex-plugin/hooks/hooks.json) survive the sync untouched (no over-eager prune).
-  - [ ] TDD: `validate_plugin_mirror_parity` (goc/engine.py) flags a dst-only hook file in claude-plugin/hooks/ and codex-plugin/hooks/ as drift.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green; `uv run goc validate` is clean.
+  - [x] TDD: reproduce.py exits zero — after a hook template is removed and sync runs, the corresponding file is gone from all three flat hook mirrors, and `--check` FAILs while a stale one remains.
+  - [x] TDD: non-GoC files in the hook mirror dirs (claude-plugin/hooks/hooks.json, codex-plugin/hooks/hooks.json) survive the sync untouched (no over-eager prune).
+  - [x] TDD: `validate_plugin_mirror_parity` (goc/engine.py) flags a dst-only hook file in claude-plugin/hooks/ and codex-plugin/hooks/ as drift.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` is green; `uv run goc validate` is clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -90,16 +90,13 @@ goc/templates/hooks/deck_prompt_router.py deck_prompt_router_v2.py`, update
 
 `reproduce.py` in this card dir drives the same scenario in-tree with a
 temp hook template (cleaning up after itself; note the sync auto-stages, so
-it may leave index entries to `git restore --staged`). Verbatim output
-today:
+it may leave index entries to `git restore --staged`). Output before the
+fix listed all three stale flat-mirror copies surviving the sync plus
+`--check` exiting 0 with a planted stale hook. After the fix:
 
 ```
-DEFECT PRESENT:
-  - stale claude-plugin/hooks/zzz_temp_reproduce_hook.py survives the sync
-  - stale codex-plugin/hooks/zzz_temp_reproduce_hook.py survives the sync
-  - stale .claude/hooks/zzz_temp_reproduce_hook.py survives the sync
-  - --check exits 0 while a stale hook file sits in claude-plugin/hooks/
-exit=1
+FIXED: orphaned hook files are pruned and --check flags stale ones.
+exit=0
 ```
 
 ## Why it matters (reachability path)
@@ -115,22 +112,26 @@ pointing at the *stale* file, which still exists — so plugin consumers keep
 executing the retired hook logic indefinitely, with `--check`, `goc
 validate`, and the parity tests all green.
 
-## Fix
+## Fix (applied)
 
-Follow the precedent set by the skill-dir fix (rubric-derived from the two
-prior siblings; no open design question):
+Followed the precedent set by the skill-dir fix (rubric-derived from the
+two prior siblings; no open design question):
 
-1. Replace the per-name single-file hook pairs with a **dir-sync** of
-   `templates/hooks/` → each flat mirror, using the existing
-   `preserve_files` mechanism (already used for `_goc-bootstrap.sh`) to
-   protect the non-synced `hooks.json` in `claude-plugin/hooks/` and
-   `codex-plugin/hooks/`. The dir-sync machinery already prunes orphans and
-   already has the `--check` orphan walk. Alternatively, add an explicit
-   orphan prune + check for dst `*.py` files not in `hook_names`.
-2. Extend `validate_plugin_mirror_parity` (`goc/engine.py:1204`) the same
-   way so the engine tripwire flags a dst-only hook file as drift.
-3. Regression test in `tests/` (e.g. alongside
-   `tests/test_plugin_mirror_parity.py`).
+1. `scripts/sync_plugin_assets.py` — replaced the three per-name
+   single-file hook pair loops with **dir-syncs** of `templates/hooks/` →
+   each flat mirror (`claude-plugin/hooks/`, `codex-plugin/hooks/`,
+   `.claude/hooks/`), using the existing `preserve_files` mechanism
+   (already used for `_goc-bootstrap.sh`) to protect the hand-maintained
+   `hooks.json` in the two plugin hook dirs. The dir-sync machinery already
+   prunes orphans and already has the `--check` orphan walk.
+2. `validate_plugin_mirror_parity` (`goc/engine.py`) — replaced the
+   per-name hook pairs with whole-directory pairs
+   (`templates/hooks` ↔ `<plugin>/hooks`, `hooks.json` excluded), so a
+   dst-only stale hook file registers as `(only in <plugin>/hooks)` drift.
+3. Regression tests: `tests/test_sync_hook_mirror_orphans.py` (pair-shape
+   guard, prune + hooks.json preservation, `--check` orphan detection) and
+   new cases in `tests/test_plugin_mirror_parity.py` (stale dst-only hook
+   flagged for claude + codex; `hooks.json` not flagged).
 
 Out of scope (note for a future card if wanted): a validator check that
 `hooks.json` entries reference existing hook files.
