@@ -91,6 +91,14 @@ with the protection enabled — and same-identity fleets are the *expected*
 configuration for autonomous bots, not an edge case. The two cards should
 be decided together.
 
+Family note: this is a third instance of the "verb reports success
+without verifying its effect" shape documented by
+[goc-advance-claims-success-when-adding-an-already-existing-edge](../goc-advance-claims-success-when-adding-an-already-existing-edge/)
+and
+[goc-unadvance-claims-success-when-removing-a-non-existent-edge](../goc-unadvance-claims-success-when-removing-a-non-existent-edge/)
+(both `meta-fix`-tagged). A fourth instance should trigger the
+architectural meta-fix card per the audit sibling-sweep rule.
+
 ## Decision required
 
 What should a claim do when the post-rebase state shows its commit was
