@@ -1,20 +1,20 @@
 ---
 title: validate-accepts-closed-at-that-predates-created
 summary: "`goc validate` checks each timestamp's shape, calendar-validity, and closed_at/status coherence, but never compares `closed_at` against `created`. A terminal card whose `closed_at` predates its `created` (closed before it existed) passes `goc validate` with exit 0, including intra-day inversions in the datetime shape. This is the cross-field ordering axis — orthogonal to the future-date cards, which compare each field against wall-clock now."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-15T05:26:59Z"
-closed_at: null
+closed_at: "2026-06-15T05:30:53Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (validate now flags closed_at < created; defect no longer fires)
-  - [ ] TDD: regression test in tests/test_validate.py covers closed_at before created (rejected), closed_at == created (accepted), closed_at after created (accepted), and an intra-day datetime inversion (rejected)
-  - [ ] TDD: a card whose created or closed_at is non-ISO is unaffected by the new check (the shape error still fires, no crash on the ordering comparison)
-  - [ ] MECHANICAL: `uv run goc validate` passes on this repo's deck; plugin mirrors re-synced if engine changed
+  - [x] TDD: reproduce.py exits zero (validate now flags closed_at < created; defect no longer fires)
+  - [x] TDD: regression test in tests/test_validate_closed_at_ordering.py covers closed_at before created (rejected), closed_at == created (accepted), closed_at after created (accepted), and an intra-day datetime inversion (rejected)
+  - [x] TDD: a card whose created or closed_at is non-ISO is unaffected by the new check (the shape error still fires, no crash on the ordering comparison)
+  - [x] MECHANICAL: `uv run goc validate` passes on this repo's deck; plugin mirrors re-synced if engine changed
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -68,13 +68,16 @@ coherence violations are — a hard validation error.
 `reproduce.py` builds three `done` cards and runs `validate_card`:
 
 ```
-closed_at BEFORE created (2026-01-01 < 2026-06-15): (none -> DEFECT)
-closed_at 08:00 BEFORE created 12:00 same day:       (none -> DEFECT)
-closed_at AFTER created (control, 2026-06-15 > 2026-01-01): (none -> correct)
+closed_at BEFORE created (2026-01-01 < 2026-06-15): ["demo: closed_at: '2026-01-01' predates created '2026-06-15' (a card cannot close before it was created)"]
+closed_at 08:00 BEFORE created 12:00 same day:       ["demo: closed_at: '2026-06-15T08:00:00Z' predates created '2026-06-15T12:00:00Z' (a card cannot close before it was created)"]
+closed_at AFTER created (control):                   (none -> correct)
+
+PASS: validator flags inverted ordering, leaves valid ordering clean
 ```
 
-The first two should each produce a `closed_at`-ordering error; today
-the validator returns no error for either.
+With the fix applied, the two inverted-ordering cards each produce a
+`closed_at predates created` error while the valid-ordering control
+stays clean; `reproduce.py` exits 0.
 
 ## Why it matters
 
@@ -90,11 +93,13 @@ commits that bypass the pre-commit validate gate.
 
 ## Fix
 
-In `validate_card`, after both `created` and `closed_at` pass their
-shape checks and `closed_at` is non-null, parse both into UTC instants
-(reuse the existing `_waiting_until_instant` ISO→instant parser, which
-handles both the date-only and datetime shapes and returns `None` for
-anything `_is_iso_date` rejects) and append an error when the
-`closed_at` instant is strictly before the `created` instant. Guard on
-both parses succeeding so a malformed value that already produced a
-shape error does not crash the comparison.
+Applied at `goc/engine.py:1420-1437` (in `validate_card`, immediately
+after the `closed_at` shape check). When both `created` and `closed_at`
+are present, both are parsed into UTC instants via the existing
+`_waiting_until_instant` ISO→instant parser (which handles the
+date-only and datetime shapes and returns `None` for anything
+`_is_iso_date` rejects). An error is appended only when *both* parses
+succeed and the `closed_at` instant is strictly before the `created`
+instant — so a value that already failed its shape check above is
+skipped and the comparison never crashes. Equal instants are accepted
+(a card created and closed in the same instant is coherent).

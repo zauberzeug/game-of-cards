@@ -1417,6 +1417,25 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     if closed_at is not None and not _is_iso_date(closed_at):
         errors.append(f"{t.title}: closed_at: {closed_at!r} not null/ISO date/datetime")
 
+    # Cross-field ordering: a card cannot enter a terminal status before it
+    # was created. Compare instants (not lexically) so a date-only `created`
+    # and a same-day datetime `closed_at` sort correctly. Both parses must
+    # succeed — a value that already failed its shape check above is skipped
+    # so the comparison never crashes.
+    created_value = fm.get("created")
+    if created_value is not None and closed_at is not None:
+        created_instant = _waiting_until_instant(created_value)
+        closed_instant = _waiting_until_instant(closed_at)
+        if (
+            created_instant is not None
+            and closed_instant is not None
+            and closed_instant < created_instant
+        ):
+            errors.append(
+                f"{t.title}: closed_at: {closed_at!r} predates created "
+                f"{created_value!r} (a card cannot close before it was created)"
+            )
+
     if "definition_of_done" in fm and not isinstance(fm["definition_of_done"], str):
         errors.append(f"{t.title}: definition_of_done: must be a string")
 
