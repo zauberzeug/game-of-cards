@@ -19,6 +19,8 @@ worker: {who: Rodja Trappe, where: main}
 
 # agent-workflows-pin-opus-instead-of-latest-fable-5-model
 
+> Later evidence: reversed by [`pin-autonomous-workflows-to-opus-while-fable-5-disabled`](../pin-autonomous-workflows-to-opus-while-fable-5-disabled/) — Fable 5 is disabled, so both workflows are back on `--model opus`. Re-pin when it returns.
+
 ## Location
 
 - `.github/workflows/audit-deck.yml:77` — `--model claude-fable-5` (was `--model opus`)

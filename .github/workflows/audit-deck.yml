@@ -74,4 +74,4 @@ jobs:
           claude_args: |
             --max-turns 200
             --permission-mode bypassPermissions
-            --model claude-fable-5
+            --model opus

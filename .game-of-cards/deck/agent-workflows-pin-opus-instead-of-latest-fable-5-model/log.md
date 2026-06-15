@@ -13,3 +13,10 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-06-10 — Closure' present
+
+## 2026-06-15T04:04:07Z — Post-close amendment
+
+Reversed by [`pin-autonomous-workflows-to-opus-while-fable-5-disabled`](../pin-autonomous-workflows-to-opus-while-fable-5-disabled/)
+— Claude Fable 5 is disabled, so both workflows were switched back to
+`--model opus`. The reasoning here (Fable 5 is the strongest model for
+the autonomous runs) still holds; re-pin fable-5 when it is re-enabled.

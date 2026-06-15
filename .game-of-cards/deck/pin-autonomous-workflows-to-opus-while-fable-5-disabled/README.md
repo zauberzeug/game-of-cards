@@ -1,19 +1,19 @@
 ---
 title: pin-autonomous-workflows-to-opus-while-fable-5-disabled
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-15T04:02:15Z"
-closed_at: null
+closed_at: "2026-06-15T04:04:34Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra]
 summary: "Claude Fable 5 is disabled right now, so the two autonomous-agent workflows (audit-deck, pull-card) that pin `--model claude-fable-5` cannot run on it. Revert both `claude_args` model overrides to `--model opus` so the unattended audit and pull-queue runs keep working. Reverses agent-workflows-pin-opus-instead-of-latest-fable-5-model; re-pin fable-5 once it is re-enabled."
 definition_of_done: |
-  - [ ] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model opus` in `claude_args`
-  - [ ] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model opus` in `claude_args`
-  - [ ] MECHANICAL: `grep -rn -- "--model" .github/workflows/` shows no remaining `claude-fable-5` override
+  - [x] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model opus` in `claude_args`
+  - [x] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model opus` in `claude_args`
+  - [x] MECHANICAL: `grep -rn -- "--model" .github/workflows/` shows no remaining `claude-fable-5` override
 worker: {who: Rodja Trappe, where: main}
 ---
 
