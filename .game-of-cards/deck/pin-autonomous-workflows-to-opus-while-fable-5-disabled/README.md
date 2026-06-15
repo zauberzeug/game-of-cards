@@ -49,6 +49,14 @@ Fable 5 is the most capable model for long-horizon agentic work. That
 reasoning is not wrong; Fable 5 is simply unavailable at the moment.
 This card is the operational reversal, not a refutation.
 
+This episode re-tests the principle set by
+[float-opus-alias-on-autonomous-github-workflows](../float-opus-alias-on-autonomous-github-workflows/):
+autonomous CI should pass a floating tier alias (`opus`), not a pinned
+model ID. The fable-5 pin re-introduced the very availability fragility
+that card resolved; floating back to `opus` is the resilient default.
+The pin is only justified for a deliberate cross-tier jump (no `latest`
+alias spans tiers), and must be reverted the moment that ID is disabled.
+
 ## Fix (applied)
 
 Replaced `--model claude-fable-5` with `--model opus` in both
