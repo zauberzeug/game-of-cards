@@ -171,6 +171,45 @@ class FoldedScalarRejectionTest(unittest.TestCase):
                 safe_load(doc)
 
 
+class TabIndentationRejectionTest(unittest.TestCase):
+    """Tabs as indentation are listed under the docstring's
+    "Unsupported (raises ParseError)" contract, but `_indent()` counted a
+    tab as one indentation char with no guard — so tab-indented structural
+    lines parsed silently, and a tab+space-indented key was promoted to a
+    top-level sibling (silent structure corruption) instead of failing loud.
+    The guard lives at the one structural chokepoint (`_peek`), so it must
+    reject structural tab indentation while leaving block-scalar content
+    (read directly, not via `_peek`) untouched."""
+
+    def test_tab_indented_nested_mapping_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("parent:\n\tchild: v\n")
+
+    def test_tab_indented_sequence_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("items:\n\t- a\n\t- b\n")
+
+    def test_tab_plus_space_indent_raises_not_promote(self):
+        # The headline defect: `\t  b: 2` parsed to {'a': 1, 'b': 2},
+        # silently promoting `b` to a top-level sibling.
+        with self.assertRaises(ParseError):
+            safe_load("a: 1\n\t  b: 2\n")
+
+    def test_block_scalar_content_with_tab_not_rejected(self):
+        # Tabs inside literal-block content are legitimate and must survive;
+        # the guard only covers structural indentation.
+        doc = "body: |\n  - [ ] item\n  \tindented continuation\n  - [ ] item2\n"
+        self.assertEqual(
+            safe_load(doc)["body"],
+            "- [ ] item\n\tindented continuation\n- [ ] item2\n",
+        )
+
+    def test_tab_inside_value_not_rejected(self):
+        # A tab in the value (not the leading indentation) is content, not
+        # indentation, and must round-trip.
+        self.assertEqual(safe_load("k: a\tb\n")["k"], "a\tb")
+
+
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):
         text = "tags:\n  - story\n  - infra\n"

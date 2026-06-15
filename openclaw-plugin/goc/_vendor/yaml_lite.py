@@ -73,11 +73,24 @@ class _Parser:
     # ── Line helpers ──────────────────────────────────────────────────────────
 
     def _peek(self) -> str | None:
-        """Return first non-blank, non-comment line; advance past skipped lines."""
+        """Return first non-blank, non-comment line; advance past skipped lines.
+
+        Every structurally-significant line (mapping keys, sequence items,
+        value continuations) is fetched through here, while block-scalar
+        content is read directly from ``self._lines``. So this is the one
+        chokepoint at which indentation is structural — and the right place
+        to enforce the docstring's "Tabs as indentation -> ParseError"
+        contract without rejecting legitimate tabs inside literal blocks.
+        """
         while self._pos < len(self._lines):
             line = self._lines[self._pos]
             bare = line.rstrip().lstrip()
             if bare and not bare.startswith("#"):
+                lead = line[: len(line) - len(line.lstrip())]
+                if "\t" in lead:
+                    raise ParseError(
+                        f"line {self._pos + 1}: tabs are not allowed as indentation"
+                    )
                 return self._lines[self._pos].rstrip()
             self._pos += 1
         return None

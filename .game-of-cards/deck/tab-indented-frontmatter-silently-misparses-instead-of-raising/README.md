@@ -1,21 +1,21 @@
 ---
 title: tab-indented-frontmatter-silently-misparses-instead-of-raising
 summary: "The vendored YAML parser's docstring lists `Tabs as indentation` under `Unsupported (raises ParseError)`, but `_indent()` counts a tab as one indentation character with no tab guard. Tab-indented frontmatter parses silently — and a tab+space-indented key is promoted to a top-level sibling, corrupting the document structure instead of failing loud."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-15T05:47:20Z"
-closed_at: null
+closed_at: "2026-06-15T05:50:56Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — tab-indented structural lines now raise ParseError instead of silently parsing
-  - [ ] TDD: a regression test in tests/ asserts ParseError on tab-indented mapping/sequence/mixed-indent input
-  - [ ] TDD: block-scalar content lines containing tabs are NOT rejected (the guard only covers structural indentation) and still round-trip
-  - [ ] MECHANICAL: the fix lives in goc/_vendor/yaml_lite.py and matches the docstring contract at line 21
-  - [ ] `uv run goc validate` passes and the full regression suite is green
+  - [x] TDD: reproduce.py exits zero — tab-indented structural lines now raise ParseError instead of silently parsing
+  - [x] TDD: a regression test in tests/ asserts ParseError on tab-indented mapping/sequence/mixed-indent input
+  - [x] TDD: block-scalar content lines containing tabs are NOT rejected (the guard only covers structural indentation) and still round-trip
+  - [x] MECHANICAL: the fix lives in goc/_vendor/yaml_lite.py and matches the docstring contract at line 21
+  - [x] `uv run goc validate` passes and the full regression suite is green
 worker: {who: "claude[bot]", where: main}
 ---
 
