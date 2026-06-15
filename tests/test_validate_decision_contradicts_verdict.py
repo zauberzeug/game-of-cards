@@ -71,6 +71,19 @@ class ValidateDecisionContradictsVerdictTest(unittest.TestCase):
         "*Resolved 2026-05-04:* Re-scope: approach X is viable under condition Y.\n\n"
         "*Reasoning:* The refutation no longer holds under Y.\n"
     )
+    # Same re-scope decision under the heading `Skill(create-card)` writes when
+    # the project rubric pre-resolves a gate-`none` card.
+    RESCOPE_DECISION_RUBRIC = (
+        "## Decision (rubric-derived)\n\n"
+        "*Resolved 2026-05-04:* Re-scope: approach X is viable under condition Y.\n\n"
+        "*Reasoning:* The refutation no longer holds under Y.\n"
+    )
+    # A *pending* section carrying re-scope language must never be read as a
+    # resolved decision — it is the question, not the answer.
+    RESCOPE_DECISION_REQUIRED = (
+        "## Decision required\n\n"
+        "Should we re-scope: is approach X viable under condition Y?\n"
+    )
     PLAIN_DECISION = (
         "## Decision\n\n"
         "*Resolved 2026-05-04:* Go with option B.\n\n"
@@ -94,6 +107,39 @@ class ValidateDecisionContradictsVerdictTest(unittest.TestCase):
                 "WARN DECISION_CONTRADICTS_VERDICT approach-x-is-unviable",
                 result.stderr,
             )
+
+    def test_warns_on_rubric_derived_rescope_decision(self) -> None:
+        # The `## Decision (rubric-derived)` heading is a first-class resolved
+        # decision (create-card writes it), so the coherence check must apply.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(
+                cwd,
+                "approach-x-is-unviable",
+                summary=self.NEGATIVE_SUMMARY,
+                decision_block=self.RESCOPE_DECISION_RUBRIC,
+            )
+            result = self.run_goc(cwd, "validate", "--quiet")
+            self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+            self.assertIn(
+                "WARN DECISION_CONTRADICTS_VERDICT approach-x-is-unviable",
+                result.stderr,
+            )
+
+    def test_no_warn_for_pending_decision_required_section(self) -> None:
+        # A pending `## Decision required` section is the question, not a
+        # resolved decision — re-scope language inside it must not flag.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(
+                cwd,
+                "approach-x-is-unviable",
+                summary=self.NEGATIVE_SUMMARY,
+                decision_block=self.RESCOPE_DECISION_REQUIRED,
+            )
+            result = self.run_goc(cwd, "validate", "--quiet")
+            self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+            self.assertNotIn("DECISION_CONTRADICTS_VERDICT", result.stderr)
 
     def test_no_warn_for_terminal_card(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

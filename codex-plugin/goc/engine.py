@@ -386,11 +386,16 @@ def extract_decision_required_section(body: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
-# A *resolved* `## Decision` block (the one `goc decide` writes), as opposed to
-# a pending `## Decision required` section. The trailing `[ \t]*\n` makes the
-# heading match exactly `## Decision` and never `## Decision required`.
+# A *resolved* `## Decision` block, as opposed to a pending `## Decision
+# required` section. Two shipped forms count as resolved: the bare
+# `## Decision` heading `goc decide` writes, and the `## Decision
+# (rubric-derived)` heading `Skill(create-card)` pre-writes when the project
+# rubric resolves a gate-`none` card. The optional `(…)` qualifier admits the
+# rubric-derived form (and any future parenthetical variant); the pending
+# `## Decision required` section is still excluded because its heading carries a
+# bare word, not a parenthetical, before the newline.
 RESOLVED_DECISION_RE = re.compile(
-    r"^## Decision[ \t]*\n(.*?)(?=^## |\Z)",
+    r"^## Decision(?: \([^)\n]*\))?[ \t]*\n(.*?)(?=^## |\Z)",
     re.MULTILINE | re.DOTALL,
 )
 

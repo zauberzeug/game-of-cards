@@ -1,0 +1,8 @@
+## 2026-06-15T04:51:39Z — Closure
+
+- **What changed**: `goc/engine.py` — widened `RESOLVED_DECISION_RE` from `^## Decision[ \t]*\n` to `^## Decision(?: \([^)\n]*\))?[ \t]*\n`, so a resolved-decision heading carrying a parenthetical qualifier (the documented `## Decision (rubric-derived)` form `Skill(create-card)` writes for rubric-pre-resolved gate-`none` cards) is recognized by `extract_resolved_decision_text` and therefore by the advisory `validate_decision_verdict_coherence`. The pending `## Decision required` section stays excluded (it has a bare word, not a parenthetical, after the heading). Comment updated to name both admitted resolved forms. Mirrors (`claude-plugin/goc/`, `codex-plugin/goc/`, `openclaw-plugin/goc/`) synced byte-for-byte.
+- **Verification**: `reproduce.py` exits 0 — bare `## Decision` and `## Decision (rubric-derived)` both flagged, `## Decision required` not. Two new regression tests in `tests/test_validate_decision_contradicts_verdict.py` (rubric-derived flagged; pending-required not flagged). Full suite 438 passed / 0 failed. `python scripts/sync_plugin_assets.py --check` clean. `goc validate` exits 0 (advisory only; pre-existing UNTAGGED_DOD_ITEM WARNs on unrelated cards).
+- **Audit**: PASS — no project rubric configured (finish-card hook empty). Decision-free fix: regex anchored to the two documented resolved-decision heading forms vs. the one documented pending form; behavior pinned by tests.
+- **Project impact**: n/a — closes a coverage hole in the safety net built by [goc-decide-leaves-stale-verdict-content-when-recording-a-rescope](../goc-decide-leaves-stale-verdict-content-when-recording-a-rescope/).
+- **Tests**: 438 passed / 0 failed
+- **Bundled with**: n/a
