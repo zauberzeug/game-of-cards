@@ -1,22 +1,22 @@
 ---
 title: goc-decide-leaves-stale-verdict-content-when-recording-a-rescope
 summary: "`goc decide` records a re-scope/reversal as an appended `## Decision` block and lowers the gate, but never touches the card's existing verdict-bearing content (summary frontmatter, body `> ⚠` banner, DoD wording) or any reference to the card in its advances/advanced_by neighbors. The card is left asserting both the old verdict at the top and the new one at the bottom; `goc validate` reports nothing. The stale top-framing is exactly what an AI agent reads first, so it drives wrong downstream actions (e.g. a near-miss `goc status … disproved` flip against a freshly re-scoped mechanism)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-15T03:40:20Z"
-closed_at: null
+closed_at: "2026-06-15T03:49:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `tests/test_decide_rescope_reconciliation.py` asserts that `goc decide <t> --decision "Re-scope: X is viable …" --because "…"` prints a reconciliation reminder naming the card's summary, body banner, and its advances/advanced_by neighbors as NOT auto-updated, and pointing at `goc status … superseded --by …` for a true re-scope.
-  - [ ] TDD: the same test asserts a *plain* decision (no re-scope/reversal marker in `--decision`) prints NO reminder (no false positive), and that the reminder lists actual neighbor titles when the card has `advances`/`advanced_by` edges.
-  - [ ] TDD: `tests/test_validate_decision_contradicts_verdict.py` asserts `goc validate` emits an advisory `WARN DECISION_CONTRADICTS_VERDICT <title>` for a non-terminal card carrying a resolved `## Decision` whose text matches re-scope/reversal markers over a summary/banner still carrying a strong negative-verdict token — and does NOT emit it for (a) terminal cards, (b) cards whose decision lacks reversal markers, (c) cards whose summary lacks a negative-verdict token. Advisory only: `validate` still exits 0.
-  - [ ] MECHANICAL: `goc/engine.py` gains a shared `RESCOPE_MARKERS_RE`; `_cmd_decide` prints the reminder when `--decision` matches; a new `validate_decision_verdict_coherence` advisory validator is wired into `_cmd_validate`'s advisory block (never gates the exit code).
-  - [ ] PROCESS: `goc/templates/skills/decide-card/SKILL.md` documents the reconciliation step (reconcile summary/banner/DoD/neighbors after a re-scope, or prefer supersede+create) — edit the template; the sync hook mirrors it.
-  - [ ] PROCESS: cross-link the sibling [goc-decide-leaves-prior-decision-block-when-the-body-already-has-one](../goc-decide-leaves-prior-decision-block-when-the-body-already-has-one/) in log.md (adjacent surface: that card dedups duplicate `## Decision` *headings*; this card reconciles the *other* verdict surfaces).
+  - [x] TDD: `tests/test_decide_rescope_reconciliation.py` asserts that `goc decide <t> --decision "Re-scope: X is viable …" --because "…"` prints a reconciliation reminder naming the card's summary, body banner, and its advances/advanced_by neighbors as NOT auto-updated, and pointing at `goc status … superseded --by …` for a true re-scope.
+  - [x] TDD: the same test asserts a *plain* decision (no re-scope/reversal marker in `--decision`) prints NO reminder (no false positive), and that the reminder lists actual neighbor titles when the card has `advances`/`advanced_by` edges.
+  - [x] TDD: `tests/test_validate_decision_contradicts_verdict.py` asserts `goc validate` emits an advisory `WARN DECISION_CONTRADICTS_VERDICT <title>` for a non-terminal card carrying a resolved `## Decision` whose text matches re-scope/reversal markers over a summary/banner still carrying a strong negative-verdict token — and does NOT emit it for (a) terminal cards, (b) cards whose decision lacks reversal markers, (c) cards whose summary lacks a negative-verdict token. Advisory only: `validate` still exits 0.
+  - [x] MECHANICAL: `goc/engine.py` gains a shared `RESCOPE_MARKERS_RE`; `_cmd_decide` prints the reminder when `--decision` matches; a new `validate_decision_verdict_coherence` advisory validator is wired into `_cmd_validate`'s advisory block (never gates the exit code).
+  - [x] PROCESS: `goc/templates/skills/decide-card/SKILL.md` documents the reconciliation step (reconcile summary/banner/DoD/neighbors after a re-scope, or prefer supersede+create) — edit the template; the sync hook mirrors it.
+  - [x] PROCESS: cross-link the sibling [goc-decide-leaves-prior-decision-block-when-the-body-already-has-one](../goc-decide-leaves-prior-decision-block-when-the-body-already-has-one/) in log.md (adjacent surface: that card dedups duplicate `## Decision` *headings*; this card reconciles the *other* verdict surfaces).
 worker: {who: Rodja Trappe, where: main}
 ---
 

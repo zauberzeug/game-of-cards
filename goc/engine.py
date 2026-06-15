@@ -386,6 +386,52 @@ def extract_decision_required_section(body: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
+# A *resolved* `## Decision` block (the one `goc decide` writes), as opposed to
+# a pending `## Decision required` section. The trailing `[ \t]*\n` makes the
+# heading match exactly `## Decision` and never `## Decision required`.
+RESOLVED_DECISION_RE = re.compile(
+    r"^## Decision[ \t]*\n(.*?)(?=^## |\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def extract_resolved_decision_text(body: str) -> str | None:
+    """Return the text of a resolved `## Decision` block, or None if absent."""
+    m = RESOLVED_DECISION_RE.search(body)
+    return m.group(1).strip() if m else None
+
+
+# Re-scope / reversal language in a recorded decision. When `goc decide`'s
+# `--decision` matches this, the decision is overturning or re-framing a
+# verdict the card already states elsewhere (summary, body banner, DoD,
+# neighbor references) — surfaces `goc decide` does NOT auto-update. Drives
+# both the decide-time reconciliation reminder and the advisory validator
+# `validate_decision_verdict_coherence`. See
+# goc-decide-leaves-stale-verdict-content-when-recording-a-rescope.
+RESCOPE_MARKERS_RE = re.compile(
+    r"\b(?:re-?scop\w*|supersed\w*|revers\w*|overturn\w*|no longer|"
+    r"instead of|was wrong|now\s+viable|actually\s+viable)\b",
+    re.IGNORECASE,
+)
+
+# Strong negative-verdict tokens. A summary or body banner carrying one of
+# these alongside a re-scope/reversal decision is the self-contradiction we
+# flag (a "REFUTED" summary over a "viable" decision). Bare "viable" is
+# deliberately absent — only the negated forms count as a negative verdict.
+NEGATIVE_VERDICT_RE = re.compile(
+    r"\b(?:refuted|disproved|disproven|unviable|not viable|do not pursue|"
+    r"don't pursue|does\s+not\s+(?:work|converge)|doesn't\s+(?:work|converge)|"
+    r"won't\s+work|will\s+not\s+work)\b",
+    re.IGNORECASE,
+)
+
+
+def _body_banner_lines(body: str) -> list[str]:
+    """Blockquote (`> …`) banner lines in a card body — the `> ⚠ VERDICT`
+    callouts a re-scope can leave stale."""
+    return [ln for ln in body.splitlines() if ln.lstrip().startswith(">")]
+
+
 def replace_or_append_decision(body: str, decision: str, reasoning: str, today: str) -> str:
     """Replace `## Decision required` with `## Decision`, or append a new section.
 
@@ -1919,6 +1965,44 @@ def validate_dod_method_tags(cards: list[Card]) -> list[BlockerWarning]:
     return warnings
 
 
+def validate_decision_verdict_coherence(cards: list[Card]) -> list[BlockerWarning]:
+    """Surface the self-contradiction `goc decide` leaves behind on an in-place
+    re-scope: a resolved `## Decision` that re-scopes/reverses a prior verdict
+    while the card's summary or a body banner still asserts that (negative)
+    verdict.
+
+    Advisory only — never contributes to `validate`'s exit code. The trigger is
+    deliberately narrow to stay low-false-positive: the recorded decision must
+    *literally* contain re-scope/reversal language (`RESCOPE_MARKERS_RE`), AND a
+    strong negative-verdict token (`NEGATIVE_VERDICT_RE`) must survive in the
+    summary or a `> …` banner. Terminal cards are exempt — a `disproved` card
+    legitimately states a negative verdict. The decide-time reconciliation
+    reminder is the point-of-action guard; this validator is the safety net for
+    the record (a re-scope recorded before the reminder existed, or one whose
+    operator skipped the reconciliation). See
+    goc-decide-leaves-stale-verdict-content-when-recording-a-rescope.
+    """
+    warnings: list[BlockerWarning] = []
+    for c in cards:
+        if c.status in TERMINAL_STATUSES:
+            continue
+        decision_text = extract_resolved_decision_text(c.body)
+        if not decision_text or not RESCOPE_MARKERS_RE.search(decision_text):
+            continue
+        surfaces = [c.summary or "", *_body_banner_lines(c.body)]
+        hit = next((m for m in (NEGATIVE_VERDICT_RE.search(s) for s in surfaces) if m), None)
+        if hit is None:
+            continue
+        warnings.append(BlockerWarning(
+            "DECISION_CONTRADICTS_VERDICT",
+            c.title,
+            f"resolved ## Decision re-scopes/reverses a prior verdict, but the "
+            f"summary/banner still asserts it (token: {hit.group(0)!r}) — "
+            f"reconcile the summary/banner, or supersede+create instead",
+        ))
+    return warnings
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Filtering + sorting
 
@@ -3272,6 +3356,8 @@ def _cmd_validate(args):
     for w in validate_waiting_overlay(cards):
         print(w.message, file=sys.stderr)
     for w in validate_dod_method_tags(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_decision_verdict_coherence(cards):
         print(w.message, file=sys.stderr)
     for e in detect_advance_cycles(cards):
         print(f"ERROR: {e}", file=sys.stderr)
@@ -5025,6 +5111,51 @@ def _cmd_move(args):
     print(f"{old_title} → {new_title}")
 
 
+def _rescope_reconciliation_notice(t: Card, persisted_body: str) -> str:
+    """Build the post-`goc decide` reminder shown when a decision re-scopes or
+    reverses a prior verdict.
+
+    `goc decide` updates only the `## Decision` block and the gate. A re-scope
+    leaves the card's *other* verdict-bearing surfaces — its `summary`, a body
+    `> ⚠` banner, DoD wording — and any reference to the card in its
+    `advances`/`advanced_by` neighbors asserting the *old* verdict. Those are
+    not auto-updated; this notice names them so the operator reconciles by hand
+    (or, for a true re-scope, supersedes + creates instead). See
+    `Skill(decide-card)` "Reconcile a re-scope".
+    """
+    lines = [
+        "⚠ This decision reads like a re-scope/reversal of a prior verdict.",
+        "  goc decide updated only the ## Decision block and the gate. These "
+        "verdict-bearing surfaces are NOT auto-updated — reconcile them so the "
+        "card stops contradicting itself:",
+    ]
+    summary = (t.summary or "").strip()
+    if summary:
+        flag = " ← still asserts a negative verdict" if NEGATIVE_VERDICT_RE.search(summary) else ""
+        snippet = summary if len(summary) <= 100 else summary[:99] + "…"
+        lines.append(f"  • summary: {snippet!r}{flag}")
+    else:
+        lines.append("  • summary: (empty — add one stating the current verdict)")
+    if _body_banner_lines(persisted_body):
+        lines.append("  • a ⚠/verdict banner in the body still asserts the old verdict")
+    lines.append("  • DoD wording that encodes the old verdict")
+    neighbors: list[str] = []
+    for field in ("advances", "advanced_by"):
+        vals = t.frontmatter.get(field) or []
+        if isinstance(vals, list):
+            neighbors.extend(str(v) for v in vals)
+    if neighbors:
+        lines.append(
+            "  • references to this card in its neighbors are NOT auto-updated: "
+            + ", ".join(neighbors)
+        )
+    lines.append(
+        f"  For a true re-scope, prefer: goc status {t.title} superseded --by <new-card> "
+        "(records a typed forward link a reader can follow)."
+    )
+    return "\n".join(lines)
+
+
 def _cmd_decide(args):
     """Record a decision in the body + log; lower the human gate to `none`.
 
@@ -5095,6 +5226,8 @@ def _cmd_decide(args):
         )
     else:
         print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
+    if RESCOPE_MARKERS_RE.search(decision):
+        print(_rescope_reconciliation_notice(t, body), file=sys.stderr)
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         decision_short = decision[:60] + ("…" if len(decision) > 60 else "")
