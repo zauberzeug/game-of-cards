@@ -5002,17 +5002,35 @@ def _move_text_rewrite(text: str, old: str, new: str) -> str:
 
 
 def _move_iter_tracked_text_files():
-    """Yield (Path, str) for tracked text files; falls back to rglob outside git."""
+    """Yield (Path, str) for in-repo text files; falls back to rglob outside git.
+
+    Enumerates tracked AND untracked-but-not-ignored files (`--cached --others
+    --exclude-standard`), not tracked files alone. A card filed with `goc new`
+    is untracked until its first commit, so the routine file-then-rename flow
+    (`goc new <slug>` → `goc move <slug> <better-slug>` before committing) would
+    otherwise have the moved card's own README.md/log.md skipped by the rewrite
+    — the directory gets renamed (via the `shutil.move` fallback, since `git mv`
+    also refuses an untracked source) while the in-file `title:` field stays
+    stale, leaving a card that fails `goc validate`. Ignored files (venv, build
+    artifacts) stay excluded, matching the `.git`-pruning rglob fallback's intent.
+    """
     try:
         result = subprocess.run(
-            ["git", "ls-files", "-z"],
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
             cwd=str(REPO_ROOT), capture_output=True, check=True, timeout=30,
         )
-        paths = [
-            REPO_ROOT / entry.decode("utf-8", errors="replace")
-            for entry in result.stdout.split(b"\x00")
-            if entry
-        ]
+        seen: set[str] = set()
+        paths = []
+        for entry in result.stdout.split(b"\x00"):
+            if not entry:
+                continue
+            rel = entry.decode("utf-8", errors="replace")
+            # --cached and --others are disjoint, but dedupe defensively so a
+            # path is never rewritten twice.
+            if rel in seen:
+                continue
+            seen.add(rel)
+            paths.append(REPO_ROOT / rel)
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
         paths = [p for p in REPO_ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
     for path in paths:

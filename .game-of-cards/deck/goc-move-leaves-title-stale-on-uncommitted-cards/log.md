@@ -1,0 +1,6 @@
+## 2026-06-15T05:11:30Z — Closure
+
+- **What changed**: `goc/engine.py` — `_move_iter_tracked_text_files` now enumerates files with `git ls-files -z --cached --others --exclude-standard` (tracked AND untracked-but-not-ignored) instead of `git ls-files -z` (tracked only), with an order-preserving dedupe. The `rglob` no-git fallback is unchanged. This makes `goc move OLD NEW` rewrite the moved card's own untracked README.md/log.md (and any untracked sibling cross-references), so the directory rename and the in-file `title:`/edge rewrite stay in sync for not-yet-committed cards.
+- **Verification**: `reproduce.py` exits 0 — after `goc move` on a never-committed card, the moved `title:` field equals NEW and `goc validate` reports no `title != dir name` error. Confirmed the contrast: a committed card was always rewritten correctly; only the untracked case was broken.
+- **Tests**: new `tests/test_move_rewrites_untracked_card.py` (3 cases: untracked-card bug path, tracked-card no-regression, untracked sibling cross-reference). Full suite green (441 tests). `goc validate` clean; `scripts/sync_plugin_assets.py --check` green after regenerating the three engine mirrors.
+- **Provenance**: surfaced and fixed-through during a `pull-card` session (queue had no `human_gate: none` ready cards — all three `none`-gate cards carry an active `waiting_on` overlay).
