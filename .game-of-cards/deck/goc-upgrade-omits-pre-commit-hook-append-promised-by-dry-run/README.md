@@ -1,20 +1,20 @@
 ---
 title: goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-17T04:39:17Z"
-closed_at: null
+closed_at: "2026-06-17T04:42:48Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — after a real `goc upgrade` in a git repo whose `.pre-commit-config.yaml` is absent, the file exists and contains `id: goc-validate`
-  - [ ] TDD: regression test in tests/test_install.py asserts dry-run/real parity — any `append .pre-commit-config.yaml` line in the upgrade plan implies the hook is present after the real run
-  - [ ] MECHANICAL: `upgrade()` calls `_append_precommit_hook(target / ".pre-commit-config.yaml")` alongside the other sync steps
-  - [ ] `uv run python -m unittest discover -s tests` passes
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero — after a real `goc upgrade` in a git repo whose `.pre-commit-config.yaml` is absent, the file exists and contains `id: goc-validate`
+  - [x] TDD: regression test in tests/test_install.py asserts dry-run/real parity — any `append .pre-commit-config.yaml` line in the upgrade plan implies the hook is present after the real run
+  - [x] MECHANICAL: `upgrade()` calls `_append_precommit_hook(target / ".pre-commit-config.yaml")` alongside the other sync steps
+  - [x] `uv run python -m unittest discover -s tests` passes
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

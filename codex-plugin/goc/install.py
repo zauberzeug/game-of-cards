@@ -1708,6 +1708,9 @@ def upgrade(
     for stale in legacy_briefings_to_strip:
         _strip_goc_block(target / stale)
     _sync_methodology_blocks(target, templates, resolved_briefing, agents=agents)
+    # Match the dry-run plan, which always lists this append (see _plan_writes).
+    # Idempotent: no-ops when the hook is already present or `.git` is absent.
+    _append_precommit_hook(target / ".pre-commit-config.yaml")
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
