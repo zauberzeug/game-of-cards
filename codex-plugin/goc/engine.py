@@ -2674,7 +2674,14 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
-            blockers = dependency_blockers(t, by_title)
+            # Mirror the board renderer's liveness gate (see `card_cell`):
+            # the dependency advisory is a "you may start" hint, which is
+            # meaningless on a terminal card. Only live cards show it.
+            blockers = (
+                dependency_blockers(t, by_title)
+                if t.status not in TERMINAL_STATUSES
+                else []
+            )
             if blockers:
                 out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
             w = t.worker

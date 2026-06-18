@@ -1,10 +1,10 @@
 ---
 title: verbose-table-shows-awaiting-prereq-line-on-terminal-status-cards
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-18T05:24:44Z"
-closed_at: null
+closed_at: "2026-06-18T05:29:57Z"
 human_gate: none
 summary: "render_table emits the 'awaiting: <prereq> (you may start)' advisory on terminal (done/disproved/superseded) cards, contradicting the board renderer which gates the same dependency signal behind a liveness check. A terminal card cannot start, so the advisory is nonsensical."
 advances: []
@@ -13,9 +13,9 @@ supersedes: []
 superseded_by: []
 tags: [bug]
 definition_of_done: |
-  - [ ] TDD: a regression test asserts the verbose table omits the `awaiting:` line for a terminal-status card (done/disproved/superseded) carrying a non-terminal `advanced_by` prereq, and still emits it for a live (open/active) card with the same prereq
-  - [ ] TDD: reproduce.py exits zero (the `awaiting: ... (you may start)` line no longer appears under the terminal card)
-  - [ ] MECHANICAL: the `awaiting:` emission in `render_table` is gated on `t.status not in TERMINAL_STATUSES`, mirroring the board renderer's `live` gate
+  - [x] TDD: a regression test asserts the verbose table omits the `awaiting:` line for a terminal-status card (done/disproved/superseded) carrying a non-terminal `advanced_by` prereq, and still emits it for a live (open/active) card with the same prereq
+  - [x] TDD: reproduce.py exits zero (the `awaiting: ... (you may start)` line no longer appears under the terminal card)
+  - [x] MECHANICAL: the `awaiting:` emission in `render_table` is gated on `t.status not in TERMINAL_STATUSES`, mirroring the board renderer's `live` gate
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -89,14 +89,24 @@ who lists closed cards verbosely. The table and the board are meant to
 agree on a card's dependency state; this is a single-renderer drift from the
 shared `TERMINAL_STATUSES` liveness rule the board already encodes.
 
-## Fix
+## Fix (applied)
 
-Gate the `awaiting:` emission on liveness, mirroring the board:
+`render_table` now gates the blocker computation on liveness, mirroring the
+board renderer (`goc/engine.py:2677`):
 
 ```python
-blockers = dependency_blockers(t, by_title) if t.status not in TERMINAL_STATUSES else []
+# Mirror the board renderer's liveness gate (see `card_cell`):
+# the dependency advisory is a "you may start" hint, which is
+# meaningless on a terminal card. Only live cards show it.
+blockers = (
+    dependency_blockers(t, by_title)
+    if t.status not in TERMINAL_STATUSES
+    else []
+)
 if blockers:
     out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
 ```
 
-(Or guard the whole two-line block with `if t.status not in TERMINAL_STATUSES:`.)
+`reproduce.py` now exits 0, and `tests/test_verbose_table_awaiting_liveness.py`
+asserts the advisory is omitted for all three terminal statuses while a live
+card with the same open prereq keeps it.
