@@ -1,10 +1,10 @@
 ---
 title: frontmatter-emitter-leaves-folded-block-scalar-headers-unquoted
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-18T05:01:22Z"
-closed_at: null
+closed_at: "2026-06-18T05:05:23Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -15,9 +15,9 @@ summary: |
   recognizes both. A scalar value like ">2" is emitted bare and crashes the
   card on the next re-parse with FrontmatterError.
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — every folded-with-explicit-indent value (>2, >3, >10, >2-, >2+) round-trips through emit_frontmatter → parse_frontmatter unchanged
-  - [ ] TDD: a regression test in tests/ asserts emit→parse round-trip for the folded-with-digits family alongside the existing pipe-family cases
-  - [ ] MECHANICAL: _YAML_BLOCK_HEADER_RE folded branch mirrors the pipe branch (allows \d*), and the full regression suite stays green
+  - [x] TDD: reproduce.py exits zero — every folded-with-explicit-indent value (>2, >3, >10, >2-, >2+) round-trips through emit_frontmatter → parse_frontmatter unchanged
+  - [x] TDD: a regression test in tests/ asserts emit→parse round-trip for the folded-with-digits family alongside the existing pipe-family cases
+  - [x] MECHANICAL: _YAML_BLOCK_HEADER_RE folded branch mirrors the pipe branch (allows \d*), and the full regression suite stays green
 worker: {who: "claude[bot]", where: main}
 ---
 

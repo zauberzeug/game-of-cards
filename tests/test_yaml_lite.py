@@ -382,6 +382,29 @@ class BlockScalarIndicatorRoundTripTest(unittest.TestCase):
             twice = e.emit_frontmatter(e.parse_frontmatter(once)[0], body="x")
             self.assertEqual(once, twice, msg=f"non-idempotent for {summary!r}")
 
+    def test_single_line_block_header_shaped_scalar_round_trips(self):
+        # A single-line scalar whose whole value is a block/folded indicator —
+        # literal (`|2`, `|3`, `|2-`, `|2+`, `|10`) OR folded (`>2`, `>3`,
+        # `>10`, `>2-`, `>2+`) — must be quoted by the emitter so it round-trips
+        # unchanged. The folded-with-digits family is the regression for
+        # frontmatter-emitter-leaves-folded-block-scalar-headers-unquoted: the
+        # parser recognizes `>2` as a folded header and raises, so an unquoted
+        # emit crashed on re-parse.
+        from goc import engine as e
+
+        headers = [
+            "|2", "|3", "|2-", "|2+", "|10",
+            ">2", ">3", ">10", ">2-", ">2+",
+        ]
+        for val in headers:
+            fm = {"title": "t", "status": "open", "summary": val}
+            out = e.emit_frontmatter(fm, body="x")
+            parsed = e.parse_frontmatter(out)[0]
+            self.assertEqual(
+                parsed["summary"], val,
+                msg=f"block-header-shaped scalar {val!r} did not round-trip",
+            )
+
 
 class DeckRoundTripTest(unittest.TestCase):
     """Parse every README.md in the real deck and verify key fields are present."""

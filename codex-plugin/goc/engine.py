@@ -180,10 +180,14 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 _YAML_INDICATOR_FIRST = frozenset("&*")
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
 # Covers both bare-indicator forms (`|`, `|-`, `>+`) and the explicit-indent
-# forms the vendored parser's `_BLOCK_INDICATOR_RE` accepts (`|2`, `|3`,
-# `|10`, `|2-`, `|2+`). Coupled by shape to `yaml._BLOCK_INDICATOR_RE` so the
-# emitter's quote-trigger cannot drift from the parser's recognizer.
-_YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>[-+]?)$")
+# forms the vendored parser's `_BLOCK_INDICATOR_RE` / `_FOLDED_INDICATOR_RE`
+# accept (`|2`, `|3`, `|10`, `|2-`, `|2+`, and the folded peers `>2`, `>10`,
+# `>2-`, `>2+`). Both branches carry `\d*` so the explicit-indent digit run is
+# recognized on the folded side too — the parser's folded recognizer accepts
+# it, so an unquoted `>2` would crash on re-parse. Coupled by shape to
+# `yaml._BLOCK_INDICATOR_RE` / `yaml._FOLDED_INDICATOR_RE` so the emitter's
+# quote-trigger cannot drift from the parser's recognizers.
+_YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>\d*[-+]?)$")
 
 
 def _parser_coerces_scalar(s: str) -> bool:
