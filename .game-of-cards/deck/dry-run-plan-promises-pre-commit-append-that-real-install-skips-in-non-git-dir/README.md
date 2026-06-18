@@ -1,6 +1,6 @@
 ---
 title: dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-18T05:06:26Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — the dry-run plan omits the .pre-commit-config.yaml append when the target has no .git, matching the executor
   - [ ] TDD: a regression test asserts dry-run/real parity for the pre-commit append in a non-git tmpdir (symmetric to the git-repo test added for goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run)
   - [ ] MECHANICAL: the "N writes planned" count drops by one in a non-git dir; no change to the git-repo dry-run plan
+worker: {who: "claude[bot]", where: main}
 ---
 
 # dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir
