@@ -1,21 +1,21 @@
 ---
 title: deck-skill-board-legend-misstates-pullability-of-dependency-flagged-cards
 summary: The `deck` skill's `goc --board` legend tells agents a `⏳` means "not ready to pull" and "No ⏳ ⇒ pullable", but the engine paints `⏳` on three axes — only two of which hide a card from the pull queue. A dependency-flagged card carries `⏳` yet is fully pullable, and the legend omits the `human_gate` axis entirely, so an agent reading the legend skips cards the scheduler would hand it next and misjudges which parked cards are pullable.
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-06-18T04:47:07Z"
-closed_at: null
+closed_at: "2026-06-18T04:50:26Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation]
 definition_of_done: |
-  - [ ] `goc/templates/skills/deck/SKILL.md` `goc --board` legend row rewritten to describe all three `⏳` axes and to distinguish queue-hiding axes (`human_gate != none`, active impediment overlay) from the advisory-only dependency-block (still pullable)
-  - [ ] The misleading biconditional "No `⏳` ⇒ pullable" removed/corrected
-  - [ ] Plugin/consumer mirrors regenerated via the sync hook so `.claude`, `.codex`, and plugin copies match the template
-  - [ ] Regression guard added to `tests/test_guidance_accuracy.py` asserting the deck board legend names the `human_gate` axis and does not claim a dependency-block makes a card unpullable
-  - [ ] `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes
+  - [x] `goc/templates/skills/deck/SKILL.md` `goc --board` legend row rewritten to describe all three `⏳` axes and to distinguish queue-hiding axes (`human_gate != none`, active impediment overlay) from the advisory-only dependency-block (still pullable)
+  - [x] The misleading biconditional "No `⏳` ⇒ pullable" removed/corrected
+  - [x] Plugin/consumer mirrors regenerated via the sync hook so `.claude`, `.codex`, and plugin copies match the template
+  - [x] Regression guard added to `tests/test_guidance_accuracy.py` asserting the deck board legend names the `human_gate` axis and does not claim a dependency-block makes a card unpullable
+  - [x] `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
