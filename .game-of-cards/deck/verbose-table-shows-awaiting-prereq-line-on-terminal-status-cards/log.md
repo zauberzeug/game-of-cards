@@ -13,3 +13,12 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-06-18 — Closure' present
+
+## 2026-06-18T05:35:30Z — Generalization connection
+
+This was a fourth instance of the hand-rolled-liveness-gate-drift family
+tracked by the open meta-fix root
+[`extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate`](../extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate/).
+The fix here aligns `render_table` to the board manually; the root card's
+eventual shared-predicate / coupling-test work should absorb this site so it
+cannot drift again. Connected rather than filing a duplicate.
