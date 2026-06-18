@@ -13,3 +13,10 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-06-18 — Closure' present
+
+## 2026-06-18T05:15:00Z — Post-close amendment
+
+Generalized by [`dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting`](../dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting/)
+— this fix was the third per-instance patch of the dry-run-plan / real-executor
+drift; the root card proposes one architectural mechanism so the plan stops
+re-enumerating executor conditionals by hand.
