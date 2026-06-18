@@ -2193,6 +2193,22 @@ class UpgradeAppendsPrecommitHookTest(unittest.TestCase):
             self.assertTrue(cfg.is_file(), msg=".pre-commit-config.yaml not written by upgrade")
             self.assertIn("id: goc-validate", cfg.read_text())
 
+    def test_dry_run_omits_pre_commit_append_in_non_git_dir(self) -> None:
+        # Inverse of the git-repo case: in a non-git dir the executor skips the
+        # pre-commit append, so the dry-run plan must omit it too (no phantom
+        # write, no inflated "N writes planned" count).
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            cfg = cwd / ".pre-commit-config.yaml"
+
+            plan = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills", "--dry-run")
+            self.assertEqual(plan.returncode, 0, msg=plan.stdout + plan.stderr)
+            self.assertNotIn(".pre-commit-config.yaml", plan.stdout)
+
+            real = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills")
+            self.assertEqual(real.returncode, 0, msg=real.stdout + real.stderr)
+            self.assertFalse(cfg.exists(), msg="real install wrote .pre-commit-config.yaml in non-git dir")
+
     def test_upgrade_does_not_duplicate_existing_pre_commit_hook(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
