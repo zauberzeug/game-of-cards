@@ -1,18 +1,18 @@
 ---
 title: deck-readme-hook-catalogue-omits-refine-deck-hook
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-19T05:05:40Z"
-closed_at: null
+closed_at: "2026-06-19T05:09:11Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation]
 definition_of_done: |
-  - [ ] TDD: a regression test asserts every shipped `goc/templates/game_of_cards/hooks/*.md` stub has a matching row in the README "Workflow-hook stubs" table (fails before the fix, passes after).
-  - [ ] MECHANICAL: the `refine-deck` row is added to the "Workflow-hook stubs" table in `goc/templates/game_of_cards/README.md` and the dogfood copy `.game-of-cards/README.md`.
-  - [ ] MECHANICAL: `uv run goc validate` is clean and the full regression suite passes.
+  - [x] TDD: a regression test asserts every shipped `goc/templates/game_of_cards/hooks/*.md` stub has a matching row in the README "Workflow-hook stubs" table (fails before the fix, passes after).
+  - [x] MECHANICAL: the `refine-deck` row is added to the "Workflow-hook stubs" table in `goc/templates/game_of_cards/README.md` and the dogfood copy `.game-of-cards/README.md`.
+  - [x] MECHANICAL: `uv run goc validate` is clean and the full regression suite passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
