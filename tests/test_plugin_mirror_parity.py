@@ -10,6 +10,7 @@ import argparse
 import importlib.util
 import os
 import re
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -333,6 +334,64 @@ class OpenClawSkillPortDriftTest(unittest.TestCase):
         for skill_dir in porter._portable_skill_dirs():
             src = skill_dir / "SKILL.md"
             self.assertEqual(porter.render_skill(src), porter.render_skill(src))
+
+    @staticmethod
+    def _sandboxed_porter(tmp: Path):
+        """Load the porter with SRC_DIR/DST_DIR/ROOT redirected into a sandbox
+        copy of the real skill trees, so prune/drift tests never mutate the
+        repo."""
+        porter = _load_porter()
+        src = tmp / "src"
+        dst = tmp / "dst"
+        shutil.copytree(ROOT / "goc" / "templates" / "skills", src)
+        shutil.copytree(ROOT / "openclaw-plugin" / "skills", dst)
+        porter.SRC_DIR = src
+        porter.DST_DIR = dst
+        porter.ROOT = tmp  # main()'s progress prints are ROOT-relative
+        return porter, src, dst
+
+    def test_empty_orphan_subdir_pruned_and_flagged(self) -> None:
+        """A nested source sibling subdir that is removed must leave no empty
+        orphan dir in the port, and `drifted_skills()` must flag such an
+        orphan while it lingers. Regression for the porter's nested-subdir
+        equivalent of the sync-side empty-orphan-dir fix.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            porter, src, dst = self._sandboxed_porter(Path(tmp))
+            skill = porter._portable_skill_dirs()[0]
+            dst_skill = dst / skill.name
+
+            # Seed a nested sibling subdir and a sibling kept-dir with 2 files.
+            (skill / "extra").mkdir()
+            (skill / "extra" / "asset.txt").write_text("nested\n", encoding="utf-8")
+            (skill / "kept").mkdir()
+            (skill / "kept" / "a.txt").write_text("a\n", encoding="utf-8")
+            (skill / "kept" / "b.txt").write_text("b\n", encoding="utf-8")
+            porter.main([])
+            self.assertTrue((dst_skill / "extra" / "asset.txt").is_file())
+            self.assertTrue((dst_skill / "kept" / "a.txt").is_file())
+
+            # Remove the nested source subdir and one file from the kept subdir.
+            shutil.rmtree(skill / "extra")
+            (skill / "kept" / "b.txt").unlink()
+            porter.main([])
+
+            # The emptied subdir must be gone; the still-populated one stays.
+            self.assertFalse(
+                (dst_skill / "extra").exists(),
+                msg="empty orphan subdir lingered after re-port",
+            )
+            self.assertTrue((dst_skill / "kept" / "a.txt").is_file())
+            self.assertFalse((dst_skill / "kept" / "b.txt").exists())
+
+            # A bare empty dst-only subdir (no source, no file) must be flagged.
+            ghost = dst_skill / "ghost"
+            ghost.mkdir()
+            drifted = porter.drifted_skills()
+            self.assertTrue(
+                any("ghost" in p.relative_to(dst).parts for p in drifted),
+                msg=f"drifted_skills() missed a bare empty orphan dir: {drifted}",
+            )
 
     def test_every_context_section_carries_host_neutral_guidance(self) -> None:
         """Every source skill with a `## Context` heading must produce a port

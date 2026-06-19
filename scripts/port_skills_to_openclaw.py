@@ -250,11 +250,20 @@ def drifted_skills() -> list[Path]:
         dst_siblings: dict[Path, Path] = {}
         if dst_skill_dir.is_dir():
             for asset in sorted(dst_skill_dir.rglob("*")):
-                if asset.is_dir() or asset.name == "SKILL.md":
+                if asset.name == "SKILL.md":
                     continue
                 if "__pycache__" in asset.parts or asset.suffix == ".pyc":
                     continue
-                dst_siblings[asset.relative_to(dst_skill_dir)] = asset
+                rel = asset.relative_to(dst_skill_dir)
+                if asset.is_dir():
+                    # An empty dst-only subdir whose source counterpart was
+                    # renamed/removed is an orphan the porter should have
+                    # pruned. rglob skips dirs by default — the blind spot
+                    # that let empty orphans ship and `--check` stay green.
+                    if not (skill_dir / rel).is_dir() and not any(asset.iterdir()):
+                        drifted.append(asset)
+                    continue
+                dst_siblings[rel] = asset
 
         for rel, src_asset in src_siblings.items():
             dst_asset = dst_skill_dir / rel
@@ -325,6 +334,24 @@ def main(argv: list[str] | None = None) -> int:
                 if asset.relative_to(dst_skill_dir) not in src_siblings:
                     asset.unlink()
                     siblings_pruned += 1
+
+        # Prune subdirs left empty because their source sibling subdir was
+        # renamed or removed. Without this, the dir lingers as an empty orphan:
+        # git does not track empty dirs, so the auto-stage commits "cleanly"
+        # while the stale dir ships in any wheel/tarball/npm copy of the
+        # payload. Walk bottom-up (reverse sort) so nested empties collapse;
+        # rmdir is self-guarding (fails on non-empty), and the src-exists guard
+        # preserves a subdir that still mirrors a live source sibling subdir.
+        if dst_skill_dir.is_dir():
+            for sub in sorted(dst_skill_dir.rglob("*"), reverse=True):
+                if not sub.is_dir() or "__pycache__" in sub.parts:
+                    continue
+                if (skill_dir / sub.relative_to(dst_skill_dir)).is_dir():
+                    continue
+                try:
+                    sub.rmdir()
+                except OSError:
+                    pass
 
     # Prune orphaned ported skill dirs (source renamed or removed) so a stale
     # skill can't ship to OpenClaw consumers undetected.
