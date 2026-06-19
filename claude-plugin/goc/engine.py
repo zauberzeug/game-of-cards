@@ -3895,7 +3895,14 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         git_dir = Path(repo_check.stdout.strip())
         if not git_dir.is_absolute():
             git_dir = DECK_ROOT / git_dir
-        if any((git_dir / sf).exists() for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD")):
+        # REBASE_HEAD alone is insufficient: it is absent at a paused
+        # interactive-rebase stop (break/edit step). The rebase state
+        # directory (rebase-merge for the merge backend, rebase-apply for
+        # the apply backend) is present for the whole rebase, so check it too.
+        if any(
+            (git_dir / sf).exists()
+            for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD", "rebase-merge", "rebase-apply")
+        ):
             print("  (auto-commit skipped: merge/rebase/cherry-pick in progress)", file=sys.stderr)
             return False
         paths: list[str] = [

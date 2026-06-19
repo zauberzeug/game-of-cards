@@ -1,21 +1,21 @@
 ---
 title: auto-commit-guard-misses-paused-rebase-without-rebase-head-marker
 summary: "`_git_auto_commit` guards against committing mid-rebase by checking for the `REBASE_HEAD` file, but that sentinel is absent at a paused interactive-rebase stop (`break`/`edit`). Only `.git/rebase-merge/` (merge backend) and `.git/rebase-apply/` (apply backend) are reliably present throughout a rebase. So a GoC state-flip verb fired during a paused rebase injects an auto-commit into the rebase sequence — the exact corruption the guard exists to prevent."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-19T05:19:40Z"
-closed_at: null
+closed_at: "2026-06-19T05:22:41Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — with a paused interactive rebase in progress (`.git/rebase-merge/` present, no `REBASE_HEAD`), `_git_auto_commit` returns False, prints the skip message, and lands no commit
-  - [ ] TDD: a regression test under tests/ pins the rebase-merge / rebase-apply sentinels (mirrors test_git_auto_commit_pathspec.py style)
-  - [ ] MECHANICAL: `.git/rebase-merge` and `.git/rebase-apply` added to the in-progress sentinel set at engine.py:3898
-  - [ ] `uv run python -m unittest discover -s tests` passes
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero — with a paused interactive rebase in progress (`.git/rebase-merge/` present, no `REBASE_HEAD`), `_git_auto_commit` returns False, prints the skip message, and lands no commit
+  - [x] TDD: a regression test under tests/ pins the rebase-merge / rebase-apply sentinels (mirrors test_git_auto_commit_pathspec.py style)
+  - [x] MECHANICAL: `.git/rebase-merge` and `.git/rebase-apply` added to the in-progress sentinel set at engine.py:3898
+  - [x] `uv run python -m unittest discover -s tests` passes
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
