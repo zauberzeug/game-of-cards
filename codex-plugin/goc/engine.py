@@ -2080,6 +2080,28 @@ def dependency_blocked(card: Card, by_title: dict[str, Card]) -> bool:
     return bool(dependency_blockers(card, by_title))
 
 
+def dependency_advisory(
+    card: Card, by_title: dict[str, Card]
+) -> tuple[list[str], bool]:
+    """Liveness-gated dependency advisory for the renderers.
+
+    The "awaiting: X — you may start" advisory is a *display* of
+    `dependency_blockers` / `dependency_blocked` that is meaningless on
+    a terminal card: a `done`/`disproved`/`superseded` card never
+    "starts", so a leftover advisory is just stale noise (and shipped as
+    a bug twice — once each in the table and JSON renderers). This helper
+    applies the `status not in TERMINAL_STATUSES` gate once so every
+    renderer consumes a pre-gated result instead of re-inlining it.
+
+    Returns `([], False)` for terminal cards, else
+    `(blockers, bool(blockers))`.
+    """
+    if card.status in TERMINAL_STATUSES:
+        return [], False
+    blockers = dependency_blockers(card, by_title)
+    return blockers, bool(blockers)
+
+
 def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
@@ -2674,14 +2696,10 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
-            # Mirror the board renderer's liveness gate (see `card_cell`):
-            # the dependency advisory is a "you may start" hint, which is
-            # meaningless on a terminal card. Only live cards show it.
-            blockers = (
-                dependency_blockers(t, by_title)
-                if t.status not in TERMINAL_STATUSES
-                else []
-            )
+            # Liveness-gated dependency advisory (see `dependency_advisory`):
+            # the "you may start" hint is meaningless on a terminal card, so
+            # only live cards show it. The gate lives in the helper now.
+            blockers, _ = dependency_advisory(t, by_title)
             if blockers:
                 out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
             w = t.worker
@@ -2761,20 +2779,12 @@ def render_json(
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
                 "supersedes": t.frontmatter.get("supersedes") or [],
                 "superseded_by": t.frontmatter.get("superseded_by") or [],
-                # Mirror the table/board liveness gate: the dependency
-                # advisory is a "you may start" hint, meaningless on a
-                # terminal card. `ready` is already status-gated by
-                # `card_is_ready` (open-only).
-                "dependency_awaiting": (
-                    dependency_blocked(t, by_title)
-                    if t.status not in TERMINAL_STATUSES
-                    else False
-                ),
-                "awaiting": (
-                    dependency_blockers(t, by_title)
-                    if t.status not in TERMINAL_STATUSES
-                    else []
-                ),
+                # Liveness-gated dependency advisory (see
+                # `dependency_advisory`): the "you may start" hint is
+                # meaningless on a terminal card. `ready` is already
+                # status-gated by `card_is_ready` (open-only).
+                "awaiting": dependency_advisory(t, by_title)[0],
+                "dependency_awaiting": dependency_advisory(t, by_title)[1],
                 "ready": card_is_ready(t, by_title),
                 "worker": t.worker,
                 "dod_open": t.dod_open,
@@ -2837,10 +2847,12 @@ def render_board(
         # out of the pull queue just as hard as an impediment overlay, so it
         # must carry the same ⏳. `dependency_blocked` stays included as an
         # advisory "has an open prereq" hint (it does not hide the card from
-        # the queue, but the board flags it).
+        # the queue, but the board flags it). The `status == "open"` guard is
+        # the board's own stricter slice — `dependency_advisory` gates out
+        # terminal cards, the board additionally flags only open ones.
         not_ready = live and (
             t.human_gate != "none"
-            or (t.status == "open" and dependency_blocked(t, by_title))
+            or (t.status == "open" and dependency_advisory(t, by_title)[1])
             or waiting_impedes(t)
         )
         if not_ready:

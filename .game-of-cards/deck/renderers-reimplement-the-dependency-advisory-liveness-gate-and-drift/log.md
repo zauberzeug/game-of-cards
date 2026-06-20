@@ -7,3 +7,20 @@ reimplemented in board card_cell, render_table, and render_json — two of
 the three drifted into shipping bugs. Gate none: the extraction shape is
 determined; left in the queue rather than fixed through because it spans
 three call sites.
+
+## 2026-06-20T06:00:00Z — Closure
+
+- **What changed**: `goc/engine.py` — added `dependency_advisory(card, by_title) -> tuple[list[str], bool]` next to `dependency_blockers` / `dependency_blocked`; replaced the inline `status not in TERMINAL_STATUSES` ternaries in `render_table`, `render_json`, and the board `card_cell` not-ready gate with calls to it. Board keeps its own stricter `status == "open"` slice atop the helper's terminal gate (no behavior change).
+- **Verification**: pure consolidation, no behavior change; `test_verbose_table_awaiting_liveness` + `test_json_awaiting_liveness` + board tests all green; new `tests/test_dependency_advisory_helper.py` pins both helper branches (terminal → `([], False)`, live → live blockers).
+- **Audit**: PASS — no rubric configured (finish-card hook empty); mechanical consolidation of a duplicated engine rule, no project principle bound beyond the deck's own "N callers reimplement one engine rule and drift" meta-fix pattern.
+- **Project impact**: n/a
+- **Tests**: 468 passed / 0 failed / 0 xfailed
+- **Bundled with**: n/a
+
+## Closure verification (2026-06-20T04:49:33Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 4/4 ticked
+- [x] log-md-closure-entry — '## 2026-06-20 — Closure' present

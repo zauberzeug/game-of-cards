@@ -21,6 +21,11 @@ worker: {who: "claude[bot]", where: main}
 
 # verbose-table-shows-awaiting-prereq-line-on-terminal-status-cards
 
+> Later: the per-renderer liveness gate this card patched is now
+> centralized in `engine.dependency_advisory` — see
+> [renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift](../renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift/)
+> (the meta-fix consolidating board / table / json).
+
 ## Location
 
 `goc/engine.py:2677-2679` — the verbose (`-v`) branch of `render_table`.

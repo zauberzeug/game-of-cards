@@ -18,6 +18,11 @@ worker: {who: "claude[bot]", where: main}
 
 # render-json-shows-awaiting-advisory-on-terminal-cards
 
+> Later: the per-renderer liveness gate this card patched is now
+> centralized in `engine.dependency_advisory` — see
+> [renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift](../renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift/)
+> (the meta-fix consolidating board / table / json).
+
 The `--json` full-record renderer emits the dependency "you may start"
 advisory (`awaiting` + `dependency_awaiting`) on terminal cards (done /
 disproved / superseded), contradicting both the table and board

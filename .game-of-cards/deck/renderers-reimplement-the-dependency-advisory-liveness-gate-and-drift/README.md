@@ -1,19 +1,19 @@
 ---
 title: renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-20T04:42:57Z"
-closed_at: null
+closed_at: "2026-06-20T04:49:37Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
-  - [ ] TDD: a single helper (e.g. `dependency_advisory(card, by_title) -> tuple[list[str], bool]`) returns `([], False)` for terminal-status cards and the live blockers otherwise; unit test covers both
-  - [ ] MECHANICAL: all three renderers — board `card_cell`, `render_table`, `render_json` — call the helper instead of inlining the `status not in TERMINAL_STATUSES` guard
-  - [ ] TDD: existing regressions (`test_verbose_table_awaiting_liveness`, `test_json_awaiting_liveness`, board tests) still pass against the centralized helper
-  - [ ] PROCESS: the two instance cards are cross-referenced; no behavior change, pure consolidation
+  - [x] TDD: a single helper (e.g. `dependency_advisory(card, by_title) -> tuple[list[str], bool]`) returns `([], False)` for terminal-status cards and the live blockers otherwise; unit test covers both
+  - [x] MECHANICAL: all three renderers — board `card_cell`, `render_table`, `render_json` — call the helper instead of inlining the `status not in TERMINAL_STATUSES` guard
+  - [x] TDD: existing regressions (`test_verbose_table_awaiting_liveness`, `test_json_awaiting_liveness`, board tests) still pass against the centralized helper
+  - [x] PROCESS: the two instance cards are cross-referenced; no behavior change, pure consolidation
 worker: {who: "claude[bot]", where: main}
 ---
 
