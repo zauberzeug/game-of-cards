@@ -1,6 +1,6 @@
 ---
 title: renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-20T04:42:57Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] MECHANICAL: all three renderers — board `card_cell`, `render_table`, `render_json` — call the helper instead of inlining the `status not in TERMINAL_STATUSES` guard
   - [ ] TDD: existing regressions (`test_verbose_table_awaiting_liveness`, `test_json_awaiting_liveness`, board tests) still pass against the centralized helper
   - [ ] PROCESS: the two instance cards are cross-referenced; no behavior change, pure consolidation
+worker: {who: "claude[bot]", where: main}
 ---
 
 # renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift
