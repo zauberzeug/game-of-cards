@@ -1,21 +1,21 @@
 ---
 title: session-start-hook-treats-explicit-yaml-null-waiting-fields-as-impediment
 summary: "The SessionStart hook reads `waiting_on`/`waiting_until` with `_frontmatter_tail`, which returns the raw token for an explicit YAML null (`null`, `Null`, `NULL`, `~`). Those non-empty strings make `_is_impeded` report an active impediment, so the hook tells the agent it `cannot resume` an active card the engine considers fully resumable. The engine's yaml_lite resolves the same literals to None (`waiting_impedes` → False)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-20T05:03:15Z"
-closed_at: null
+closed_at: "2026-06-20T05:07:41Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (hook and engine agree on `waiting_on: null`, `~`, `Null`, `NULL`, and `waiting_until: null`)
-  - [ ] TDD: a regression test asserts `_is_impeded` returns the same verdict as `engine.waiting_impedes` for explicit-YAML-null `waiting_on`/`waiting_until`, and the canonical-reason control still impedes
-  - [ ] MECHANICAL: `_card_waiting_on` / `_card_waiting_until` resolve YAML null literals to None, mirroring `yaml_lite._NULL_SET`
-  - [ ] PROCESS: edit lands in the template (`goc/templates/hooks/deck_session_start.py`); plugin mirrors re-sync via pre-commit
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (hook and engine agree on `waiting_on: null`, `~`, `Null`, `NULL`, and `waiting_until: null`)
+  - [x] TDD: a regression test asserts `_is_impeded` returns the same verdict as `engine.waiting_impedes` for explicit-YAML-null `waiting_on`/`waiting_until`, and the canonical-reason control still impedes
+  - [x] MECHANICAL: `_card_waiting_on` / `_card_waiting_until` resolve YAML null literals to None, mirroring `yaml_lite._NULL_SET`
+  - [x] PROCESS: edit lands in the template (`goc/templates/hooks/deck_session_start.py`); plugin mirrors re-sync via pre-commit
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -57,7 +57,7 @@ parses the same frontmatter through `yaml_lite`, where
 
 ## Empirical evidence
 
-`uv run python deck/<title>/reproduce.py`:
+Pre-fix (`uv run python deck/<title>/reproduce.py`):
 
 ```
 waiting_on: null                   : hook=True  engine=False  <-- DIVERGE
@@ -67,6 +67,20 @@ waiting_on: Null                   : hook=True  engine=False  <-- DIVERGE
 waiting_on: NULL                   : hook=True  engine=False  <-- DIVERGE
 waiting_on: external (control)     : hook=True  engine=True   (agree)
 waiting_on: (empty)                : hook=False engine=False  (agree)
+```
+
+Post-fix (exit 0):
+
+```
+waiting_on: null                   : hook=False engine=False
+waiting_until: null                : hook=False engine=False
+waiting_on: ~                      : hook=False engine=False
+waiting_on: Null                   : hook=False engine=False
+waiting_on: NULL                   : hook=False engine=False
+waiting_on: external (control)     : hook=True  engine=True 
+waiting_on: (empty)                : hook=False engine=False
+
+OK: hook agrees with engine on all cases.
 ```
 
 ## Why it matters

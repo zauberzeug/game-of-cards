@@ -17,6 +17,9 @@ from pathlib import Path
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?\n)---\n", re.DOTALL)
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+# Mirrors `goc._vendor.yaml_lite._NULL_SET`: explicit YAML null literals that
+# resolve to None, so `waiting_on: null` / `~` reads as absent, not a reason.
+_NULL_SET = frozenset(("null", "Null", "NULL", "~"))
 
 
 def _frontmatter_tail(line: str) -> str:
@@ -38,6 +41,18 @@ def _frontmatter_tail(line: str) -> str:
             break
         i += 1
     return tail.strip().strip('"').strip("'")
+
+
+def _scalar_or_none(line: str) -> str | None:
+    """Tail of a frontmatter scalar, or None for blank / explicit YAML null.
+
+    Mirrors `yaml_lite._NULL_SET` so the hook resolves `key: null`, `~`,
+    `Null`, `NULL` to absent — matching how the engine parses the same line.
+    Without this, the raw token (`"null"`) survives as a truthy string and
+    `_is_impeded` mistakes an absent overlay for a live one.
+    """
+    tail = _frontmatter_tail(line)
+    return tail if tail and tail not in _NULL_SET else None
 
 
 def _card_status(readme: Path) -> str | None:
@@ -81,7 +96,7 @@ def _card_waiting_on(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("waiting_on:"):
-            return _frontmatter_tail(line) or None
+            return _scalar_or_none(line)
     return None
 
 
@@ -96,7 +111,7 @@ def _card_waiting_until(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("waiting_until:"):
-            return _frontmatter_tail(line) or None
+            return _scalar_or_none(line)
     return None
 
 
