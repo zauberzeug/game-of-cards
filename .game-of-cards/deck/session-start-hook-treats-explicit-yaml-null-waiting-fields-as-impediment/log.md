@@ -22,3 +22,14 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-06-20 — Closure' present
+
+## 2026-06-20T05:11:00Z — Generalization pointer
+
+The pattern-generalization check flagged this fix as instance #8 of a
+recurring shape: the Python SessionStart hook re-derives engine semantics
+(`waiting_impedes`, `_waiting_until_instant`, `yaml_lite` scalar/null parsing)
+with a dependency-free mini-parser and drifts one bug at a time. Filed the
+meta-fix root
+[session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting](../session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting/)
+to decide a systematic parity guard. This card stays closed (the null-literal
+bug is fixed); the family-level guard is tracked there.
