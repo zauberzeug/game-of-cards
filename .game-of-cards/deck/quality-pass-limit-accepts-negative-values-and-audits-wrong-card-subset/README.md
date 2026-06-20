@@ -1,20 +1,21 @@
 ---
 title: quality-pass-limit-accepts-negative-values-and-audits-wrong-card-subset
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-06-20T05:20:50Z"
-closed_at: null
+closed_at: "2026-06-20T05:25:20Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (a negative `--limit` is rejected at the argparse layer with the same `is not a non-negative integer` error `--max-rows` already produces)
-  - [ ] TDD: parsing `quality-pass --limit 0` and `--limit 3` still succeeds (non-negative values unaffected)
-  - [ ] MECHANICAL: `--limit` declaration at `engine.py:3075` uses `type=_non_negative_int`
-  - [ ] `uv run python -m unittest discover -s tests` passes
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (a negative `--limit` is rejected at the argparse layer with the same `is not a non-negative integer` error `--max-rows` already produces)
+  - [x] TDD: parsing `quality-pass --limit 0` and `--limit 3` still succeeds (non-negative values unaffected)
+  - [x] MECHANICAL: `--limit` declaration at `engine.py:3075` uses `type=_non_negative_int`
+  - [x] `uv run python -m unittest discover -s tests` passes
+  - [x] `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `quality-pass --limit` accepts negative values and audits the wrong card subset

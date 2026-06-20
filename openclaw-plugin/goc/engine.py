@@ -3072,7 +3072,7 @@ def _build_parser() -> argparse.ArgumentParser:
                       help="Also run a Sonnet-batched summary+DoD audit.")
     p_qp.add_argument("--no-llm", dest="llm", action="store_false",
                       help="Disable LLM audit.")
-    p_qp.add_argument("--limit", type=int, default=None,
+    p_qp.add_argument("--limit", type=_non_negative_int, default=None,
                       help="With --llm: cap card count (testing/sampling).")
     p_qp.add_argument("--dry-run", action="store_true",
                       help="With --llm: print verdicts; skip the interactive accept/reject walk.")
