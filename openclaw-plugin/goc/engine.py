@@ -2761,8 +2761,20 @@ def render_json(
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
                 "supersedes": t.frontmatter.get("supersedes") or [],
                 "superseded_by": t.frontmatter.get("superseded_by") or [],
-                "dependency_awaiting": dependency_blocked(t, by_title),
-                "awaiting": dependency_blockers(t, by_title),
+                # Mirror the table/board liveness gate: the dependency
+                # advisory is a "you may start" hint, meaningless on a
+                # terminal card. `ready` is already status-gated by
+                # `card_is_ready` (open-only).
+                "dependency_awaiting": (
+                    dependency_blocked(t, by_title)
+                    if t.status not in TERMINAL_STATUSES
+                    else False
+                ),
+                "awaiting": (
+                    dependency_blockers(t, by_title)
+                    if t.status not in TERMINAL_STATUSES
+                    else []
+                ),
                 "ready": card_is_ready(t, by_title),
                 "worker": t.worker,
                 "dod_open": t.dod_open,
