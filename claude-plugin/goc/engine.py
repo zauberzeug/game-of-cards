@@ -2808,8 +2808,8 @@ def render_json(
                 # `dependency_advisory`): the "you may start" hint is
                 # meaningless on a terminal card. `ready` is already
                 # status-gated by `card_is_ready` (open-only).
-                "awaiting": dependency_advisory(t, by_title)[0],
-                "dependency_awaiting": dependency_advisory(t, by_title)[1],
+                "awaiting": advisory[0],
+                "dependency_awaiting": advisory[1],
                 "ready": card_is_ready(t, by_title),
                 "worker": t.worker,
                 "dod_open": t.dod_open,
@@ -2817,6 +2817,7 @@ def render_json(
                 "dod_freeform": t.dod_freeform,
             }
             for t in cards
+            for advisory in (dependency_advisory(t, by_title),)
         ]
     return json.dumps(records, indent=2, default=str)
 

@@ -1,17 +1,17 @@
 ---
 title: render-json-walks-the-dependency-graph-twice-per-card
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-21T19:06:47Z"
-closed_at: null
+closed_at: "2026-06-21T19:14:24Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: `render_json` computes `dependency_advisory(t, by_title)` once per card and unpacks the tuple, instead of calling it twice (`goc/engine.py:2811-2812`).
-  - [ ] MECHANICAL: the emitted JSON is byte-for-byte unchanged (the two fields `awaiting` / `dependency_awaiting` keep the same values); `uv run goc validate` and the regression suite stay green; plugin mirrors synced.
+  - [x] MECHANICAL: `render_json` computes `dependency_advisory(t, by_title)` once per card and unpacks the tuple, instead of calling it twice (`goc/engine.py:2811-2812`).
+  - [x] MECHANICAL: the emitted JSON is byte-for-byte unchanged (the two fields `awaiting` / `dependency_awaiting` keep the same values); `uv run goc validate` and the regression suite stay green; plugin mirrors synced.
 worker: {who: "claude[bot]", where: main}
 ---
 
