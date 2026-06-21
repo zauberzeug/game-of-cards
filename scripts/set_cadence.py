@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""Retune the autonomous GitHub Actions cadence (repo-local dev tool).
+
+GitHub Actions `cron:` is a *literal* string in the workflow file —
+`schedule:` cannot read a config value — so making the cadence
+"configurable" means rewriting those literals in place. This script
+rewrites the `- cron:` line and the adjacent managed `# cadence:`
+comment in each autonomous workflow from a small interval spec.
+
+Query the current cadence::
+
+    python3 scripts/set_cadence.py --show
+
+Change it (then commit and push — scheduled workflows only take effect
+from the *default branch*)::
+
+    python3 scripts/set_cadence.py --pull 1h --audit 3h --refine 3h
+
+Interval specs: ``<N>h`` where N divides 24 (1, 2, 3, 4, 6, 8, 12), or
+``24h`` / ``1d`` for daily. Per-workflow minute offsets are fixed (pull
+:00, audit :15, refine :45) so the three deck-mutating cloud agents
+never launch on the same minute and race each other on ``main``.
+
+This tool is intentionally **repo-local**: it targets THIS repo's own
+autonomous workflow files, which ``goc install`` does not ship to
+consumers. It uses only the standard library so ``python3
+scripts/set_cadence.py`` works without ``uv``.
+"""
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+
+def _repo_root() -> Path:
+    """Walk up from this file to the repo root (the dir holding pyproject.toml)."""
+    p = Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / "pyproject.toml").exists():
+            return p
+        p = p.parent
+    raise RuntimeError("repo root (pyproject.toml) not found")
+
+
+# key -> (workflow filename, minute offset, human label). The offsets keep
+# the three scheduled deck agents off each other's launch minute on `main`.
+WORKFLOWS: dict[str, tuple[str, int, str]] = {
+    "pull": ("pull-card.yml", 0, "pull-card"),
+    "audit": ("audit-deck.yml", 15, "audit-deck"),
+    "refine": ("refine-deck.yml", 45, "refine-deck"),
+}
+
+_CRON_RE = re.compile(r"^[ \t]*- cron: .*$", re.MULTILINE)
+_CADENCE_RE = re.compile(r"^[ \t]*# cadence: .*$", re.MULTILINE)
+_SPEC_RE = re.compile(r"^(\d+)\s*([hd])$")
+
+
+def interval_to_cron(spec: str, offset: int) -> str:
+    """Translate an interval spec + minute offset into a 5-field cron string.
+
+    Supported: ``<N>h`` for N in {1, 2, 3, 4, 6, 8, 12} (must divide 24 so
+    the ``*/N`` hour step doesn't reset at midnight), and ``24h`` / ``1d``
+    for daily. Anything else raises ``ValueError`` — cron can't express
+    e.g. "every 5 days" without month-boundary drift, so we refuse rather
+    than emit a surprising schedule.
+    """
+    if not 0 <= offset <= 59:
+        raise ValueError(f"minute offset {offset} out of range 0..59")
+    m = _SPEC_RE.match(spec.strip().lower())
+    if not m:
+        raise ValueError(
+            f"unrecognized interval {spec!r}; use <N>h (1,2,3,4,6,8,12) or 1d/24h"
+        )
+    n, unit = int(m.group(1)), m.group(2)
+    if unit == "d":
+        if n != 1:
+            raise ValueError(
+                f"{spec!r}: multi-day intervals drift at month boundaries in cron; "
+                "use 1d or an hour interval"
+            )
+        return f"{offset} 0 * * *"
+    # unit == "h"
+    if n == 24:
+        return f"{offset} 0 * * *"
+    if not 1 <= n <= 23 or 24 % n != 0:
+        raise ValueError(
+            f"{spec!r}: hour interval must divide 24 (1,2,3,4,6,8,12) or be 24h"
+        )
+    hour_field = "*" if n == 1 else f"*/{n}"
+    return f"{offset} {hour_field} * * *"
+
+
+def _workflow_path(repo_root: Path, key: str) -> Path:
+    filename = WORKFLOWS[key][0]
+    return repo_root / ".github" / "workflows" / filename
+
+
+def _cadence_comment(label: str, spec: str, offset: int) -> str:
+    return (
+        f"    # cadence: {label} every {spec} (minute offset :{offset:02d}) "
+        "— managed by scripts/set_cadence.py; retune via that script, "
+        "not the two lines below"
+    )
+
+
+def retune(repo_root: Path, key: str, spec: str) -> tuple[str, bool]:
+    """Rewrite one workflow's cron + cadence comment. Return ``(cron, changed)``."""
+    filename, offset, label = WORKFLOWS[key]
+    path = _workflow_path(repo_root, key)
+    if not path.exists():
+        raise FileNotFoundError(f"{path} not found")
+    cron = interval_to_cron(spec, offset)
+    text = path.read_text()
+
+    new_cron_line = f"    - cron: '{cron}'"
+    new_comment = _cadence_comment(label, spec, offset)
+
+    # Lambda replacements: sidestep re's interpretation of \1 / \g<> in
+    # replacement strings (a cron like */3 is fine today, but never risk it).
+    text2, n_cron = _CRON_RE.subn(lambda _m: new_cron_line, text, count=1)
+    if n_cron != 1:
+        raise ValueError(
+            f"{filename}: expected exactly one `- cron:` line, found {n_cron}"
+        )
+    text3, n_cad = _CADENCE_RE.subn(lambda _m: new_comment, text2, count=1)
+    if n_cad != 1:
+        raise ValueError(
+            f"{filename}: expected exactly one `# cadence:` marker line, found "
+            f"{n_cad}; add a `    # cadence: ...` line above `- cron:` first"
+        )
+
+    changed = text3 != text
+    if changed:
+        path.write_text(text3)
+    return cron, changed
+
+
+def current_cadence(repo_root: Path) -> dict[str, dict[str, str]]:
+    """Read each workflow's cron + cadence comment (for ``--show``)."""
+    out: dict[str, dict[str, str]] = {}
+    for key, (filename, _offset, _label) in WORKFLOWS.items():
+        path = _workflow_path(repo_root, key)
+        if not path.exists():
+            out[key] = {"file": filename, "cron": "(missing file)", "comment": ""}
+            continue
+        text = path.read_text()
+        cron_m = _CRON_RE.search(text)
+        cad_m = _CADENCE_RE.search(text)
+        cron = (
+            cron_m.group().strip()[len("- cron: "):].strip().strip("'\"")
+            if cron_m
+            else "(no cron)"
+        )
+        comment = (
+            cad_m.group().strip()[len("# cadence: "):].strip() if cad_m else ""
+        )
+        out[key] = {"file": filename, "cron": cron, "comment": comment}
+    return out
+
+
+def _print_cadence(cadence: dict[str, dict[str, str]]) -> None:
+    width = max(len(v["file"]) for v in cadence.values())
+    for key in WORKFLOWS:
+        v = cadence[key]
+        print(f"  {v['file']:<{width}}  cron: {v['cron']}")
+        if v["comment"]:
+            print(f"  {'':<{width}}  ({v['comment']})")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="set_cadence.py",
+        description="Query or retune the autonomous GitHub Actions cadence (repo-local).",
+        epilog="Interval specs: <N>h (1,2,3,4,6,8,12) or 1d/24h. Commit & push to apply.",
+    )
+    parser.add_argument(
+        "--show", action="store_true", help="print the current cadence and exit"
+    )
+    parser.add_argument("--pull", metavar="INTERVAL", help="pull-card interval, e.g. 1h")
+    parser.add_argument("--audit", metavar="INTERVAL", help="audit-deck interval, e.g. 3h")
+    parser.add_argument(
+        "--refine", metavar="INTERVAL", help="refine-deck interval, e.g. 3h"
+    )
+    args = parser.parse_args(argv)
+
+    repo_root = _repo_root()
+    requested = {
+        k: v for k, v in (("pull", args.pull), ("audit", args.audit), ("refine", args.refine)) if v
+    }
+
+    # No change requested (or --show wins): just report current state.
+    if args.show or not requested:
+        if not requested and not args.show:
+            print(
+                "No interval given; showing current cadence "
+                "(use --pull/--audit/--refine to change it).\n"
+            )
+        _print_cadence(current_cadence(repo_root))
+        return 0
+
+    any_changed = False
+    for key, spec in requested.items():
+        try:
+            cron, changed = retune(repo_root, key, spec)
+        except (ValueError, FileNotFoundError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"  {WORKFLOWS[key][0]:<16} cron: {cron:<14} ({'set' if changed else 'unchanged'})")
+        any_changed = any_changed or changed
+
+    if any_changed:
+        print(
+            "\nScheduled workflows run from the default branch — commit and "
+            "push these changes for the new cadence to take effect."
+        )
+    else:
+        print("\nNo changes (already at the requested cadence).")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -177,7 +177,11 @@ def _build_sync_pairs() -> list[SyncPair]:
             # `templates/bootstrap/_goc-bootstrap.sh` (a different src path
             # than templates/skills/). Preserve it during the dir sync; a
             # separate single-file sync pair below keeps it current.
-            frozenset({"_goc-bootstrap.sh"}),
+            # `tune-cadence/SKILL.md` is a repo-local Claude Code dev skill
+            # (wraps scripts/set_cadence.py) with no template source and
+            # ships to no consumer — preserve it so the dir sync doesn't
+            # delete it as "not in src".
+            frozenset({"_goc-bootstrap.sh", "tune-cadence/SKILL.md"}),
         )
     )
     pairs.append(

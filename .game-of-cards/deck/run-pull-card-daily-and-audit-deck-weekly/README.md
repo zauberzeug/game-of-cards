@@ -18,6 +18,13 @@ worker: {who: Rodja Trappe, where: main}
 
 # run-pull-card-daily-and-audit-deck-weekly
 
+> Later (2026-06-21): this cadence was deliberately **reversed** while
+> spare-token headroom was high — pull-card → hourly, audit-deck → every
+> 3h, plus a new refine-deck workflow every 3h, all now managed by
+> `scripts/set_cadence.py`. See
+> [add-set-cadence-tooling-to-retune-autonomous-workflows](../add-set-cadence-tooling-to-retune-autonomous-workflows/).
+> The record below remains accurate for the 2026-05-31 slowdown it made.
+
 Slow the autonomous GitHub Actions cadence: drain the queue once a day
 and feed it (audit) once a week, instead of hourly pull / daily audit.
 
