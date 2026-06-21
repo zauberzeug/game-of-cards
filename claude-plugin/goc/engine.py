@@ -3344,7 +3344,14 @@ def _cmd_default(args):
     if args.done_flag:
         status = "done"
     elif args.status_flag is None:
-        status = "all" if closed_since_threshold is not None else "open"
+        # --waiting and --closed-since both surface cards beyond the open
+        # queue (active-impeded cards, closed cards): auto-extend the default
+        # status to "all" so the subsequent filter has something to narrow.
+        status = (
+            "all"
+            if (closed_since_threshold is not None or getattr(args, "waiting", False))
+            else "open"
+        )
     else:
         status = args.status_flag
     status_filter_explicit = bool(args.done_flag or args.status_flag is not None)

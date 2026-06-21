@@ -1,0 +1,92 @@
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class WaitingFilterStatusScopeTest(unittest.TestCase):
+    """`goc --waiting` must surface impeded cards regardless of progress
+    status — a card may be `status: active` AND carry `waiting_on` (the
+    three-axis stuck model). The default status filter must not drop active
+    impeded cards before the `--waiting` filter runs.
+    """
+
+    def run_goc(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        pythonpath = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
+        return subprocess.run(
+            [sys.executable, "-m", "goc.cli", *args],
+            cwd=cwd,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    def write_card(self, cwd: Path, title: str, status: str, waiting_on: str | None) -> None:
+        card_dir = cwd / "deck" / title
+        card_dir.mkdir(parents=True)
+        overlay = f"waiting_on: {waiting_on}\n" if waiting_on is not None else ""
+        (card_dir / "README.md").write_text(
+            "---\n"
+            f"title: {title}\n"
+            f"summary: {title}\n"
+            f"status: {status}\n"
+            "stage: null\n"
+            "contribution: low\n"
+            "created: 2026-05-04\n"
+            "closed_at: null\n"
+            "human_gate: none\n"
+            "advances: []\n"
+            "advanced_by: []\n"
+            "tags: [bug]\n"
+            f"{overlay}"
+            "definition_of_done: |\n"
+            "  - [ ] test card\n"
+            "---\n\n"
+            f"# {title}\n"
+        )
+
+    def titles(self, result: subprocess.CompletedProcess[str]) -> set[str]:
+        return {c["title"] for c in json.loads(result.stdout)}
+
+    def test_waiting_surfaces_active_impeded_card(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "open-impeded", "open", "external")
+            self.write_card(cwd, "active-impeded", "active", "external")
+            self.write_card(cwd, "open-clear", "open", None)
+
+            result = self.run_goc(cwd, "--waiting", "--json")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            titles = self.titles(result)
+            self.assertIn("open-impeded", titles)
+            self.assertIn("active-impeded", titles)
+            self.assertNotIn("open-clear", titles)
+
+    def test_explicit_status_open_still_narrows(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "open-impeded", "open", "external")
+            self.write_card(cwd, "active-impeded", "active", "external")
+
+            result = self.run_goc(cwd, "--waiting", "--status", "open", "--json")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            titles = self.titles(result)
+            self.assertIn("open-impeded", titles)
+            self.assertNotIn("active-impeded", titles)
+
+
+if __name__ == "__main__":
+    unittest.main()

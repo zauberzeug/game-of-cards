@@ -1,20 +1,20 @@
 ---
 title: goc-waiting-default-status-hides-active-impeded-cards
 summary: "`goc --waiting` defaults its status filter to `open`, so an `active` card carrying an impediment overlay is dropped before the `--waiting` filter runs — invisible in the very view meant to surface impeded work. `--closed-since` already auto-extends the default status to `all`; `--waiting` should do the same."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-21T12:19:06Z"
-closed_at: null
+closed_at: "2026-06-21T12:23:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (an `active` + `waiting_on` card appears in `goc --waiting` output)
-  - [ ] TDD: a regression test asserts `goc --waiting` (no explicit `--status`) surfaces both an `open` and an `active` impeded card, and that explicit `--status open` still narrows to open
-  - [ ] MECHANICAL: `_cmd_default` extends the default status to `all` when `--waiting` is set and `--status` is not explicit, mirroring the `--closed-since` precedent
-  - [ ] uv run goc validate passes
+  - [x] TDD: reproduce.py exits zero (an `active` + `waiting_on` card appears in `goc --waiting` output)
+  - [x] TDD: a regression test asserts `goc --waiting` (no explicit `--status`) surfaces both an `open` and an `active` impeded card, and that explicit `--status open` still narrows to open
+  - [x] MECHANICAL: `_cmd_default` extends the default status to `all` when `--waiting` is set and `--status` is not explicit, mirroring the `--closed-since` precedent
+  - [x] uv run goc validate passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -93,15 +93,22 @@ in the default view. The reachability path is direct: any
 `goc wait <active-card> --reason external` produces an `active` card with
 `waiting_on` set, which `_cmd_default` then hides from `goc --waiting`.
 
-## Fix
+## Fix (applied)
 
-Mirror the `--closed-since` precedent one line up — extend the default
-status to `all` when `--waiting` is set and `--status` is not explicit:
+`_cmd_default` now mirrors the `--closed-since` precedent one line up —
+the default status extends to `all` when `--waiting` is set and `--status`
+is not explicit:
 
 ```python
 elif args.status_flag is None:
-    status = "all" if (closed_since_threshold is not None
-                       or getattr(args, "waiting", False)) else "open"
+    # --waiting and --closed-since both surface cards beyond the open
+    # queue (active-impeded cards, closed cards): auto-extend the default
+    # status to "all" so the subsequent filter has something to narrow.
+    status = (
+        "all"
+        if (closed_since_threshold is not None or getattr(args, "waiting", False))
+        else "open"
+    )
 ```
 
 The `--waiting` filter at `engine.py:3378-3379` then does the real
