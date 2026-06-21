@@ -72,6 +72,40 @@ class RenderVerdictRewriteCountTest(unittest.TestCase):
         self.assertTrue(has_rewrite)  # driven by DoD, not the rewriteless title
         self.assertIn("dod:", out)
 
+    def test_fixless_dod_issue_not_counted(self) -> None:
+        """A DoD issue with no `fix` is not applicable (mirror
+        `_apply_dod_rewrite`'s `"idx" in issue and "fix" in issue` guard), so it
+        must NOT count toward has_rewrite and must not advertise a bogus fix."""
+        has_rewrite, out = self._render(
+            {
+                "title": "c",
+                "title_verdict": {"ok": True},
+                "summary_verdict": {"ok": True},
+                "dod_issues": [{"idx": 0, "issue": "vague"}],  # no "fix"
+            }
+        )
+        self.assertFalse(has_rewrite)
+        self.assertNotIn("fix: ?", out)
+        self.assertIn("no rewrite offered", out)
+
+    def test_mixed_fixable_and_fixless_dod_issues(self) -> None:
+        """A verdict mixing an applicable fix with a fixless flag counts as a
+        rewrite (the fixable one), and only the fixable issue advertises a fix."""
+        has_rewrite, out = self._render(
+            {
+                "title": "c",
+                "title_verdict": {"ok": True},
+                "summary_verdict": {"ok": True},
+                "dod_issues": [
+                    {"idx": 0, "issue": "vague", "fix": "do X"},
+                    {"idx": 1, "issue": "also vague"},  # no "fix"
+                ],
+            }
+        )
+        self.assertTrue(has_rewrite)
+        self.assertIn("fix: do X", out)
+        self.assertIn("no rewrite offered", out)
+
 
 if __name__ == "__main__":
     unittest.main()

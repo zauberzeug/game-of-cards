@@ -1,20 +1,20 @@
 ---
 title: quality-pass-llm-counts-fixless-dod-issue-as-proposed-rewrite
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-21T05:33:18Z"
-closed_at: null
+closed_at: "2026-06-21T05:37:04Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `deck/<title>/reproduce.py` calls `_render_verdict` with an OK title/summary and a single `dod_issues` entry that carries no `fix` (e.g. `{"idx": 0, "issue": "vague"}`), and asserts the buggy `has_rewrite == True` while the apply path (`_apply_dod_rewrite`) would write nothing.
-  - [ ] FIX: in `goc/engine.py` `_render_verdict`, only set `has_rewrite = True` for DoD issues that would actually be applied — mirror `_apply_dod_rewrite`'s `"idx" in issue and "fix" in issue` guard; fixless flagged issues print as "flagged, no rewrite offered" without counting.
-  - [ ] TDD: after the fix, the fixless-DoD verdict returns `has_rewrite == False`; a DoD issue with both `idx` and `fix` still returns `True` (regression for `test_dod_issues_still_counted`).
-  - [ ] EMPIRICAL: rerun reproduce.py against the patched engine; record before/after output in this body's "Empirical evidence" section.
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] TDD: `deck/<title>/reproduce.py` calls `_render_verdict` with an OK title/summary and a single `dod_issues` entry that carries no `fix` (e.g. `{"idx": 0, "issue": "vague"}`), and asserts the buggy `has_rewrite == True` while the apply path (`_apply_dod_rewrite`) would write nothing.
+  - [x] FIX: in `goc/engine.py` `_render_verdict`, only set `has_rewrite = True` for DoD issues that would actually be applied — mirror `_apply_dod_rewrite`'s `"idx" in issue and "fix" in issue` guard; fixless flagged issues print as "flagged, no rewrite offered" without counting.
+  - [x] TDD: after the fix, the fixless-DoD verdict returns `has_rewrite == False`; a DoD issue with both `idx` and `fix` still returns `True` (regression for `test_dod_issues_still_counted`).
+  - [x] EMPIRICAL: rerun reproduce.py against the patched engine; record before/after output in this body's "Empirical evidence" section.
+  - [x] PROCESS: `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -87,4 +87,32 @@ branches. Render counts only what apply will write.
 
 ## Empirical evidence
 
-(to be filled by reproduce.py before/after the fix)
+`reproduce.py` against the fixless-DoD verdict `{"idx": 0, "issue":
+"this item is vague"}` (no `fix`):
+
+Before the fix:
+
+```
+has_rewrite=True
+applicable_fixes=0
+bogus 'fix: ?' advertised=True
+OVER-COUNT BUG=True
+AssertionError: BUG: _render_verdict counted a fixless DoD issue as a
+proposed rewrite while the apply path would write nothing
+```
+
+After the fix:
+
+```
+has_rewrite=False
+applicable_fixes=0
+bogus 'fix: ?' advertised=False
+OVER-COUNT BUG=False
+OK: render count agrees with the apply path
+```
+
+`_render_verdict` now splits `dod_issues` into `fixable` (both `idx`
+and `fix`, mirroring `_apply_dod_rewrite`'s guard) and `fixless`; only
+`fixable` sets `has_rewrite` and prints a `fix:` line, while `fixless`
+issues print as "flagged, no rewrite offered". Full suite: 483 tests
+pass; `uv run goc validate` clean.

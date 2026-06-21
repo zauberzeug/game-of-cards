@@ -3582,13 +3582,22 @@ def _render_verdict(verdict: dict) -> bool:
     else:
         print(f"summary: flagged, no rewrite offered — {sv.get('reason', '?')}")
     dod_issues = verdict.get("dod_issues") or []
-    if dod_issues:
+    # Mirror _apply_dod_rewrite's guard: only an issue carrying both `idx` and
+    # `fix` is an applicable rewrite, so only those count. A flagged-but-fixless
+    # issue prints for visibility but does NOT count toward has_rewrite.
+    fixable = [issue for issue in dod_issues if "idx" in issue and "fix" in issue]
+    fixless = [issue for issue in dod_issues if not ("idx" in issue and "fix" in issue)]
+    if fixable:
         has_rewrite = True
-        print(f"dod:     {len(dod_issues)} issue(s)")
-        for issue in dod_issues:
+        print(f"dod:     {len(fixable)} issue(s)")
+        for issue in fixable:
+            print(f"  [{issue['idx']}] {issue.get('issue', '?')}")
+            print(f"      fix: {issue['fix']}")
+    if fixless:
+        print(f"dod:     {len(fixless)} flagged, no rewrite offered")
+        for issue in fixless:
             print(f"  [{issue.get('idx', '?')}] {issue.get('issue', '?')}")
-            print(f"      fix: {issue.get('fix', '?')}")
-    else:
+    if not dod_issues:
         print("dod:     OK")
     return has_rewrite
 
