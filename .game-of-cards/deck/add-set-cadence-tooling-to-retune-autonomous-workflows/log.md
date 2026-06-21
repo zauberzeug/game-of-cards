@@ -37,3 +37,11 @@ the default branch).
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-06-21 — Closure' present
+
+## 2026-06-21 — pull-card moved off :00
+
+Follow-up: pull-card's minute offset moved `:00` → `:13` to dodge GitHub's
+congested top-of-hour schedule slot (this repo's scheduled runs dispatch
+~85–90 min late, worst at `:00`). The `WORKFLOWS` table in
+`scripts/set_cadence.py` now bakes in pull `:13`. See
+`shift-pull-card-off-the-congested-top-of-hour-cron-slot`.

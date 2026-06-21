@@ -18,7 +18,7 @@ from the *default branch*)::
 
 Interval specs: ``<N>h`` where N divides 24 (1, 2, 3, 4, 6, 8, 12), or
 ``24h`` / ``1d`` for daily. Per-workflow minute offsets are fixed (pull
-:00, audit :15, refine :45) so the three deck-mutating cloud agents
+:13, audit :15, refine :45) so the three deck-mutating cloud agents
 never launch on the same minute and race each other on ``main``.
 
 This tool is intentionally **repo-local**: it targets THIS repo's own
@@ -47,7 +47,7 @@ def _repo_root() -> Path:
 # key -> (workflow filename, minute offset, human label). The offsets keep
 # the three scheduled deck agents off each other's launch minute on `main`.
 WORKFLOWS: dict[str, tuple[str, int, str]] = {
-    "pull": ("pull-card.yml", 0, "pull-card"),
+    "pull": ("pull-card.yml", 13, "pull-card"),
     "audit": ("audit-deck.yml", 15, "audit-deck"),
     "refine": ("refine-deck.yml", 45, "refine-deck"),
 }

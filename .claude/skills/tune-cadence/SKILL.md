@@ -34,7 +34,7 @@ python3 scripts/set_cadence.py --pull 1h --audit 3h --refine 3h
 - Interval specs: `<N>h` where N divides 24 (1, 2, 3, 4, 6, 8, 12), or
   `1d` / `24h` for daily. Other values are rejected — cron can't express
   e.g. "every 5 days" without month-boundary drift.
-- Minute offsets are fixed (pull `:00`, audit `:15`, refine `:45`) so the
+- Minute offsets are fixed (pull `:13`, audit `:15`, refine `:45`) so the
   three deck-mutating agents never launch on the same minute and race on
   `main`.
 
