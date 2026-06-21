@@ -16,10 +16,12 @@ from the *default branch*)::
 
     python3 scripts/set_cadence.py --pull 1h --audit 3h --refine 3h
 
-Interval specs: ``<N>h`` where N divides 24 (1, 2, 3, 4, 6, 8, 12), or
-``24h`` / ``1d`` for daily. Per-workflow minute offsets are fixed (pull
-:13, audit :15, refine :45) so the three deck-mutating cloud agents
-never launch on the same minute and race each other on ``main``.
+Interval specs: ``<N>h`` where N divides 24 (1, 2, 3, 4, 6, 8, 12) or
+``24h``; and ``<N>d`` for every-N-days (``1d`` is daily; ``Nd`` maps to a
+day-of-month ``*/N`` step, which realigns at each month boundary — gaps
+near month-end are shorter than N days). Per-workflow minute offsets are
+fixed (pull :13, audit :15, refine :45) so the three deck-mutating cloud
+agents never launch on the same minute and race each other on ``main``.
 
 This tool is intentionally **repo-local**: it targets THIS repo's own
 autonomous workflow files, which ``goc install`` does not ship to
@@ -60,27 +62,32 @@ _SPEC_RE = re.compile(r"^(\d+)\s*([hd])$")
 def interval_to_cron(spec: str, offset: int) -> str:
     """Translate an interval spec + minute offset into a 5-field cron string.
 
-    Supported: ``<N>h`` for N in {1, 2, 3, 4, 6, 8, 12} (must divide 24 so
-    the ``*/N`` hour step doesn't reset at midnight), and ``24h`` / ``1d``
-    for daily. Anything else raises ``ValueError`` — cron can't express
-    e.g. "every 5 days" without month-boundary drift, so we refuse rather
-    than emit a surprising schedule.
+    Supported:
+    - ``<N>h`` for N in {1, 2, 3, 4, 6, 8, 12} (must divide 24 so the
+      ``*/N`` hour step doesn't reset at midnight), or ``24h``.
+    - ``<N>d`` for every-N-days: ``1d`` → daily; ``Nd`` (N≥2) → a
+      day-of-month ``*/N`` step. cron's ``*/N`` day field realigns at each
+      month boundary, so this is "roughly every N days" — the gap across a
+      month end is shorter than N. That is the standard cron approximation;
+      there is no exact every-N-days cron.
+
+    Anything else raises ``ValueError``.
     """
     if not 0 <= offset <= 59:
         raise ValueError(f"minute offset {offset} out of range 0..59")
     m = _SPEC_RE.match(spec.strip().lower())
     if not m:
         raise ValueError(
-            f"unrecognized interval {spec!r}; use <N>h (1,2,3,4,6,8,12) or 1d/24h"
+            f"unrecognized interval {spec!r}; use <N>h (1,2,3,4,6,8,12), 24h, or <N>d"
         )
     n, unit = int(m.group(1)), m.group(2)
     if unit == "d":
-        if n != 1:
-            raise ValueError(
-                f"{spec!r}: multi-day intervals drift at month boundaries in cron; "
-                "use 1d or an hour interval"
-            )
-        return f"{offset} 0 * * *"
+        if n < 1:
+            raise ValueError(f"{spec!r}: day interval must be >= 1")
+        if n == 1:
+            return f"{offset} 0 * * *"
+        # day-of-month */N: roughly every N days, realigning each month.
+        return f"{offset} 0 */{n} * *"
     # unit == "h"
     if n == 24:
         return f"{offset} 0 * * *"

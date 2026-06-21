@@ -12,8 +12,8 @@ name: Pull Card
 
 on:
   schedule:
-    # cadence: pull-card every 1h (minute offset :13) — managed by scripts/set_cadence.py; retune via that script, not the two lines below
-    - cron: '13 * * * *'
+    # cadence: pull-card every 6h (minute offset :13) — managed by scripts/set_cadence.py; retune via that script, not the two lines below
+    - cron: '13 */6 * * *'
   workflow_dispatch:
     inputs:
       iteration:

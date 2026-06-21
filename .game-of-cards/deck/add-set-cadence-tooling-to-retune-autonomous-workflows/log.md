@@ -45,3 +45,10 @@ congested top-of-hour schedule slot (this repo's scheduled runs dispatch
 ~85–90 min late, worst at `:00`). The `WORKFLOWS` table in
 `scripts/set_cadence.py` now bakes in pull `:13`. See
 `shift-pull-card-off-the-congested-top-of-hour-cron-slot`.
+
+## 2026-06-21 — multi-day intervals now supported
+
+Follow-up: the "multi-day intervals rejected" behavior recorded above was
+reversed. `set_cadence.py` now maps `<N>d` (N≥2) to a day-of-month `*/N`
+cron step (roughly every N days, realigning at month boundaries). See
+`support-multi-day-intervals-and-slow-the-autonomous-cadence`.

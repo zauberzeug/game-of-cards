@@ -67,9 +67,15 @@ class IntervalToCronTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 setc.interval_to_cron(bad, 0)
 
-    def test_multiday_rejected(self) -> None:
+    def test_multiday_supported(self) -> None:
+        # Nd (N>=2) -> day-of-month */N step (roughly every N days).
+        self.assertEqual(setc.interval_to_cron("3d", 15), "15 0 */3 * *")
+        self.assertEqual(setc.interval_to_cron("3d", 45), "45 0 */3 * *")
+        self.assertEqual(setc.interval_to_cron("7d", 0), "0 0 */7 * *")
+
+    def test_zero_day_rejected(self) -> None:
         with self.assertRaises(ValueError):
-            setc.interval_to_cron("5d", 0)
+            setc.interval_to_cron("0d", 0)
 
     def test_garbage_rejected(self) -> None:
         for bad in ("", "h", "1m", "abc", "1.5h"):

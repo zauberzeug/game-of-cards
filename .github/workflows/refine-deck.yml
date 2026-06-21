@@ -14,8 +14,8 @@ name: Refine Deck
 
 on:
   schedule:
-    # cadence: refine-deck every 3h (minute offset :45) — managed by scripts/set_cadence.py; retune via that script, not the two lines below
-    - cron: '45 */3 * * *'
+    # cadence: refine-deck every 3d (minute offset :45) — managed by scripts/set_cadence.py; retune via that script, not the two lines below
+    - cron: '45 0 */3 * *'
   workflow_dispatch:
 
 permissions:
