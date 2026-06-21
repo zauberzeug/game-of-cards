@@ -1,5 +1,6 @@
 ---
 title: yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting
+summary: "`_vendor/yaml_lite.py` contains three independent hand-rolled character scanners — `_split_flow`, `_split_key`, `_strip_comment` — that each re-implement the same quote-state / backslash-escape / bracket-depth bookkeeping. Because the logic is copy-pasted rather than shared, the three keep drifting out of sync: four separate bug cards have patched them one at a time. Decision-gated on extracting one shared stepping primitive so the scanners cannot diverge again."
 status: open
 stage: null
 contribution: medium
@@ -7,7 +8,11 @@ created: "2026-06-04T04:39:22Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - yaml-lite-strip-comment-defeated-by-unbalanced-quote-in-bare-value
+  - yaml-lite-truncates-flow-collection-with-hash-in-quoted-element
+  - yaml-lite-flow-collection-mis-splits-on-backslash-escaped-quote
+  - strip-comment-closes-double-quoted-scalar-on-backslash-escaped-quote
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.

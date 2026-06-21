@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-06-05T04:33:35Z"
 closed_at: "2026-06-05T04:36:48Z"
 human_gate: none
-advances: []
+advances:
+  - dod-fence-mask-reimplements-commonmark-fences-and-keeps-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

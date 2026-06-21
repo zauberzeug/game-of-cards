@@ -1,5 +1,6 @@
 ---
 title: single-source-pattern-check-reminder-across-host-ports
+summary: "The `pattern_generalization_check` Stop-hook REMINDER string is duplicated across host ports. The 6 Python copies are already single-sourced via `scripts/sync_plugin_assets.py` (CI-enforced), so the genuine remaining duplication is across the Python/TypeScript language boundary — the authored Python source (`goc/templates/hooks/pattern_generalization_check.py`) vs. the OpenClaw TS port (`openclaw-plugin/index.ts`, `PATTERN_REMINDER`). Decision-gated on whether single-sourcing across that boundary is worth the machinery, and if so the mechanism."
 status: open
 stage: null
 contribution: low

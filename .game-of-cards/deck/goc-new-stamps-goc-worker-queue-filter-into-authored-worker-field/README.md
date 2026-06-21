@@ -1,5 +1,6 @@
 ---
 title: goc-new-stamps-goc-worker-queue-filter-into-authored-worker-field
+summary: "`goc new`'s `--worker` uses `argparse.SUPPRESS` and shares the default dest `worker` with the global `--worker` queue filter (whose default is `$GOC_WORKER`). So a bare `goc new` run with `GOC_WORKER` or global `--worker` set stamps that triage-filter value into the new card's authored `worker` field. Fix: give `new --worker` a distinct dest, mirroring the `advances_wire`/`advanced_by_wire` remedy at engine.py:2830-2833. Decision-gated on the intended contract."
 status: open
 stage: null
 contribution: medium

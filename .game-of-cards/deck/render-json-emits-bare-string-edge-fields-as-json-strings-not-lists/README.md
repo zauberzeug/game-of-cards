@@ -1,5 +1,6 @@
 ---
 title: render-json-emits-bare-string-edge-fields-as-json-strings-not-lists
+summary: "Eighth confirmed sibling of [[bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes]]. `render_json` (engine.py:2480-2483) reads the four edge fields with an `or []` fallback, which only catches `None` and empty containers; a truthy bare-string scalar like `advances: foo-card` passes through verbatim, so `goc --json` emits a string where the output contract promises a list. Close under whichever architectural fix the meta-fix adopts (loader reject / shared list-coercing helper / per-consumer guard)."
 status: open
 stage: null
 contribution: medium

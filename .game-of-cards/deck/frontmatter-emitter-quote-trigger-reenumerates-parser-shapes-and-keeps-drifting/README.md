@@ -1,5 +1,6 @@
 ---
 title: frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting
+summary: "`emit_frontmatter`'s inline-scalar emitter (`_yaml_inline`, engine.py:248-253) decides whether to quote a scalar by re-enumerating, in independent hand-maintained predicates, the value shapes the vendored parser (`_vendor/yaml_lite.py`) would coerce or reject. Because the emitter's quoting knowledge is a copy of the parser's rather than derived from it, the two drift — 8+ separate bug cards have patched this one predicate family one shape at a time. Decision-gated on a factoring that derives the emitter's quote decision from parser behaviour (one source of truth)."
 status: open
 stage: null
 contribution: medium

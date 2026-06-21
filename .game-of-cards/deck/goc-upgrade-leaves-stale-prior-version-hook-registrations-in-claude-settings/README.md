@@ -1,5 +1,6 @@
 ---
 title: goc-upgrade-leaves-stale-prior-version-hook-registrations-in-claude-settings
+summary: "Both settings-side functions (`_merge_claude_settings`, `_strip_goc_settings_entries` in install.py) identify a GoC-owned hook registration by its exact *current* command string from `GOC_CLAUDE_HOOKS.values()`. A hook GoC shipped under a different command string in a prior version (the consequence of renaming or repathing a hook file) is invisible to both: merge appends the current registration as a duplicate while the stale one survives, and strip leaves the stale one behind. Fix both sites via one shared GoC-owned-hook discriminator."
 status: open
 stage: null
 contribution: medium

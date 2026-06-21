@@ -1,5 +1,6 @@
 ---
 title: validate-ignores-unknown-frontmatter-keys-so-typos-pass-silently
+summary: "`goc validate` never checks that a card's frontmatter keys are drawn from the known set (`required_fields ∪ optional_fields`). The schema declares `optional_fields` as a closed list, but the engine loads it into the `Schema` dataclass (engine.py:469,490) and never reads it again, so a misspelled or invented key validates clean. The most damaging instance is a `wating_on` typo, which leaves the impediment overlay silently inert. Decision-gated on whether to warn or hard-fail on unknown keys."
 status: open
 stage: null
 contribution: medium

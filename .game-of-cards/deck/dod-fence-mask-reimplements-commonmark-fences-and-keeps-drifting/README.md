@@ -1,5 +1,6 @@
 ---
 title: dod-fence-mask-reimplements-commonmark-fences-and-keeps-drifting
+summary: "`_dod_fenced_mask` in engine.py masks fenced-code lines so an illustrative `- [ ]` inside a code block isn't counted as a real DoD item, but it is a hand-rolled partial reimplementation of CommonMark §4.5 that has now been patched three separate times — each time for a different spec rule discovered only after a card hit the bug. Same missing-abstraction shape as [[yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting]]: a scanner re-deriving a spec one bug-report at a time with no single authority for conforming behaviour. Decision-gated on the factoring (derive from a real CommonMark fence primitive vs. keep patching)."
 status: open
 stage: null
 contribution: medium
@@ -7,7 +8,10 @@ created: "2026-06-05T04:54:13Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - dod-checkbox-inside-fenced-code-block-counts-as-real-item-and-blocks-closure
+  - dod-scanners-treat-a-tilde-fence-as-closing-a-backtick-code-block
+  - dod-scanners-treat-an-info-string-fence-line-as-closing-a-code-block
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
   - [ ] (replace with real criteria after the decision)
