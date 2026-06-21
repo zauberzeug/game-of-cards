@@ -1,7 +1,7 @@
 {
   "id": "game-of-cards",
   "name": "Game of Cards",
-  "description": "Agile work-card methodology for AI-agent collaborators. Adds a `goc` tool, three lifecycle hooks, and 15 deck skills at workspace tier.",
+  "description": "Agile work-card methodology for AI-agent collaborators. Adds a `goc` tool, three lifecycle hooks, and 16 deck skills at workspace tier.",
   "contracts": {
     "tools": ["goc"]
   },
@@ -20,7 +20,8 @@
     "skills/audit-deck",
     "skills/standup",
     "skills/retrospective",
-    "skills/card-schema"
+    "skills/card-schema",
+    "skills/upgrade"
   ],
   "activation": {
     "onStartup": true

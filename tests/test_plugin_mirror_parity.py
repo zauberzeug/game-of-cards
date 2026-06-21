@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -418,6 +419,70 @@ class OpenClawSkillPortDriftTest(unittest.TestCase):
                 "output is missing the host-neutral guidance paragraph "
                 "(CONTEXT_BLOCK_RE failed to match): " + ", ".join(offenders)
             ),
+        )
+
+
+class OpenClawManifestSkillRegistrationTest(unittest.TestCase):
+    """OpenClaw activates skills from the explicit `skills` array in
+    `openclaw.plugin.json`, which is hand-maintained (NOT auto-synced). A
+    ported skill dir that is absent from that array ships as dead files the
+    host never activates; a stale array entry points at a missing dir. The
+    porter drift guard and `--check` only compare SKILL.md *content*, so
+    they cannot see this registration gap. This guard closes it.
+
+    Lives in a test (not a `ci.yml` step) for the same reason the porter
+    drift guard does — the autonomous bot's `GITHUB_TOKEN` cannot edit
+    files under `.github/workflows/`.
+    """
+
+    @staticmethod
+    def _manifest_skills() -> set[str]:
+        manifest = json.loads(
+            (ROOT / "openclaw-plugin" / "openclaw.plugin.json").read_text(encoding="utf-8")
+        )
+        return {entry.split("/", 1)[-1] for entry in manifest.get("skills", [])}
+
+    @staticmethod
+    def _ported_skill_dirs() -> set[str]:
+        skills_root = ROOT / "openclaw-plugin" / "skills"
+        return {
+            d.name
+            for d in skills_root.iterdir()
+            if d.is_dir() and d.name != "__pycache__"
+        }
+
+    def test_manifest_skills_match_ported_dirs(self) -> None:
+        registered = self._manifest_skills()
+        ported = self._ported_skill_dirs()
+        missing = ported - registered
+        extra = registered - ported
+        self.assertEqual(
+            set(), missing,
+            msg=(
+                "ported openclaw-plugin/skills/ dirs absent from the "
+                "openclaw.plugin.json `skills` array (they ship as dead "
+                "files the host never activates): " + ", ".join(sorted(missing))
+            ),
+        )
+        self.assertEqual(
+            set(), extra,
+            msg=(
+                "openclaw.plugin.json `skills` entries with no corresponding "
+                "ported skill dir (stale registration): " + ", ".join(sorted(extra))
+            ),
+        )
+
+    def test_manifest_description_skill_count_matches(self) -> None:
+        manifest = json.loads(
+            (ROOT / "openclaw-plugin" / "openclaw.plugin.json").read_text(encoding="utf-8")
+        )
+        m = re.search(r"(\d+)\s+deck skills", manifest.get("description", ""))
+        self.assertIsNotNone(
+            m, msg="manifest description no longer states an '<N> deck skills' count"
+        )
+        self.assertEqual(
+            len(self._ported_skill_dirs()), int(m.group(1)),
+            msg="manifest description skill count drifted from the ported skill-dir count",
         )
 
 
