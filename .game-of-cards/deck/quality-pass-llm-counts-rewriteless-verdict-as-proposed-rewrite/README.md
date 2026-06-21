@@ -1,6 +1,6 @@
 ---
 title: quality-pass-llm-counts-rewriteless-verdict-as-proposed-rewrite
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-21T05:20:00Z"
@@ -27,6 +27,7 @@ definition_of_done: |
         `_apply_verdict_interactive` (`not ok and rewrite`)
   - [ ] PROCESS: reproduce.py inverted to assert the fixed behavior; log.md
         closure entry records the before/after counts
+worker: {who: "claude[bot]", where: main}
 ---
 
 # quality-pass-llm-counts-rewriteless-verdict-as-proposed-rewrite
