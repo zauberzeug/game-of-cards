@@ -1,6 +1,6 @@
 ---
 title: terminal-status-guard-missing-across-mutation-verbs
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-21T10:57:17Z"
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] MECHANICAL: Each guarded verb's error message names the supersede workflow (`goc status <old> superseded --by <new>`) where that is the correct forward path, matching the post-fix `_cmd_decide` message.
   - [ ] TDD: A regression test asserts each of the four verbs refuses a terminal-status target (exit non-zero, no mutation written).
   - [ ] PROCESS: Sibling-shape audit closed out — `_cmd_advance` / `_cmd_unadvance` (engine.py:~4383/4404) explicitly classified as in-scope (need a guard) or out-of-scope (supersession edges legitimately mutate closed cards), with the verdict recorded.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # terminal-status-guard-missing-across-mutation-verbs
