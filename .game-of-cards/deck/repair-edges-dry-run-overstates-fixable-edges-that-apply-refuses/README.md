@@ -1,7 +1,7 @@
 ---
 title: repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses
 summary: "`goc repair-edges` (dry-run) classifies every half-edge as fixable/structural against ONE original snapshot, while `--apply` reloads before each edge so its cycle checks see earlier same-run repairs. When repairing one half-edge creates the advances cycle that makes a second half-edge structural, the dry-run promises N repairs but apply performs fewer and exits 1. A 4th instance of the dry-run-vs-executor drift meta-fix family, now in repair-edges (not install/migrate)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-21T19:36:04Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the dry-run classification loop in `_cmd_repair_edges` (`engine.py`) simulates earlier same-run repairs the way `--apply` reloads — i.e. the two loops no longer compute fixable/structural from different graph snapshots
   - [ ] PROCESS: forward pointer added to the root meta-fix card `dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting` (this instance recorded under "instances so far")
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc repair-edges` dry-run overstates the repairs that `--apply` will make
