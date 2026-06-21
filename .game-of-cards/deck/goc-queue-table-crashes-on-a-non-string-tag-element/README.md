@@ -18,6 +18,13 @@ worker: {who: "claude[bot]", where: main}
 
 # `goc` queue table crashes on a non-string tag element
 
+> Family: an instance of the broader root cause tracked by
+> [bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes](../bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes/)
+> — the render-path twin of that card's already-tracked `advanced_by`
+> sibling `goc-validate-crashes-with-typeerror-on-non-string-element-in-tags-list`
+> (same non-string-element shape, different consumer). Fixed per-consumer
+> here; the architectural fix is the open decision on the meta-fix card.
+
 ## Location
 
 `goc/engine.py:2677`, inside `render_table`.

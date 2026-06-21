@@ -61,3 +61,34 @@ per the audit sibling-sweep rule, an Nth instance of an
 already-catalogued family with the meta-fix already open belongs on
 the architectural card, not a new per-consumer filing. Card stays at
 `human_gate: decision` pending the A/B/C choice.
+
+## 2026-06-21 — Second failure mode connected (no status change)
+
+An empty-queue audit pull surfaced two render-path crashes that share
+this card's root cause but a *different symptom* than the eight
+bare-string-on-list sites: a **non-string scalar** on a field whose
+read-time consumer assumes a string, crashing the queue/board renderer
+with a hard `TypeError` before `validate` runs (not the silent
+char-by-char iteration of the bare-string-on-list shape).
+
+- `goc-queue-and-board-crash-on-a-non-string-contribution-value` —
+  `contribution: 42` crashes `render_table` (`len`/`ljust`) and
+  `render_board` (`c[0]`). Note `contribution` is a **scalar** field,
+  outside the five list-typed fields this card enumerates — so the
+  family is broader than "list-typed fields" alone.
+- `goc-queue-table-crashes-on-a-non-string-tag-element` —
+  `tags: [bug, 42]` crashes `render_table`'s `",".join(...)`; the
+  render-path twin of the already-tracked `advanced_by` sibling
+  `goc-validate-crashes-with-typeerror-on-non-string-element-in-tags-list`.
+
+Both were fix-through closed at their consumers (with reproduce.py +
+regression tests), so they are NOT re-filed here. They are connected to
+this card per the pattern-generalization rule: they widen the root cause
+to "the parser accepts any scalar shape on any field; each consumer
+independently assumes a shape," which strengthens **approach A**
+generalized to *all* schema-typed fields (not only the five list-typed
+ones). Body section "## A second failure mode — non-string *scalars*
+crash the render path" + summary amended to record this. The shipped
+render-path coercions are themselves per-consumer guards — more
+instances of the model this card argues against. Card stays at
+`human_gate: decision` pending the A/B/C choice.

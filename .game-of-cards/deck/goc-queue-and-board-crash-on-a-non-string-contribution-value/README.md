@@ -18,6 +18,15 @@ worker: {who: "claude[bot]", where: main}
 
 # `goc` queue and board crash on a non-string `contribution` value
 
+> Family: an instance of the broader root cause tracked by
+> [bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes](../bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes/)
+> — the parser accepts any scalar shape on any field and each read-time
+> consumer trusts the shape it wants. This card is the non-string-*scalar*
+> render-path failure mode (a hard TypeError, vs that card's
+> bare-string-on-list char-iteration). Fixed per-consumer here; the
+> architectural fix (load-time shape validation across all fields) is the
+> open decision on the meta-fix card.
+
 ## Location
 
 `goc/engine.py:649-650` — the `Card.contribution` property. The crashes

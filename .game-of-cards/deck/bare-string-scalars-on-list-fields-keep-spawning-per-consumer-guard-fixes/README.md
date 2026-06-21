@@ -1,6 +1,6 @@
 ---
 title: bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
-summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:4172) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:2552) have now surfaced — the family will keep recurring until the loader rejects the malformed shape at the source or every consumer routes through a shared shape-coercing helper."
+summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:4172) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:2552) have now surfaced. A 2026-06-21 audit added a second failure mode in the same root cause — a non-string *scalar* on a field whose consumer assumes a string (`contribution: 42`; a non-string element in `tags`) crashes the queue/board renderer with a hard TypeError before validate runs, and `contribution` is a scalar field outside the five list-typed ones, so the family is broader than list fields alone. The family will keep recurring until the loader rejects/coerces the malformed shape at the source (approach A, generalized to all schema-typed fields) or every consumer routes through a shared shape-coercing helper."
 status: open
 stage: null
 contribution: medium
@@ -156,6 +156,41 @@ char-list output above is verbatim. The display is read-only (no file
 corruption), so the impact is lower than the mutating siblings, but it
 is one more consumer that joins the family, and it must be on the
 migration checklist for whichever central fix (A or B) is chosen.
+
+## A second failure mode — non-string *scalars* crash the render path (closed render-path siblings)
+
+The eight sites above all share one failure mode: a *bare string where a
+list is expected*, iterated character-by-character. A later audit
+(2026-06-21) surfaced a **second failure mode in the same root cause** —
+the loader equally tolerates a *non-string scalar* on a field whose
+read-time consumer assumes a string, and the queue/board renderers then
+crash with a hard `TypeError` (not silent char-iteration) before
+`validate` ever runs. Two closed render-path siblings:
+
+- [goc-queue-and-board-crash-on-a-non-string-contribution-value](../goc-queue-and-board-crash-on-a-non-string-contribution-value/)
+  — `contribution: 42` (a **scalar** field, outside the five list-typed
+  fields above) reaches `render_table` (`len()`/`.ljust()`) and
+  `render_board` (`c[0]`) and crashes the whole deck view. Fixed by
+  coercing in the `Card.contribution` getter.
+- [goc-queue-table-crashes-on-a-non-string-tag-element](../goc-queue-table-crashes-on-a-non-string-tag-element/)
+  — `tags: [bug, 42]` (a correct list, but a **non-string element**)
+  crashes `render_table`'s `",".join(...)`. This is the render-path twin
+  of the already-tracked `advanced_by` sibling
+  `goc-validate-crashes-with-typeerror-on-non-string-element-in-tags-list`
+  (same shape, different consumer). Fixed by coercing each element in the
+  join.
+
+Both were fixed at their consumer (the audit's fix-through), but they
+matter to *this* card because they widen the root cause: the parser
+accepts **any scalar shape on any field**, and each read-time consumer
+independently (and inconsistently) assumes the shape it wants — the same
+disease as the bare-string-on-list family, a different symptom.
+**Approach A, generalized to validate/coerce every schema-typed field's
+shape at load time (not only the five list-typed fields), closes both
+failure modes at once;** a per-field-type approach-B helper would need a
+scalar variant too. The render-path coercions already shipped are
+per-consumer guards — i.e. more instances of exactly the model this card
+argues against.
 
 ## Reachability path
 
