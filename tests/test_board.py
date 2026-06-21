@@ -228,6 +228,44 @@ class BoardRenderingTest(unittest.TestCase):
         self.assertIn("⏳", open_cell("impeded"))
         self.assertNotIn("⏳", open_cell("free"))
 
+    def test_renderers_tolerate_non_string_contribution(self) -> None:
+        """A hand-edited or legacy card with a non-string scalar
+        `contribution` (e.g. `42`) loads cleanly (`load_all_cards` only
+        skips `FrontmatterError`, not schema violations) and the read-only
+        views render BEFORE validation. `Card.contribution` must coerce to
+        `str` so `render_table` (`len`/`ljust`) and `render_board` (`[0]`)
+        don't crash the entire deck view on one bad card. Regression for the
+        non-string shape left open by `board-crashes-when-a-card-has-no-
+        contribution-value` (which fixed only the empty/None case)."""
+        from goc import engine
+
+        card = self._open_card("int-contribution")
+        card.frontmatter["contribution"] = 42
+
+        # The property hands a string to every downstream consumer.
+        self.assertEqual("42", card.contribution)
+
+        vals = engine.compute_values([card])
+        # Neither renderer raises.
+        engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        board = engine.render_board([card], values=vals, max_rows=20, no_color=True)
+        self.assertIn("[4]", board)  # marker is first char of "42"
+
+    def test_board_marks_none_contribution_with_placeholder(self) -> None:
+        """Coercion must not regress the empty/None case: a blank
+        `contribution:` (parses to None) stays falsy and keeps the `[?]`
+        marker rather than becoming the truthy string ``"None"`` → `[N]`."""
+        from goc import engine
+
+        card = self._open_card("none-contribution")
+        card.frontmatter["contribution"] = None
+
+        self.assertEqual("", card.contribution)
+        board = engine.render_board([card], max_rows=20, no_color=True)
+        self.assertIn("[?]", board)
+        self.assertNotIn("[N]", board)
+
     def test_board_rejects_negative_max_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

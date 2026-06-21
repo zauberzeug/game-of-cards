@@ -647,7 +647,8 @@ class Card:
 
     @property
     def contribution(self) -> str:
-        return self.frontmatter.get("contribution", "")
+        v = self.frontmatter.get("contribution")
+        return "" if v is None else str(v)
 
     @property
     def human_gate(self) -> str:

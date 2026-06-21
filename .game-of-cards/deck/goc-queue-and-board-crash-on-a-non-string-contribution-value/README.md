@@ -1,18 +1,18 @@
 ---
 title: goc-queue-and-board-crash-on-a-non-string-contribution-value
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-21T18:57:07Z"
-closed_at: null
+closed_at: "2026-06-21T19:01:11Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `render_table` (verbose 0 and 1) and `render_board` over a one-card deck whose `contribution` is a non-string scalar (e.g. `42`) both render without raising.
-  - [ ] MECHANICAL: `Card.contribution` (`goc/engine.py:649-650`) coerces to `str`, mirroring the `created` property two definitions below it (`goc/engine.py:661-664`).
-  - [ ] MECHANICAL: plugin mirrors synced (`goc/engine.py` is mirrored byte-for-byte into the plugin payloads) and `uv run goc validate` is clean.
+  - [x] TDD: reproduce.py exits zero — `render_table` (verbose 0 and 1) and `render_board` over a one-card deck whose `contribution` is a non-string scalar (e.g. `42`) both render without raising; a regression test in `tests/test_board.py` covers both renderers plus the None-marker guard.
+  - [x] MECHANICAL: `Card.contribution` (`goc/engine.py:649-650`) coerces non-None values to `str` (None/missing stays `""` so the empty-case `[?]` board marker does not regress to `[N]`).
+  - [x] MECHANICAL: plugin mirrors synced (`goc/engine.py` is mirrored byte-for-byte into the plugin payloads) and `uv run goc validate` is clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -74,11 +74,23 @@ distinct uncovered crash site.
 
 ## Empirical evidence
 
+Before the fix:
+
+```
+render_table CRASH: TypeError object of type 'int' has no len()
+render_table (verbose) CRASH: TypeError object of type 'int' has no len()
+render_board CRASH: TypeError 'int' object is not subscriptable
+```
+
+After the fix (reproduce.py exits 0):
+
 ```
 $ uv run python deck/goc-queue-and-board-crash-on-a-non-string-contribution-value/reproduce.py
 compute_values OK (int contribution does not crash the value walk): (0.0, ['self'])
-render_table CRASH: TypeError object of type 'int' has no len()
-render_board CRASH: TypeError 'int' object is not subscriptable
+render_table OK (int)
+render_table (verbose) OK (int)
+render_board OK (int)
+render_board OK (None still marked [?])
 ```
 
 (`compute_values` survives because `CONTRIBUTION_RANK.get(t.contribution, 0.0)`
@@ -99,15 +111,17 @@ the non-string shape.
 
 ## Fix
 
-Coerce in the property, mirroring `created`:
+Coerce in the property (close to `created`, but keeping None falsy so
+the sibling card's empty-case `[?]` marker does not regress to `[N]`):
 
 ```python
 @property
 def contribution(self) -> str:
-    return str(self.frontmatter.get("contribution", ""))
+    v = self.frontmatter.get("contribution")
+    return "" if v is None else str(v)
 ```
 
-One line fixes both renderers (and any other consumer that assumes a
+This fixes both renderers (and any other consumer that assumes a
 string). `validate` still flags the value as out-of-enum
 (`engine.py:1427`), so coercion does not mask the schema violation — it
 just keeps the read-only views alive long enough to show it.
