@@ -8,7 +8,8 @@ created: "2026-06-08T04:39:38Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - pattern-generalization-mutation-detector-fires-on-pathspec-separator-staging
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: human resolves `## Decision required` — recognizer strategy chosen (grammar-aware normalization vs. argparse-style parse vs. broadened token test), recorded in log.md
