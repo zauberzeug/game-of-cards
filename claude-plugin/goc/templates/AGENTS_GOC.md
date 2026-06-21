@@ -21,6 +21,22 @@ Project-local extensions live under `.game-of-cards/`; see its
 `README.md` if present. The `<!-- BEGIN GOC -->` markers above are the
 discovery signal that this repo uses GoC.
 
+**The README is a dashboard, not a changelog.** A card's `README.md`
+shows only what is true *now*; `log.md` is the append-only journal of
+how it got there. When new evidence corrects, refutes, or re-scopes a
+finding the README already asserts, **rewrite the section that stated
+it in place** — do not append a "Correction" / "Update" / "Latest
+finding" block below it and leave the now-false claim standing. A card
+that asserts both the old verdict and the new one contradicts itself,
+and the stale top-framing is exactly what the next agent reads first.
+In the same pass, reconcile the `summary:` frontmatter and any `> ⚠`
+verdict banner, and record the *why* plus the demoted claim in
+`log.md`. `goc decide` reminds you of this for re-scopes and `goc
+validate` flags `DECISION_CONTRADICTS_VERDICT`, but the discipline
+applies to every hand edit, not just the decide path — the lone
+exception is a closed card's post-close amendment (next). See
+`Skill(card-schema)` "What goes where" for the full contract.
+
 **Closure is not frozenness.** When new evidence surfaces after a card
 closes, file a new card for the new work and amend the closed card
 with a forward pointer (dated `log.md` append; optional `> Later
