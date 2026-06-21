@@ -252,6 +252,22 @@ class BoardRenderingTest(unittest.TestCase):
         board = engine.render_board([card], values=vals, max_rows=20, no_color=True)
         self.assertIn("[4]", board)  # marker is first char of "42"
 
+    def test_table_tolerates_non_string_tag_element(self) -> None:
+        """`render_table` joins the first four tags; a non-string element
+        (e.g. `42` from a hand edit or legacy card) loads cleanly and must
+        not crash the whole queue view on the join. Sibling of the
+        non-string-contribution crash; only the table renders tags, so the
+        board and JSON paths already tolerate the shape."""
+        from goc import engine
+
+        card = self._open_card("int-tag")
+        card.frontmatter["tags"] = ["bug", 42]
+
+        vals = engine.compute_values([card])
+        table = engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        self.assertIn("bug,42", table)
+
     def test_board_marks_none_contribution_with_placeholder(self) -> None:
         """Coercion must not regress the empty/None case: a blank
         `contribution:` (parses to None) stays falsy and keeps the `[?]`

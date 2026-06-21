@@ -1,18 +1,18 @@
 ---
 title: goc-queue-table-crashes-on-a-non-string-tag-element
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-21T19:03:15Z"
-closed_at: null
+closed_at: "2026-06-21T19:04:48Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `render_table` (verbose 0 and 1) over a one-card deck whose `tags` list contains a non-string element (e.g. `[bug, 42]`) renders without raising.
-  - [ ] MECHANICAL: the tag join in `render_table` (`goc/engine.py:2677`) coerces each element to `str` so a non-string element does not crash the whole view; `validate` still flags the element as a non-canonical tag.
-  - [ ] MECHANICAL: plugin mirrors synced (`goc/engine.py` is mirrored byte-for-byte into the plugin payloads) and `uv run goc validate` is clean.
+  - [x] TDD: reproduce.py exits zero — `render_table` (verbose 0 and 1) over a one-card deck whose `tags` list contains a non-string element (e.g. `[bug, 42]`) renders without raising; regression test `test_table_tolerates_non_string_tag_element` in `tests/test_board.py`.
+  - [x] MECHANICAL: the tag join in `render_table` (`goc/engine.py:2677`) coerces each element to `str` so a non-string element does not crash the whole view; `validate` still flags the element as a non-canonical tag.
+  - [x] MECHANICAL: plugin mirrors synced (`goc/engine.py` is mirrored byte-for-byte into the plugin payloads) and `uv run goc validate` is clean.
 worker: {who: "claude[bot]", where: main}
 ---
 

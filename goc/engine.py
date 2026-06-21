@@ -2675,7 +2675,7 @@ def render_table(
         headers = ["TITLE", "STATUS", "CONTR.", "VALUE", "GATE", "TAGS", "DOD"]
     rows: list[tuple[str, ...]] = []
     for t in cards:
-        tags = ",".join(t.tags[:4])
+        tags = ",".join(str(x) for x in t.tags[:4])
         if len(t.tags) > 4:
             tags += "+"
         dod = "prose" if t.dod_freeform else f"{t.dod_done}/{t.dod_done + t.dod_open}"
