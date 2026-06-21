@@ -858,6 +858,22 @@ def _is_iso_date(value) -> bool:
     return True
 
 
+def _is_date_only(value) -> bool:
+    """True when an ISO timestamp carries only day granularity.
+
+    A bare `date` (not its `datetime` subclass) or a `YYYY-MM-DD` string
+    names a calendar day, not an instant — callers that compare such a
+    value against a full datetime must compare at day granularity rather
+    than promoting it to midnight UTC. Returns False for datetimes,
+    datetime-shaped strings, and non-ISO values.
+    """
+    if isinstance(value, datetime):
+        return False
+    if isinstance(value, date):
+        return True
+    return isinstance(value, str) and bool(_ISO_DATE_RE.match(value))
+
+
 def _utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -1425,16 +1441,24 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     # was created. Compare instants (not lexically) so a date-only `created`
     # and a same-day datetime `closed_at` sort correctly. Both parses must
     # succeed — a value that already failed its shape check above is skipped
-    # so the comparison never crashes.
+    # so the comparison never crashes. When either operand is a bare date,
+    # only the calendar day is known: compare at day granularity so a
+    # same-day close with a sub-day `created` datetime (whose bare-date
+    # `closed_at` promotes to that day's midnight) isn't spuriously flagged.
+    # Genuine inversions — an earlier `closed_at` day, or a both-datetime
+    # intra-day reversal — still fire.
     created_value = fm.get("created")
     if created_value is not None and closed_at is not None:
         created_instant = _waiting_until_instant(created_value)
         closed_instant = _waiting_until_instant(closed_at)
-        if (
-            created_instant is not None
-            and closed_instant is not None
-            and closed_instant < created_instant
-        ):
+        if created_instant is not None and closed_instant is not None:
+            if _is_date_only(created_value) or _is_date_only(closed_at):
+                predates = closed_instant.date() < created_instant.date()
+            else:
+                predates = closed_instant < created_instant
+        else:
+            predates = False
+        if predates:
             errors.append(
                 f"{t.title}: closed_at: {closed_at!r} predates created "
                 f"{created_value!r} (a card cannot close before it was created)"

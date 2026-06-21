@@ -119,6 +119,57 @@ class ValidateClosedAtOrderingTest(unittest.TestCase):
 
             self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
 
+    def test_same_day_datetime_created_bare_date_closed_accepted(self) -> None:
+        # Day-granularity `closed_at` on a card created at a sub-day datetime
+        # the same calendar day is coherent — the bare date must not be
+        # promoted to midnight and then flagged as predating `created`.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _write_done_card(
+                cwd,
+                "same-day-dt-created-bare-closed",
+                '"2026-06-15T20:00:00Z"',
+                "2026-06-15",
+            )
+
+            result = _run_validate(cwd)
+
+            self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+
+    def test_same_day_bare_date_created_datetime_closed_accepted(self) -> None:
+        # The inverse mix (date created, same-day datetime closed) must also
+        # stay clean.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _write_done_card(
+                cwd,
+                "same-day-bare-created-dt-closed",
+                "2026-06-15",
+                '"2026-06-15T20:00:00Z"',
+            )
+
+            result = _run_validate(cwd)
+
+            self.assertEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+
+    def test_bare_date_closed_earlier_day_than_datetime_created_rejected(self) -> None:
+        # A bare-date `closed_at` on a strictly-earlier calendar day than a
+        # datetime `created` is a genuine inversion and must still fire.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            _write_done_card(
+                cwd,
+                "bare-closed-earlier-day",
+                '"2026-06-15T20:00:00Z"',
+                "2026-06-14",
+            )
+
+            result = _run_validate(cwd)
+
+            self.assertNotEqual(0, result.returncode, msg=f"stderr:\n{result.stderr}")
+            self.assertIn("bare-closed-earlier-day: closed_at:", result.stderr)
+            self.assertIn("predates created", result.stderr)
+
     def test_non_iso_created_still_only_shape_error_no_crash(self) -> None:
         # A malformed `created` must surface the existing shape error and must
         # NOT crash the new ordering comparison (which skips when a parse fails).
