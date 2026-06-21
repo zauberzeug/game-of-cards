@@ -4928,6 +4928,49 @@ def _print_structural_edge_problems(problems: list[tuple[HalfEdge, str]]) -> Non
         print(f"  {edge.message}: {problem}", file=sys.stderr)
 
 
+def _simulate_repair(by_title: dict[str, "Card"], edge: HalfEdge) -> None:
+    """Mirror `_mutate_pair`'s on-disk effect in memory.
+
+    A repair adds the missing reverse half (`edge.src` → `edge.ref.inverse`);
+    the forward half already exists by construction, so it is a no-op. Applying
+    just the reverse half to the shared in-memory `Card` objects lets later
+    cycle checks in the same classification pass observe this repair — exactly
+    as `--apply` would by re-loading from disk before each edge.
+    """
+    target = by_title.get(edge.ref)
+    if target is None:
+        return
+    cur = target.frontmatter.get(edge.inverse) or []
+    if not isinstance(cur, list):
+        cur = []
+    if edge.src not in cur:
+        target.frontmatter[edge.inverse] = [*cur, edge.src]
+
+
+def _classify_half_edges(
+    half_edges: list[HalfEdge], cards: list["Card"]
+) -> tuple[list[HalfEdge], list[tuple[HalfEdge, str]]]:
+    """Split half-edges into (fixable, structural) against an evolving graph.
+
+    Single source of truth for both the dry-run preview and `--apply`: each
+    edge is classified, then — if fixable — its repair is simulated in memory
+    so subsequent cycle checks see the forward edges earlier repairs add. This
+    is what keeps the preview honest: when repairing one half-edge closes a
+    cycle for a later one, both passes classify the later edge as structural.
+    """
+    by_title = {c.title: c for c in cards}
+    fixable: list[HalfEdge] = []
+    structural: list[tuple[HalfEdge, str]] = []
+    for edge in half_edges:
+        problem = _repair_edge_cycle_problem(edge, cards)
+        if problem:
+            structural.append((edge, problem))
+            continue
+        fixable.append(edge)
+        _simulate_repair(by_title, edge)
+    return fixable, structural
+
+
 def _cmd_repair_edges(args):
     """Preview or repair asymmetric bidirectional half-edges (advances/advanced_by, supersedes/superseded_by)."""
     cards = load_all_cards()
@@ -4936,14 +4979,7 @@ def _cmd_repair_edges(args):
         print("No half-edges found.")
         return
 
-    fixable: list[HalfEdge] = []
-    structural: list[tuple[HalfEdge, str]] = []
-    for edge in half_edges:
-        problem = _repair_edge_cycle_problem(edge, cards)
-        if problem:
-            structural.append((edge, problem))
-        else:
-            fixable.append(edge)
+    fixable, structural = _classify_half_edges(half_edges, cards)
 
     if not args.apply:
         if fixable:
@@ -4960,18 +4996,12 @@ def _cmd_repair_edges(args):
         return
 
     repaired = 0
-    structural = []
-    for edge in half_edges:
-        # Re-load before each mutation so cycle checks see earlier repairs from
-        # this invocation.
-        current_cards = load_all_cards()
-        problem = _repair_edge_cycle_problem(edge, current_cards)
-        if problem:
-            structural.append((edge, problem))
-            continue
-        # Apply the missing reverse half: add edge.src to edge.ref's inverse list.
-        # The forward edge already exists by construction, so this idempotently
-        # restores symmetry for any LIST_REL_FIELDS pair.
+    # `fixable` was classified against the same evolving graph `--apply` would
+    # observe by reloading before each edge (see `_classify_half_edges`), so it
+    # already excludes edges made structural by an earlier same-run repair.
+    # Applying the missing reverse half is idempotent for any LIST_REL_FIELDS
+    # pair, since the forward edge exists by construction.
+    for edge in fixable:
         _mutate_pair(edge.ref, edge.src, edge.inverse, edge.field, add=True)
         print(f"repaired: {edge.message}")
         repaired += 1

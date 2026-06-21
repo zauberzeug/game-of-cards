@@ -1,22 +1,22 @@
 ---
 title: repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses
 summary: "`goc repair-edges` (dry-run) classifies every half-edge as fixable/structural against ONE original snapshot, while `--apply` reloads before each edge so its cycle checks see earlier same-run repairs. When repairing one half-edge creates the advances cycle that makes a second half-edge structural, the dry-run promises N repairs but apply performs fewer and exits 1. A 4th instance of the dry-run-vs-executor drift meta-fix family, now in repair-edges (not install/migrate)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-21T19:36:04Z"
-closed_at: null
+closed_at: "2026-06-21T19:47:17Z"
 human_gate: none
 advances:
   - dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — the dry-run "would be repaired (N)" set equals the set `--apply` actually repairs, on a deck where one repair creates a cycle for another
-  - [ ] TDD: a regression test asserts dry-run/apply parity for repair classification across an interacting-half-edge fixture (two Type-β advances half-edges that form a cycle when both reverse halves are added)
-  - [ ] MECHANICAL: the dry-run classification loop in `_cmd_repair_edges` (`engine.py`) simulates earlier same-run repairs the way `--apply` reloads — i.e. the two loops no longer compute fixable/structural from different graph snapshots
-  - [ ] PROCESS: forward pointer added to the root meta-fix card `dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting` (this instance recorded under "instances so far")
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
+  - [x] TDD: reproduce.py exits zero — the dry-run "would be repaired (N)" set equals the set `--apply` actually repairs, on a deck where one repair creates a cycle for another
+  - [x] TDD: a regression test asserts dry-run/apply parity for repair classification across an interacting-half-edge fixture (two Type-β advances half-edges that form a cycle when both reverse halves are added)
+  - [x] MECHANICAL: the dry-run classification loop in `_cmd_repair_edges` (`engine.py`) simulates earlier same-run repairs the way `--apply` reloads — i.e. the two loops no longer compute fixable/structural from different graph snapshots
+  - [x] PROCESS: forward pointer added to the root meta-fix card `dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting` (this instance recorded under "instances so far")
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

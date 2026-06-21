@@ -6,8 +6,8 @@ repairs. On a deck where repairing one half-edge creates the advances cycle
 that makes a second half-edge structural, the dry-run promises N repairs but
 `--apply` performs fewer and exits non-zero.
 
-Exits 0 when the bug is present (dry-run count > apply count), 1 once the two
-passes agree (the fix has landed).
+Exits non-zero while the bug is present (dry-run count > apply count); exits
+zero once the two passes agree on the repair set (the fix has landed).
 """
 
 import os
@@ -95,9 +95,9 @@ def main() -> int:
                 f"\nFAIL (bug present): dry-run promised {dry_count} repairs but "
                 f"apply performed {apply_count} — the preview overstates."
             )
-            return 0
+            return 1
         print("\nPASS (fixed): dry-run and apply agree on the repair set.")
-        return 1
+        return 0
 
 
 if __name__ == "__main__":

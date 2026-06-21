@@ -18,8 +18,8 @@ summary: |
   (`_plan_writes` / migrate's preview branch) that re-enumerates conditionals
   the real executor applies independently. The two code paths drift: every
   time an executor grows a guard, the plan must be patched to match by hand,
-  and when it isn't, the dry-run lies. Four instances have surfaced (three
-  fixed one-by-one, one open in `repair-edges`); this card proposes one
+  and when it isn't, the dry-run lies. Four instances have surfaced (all
+  fixed one-by-one, the latest in `repair-edges`); this card proposes one
   architectural fix so the plan derives from the executor instead of
   re-listing its decisions.
 definition_of_done: |
@@ -48,8 +48,8 @@ contract.
 ## The instances so far
 
 Four separate cards. The first three were each fixed by patching the plan to
-re-mirror one executor conditional; the fourth (open) shows the same shape in
-a different verb:
+re-mirror one executor conditional; the fourth, in a different verb, was fixed
+by unifying its two passes into one incremental classifier:
 
 1. [goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run](../goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run/)
    — git-repo case: dry-run promised the pre-commit append, real upgrade
@@ -66,7 +66,10 @@ a different verb:
    repairs apply then refuses as cycle-creating. The first instance outside
    the `install`/`upgrade`/`migrate` cluster — the drift is a `repair-edges`
    verb, not a `_plan_writes` write-plan — which widens the case that the
-   architectural fix should be general rather than per-verb. Open (unfixed).
+   architectural fix should be general rather than per-verb. Fixed by routing
+   both passes through one incremental classifier (`_classify_half_edges`) that
+   simulates each same-run repair in memory, so the dry-run sees the forward
+   edges earlier repairs add — exactly as `--apply`'s reload does.
 
 Instances 1 and 3 are the *same conditional* (`.git` presence around the
 pre-commit append) drifting in opposite directions across two code paths —

@@ -115,6 +115,51 @@ class RepairEdgesTest(unittest.TestCase):
             self.assertIn("c-card \u2192 a-card would create a cycle in the advances graph", result.stderr)
             self.assertNotIn("c-card", self.readme(cwd, "a-card"))
 
+    def interacting_advances_half_edges(self, cwd: Path) -> None:
+        """Two Type-β advances half-edges that form a cycle once both reverse
+        halves are added: each card's advanced_by names the other, but neither
+        carries the matching advances entry. Repairing the first adds the
+        advances forward edge that makes the second structural."""
+        for title, other in (("card-a", "card-b"), ("card-b", "card-a")):
+            self.new_card(cwd, title)
+            self.write_readme(
+                cwd,
+                title,
+                self.readme(cwd, title).replace(
+                    "advanced_by: []\n",
+                    f"advanced_by:\n  - {other}\n",
+                ),
+            )
+
+    def test_repair_edges_dry_run_matches_apply_on_interacting_half_edges(self) -> None:
+        # Regression: the dry-run classification must simulate earlier same-run
+        # repairs the way --apply does, so the preview's "would be repaired (N)"
+        # set equals the set --apply actually repairs. Before the fix the dry
+        # run classified every edge against one original snapshot and promised 2
+        # repairs while --apply (reloading before each edge) performed 1.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.interacting_advances_half_edges(cwd)
+
+            dry = self.run_goc(cwd, "repair-edges")
+            self.assert_goc_ok(dry)
+            self.assertIn("Half-edges that would be repaired (1):", dry.stdout)
+            # The structural edge is surfaced in the preview too (to stderr),
+            # not silently folded into the fixable count.
+            self.assertIn("would create a cycle in the advances graph", dry.stderr)
+
+            apply = self.run_goc(cwd, "repair-edges", "--apply")
+            self.assertEqual(
+                1, apply.returncode, msg=f"stdout:\n{apply.stdout}\nstderr:\n{apply.stderr}"
+            )
+            apply_repaired = apply.stdout.count("repaired: ")
+            self.assertEqual(
+                1,
+                apply_repaired,
+                msg=f"dry-run promised 1 repair; apply performed {apply_repaired}",
+            )
+            self.assertIn("would create a cycle in the advances graph", apply.stderr)
+
     def test_repair_edges_help_names_both_relation_classes(self) -> None:
         import argparse
 
