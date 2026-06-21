@@ -1,10 +1,10 @@
 ---
 title: add-set-cadence-tooling-to-retune-autonomous-workflows
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-21T05:08:07Z"
-closed_at: null
+closed_at: "2026-06-21T05:23:55Z"
 human_gate: none
 advances: []
 advanced_by: []

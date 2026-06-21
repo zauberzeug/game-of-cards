@@ -16,3 +16,24 @@
 - Verification: test_set_cadence + `sync --check` + `goc validate` green;
   full suite 486/487 (sole failure is the interactive-rebase guard test the
   sandbox cannot set up — it shells out to `git rebase -i`; passes in CI).
+
+## 2026-06-21 — Closure
+
+Closed: all 6 DoD items met. `scripts/set_cadence.py` + the `tune-cadence`
+repo-local skill + `refine-deck.yml` shipped; cadence applied (pull-card
+hourly, audit-deck + refine-deck every 3h) and verified via `--show`, an
+idempotent re-run, `goc validate`, `sync --check`, and
+`test_set_cadence`. Reverses `run-pull-card-daily-and-audit-deck-weekly`
+(amended there with a forward pointer); `MAX_ITERATIONS` cap untouched.
+The only regression-suite failure is the sandbox-only interactive-rebase
+guard test (`git rebase -i` unsupported here; passes in CI). Pending:
+push to `main` so the new cron takes effect (scheduled workflows run from
+the default branch).
+
+## Closure verification (2026-06-21T05:25:13Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 6/6 ticked
+- [x] log-md-closure-entry — '## 2026-06-21 — Closure' present
