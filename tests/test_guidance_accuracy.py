@@ -98,5 +98,65 @@ class AgentsArchitectureAccuracyTest(unittest.TestCase):
         )
 
 
+def _board_legend_row(path: Path) -> str:
+    """Return the `goc --board` legend row from a deck SKILL.md table."""
+    for line in path.read_text().splitlines():
+        if "`goc --board`" in line and line.lstrip().startswith("|"):
+            return line
+    raise AssertionError(f"{path}: no `goc --board` legend row found")
+
+
+# The deck skill's board legend is the one place agents learn what the `⏳`
+# glyph means. The engine paints `⏳` on three axes (`render_board`), but only
+# two of them hide a card from the pull queue (`card_is_ready` ignores
+# `dependency_blocked`). A legend that claims `⏳` ⇒ unpullable, or that omits
+# the `human_gate` axis, misleads autonomous pullers.
+_DECK_SKILL_FILES = [
+    ROOT / "goc" / "templates" / "skills" / "deck" / "SKILL.md",
+    ROOT / ".claude" / "skills" / "deck" / "SKILL.md",
+]
+# The false biconditional the old legend shipped.
+_STALE_BICONDITIONAL = re.compile(r"No\s+`?⏳`?\s*⇒\s*pullable", re.IGNORECASE)
+
+
+class DeckBoardLegendAccuracyTest(unittest.TestCase):
+    def test_board_legend_names_human_gate_axis(self) -> None:
+        for path in _DECK_SKILL_FILES:
+            if not path.exists():
+                continue
+            row = _board_legend_row(path)
+            self.assertIn(
+                "human_gate",
+                row,
+                msg=(
+                    f"{path.relative_to(ROOT)}: board legend omits the "
+                    "`human_gate` axis, but `render_board` paints `⏳` on it."
+                ),
+            )
+
+    def test_board_legend_does_not_claim_dependency_block_unpullable(self) -> None:
+        for path in _DECK_SKILL_FILES:
+            if not path.exists():
+                continue
+            row = _board_legend_row(path)
+            self.assertNotRegex(
+                row,
+                _STALE_BICONDITIONAL,
+                msg=(
+                    f"{path.relative_to(ROOT)}: board legend asserts the false "
+                    "biconditional 'No ⏳ ⇒ pullable'. A dependency-blocked card "
+                    "carries `⏳` yet `card_is_ready` reports it pullable."
+                ),
+            )
+            self.assertIn(
+                "still pullable",
+                row,
+                msg=(
+                    f"{path.relative_to(ROOT)}: board legend should state that a "
+                    "dependency-block leaves the card still pullable (advisory only)."
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

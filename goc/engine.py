@@ -180,10 +180,14 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 _YAML_INDICATOR_FIRST = frozenset("&*")
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
 # Covers both bare-indicator forms (`|`, `|-`, `>+`) and the explicit-indent
-# forms the vendored parser's `_BLOCK_INDICATOR_RE` accepts (`|2`, `|3`,
-# `|10`, `|2-`, `|2+`). Coupled by shape to `yaml._BLOCK_INDICATOR_RE` so the
-# emitter's quote-trigger cannot drift from the parser's recognizer.
-_YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>[-+]?)$")
+# forms the vendored parser's `_BLOCK_INDICATOR_RE` / `_FOLDED_INDICATOR_RE`
+# accept (`|2`, `|3`, `|10`, `|2-`, `|2+`, and the folded peers `>2`, `>10`,
+# `>2-`, `>2+`). Both branches carry `\d*` so the explicit-indent digit run is
+# recognized on the folded side too — the parser's folded recognizer accepts
+# it, so an unquoted `>2` would crash on re-parse. Coupled by shape to
+# `yaml._BLOCK_INDICATOR_RE` / `yaml._FOLDED_INDICATOR_RE` so the emitter's
+# quote-trigger cannot drift from the parser's recognizers.
+_YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>\d*[-+]?)$")
 
 
 def _parser_coerces_scalar(s: str) -> bool:
@@ -386,11 +390,16 @@ def extract_decision_required_section(body: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
-# A *resolved* `## Decision` block (the one `goc decide` writes), as opposed to
-# a pending `## Decision required` section. The trailing `[ \t]*\n` makes the
-# heading match exactly `## Decision` and never `## Decision required`.
+# A *resolved* `## Decision` block, as opposed to a pending `## Decision
+# required` section. Two shipped forms count as resolved: the bare
+# `## Decision` heading `goc decide` writes, and the `## Decision
+# (rubric-derived)` heading `Skill(create-card)` pre-writes when the project
+# rubric resolves a gate-`none` card. The optional `(…)` qualifier admits the
+# rubric-derived form (and any future parenthetical variant); the pending
+# `## Decision required` section is still excluded because its heading carries a
+# bare word, not a parenthetical, before the newline.
 RESOLVED_DECISION_RE = re.compile(
-    r"^## Decision[ \t]*\n(.*?)(?=^## |\Z)",
+    r"^## Decision(?: \([^)\n]*\))?[ \t]*\n(.*?)(?=^## |\Z)",
     re.MULTILINE | re.DOTALL,
 )
 
@@ -847,6 +856,22 @@ def _is_iso_date(value) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _is_date_only(value) -> bool:
+    """True when an ISO timestamp carries only day granularity.
+
+    A bare `date` (not its `datetime` subclass) or a `YYYY-MM-DD` string
+    names a calendar day, not an instant — callers that compare such a
+    value against a full datetime must compare at day granularity rather
+    than promoting it to midnight UTC. Returns False for datetimes,
+    datetime-shaped strings, and non-ISO values.
+    """
+    if isinstance(value, datetime):
+        return False
+    if isinstance(value, date):
+        return True
+    return isinstance(value, str) and bool(_ISO_DATE_RE.match(value))
 
 
 def _utc_now_iso() -> str:
@@ -1411,6 +1436,33 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     closed_at = fm.get("closed_at")
     if closed_at is not None and not _is_iso_date(closed_at):
         errors.append(f"{t.title}: closed_at: {closed_at!r} not null/ISO date/datetime")
+
+    # Cross-field ordering: a card cannot enter a terminal status before it
+    # was created. Compare instants (not lexically) so a date-only `created`
+    # and a same-day datetime `closed_at` sort correctly. Both parses must
+    # succeed — a value that already failed its shape check above is skipped
+    # so the comparison never crashes. When either operand is a bare date,
+    # only the calendar day is known: compare at day granularity so a
+    # same-day close with a sub-day `created` datetime (whose bare-date
+    # `closed_at` promotes to that day's midnight) isn't spuriously flagged.
+    # Genuine inversions — an earlier `closed_at` day, or a both-datetime
+    # intra-day reversal — still fire.
+    created_value = fm.get("created")
+    if created_value is not None and closed_at is not None:
+        created_instant = _waiting_until_instant(created_value)
+        closed_instant = _waiting_until_instant(closed_at)
+        if created_instant is not None and closed_instant is not None:
+            if _is_date_only(created_value) or _is_date_only(closed_at):
+                predates = closed_instant.date() < created_instant.date()
+            else:
+                predates = closed_instant < created_instant
+        else:
+            predates = False
+        if predates:
+            errors.append(
+                f"{t.title}: closed_at: {closed_at!r} predates created "
+                f"{created_value!r} (a card cannot close before it was created)"
+            )
 
     if "definition_of_done" in fm and not isinstance(fm["definition_of_done"], str):
         errors.append(f"{t.title}: definition_of_done: must be a string")
@@ -2052,6 +2104,28 @@ def dependency_blocked(card: Card, by_title: dict[str, Card]) -> bool:
     return bool(dependency_blockers(card, by_title))
 
 
+def dependency_advisory(
+    card: Card, by_title: dict[str, Card]
+) -> tuple[list[str], bool]:
+    """Liveness-gated dependency advisory for the renderers.
+
+    The "awaiting: X — you may start" advisory is a *display* of
+    `dependency_blockers` / `dependency_blocked` that is meaningless on
+    a terminal card: a `done`/`disproved`/`superseded` card never
+    "starts", so a leftover advisory is just stale noise (and shipped as
+    a bug twice — once each in the table and JSON renderers). This helper
+    applies the `status not in TERMINAL_STATUSES` gate once so every
+    renderer consumes a pre-gated result instead of re-inlining it.
+
+    Returns `([], False)` for terminal cards, else
+    `(blockers, bool(blockers))`.
+    """
+    if card.status in TERMINAL_STATUSES:
+        return [], False
+    blockers = dependency_blockers(card, by_title)
+    return blockers, bool(blockers)
+
+
 def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
@@ -2646,7 +2720,10 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
-            blockers = dependency_blockers(t, by_title)
+            # Liveness-gated dependency advisory (see `dependency_advisory`):
+            # the "you may start" hint is meaningless on a terminal card, so
+            # only live cards show it. The gate lives in the helper now.
+            blockers, _ = dependency_advisory(t, by_title)
             if blockers:
                 out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
             w = t.worker
@@ -2726,8 +2803,12 @@ def render_json(
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
                 "supersedes": t.frontmatter.get("supersedes") or [],
                 "superseded_by": t.frontmatter.get("superseded_by") or [],
-                "dependency_awaiting": dependency_blocked(t, by_title),
-                "awaiting": dependency_blockers(t, by_title),
+                # Liveness-gated dependency advisory (see
+                # `dependency_advisory`): the "you may start" hint is
+                # meaningless on a terminal card. `ready` is already
+                # status-gated by `card_is_ready` (open-only).
+                "awaiting": dependency_advisory(t, by_title)[0],
+                "dependency_awaiting": dependency_advisory(t, by_title)[1],
                 "ready": card_is_ready(t, by_title),
                 "worker": t.worker,
                 "dod_open": t.dod_open,
@@ -2790,10 +2871,12 @@ def render_board(
         # out of the pull queue just as hard as an impediment overlay, so it
         # must carry the same ⏳. `dependency_blocked` stays included as an
         # advisory "has an open prereq" hint (it does not hide the card from
-        # the queue, but the board flags it).
+        # the queue, but the board flags it). The `status == "open"` guard is
+        # the board's own stricter slice — `dependency_advisory` gates out
+        # terminal cards, the board additionally flags only open ones.
         not_ready = live and (
             t.human_gate != "none"
-            or (t.status == "open" and dependency_blocked(t, by_title))
+            or (t.status == "open" and dependency_advisory(t, by_title)[1])
             or waiting_impedes(t)
         )
         if not_ready:
@@ -3013,7 +3096,7 @@ def _build_parser() -> argparse.ArgumentParser:
                       help="Also run a Sonnet-batched summary+DoD audit.")
     p_qp.add_argument("--no-llm", dest="llm", action="store_false",
                       help="Disable LLM audit.")
-    p_qp.add_argument("--limit", type=int, default=None,
+    p_qp.add_argument("--limit", type=_non_negative_int, default=None,
                       help="With --llm: cap card count (testing/sampling).")
     p_qp.add_argument("--dry-run", action="store_true",
                       help="With --llm: print verdicts; skip the interactive accept/reject walk.")
@@ -3860,7 +3943,14 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         git_dir = Path(repo_check.stdout.strip())
         if not git_dir.is_absolute():
             git_dir = DECK_ROOT / git_dir
-        if any((git_dir / sf).exists() for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD")):
+        # REBASE_HEAD alone is insufficient: it is absent at a paused
+        # interactive-rebase stop (break/edit step). The rebase state
+        # directory (rebase-merge for the merge backend, rebase-apply for
+        # the apply backend) is present for the whole rebase, so check it too.
+        if any(
+            (git_dir / sf).exists()
+            for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD", "rebase-merge", "rebase-apply")
+        ):
             print("  (auto-commit skipped: merge/rebase/cherry-pick in progress)", file=sys.stderr)
             return False
         paths: list[str] = [
@@ -4997,17 +5087,35 @@ def _move_text_rewrite(text: str, old: str, new: str) -> str:
 
 
 def _move_iter_tracked_text_files():
-    """Yield (Path, str) for tracked text files; falls back to rglob outside git."""
+    """Yield (Path, str) for in-repo text files; falls back to rglob outside git.
+
+    Enumerates tracked AND untracked-but-not-ignored files (`--cached --others
+    --exclude-standard`), not tracked files alone. A card filed with `goc new`
+    is untracked until its first commit, so the routine file-then-rename flow
+    (`goc new <slug>` → `goc move <slug> <better-slug>` before committing) would
+    otherwise have the moved card's own README.md/log.md skipped by the rewrite
+    — the directory gets renamed (via the `shutil.move` fallback, since `git mv`
+    also refuses an untracked source) while the in-file `title:` field stays
+    stale, leaving a card that fails `goc validate`. Ignored files (venv, build
+    artifacts) stay excluded, matching the `.git`-pruning rglob fallback's intent.
+    """
     try:
         result = subprocess.run(
-            ["git", "ls-files", "-z"],
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
             cwd=str(REPO_ROOT), capture_output=True, check=True, timeout=30,
         )
-        paths = [
-            REPO_ROOT / entry.decode("utf-8", errors="replace")
-            for entry in result.stdout.split(b"\x00")
-            if entry
-        ]
+        seen: set[str] = set()
+        paths = []
+        for entry in result.stdout.split(b"\x00"):
+            if not entry:
+                continue
+            rel = entry.decode("utf-8", errors="replace")
+            # --cached and --others are disjoint, but dedupe defensively so a
+            # path is never rewritten twice.
+            if rel in seen:
+                continue
+            seen.add(rel)
+            paths.append(REPO_ROOT / rel)
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
         paths = [p for p in REPO_ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
     for path in paths:

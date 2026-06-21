@@ -2154,5 +2154,75 @@ class AppendPrecommitHookWorktreeTest(unittest.TestCase):
             self.assertFalse(target.exists())
 
 
+class UpgradeAppendsPrecommitHookTest(unittest.TestCase):
+    """Regression: `goc upgrade`'s dry-run plan lists the pre-commit hook
+    append, so the real upgrade must perform it too. The install path skips
+    the hook when run before `git init` (no `.git` yet); the documented
+    remedy (`git init` then `goc upgrade`) must actually install it instead
+    of merely promising to in the dry-run plan."""
+
+    def run_goc(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        pythonpath = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
+        return subprocess.run(
+            [sys.executable, "-m", "goc.cli", *args],
+            cwd=cwd, env=env, text=True, capture_output=True, check=False,
+        )
+
+    def test_upgrade_appends_pre_commit_hook_after_late_git_init(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            cfg = cwd / ".pre-commit-config.yaml"
+
+            # Install before the directory is a git checkout — hook skipped.
+            install = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills")
+            self.assertEqual(install.returncode, 0, msg=install.stdout + install.stderr)
+            self.assertFalse(cfg.exists())
+
+            subprocess.run(["git", "init", "-q"], cwd=cwd, check=True, capture_output=True)
+
+            # The dry-run plan promises the append...
+            plan = self.run_goc(cwd, "upgrade", "--keep-local-skills", "--dry-run")
+            self.assertEqual(plan.returncode, 0, msg=plan.stdout + plan.stderr)
+            self.assertIn("append .pre-commit-config.yaml", plan.stdout)
+
+            # ...so the real run must perform it (dry-run/real parity).
+            real = self.run_goc(cwd, "upgrade", "--keep-local-skills")
+            self.assertEqual(real.returncode, 0, msg=real.stdout + real.stderr)
+            self.assertTrue(cfg.is_file(), msg=".pre-commit-config.yaml not written by upgrade")
+            self.assertIn("id: goc-validate", cfg.read_text())
+
+    def test_dry_run_omits_pre_commit_append_in_non_git_dir(self) -> None:
+        # Inverse of the git-repo case: in a non-git dir the executor skips the
+        # pre-commit append, so the dry-run plan must omit it too (no phantom
+        # write, no inflated "N writes planned" count).
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            cfg = cwd / ".pre-commit-config.yaml"
+
+            plan = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills", "--dry-run")
+            self.assertEqual(plan.returncode, 0, msg=plan.stdout + plan.stderr)
+            self.assertNotIn(".pre-commit-config.yaml", plan.stdout)
+
+            real = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills")
+            self.assertEqual(real.returncode, 0, msg=real.stdout + real.stderr)
+            self.assertFalse(cfg.exists(), msg="real install wrote .pre-commit-config.yaml in non-git dir")
+
+    def test_upgrade_does_not_duplicate_existing_pre_commit_hook(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            cfg = cwd / ".pre-commit-config.yaml"
+
+            subprocess.run(["git", "init", "-q"], cwd=cwd, check=True, capture_output=True)
+            install = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills")
+            self.assertEqual(install.returncode, 0, msg=install.stdout + install.stderr)
+            self.assertEqual(cfg.read_text().count("id: goc-validate"), 1)
+
+            real = self.run_goc(cwd, "upgrade", "--keep-local-skills")
+            self.assertEqual(real.returncode, 0, msg=real.stdout + real.stderr)
+            self.assertEqual(cfg.read_text().count("id: goc-validate"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

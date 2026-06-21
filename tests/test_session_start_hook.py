@@ -540,3 +540,56 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
         self.assertNotIn("impeded", gate_lines[0])
         self.assertIn("impeded", impeded_lines[0])
         self.assertNotIn("gated", impeded_lines[0])
+
+    def test_explicit_yaml_null_waiting_fields_are_not_an_impediment(self):
+        """Explicit YAML null literals in `waiting_on`/`waiting_until` read as absent.
+
+        The engine parses frontmatter through `yaml_lite`, whose `_NULL_SET`
+        ({null, Null, NULL, ~}) resolves those literals to None, so
+        `engine.waiting_impedes` returns False for `waiting_on: null`. The hook
+        re-implements the parse with its own mini-frontmatter reader; before the
+        fix it returned the raw token `"null"`, which `_is_impeded` mistook for a
+        live reason — framing a resumable active card as
+        `Impeded active card(s) — agent cannot resume` at session start.
+
+        Pin the hook against `engine.waiting_impedes` so the two never drift.
+        Reachability is the hand-edit / external-tool / pre-validate path the
+        rest of this hook family already accepts (the engine never emits an
+        explicit-null overlay).
+        """
+        import goc.engine as engine
+
+        for field in ("waiting_on", "waiting_until"):
+            for literal in ("null", "Null", "NULL", "~"):
+                frontmatter = f"status: active\n{field}: {literal}"
+                p = Path(
+                    tempfile.NamedTemporaryFile(
+                        mode="w", suffix=".md", delete=False
+                    ).name
+                )
+                p.write_text(f"---\n{frontmatter}\n---\nbody\n", encoding="utf-8")
+
+                card_dir = Path(tempfile.mkdtemp())
+                (card_dir / "README.md").write_text(
+                    f"---\n{frontmatter}\n---\nbody\n", encoding="utf-8"
+                )
+                engine_view = engine.waiting_impedes(engine.load_card(card_dir))
+
+                self.assertFalse(
+                    self.hook._is_impeded(p),
+                    f"{field}: {literal} is an explicit YAML null, not an impediment",
+                )
+                self.assertEqual(
+                    self.hook._is_impeded(p),
+                    engine_view,
+                    f"hook must agree with engine for {field}: {literal}",
+                )
+
+        # Control: a real reason still impedes (and agrees with the engine).
+        p = Path(
+            tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name
+        )
+        p.write_text(
+            "---\nstatus: active\nwaiting_on: external\n---\nbody\n", encoding="utf-8"
+        )
+        self.assertTrue(self.hook._is_impeded(p))

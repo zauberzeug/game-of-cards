@@ -860,7 +860,8 @@ def _plan_writes(
                 writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
         if is_local and shim.settings_json:
             writes.append(PlannedWrite(agent, "merge", target / shim.settings_json, "harness"))
-    writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
+    if (target / ".git").exists():
+        writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
     return writes
 
 
@@ -1708,6 +1709,10 @@ def upgrade(
     for stale in legacy_briefings_to_strip:
         _strip_goc_block(target / stale)
     _sync_methodology_blocks(target, templates, resolved_briefing, agents=agents)
+    # Match the dry-run plan, which lists this append only in a git repo
+    # (see _plan_writes). Idempotent: no-ops when the hook is already present
+    # or `.git` is absent.
+    _append_precommit_hook(target / ".pre-commit-config.yaml")
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 
