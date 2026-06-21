@@ -1,5 +1,6 @@
 ---
 title: quality-pass-llm-counts-fixless-dod-issue-as-proposed-rewrite
+summary: "`goc quality-pass --llm`'s `_render_verdict` sets `has_rewrite = True` whenever `dod_issues` is non-empty, even for issues that carry no proposed `fix`, so a fixless DoD observation is miscounted in the 'N cards with proposed rewrites' tally. Fixed by only flagging a rewrite when an issue actually carries a fix."
 status: done
 stage: null
 contribution: medium

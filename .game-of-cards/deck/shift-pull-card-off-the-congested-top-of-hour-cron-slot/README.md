@@ -1,5 +1,6 @@
 ---
 title: shift-pull-card-off-the-congested-top-of-hour-cron-slot
+summary: "Move pull-card's scheduled cron minute from `:00` to `:13` to cut GitHub Actions schedule-dispatch delay. Minute `:00` is the most congested slot on GitHub's shared scheduler queue — the old `0 3 * * *` cron dispatched ~85-90 min late — and sibling workflows already dodge it; this moves pull-card off the top of the hour."
 status: done
 stage: null
 contribution: low

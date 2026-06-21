@@ -1,5 +1,6 @@
 ---
 title: dod-scanners-treat-an-info-string-fence-line-as-closing-a-code-block
+summary: "The shared DoD fenced-code mask treats an info-string fence line (e.g. a backtick-fence carrying a language tag) as a valid closing fence, but per CommonMark section 4.5 a closing fence may not carry an info string. The block closes early and the illustrative `- [ ]` lines that follow are miscounted as real DoD items, making the card impossible to close. Fixed in the closing-fence branch at `goc/engine.py:520`."
 status: done
 stage: null
 contribution: medium

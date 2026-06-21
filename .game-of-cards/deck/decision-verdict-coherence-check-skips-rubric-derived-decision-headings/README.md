@@ -1,5 +1,6 @@
 ---
 title: decision-verdict-coherence-check-skips-rubric-derived-decision-headings
+summary: "The advisory validator `validate_decision_verdict_coherence` (`goc/engine.py:1968`) locates a card's recorded decision via `RESOLVED_DECISION_RE`, which only matches a bare `## Decision` heading. A `## Decision (rubric-derived)` heading is skipped, so a rubric-derived decision that re-scopes a prior verdict escapes the stale-verdict coherence check. Fixed by extending the regex to accept the rubric-derived heading variant."
 status: done
 stage: null
 contribution: medium

@@ -1,5 +1,6 @@
 ---
 title: clawhub-package-publishes-pre-rewrite-package-json
+summary: "The v0.0.24 release published correct PyPI/npm/tag version surfaces, but the ClawHub bundle was assembled from the workflow-dispatch SHA instead of the post-rewrite release commit, so the uploaded OpenClaw package still carried the previous version literal. ClawHub registry metadata showed the requested version while installed downstream packages could report the old one. Fixed by passing the post-rewrite release ref to the ClawHub publish job."
 status: done
 stage: null
 contribution: high

@@ -1,5 +1,6 @@
 ---
 title: goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run
+summary: "`goc upgrade --dry-run` lists a planned append of the `goc validate` pre-commit hook (emitted unconditionally by `_plan_writes`), but the actual `upgrade()` body never performs the append that `install()` does, so the promised write silently never lands. Fixed by mirroring `install()`'s pre-commit append call in `upgrade()`."
 status: done
 stage: null
 contribution: medium

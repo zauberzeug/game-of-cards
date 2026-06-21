@@ -1,5 +1,6 @@
 ---
 title: run-pull-card-daily-and-audit-deck-weekly
+summary: "Slowed the autonomous GitHub Actions cadence — pull-card from hourly to daily (03:00 UTC) and audit-deck from daily to weekly (Mondays) — to cut token spend. This cadence was later reversed while headroom was high and is now managed by `scripts/set_cadence.py`; the record stands for the 2026-05-31 slowdown it made."
 status: done
 stage: null
 contribution: low

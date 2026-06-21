@@ -1,5 +1,6 @@
 ---
 title: deck-readme-hook-catalogue-omits-refine-deck-hook
+summary: "The deck README's 'Workflow-hook stubs' table lists only five hooks, but a sixth stub (`hooks/refine-deck.md`) ships and is actively injected into the `refine-deck` skill body, so a consumer reading the catalogue cannot discover the `refine-deck` extension point. Fixed in both `goc/templates/game_of_cards/README.md` and the dogfood copy."
 status: done
 stage: null
 contribution: low

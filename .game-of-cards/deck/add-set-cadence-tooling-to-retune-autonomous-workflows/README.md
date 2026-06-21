@@ -1,5 +1,6 @@
 ---
 title: add-set-cadence-tooling-to-retune-autonomous-workflows
+summary: "Ship a setter script and a repo-local skill that make the autonomous GitHub Actions cron cadence cheap to retune, then drive the current values through them, instead of hand-editing three cron strings each time spare-token headroom changes. This card reverses the earlier deliberate slowdown while headroom is high; the `MAX_ITERATIONS` cap is left untouched."
 status: done
 stage: null
 contribution: medium

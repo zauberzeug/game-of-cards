@@ -1,5 +1,6 @@
 ---
 title: quality-pass-limit-accepts-negative-values-and-audits-wrong-card-subset
+summary: "`goc quality-pass --limit` was declared `type=int`, so a negative value passed argparse and flowed into the slice `cards[:limit]` — `--limit -2` audited everything except the last two cards and `--limit 0` audited zero, instead of capping the count. The sibling `--max-rows` flag already used `_non_negative_int`; fixed by applying the same helper to `--limit`."
 status: done
 stage: null
 contribution: medium

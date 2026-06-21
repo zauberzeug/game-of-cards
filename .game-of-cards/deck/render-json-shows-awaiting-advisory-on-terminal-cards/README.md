@@ -1,5 +1,6 @@
 ---
 title: render-json-shows-awaiting-advisory-on-terminal-cards
+summary: "The `--json` full-record renderer emitted the dependency 'you may start' advisory (`awaiting` / `dependency_awaiting`) on terminal cards, contradicting the table and board renderers which suppress it on cards that cannot start. Fixed at `goc/engine.py:2764`; the per-renderer liveness gate was later centralized in `engine.dependency_advisory`."
 status: done
 stage: null
 contribution: medium

@@ -1,5 +1,6 @@
 ---
 title: verbose-table-render-crashes-on-card-with-empty-definition-of-done
+summary: "`goc -vv` crashes with `AttributeError: NoneType has no attribute splitlines` on a card whose `definition_of_done:` key is present but empty, because the vendored YAML parser yields `None` and the `.get(..., '')` default only fires when the key is absent. This was the lone unguarded read of the field; every sibling read uses the `or ''` idiom. Fixed at `goc/engine.py:2460`."
 status: done
 stage: null
 contribution: medium

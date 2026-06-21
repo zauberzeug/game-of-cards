@@ -1,5 +1,6 @@
 ---
 title: board-columns-hardcoded-instead-of-derived-from-schema-status-values
+summary: "`render_board` (`goc/engine.py:2562`) built its kanban columns from a literal status list instead of deriving them from `schema.yaml`'s authoritative `status_values`, so any card with a status outside the hardcoded list was silently dropped from `goc --board` with no diagnostic. Fixed by sourcing the columns from the schema enum."
 status: done
 stage: null
 contribution: medium

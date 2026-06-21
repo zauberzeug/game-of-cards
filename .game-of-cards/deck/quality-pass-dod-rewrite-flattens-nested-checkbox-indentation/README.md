@@ -1,5 +1,6 @@
 ---
 title: quality-pass-dod-rewrite-flattens-nested-checkbox-indentation
+summary: "`_apply_dod_rewrite` (`goc/engine.py:3604`) rebuilds a rewritten DoD item by `lstrip()`-ing the LLM's fix text and writing it back without restoring the original line's leading whitespace, so a verdict targeting a nested (`  - [ ]`) sub-item silently flattens it to column 0 and destroys the DoD nesting. Fixed by re-applying the original line's indentation."
 status: done
 stage: null
 contribution: low

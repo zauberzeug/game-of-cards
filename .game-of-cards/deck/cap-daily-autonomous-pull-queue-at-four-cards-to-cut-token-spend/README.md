@@ -1,5 +1,6 @@
 ---
 title: cap-daily-autonomous-pull-queue-at-four-cards-to-cut-token-spend
+summary: "Halve the per-day token budget of the autonomous loop by lowering the self-trigger cap `MAX_ITERATIONS` in `pull-card.yml` from 8 to 4. Each iteration is a full Opus agent run under `bypassPermissions` — the dominant daily cost — so capping at 4 roughly halves worst-case daily spend while still clearing a small backlog each morning."
 status: done
 stage: null
 contribution: low

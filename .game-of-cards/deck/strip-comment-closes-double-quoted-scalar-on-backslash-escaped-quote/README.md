@@ -1,5 +1,6 @@
 ---
 title: strip-comment-closes-double-quoted-scalar-on-backslash-escaped-quote
+summary: "`yaml_lite._strip_comment` tracks quote state to avoid stripping a `#` inside a quoted scalar but, unlike its sibling scanners `_split_flow` / `_split_key`, has no backslash-escape handling. An emitter-produced escaped quote inside a double-quoted value is misread as the closing quote, so a later ` #` is treated as a comment delimiter and the value is silently truncated on read. Fixed at `goc/_vendor/yaml_lite.py:423`."
 status: done
 stage: null
 contribution: medium

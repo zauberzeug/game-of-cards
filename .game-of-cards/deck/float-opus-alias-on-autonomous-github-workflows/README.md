@@ -1,5 +1,6 @@
 ---
 title: float-opus-alias-on-autonomous-github-workflows
+summary: "Switch the two autonomous `claude-code-action` workflows (`pull-card.yml`, `audit-deck.yml`) from the pinned model id `claude-opus-4-7` to the floating alias `opus`, so cron-driven runs auto-pick the strongest available Opus without a manual workflow edit each Opus release. The pinned id went stale the moment Opus 4.8 shipped."
 status: done
 stage: null
 contribution: low

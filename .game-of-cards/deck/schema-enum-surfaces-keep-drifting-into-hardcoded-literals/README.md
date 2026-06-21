@@ -1,5 +1,6 @@
 ---
 title: schema-enum-surfaces-keep-drifting-into-hardcoded-literals
+summary: "Meta-fix umbrella: `schema.yaml` is the documented single source of truth for the card enums, yet the engine repeatedly re-states them as literals far from the schema and each divergence is found and fixed one card at a time. Four instances of the same root-cause shape were the signal to install a structural fix (derive the surfaces from the schema, or guard against re-hardcoding) rather than keep playing whack-a-mole."
 status: done
 stage: null
 contribution: medium

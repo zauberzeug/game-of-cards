@@ -1,5 +1,6 @@
 ---
 title: install-auto-detects-codex-from-the-shared-agents-md-briefing-file
+summary: "`goc install`'s no-flag harness auto-detection treats `AGENTS.md` as a Codex-exclusive marker and `.mcp.json` as a Claude-exclusive marker, but both are cross-agent files, so the detector installs a harness the user never asked for. `AGENTS.md` is GoC's generic cross-agent briefing default and `.mcp.json` is consumed by many MCP clients including Codex. The signal table at `goc/install.py:49` conflates exclusive install markers with shared files."
 status: open
 stage: null
 contribution: high

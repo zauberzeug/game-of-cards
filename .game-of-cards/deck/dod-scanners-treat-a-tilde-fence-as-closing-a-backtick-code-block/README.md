@@ -1,5 +1,6 @@
 ---
 title: dod-scanners-treat-a-tilde-fence-as-closing-a-backtick-code-block
+summary: "The shared DoD fenced-code mask (`_dod_fenced_mask`, `goc/engine.py:493`) flips `in_fence` on any backtick-run or tilde-run line with no memory of which character opened the block, so a `~~~` line inside a backtick block desyncs the mask. Per CommonMark section 4.5 a fence closes only on the same character with run length >= the opener's. The desync silently bypasses the DoD closure contract for every reader of the mask."
 status: done
 stage: null
 contribution: medium

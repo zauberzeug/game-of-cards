@@ -1,5 +1,6 @@
 ---
 title: renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift
+summary: "Meta-fix: the 'dependency advisory is meaningless on a terminal card' liveness gate was reimplemented independently in each of goc's three card renderers (board, table, json) and had already drifted into a shipping bug. The `dependency_blockers` functions deliberately don't gate on the card's own status, so every caller had to re-apply the same `status not in TERMINAL_STATUSES` guard. Fixed by centralizing the gate in one `dependency_advisory` helper."
 status: done
 stage: null
 contribution: medium
