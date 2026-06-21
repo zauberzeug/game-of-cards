@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-06-18T05:06:26Z"
 closed_at: "2026-06-18T05:13:19Z"
 human_gate: none
-advances: []
+advances:
+  - dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting
 advanced_by: []
 tags: [bug, infra]
 summary: |

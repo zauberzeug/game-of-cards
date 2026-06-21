@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-06-19T05:33:01Z"
 closed_at: "2026-06-19T05:38:51Z"
 human_gate: none
-advances: []
+advances:
+  - sync-mechanisms-reimplement-orphan-pruning-and-drift-detection-and-keep-drifting
 advanced_by: []
 tags: [bug, infra]
 summary: "scripts/port_skills_to_openclaw.py prunes orphaned sibling FILES but never rmdir's a now-empty nested subdir left behind when a source sibling under a subdirectory is removed. drifted_skills() skips directories, so `--check` and tests/test_plugin_mirror_parity.py stay green while the empty orphan dir ships in the OpenClaw payload. This is the porter's nested-subdir equivalent of the already-closed sync-side fix (sync-plugin-assets-leaves-orphaned-empty-skill-dirs-and-check-passes); the porter was never given the same empty-dir prune."

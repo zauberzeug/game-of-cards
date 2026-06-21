@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-29T23:49:14Z"
 closed_at: "2026-05-29T23:56:19Z"
 human_gate: none
-advances: []
+advances:
+  - session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |

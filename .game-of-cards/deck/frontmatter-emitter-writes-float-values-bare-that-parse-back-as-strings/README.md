@@ -7,7 +7,8 @@ contribution: low
 created: "2026-05-26T21:57:44Z"
 closed_at: "2026-05-26T22:13:28Z"
 human_gate: none
-advances: []
+advances:
+  - frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

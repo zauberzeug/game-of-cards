@@ -1,19 +1,19 @@
 ---
 title: meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired
 summary: "Several open `meta-fix` umbrella cards (the `…-keep-drifting` / `…-reimplement…` family) declare their sibling-bug roster in prose with `[[links]]` but carry empty `advanced_by` edges, so the deck's record/scheduler axes and the board's dependency display never see the family. The established convention (per `render-json-emits-bare-string-edge-fields-as-json-strings-not-lists`) is sibling `advances` umbrella / umbrella `advanced_by` siblings; a refine-deck pass wired two exemplars (`yaml-lite-quote-scanners…`, `dod-fence-mask…`) but the rest need per-body judgment because each umbrella's prose also cross-references *peer* umbrellas (\"same shape elsewhere\"), which must NOT be wired as family edges."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-21T08:24:27Z"
-closed_at: null
+closed_at: "2026-06-21T09:33:46Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [meta-fix]
 definition_of_done: |
-  - [ ] EMPIRICAL: for each umbrella below, the genuine sibling-bug cards (the family the umbrella retires) are wired `umbrella.advanced_by += sibling` via `goc advance <umbrella> --by <sibling>`, and peer-umbrella cross-references are left UNwired. Verified by re-reading each body to separate the "## family / each was fixed independently" roster from the "same shape elsewhere" cross-references.
-  - [ ] MECHANICAL: `goc validate` stays clean (edge symmetry holds by construction via `goc advance`).
-  - [ ] PROCESS: the orphaned-meta-fix-family sub-check in `Skill(refine-deck)` Step 2 returns no open umbrella with a prose roster but zero edges (re-run the meta-fix zero-edge survey counting BOTH `advances` and `advanced_by`).
+  - [x] EMPIRICAL: for each umbrella below, the genuine sibling-bug cards (the family the umbrella retires) are wired `umbrella.advanced_by += sibling` via `goc advance <umbrella> --by <sibling>`, and peer-umbrella cross-references are left UNwired. Verified by re-reading each body to separate the "## family / each was fixed independently" roster from the "same shape elsewhere" cross-references.
+  - [x] MECHANICAL: `goc validate` stays clean (edge symmetry holds by construction via `goc advance`).
+  - [x] PROCESS: the orphaned-meta-fix-family sub-check in `Skill(refine-deck)` Step 2 returns no open umbrella with a prose roster but zero edges (re-run the meta-fix zero-edge survey counting BOTH `advances` and `advanced_by`).
 worker: {who: "claude[bot]", where: main}
 ---
 

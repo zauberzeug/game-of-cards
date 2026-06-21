@@ -7,7 +7,10 @@ created: "2026-06-18T05:14:50Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run
+  - migrate-dry-run-omits-legacy-tree-removal-for-identical-only-trees
+  - dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir
 tags: [meta-fix, infra, api-contract]
 summary: |
   `goc install/upgrade/migrate --dry-run` maintains a hand-written preview

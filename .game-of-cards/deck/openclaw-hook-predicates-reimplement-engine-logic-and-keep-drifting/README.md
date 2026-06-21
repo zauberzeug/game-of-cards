@@ -8,7 +8,9 @@ created: "2026-06-05T05:19:57Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - openclaw-session-start-frontmatter-reader-truncates-colon-bearing-values-via-typescript-split-limit
+  - openclaw-session-start-hook-accepts-calendar-impossible-waiting-until
 tags: [meta-fix, infra]
 definition_of_done: |
   - [ ] (replace after the decision is recorded)

@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-05T05:13:19Z"
 closed_at: "2026-06-05T05:16:46Z"
 human_gate: none
-advances: []
+advances:
+  - openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |

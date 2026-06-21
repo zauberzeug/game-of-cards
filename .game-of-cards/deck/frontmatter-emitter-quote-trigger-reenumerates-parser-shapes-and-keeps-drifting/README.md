@@ -8,7 +8,15 @@ created: "2026-06-18T05:08:40Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - frontmatter-emitter-does-not-quote-empty-string-scalar-that-parses-as-null
+  - frontmatter-emitter-does-not-quote-indicator-or-whitespace-padded-values
+  - frontmatter-emitter-does-not-quote-integer-looking-string-scalars
+  - frontmatter-emitter-does-not-quote-integer-null-or-case-variant-boolean-values
+  - frontmatter-emitter-leaves-explicit-indent-block-scalar-headers-unquoted
+  - frontmatter-emitter-leaves-folded-block-scalar-headers-unquoted
+  - frontmatter-emitter-writes-float-values-bare-that-parse-back-as-strings
+  - inline-emitter-writes-multi-line-strings-bare-destroying-subsequent-frontmatter
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.

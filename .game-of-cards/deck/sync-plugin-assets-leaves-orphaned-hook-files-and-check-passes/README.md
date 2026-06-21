@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-12T04:43:21Z"
 closed_at: "2026-06-12T05:00:51Z"
 human_gate: none
-advances: []
+advances:
+  - sync-mechanisms-reimplement-orphan-pruning-and-drift-detection-and-keep-drifting
 advanced_by: []
 tags: [bug, infra, meta-fix]
 definition_of_done: |

@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-06-18T05:01:22Z"
 closed_at: "2026-06-18T05:05:23Z"
 human_gate: none
-advances: []
+advances:
+  - frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting
 advanced_by: []
 tags: [bug, api-contract]
 summary: |

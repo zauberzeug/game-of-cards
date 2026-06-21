@@ -8,7 +8,15 @@ created: "2026-06-20T05:10:32Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - session-start-hook-frames-waiting-on-active-cards-as-resumable
+  - session-start-hook-impeded-check-ignores-elapsed-waiting-until
+  - session-start-hook-treats-malformed-bare-waiting-until-as-not-impeded
+  - session-start-hook-treats-non-canonical-waiting-on-as-not-impeded
+  - session-start-hook-misreads-same-day-datetime-waiting-until-as-not-impeded
+  - deck-session-start-hook-misreads-frontmatter-fields-with-inline-yaml-comments
+  - deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers
+  - session-start-hook-treats-explicit-yaml-null-waiting-fields-as-impediment
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] (replace after the decision is recorded)
