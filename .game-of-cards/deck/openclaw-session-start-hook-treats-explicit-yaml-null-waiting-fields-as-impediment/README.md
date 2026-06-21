@@ -1,21 +1,21 @@
 ---
 title: openclaw-session-start-hook-treats-explicit-yaml-null-waiting-fields-as-impediment
 summary: "The OpenClaw `index.ts` session-start reader does not resolve explicit YAML null literals (`null` / `Null` / `NULL` / `~`) on the `waiting_on` / `waiting_until` fields, so `waiting_on: null` on an active card survives as the truthy string `\"null\"` and `isImpeded` reports the card as impeded — announcing a fully-resumable card as `agent cannot resume.`. The Python hook resolves these literals to absent via `_NULL_SET`; the TS port never got that translation. New instance of the openclaw-hook-predicate drift family."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-21T10:11:56Z"
-closed_at: null
+closed_at: "2026-06-21T10:20:12Z"
 human_gate: none
 advances:
   - openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: a null-literal cell is added to `tests/test_openclaw_session_start_hook.py` (extracts the TS reader path / `isImpeded` and asserts `waiting_on: null` / `~` / `Null` / `NULL` on an active card reads as NOT impeded), red before the fix.
-  - [ ] TDD: `reproduce.py` exits zero (Python hook and OpenClaw TS agree `impeded=False` for every explicit-null literal).
-  - [ ] MECHANICAL: `openclaw-plugin/index.ts` resolves explicit YAML null literals to "absent" for the `waiting_on` / `waiting_until` frontmatter reads, mirroring `goc._vendor.yaml_lite._NULL_SET` and the Python hook's `_scalar_or_none`.
-  - [ ] PROCESS: the meta-fix umbrella `openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting` lists this card under `advanced_by` (edge wired both ways) and its body's drift-cell enumeration is updated to include the explicit-null cell.
+  - [x] TDD: a null-literal cell is added to `tests/test_openclaw_session_start_hook.py` (extracts the TS reader path / `isImpeded` and asserts `waiting_on: null` / `~` / `Null` / `NULL` on an active card reads as NOT impeded), red before the fix.
+  - [x] TDD: `reproduce.py` exits zero (Python hook and OpenClaw TS agree `impeded=False` for every explicit-null literal).
+  - [x] MECHANICAL: `openclaw-plugin/index.ts` resolves explicit YAML null literals to "absent" for the `waiting_on` / `waiting_until` frontmatter reads, mirroring `goc._vendor.yaml_lite._NULL_SET` and the Python hook's `_scalar_or_none`.
+  - [x] PROCESS: the meta-fix umbrella `openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting` lists this card under `advanced_by` (edge wired both ways) and its body's drift-cell enumeration is updated to include the explicit-null cell.
 worker: {who: "claude[bot]", where: main}
 ---
 

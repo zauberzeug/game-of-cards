@@ -1,6 +1,6 @@
 ---
 title: openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting
-summary: "META-FIX. The OpenClaw plugin's `index.ts` hand-reimplements several Python engine predicates (parseWaitingUntil/isImpeded/frontmatterTail/stripQuotes/opt-out regex) in TypeScript. They keep drifting from the engine one bug at a time — three fixed so far — because the only parity guard is a hand-maintained isImpeded matrix test that catches only what someone remembered to add. Decide a systematic port-parity guard."
+summary: "META-FIX. The OpenClaw plugin's `index.ts` hand-reimplements several Python engine predicates (parseWaitingUntil/isImpeded/frontmatterTail/stripQuotes/opt-out regex) in TypeScript. They keep drifting from the engine one bug at a time — four fixed so far — because the only parity guard is a hand-maintained isImpeded matrix test that catches only what someone remembered to add. Decide a systematic port-parity guard."
 status: open
 stage: null
 contribution: medium
@@ -47,6 +47,11 @@ own one-off card rather than caught by a guard:
    `tests/test_openclaw_session_start_hook.py`'s docstring documents).
 3. `openclaw-session-start-hook-accepts-calendar-impossible-waiting-until`
    (done) — `Date.parse` rolled `2026-02-30` forward instead of rejecting it.
+4. `openclaw-session-start-hook-treats-explicit-yaml-null-waiting-fields-as-impediment`
+   (done) — the `waiting_on` / `waiting_until` reader had no `_NULL_SET`
+   resolution, so a hand-edited `waiting_on: null` / `~` survived as the
+   truthy string `"null"` and impeded a resumable card. Fixed by mirroring
+   the Python hook's `_scalar_or_none` as a `scalarOrEmpty` helper.
 
 The only existing guard is the hand-written `isImpeded` matrix in
 `tests/test_openclaw_session_start_hook.py`: it extracts the TS functions and

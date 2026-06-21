@@ -101,8 +101,10 @@ def _ts_impeded_all() -> dict[str, bool]:
     src = INDEX_TS.read_text()
     pieces = [
         _extract_const_line(src, "ISO_DATE_RE"),
+        _extract_const_line(src, "NULL_LITERALS"),
         _extract_fn(src, "stripQuotes"),
         _extract_fn(src, "frontmatterTail"),
+        _extract_fn(src, "scalarOrEmpty"),
         _extract_fn(src, "parseWaitingUntil"),
         _extract_fn(src, "isImpeded"),
     ]
@@ -113,7 +115,7 @@ const NOW = new Date("{PINNED_NOW_ISO}");
 const out = {{}};
 for (const lit of {literals_json}) {{
   // Exactly what findActiveCards does for a `waiting_on:` frontmatter line.
-  const waitingOn = stripQuotes(frontmatterTail("waiting_on: " + lit));
+  const waitingOn = scalarOrEmpty("waiting_on: " + lit);
   out[lit] = isImpeded(waitingOn, "", NOW);
 }}
 console.log(JSON.stringify(out));

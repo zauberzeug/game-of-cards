@@ -120,6 +120,10 @@ function buildArgs(input: GocToolInput): string[] {
 const FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+// Mirrors `goc._vendor.yaml_lite._NULL_SET` (and the Python hook's `_NULL_SET`):
+// explicit YAML null literals that resolve to absent, so `waiting_on: null` / `~`
+// reads as "no reason", not the truthy string "null".
+const NULL_LITERALS = new Set(["null", "Null", "NULL", "~"]);
 
 interface ActiveCard {
   name: string;
@@ -154,6 +158,17 @@ function frontmatterTail(line: string): string {
     }
   }
   return tail.trim();
+}
+
+function scalarOrEmpty(line: string): string {
+  // Mirrors the Python hook's `_scalar_or_none`: resolve an explicit YAML
+  // null literal on the scalar tail to "absent" (empty string) so a
+  // hand-edited `waiting_on: null` / `~` reads as no impediment rather than
+  // the truthy token "null". Used only for the `waiting_on` / `waiting_until`
+  // reads — `status` / `human_gate` keep the raw tail, matching the Python
+  // hook, which routes only the two waiting fields through `_scalar_or_none`.
+  const tail = stripQuotes(frontmatterTail(line));
+  return NULL_LITERALS.has(tail) ? "" : tail;
 }
 
 function parseWaitingUntil(value: string): Date | null {
@@ -251,9 +266,9 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
         const val = stripQuotes(frontmatterTail(line));
         if (val) humanGate = val;
       } else if (line.startsWith("waiting_on:")) {
-        waitingOn = stripQuotes(frontmatterTail(line));
+        waitingOn = scalarOrEmpty(line);
       } else if (line.startsWith("waiting_until:")) {
-        waitingUntil = stripQuotes(frontmatterTail(line));
+        waitingUntil = scalarOrEmpty(line);
       }
     }
     if (status !== "active") continue;

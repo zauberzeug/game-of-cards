@@ -143,6 +143,29 @@ test("non-canonical waiting_on with no waiting_until is impeded", () => {{
 test("non-canonical waiting_on with malformed waiting_until is impeded", () => {{
   assert.strictEqual(isImpeded("customer-call", "not-a-date", NOW), true);
 }});
+
+// Explicit-YAML-null reader matrix — the cell this fix patched. A hand-edited
+// card that blanks the field by writing `waiting_on: null` / `~` / `Null` /
+// `NULL` (instead of deleting the line) must read as NOT impeded, mirroring the
+// Python hook's `_scalar_or_none` / `yaml_lite._NULL_SET`. Pre-fix the raw
+// token survived as the truthy string "null" and isImpeded reported impeded,
+// falsely announcing a resumable active card as "agent cannot resume." This
+// exercises the real reader path (scalarOrEmpty ∘ frontmatterTail) the way
+// findActiveCards does, not isImpeded in isolation.
+for (const lit of ["null", "Null", "NULL", "~"]) {{
+  test(`explicit-null waiting_on literal ${{lit}} reads as NOT impeded`, () => {{
+    const waitingOn = scalarOrEmpty("waiting_on: " + lit);
+    assert.strictEqual(isImpeded(waitingOn, "", NOW), false);
+  }});
+}}
+
+test("explicit-null waiting_until literal reads as NOT impeded (not malformed)", () => {{
+  // `waiting_until: null` must resolve to absent, NOT hit the unparseable
+  // backstop. With no waiting_on and a null-resolved waiting_until, the card
+  // is a bare un-deferred active card → not impeded.
+  const waitingUntil = scalarOrEmpty("waiting_until: null");
+  assert.strictEqual(isImpeded("", waitingUntil, NOW), false);
+}});
 """
 
 
@@ -164,6 +187,10 @@ class OpenclawIsImpededMatrixTest(unittest.TestCase):
             [
                 _extract_const_line(src, "ISO_DATE_RE"),
                 _extract_const_line(src, "ISO_DATETIME_UTC_RE"),
+                _extract_const_line(src, "NULL_LITERALS"),
+                _extract_top_level_function(src, "stripQuotes"),
+                _extract_top_level_function(src, "frontmatterTail"),
+                _extract_top_level_function(src, "scalarOrEmpty"),
                 _extract_top_level_function(src, "parseWaitingUntil"),
                 _extract_top_level_function(src, "isImpeded"),
             ]
