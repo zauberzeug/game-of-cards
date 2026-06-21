@@ -1,10 +1,10 @@
 ---
 title: quality-pass-llm-counts-rewriteless-verdict-as-proposed-rewrite
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-21T05:20:00Z"
-closed_at: null
+closed_at: "2026-06-21T05:24:46Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -16,16 +16,16 @@ summary: |
   rewrite when `rewrite` is truthy. The two sides disagree, so the report
   over-counts ("N with proposed rewrites") and prints a bogus `proposed: ?` line.
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero before the fix (defect fires) and the new
+  - [x] TDD: reproduce.py exits zero before the fix (defect fires) and the new
         unit test fails before the fix, passes after
-  - [ ] TDD: `_render_verdict` returns False for a title/summary verdict that is
+  - [x] TDD: `_render_verdict` returns False for a title/summary verdict that is
         `ok: false` but carries no `rewrite` string, and does not print a
         `proposed: ?` line for it
-  - [ ] TDD: `_render_verdict` still returns True and prints REWRITE when a real
+  - [x] TDD: `_render_verdict` still returns True and prints REWRITE when a real
         `rewrite` string is present (no regression), and still flags DoD issues
-  - [ ] MECHANICAL: the render-side guard mirrors the apply-side guard in
+  - [x] MECHANICAL: the render-side guard mirrors the apply-side guard in
         `_apply_verdict_interactive` (`not ok and rewrite`)
-  - [ ] PROCESS: reproduce.py inverted to assert the fixed behavior; log.md
+  - [x] PROCESS: reproduce.py inverted to assert the fixed behavior; log.md
         closure entry records the before/after counts
 worker: {who: "claude[bot]", where: main}
 ---

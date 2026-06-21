@@ -66,6 +66,16 @@ print("=== _apply_verdict_interactive (auto_yes) ===")
 print(f"applied: {applied}")
 print()
 
+# Post-fix assertions: render side and apply side agree — a rewriteless
+# `ok: false` verdict is NOT counted, and no bogus `proposed: ?` line prints.
 over_counts = has_rewrite and not (applied["title"] or applied["summary"] or applied["dod"])
 print(f"BUG: render counts a rewrite the apply path never offers? {over_counts}")
-sys.exit(0 if over_counts else 1)
+
+fixed = (
+    not has_rewrite
+    and "title:   REWRITE" not in rendered
+    and "summary: REWRITE" not in rendered
+    and "proposed: ?" not in rendered
+)
+print(f"FIXED: rewriteless verdict not counted, no bogus 'proposed: ?'? {fixed}")
+sys.exit(0 if fixed else 1)

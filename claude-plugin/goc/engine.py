@@ -3564,17 +3564,23 @@ def _render_verdict(verdict: dict) -> bool:
     tv = verdict.get("title_verdict") or {}
     if tv.get("ok"):
         print("title:   OK")
-    else:
+    elif tv.get("rewrite"):
+        # Mirror _apply_verdict_interactive's guard: only a verdict carrying a
+        # rewrite string is an applicable rewrite, so only it counts.
         has_rewrite = True
         print(f"title:   REWRITE — {tv.get('reason', '?')}")
-        print(f"  proposed: {tv.get('rewrite', '?')}")
+        print(f"  proposed: {tv['rewrite']}")
+    else:
+        print(f"title:   flagged, no rewrite offered — {tv.get('reason', '?')}")
     sv = verdict.get("summary_verdict") or {}
     if sv.get("ok"):
         print("summary: OK")
-    else:
+    elif sv.get("rewrite"):
         has_rewrite = True
         print(f"summary: REWRITE — {sv.get('reason', '?')}")
-        print(f"  proposed: {sv.get('rewrite', '?')}")
+        print(f"  proposed: {sv['rewrite']}")
+    else:
+        print(f"summary: flagged, no rewrite offered — {sv.get('reason', '?')}")
     dod_issues = verdict.get("dod_issues") or []
     if dod_issues:
         has_rewrite = True
