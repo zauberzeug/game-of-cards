@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-31T04:19:38Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - pattern-generalization-mutation-detector-matches-git-staging-by-literal-flag-tokens
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
