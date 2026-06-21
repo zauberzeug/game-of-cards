@@ -11,15 +11,17 @@ advanced_by:
   - goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run
   - migrate-dry-run-omits-legacy-tree-removal-for-identical-only-trees
   - dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir
+  - repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses
 tags: [meta-fix, infra, api-contract]
 summary: |
   `goc install/upgrade/migrate --dry-run` maintains a hand-written preview
   (`_plan_writes` / migrate's preview branch) that re-enumerates conditionals
   the real executor applies independently. The two code paths drift: every
   time an executor grows a guard, the plan must be patched to match by hand,
-  and when it isn't, the dry-run lies. Three instances have been fixed
-  one-by-one; this card proposes one architectural fix so the plan derives
-  from the executor instead of re-listing its decisions.
+  and when it isn't, the dry-run lies. Four instances have surfaced (three
+  fixed one-by-one, one open in `repair-edges`); this card proposes one
+  architectural fix so the plan derives from the executor instead of
+  re-listing its decisions.
 definition_of_done: |
   - [ ] PROCESS: decision recorded (see `## Decision required`) — pick the unification mechanism (plan-derived-from-executor, shared predicate table, or property-test that asserts plan/executor parity over a matrix of environments)
   - [ ] TDD: a single parity harness asserts dry-run plan == real executor effects across the environment matrix (git/non-git, identical-only migrate tree, hook-present/absent), failing if any future executor guard is not mirrored in the plan
@@ -45,8 +47,9 @@ contract.
 
 ## The instances so far
 
-Three separate cards, each fixed by patching the plan to re-mirror one
-executor conditional:
+Four separate cards. The first three were each fixed by patching the plan to
+re-mirror one executor conditional; the fourth (open) shows the same shape in
+a different verb:
 
 1. [goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run](../goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run/)
    — git-repo case: dry-run promised the pre-commit append, real upgrade
@@ -57,6 +60,13 @@ executor conditional:
 3. [dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir](../dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir/)
    — non-git case: dry-run plan promised the pre-commit append, real install
    skipped it. Fixed by gating the plan line on `.git` (this card's trigger).
+4. [repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses](../repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses/)
+   — `repair-edges`: the dry-run classifies half-edges against one original
+   snapshot while `--apply` reloads before each edge, so the preview promises
+   repairs apply then refuses as cycle-creating. The first instance outside
+   the `install`/`upgrade`/`migrate` cluster — the drift is a `repair-edges`
+   verb, not a `_plan_writes` write-plan — which widens the case that the
+   architectural fix should be general rather than per-verb. Open (unfixed).
 
 Instances 1 and 3 are the *same conditional* (`.git` presence around the
 pre-commit append) drifting in opposite directions across two code paths —
