@@ -3612,11 +3612,12 @@ def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:
     fix_by_idx = {issue["idx"]: issue["fix"] for issue in issues if "idx" in issue and "fix" in issue}
     for box_idx, line_idx in enumerate(box_indices):
         if box_idx in fix_by_idx:
+            indent = re.match(r"[ \t]*", lines[line_idx]).group(0)
             new_text = fix_by_idx[box_idx]
             new_text = new_text.lstrip()
             if not new_text.startswith("- ["):
                 new_text = f"- [ ] {new_text}"
-            lines[line_idx] = new_text
+            lines[line_idx] = indent + new_text
     fm["definition_of_done"] = "\n".join(lines) + ("\n" if not dod_text.endswith("\n") else "")
     readme.write_text(emit_frontmatter(fm, body=body))
 
