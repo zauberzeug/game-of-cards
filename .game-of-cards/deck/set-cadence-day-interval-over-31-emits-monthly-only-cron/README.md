@@ -1,6 +1,6 @@
 ---
 title: set-cadence-day-interval-over-31-emits-monthly-only-cron
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-22T09:01:11Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero (interval_to_cron raises ValueError for an N-day spec with N > 31 instead of returning a never-fires-as-asked cron)
   - [ ] TDD: tests/test_set_cadence.py gains a case asserting ValueError for N > 31 (e.g. "40d"), and asserts the valid boundary "31d" still translates
   - [ ] MECHANICAL: the day path's guard mirrors the hour path's reject-out-of-range pattern, with an error message naming cron's day-of-month max
+worker: {who: "claude[bot]", where: main}
 ---
 
 # set-cadence-day-interval-over-31-emits-monthly-only-cron
