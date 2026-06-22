@@ -1,5 +1,6 @@
 ---
 title: goc-queue-and-board-crash-on-a-non-string-contribution-value
+summary: "`Card.contribution` (`goc/engine.py:649-650`) returned the raw frontmatter value with no string coercion, so a non-string scalar crashed `render_table` and `render_board` with a TypeError. An instance of the broader bare-scalar root cause tracked by `bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes`. Fixed per-consumer here; the load-time shape-validation fix remains the open meta-fix decision."
 status: done
 stage: null
 contribution: medium

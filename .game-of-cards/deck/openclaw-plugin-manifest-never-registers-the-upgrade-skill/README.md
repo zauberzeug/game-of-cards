@@ -1,5 +1,6 @@
 ---
 title: openclaw-plugin-manifest-never-registers-the-upgrade-skill
+summary: "The OpenClaw plugin payload shipped the `upgrade` skill as files but never registered it in `openclaw.plugin.json`'s hardcoded `skills` array, so OpenClaw never activated it. The porter's `--check`/`drifted_skills()` compared SKILL.md content only and did not verify manifest registration. Fixed by registering the skill and adding a parity guard (`OpenClawManifestSkillRegistrationTest`) linking the manifest array to the ported skill dirs."
 status: done
 stage: null
 contribution: medium

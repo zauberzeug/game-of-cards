@@ -1,5 +1,6 @@
 ---
 title: goc-queue-table-crashes-on-a-non-string-tag-element
+summary: "`render_table` joined the first four tags via `\",\".join(t.tags[:4])` (`goc/engine.py:2677`), but the `tags` property only guarantees a list, not string elements — a non-string element crashed the queue table with a TypeError. Render-path twin of the validate/`advanced_by` siblings in the bare-scalar family (`bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes`). Fixed per-consumer; the architectural fix is the open meta-fix decision."
 status: done
 stage: null
 contribution: medium

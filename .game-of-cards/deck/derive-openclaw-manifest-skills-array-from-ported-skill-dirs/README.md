@@ -1,5 +1,6 @@
 ---
 title: derive-openclaw-manifest-skills-array-from-ported-skill-dirs
+summary: "The `skills` array (and '<N> deck skills' description count) in `openclaw-plugin/openclaw.plugin.json` is hand-maintained and silently drifted once — the `upgrade` skill shipped as dead files for ~3 weeks. A parity guard now detects drift but does not eliminate the hand-maintenance class. Decision card: derive the array + count from the ported skill dirs in `scripts/port_skills_to_openclaw.py` (mirroring the Claude hook-manifest derivation), or keep it hand-maintained with the guard as the chosen contract."
 status: open
 stage: null
 contribution: medium

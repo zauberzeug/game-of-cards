@@ -1,5 +1,6 @@
 ---
 title: sync-claude-import-overwrites-user-authored-import-line-with-goc-target
+summary: "`_sync_claude_import` (`goc/install.py:229-267`) identifies the GoC import line to update by matching against ALL importable targets (`@AGENTS.md`, `@CLAUDE.local.md`), not just the one GoC manages. So a user's hand-authored `@CLAUDE.local.md` import is rewritten to `@AGENTS.md` when GoC's briefing target is the default, destroying the user's import. Sibling of `strip-claude-import-removes-user-authored-import-lines-from-claude-md`; both functions need the same ownership rule for bare import lines."
 status: open
 stage: null
 contribution: medium

@@ -1,5 +1,6 @@
 ---
 title: render-json-walks-the-dependency-graph-twice-per-card
+summary: "`render_json` called `dependency_advisory(t, by_title)` twice per card (`goc/engine.py:2811-2812`) — once for each tuple element — doubling the dependency-edge walk on every `goc --json` render. Fixed by computing the tuple once and unpacking `blockers, awaiting`; the emitted JSON is byte-for-byte unchanged."
 status: done
 stage: null
 contribution: low

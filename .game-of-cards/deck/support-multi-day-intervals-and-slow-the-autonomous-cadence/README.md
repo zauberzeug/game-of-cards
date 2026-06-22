@@ -1,5 +1,6 @@
 ---
 title: support-multi-day-intervals-and-slow-the-autonomous-cadence
+summary: "Dialed the autonomous loop down to a low-churn cadence (pull-card every 6h, audit/refine every 3 days) and taught `set_cadence.py`'s `interval_to_cron` to map `<N>d` (N≥2) to a day-of-month `*/N` step, reversing the parent card's deliberate refusal of multi-day intervals. Documents the honest caveat that there is no exact 'every N days' cron — a day-of-month `*/N` step resets at month boundaries."
 status: done
 stage: null
 contribution: low
