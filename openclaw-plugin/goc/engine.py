@@ -4569,6 +4569,11 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
         where = r.stdout.strip() if r.returncode == 0 else None
         if where in ("", "HEAD"):
             where = None
+        if where is None:
+            # No detectable branch (detached HEAD / fresh checkout): preserve any
+            # stored branch context rather than dropping it. A detectable branch
+            # still updates `where` (the documented "add/update where" intent).
+            where = existing_dict.get("where")
 
     # A worker mapping requires a non-empty `who`; a `where`-only worker is
     # rejected by validate_card. So if `who` is unknown (e.g. git user.name is
