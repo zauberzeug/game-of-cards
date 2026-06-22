@@ -1559,6 +1559,57 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             log_text = (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text()
             self.assertIn("## Closure verification", log_text)
 
+    def test_attest_skip_with_null_check_description_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            # The skipped check carries an explicit `description: null`; a
+            # sibling check still runs so the all-skipped guard does not fire
+            # before the skip branch builds its summary.
+            config.write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod:\n"
+                "  - name: dod-100-percent\n"
+                "    kind: derived\n"
+                "  - name: log-md-closure-entry\n"
+                "    kind: derived\n"
+                "    description: null\n"
+                "  - name: advanced-by-closed\n"
+                "    kind: derived\n"
+                "    description: edge prereq check\n"
+            )
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+            readme = cwd / ".game-of-cards" / "deck" / "smoke-card" / "README.md"
+            readme.write_text(readme.read_text().replace("- [ ] (replace with real criteria)", "- [x] closure ok"))
+
+            # Skip the null-description check (the crash trigger) and the
+            # string-description check (no-regression); dod-100-percent runs.
+            attest = self.run_goc(
+                cwd,
+                "attest",
+                "smoke-card",
+                "--skip",
+                "log-md-closure-entry",
+                "--skip",
+                "advanced-by-closed",
+                "--non-interactive",
+            )
+
+            self.assert_goc_ok(attest)
+            self.assertNotIn("TypeError", attest.stderr)
+            self.assertIn("log-md-closure-entry — SKIPPED", attest.stdout)
+            self.assertIn("advanced-by-closed — SKIPPED", attest.stdout)
+            self.assertIn("Attestation OK", attest.stdout)
+            # The null description renders as an empty parenthetical; a string
+            # description still renders its text (the pre-fix behavior).
+            log_text = (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text()
+            self.assertIn("log-md-closure-entry SKIPPED — SKIPPED ()", log_text)
+            self.assertIn("advanced-by-closed SKIPPED — SKIPPED (edge prereq check)", log_text)
+
     def test_state_mutations_respect_auto_commit_config_and_cli_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

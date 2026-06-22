@@ -4492,7 +4492,7 @@ def _cmd_attest(args):
                         "name": name,
                         "passed": True,
                         "skipped": True,
-                        "summary": f"SKIPPED ({check.get('description', '')[:60]})",
+                        "summary": f"SKIPPED ({(check.get('description') or '')[:60]})",
                     }
                 )
                 print(f"  [~] {name} — SKIPPED")
