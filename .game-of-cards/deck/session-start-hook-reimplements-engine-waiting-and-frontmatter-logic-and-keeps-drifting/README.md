@@ -18,6 +18,7 @@ advanced_by:
   - deck-session-start-hook-strips-quotes-asymmetrically-across-frontmatter-readers
   - session-start-hook-treats-explicit-yaml-null-waiting-fields-as-impediment
   - session-start-hook-treats-coerced-bool-or-int-waiting-on-as-impediment
+  - session-start-hook-over-coerces-quoted-waiting-scalars-to-absent
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] (replace after the decision is recorded)
