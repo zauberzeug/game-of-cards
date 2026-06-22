@@ -77,6 +77,17 @@ class IntervalToCronTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             setc.interval_to_cron("0d", 0)
 
+    def test_day_interval_over_31_rejected(self) -> None:
+        # cron's day-of-month field caps at 31; a */N step with N > 31
+        # matches only the 1st and cannot represent "every N days".
+        for bad in ("32d", "40d", "365d"):
+            with self.assertRaises(ValueError):
+                setc.interval_to_cron(bad, 0)
+
+    def test_day_interval_boundary_31_supported(self) -> None:
+        # 31d is the last representable day-of-month step.
+        self.assertEqual(setc.interval_to_cron("31d", 0), "0 0 */31 * *")
+
     def test_garbage_rejected(self) -> None:
         for bad in ("", "h", "1m", "abc", "1.5h"):
             with self.assertRaises(ValueError):

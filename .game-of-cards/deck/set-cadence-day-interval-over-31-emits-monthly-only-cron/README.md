@@ -1,10 +1,10 @@
 ---
 title: set-cadence-day-interval-over-31-emits-monthly-only-cron
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-22T09:01:11Z"
-closed_at: null
+closed_at: "2026-06-22T09:03:44Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -15,9 +15,9 @@ summary: |
   day-of-month field (max 31), which can only ever match day 1 — silently
   collapsing "every N days" into "monthly on the 1st" with no error.
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (interval_to_cron raises ValueError for an N-day spec with N > 31 instead of returning a never-fires-as-asked cron)
-  - [ ] TDD: tests/test_set_cadence.py gains a case asserting ValueError for N > 31 (e.g. "40d"), and asserts the valid boundary "31d" still translates
-  - [ ] MECHANICAL: the day path's guard mirrors the hour path's reject-out-of-range pattern, with an error message naming cron's day-of-month max
+  - [x] TDD: reproduce.py exits zero (interval_to_cron raises ValueError for an N-day spec with N > 31 instead of returning a never-fires-as-asked cron)
+  - [x] TDD: tests/test_set_cadence.py gains a case asserting ValueError for N > 31 (e.g. "40d"), and asserts the valid boundary "31d" still translates
+  - [x] MECHANICAL: the day path's guard mirrors the hour path's reject-out-of-range pattern, with an error message naming cron's day-of-month max
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -88,9 +88,9 @@ instead — a cadence that does not match the request and gives no
 feedback that the spec was unrepresentable. The reachable invocation is
 `python3 scripts/set_cadence.py --<workflow> Nd` for any N > 31.
 
-## Fix
+## Fix (applied)
 
-Add an upper-bound guard to the day path mirroring the hour path's
+Added an upper-bound guard to the day path mirroring the hour path's
 reject-out-of-range behavior — cron's day-of-month field caps at 31, so
 a step larger than that cannot approximate "every N days":
 

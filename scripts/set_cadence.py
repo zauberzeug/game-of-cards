@@ -65,11 +65,13 @@ def interval_to_cron(spec: str, offset: int) -> str:
     Supported:
     - ``<N>h`` for N in {1, 2, 3, 4, 6, 8, 12} (must divide 24 so the
       ``*/N`` hour step doesn't reset at midnight), or ``24h``.
-    - ``<N>d`` for every-N-days: ``1d`` → daily; ``Nd`` (N≥2) → a
-      day-of-month ``*/N`` step. cron's ``*/N`` day field realigns at each
-      month boundary, so this is "roughly every N days" — the gap across a
-      month end is shorter than N. That is the standard cron approximation;
-      there is no exact every-N-days cron.
+    - ``<N>d`` for every-N-days, 1 ≤ N ≤ 31: ``1d`` → daily; ``Nd`` (N≥2)
+      → a day-of-month ``*/N`` step. cron's ``*/N`` day field realigns at
+      each month boundary, so this is "roughly every N days" — the gap
+      across a month end is shorter than N. That is the standard cron
+      approximation; there is no exact every-N-days cron. N > 31 is
+      rejected: cron's day-of-month field caps at 31, so a larger step
+      matches only the 1st and cannot represent the requested cadence.
 
     Anything else raises ``ValueError``.
     """
@@ -84,6 +86,12 @@ def interval_to_cron(spec: str, offset: int) -> str:
     if unit == "d":
         if n < 1:
             raise ValueError(f"{spec!r}: day interval must be >= 1")
+        if n > 31:
+            raise ValueError(
+                f"{spec!r}: day interval must be <= 31 "
+                "(cron's day-of-month field caps at 31; a larger */N step "
+                "fires only on the 1st)"
+            )
         if n == 1:
             return f"{offset} 0 * * *"
         # day-of-month */N: roughly every N days, realigning each month.
