@@ -1,6 +1,6 @@
 ---
 title: session-start-hook-treats-coerced-bool-or-int-waiting-on-as-impediment
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-22T08:38:45Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] TDD: no behavior change for canonical reasons (external / resource / deferred), other non-canonical *string* reasons (the sibling card's cell — e.g. `externl` still impedes), bare-`waiting_until` deferrals, elapsed-`until` resurfacing, the `until_unparseable` backstop, or the all-empty cell.
   - [ ] EMPIRICAL: `reproduce.py` exits 0 (engine and hook agree across all coerced values).
   - [ ] PROCESS: pre-commit `sync-plugin-assets` regenerates the Claude-Code / Codex plugin mirrors of `deck_session_start.py`; CI parity stays green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Session-start hook treats coerced bool/int `waiting_on` as an impediment
