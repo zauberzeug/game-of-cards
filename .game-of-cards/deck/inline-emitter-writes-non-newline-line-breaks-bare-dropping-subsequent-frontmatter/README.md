@@ -1,7 +1,7 @@
 ---
 title: inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
 summary: "`_yaml_inline` (engine.py:237) guards only against the LF newline before emitting a scalar bare, but the vendored parser splits the document with `str.splitlines()`, which treats nine other characters (CR, VT, FF, FS, GS, RS, NEL, LS, PS) as line breaks. A single-line field such as `summary` carrying an interior CR is emitted bare; on the next mutating verb's re-parse the value is truncated at the break and every field below it (tags, advances, definition_of_done) is silently dropped, passing goc validate the whole way. Sibling shape of the closed multi-line-newline card under the emitter quote-trigger meta-fix."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-06-22T19:48:28Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: a regression test asserts the emitter's behaviour for a scalar containing a non-LF line break (CR/VT/FF/FS/GS/RS/NEL/LS/PS) — either it raises a `FrontmatterError` like the existing `\n` case, or it round-trips faithfully; it must NOT emit the value bare and silently drop trailing fields.
   - [ ] MECHANICAL: the line-break detection lives in one place (not a fresh hand-maintained char list copied near the existing `"\n" in s` check) — derive the dangerous set from `str.splitlines()` behaviour so it cannot drift from the parser, consistent with the meta-fix this card advances.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green (the vendored parser/emitter is mirrored into the plugin payloads).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
