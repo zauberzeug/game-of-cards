@@ -490,6 +490,83 @@ class BlockScalarIndicatorRoundTripTest(unittest.TestCase):
             )
 
 
+class NonLFLineBreakRefusalTest(unittest.TestCase):
+    """A single-line scalar carrying a non-LF line-break character must never be
+    emitted bare. The vendored parser splits the document with str.splitlines(),
+    which breaks on nine characters beyond LF (CR, VT, FF, FS, GS, RS, NEL,
+    U+2028, U+2029); emitting such a value bare truncates it on re-parse and
+    silently drops every frontmatter field below it. Literal-block style can't
+    rescue them either — it rewrites the break to LF — so the emitter refuses
+    them at the boundary, the same posture as the LF and float branches.
+    Regression for
+    inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter.
+    """
+
+    NON_LF_BREAKS = {
+        "CR": "\r",
+        "VT": "\x0b",
+        "FF": "\x0c",
+        "FS": "\x1c",
+        "GS": "\x1d",
+        "RS": "\x1e",
+        "NEL": "\x85",
+        "LS": " ",
+        "PS": " ",
+    }
+
+    def test_yaml_inline_refuses_each_non_lf_break(self):
+        from goc import engine as e
+
+        for name, ch in self.NON_LF_BREAKS.items():
+            with self.assertRaises(e.FrontmatterError, msg=f"{name} not refused"):
+                e._yaml_inline(f"line one{ch}line two")
+
+    def test_emit_frontmatter_refuses_summary_with_non_lf_break(self):
+        from goc import engine as e
+
+        for name, ch in self.NON_LF_BREAKS.items():
+            fm = {
+                "title": "t",
+                "status": "open",
+                "summary": f"line one{ch}line two",
+                "tags": ["bug"],
+            }
+            with self.assertRaises(e.FrontmatterError, msg=f"{name} not refused"):
+                e.emit_frontmatter(fm, body="x")
+
+    def test_non_lf_break_alongside_lf_is_refused_not_block_emitted(self):
+        # A value carrying BOTH an LF and a non-LF break must not be routed to
+        # literal-block style: the block emitter would rewrite the non-LF break
+        # to LF, silently corrupting the value. It must hit the boundary refusal.
+        from goc import engine as e
+
+        fm = {"title": "t", "status": "open", "summary": "a\nb\rc"}
+        with self.assertRaises(e.FrontmatterError):
+            e.emit_frontmatter(fm, body="x")
+
+    def test_plain_lf_multiline_still_block_emits(self):
+        # The fix must not regress the LF case: a pure-LF multi-line value still
+        # round-trips through literal-block style.
+        from goc import engine as e
+
+        fm = {"title": "t", "status": "open", "summary": "alpha\nbeta"}
+        out = e.emit_frontmatter(fm, body="x")
+        self.assertIn("summary: |-\n", out)
+        self.assertEqual(e.parse_frontmatter(out)[0]["summary"], "alpha\nbeta")
+
+    def test_detection_derives_from_splitlines(self):
+        # The dangerous set is derived from str.splitlines(), so the predicate
+        # agrees with the parser's own line-splitting for every break character
+        # and stays empty for an ordinary single-line scalar.
+        from goc import engine as e
+
+        for ch in self.NON_LF_BREAKS.values():
+            self.assertTrue(e._contains_line_break(f"x{ch}y"))
+        self.assertTrue(e._contains_line_break("x\ny"))
+        self.assertFalse(e._contains_line_break("ordinary single line"))
+        self.assertFalse(e._contains_line_break(""))
+
+
 class DeckRoundTripTest(unittest.TestCase):
     """Parse every README.md in the real deck and verify key fields are present."""
 

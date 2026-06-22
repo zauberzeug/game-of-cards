@@ -190,6 +190,23 @@ _YAML_INDICATOR_FIRST = frozenset("&*")
 _YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>\d*[-+]?)$")
 
 
+def _contains_line_break(s: str) -> bool:
+    """True when `s` holds any character str.splitlines() treats as a line
+    boundary (LF plus CR, VT, FF, FS, GS, RS, NEL, U+2028, U+2029).
+
+    The vendored parser splits the document with str.splitlines()
+    (`yaml_lite._Parser(text.splitlines())`), so any such character — not just
+    LF — breaks a scalar on re-parse, truncating its value and dropping every
+    frontmatter field below it. Deriving the predicate from str.splitlines()
+    itself is what keeps the emitter's line-break guard from drifting from the
+    parser's line-splitting: a hand-maintained character list near the `"\\n"`
+    check would inevitably miss the other nine. `"".join(s.splitlines())` drops
+    exactly the break characters and nothing else, so it differs from `s` iff
+    `s` contains at least one.
+    """
+    return "".join(s.splitlines()) != s
+
+
 def _parser_coerces_scalar(s: str) -> bool:
     """True when the vendored parser would coerce bare scalar `s` to a
     non-string (int / None / bool).
@@ -234,16 +251,25 @@ def _yaml_inline(value) -> str:
             "store the value as a string or int."
         )
     s = str(value)
-    if "\n" in s:
-        # The inline emitter has no double-quoted escape for raw newlines that
+    if _contains_line_break(s):
+        # The inline emitter has no double-quoted escape for line breaks that
         # round-trips through the vendored parser, and emitting bare destroys
-        # every frontmatter field below this one (the trailing lines are read
-        # as top-level non-key text and end the mapping early). The caller must
-        # route multi-line values through `emit_frontmatter`, which detects
-        # them and uses literal-block style (`|-`) — see the docstring above.
+        # every frontmatter field below this one (the parser splits the scalar
+        # on the break via str.splitlines(), so the trailing lines are read as
+        # top-level non-key text and end the mapping early). LF-delimited text
+        # must route through `emit_frontmatter`, which detects it and uses
+        # literal-block style (`|-`) — see the docstring above. Other line
+        # breaks (CR, VT, FF, FS, GS, RS, NEL, U+2028, U+2029) cannot round-trip
+        # at all — literal-block style would silently rewrite them to LF and the
+        # parser has no escape that decodes them — so they are refused outright,
+        # the same boundary posture as the float branch above.
         raise FrontmatterError(
-            "multi-line frontmatter values are not supported by _yaml_inline; "
-            "route the field through emit_frontmatter (block-scalar `|-`) instead."
+            "frontmatter scalar contains a line-break character the vendored "
+            "parser splits on (str.splitlines breaks on LF plus CR/VT/FF/FS/GS/"
+            "RS/NEL/U+2028/U+2029); emitting it bare would truncate the value "
+            "and drop every field below it. Route LF-delimited text through "
+            "emit_frontmatter (block-scalar `|-`); other line breaks are "
+            "unsupported."
         )
     if (
         _YAML_NEEDS_QUOTE.search(s)
@@ -329,7 +355,18 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
         if key == "worker":
             lines.append(f"{key}: {_emit_worker(value)}")
             continue
-        if isinstance(value, str) and "\n" in value:
+        if (
+            isinstance(value, str)
+            and "\n" in value
+            and not _contains_line_break(value.replace("\n", ""))
+        ):
+            # Literal-block style faithfully round-trips ONLY LF line breaks:
+            # _emit_block_field splits on str.splitlines() and the parser reads
+            # the lines back joined with LF, so any *other* break character
+            # (CR/VT/FF/...) would be silently rewritten to LF. A value carrying
+            # such a character therefore falls through to `_yaml_inline` below,
+            # which refuses it at the boundary rather than corrupting it here.
+            #
             # Pick the chomp indicator from the value's own trailing-newline
             # state so the emit->parse round-trip is faithful: the parser reads
             # a clip block (`|`) back with one trailing newline and a strip

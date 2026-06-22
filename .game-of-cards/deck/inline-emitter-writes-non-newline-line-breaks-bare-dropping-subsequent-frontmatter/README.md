@@ -1,21 +1,21 @@
 ---
 title: inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
 summary: "`_yaml_inline` (engine.py:237) guards only against the LF newline before emitting a scalar bare, but the vendored parser splits the document with `str.splitlines()`, which treats nine other characters (CR, VT, FF, FS, GS, RS, NEL, LS, PS) as line breaks. A single-line field such as `summary` carrying an interior CR is emitted bare; on the next mutating verb's re-parse the value is truncated at the break and every field below it (tags, advances, definition_of_done) is silently dropped, passing goc validate the whole way. Sibling shape of the closed multi-line-newline card under the emitter quote-trigger meta-fix."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-06-22T19:48:28Z"
-closed_at: null
+closed_at: "2026-06-22T20:02:02Z"
 human_gate: none
 advances:
   - frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — none of the nine non-LF line-break characters round-trips lossily through `emit_frontmatter` -> `parse_frontmatter`.
-  - [ ] TDD: a regression test asserts the emitter's behaviour for a scalar containing a non-LF line break (CR/VT/FF/FS/GS/RS/NEL/LS/PS) — either it raises a `FrontmatterError` like the existing `\n` case, or it round-trips faithfully; it must NOT emit the value bare and silently drop trailing fields.
-  - [ ] MECHANICAL: the line-break detection lives in one place (not a fresh hand-maintained char list copied near the existing `"\n" in s` check) — derive the dangerous set from `str.splitlines()` behaviour so it cannot drift from the parser, consistent with the meta-fix this card advances.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green (the vendored parser/emitter is mirrored into the plugin payloads).
+  - [x] TDD: `reproduce.py` exits zero — none of the nine non-LF line-break characters round-trips lossily through `emit_frontmatter` -> `parse_frontmatter`.
+  - [x] TDD: a regression test asserts the emitter's behaviour for a scalar containing a non-LF line break (CR/VT/FF/FS/GS/RS/NEL/LS/PS) — either it raises a `FrontmatterError` like the existing `\n` case, or it round-trips faithfully; it must NOT emit the value bare and silently drop trailing fields.
+  - [x] MECHANICAL: the line-break detection lives in one place (not a fresh hand-maintained char list copied near the existing `"\n" in s` check) — derive the dangerous set from `str.splitlines()` behaviour so it cannot drift from the parser, consistent with the meta-fix this card advances.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green (the vendored parser/emitter is mirrored into the plugin payloads).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -66,27 +66,29 @@ round-trip. The faithful options are to **reject** the character at the
 boundary (consistent with how `\n` and float values are already refused) or
 to teach both emitter and parser a real escape for it.
 
-## Empirical evidence
+## Empirical evidence (resolved)
 
-`uv run python deck/<title>/reproduce.py`:
+Before the fix, each of the nine characters was emitted bare and the
+re-parse lost the summary's tail **and** both subsequent fields. After the
+fix, `uv run python deck/<title>/reproduce.py` exits 0:
 
 ```
-  CR: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
-  VT: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
-  FF: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
-  FS: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
-  GS: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
-  RS: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
- NEL: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
-  LS: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
-  PS: summary_preserved=False tail_fields_preserved=False emitted_quoted=False  -> FAIL
+  CR: refused at boundary (FrontmatterError)  -> ok
+  VT: refused at boundary (FrontmatterError)  -> ok
+  FF: refused at boundary (FrontmatterError)  -> ok
+  FS: refused at boundary (FrontmatterError)  -> ok
+  GS: refused at boundary (FrontmatterError)  -> ok
+  RS: refused at boundary (FrontmatterError)  -> ok
+ NEL: refused at boundary (FrontmatterError)  -> ok
+  LS: refused at boundary (FrontmatterError)  -> ok
+  PS: refused at boundary (FrontmatterError)  -> ok
 
-DEFECT REPRODUCED
+no defect (fix is in place)
 ```
 
-For each character: a card with `summary: line one<CHAR>line two` followed by
-`tags` and `advances` loses the summary's tail **and** both subsequent fields
-after one parse/emit cycle.
+The emitter now refuses these values at the boundary rather than emitting
+them bare, so the silent truncate-and-drop-trailing-fields path no longer
+exists.
 
 ## Why it matters
 
@@ -119,17 +121,25 @@ inside a *scalar value*, causing *silent* truncation and downstream field
 loss — a different mechanism (`splitlines`, not the frontmatter regex) and a
 different symptom (silent corruption, not rejection).
 
-## Fix (proposed — do not apply here)
+## Fix (applied)
 
-Derive the dangerous-character set from `str.splitlines()` rather than
-hand-listing it, and apply the same rejection the `\n` case already uses.
-Concretely, replace the `if "\n" in s:` test at `engine.py:237` (and the
-companion block-routing test at `:332`) with a check that fires for any
-character `str.splitlines()` treats as a line break — e.g. a string round-trips
-iff `len(s.splitlines()) <= 1` and it ends in no trailing break — and raise the
-existing `FrontmatterError`, so the boundary refuses values the vendored parser
-cannot represent. A unifying mechanism that closes the parent meta-fix would
-fold this into a single emitter-derives-from-parser source of truth and a
-`parse(emit(s)) == s` property test over a corpus that includes these
-characters.
+A single predicate `_contains_line_break(s)` in `goc/engine.py` derives the
+dangerous-character set from the parser's own line-splitting:
+`"".join(s.splitlines()) != s` is true iff `s` holds any character
+`str.splitlines()` treats as a line boundary (LF plus the nine others), so it
+can never drift from the vendored parser.
+
+- `_yaml_inline` now refuses the scalar when `_contains_line_break(s)` fires,
+  replacing the LF-only `if "\n" in s:` guard. This is the same boundary
+  posture as the existing float and `\n` refusals — these characters have no
+  round-tripping representation, so they are rejected rather than corrupted.
+- `emit_frontmatter`'s literal-block routing now triggers only for pure-LF
+  multi-line values (`"\n" in value and not _contains_line_break(value.replace("\n", ""))`).
+  A value carrying a non-LF break would be silently rewritten to LF by
+  literal-block style, so it falls through to `_yaml_inline`'s refusal instead.
+
+This is the per-shape resolution of nine of the ten characters
+`str.splitlines()` breaks on (the closed `\n` sibling covered the tenth),
+wired under the parent meta-fix
+[frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting](../frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting/).
 
