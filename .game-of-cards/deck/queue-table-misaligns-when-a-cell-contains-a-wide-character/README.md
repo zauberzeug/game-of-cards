@@ -1,7 +1,7 @@
 ---
 title: queue-table-misaligns-when-a-cell-contains-a-wide-character
 summary: "`render_table` (engine.py:2689-2715), the default `goc` queue view, computes column widths with `len()` and pads with `str.ljust()`/`str.rjust()` — both codepoint-based — so a cell holding an East-Asian wide character (two terminal columns) skews every column to its right. `render_board` was fixed for exactly this via `_display_width`/`_display_ljust` (closed card board-grid-misaligns-when-a-row-contains-the-wide-hourglass-glyph); the table renderer was left on the codepoint path. Low contribution: goc emits no wide glyph into table cells itself, so the trigger is a user-authored wide title/tag, which the repo's card-authoring rules already discourage."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-22T19:51:28Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test asserts `render_table` and `render_board` agree on inter-column display alignment for a row containing a wide character.
   - [ ] MECHANICAL: `render_table` measures and pads with `_display_width`/`_display_ljust` (and a display-aware right-justify for the VALUE column) rather than `len()`/`str.ljust()`/`str.rjust()`, mirroring `render_board`.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # queue-table-misaligns-when-a-cell-contains-a-wide-character
