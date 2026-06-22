@@ -1,21 +1,21 @@
 ---
 title: refine-deck-meta-fix-orphan-check-counts-only-advances-false-positives-wired-families
 summary: "`Skill(refine-deck)`'s orphaned-dependency sub-check 2 (meta-fix) tests `if not (c.get('advances') or [])`, counting only the `advances` field. But the established convention — confirmed by the closed `meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired` card — wires umbrella families via `advanced_by` (umbrella `advanced_by` siblings, sibling `advances` umbrella). So every correctly-wired umbrella is a false positive: a 2026-06-22 hygiene pass surfaced 31 meta-fix cards, of which 12 were genuine roots already wired via `advanced_by`. Sub-checks 1 (epics) and 3 (legacy markers) already count `len(advances) + len(advanced_by)`; sub-check 2 should match."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-22T01:46:28Z"
-closed_at: null
+closed_at: "2026-06-22T01:53:57Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: sub-check 2 in `goc/templates/skills/refine-deck/SKILL.md` counts `len(c.get('advances') or []) + len(c.get('advanced_by') or [])` (matching sub-checks 1 and 3) so a meta-fix umbrella wired via `advanced_by` is no longer surfaced as "empty advances".
-  - [ ] MECHANICAL: the prose at lines 186-191 ("Meta-fix cards with empty advances") is updated to say "zero edges (neither `advances` nor `advanced_by`)" and the printed message no longer says "empty advances" specifically.
-  - [ ] PROCESS: the change is made in the template only; `python scripts/sync_plugin_assets.py` (or the pre-commit `sync-plugin-assets` hook) regenerates the five skill mirrors (`.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`, and the OpenClaw port via `scripts/port_skills_to_openclaw.py`).
-  - [ ] EMPIRICAL: re-running the sub-check 2 survey on this repo's deck surfaces only genuinely-naked meta-fix cards (zero on both edge fields), not the umbrellas already wired via `advanced_by`.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] MECHANICAL: sub-check 2 in `goc/templates/skills/refine-deck/SKILL.md` counts `len(c.get('advances') or []) + len(c.get('advanced_by') or [])` (matching sub-checks 1 and 3) so a meta-fix umbrella wired via `advanced_by` is no longer surfaced as "empty advances".
+  - [x] MECHANICAL: the prose at lines 186-191 ("Meta-fix cards with empty advances") is updated to say "zero edges (neither `advances` nor `advanced_by`)" and the printed message no longer says "empty advances" specifically.
+  - [x] PROCESS: the change is made in the template only; `python scripts/sync_plugin_assets.py` (or the pre-commit `sync-plugin-assets` hook) regenerates the five skill mirrors (`.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`, and the OpenClaw port via `scripts/port_skills_to_openclaw.py`).
+  - [x] EMPIRICAL: re-running the sub-check 2 survey on this repo's deck surfaces only genuinely-naked meta-fix cards (zero on both edge fields), not the umbrellas already wired via `advanced_by`.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 worker: {who: "claude[bot]", where: main}
 ---
 
