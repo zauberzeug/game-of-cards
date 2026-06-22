@@ -411,6 +411,57 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
                 f"non-canonical waiting_on={value!r} must still impede",
             )
 
+    def test_coerced_bool_int_waiting_on_resolves_to_none(self):
+        """Opposite cell to the non-canonical-string case: a `waiting_on`
+        token the yaml-lite parser coerces away from `str` (`false` / `true`
+        / `yes` / `no` / `42`) must read as None — matching the engine's
+        `isinstance(v, str)` guard in `Card.waiting_on`. The reader, not the
+        shared `_scalar_or_none`, drops the coerced token (the sibling
+        `waiting_until` reader keeps the engine's no-isinstance contract).
+        """
+        for value in ("false", "true", "yes", "no", "42"):
+            p = self._readme_path(f"status: active\nwaiting_on: {value}")
+            self.assertIsNone(
+                self.hook._card_waiting_on(p),
+                f"coerced waiting_on={value!r} must resolve to None",
+            )
+
+    def test_coerced_bool_int_waiting_on_not_impeded_agrees_with_engine(self):
+        """A coerced bool/int `waiting_on` with no `waiting_until` must NOT
+        impede, mirroring `engine.waiting_impedes` (which sees `waiting_on`
+        as None after the `isinstance` guard). Before the fix the hook
+        over-fired `_is_impeded=True` while the engine reported resumable.
+        """
+        from goc import engine  # local import: engine on sys.path via ROOT
+
+        sys.path.insert(0, str(ROOT))
+        for value in ("false", "true", "yes", "no", "42"):
+            with tempfile.TemporaryDirectory() as tmp:
+                card_dir = Path(tmp)
+                readme = card_dir / "README.md"
+                readme.write_text(
+                    "---\ntitle: demo\nstatus: active\ncontribution: medium\n"
+                    f"human_gate: none\nwaiting_on: {value}\ntags: []\n---\n"
+                    "# Demo\n\n## Definition of Done\n- [ ] x\n",
+                    encoding="utf-8",
+                )
+                card = engine.load_card(card_dir)
+                self.assertFalse(
+                    engine.waiting_impedes(card),
+                    f"engine must treat coerced waiting_on={value!r} as resumable",
+                )
+                self.assertFalse(
+                    self.hook._is_impeded(readme),
+                    f"hook must agree: coerced waiting_on={value!r} is resumable",
+                )
+
+    def _readme_path(self, frontmatter: str) -> Path:
+        p = Path(
+            tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name
+        )
+        p.write_text(f"---\n{frontmatter}\n---\nbody\n", encoding="utf-8")
+        return p
+
     def test_four_card_matrix_only_a_appears_under_resumable(self):
         """DoD fixture: (a) plain active, (b) waiting_on: external,
         (c) waiting_on: deferred + future waiting_until, (d) human_gate: decision.

@@ -124,6 +124,13 @@ const ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 // explicit YAML null literals that resolve to absent, so `waiting_on: null` / `~`
 // reads as "no reason", not the truthy string "null".
 const NULL_LITERALS = new Set(["null", "Null", "NULL", "~"]);
+// Mirrors `goc._vendor.yaml_lite._TRUE_SET` / `_FALSE_SET` / `_INT_RE` (and the
+// Python hook's same-named constants): tokens the yaml-lite parser coerces away
+// from `str` (to bool / int). The engine's `Card.waiting_on` drops a non-`str`
+// value via `isinstance(v, str)`, so the `waiting_on` read resolves these to ""
+// too — see `cardWaitingOn`.
+const BOOL_LITERALS = new Set(["true", "True", "TRUE", "yes", "Yes", "YES", "false", "False", "FALSE", "no", "No", "NO"]);
+const INT_RE = /^-?\d+$/;
 
 interface ActiveCard {
   name: string;
@@ -169,6 +176,19 @@ function scalarOrEmpty(line: string): string {
   // hook, which routes only the two waiting fields through `_scalar_or_none`.
   const tail = stripQuotes(frontmatterTail(line));
   return NULL_LITERALS.has(tail) ? "" : tail;
+}
+
+function waitingOnScalar(line: string): string {
+  // Scoped narrowing beyond scalarOrEmpty for the `waiting_on` read only:
+  // the engine's Card.waiting_on drops any value the yaml-lite parser would
+  // coerce away from `str` via `isinstance(v, str)`, so a bool literal
+  // (true/yes/false/no …) or an integer token reads as "" (no reason) here
+  // too. The `waiting_until` read keeps scalarOrEmpty — the engine's
+  // waiting_until property has no isinstance guard, so its unparseable
+  // backstop must still see the raw token.
+  const tail = scalarOrEmpty(line);
+  if (tail !== "" && (BOOL_LITERALS.has(tail) || INT_RE.test(tail))) return "";
+  return tail;
 }
 
 function parseWaitingUntil(value: string): Date | null {
@@ -266,7 +286,7 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
         const val = stripQuotes(frontmatterTail(line));
         if (val) humanGate = val;
       } else if (line.startsWith("waiting_on:")) {
-        waitingOn = scalarOrEmpty(line);
+        waitingOn = waitingOnScalar(line);
       } else if (line.startsWith("waiting_until:")) {
         waitingUntil = scalarOrEmpty(line);
       }

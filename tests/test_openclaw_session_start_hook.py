@@ -166,6 +166,20 @@ test("explicit-null waiting_until literal reads as NOT impeded (not malformed)",
   const waitingUntil = scalarOrEmpty("waiting_until: null");
   assert.strictEqual(isImpeded("", waitingUntil, NOW), false);
 }});
+
+// Coerced-bool/int reader matrix — the opposite cell of the non-canonical-
+// string case. A `waiting_on` token the yaml-lite parser coerces away from
+// `str` (true/false/yes/no/<int>) must read as "" via waitingOnScalar so the
+// card is NOT impeded, mirroring the engine's `isinstance(v, str)` guard. The
+// `waiting_until` reader is deliberately NOT narrowed the same way (the engine
+// has no isinstance guard there).
+for (const lit of ["false", "true", "yes", "no", "42"]) {{
+  test(`coerced waiting_on literal ${{lit}} reads as NOT impeded`, () => {{
+    const waitingOn = waitingOnScalar("waiting_on: " + lit);
+    assert.strictEqual(waitingOn, "");
+    assert.strictEqual(isImpeded(waitingOn, "", NOW), false);
+  }});
+}}
 """
 
 
@@ -188,9 +202,12 @@ class OpenclawIsImpededMatrixTest(unittest.TestCase):
                 _extract_const_line(src, "ISO_DATE_RE"),
                 _extract_const_line(src, "ISO_DATETIME_UTC_RE"),
                 _extract_const_line(src, "NULL_LITERALS"),
+                _extract_const_line(src, "BOOL_LITERALS"),
+                _extract_const_line(src, "INT_RE"),
                 _extract_top_level_function(src, "stripQuotes"),
                 _extract_top_level_function(src, "frontmatterTail"),
                 _extract_top_level_function(src, "scalarOrEmpty"),
+                _extract_top_level_function(src, "waitingOnScalar"),
                 _extract_top_level_function(src, "parseWaitingUntil"),
                 _extract_top_level_function(src, "isImpeded"),
             ]

@@ -20,6 +20,14 @@ _ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 # Mirrors `goc._vendor.yaml_lite._NULL_SET`: explicit YAML null literals that
 # resolve to None, so `waiting_on: null` / `~` reads as absent, not a reason.
 _NULL_SET = frozenset(("null", "Null", "NULL", "~"))
+# Mirrors `goc._vendor.yaml_lite._TRUE_SET` / `_FALSE_SET` / `_INT_RE`: tokens
+# the yaml-lite parser coerces away from `str` (to bool / int). The engine's
+# `Card.waiting_on` drops a non-`str` value via `isinstance(v, str)`, so the
+# `waiting_on` reader must resolve these coerced tokens to None too — see
+# `_card_waiting_on`.
+_TRUE_SET = frozenset(("true", "True", "TRUE", "yes", "Yes", "YES"))
+_FALSE_SET = frozenset(("false", "False", "FALSE", "no", "No", "NO"))
+_INT_RE = re.compile(r"^-?\d+$")
 
 
 def _frontmatter_tail(line: str) -> str:
@@ -86,7 +94,16 @@ def _card_human_gate(readme: Path) -> str:
 
 
 def _card_waiting_on(readme: Path) -> str | None:
-    """Return the frontmatter `waiting_on` value, or None if absent/blank."""
+    """Return the frontmatter `waiting_on` value, or None if absent/blank.
+
+    Scoped narrowing beyond `_scalar_or_none`: the engine's `Card.waiting_on`
+    drops any value the yaml-lite parser would coerce away from `str` via
+    `isinstance(v, str)`, so a token in `_TRUE_SET ∪ _FALSE_SET` (coerced to
+    bool) or matching `_INT_RE` (coerced to int) reads as None here too. Only
+    the `waiting_on` reader applies this — the engine's `waiting_until`
+    property has no `isinstance` guard, so `_card_waiting_until` keeps the raw
+    token (its unparseable-backstop contract depends on it).
+    """
     try:
         text = readme.read_text(encoding="utf-8")
     except OSError:
@@ -96,7 +113,14 @@ def _card_waiting_on(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("waiting_on:"):
-            return _scalar_or_none(line)
+            reason = _scalar_or_none(line)
+            if reason is not None and (
+                reason in _TRUE_SET
+                or reason in _FALSE_SET
+                or _INT_RE.match(reason)
+            ):
+                return None
+            return reason
     return None
 
 
