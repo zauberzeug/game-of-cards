@@ -30,16 +30,18 @@ _FALSE_SET = frozenset(("false", "False", "FALSE", "no", "No", "NO"))
 _INT_RE = re.compile(r"^-?\d+$")
 
 
-def _frontmatter_tail(line: str) -> str:
-    """Return the comment-free, quote-stripped tail of a `key: value` line.
+def _comment_free_tail(line: str) -> str:
+    """Return the inline-comment-free, whitespace-trimmed tail of a
+    `key: value` line, with surrounding quotes **preserved**.
 
     Mirrors the YAML 1.1/1.2 rule for inline comments on a bare scalar: a
     `#` terminates the value only when preceded by whitespace (or at the
     very start), so `status: active # note` yields `'active'` while
-    `status: foo#bar` yields `'foo#bar'`. The hook re-implements YAML
-    parsing for four enum/date fields so it has no package dependency;
-    routing all four readers through this helper keeps their treatment
-    of authored inline comments aligned.
+    `status: foo#bar` yields `'foo#bar'`. Keeping the quotes lets callers
+    distinguish a quoted scalar (which the yaml-lite parser keeps as a live
+    `str`) from an unquoted token (subject to null/bool/int coercion) — the
+    distinction `_card_waiting_on` / `_scalar_or_none` need to mirror the
+    engine.
     """
     tail = line.split(":", 1)[1]
     i = 0
@@ -48,19 +50,40 @@ def _frontmatter_tail(line: str) -> str:
             tail = tail[:i]
             break
         i += 1
-    return tail.strip().strip('"').strip("'")
+    return tail.strip()
+
+
+def _frontmatter_tail(line: str) -> str:
+    """Return the comment-free, quote-stripped tail of a `key: value` line.
+
+    Quote-stripping wrapper over `_comment_free_tail`; the hook
+    re-implements YAML parsing for four enum/date fields so it has no
+    package dependency, and routing all four readers through this helper
+    keeps their treatment of authored inline comments aligned.
+    """
+    return _comment_free_tail(line).strip('"').strip("'")
 
 
 def _scalar_or_none(line: str) -> str | None:
     """Tail of a frontmatter scalar, or None for blank / explicit YAML null.
 
-    Mirrors `yaml_lite._NULL_SET` so the hook resolves `key: null`, `~`,
-    `Null`, `NULL` to absent — matching how the engine parses the same line.
-    Without this, the raw token (`"null"`) survives as a truthy string and
-    `_is_impeded` mistakes an absent overlay for a live one.
+    Mirrors `yaml_lite._NULL_SET` so the hook resolves an *unquoted*
+    `key: null`, `~`, `Null`, `NULL` to absent — matching how the engine
+    parses the same line. The null coercion is quote-aware: yaml-lite only
+    coerces *bare* null literals, so a quoted `key: "null"` stays the live
+    string `"null"` (which the engine keeps), and resolving it to absent
+    here would diverge from the engine. Without the bare-token guard, the
+    raw token (`null`) would survive as a truthy string and `_is_impeded`
+    would mistake an absent overlay for a live one.
     """
-    tail = _frontmatter_tail(line)
-    return tail if tail and tail not in _NULL_SET else None
+    raw = _comment_free_tail(line)
+    quoted = raw[:1] in ('"', "'")
+    value = raw.strip('"').strip("'") if quoted else raw
+    if not value:
+        return None
+    if not quoted and value in _NULL_SET:
+        return None
+    return value
 
 
 def _card_status(readme: Path) -> str | None:
@@ -98,11 +121,14 @@ def _card_waiting_on(readme: Path) -> str | None:
 
     Scoped narrowing beyond `_scalar_or_none`: the engine's `Card.waiting_on`
     drops any value the yaml-lite parser would coerce away from `str` via
-    `isinstance(v, str)`, so a token in `_TRUE_SET ∪ _FALSE_SET` (coerced to
-    bool) or matching `_INT_RE` (coerced to int) reads as None here too. Only
-    the `waiting_on` reader applies this — the engine's `waiting_until`
-    property has no `isinstance` guard, so `_card_waiting_until` keeps the raw
-    token (its unparseable-backstop contract depends on it).
+    `isinstance(v, str)`, so an *unquoted* token in `_NULL_SET` / `_TRUE_SET`
+    / `_FALSE_SET` (coerced to None/bool) or matching `_INT_RE` (coerced to
+    int) reads as None here too. The coercion is quote-aware: a *quoted*
+    `"true"` / `"42"` / `"null"` is parsed as a live `str` the engine keeps,
+    so it stays a reason. Only the `waiting_on` reader applies the bool/int
+    narrowing — the engine's `waiting_until` property has no `isinstance`
+    guard, so `_card_waiting_until` keeps the raw token (its
+    unparseable-backstop contract depends on it).
     """
     try:
         text = readme.read_text(encoding="utf-8")
@@ -113,14 +139,25 @@ def _card_waiting_on(readme: Path) -> str | None:
         return None
     for line in m.group(1).splitlines():
         if line.startswith("waiting_on:"):
-            reason = _scalar_or_none(line)
-            if reason is not None and (
-                reason in _TRUE_SET
-                or reason in _FALSE_SET
-                or _INT_RE.match(reason)
+            raw = _comment_free_tail(line)
+            quoted = raw[:1] in ('"', "'")
+            value = raw.strip('"').strip("'") if quoted else raw
+            if not value:
+                return None
+            # yaml-lite coerces only *unquoted* tokens away from `str`
+            # (null/bool -> None/bool, int -> int), all of which the engine's
+            # `isinstance(v, str)` guard drops to None. A *quoted* "true" /
+            # "42" / "null" stays a live string reason the engine keeps, so
+            # coercion must skip it — otherwise the hook reports a card the
+            # engine impedes as resumable.
+            if not quoted and (
+                value in _NULL_SET
+                or value in _TRUE_SET
+                or value in _FALSE_SET
+                or _INT_RE.match(value)
             ):
                 return None
-            return reason
+            return value
     return None
 
 

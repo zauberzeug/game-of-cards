@@ -168,27 +168,39 @@ function frontmatterTail(line: string): string {
 }
 
 function scalarOrEmpty(line: string): string {
-  // Mirrors the Python hook's `_scalar_or_none`: resolve an explicit YAML
-  // null literal on the scalar tail to "absent" (empty string) so a
-  // hand-edited `waiting_on: null` / `~` reads as no impediment rather than
-  // the truthy token "null". Used only for the `waiting_on` / `waiting_until`
-  // reads — `status` / `human_gate` keep the raw tail, matching the Python
-  // hook, which routes only the two waiting fields through `_scalar_or_none`.
-  const tail = stripQuotes(frontmatterTail(line));
-  return NULL_LITERALS.has(tail) ? "" : tail;
+  // Mirrors the Python hook's `_scalar_or_none`: resolve an *unquoted*
+  // explicit YAML null literal on the scalar tail to "absent" (empty string)
+  // so a hand-edited `waiting_on: null` / `~` reads as no impediment rather
+  // than the truthy token "null". The null coercion is quote-aware —
+  // yaml-lite coerces only *bare* null literals, so a quoted `"null"` stays
+  // the live string the engine keeps; resolving it to "" here would diverge.
+  // Used only for the `waiting_on` / `waiting_until` reads — `status` /
+  // `human_gate` keep the raw tail, matching the Python hook, which routes
+  // only the two waiting fields through `_scalar_or_none`.
+  const raw = frontmatterTail(line);
+  const quoted = raw[0] === '"' || raw[0] === "'";
+  const value = quoted ? stripQuotes(raw) : raw;
+  if (value === "") return "";
+  if (!quoted && NULL_LITERALS.has(value)) return "";
+  return value;
 }
 
 function waitingOnScalar(line: string): string {
   // Scoped narrowing beyond scalarOrEmpty for the `waiting_on` read only:
-  // the engine's Card.waiting_on drops any value the yaml-lite parser would
-  // coerce away from `str` via `isinstance(v, str)`, so a bool literal
-  // (true/yes/false/no …) or an integer token reads as "" (no reason) here
-  // too. The `waiting_until` read keeps scalarOrEmpty — the engine's
-  // waiting_until property has no isinstance guard, so its unparseable
-  // backstop must still see the raw token.
-  const tail = scalarOrEmpty(line);
-  if (tail !== "" && (BOOL_LITERALS.has(tail) || INT_RE.test(tail))) return "";
-  return tail;
+  // the engine's Card.waiting_on drops any *unquoted* value the yaml-lite
+  // parser coerces away from `str` via `isinstance(v, str)`, so a null/bool
+  // literal (null/true/yes/false/no …) or an integer token reads as "" (no
+  // reason) here too. The coercion is quote-aware: a quoted `"true"` / `"42"`
+  // / `"null"` is parsed as a live string reason the engine keeps, so it must
+  // not be coerced. The `waiting_until` read keeps scalarOrEmpty — the
+  // engine's waiting_until property has no isinstance guard, so its
+  // unparseable backstop must still see the raw token.
+  const raw = frontmatterTail(line);
+  const quoted = raw[0] === '"' || raw[0] === "'";
+  const value = quoted ? stripQuotes(raw) : raw;
+  if (value === "") return "";
+  if (!quoted && (NULL_LITERALS.has(value) || BOOL_LITERALS.has(value) || INT_RE.test(value))) return "";
+  return value;
 }
 
 function parseWaitingUntil(value: string): Date | null {

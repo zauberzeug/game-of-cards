@@ -455,6 +455,67 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
                     f"hook must agree: coerced waiting_on={value!r} is resumable",
                 )
 
+    def test_quoted_waiting_on_stays_a_live_reason(self):
+        """A *quoted* `waiting_on: "true"` / `"42"` / `"null"` is parsed by
+        yaml-lite as a live `str` the engine keeps (and treats as impeded),
+        so the reader must NOT coerce it to None. The coercion narrowing
+        applies only to *unquoted* tokens; running it on the quote-stripped
+        value (the pre-fix behavior) wrongly dropped quoted reasons.
+        """
+        for value in ('"true"', '"false"', '"42"', "'yes'", '"null"'):
+            p = self._readme_path(f"status: active\nwaiting_on: {value}")
+            self.assertEqual(
+                self.hook._card_waiting_on(p),
+                value.strip("\"'"),
+                f"quoted waiting_on={value} must stay a live reason",
+            )
+
+    def test_quoted_waiting_scalars_impede_agreeing_with_engine(self):
+        """Quoted `waiting_on: "true"` and `waiting_until: "null"` are live
+        string values the engine impedes on (a quoted `"null"` waiting_until
+        is unparseable → the engine's backstop hides the card). The hook must
+        agree. Unquoted forms keep coercing to absent, so they must NOT
+        impede — both directions are asserted to guard the boundary.
+        """
+        from goc import engine  # local import: engine on sys.path via ROOT
+
+        sys.path.insert(0, str(ROOT))
+        impede_cases = [
+            'waiting_on: "true"',
+            'waiting_on: "42"',
+            'waiting_on: "null"',
+            'waiting_until: "null"',
+        ]
+        resumable_cases = [
+            "waiting_on: true",
+            "waiting_on: 42",
+            "waiting_on: null",
+            "waiting_until: null",
+        ]
+        for fm, expect in [(c, True) for c in impede_cases] + [
+            (c, False) for c in resumable_cases
+        ]:
+            with tempfile.TemporaryDirectory() as tmp:
+                card_dir = Path(tmp)
+                readme = card_dir / "README.md"
+                readme.write_text(
+                    "---\ntitle: demo\nstatus: active\ncontribution: medium\n"
+                    f"human_gate: none\n{fm}\ntags: []\n---\n"
+                    "# Demo\n\n## Definition of Done\n- [ ] x\n",
+                    encoding="utf-8",
+                )
+                card = engine.load_card(card_dir)
+                self.assertEqual(
+                    engine.waiting_impedes(card),
+                    expect,
+                    f"engine impede mismatch for {fm!r}",
+                )
+                self.assertEqual(
+                    self.hook._is_impeded(readme),
+                    expect,
+                    f"hook must agree with engine for {fm!r}",
+                )
+
     def _readme_path(self, frontmatter: str) -> Path:
         p = Path(
             tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name

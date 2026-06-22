@@ -1,21 +1,21 @@
 ---
 title: session-start-hook-over-coerces-quoted-waiting-scalars-to-absent
 summary: "The SessionStart hook strips outer quotes before its null/bool/int coercion check, so a quoted `waiting_on: \"true\"`/`\"42\"`/`\"null\"` (and `waiting_until: \"null\"`) — which the engine keeps as a live string reason and treats as impeded — is wrongly resolved to absent and the card is announced as resumable. Opposite-direction regression of the just-closed bool/int coercion fix, whose tests only cover unquoted forms."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-22T09:20:54Z"
-closed_at: null
+closed_at: "2026-06-22T09:26:37Z"
 human_gate: none
 advances:
   - session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `deck/<title>/reproduce.py` exits zero — the hook agrees with `engine.waiting_impedes` for quoted `waiting_on: "true"`/`"false"`/`"42"`/`"null"` and `waiting_until: "null"` (all currently DIVERGE).
-  - [ ] TDD: a regression test in `tests/test_session_start_hook.py` asserts a quoted `waiting_on: "true"` and a quoted `waiting_until: "null"` card is reported impeded by the hook (matching the engine), and that unquoted `waiting_on: true`/`42`/`null` still resolve to absent.
-  - [ ] MECHANICAL: `_card_waiting_on` and `_scalar_or_none` in `goc/templates/hooks/deck_session_start.py` apply null/bool/int coercion only to *unquoted* tokens; the OpenClaw TS port (`waitingOnScalar` / `scalarOrEmpty` in `openclaw-plugin/index.ts`) mirrors the change.
-  - [ ] PROCESS: re-sync plugin mirrors (`python scripts/sync_plugin_assets.py`) and re-port OpenClaw skills if needed; `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+  - [x] TDD: `deck/<title>/reproduce.py` exits zero — the hook agrees with `engine.waiting_impedes` for quoted `waiting_on: "true"`/`"false"`/`"42"`/`"null"` and `waiting_until: "null"` (all DIVERGED before the fix).
+  - [x] TDD: a regression test in `tests/test_session_start_hook.py` asserts a quoted `waiting_on: "true"` and a quoted `waiting_until: "null"` card is reported impeded by the hook (matching the engine), and that unquoted `waiting_on: true`/`42`/`null` still resolve to absent. (OpenClaw mirror in `tests/test_openclaw_session_start_hook.py`.)
+  - [x] MECHANICAL: `_card_waiting_on` and `_scalar_or_none` in `goc/templates/hooks/deck_session_start.py` apply null/bool/int coercion only to *unquoted* tokens; the OpenClaw TS port (`waitingOnScalar` / `scalarOrEmpty` in `openclaw-plugin/index.ts`) mirrors the change.
+  - [x] PROCESS: re-synced plugin mirrors (`python scripts/sync_plugin_assets.py`); `uv run python -m unittest discover -s tests` (513 pass) and `uv run goc validate` both pass.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -71,16 +71,24 @@ reports resumable.
 
 ## Empirical evidence
 
-`reproduce.py` output on a clean checkout (defect present):
+Before the fix, `reproduce.py` reported six divergences (`engine
+impedes=True` / `hook impedes=False`) across the quoted `waiting_on`
+and `waiting_until` matrix. After the quote-aware coercion fix the hook
+agrees with the engine on every row:
 
 ```
-waiting_on: "true"   | engine impedes=True  reason='true'   | hook impedes=False | DIVERGE
-waiting_on: "false"  | engine impedes=True  reason='false'  | hook impedes=False | DIVERGE
-waiting_on: "42"     | engine impedes=True  reason='42'     | hook impedes=False | DIVERGE
-waiting_on: 'yes'    | engine impedes=True  reason='yes'    | hook impedes=False | DIVERGE
-waiting_on: "null"   | engine impedes=True  reason='null'   | hook impedes=False | DIVERGE
-waiting_until: "null"| engine impedes=True  until='null'    | hook impedes=False | DIVERGE
+waiting_on: "true"     | engine impedes=True  | hook impedes=True  | ok
+waiting_on: "false"    | engine impedes=True  | hook impedes=True  | ok
+waiting_on: "42"       | engine impedes=True  | hook impedes=True  | ok
+waiting_on: 'yes'      | engine impedes=True  | hook impedes=True  | ok
+waiting_on: "null"     | engine impedes=True  | hook impedes=True  | ok
+waiting_until: "null"  | engine impedes=True  | hook impedes=True  | ok
+
+PASS: hook agrees with engine across the quoted-scalar matrix.
 ```
+
+Unquoted `waiting_on: true`/`42`/`null` and `waiting_until: null` still
+resolve to absent (no impediment), unchanged from before.
 
 ## Why it matters
 

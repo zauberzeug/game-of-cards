@@ -180,6 +180,28 @@ for (const lit of ["false", "true", "yes", "no", "42"]) {{
     assert.strictEqual(isImpeded(waitingOn, "", NOW), false);
   }});
 }}
+
+// Quoted-scalar matrix — a *quoted* null/bool/int token is parsed by yaml-lite
+// as a live string the engine keeps and impedes on, so the readers must NOT
+// coerce it. The coercion narrowing applies only to *bare* tokens; pre-fix the
+// readers stripped quotes before the null/bool/int check and wrongly dropped a
+// quoted `"true"` / `"42"` / `"null"` (and a quoted `waiting_until: "null"`).
+for (const lit of ['"true"', '"42"', '"null"', "'yes'"]) {{
+  test(`quoted waiting_on literal ${{lit}} stays a live reason (impeded)`, () => {{
+    const waitingOn = waitingOnScalar("waiting_on: " + lit);
+    assert.notStrictEqual(waitingOn, "");
+    assert.strictEqual(isImpeded(waitingOn, "", NOW), true);
+  }});
+}}
+
+test("quoted waiting_until null literal is unparseable → impeded", () => {{
+  // A quoted `waiting_until: "null"` stays the live string "null", which is
+  // unparseable as a date → the engine's backstop impedes. scalarOrEmpty must
+  // keep the token (not resolve it to absent).
+  const waitingUntil = scalarOrEmpty('waiting_until: "null"');
+  assert.strictEqual(waitingUntil, "null");
+  assert.strictEqual(isImpeded("", waitingUntil, NOW), true);
+}});
 """
 
 
