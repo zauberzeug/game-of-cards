@@ -1,7 +1,7 @@
 ---
 title: refine-deck-meta-fix-orphan-check-counts-only-advances-false-positives-wired-families
 summary: "`Skill(refine-deck)`'s orphaned-dependency sub-check 2 (meta-fix) tests `if not (c.get('advances') or [])`, counting only the `advances` field. But the established convention — confirmed by the closed `meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired` card — wires umbrella families via `advanced_by` (umbrella `advanced_by` siblings, sibling `advances` umbrella). So every correctly-wired umbrella is a false positive: a 2026-06-22 hygiene pass surfaced 31 meta-fix cards, of which 12 were genuine roots already wired via `advanced_by`. Sub-checks 1 (epics) and 3 (legacy markers) already count `len(advances) + len(advanced_by)`; sub-check 2 should match."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-22T01:46:28Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] PROCESS: the change is made in the template only; `python scripts/sync_plugin_assets.py` (or the pre-commit `sync-plugin-assets` hook) regenerates the five skill mirrors (`.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`, and the OpenClaw port via `scripts/port_skills_to_openclaw.py`).
   - [ ] EMPIRICAL: re-running the sub-check 2 survey on this repo's deck surfaces only genuinely-naked meta-fix cards (zero on both edge fields), not the umbrellas already wired via `advanced_by`.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `refine-deck` meta-fix orphan sub-check counts only `advances`, false-positives correctly-wired families
