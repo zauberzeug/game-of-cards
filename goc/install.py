@@ -784,10 +784,14 @@ def _strip_claude_vendored_harness(target: Path, templates: Path) -> None:
         skills_dir = target / shim.skills.target
         if skills_dir.is_dir():
             skills_src = templates / "skills"
+            # The bundled plugin engine omits templates/skills/, so the set of
+            # GoC-owned skill names cannot be derived there. Skip skill-dir
+            # removal in that case (never destroy authored content) and let the
+            # hook-file and settings-entry cleanup below proceed.
             goc_owned = {
                 p.name for p in skills_src.iterdir()
                 if p.is_dir() and skill_for_agent(p.name, "claude")
-            }
+            } if skills_src.is_dir() else set()
             for child in list(skills_dir.iterdir()):
                 if child.is_dir() and child.name in goc_owned:
                     shutil.rmtree(child)

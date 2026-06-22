@@ -1,10 +1,10 @@
 ---
 title: strip-claude-vendored-harness-crashes-when-plugin-engine-omits-skill-templates
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-22T14:36:14Z"
-closed_at: null
+closed_at: "2026-06-22T14:40:33Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -16,10 +16,10 @@ summary: |
   plugin-bundled engine therefore raises FileNotFoundError before any
   cleanup runs.
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (cleanup completes without crash, user skill preserved)
-  - [ ] TDD: regression test in tests/ covers the templates/skills-absent cleanup path
-  - [ ] MECHANICAL: `skills_src.iterdir()` is guarded so an absent template skill tree yields an empty goc-owned set rather than a crash
-  - [ ] PROCESS: full suite green (`uv run python -m unittest discover -s tests`)
+  - [x] TDD: reproduce.py exits zero (cleanup completes without crash, user skill preserved)
+  - [x] TDD: regression test in tests/ covers the templates/skills-absent cleanup path
+  - [x] MECHANICAL: `skills_src.iterdir()` is guarded so an absent template skill tree yields an empty goc-owned set rather than a crash
+  - [x] PROCESS: full suite green (`uv run python -m unittest discover -s tests`)
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -87,13 +87,28 @@ this crash. install.py:788 is absent from that card's location list.
 
 `reproduce.py` copies the real template tree minus `skills/` (the plugin
 payload shape) and runs the cleanup against a repo with one GoC-managed
-and one user-authored leftover skill:
+and one user-authored leftover skill.
+
+Before the fix, the cleanup crashed:
 
 ```
 REPRODUCED: FileNotFoundError during cleanup: [Errno 2] No such file or directory: '.../templates/skills'
 Cleanup crashed; vendored->plugin migration is broken from the plugin engine.
 exit=1
 ```
+
+After guarding `skills_src.iterdir()` with `skills_src.is_dir()`:
+
+```
+OK: cleanup completed without crash; user-authored skill preserved
+  my-custom-skill still present: True
+exit=0
+```
+
+The regression test
+`tests/test_install.py::ClaudeHarnessInstallTest::test_strip_vendored_harness_survives_absent_template_skill_tree`
+exercises the same path and was verified to fail (FileNotFoundError)
+without the guard.
 
 ## Fix
 

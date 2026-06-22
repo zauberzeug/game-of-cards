@@ -467,6 +467,41 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 goc_cmds = [c for c in all_commands if c and ".claude/hooks/" in c]
                 self.assertEqual([], goc_cmds, "GoC hook registrations should be stripped after migration")
 
+    def test_strip_vendored_harness_survives_absent_template_skill_tree(self) -> None:
+        """Cleanup must not crash when the engine omits templates/skills/.
+
+        The bundled plugin engine deliberately ships no templates/skills/
+        subdir. The vendored->plugin cleanup iterates that tree to learn the
+        GoC-owned skill names; with the tree absent it must yield an empty set
+        (skip skill-dir removal, never destroy authored content) rather than
+        raising FileNotFoundError.
+        """
+        from goc.install import _strip_claude_vendored_harness, _templates_root
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            # Mimic the plugin payload: every template subtree EXCEPT skills/.
+            templates = tmp / "templates"
+            shutil.copytree(
+                _templates_root(), templates, ignore=shutil.ignore_patterns("skills")
+            )
+            self.assertFalse((templates / "skills").exists())
+
+            target = tmp / "repo"
+            goc_skill = target / ".claude" / "skills" / "deck"
+            goc_skill.mkdir(parents=True)
+            (goc_skill / "SKILL.md").write_text("goc-managed\n")
+            user_skill = target / ".claude" / "skills" / "my-custom-skill"
+            user_skill.mkdir(parents=True)
+            (user_skill / "SKILL.md").write_text("user-authored\n")
+
+            # Must not raise FileNotFoundError.
+            _strip_claude_vendored_harness(target, templates)
+
+            # Authored content is never destroyed when GoC-owned names are unknown.
+            self.assertTrue(user_skill.exists())
+            self.assertTrue(goc_skill.exists())
+
     def test_upgrade_keep_local_skills_preserves_vendored_layout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
