@@ -2723,32 +2723,35 @@ def render_table(
             rows.append((t.title, t.status, stage, t.contribution, value_str, t.human_gate, t.created, tags, dod))
         else:
             rows.append((t.title, t.status, t.contribution, value_str, t.human_gate, tags, dod))
-    widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
+    widths = [
+        max(_display_width(h), max((_display_width(r[i]) for r in rows), default=0))
+        for i, h in enumerate(headers)
+    ]
     out_lines: list[str] = []
-    out_lines.append("  ".join(h.ljust(widths[i]) for i, h in enumerate(headers)))
+    out_lines.append("  ".join(_display_ljust(h, widths[i]) for i, h in enumerate(headers)))
     out_lines.append("  ".join("-" * widths[i] for i in range(len(headers))))
     for t, r in zip(cards, rows):
         if verbose >= 1:
             cells = [
-                r[0].ljust(widths[0]),
-                _wrap(r[1].ljust(widths[1]), t.status, enabled),
-                r[2].ljust(widths[2]),
-                _wrap(r[3].ljust(widths[3]), t.contribution, enabled),
-                r[4].rjust(widths[4]),
-                _wrap(r[5].ljust(widths[5]), t.human_gate, enabled),
-                r[6].ljust(widths[6]),
-                r[7].ljust(widths[7]),
-                r[8].ljust(widths[8]),
+                _display_ljust(r[0], widths[0]),
+                _wrap(_display_ljust(r[1], widths[1]), t.status, enabled),
+                _display_ljust(r[2], widths[2]),
+                _wrap(_display_ljust(r[3], widths[3]), t.contribution, enabled),
+                _display_rjust(r[4], widths[4]),
+                _wrap(_display_ljust(r[5], widths[5]), t.human_gate, enabled),
+                _display_ljust(r[6], widths[6]),
+                _display_ljust(r[7], widths[7]),
+                _display_ljust(r[8], widths[8]),
             ]
         else:
             cells = [
-                r[0].ljust(widths[0]),
-                _wrap(r[1].ljust(widths[1]), t.status, enabled),
-                _wrap(r[2].ljust(widths[2]), t.contribution, enabled),
-                r[3].rjust(widths[3]),
-                _wrap(r[4].ljust(widths[4]), t.human_gate, enabled),
-                r[5].ljust(widths[5]),
-                r[6].ljust(widths[6]),
+                _display_ljust(r[0], widths[0]),
+                _wrap(_display_ljust(r[1], widths[1]), t.status, enabled),
+                _wrap(_display_ljust(r[2], widths[2]), t.contribution, enabled),
+                _display_rjust(r[3], widths[3]),
+                _wrap(_display_ljust(r[4], widths[4]), t.human_gate, enabled),
+                _display_ljust(r[5], widths[5]),
+                _display_ljust(r[6], widths[6]),
             ]
         out_lines.append("  ".join(cells))
         if verbose >= 1:
@@ -2872,6 +2875,12 @@ def _display_ljust(text: str, width: int) -> str:
     """Left-justify to a target display width (not codepoint count)."""
     pad = width - _display_width(text)
     return text + " " * pad if pad > 0 else text
+
+
+def _display_rjust(text: str, width: int) -> str:
+    """Right-justify to a target display width (not codepoint count)."""
+    pad = width - _display_width(text)
+    return " " * pad + text if pad > 0 else text
 
 
 def render_board(

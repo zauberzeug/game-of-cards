@@ -282,6 +282,54 @@ class BoardRenderingTest(unittest.TestCase):
         self.assertIn("[?]", board)
         self.assertNotIn("[N]", board)
 
+    def test_table_aligns_columns_for_wide_character_row(self) -> None:
+        """`render_table` (the default `goc` queue view) must size and pad
+        columns by *display* width, not codepoint count, so a row whose title
+        holds an East-Asian wide glyph (two terminal columns) doesn't skew the
+        grid. Regression for the table renderer being left on the `len()` /
+        `str.ljust` path after `render_board` was switched to
+        `_display_width` / `_display_ljust`
+        (board-grid-misaligns-when-a-row-contains-the-wide-hourglass-glyph)."""
+        from goc import engine
+
+        wide = self._open_card("日本語-title")  # 3 wide glyphs, len()==9, display 12
+        ascii_card = self._open_card("ascii-title")
+        cards = [wide, ascii_card]
+
+        def status_col_start(line: str) -> int:
+            """Display column where the second (STATUS) column begins."""
+            i = 0
+            while i < len(line) and line[i] != " ":
+                i += 1
+            while i < len(line) and line[i] == " ":
+                i += 1
+            return engine._display_width(line[:i])
+
+        table = engine.render_table(cards, verbose=0, no_color=True).splitlines()
+        wide_row = next(ln for ln in table if ln.startswith("日本語"))
+        ascii_row = next(ln for ln in table if ln.startswith("ascii-title"))
+        self.assertEqual(
+            status_col_start(wide_row),
+            status_col_start(ascii_row),
+            msg="table STATUS column misaligned across a wide-glyph row",
+        )
+
+        # The table and board agree on inter-column alignment: every rendered
+        # board line shares one display width (already asserted elsewhere), and
+        # the table's data rows likewise share one display width.
+        data_rows = [wide_row, ascii_row]
+        self.assertEqual(
+            1,
+            len({engine._display_width(r) for r in data_rows}),
+            msg="table data rows differ in display width on a wide-glyph row",
+        )
+        board = engine.render_board(cards, max_rows=20, no_color=True)
+        self.assertEqual(
+            1,
+            len({engine._display_width(ln) for ln in board.splitlines()}),
+            msg="board rows differ in display width on a wide-glyph row",
+        )
+
     def test_board_rejects_negative_max_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
