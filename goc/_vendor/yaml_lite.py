@@ -142,6 +142,20 @@ class _Parser:
             curr = self._indent(line)
             if curr < indent:
                 break
+            if curr > indent:
+                # The mirror of the _parse_block_mapping guard: in every valid
+                # parse path the line at the top of this loop is at <= indent.
+                # A nested sequence's more-indented items are consumed in full
+                # by the recursive _parse_block_sequence(ni) call below before
+                # control returns here, so a more-indented `- item` line is
+                # malformed — an over-indented item that would otherwise be
+                # silently absorbed as a same-level sibling. Fail loud, matching
+                # the mapping guard, the tab guard in _peek, and the
+                # ambiguous-indent guard in _parse_block_scalar.
+                raise ParseError(
+                    f"line {self._pos + 1}: line is indented {curr}, more than "
+                    f"the surrounding sequence at {indent}; unexpected indentation"
+                )
             bare = line.lstrip()
             if not (bare.startswith("- ") or bare == "-"):
                 break

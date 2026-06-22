@@ -1,10 +1,10 @@
 ---
 title: yaml-lite-overindented-block-sequence-item-silently-absorbed-instead-of-raising
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-22T19:31:36Z"
-closed_at: null
+closed_at: "2026-06-22T19:35:38Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -20,11 +20,11 @@ summary: |
   hand-edited card with an over-indented edge item is mis-parsed instead
   of rejected, and goc validate does not catch it.
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero once fixed — an over-indented block-sequence item raises ParseError instead of being silently absorbed
-  - [ ] TDD: a unit test in tests/test_yaml_lite.py asserts ParseError is raised for an over-indented sequence item
-  - [ ] TDD: existing valid block sequences, nested sequences, and inline-map sequence items still parse unchanged (regression suite stays green)
-  - [ ] MECHANICAL: the fix lands in goc/_vendor/yaml_lite.py only; plugin mirrors regenerate via the sync hook
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero once fixed — an over-indented block-sequence item raises ParseError instead of being silently absorbed
+  - [x] TDD: a unit test in tests/test_yaml_lite.py asserts ParseError is raised for an over-indented sequence item
+  - [x] TDD: existing valid block sequences, nested sequences, and inline-map sequence items still parse unchanged (regression suite stays green)
+  - [x] MECHANICAL: the fix lands in goc/_vendor/yaml_lite.py only; plugin mirrors regenerate via the sync hook
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -107,10 +107,10 @@ This is the block-sequence analogue of
 (done — the *opposite* failure mode, same-indent items dropped). Neither
 covers an over-indented sequence item.
 
-## Fix
+## Fix (applied)
 
 In `_parse_block_sequence`, after the `curr < indent` break, a
-more-indented line raises instead of being treated as a same-level
+more-indented line now raises instead of being treated as a same-level
 item, mirroring `_parse_block_mapping`:
 
 ```python
@@ -131,6 +131,9 @@ the parser's fail-loud contract and the precedent set by the mapping
 guard, the tab guard in `_peek`, and the block-scalar ambiguous-indent
 `ParseError`.
 
-Regression coverage lands in `tests/test_yaml_lite.py`. The edit is
-confined to `goc/_vendor/yaml_lite.py`; the plugin mirrors regenerate
-byte-for-byte via `scripts/sync_plugin_assets.py`.
+Regression coverage lands in `tests/test_yaml_lite.py`
+(`OverIndentedSequenceRejectionTest`): the over-indented item raises,
+and valid same-indent sequences, nested sequences, and inline-map
+sequence items still parse unchanged. The edit is confined to
+`goc/_vendor/yaml_lite.py`; the three plugin mirrors were regenerated
+byte-for-byte by `scripts/sync_plugin_assets.py`.

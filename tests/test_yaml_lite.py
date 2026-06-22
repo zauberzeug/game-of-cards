@@ -247,6 +247,53 @@ class OverIndentedMappingRejectionTest(unittest.TestCase):
         )
 
 
+class OverIndentedSequenceRejectionTest(unittest.TestCase):
+    """A `- item` line *more* indented than its surrounding sequence is
+    malformed: `_parse_block_sequence` only broke on a less-indented line, so a
+    more-indented item was silently absorbed as a same-level sibling. This is
+    the block-sequence analogue of OverIndentedMappingRejectionTest; the guard
+    mirrors the mapping guard, the tab guard, and the block-scalar
+    ambiguous-indent guard: fail loud."""
+
+    def test_over_indented_sequence_item_raises_not_absorb(self):
+        # The headline defect: `      - second-target` parsed into the same
+        # list as `  - first-target`, silently absorbing the over-indented item
+        # as a same-level sibling instead of rejecting the ambiguous indent.
+        with self.assertRaises(ParseError):
+            safe_load(
+                "advances:\n  - first-target\n      - second-target\n"
+                "contribution: high\n"
+            )
+
+    def test_over_indented_top_level_sequence_item_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("- a\n    - b\n")
+
+    def test_valid_sequence_still_parses(self):
+        # Items at the same indent (the shape the emitter produces for the four
+        # edge fields) must still parse unchanged — the guard fires only on a
+        # strictly more-indented item.
+        self.assertEqual(
+            safe_load("advances:\n  - first\n  - second\nkey: v\n"),
+            {"advances": ["first", "second"], "key": "v"},
+        )
+
+    def test_valid_nested_sequence_still_parses(self):
+        # A legitimately-nested sequence (empty item whose content is a deeper
+        # sequence) is consumed in full by the recursion before control returns
+        # to the parent loop, so the guard does not fire on it.
+        self.assertEqual(
+            safe_load("- a\n-\n  - b\n  - c\n- d\n"),
+            ["a", ["b", "c"], "d"],
+        )
+
+    def test_valid_inline_map_sequence_item_still_parses(self):
+        self.assertEqual(
+            safe_load("checks:\n  - name: foo\n    kind: derived\n")["checks"],
+            [{"name": "foo", "kind": "derived"}],
+        )
+
+
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):
         text = "tags:\n  - story\n  - infra\n"
