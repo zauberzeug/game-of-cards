@@ -210,6 +210,43 @@ class TabIndentationRejectionTest(unittest.TestCase):
         self.assertEqual(safe_load("k: a\tb\n")["k"], "a\tb")
 
 
+class OverIndentedMappingRejectionTest(unittest.TestCase):
+    """A space-indented line *more* indented than its surrounding mapping is
+    malformed: `_parse_block_mapping` only broke on a less-indented line, so a
+    more-indented key was silently promoted to a top-level sibling, and a
+    more-indented bare plain-scalar continuation silently truncated every
+    following key. PyYAML raises (Case 1) or folds (Case 2). The guard mirrors
+    the tab guard and the block-scalar ambiguous-indent guard: fail loud."""
+
+    def test_over_indented_mapping_key_raises_not_promote(self):
+        # The headline defect: `  human_gate: decision` parsed to
+        # {'status': 'open', 'human_gate': 'decision'}, silently promoting the
+        # nested key to a top-level sibling.
+        with self.assertRaises(ParseError):
+            safe_load("status: open\n  human_gate: decision\n")
+
+    def test_over_indented_bare_continuation_raises_not_truncate(self):
+        # `  world` parsed to {'summary': 'hello'} — the continuation line was
+        # dropped AND `status: open` was silently truncated off the document.
+        with self.assertRaises(ParseError):
+            safe_load("summary: hello\n  world\nstatus: open\n")
+
+    def test_valid_nested_mapping_still_parses(self):
+        # A legitimately-nested mapping (key with empty value, children
+        # indented under it) must still parse unchanged — the guard fires only
+        # at the top of the mapping loop, after _resolve_value consumed nesting.
+        self.assertEqual(
+            safe_load("a:\n  b: 1\n  c: 2\nd: 3\n"),
+            {"a": {"b": 1, "c": 2}, "d": 3},
+        )
+
+    def test_valid_deeply_nested_mapping_still_parses(self):
+        self.assertEqual(
+            safe_load("a:\n  b:\n    c: 1\n  d: 2\ne: 3\n"),
+            {"a": {"b": {"c": 1}, "d": 2}, "e": 3},
+        )
+
+
 class BlockSequenceTest(unittest.TestCase):
     def test_sequence_of_scalars(self):
         text = "tags:\n  - story\n  - infra\n"

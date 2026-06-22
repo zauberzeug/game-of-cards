@@ -110,6 +110,19 @@ class _Parser:
             curr = self._indent(line)
             if curr < indent:
                 break
+            if curr > indent:
+                # In every valid parse path the line at the top of this loop
+                # is at <= indent: nested mappings/sequences/block scalars are
+                # consumed in full by _resolve_value before control returns
+                # here. A more-indented line is therefore malformed — an
+                # over-indented key (silently promoted to a sibling) or a bare
+                # plain-scalar continuation (which would otherwise truncate
+                # every following key). Fail loud, matching the tab guard in
+                # _peek and the ambiguous-indent guard in _parse_block_scalar.
+                raise ParseError(
+                    f"line {self._pos + 1}: line is indented {curr}, more than "
+                    f"the surrounding mapping at {indent}; unexpected indentation"
+                )
             bare = line.lstrip()
             key, rest = _split_key(bare)
             if key is None:
