@@ -17,6 +17,7 @@ advanced_by:
   - frontmatter-emitter-leaves-folded-block-scalar-headers-unquoted
   - frontmatter-emitter-writes-float-values-bare-that-parse-back-as-strings
   - inline-emitter-writes-multi-line-strings-bare-destroying-subsequent-frontmatter
+  - inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.
