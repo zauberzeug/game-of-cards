@@ -2143,7 +2143,7 @@ def dependency_blocked(card: Card, by_title: dict[str, Card]) -> bool:
 
 
 def dependency_advisory(
-    card: Card, by_title: dict[str, Card]
+    card: Card, by_title: dict[str, Card], queue_only: bool = False
 ) -> tuple[list[str], bool]:
     """Liveness-gated dependency advisory for the renderers.
 
@@ -2155,10 +2155,26 @@ def dependency_advisory(
     applies the `status not in TERMINAL_STATUSES` gate once so every
     renderer consumes a pre-gated result instead of re-inlining it.
 
-    Returns `([], False)` for terminal cards, else
-    `(blockers, bool(blockers))`.
+    The advisory is gated along two independent status dimensions:
+
+    1. **Terminal gate** (default, `queue_only=False`) — never show it on
+       a terminal card. The machine surface (`render_json`) consumes this
+       form: it exposes the raw advisory plus a separate, status-gated
+       `ready` field.
+    2. **Open-only slice** (`queue_only=True`) — additionally suppress the
+       advisory on `active` cards. "You may start" is a pull-queue hint
+       with no audience once a card is claimed, so the two human-facing
+       renderers (`render_table`, `render_board`'s `card_cell`) consume
+       this stricter form. Centralized here so the slice cannot drift into
+       a per-renderer copy again (it already shipped one bug per
+       un-centralized dimension).
+
+    Returns `([], False)` for terminal cards (and, when `queue_only`, for
+    any non-open card), else `(blockers, bool(blockers))`.
     """
     if card.status in TERMINAL_STATUSES:
+        return [], False
+    if queue_only and card.status != "open":
         return [], False
     blockers = dependency_blockers(card, by_title)
     return blockers, bool(blockers)
@@ -2762,14 +2778,12 @@ def render_table(
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
             # Liveness-gated dependency advisory (see `dependency_advisory`):
-            # the "you may start" hint is meaningless on a terminal card, so
-            # the helper gates those out. The `status == "open"` guard is the
-            # same stricter slice the board applies (render_board's not_ready
-            # gate): "you may start" is a pull-queue hint with no audience on
-            # an already-claimed `active` card, so the two human-facing
-            # renderers agree to surface it only for open cards.
-            blockers, _ = dependency_advisory(t, by_title)
-            if t.status == "open" and blockers:
+            # the human-facing `queue_only=True` slice gates out terminal
+            # *and* active cards, so "you may start" surfaces only on open
+            # cards — the same stricter slice the board applies. Centralized
+            # in the helper so table and board cannot drift apart again.
+            blockers, _ = dependency_advisory(t, by_title, queue_only=True)
+            if blockers:
                 out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
             w = t.worker
             if w:
@@ -2923,12 +2937,12 @@ def render_board(
         # out of the pull queue just as hard as an impediment overlay, so it
         # must carry the same ⏳. `dependency_blocked` stays included as an
         # advisory "has an open prereq" hint (it does not hide the card from
-        # the queue, but the board flags it). The `status == "open"` guard is
-        # the board's own stricter slice — `dependency_advisory` gates out
-        # terminal cards, the board additionally flags only open ones.
+        # the queue, but the board flags it). The `queue_only=True` slice is
+        # the board's own stricter gate — open cards only — shared with the
+        # table so the two human-facing renderers cannot drift apart.
         not_ready = live and (
             t.human_gate != "none"
-            or (t.status == "open" and dependency_advisory(t, by_title)[1])
+            or dependency_advisory(t, by_title, queue_only=True)[1]
             or waiting_impedes(t)
         )
         if not_ready:

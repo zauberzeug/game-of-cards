@@ -1,20 +1,20 @@
 ---
 title: centralize-the-open-only-slice-of-the-dependency-advisory
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-23T09:01:34Z"
-closed_at: null
+closed_at: "2026-06-23T13:23:52Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: the `status == "open"` slice for the dependency advisory is expressed once (a shared helper or a `queue_only`-style parameter on `dependency_advisory`), and both human-facing renderers — `render_table` and `render_board`'s `card_cell` — consume it instead of each inlining `t.status == "open"`.
-  - [ ] TDD: a unit test pins the helper's contract — open card with an open prereq → advisory shown; active/terminal card with the same prereq → advisory suppressed; and asserts table and board agree for each.
-  - [ ] TDD: existing regressions still pass — `tests/test_verbose_table_awaiting_liveness.py` (terminal + active cases), `tests/test_board.py`, and the JSON liveness test — with no behavior change to any renderer.
-  - [ ] MECHANICAL: the JSON renderer is left consuming the terminal-only `dependency_advisory` (machine surface keeps the raw advisory + separate `ready` field) — the consolidation must not silently fold the open-only slice into JSON.
-  - [ ] `uv run goc validate` passes.
+  - [x] MECHANICAL: the `status == "open"` slice for the dependency advisory is expressed once (a shared helper or a `queue_only`-style parameter on `dependency_advisory`), and both human-facing renderers — `render_table` and `render_board`'s `card_cell` — consume it instead of each inlining `t.status == "open"`.
+  - [x] TDD: a unit test pins the helper's contract — open card with an open prereq → advisory shown; active/terminal card with the same prereq → advisory suppressed; and asserts table and board agree for each.
+  - [x] TDD: existing regressions still pass — `tests/test_verbose_table_awaiting_liveness.py` (terminal + active cases), `tests/test_board.py`, and the JSON liveness test — with no behavior change to any renderer.
+  - [x] MECHANICAL: the JSON renderer is left consuming the terminal-only `dependency_advisory` (machine surface keeps the raw advisory + separate `ready` field) — the consolidation must not silently fold the open-only slice into JSON.
+  - [x] `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 

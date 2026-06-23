@@ -84,5 +84,82 @@ class DependencyAdvisoryHelperTest(unittest.TestCase):
         self.assertEqual(flag, bool(blockers))
 
 
+class DependencyAdvisoryQueueOnlySliceTest(unittest.TestCase):
+    """The `queue_only=True` slice consumed by the two human-facing renderers
+    (table, board) additionally suppresses the advisory on `active` cards:
+    "you may start" is a pull-queue hint with no audience once a card is
+    claimed. JSON keeps the default (terminal-only) form.
+    """
+
+    def setUp(self) -> None:
+        self.prereq = _card("prereq-open", "open", [])
+        self.by_title = {"prereq-open": self.prereq}
+
+    def test_open_card_with_open_prereq_shows_advisory(self) -> None:
+        card = _card("child", "open", ["prereq-open"])
+        self.assertEqual(
+            engine.dependency_advisory(card, self.by_title, queue_only=True),
+            (["prereq-open"], True),
+        )
+
+    def test_active_card_suppresses_advisory(self) -> None:
+        card = _card("child", "active", ["prereq-open"])
+        self.assertEqual(
+            engine.dependency_advisory(card, self.by_title, queue_only=True),
+            ([], False),
+        )
+
+    def test_terminal_card_suppresses_advisory(self) -> None:
+        for terminal_status in sorted(engine.TERMINAL_STATUSES):
+            with self.subTest(status=terminal_status):
+                card = _card("child", terminal_status, ["prereq-open"])
+                self.assertEqual(
+                    engine.dependency_advisory(
+                        card, self.by_title, queue_only=True
+                    ),
+                    ([], False),
+                )
+
+    def test_default_form_keeps_terminal_only_contract(self) -> None:
+        # The machine surface (JSON) consumes the default form: active cards
+        # still carry the advisory, only terminal cards are gated out.
+        active = _card("child", "active", ["prereq-open"])
+        self.assertEqual(
+            engine.dependency_advisory(active, self.by_title),
+            (["prereq-open"], True),
+        )
+
+    def test_table_and_board_agree_per_status(self) -> None:
+        # End-to-end: both human-facing renderers must agree on whether the
+        # advisory surfaces, for every status. The table prints
+        # `awaiting: ... (you may start)`; the board flags the card with ⏳.
+        # Both derive from the shared `queue_only=True` slice, so the
+        # advisory shows iff the card is open.
+        for status in ["open", "active", *sorted(engine.TERMINAL_STATUSES)]:
+            with self.subTest(status=status):
+                prereq = _card("prereq-open", "open", [])
+                child = _card("child", status, ["prereq-open"])
+                cards = [prereq, child]
+                by_title = {c.title: c for c in cards}
+
+                table = engine.render_table(
+                    cards, verbose=2, no_color=True, by_title=by_title
+                )
+                board = engine.render_board(
+                    cards, max_rows=10, no_color=True, by_title=by_title
+                )
+
+                table_shows = "awaiting: prereq-open (you may start)" in table
+                # The board's ⏳ has other causes (human_gate, impediment);
+                # here the child is gate-free and unimpeded, so the only ⏳
+                # source for it is the dependency advisory slice.
+                board_shows = "child" in board and "⏳" in board
+
+                expected = status == "open"
+                self.assertEqual(table_shows, expected)
+                self.assertEqual(board_shows, expected)
+                self.assertEqual(table_shows, board_shows)
+
+
 if __name__ == "__main__":
     unittest.main()
