@@ -1,7 +1,7 @@
 ---
 title: closed-since-huge-window-crashes-with-overflowerror-traceback
 summary: "`goc --closed-since <huge-window>` (e.g. `99999999999w`) crashes with an uncaught `OverflowError` traceback. `parse_closed_since` rejects non-positive N cleanly (exit 2) but applies no upper bound before `timedelta(hours=...)`, so a syntactically valid but oversized window overflows. Fix: bound-check or wrap the timedelta and emit the same `goc: error: --closed-since: ...` / exit 2 as the other invalid-input branches."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-23T19:43:04Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test asserts an oversized window exits 2 with a `goc: error: --closed-since:` message; valid windows (`24h`, `7d`, `2w`) and absolute dates still parse
   - [ ] MECHANICAL: the fix lives in `parse_closed_since` (`goc/engine.py`) and reuses the existing exit-2 error style
   - [ ] PROCESS: plugin mirrors re-synced; `uv run goc validate` passes and the full `unittest` suite stays green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc --closed-since <huge-window>` crashes with an OverflowError traceback
