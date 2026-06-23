@@ -1558,7 +1558,10 @@ def _resolve_upgrade_briefing_target(
         choice = found[0]
     else:
         try:
-            choice = found[int(raw) - 1]
+            idx = int(raw)
+            if not 1 <= idx <= len(found):
+                raise IndexError
+            choice = found[idx - 1]
         except (ValueError, IndexError):
             print(f"goc: error: invalid selection {raw!r}; aborting upgrade.", file=sys.stderr)
             sys.exit(2)

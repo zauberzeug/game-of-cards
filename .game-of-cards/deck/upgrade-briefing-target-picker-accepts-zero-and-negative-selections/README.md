@@ -1,21 +1,22 @@
 ---
 title: upgrade-briefing-target-picker-accepts-zero-and-negative-selections
 summary: "`goc upgrade`'s multi-block legacy-install picker converts a 1-based selection to a 0-based index with `found[int(raw) - 1]`. Python negative indexing means `0` resolves to `found[-1]` (the last candidate) and any negative number wraps around, so out-of-range input silently selects the WRONG briefing file and strips the block from the others instead of hitting the existing abort branch."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-06-23T01:28:33Z"
-closed_at: null
+closed_at: "2026-06-23T01:32:52Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (picker aborts with SystemExit(2) on `0` and `-1` instead of selecting a file)
-  - [ ] TDD: a regression test feeds `0\n` and `-1\n` to `_resolve_upgrade_briefing_target` via non-TTY stdin and asserts `SystemExit` with code 2
-  - [ ] TDD: the same test asserts a valid in-range selection (`2\n`) still resolves to the second candidate (no regression)
-  - [ ] MECHANICAL: the fix bounds-checks `1 <= idx <= len(found)` before indexing, routing out-of-range numbers into the existing `invalid selection` abort branch
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+  - [x] TDD: reproduce.py exits zero (picker aborts with SystemExit(2) on `0` and `-1` instead of selecting a file)
+  - [x] TDD: a regression test feeds `0\n` and `-1\n` to `_resolve_upgrade_briefing_target` via non-TTY stdin and asserts `SystemExit` with code 2
+  - [x] TDD: the same test asserts a valid in-range selection (`2\n`) still resolves to the second candidate (no regression)
+  - [x] MECHANICAL: the fix bounds-checks `1 <= idx <= len(found)` before indexing, routing out-of-range numbers into the existing `invalid selection` abort branch
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc upgrade` briefing-target picker accepts `0` and negative selections via Python negative indexing
