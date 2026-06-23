@@ -1,6 +1,6 @@
 ---
 title: merge-claude-settings-rewrites-settings-json-on-idempotent-merge
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-23T20:01:33Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: regression test asserts a no-op re-merge does not rewrite settings.json, AND a merge that genuinely adds a missing hook still writes
   - [ ] MECHANICAL: `_merge_claude_settings` guards its `write_text` with a `changed` flag, mirroring `_strip_goc_settings_entries`
   - [ ] PROCESS: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # merge-claude-settings-rewrites-settings-json-on-idempotent-merge
