@@ -2535,7 +2535,14 @@ def parse_closed_since(value: str | None, *, now: datetime | None = None) -> dat
             )
             sys.exit(2)
         hours = {"h": n, "d": n * 24, "w": n * 24 * 7}[unit]
-        return base - timedelta(hours=hours)
+        try:
+            return base - timedelta(hours=hours)
+        except OverflowError:
+            print(
+                "goc: error: --closed-since: window too large",
+                file=sys.stderr,
+            )
+            sys.exit(2)
     if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
         try:
             d = date.fromisoformat(value)
