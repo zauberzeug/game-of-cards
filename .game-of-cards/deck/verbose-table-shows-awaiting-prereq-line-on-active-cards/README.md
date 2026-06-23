@@ -1,20 +1,20 @@
 ---
 title: verbose-table-shows-awaiting-prereq-line-on-active-cards
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-23T08:53:29Z"
-closed_at: null
+closed_at: "2026-06-23T08:59:30Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — the verbose table omits the `awaiting: ... (you may start)` line for an `active` card with an open `advanced_by` prereq, while still showing it for an `open` card with the same prereq.
-  - [ ] TDD: a regression test asserts the table and board agree on the dependency advisory for an active card (table omits the awaiting line; board omits the `⏳`).
-  - [ ] MECHANICAL: the existing terminal-status liveness test (`tests/test_verbose_table_awaiting_liveness.py`) still passes unchanged.
-  - [ ] `uv run goc validate` passes.
-  - [ ] `uv run python -m unittest discover -s tests` passes.
+  - [x] TDD: reproduce.py exits zero — the verbose table omits the `awaiting: ... (you may start)` line for an `active` card with an open `advanced_by` prereq, while still showing it for an `open` card with the same prereq.
+  - [x] TDD: a regression test asserts the table and board agree on the dependency advisory for an active card (table omits the awaiting line; board omits the `⏳`).
+  - [x] MECHANICAL: the existing terminal-status liveness test (`tests/test_verbose_table_awaiting_liveness.py`) still passes unchanged.
+  - [x] `uv run goc validate` passes.
+  - [x] `uv run python -m unittest discover -s tests` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 

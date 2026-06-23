@@ -2763,9 +2763,13 @@ def render_table(
                 out_lines.append(f"    summary: {t.summary}")
             # Liveness-gated dependency advisory (see `dependency_advisory`):
             # the "you may start" hint is meaningless on a terminal card, so
-            # only live cards show it. The gate lives in the helper now.
+            # the helper gates those out. The `status == "open"` guard is the
+            # same stricter slice the board applies (render_board's not_ready
+            # gate): "you may start" is a pull-queue hint with no audience on
+            # an already-claimed `active` card, so the two human-facing
+            # renderers agree to surface it only for open cards.
             blockers, _ = dependency_advisory(t, by_title)
-            if blockers:
+            if t.status == "open" and blockers:
                 out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
             w = t.worker
             if w:

@@ -87,6 +87,46 @@ class VerboseTableAwaitingLivenessTest(unittest.TestCase):
                     msg=f"live card lost its awaiting advisory:\n{out}",
                 )
 
+    def test_active_card_omits_awaiting_and_agrees_with_board(self) -> None:
+        # `(you may start)` is a pull-queue hint with no audience on an
+        # already-claimed `active` card. The board's not_ready gate already
+        # surfaces the dependency advisory only for open cards; the table
+        # must agree (the two human-facing renderers consume the same
+        # `dependency_advisory` helper but the board adds the open-only
+        # slice — the table now mirrors it).
+        prereq = _card("prereq-open", "open", [], "2026-06-18")
+        active = _card("active-child", "active", ["prereq-open"], "2026-06-17")
+        live = _card("open-child", "open", ["prereq-open"], "2026-06-17")
+        cards = [active, live, prereq]
+
+        out = engine.render_table(cards, verbose=1, no_color=True)
+        # The active card must NOT carry an awaiting advisory.
+        self.assertEqual(
+            _awaiting_lines_for(out, "active-child"),
+            [],
+            msg=f"active card showed an awaiting advisory:\n{out}",
+        )
+        # An open card with the same prereq still shows it.
+        self.assertEqual(
+            _awaiting_lines_for(out, "open-child"),
+            ["awaiting: prereq-open (you may start)"],
+            msg=f"open card lost its awaiting advisory:\n{out}",
+        )
+
+        # The board agrees: it flags the open card's dependency advisory
+        # with the hourglass but leaves the active card unmarked.
+        board = engine.render_board(cards, no_color=True, max_rows=100)
+        self.assertIn(
+            "open-child [m] ⏳",
+            board,
+            msg=f"board dropped the open card's dependency marker:\n{board}",
+        )
+        self.assertNotIn(
+            "active-child [m] ⏳",
+            board,
+            msg=f"board flagged the active card's dependency advisory:\n{board}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
