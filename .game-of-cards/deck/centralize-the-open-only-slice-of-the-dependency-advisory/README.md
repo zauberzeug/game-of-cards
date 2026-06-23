@@ -1,6 +1,6 @@
 ---
 title: centralize-the-open-only-slice-of-the-dependency-advisory
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-23T09:01:34Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: existing regressions still pass — `tests/test_verbose_table_awaiting_liveness.py` (terminal + active cases), `tests/test_board.py`, and the JSON liveness test — with no behavior change to any renderer.
   - [ ] MECHANICAL: the JSON renderer is left consuming the terminal-only `dependency_advisory` (machine surface keeps the raw advisory + separate `ready` field) — the consolidation must not silently fold the open-only slice into JSON.
   - [ ] `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Centralize the open-only slice of the dependency advisory
