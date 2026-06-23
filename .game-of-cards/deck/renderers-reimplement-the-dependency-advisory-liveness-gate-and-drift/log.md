@@ -24,3 +24,17 @@ three call sites.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-06-20 — Closure' present
+
+## 2026-06-23 — Later evidence (second dimension drifted)
+
+This meta-fix centralized only the **terminal** gate. The closure note
+above flagged that the board keeps its own stricter `status == "open"`
+slice — that *open-only* dimension was left inlined, and it later
+drifted into a shipping bug: the verbose table never carried the slice,
+so it flagged `active` cards the board did not
+(`verbose-table-shows-awaiting-prereq-line-on-active-cards`, fixed
+2026-06-23). The fix inlined the same `status == "open"` guard into
+`render_table`, so the open-only slice now lives as two copies — the
+very shape this family exists to eliminate, one dimension deeper.
+Follow-on consolidation filed as
+`centralize-the-open-only-slice-of-the-dependency-advisory`.
