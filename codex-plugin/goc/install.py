@@ -1383,7 +1383,7 @@ def _write_skills_source(target: Path, value: str) -> None:
     config_path = target / ".game-of-cards" / "config.yaml"
     if not config_path.exists():
         return
-    text = config_path.read_text()
+    text, newline = _read_text_keep_newline(config_path)
     # Prefer the active (non-commented) key; fall back to un-commenting a
     # commented example only when no active line exists. A single
     # `#?`-optional pattern with `count=1` would rewrite whichever line
@@ -1400,7 +1400,7 @@ def _write_skills_source(target: Path, value: str) -> None:
     else:
         sep = "" if text.endswith("\n") else "\n"
         new_text = f"{text}{sep}\n{replacement}\n"
-    config_path.write_text(new_text)
+    _write_text_keep_newline(config_path, new_text, newline)
 
 
 def install(

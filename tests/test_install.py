@@ -681,6 +681,61 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             _write_skills_source(cwd, "plugin")
             self.assertEqual(config_path.read_text(), "skills_source: plugin\n")
 
+    def test_write_skills_source_preserves_crlf_line_endings(self) -> None:
+        """Regression: a CRLF-authored config.yaml must keep its CRLF endings.
+
+        `_write_skills_source` read with `Path.read_text()` (universal-newline
+        translation: CRLF -> LF) and wrote back with `Path.write_text()` (LF
+        only), so the first install/upgrade/mode-switch silently rewrote a
+        Windows consumer's whole config to LF. It must route through
+        `_read_text_keep_newline` / `_write_text_keep_newline` so only the
+        targeted `skills_source:` line changes.
+        """
+        from goc.install import _write_skills_source
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.parent.mkdir(parents=True)
+
+            # CRLF-authored config with a commented example line.
+            raw = (
+                "# GoC project config\r\n"
+                "deck_dir: .game-of-cards/deck\r\n"
+                "# skills_source: auto\r\n"
+                "some_key: value\r\n"
+            ).encode("utf-8")
+            config_path.write_bytes(raw)
+
+            before = config_path.read_bytes().count(b"\r")
+            _write_skills_source(cwd, "vendored")
+            after_bytes = config_path.read_bytes()
+
+            self.assertEqual(
+                after_bytes.count(b"\r"),
+                before,
+                "CRLF line endings must be preserved across the rewrite",
+            )
+            self.assertIn(b"skills_source: vendored\r\n", after_bytes)
+            # The untouched lines keep their CRLF too.
+            self.assertIn(b"# GoC project config\r\n", after_bytes)
+
+    def test_write_skills_source_lf_config_stays_lf(self) -> None:
+        """An LF-authored config must not gain spurious CR bytes."""
+        from goc.install import _write_skills_source
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.parent.mkdir(parents=True)
+
+            config_path.write_bytes(b"# header\nskills_source: auto\n")
+            _write_skills_source(cwd, "plugin")
+            after_bytes = config_path.read_bytes()
+
+            self.assertEqual(after_bytes.count(b"\r"), 0)
+            self.assertEqual(after_bytes, b"# header\nskills_source: plugin\n")
+
     def test_plugin_mode_upgrade_preserves_non_goc_skills(self) -> None:
         """Regression: upgrade in plugin mode must not delete user-owned skills.
 

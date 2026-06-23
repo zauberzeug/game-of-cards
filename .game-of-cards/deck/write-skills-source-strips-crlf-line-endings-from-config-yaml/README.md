@@ -1,21 +1,21 @@
 ---
 title: write-skills-source-strips-crlf-line-endings-from-config-yaml
 summary: "`_write_skills_source` reads `.game-of-cards/config.yaml` with `Path.read_text()` and writes it back with `Path.write_text()`, so a CRLF-authored config has every line rewritten to LF the first time install/upgrade/mode-switch sets `skills_source:`. The closed card `install-marker-merge-rewrites-crlf-briefing-files-to-lf` already added `_read_text_keep_newline`/`_write_text_keep_newline` and its DoD called for sweeping other write-paths — this one was missed. Fix: route the read/write through those helpers."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-23T19:37:08Z"
-closed_at: null
+closed_at: "2026-06-23T19:42:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (CR byte count unchanged after `_write_skills_source` on a CRLF config)
-  - [ ] TDD: a regression test in tests/ writes a CRLF `config.yaml`, runs `_write_skills_source`, and asserts the CR-byte count is preserved while `skills_source:` is updated
-  - [ ] TDD: an LF-authored config stays LF (no spurious CR introduced)
-  - [ ] MECHANICAL: `_write_skills_source` reads via `_read_text_keep_newline` and writes via `_write_text_keep_newline`
-  - [ ] `uv run goc validate` passes and the full `unittest` suite stays green
+  - [x] TDD: reproduce.py exits zero (CR byte count unchanged after `_write_skills_source` on a CRLF config)
+  - [x] TDD: a regression test in tests/ writes a CRLF `config.yaml`, runs `_write_skills_source`, and asserts the CR-byte count is preserved while `skills_source:` is updated
+  - [x] TDD: an LF-authored config stays LF (no spurious CR introduced)
+  - [x] MECHANICAL: `_write_skills_source` reads via `_read_text_keep_newline` and writes via `_write_text_keep_newline`
+  - [x] PROCESS: `uv run goc validate` passes and the full `unittest` suite stays green
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -53,19 +53,25 @@ convention.
 
 ## Empirical evidence
 
+Pre-fix, `reproduce.py` showed all four CR bytes stripped (`CR bytes
+before: 4` → `after: 0`, "DEFECT CONFIRMED"). Post-fix, the same script
+exits 0:
+
 `uv run python .game-of-cards/deck/write-skills-source-strips-crlf-line-endings-from-config-yaml/reproduce.py`:
 
 ```
 CR bytes before: 4
-CR bytes after:  0
+CR bytes after:  4
 --- resulting file (repr) ---
-'# GoC project config\ndeck_dir: .game-of-cards/deck\nskills_source: vendored\nsome_key: value\n'
+'# GoC project config\r\ndeck_dir: .game-of-cards/deck\r\nskills_source: vendored\r\nsome_key: value\r\n'
 
-DEFECT CONFIRMED: CRLF stripped — 4 CR bytes became 0.
+OK: CRLF preserved; only the skills_source line changed.
 ```
 
-All four CR bytes vanish; only the `skills_source:` line was meant to
-change.
+The CRLF convention is preserved and only the `skills_source:` line
+changed. Regression tests in `tests/test_install.py`
+(`test_write_skills_source_preserves_crlf_line_endings`,
+`test_write_skills_source_lf_config_stays_lf`) lock both directions in.
 
 ## Why it matters
 
