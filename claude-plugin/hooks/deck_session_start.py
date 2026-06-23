@@ -34,23 +34,39 @@ def _comment_free_tail(line: str) -> str:
     """Return the inline-comment-free, whitespace-trimmed tail of a
     `key: value` line, with surrounding quotes **preserved**.
 
-    Mirrors the YAML 1.1/1.2 rule for inline comments on a bare scalar: a
-    `#` terminates the value only when preceded by whitespace (or at the
-    very start), so `status: active # note` yields `'active'` while
-    `status: foo#bar` yields `'foo#bar'`. Keeping the quotes lets callers
-    distinguish a quoted scalar (which the yaml-lite parser keeps as a live
-    `str`) from an unquoted token (subject to null/bool/int coercion) — the
-    distinction `_card_waiting_on` / `_scalar_or_none` need to mirror the
-    engine.
+    Mirrors the YAML 1.1/1.2 rule for inline comments as the engine's
+    vendored parser implements it (`goc._vendor.yaml_lite._strip_comment`):
+    a `#` terminates the value only when preceded by whitespace AND it sits
+    **outside** a quoted scalar. So `status: active # note` yields
+    `'active'`, `status: foo#bar` yields `'foo#bar'` (no preceding space),
+    and `status: "done # x"` yields `'"done # x"'` (the `#` is inside the
+    quotes, so it is content). The quote tracking only engages for a
+    genuinely quoted scalar — one whose value starts with a quote — so a
+    lone apostrophe in a bare value (`5 o'clock`) stays ordinary content.
+    Keeping the quotes lets callers distinguish a quoted scalar (which the
+    yaml-lite parser keeps as a live `str`) from an unquoted token (subject
+    to null/bool/int coercion) — the distinction `_card_waiting_on` /
+    `_scalar_or_none` need to mirror the engine.
     """
-    tail = line.split(":", 1)[1]
-    i = 0
-    while i < len(tail):
-        if tail[i] == "#" and (i == 0 or tail[i - 1].isspace()):
-            tail = tail[:i]
-            break
-        i += 1
-    return tail.strip()
+    tail = line.split(":", 1)[1].strip()
+    if tail.startswith("#"):
+        return ""
+    quoted = tail[:1] in ('"', "'")
+    in_q: str | None = None
+    escaped = False
+    for i, c in enumerate(tail):
+        if escaped:
+            escaped = False
+        elif in_q:
+            if c == "\\" and in_q == '"':
+                escaped = True  # double-quoted YAML escapes the next char
+            elif c == in_q:
+                in_q = None
+        elif quoted and c in ('"', "'"):
+            in_q = c
+        elif c == "#" and i > 0 and tail[i - 1] in (" ", "\t"):
+            return tail[:i].rstrip()
+    return tail
 
 
 def _frontmatter_tail(line: str) -> str:

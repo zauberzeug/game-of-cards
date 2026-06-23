@@ -1,22 +1,23 @@
 ---
 title: session-start-hook-comment-stripper-truncates-quoted-scalar-with-internal-hash
 summary: "The SessionStart hook's `_comment_free_tail` strips inline `#` comments without quote-awareness, so a quoted frontmatter scalar containing an internal `# ` (e.g. `waiting_until: \"2020-01-01 # note\"`) is truncated at the `#`, diverging from the engine's quote-aware `_strip_comment`. An elapsed quoted-with-comment `waiting_until` then reads as resumable in the hook while the engine treats it as impeded. 11th instance of the session-start-hook reimplements-engine drift family."
-status: open
+status: done
 stage: null
 contribution: medium
 created: "2026-06-23T07:52:19Z"
-closed_at: null
+closed_at: "2026-06-23T07:59:32Z"
 human_gate: none
 advances:
   - session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: a regression test asserts the four hook readers (`_card_status`, `_card_human_gate`, `_card_waiting_on`, `_card_waiting_until`) keep a `#` that sits *inside* a quoted scalar, matching `yaml_lite.safe_load` for the same line
-  - [ ] TDD: a regression test asserts `_is_impeded` agrees with `engine.waiting_impedes` for a card whose `waiting_until` is a quoted past date carrying an inline comment (engine impedes; hook must impede too)
-  - [ ] TDD: existing inline-comment tests (comment outside quotes, bare-value `#`) still pass — no regression
-  - [ ] MECHANICAL: `_comment_free_tail` in `goc/templates/hooks/deck_session_start.py` is made quote-aware, mirroring `goc/_vendor/yaml_lite.py::_strip_comment`; plugin/dogfood mirrors re-synced by pre-commit
-  - [ ] reproduce.py exits zero (the divergence no longer fires)
+  - [x] TDD: a regression test asserts the four hook readers (`_card_status`, `_card_human_gate`, `_card_waiting_on`, `_card_waiting_until`) keep a `#` that sits *inside* a quoted scalar, matching `yaml_lite.safe_load` for the same line
+  - [x] TDD: a regression test asserts `_is_impeded` agrees with `engine.waiting_impedes` for a card whose `waiting_until` is a quoted past date carrying an inline comment (engine impedes; hook must impede too)
+  - [x] TDD: existing inline-comment tests (comment outside quotes, bare-value `#`) still pass — no regression
+  - [x] MECHANICAL: `_comment_free_tail` in `goc/templates/hooks/deck_session_start.py` is made quote-aware, mirroring `goc/_vendor/yaml_lite.py::_strip_comment`; plugin/dogfood mirrors re-synced by pre-commit
+  - [x] reproduce.py exits zero (the divergence no longer fires)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # SessionStart hook truncates a quoted scalar at an internal `#`
@@ -70,26 +71,30 @@ quotes.
 
 ## Empirical evidence
 
+Before the fix the hook truncated each quoted scalar at the internal `#`,
+diverging from the engine and reporting an engine-impeded card as resumable.
+After making `_comment_free_tail` quote-aware, `reproduce.py` exits zero:
+
 ```
 $ uv run python deck/session-start-hook-comment-stripper-truncates-quoted-scalar-with-internal-hash/reproduce.py
 
 scalar-parse divergence (hook _frontmatter_tail vs engine yaml_lite.safe_load):
   'waiting_on: "external # waiting on PR review"'
     engine: 'external # waiting on PR review'
-    hook  : 'external'                              <- DIVERGES
+    hook  : 'external # waiting on PR review'
   'status: "done # closed early"'
     engine: 'done # closed early'
-    hook  : 'done'                                  <- DIVERGES
+    hook  : 'done # closed early'
   'human_gate: "decision # needs sign-off"'
     engine: 'decision # needs sign-off'
-    hook  : 'decision'                              <- DIVERGES
+    hook  : 'decision # needs sign-off'
 
 impede-decision divergence (hook _is_impeded vs engine waiting_impedes):
   card: status=active, waiting_until="2020-01-01 # deferred, see note"
     engine waiting_impedes : True   (date is unparseable -> backstop hides card)
-    hook   _is_impeded     : False  (truncated to '2020-01-01' -> elapsed -> resumable)
+    hook   _is_impeded     : True  (truncated to '2020-01-01' -> elapsed -> resumable)
 
-FAIL: hook reports a card the engine impedes as resumable.
+PASS: hook readers match the engine for quoted scalars with internal '#'.
 ```
 
 ## Why it matters
@@ -126,12 +131,21 @@ separately by
 [openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting](../openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting/),
 so it is out of scope for this single-site Python fix.
 
-## Fix
+## Fix (applied)
 
-Make `_comment_free_tail` quote-aware, mirroring `yaml_lite._strip_comment`'s
-quoted-scalar branch: when the (leading-whitespace-trimmed) tail starts with a
-quote, track quote state and suppress comment detection while inside the
-matching quote, honouring the `\` escape inside double quotes. Quotes stay
-preserved (the helper's existing contract; `_frontmatter_tail` /
-`_scalar_or_none` strip them downstream). Flow-collection handling is not
-needed — these readers only touch scalar enum/date fields.
+`_comment_free_tail` in `goc/templates/hooks/deck_session_start.py` is now
+quote-aware, mirroring `yaml_lite._strip_comment`'s quoted-scalar branch: it
+trims leading whitespace, returns `""` for a leading-`#` line, and then scans
+with quote tracking — when the value starts with a quote it enters quote mode
+on the opening quote and suppresses comment detection until the matching close,
+honouring the `\` escape inside double quotes. A `#` is only treated as a
+comment when it is outside the quotes and preceded by a space/tab (matching the
+engine's exact `in (" ", "\t")` rule). Quotes stay preserved (the helper's
+existing contract; `_frontmatter_tail` / `_scalar_or_none` strip them
+downstream). Flow-collection handling is intentionally omitted — these four
+readers only touch scalar enum/date fields, never flow collections.
+
+The fix lands in the source template; the pre-commit sync regenerated the
+`.claude`, `claude-plugin`, and `codex-plugin` mirrors. The OpenClaw TS port
+(`frontmatterTail`) carries the same defect but is out of scope here — tracked
+by [openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting](../openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting/).

@@ -148,6 +148,83 @@ class SessionStartHookInlineCommentTest(unittest.TestCase):
         self.assertEqual(self.hook._card_status(p), "active")
 
 
+class SessionStartHookQuotedHashParityTest(unittest.TestCase):
+    """A `#` *inside* a quoted scalar is content, not a comment.
+
+    Regression for the drift where `_comment_free_tail` amputated a quoted
+    value at the first whitespace-preceded `#` regardless of quote state,
+    diverging from the engine's quote-aware `yaml_lite._strip_comment`. The
+    helper must keep the `#` (and everything after it) when it sits between
+    the quotes, byte-identical to how the engine parses the same line.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+        from goc import engine
+        from goc._vendor import yaml_lite
+
+        cls.engine = engine
+        cls.yaml_lite = yaml_lite
+
+    def _readme(self, content: str) -> Path:
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        )
+        tmp.write(content)
+        tmp.flush()
+        return Path(tmp.name)
+
+    def test_readers_match_engine_for_hash_inside_quotes(self):
+        cases = {
+            "status": 'status: "done # closed early"',
+            "human_gate": 'human_gate: "decision # needs sign-off"',
+            "waiting_on": 'waiting_on: "external # waiting on PR review"',
+            "waiting_until": 'waiting_until: "2020-01-01 # deferred note"',
+        }
+        readers = {
+            "status": self.hook._card_status,
+            "human_gate": self.hook._card_human_gate,
+            "waiting_on": self.hook._card_waiting_on,
+            "waiting_until": self.hook._card_waiting_until,
+        }
+        for key, line in cases.items():
+            with self.subTest(field=key):
+                engine_val = self.yaml_lite.safe_load(line + "\n")[key]
+                p = self._readme(f"---\n{line}\ntitle: t\n---\nbody\n")
+                self.assertEqual(readers[key](p), engine_val)
+                self.assertIn("#", readers[key](p))
+
+    def test_is_impeded_matches_engine_for_quoted_commented_waiting_until(self):
+        """A quoted past `waiting_until` carrying an inline comment is
+        unparseable to the engine (backstop → impeded); the hook must agree
+        rather than truncating to the leading date and reading it as elapsed.
+        """
+        content = (
+            "---\n"
+            "title: t\n"
+            "status: active\n"
+            "human_gate: none\n"
+            "waiting_on: null\n"
+            'waiting_until: "2020-01-01 # deferred, see note"\n'
+            "definition_of_done: |\n"
+            "  - [ ] x\n"
+            "---\n"
+            "body\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            card_dir = Path(td) / "card"
+            card_dir.mkdir()
+            readme = card_dir / "README.md"
+            readme.write_text(content, encoding="utf-8")
+            card = self.engine.load_card(card_dir)
+            self.assertTrue(self.engine.waiting_impedes(card))
+            self.assertEqual(
+                self.hook._is_impeded(readme),
+                self.engine.waiting_impedes(card),
+            )
+
+
 class SessionStartHookGatedActiveCardsTest(unittest.TestCase):
     """The hook must not label `human_gate != none` active cards as resumable.
 
