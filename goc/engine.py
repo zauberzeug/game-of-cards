@@ -5504,8 +5504,14 @@ def _cmd_triage(args):
             lines.append(f"- {entry['title']} · aged {entry['aged_days']}d · contribution:{entry['contribution']}")
             preview = entry["decision_required"]
             if preview:
-                for ln in preview.splitlines()[:6]:
+                preview_lines = preview.splitlines()
+                for ln in preview_lines[:6]:
                     lines.append(f"  > {ln}" if ln else "  >")
+                if len(preview_lines) > 6:
+                    lines.append(
+                        f"  > … +{len(preview_lines) - 6} more lines "
+                        f"(see `goc show {entry['title']}`)"
+                    )
             elif entry["summary"]:
                 first = entry["summary"].splitlines()[0][:140]
                 lines.append(f"  > {first}")
