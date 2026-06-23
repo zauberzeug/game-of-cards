@@ -563,6 +563,7 @@ def _merge_claude_settings(settings_path: Path) -> None:
     settings: dict = {}
     original: str = ""
     backup_path: Path | None = None
+    changed = False
 
     def _ensure_backup() -> Path:
         nonlocal backup_path
@@ -591,6 +592,7 @@ def _merge_claude_settings(settings_path: Path) -> None:
                 file=sys.stderr,
             )
             settings = {}
+            changed = True
 
     hooks = settings.setdefault("hooks", {})
     if not isinstance(hooks, dict):
@@ -603,6 +605,7 @@ def _merge_claude_settings(settings_path: Path) -> None:
         )
         settings["hooks"] = {}
         hooks = settings["hooks"]
+        changed = True
 
     for event, command in GOC_CLAUDE_HOOKS.items():
         event_hooks = hooks.setdefault(event, [])
@@ -617,6 +620,7 @@ def _merge_claude_settings(settings_path: Path) -> None:
             )
             hooks[event] = []
             event_hooks = hooks[event]
+            changed = True
         for group in event_hooks:
             if not isinstance(group, dict):
                 continue
@@ -633,6 +637,7 @@ def _merge_claude_settings(settings_path: Path) -> None:
                     file=sys.stderr,
                 )
                 group["hooks"] = []
+                changed = True
             elif any(not isinstance(h, dict) for h in group_hooks):
                 backup = _ensure_backup()
                 print(
@@ -649,8 +654,14 @@ def _merge_claude_settings(settings_path: Path) -> None:
         )
         if not already:
             event_hooks.append({"hooks": [{"type": "command", "command": command}]})
+            changed = True
 
-    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    # Mirror `_strip_goc_settings_entries`: only rewrite the user-owned
+    # file when GoC actually changed something. An idempotent merge (every
+    # hook already present) must leave the user's bytes — indentation, key
+    # order, trailing newline — untouched rather than reflowing them.
+    if changed:
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
 
 def _strip_goc_settings_entries(settings_path: Path) -> None:

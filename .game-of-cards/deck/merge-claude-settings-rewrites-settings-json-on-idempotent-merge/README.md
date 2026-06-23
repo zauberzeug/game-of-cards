@@ -1,20 +1,20 @@
 ---
 title: merge-claude-settings-rewrites-settings-json-on-idempotent-merge
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-23T20:01:33Z"
-closed_at: null
+closed_at: "2026-06-23T20:07:02Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 summary: "`_merge_claude_settings` writes `.claude/settings.json` unconditionally, even when every GoC hook is already registered. The no-op re-serialisation reflows the user's chosen indentation and re-orders top-level keys — a spurious diff in a checked-in user file on every idempotent `goc install`/`goc upgrade`. The sibling `_strip_goc_settings_entries` already threads a `changed` flag and guards its write; mirror that here."
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (idempotent merge leaves the user file byte-identical)
-  - [ ] TDD: regression test asserts a no-op re-merge does not rewrite settings.json, AND a merge that genuinely adds a missing hook still writes
-  - [ ] MECHANICAL: `_merge_claude_settings` guards its `write_text` with a `changed` flag, mirroring `_strip_goc_settings_entries`
-  - [ ] PROCESS: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
+  - [x] TDD: reproduce.py exits zero (idempotent merge leaves the user file byte-identical)
+  - [x] TDD: regression test asserts a no-op re-merge does not rewrite settings.json, AND a merge that genuinely adds a missing hook still writes
+  - [x] MECHANICAL: `_merge_claude_settings` guards its `write_text` with a `changed` flag, mirroring `_strip_goc_settings_entries`
+  - [x] PROCESS: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 

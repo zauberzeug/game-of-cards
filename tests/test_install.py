@@ -980,6 +980,56 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             goc_count = sum(1 for c in session_cmds if "deck_session_start" in (c or ""))
             self.assertEqual(1, goc_count)
 
+    def test_merge_claude_settings_idempotent_merge_leaves_file_untouched(self) -> None:
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # A user-owned file that already carries every GoC hook, written
+            # with the user's own 4-space indentation and key ordering.
+            hooks: dict = {}
+            for event, command in GOC_CLAUDE_HOOKS.items():
+                hooks.setdefault(event, []).append(
+                    {"hooks": [{"type": "command", "command": command}]}
+                )
+            original = json.dumps(
+                {
+                    "permissions": {"allow": ["Bash(uv run goc:*)"]},
+                    "hooks": hooks,
+                    "env": {"MY_VAR": "1"},
+                },
+                indent=4,
+            ) + "\n"
+            settings_path.write_text(original)
+
+            _merge_claude_settings(settings_path)
+
+            # No hook needed adding -> the user's bytes are preserved verbatim
+            # (indentation, key order, trailing newline), not reflowed.
+            self.assertEqual(original, settings_path.read_text())
+
+    def test_merge_claude_settings_writes_when_a_hook_is_missing(self) -> None:
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.write_text(json.dumps({"theme": "dark"}, indent=2) + "\n")
+
+            _merge_claude_settings(settings_path)
+
+            merged = json.loads(settings_path.read_text())
+            self.assertEqual("dark", merged.get("theme"))
+            for event, command in GOC_CLAUDE_HOOKS.items():
+                cmds = [
+                    h.get("command")
+                    for group in merged["hooks"].get(event, [])
+                    for h in group.get("hooks", [])
+                ]
+                self.assertIn(command, cmds)
+
     def test_strip_goc_settings_entries_removes_only_goc_hooks(self) -> None:
         from goc.install import _strip_goc_settings_entries
 
