@@ -247,6 +247,46 @@ class OverIndentedMappingRejectionTest(unittest.TestCase):
         )
 
 
+class ColonNoSpaceMappingRejectionTest(unittest.TestCase):
+    """A same-indent block-mapping line whose `:` is not followed by a space is
+    not a valid key (YAML reads `status:open` as a plain scalar). `_split_key`
+    returned None and `_parse_block_mapping` silently `break`d, dropping that
+    line AND every key below it. This is the block-mapping analogue of the
+    over-indent / tab / block-scalar guards: fail loud rather than truncate."""
+
+    def test_colon_no_space_mid_document_raises_not_truncate(self):
+        # The headline defect: `status:open` parsed to {'title': 'foo'},
+        # silently dropping `status:open` and `contribution: medium`.
+        with self.assertRaises(ParseError):
+            safe_load("title: foo\nstatus:open\ncontribution: medium\n")
+
+    def test_colon_no_space_minimal_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("a: 1\nb:2\nc: 3\n")
+
+    def test_bare_scalar_same_indent_raises(self):
+        # A same-indent line with no colon at all is also a malformed entry.
+        with self.assertRaises(ParseError):
+            safe_load("a: 1\nbareword\nc: 3\n")
+
+    def test_colon_at_end_of_line_still_parses(self):
+        # `key:` (empty value, colon at end-of-line) is a legitimate key and
+        # must still parse — the no-space guard fires only on a colon that is
+        # neither followed by whitespace nor at end-of-line.
+        self.assertEqual(
+            safe_load("a:\nb: 2\n"),
+            {"a": None, "b": 2},
+        )
+
+    def test_value_with_interior_colon_still_parses(self):
+        # The space after the *first* colon makes it the separator; a colon
+        # inside the value (no space) is ordinary content, not a second key.
+        self.assertEqual(
+            safe_load("a: foo:bar\nb: 2\n"),
+            {"a": "foo:bar", "b": 2},
+        )
+
+
 class OverIndentedSequenceRejectionTest(unittest.TestCase):
     """A `- item` line *more* indented than its surrounding sequence is
     malformed: `_parse_block_sequence` only broke on a less-indented line, so a

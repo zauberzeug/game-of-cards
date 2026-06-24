@@ -1,20 +1,20 @@
 ---
 title: yaml-lite-block-mapping-key-without-space-after-colon-silently-truncates-frontmatter
 summary: "The vendored yaml_lite parser only treats a `:` as a block-mapping key separator when a space/tab follows it, so a hand-edited line like `status:open` (no space) is unrecognized. `_parse_block_mapping` then silently `break`s on that line, dropping it AND every key below it from the document — no error. This is the one same-indent silent-truncation hole left in the parser's otherwise loud-fail posture (tabs, over-indent, and block-scalar headers all raise)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T13:17:44Z"
-closed_at: null
+closed_at: "2026-06-24T13:23:13Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `safe_load("title: foo\nstatus:open\ncontribution: medium")` raises ParseError instead of returning `{'title': 'foo'}`
-  - [ ] TDD: a test in tests/test_yaml_lite.py asserts a same-indent block-mapping line with a colon but no following space (`a: 1\nb:2\nc: 3`) raises ParseError, and a bare-scalar same-indent line (no colon at all) also raises
-  - [ ] TDD: existing valid-mapping round-trips still pass (the full tests/test_yaml_lite.py suite stays green)
-  - [ ] MECHANICAL: `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero — `safe_load("title: foo\nstatus:open\ncontribution: medium")` raises ParseError instead of returning `{'title': 'foo'}`
+  - [x] TDD: a test in tests/test_yaml_lite.py asserts a same-indent block-mapping line with a colon but no following space (`a: 1\nb:2\nc: 3`) raises ParseError, and a bare-scalar same-indent line (no colon at all) also raises
+  - [x] TDD: existing valid-mapping round-trips still pass (the full tests/test_yaml_lite.py suite stays green)
+  - [x] MECHANICAL: `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -63,7 +63,8 @@ truncate every following key").
 
 ## Empirical evidence
 
-See `reproduce.py`. Live confirmation:
+The defect, before the fix (`safe_load` silently dropped `status:open` and
+every key after it, while the analogous over-indent case correctly raised):
 
 ```
 case1: {'title': 'foo'}          # safe_load('title: foo\nstatus:open\ncontribution: medium')
@@ -71,8 +72,14 @@ case2: {'a': 1}                  # safe_load('a: 1\nb:2\nc: 3')
 over-indent (control, raises):   ParseError   # safe_load('a: 1\n  b: 2')
 ```
 
-`status:open` and every key after it are silently dropped, while the analogous
-over-indent case correctly raises.
+After the fix, `reproduce.py` exits zero — all three same-indent malformed
+shapes raise `ParseError`, matching the parser's loud-fail posture:
+
+```
+OK: safe_load('title: foo\nstatus:open\ncontribution: medium') raised ParseError
+OK: safe_load('a: 1\nb:2\nc: 3') raised ParseError
+OK (control): over-indented line raises ParseError
+```
 
 ## Why it matters
 

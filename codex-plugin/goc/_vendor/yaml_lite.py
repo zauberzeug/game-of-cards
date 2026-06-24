@@ -126,7 +126,22 @@ class _Parser:
             bare = line.lstrip()
             key, rest = _split_key(bare)
             if key is None:
-                break
+                # A line at the mapping indent that is not a recognizable
+                # `key: value` entry — most commonly a missing space after the
+                # colon (`status:open`), which YAML treats as a plain scalar,
+                # not a key, but also a bare scalar with no colon at all. The
+                # dedent (`curr < indent`) and over-indent (`curr > indent`)
+                # cases are already handled above, so anything reaching here is
+                # a malformed sibling entry. Silently breaking would drop this
+                # line AND every key below it from the document — the exact
+                # truncation the over-indent guard above and the tab guard in
+                # _peek exist to prevent. Fail loud to match that posture.
+                raise ParseError(
+                    f"line {self._pos + 1}: {bare!r} is not a valid "
+                    f"'key: value' mapping entry (a ':' key separator must be "
+                    f"followed by a space); breaking here would silently drop "
+                    f"it and every following key"
+                )
             self._pos += 1
             result[key] = self._resolve_value(rest, indent)
         return result
