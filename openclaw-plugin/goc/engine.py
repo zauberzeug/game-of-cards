@@ -3474,7 +3474,15 @@ def _cmd_default(args):
         ))
     else:
         out = render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
-        active_notice = render_active_notice(cards, values=full_values) if status == "open" else ""
+        # Scope the active-card banner to --worker, mirroring the board path
+        # above: the banner is a per-queue "before you claim work" hint, so a
+        # worker-scoped queue must see only that worker's claimed cards.
+        notice_cards = (
+            [t for t in cards
+             if args.worker.lower() in _worker_who(t.frontmatter.get("worker")).lower()]
+            if args.worker else cards
+        )
+        active_notice = render_active_notice(notice_cards, values=full_values) if status == "open" else ""
         leverage = (
             render_leverage_line(filtered, cards, values=full_values)
             if args.ready else ""

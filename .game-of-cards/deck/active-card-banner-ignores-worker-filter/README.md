@@ -1,19 +1,19 @@
 ---
 title: active-card-banner-ignores-worker-filter
 summary: "`goc --worker <name>` scopes the open queue to one worker, but the `ACTIVE:` heads-up banner above the table is built from the full unfiltered deck — so it lists every worker's claimed cards, not just the filtered worker's. The board path one branch up already honors `--worker`; the table-banner call site does not."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T02:26:20Z"
-closed_at: null
+closed_at: "2026-06-24T02:30:55Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py builds a deck with one active card owned by `alice` and one by `bob`, runs the table render with `worker="alice"`, and asserts the `ACTIVE:` banner names only alice's card (exits zero on the fixed engine)
-  - [ ] TDD: a regression test in `tests/` asserts the worker-scoped banner behavior (and that an unfiltered run still lists all active cards)
-  - [ ] MECHANICAL: the `cli()` table branch in `goc/engine.py` passes a `--worker`-scoped card list to `render_active_notice`, mirroring the board path's `args.worker` handling
+  - [x] TDD: reproduce.py builds a deck with one active card owned by `alice` and one by `bob`, runs the table render with `worker="alice"`, and asserts the `ACTIVE:` banner names only alice's card (exits zero on the fixed engine)
+  - [x] TDD: a regression test in `tests/` asserts the worker-scoped banner behavior (and that an unfiltered run still lists all active cards)
+  - [x] MECHANICAL: the `cli()` table branch in `goc/engine.py` passes a `--worker`-scoped card list to `render_active_notice`, mirroring the board path's `args.worker` handling
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -61,16 +61,27 @@ own behavior on the identical flag.
 
 ## Empirical evidence
 
-See [reproduce.py](reproduce.py). On the unfixed engine, a deck with
-`alice-active` and `bob-active` (both `status: active`) rendered with
-`worker="alice"` produces:
+See [reproduce.py](reproduce.py), which drives the real CLI against a
+temp deck holding `alice-active`, `bob-active` (both `status: active`),
+and `alice-open`. On the **unfixed** engine, `goc --worker alice`
+produced:
 
 ```
-banner mentions bob-active: True   (BUG — bob is not alice's worker)
+ACTIVE: 2 claimed cards outside this open queue: alice-active, bob-active. ...
+banner mentions bob-active:   True   (BUG if True)
 ```
 
-After the fix, the worker-scoped banner names only `alice-active`, and an
-unfiltered render still names both.
+On the **fixed** engine it is correctly worker-scoped:
+
+```
+ACTIVE: 1 claimed card outside this open queue: alice-active. ...
+banner mentions bob-active:   False
+banner mentions alice-active: True
+PASS: ACTIVE banner is scoped to --worker alice.
+```
+
+The unfiltered run (`goc` with no `--worker`) still lists both active
+cards, as asserted by `tests/test_active_notice_worker_scope.py`.
 
 ## Why it matters
 
