@@ -1,21 +1,21 @@
 ---
 title: goc-new-crashes-with-valueerror-when-deck-lives-in-shared-worktree-root
 summary: "`goc new`'s final success/next-step prints call `card_dir.relative_to(REPO_ROOT)`. In shared-worktree-deck mode DECK_ROOT (primary tree) != REPO_ROOT (linked worktree), so card_dir lives outside REPO_ROOT and the call raises ValueError — after the card is already written to disk. The command half-succeeds and crashes with an uncaught traceback instead of printing the next-step hint."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T07:37:14Z"
-closed_at: null
+closed_at: "2026-06-24T07:43:04Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: a regression test constructs a card_dir outside REPO_ROOT (as in shared-worktree mode) and asserts the success-message path-display does not raise ValueError
-  - [ ] TDD: reproduce.py exits zero after the fix (defect no longer fires)
-  - [ ] MECHANICAL: engine.py:4917-4918 no longer use relative_to(REPO_ROOT) for card_dir; they use a crash-proof display (relative_to(DECK_ROOT) or _display_path), matching the established pattern at engine.py:4291
-  - [ ] MECHANICAL: non-worktree output is unchanged (still prints `.game-of-cards/deck/<title>/`)
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: a regression test constructs a card_dir outside REPO_ROOT (as in shared-worktree mode) and asserts the success-message path-display does not raise ValueError
+  - [x] TDD: reproduce.py exits zero after the fix (defect no longer fires)
+  - [x] MECHANICAL: engine.py:4917-4918 no longer use relative_to(REPO_ROOT) for card_dir; they use a crash-proof display (relative_to(DECK_ROOT) or _display_path), matching the established pattern at engine.py:4291
+  - [x] MECHANICAL: non-worktree output is unchanged (still prints `.game-of-cards/deck/<title>/`)
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

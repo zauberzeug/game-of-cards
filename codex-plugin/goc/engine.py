@@ -4914,8 +4914,13 @@ def _cmd_new(args):
         _mutate_pair(target, title, "advanced_by", "advances", add=True)
     for advancer in advanced_by:
         _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
-    print(f"created {card_dir.relative_to(REPO_ROOT)}/")
-    print(f"Next: edit {card_dir.relative_to(REPO_ROOT)}/README.md to fill the body and DoD; then ask your agent to implement the card.")
+    # card_dir is always under DECK_DIR ⊆ DECK_ROOT, which is NOT REPO_ROOT in
+    # shared-worktree-deck mode (DECK_ROOT is the primary tree, REPO_ROOT the
+    # linked worktree). relative_to(DECK_ROOT) is crash-proof and matches the
+    # deck-path display used elsewhere (e.g. the rebase-conflict path above).
+    rel = card_dir.relative_to(DECK_ROOT)
+    print(f"created {rel}/")
+    print(f"Next: edit {rel}/README.md to fill the body and DoD; then ask your agent to implement the card.")
     # Default for `goc new` is NO commit so the scaffold-then-fill-in
     # workflow is unchanged; --commit is the opt-in for wired filings so
     # the new card's edge writes to existing endpoints don't linger as
