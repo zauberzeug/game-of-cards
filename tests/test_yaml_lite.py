@@ -287,6 +287,44 @@ class ColonNoSpaceMappingRejectionTest(unittest.TestCase):
         )
 
 
+class FlowCollectionTrailingContentRejectionTest(unittest.TestCase):
+    """An inline flow collection followed by non-comment trailing content on
+    the same line (e.g. `[bug, api]# recategorize`, where the `#` has no
+    preceding space so it is not a YAML comment) used to be silently corrupted:
+    `_parse_flow_sequence` returned the whole raw line as one phantom element
+    and `_parse_flow_mapping` dropped every pair. The guard now fails loud,
+    matching the over-indent / colon-no-space / tab / folded-scalar guards."""
+
+    def test_flow_sequence_trailing_content_raises_not_phantom_element(self):
+        # The headline defect: parsed to {'tags': ['[bug, api]# recategorize']}.
+        with self.assertRaises(ParseError):
+            safe_load("tags: [bug, api]# recategorize\n")
+
+    def test_flow_mapping_trailing_content_raises_not_dropped_pairs(self):
+        # The headline defect: parsed to {'worker': {}} — all pairs silently lost.
+        with self.assertRaises(ParseError):
+            safe_load("worker: {who: a}# note\n")
+
+    def test_flow_sequence_mismatched_close_bracket_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("k: [a, b}\n")
+
+    def test_flow_mapping_mismatched_close_bracket_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("k: {who: a]\n")
+
+    def test_wellformed_flow_collections_still_parse(self):
+        # The fix must not regress legitimate flow collections, including a
+        # nested collection as an element/value and a genuine space-preceded
+        # end-of-line comment.
+        self.assertEqual(safe_load("k: [a, b, c]\n"), {"k": ["a", "b", "c"]})
+        self.assertEqual(safe_load("k: {who: a, where: main}\n"),
+                         {"k": {"who": "a", "where": "main"}})
+        self.assertEqual(safe_load("k: [a, [b, c]]\n"), {"k": ["a", ["b", "c"]]})
+        self.assertEqual(safe_load("k: [a, b] # a real comment\n"),
+                         {"k": ["a", "b"]})
+
+
 class OverIndentedSequenceRejectionTest(unittest.TestCase):
     """A `- item` line *more* indented than its surrounding sequence is
     malformed: `_parse_block_sequence` only broke on a less-indented line, so a

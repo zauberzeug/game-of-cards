@@ -1,20 +1,20 @@
 ---
 title: yaml-lite-flow-collection-with-trailing-content-silently-corrupts-value
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T19:01:39Z"
-closed_at: null
+closed_at: "2026-06-24T19:07:47Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 summary: "An inline flow collection followed by non-comment trailing content on the same line — e.g. `tags: [bug, api]# recategorize` (no space before the `#`, so it is not a YAML comment) — is silently corrupted instead of rejected. `_parse_flow_sequence` returns the whole raw line as a single phantom element; `_parse_flow_mapping` silently drops every key/value pair. The parser's documented posture is fail-loud on malformed structural input (over-indent, missing-space-after-colon, tabs, folded scalars all raise ParseError); these two flow helpers are the lone silent-corruption holdouts."
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (the malformed inputs now raise ParseError instead of returning corrupted values)
-  - [ ] TDD: a new test in tests/test_yaml_lite.py asserts `tags: [bug, api]# recategorize` raises ParseError, and `worker: {who: a}# note` raises ParseError, alongside an assertion that well-formed `[a, b]` / `{k: v}` still parse
-  - [ ] MECHANICAL: `_parse_flow_sequence` and `_parse_flow_mapping` raise ParseError on text that opens with `[`/`{` but does not close with the matching `]`/`}` (trailing non-comment content)
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
+  - [x] TDD: reproduce.py exits zero (the malformed inputs now raise ParseError instead of returning corrupted values)
+  - [x] TDD: a new test in tests/test_yaml_lite.py asserts `tags: [bug, api]# recategorize` raises ParseError, and `worker: {who: a}# note` raises ParseError, alongside an assertion that well-formed `[a, b]` / `{k: v}` still parse
+  - [x] MECHANICAL: `_parse_flow_sequence` and `_parse_flow_mapping` raise ParseError on text that opens with `[`/`{` but does not close with the matching `]`/`}` (trailing non-comment content)
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
 worker: {who: "claude[bot]", where: main}
 ---
 

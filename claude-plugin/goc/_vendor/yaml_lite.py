@@ -374,8 +374,20 @@ def _parse_single_quoted(text: str) -> str:
 
 
 def _parse_flow_sequence(text: str) -> list:
-    if not (text.startswith("[") and text.endswith("]")):
+    if not text.startswith("["):
         return [text]
+    if not text.endswith("]"):
+        # A leading `[` with no matching trailing `]` is malformed flow
+        # input — most commonly an inline sequence followed by trailing
+        # content that is not a (space-preceded) comment, e.g.
+        # `tags: [bug, api]# recategorize`. Returning [text] would bury the
+        # whole raw line as a single phantom element. Fail loud, matching
+        # the over-indent and missing-space-after-colon guards above.
+        raise ParseError(
+            f"flow sequence {text!r} has trailing content after its "
+            f"closing ']' (an end-of-line '#' comment must be preceded "
+            f"by a space)"
+        )
     inner = text[1:-1].strip()
     if not inner:
         return []
@@ -383,8 +395,20 @@ def _parse_flow_sequence(text: str) -> list:
 
 
 def _parse_flow_mapping(text: str) -> dict:
-    if not (text.startswith("{") and text.endswith("}")):
+    if not text.startswith("{"):
         return {}
+    if not text.endswith("}"):
+        # A leading `{` with no matching trailing `}` is malformed flow
+        # input — e.g. an inline mapping followed by trailing content that
+        # is not a (space-preceded) comment, `worker: {who: a}# note`.
+        # Returning {} would silently drop every key/value pair. Fail loud,
+        # matching the sequence guard above and the parser's documented
+        # posture for malformed structural input.
+        raise ParseError(
+            f"flow mapping {text!r} has trailing content after its "
+            f"closing '}}' (an end-of-line '#' comment must be preceded "
+            f"by a space)"
+        )
     inner = text[1:-1].strip()
     if not inner:
         return {}
