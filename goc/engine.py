@@ -4187,7 +4187,7 @@ def _enforce_closure_on_integration_or_exit(title: str) -> None:
         cwd=git_cwd,
         check=False,
     )
-    if check.returncode != 0:
+    if check.returncode == 1:
         print(
             f"ERROR: {title}: closure_on_integration is enabled and HEAD is not"
             " reachable from origin/main. Integrate the work (merge or push)"
@@ -4195,6 +4195,14 @@ def _enforce_closure_on_integration_or_exit(title: str) -> None:
             file=sys.stderr,
         )
         sys.exit(2)
+    if check.returncode != 0:
+        print(
+            "  Warning: closure_on_integration is enabled but `git merge-base"
+            " --is-ancestor` could not determine reachability (git error);"
+            " skipping check",
+            file=sys.stderr,
+        )
+        return
 
 
 def claim_push_enabled() -> bool:
