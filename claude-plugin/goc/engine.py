@@ -5343,6 +5343,9 @@ def _cmd_move(args):
     if not re.match(schema.title_pattern, new_title):
         print(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", file=sys.stderr)
         sys.exit(2)
+    if old_title == new_title:
+        print(f"ERROR: cannot move a card to itself (old and new titles are both {new_title!r})", file=sys.stderr)
+        sys.exit(2)
     src = DECK_DIR / old_title
     dst = DECK_DIR / new_title
     if not src.exists():
