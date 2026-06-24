@@ -2635,18 +2635,20 @@ def sort_default(
         by_title = {c.title: c for c in cards}
 
     def live_direct(t: Card) -> int:
-        n = 0
         advances = t.frontmatter.get("advances") or []
         if not isinstance(advances, list):
             return 0
+        # Count distinct workable downstream cards, not raw list elements:
+        # a duplicated edge (`advances: [B, B]`) unblocks one card, not two.
+        live = set()
         for dest in advances:
             dc = by_title.get(dest)
             if dc is None:
                 continue
             if not card_is_workable_for_scheduler(dc):
                 continue
-            n += 1
-        return n
+            live.add(dest)
+        return len(live)
 
     def key(t: Card):
         v, _ = values.get(t.title, (0.0, []))

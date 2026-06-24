@@ -74,6 +74,38 @@ class SortDefaultFullDeckTiebreakTest(unittest.TestCase):
             f"downstream cards; got {order}",
         )
 
+    def test_duplicate_advances_edge_counts_once(self) -> None:
+        # A duplicated edge unblocks one downstream card, not two. A-dup lists
+        # the same live target twice; A-two lists two distinct live targets.
+        # They tie on value, so the tiebreak decides: A-two (two distinct
+        # downstream cards) must outrank A-dup even though A-dup is older.
+        a_dup = _mk("a-dup", "open", "medium",
+                    ["bb-leaf", "bb-leaf"], "2026-01-01")
+        a_two = _mk("a-two", "open", "medium",
+                    ["bb-leaf", "cc-leaf"], "2026-01-02")
+        bb = _mk("bb-leaf", "open", "low", [], "2026-01-03")
+        cc = _mk("cc-leaf", "open", "low", [], "2026-01-04")
+        full = [a_dup, a_two, bb, cc]
+
+        values = compute_values(full)
+        self.assertAlmostEqual(
+            values["a-dup"][0], values["a-two"][0],
+            msg="precondition: A-dup and A-two must tie on value",
+        )
+
+        full_by_title = {c.title: c for c in full}
+        subset = [a_dup, a_two]
+        order = [
+            c.title
+            for c in sort_default(subset, values=values, by_title=full_by_title)
+        ]
+        self.assertEqual(
+            order,
+            ["a-two", "a-dup"],
+            "a duplicated `advances` edge must count as one distinct "
+            f"downstream card, not two; got {order}",
+        )
+
     def test_genuinely_dangling_edge_still_counts_zero(self) -> None:
         # A target absent from the *whole* deck (not merely filtered out) is a
         # dangling edge and must contribute 0 — so age decides, oldest first.
