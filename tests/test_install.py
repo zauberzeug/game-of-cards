@@ -1010,6 +1010,77 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             # (indentation, key order, trailing newline), not reflowed.
             self.assertEqual(original, settings_path.read_text())
 
+    def test_merge_claude_settings_idempotent_merge_with_non_object_item_makes_no_backup(self) -> None:
+        """A settings file that already carries every GoC hook AND contains a
+        non-object item in a `hooks[event][].hooks` list is fully idempotent.
+        The merge must not spawn a `.bak` sibling or rewrite the file — the
+        no-op non-object-items branch used to back up on every run.
+        """
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+            hooks: dict = {}
+            for event, command in GOC_CLAUDE_HOOKS.items():
+                hooks.setdefault(event, []).append(
+                    {"hooks": [{"type": "command", "command": command}]}
+                )
+            first_event = next(iter(GOC_CLAUDE_HOOKS))
+            hooks[first_event][0]["hooks"].append("literal-user-item")
+            original = json.dumps({"hooks": hooks}, indent=2) + "\n"
+            settings_path.write_text(original)
+
+            _merge_claude_settings(settings_path)
+            _merge_claude_settings(settings_path)
+
+            backups = list(settings_path.parent.glob("settings.json.*.bak"))
+            self.assertEqual([], backups, msg=f"backups={backups}")
+            # Idempotent merge leaves the user's bytes untouched.
+            self.assertEqual(original, settings_path.read_text())
+
+    def test_merge_claude_settings_backs_up_non_object_item_when_rewriting(self) -> None:
+        """The non-object-items safety copy must still be made when GoC
+        actually rewrites the file (a GoC hook is missing). The backup is the
+        pristine pre-reflow copy — deferring it to the write must not drop it.
+        """
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # A user group with a non-object item, but NO GoC hooks present —
+            # so the merge must add them and rewrite the file.
+            original = json.dumps(
+                {"hooks": {"SessionStart": [{"hooks": ["literal-user-item"]}]}},
+                indent=2,
+            ) + "\n"
+            settings_path.write_text(original)
+
+            _merge_claude_settings(settings_path)
+
+            # File was rewritten with GoC hooks added.
+            merged = json.loads(settings_path.read_text())
+            cmds = [
+                h.get("command")
+                for group in merged["hooks"].get("SessionStart", [])
+                if isinstance(group, dict)
+                for h in group.get("hooks", [])
+                if isinstance(h, dict)
+            ]
+            self.assertIn(GOC_CLAUDE_HOOKS["SessionStart"], cmds)
+            # Exactly one pristine backup of the original bytes was made.
+            backups = list(settings_path.parent.glob("settings.json.*.bak"))
+            self.assertEqual(1, len(backups), msg=f"backups={backups}")
+            self.assertEqual(original, backups[0].read_text())
+            # The non-object item survives the rewrite verbatim.
+            self.assertIn(
+                "literal-user-item",
+                merged["hooks"]["SessionStart"][0]["hooks"],
+            )
+
     def test_merge_claude_settings_writes_when_a_hook_is_missing(self) -> None:
         from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
 

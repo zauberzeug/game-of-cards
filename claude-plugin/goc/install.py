@@ -594,6 +594,8 @@ def _merge_claude_settings(settings_path: Path) -> None:
             settings = {}
             changed = True
 
+    non_object_item_events: list[str] = []
+
     hooks = settings.setdefault("hooks", {})
     if not isinstance(hooks, dict):
         backup = _ensure_backup()
@@ -639,13 +641,11 @@ def _merge_claude_settings(settings_path: Path) -> None:
                 group["hooks"] = []
                 changed = True
             elif any(not isinstance(h, dict) for h in group_hooks):
-                backup = _ensure_backup()
-                print(
-                    f"  warning: {settings_path} hooks.{event}[].hooks contains "
-                    f"non-object items; backed it up to {backup.name}. The "
-                    f"non-object items are preserved verbatim.",
-                    file=sys.stderr,
-                )
+                # No mutation here — the non-object items are kept as-is. Defer
+                # the backup+warning until we know GoC is actually going to
+                # rewrite the file (an idempotent merge must not spawn a .bak).
+                if event not in non_object_item_events:
+                    non_object_item_events.append(event)
         already = any(
             isinstance(h, dict) and h.get("command") == command
             for group in event_hooks
@@ -659,8 +659,18 @@ def _merge_claude_settings(settings_path: Path) -> None:
     # Mirror `_strip_goc_settings_entries`: only rewrite the user-owned
     # file when GoC actually changed something. An idempotent merge (every
     # hook already present) must leave the user's bytes — indentation, key
-    # order, trailing newline — untouched rather than reflowing them.
+    # order, trailing newline — untouched rather than reflowing them. The
+    # backup is part of that contract: it is the pristine copy made before
+    # GoC reflows the file, so it only makes sense when a write happens.
     if changed:
+        for event in non_object_item_events:
+            backup = _ensure_backup()
+            print(
+                f"  warning: {settings_path} hooks.{event}[].hooks contains "
+                f"non-object items; backed it up to {backup.name}. The "
+                f"non-object items are preserved verbatim.",
+                file=sys.stderr,
+            )
         settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
 
