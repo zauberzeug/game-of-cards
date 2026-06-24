@@ -291,15 +291,22 @@ def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
     indent from the first content line, so a content line whose own text begins
     with whitespace would otherwise corrupt the round-trip: the inflated first
     line either raises (a later, less-indented line is judged ambiguous) or
-    silently folds a shared leading indent into the block indent. When the first
-    content line begins with whitespace, emit an explicit indentation indicator
-    (`|2` / `|2-`) that pins the block indent to the 2-space prefix regardless of
-    the content's own leading whitespace.
+    silently folds a shared leading indent into the block indent. We therefore
+    emit an explicit indentation indicator (`|2` / `|2-`) — which pins the block
+    indent to the 2-space prefix regardless of the content's own leading
+    whitespace — in either of two cases: the first non-blank content line begins
+    with whitespace, OR a whitespace-only (but non-empty) line precedes the first
+    non-blank line. The latter line would otherwise be collapsed to "" by the
+    parser, which treats any blank-after-rstrip line as a structural blank while
+    the block indent is still unknown (`block_indent is None`).
     """
     text = (value or "").rstrip("\n")
     lines = text.splitlines()
-    first_content = next((ln for ln in lines if ln.strip()), "")
-    if first_content[:1].isspace():
+    first_idx = next((i for i, ln in enumerate(lines) if ln.strip()), len(lines))
+    first_content = lines[first_idx] if first_idx < len(lines) else ""
+    if first_content[:1].isspace() or any(
+        ln and not ln.strip() for ln in lines[:first_idx]
+    ):
         indicator = f"{indicator[0]}2{indicator[1:]}"
     out = [f"{key}: {indicator}"]
     for ln in lines:

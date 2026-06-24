@@ -1,27 +1,27 @@
 ---
 title: frontmatter-emitter-drops-leading-whitespace-only-line-in-block-scalar-values
 summary: "`_emit_block_field` only emits an explicit indent indicator (`|2`/`|2-`) when the FIRST NON-BLANK content line begins with whitespace. A leading whitespace-only line (e.g. `\"   \"`) that precedes the first non-blank line is skipped by the `first_content` selection, so the bare `|`/`|-` indicator is kept; on re-parse the parser treats that line as a structural blank (`block_indent is None`) and collapses its interior spaces to `\"\"`. Breaks the emit->parse round-trip for the leading-whitespace case left unfixed by the two closed block-scalar siblings."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T19:36:16Z"
-closed_at: null
+closed_at: "2026-06-24T19:43:08Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a block-scalar value whose first
+  - [x] TDD: reproduce.py exits zero — a block-scalar value whose first
         line is whitespace-only (`"   \nsecond line"`) round-trips
         (emit->parse) byte-for-byte, plus a multi-leading-blank variant
         (`"  \n   \nbody"`).
-  - [ ] TDD: the already-fixed sibling cases still round-trip (interior
+  - [x] TDD: the already-fixed sibling cases still round-trip (interior
         whitespace-only line `"first\n   \nthird"`, first non-blank line
         indented, trailing-blank chomp) so the fix does not regress them.
-  - [ ] MECHANICAL: the fix lands in the `goc/engine.py` source-of-truth
+  - [x] MECHANICAL: the fix lands in the `goc/engine.py` source-of-truth
         (the engine is vendored into the plugin payloads); plugin mirrors
         re-sync and `python scripts/sync_plugin_assets.py --check` passes.
-  - [ ] PROCESS: `uv run goc validate` is clean on this repo's own deck.
+  - [x] PROCESS: `uv run goc validate` is clean on this repo's own deck.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -72,13 +72,26 @@ survive. The emitter just never triggers it for this case.
 
 ## Empirical evidence
 
-`uv run python deck/.../reproduce.py`:
+Before the fix, `uv run python deck/.../reproduce.py` exited 1:
 
 ```
 FAIL '   \nsecond line' -> '\nsecond line'
 FAIL '  \n   \nbody'    -> '\n\nbody'
-OK   'first\n   \nthird' (interior case, already fixed, round-trips)
+OK   'first\n   \nthird' (interior case, already fixed)
+OK   '  indented\nplain' (first-line-indented case, already fixed)
 ```
+
+After the fix it exits 0 — all four cases round-trip:
+
+```
+OK   '   \nsecond line' -> '   \nsecond line'
+OK   '  \n   \nbody'    -> '  \n   \nbody'
+OK   'first\n   \nthird' -> 'first\n   \nthird'
+OK   '  indented\nplain' -> '  indented\nplain'
+```
+
+A permanent regression test lives at
+`tests/test_yaml_lite.py::BlockScalarIndicatorRoundTripTest::test_leading_whitespace_only_line_survives_reemit`.
 
 ## Why it matters
 

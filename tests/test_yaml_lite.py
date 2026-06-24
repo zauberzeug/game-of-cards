@@ -544,6 +544,31 @@ class BlockScalarIndicatorRoundTripTest(unittest.TestCase):
             twice = e.emit_frontmatter(e.parse_frontmatter(once)[0], body="x")
             self.assertEqual(once, twice, msg=f"non-idempotent for {summary!r}")
 
+    def test_leading_whitespace_only_line_survives_reemit(self):
+        # Regression for
+        # frontmatter-emitter-drops-leading-whitespace-only-line-in-block-scalar-values:
+        # a block-scalar value whose first line(s) are whitespace-only must
+        # trigger the explicit indent indicator (`|2`/`|2-`) so the parser does
+        # not collapse those leading lines to "" while block_indent is still
+        # None. Includes the already-fixed interior / first-line-indented
+        # sibling cases to guard against regressing them.
+        from goc import engine as e
+
+        cases = [
+            "   \nsecond line",   # leading whitespace-only line (the defect)
+            "  \n   \nbody",      # multiple leading whitespace-only lines
+            "first\n   \nthird",  # interior whitespace-only line (prior fix)
+            "  indented\nplain",  # first non-blank line indented (prior fix)
+        ]
+        for val in cases:
+            fm = {"title": "t", "status": "open", "summary": val}
+            out = e.emit_frontmatter(fm, body="x")
+            parsed = e.parse_frontmatter(out)[0]
+            self.assertEqual(
+                parsed["summary"], val,
+                msg=f"block-scalar value {val!r} did not round-trip",
+            )
+
     def test_single_line_block_header_shaped_scalar_round_trips(self):
         # A single-line scalar whose whole value is a block/folded indicator —
         # literal (`|2`, `|3`, `|2-`, `|2+`, `|10`) OR folded (`>2`, `>3`,
