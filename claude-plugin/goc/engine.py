@@ -2624,7 +2624,8 @@ def sort_default(
     sorting the `open` column) is still live and still unblocks flow, so it
     must count. Only a genuinely dangling edge — target absent from the whole
     deck — counts 0, because `card_is_workable_for_scheduler` never sees it,
-    matching the value walk's dangling-edge drop at engine.py:1739. When
+    matching the value walk's dangling-edge drop in `compute_values`'s
+    `value_for`. When
     `by_title` is omitted it is built from `cards`, which is only correct
     when `cards` IS the full deck; callers that sort a subset must thread
     the full-deck lookup (every renderer already holds one as `full_by_title`).

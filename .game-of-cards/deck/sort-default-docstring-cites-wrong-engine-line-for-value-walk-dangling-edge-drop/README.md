@@ -1,23 +1,24 @@
 ---
 title: sort-default-docstring-cites-wrong-engine-line-for-value-walk-dangling-edge-drop
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-24T13:57:19Z"
-closed_at: null
+closed_at: "2026-06-24T14:01:40Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, meta-fix, bug]
 definition_of_done: |
-  - [ ] `sort_default`'s docstring no longer cites a hardcoded `engine.py:NNNN`
+  - [x] `sort_default`'s docstring no longer cites a hardcoded `engine.py:NNNN`
         line for the value walk's dangling-edge drop.
-  - [ ] The cross-reference instead names the symbol it points at
+  - [x] The cross-reference instead names the symbol it points at
         (`compute_values`'s `value_for`), so it cannot rot when line numbers shift.
-  - [ ] `reproduce.py` asserts no `engine.py:NNNN` hardcoded line citation
+  - [x] `reproduce.py` asserts no `engine.py:NNNN` hardcoded line citation
         remains in `sort_default.__doc__` and that it names `value_for`.
-  - [ ] `uv run python -m unittest discover -s tests` passes.
-  - [ ] `uv run goc validate` passes.
+        (Durably guarded by `tests/test_guidance_accuracy.py::DocstringCitationAccuracyTest`.)
+  - [x] `uv run python -m unittest discover -s tests` passes.
+  - [x] `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 

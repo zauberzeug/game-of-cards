@@ -158,5 +158,31 @@ class DeckBoardLegendAccuracyTest(unittest.TestCase):
             )
 
 
+class DocstringCitationAccuracyTest(unittest.TestCase):
+    """`sort_default`'s docstring must cite the value walk by symbol, not by a
+    hardcoded `engine.py:NNNN` line that rots as surrounding code shifts."""
+
+    def test_sort_default_docstring_has_no_hardcoded_engine_line(self) -> None:
+        from goc.engine import sort_default
+
+        doc = sort_default.__doc__ or ""
+        stale = re.findall(r"engine\.py:\d+", doc)
+        self.assertFalse(
+            stale,
+            msg=(
+                "sort_default docstring cites a hardcoded line number "
+                f"({stale}); cite the symbol instead so it cannot drift."
+            ),
+        )
+        self.assertIn(
+            "value_for",
+            doc,
+            msg=(
+                "sort_default docstring should name `value_for` (the value "
+                "walk's dangling-edge drop) it cross-references."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
