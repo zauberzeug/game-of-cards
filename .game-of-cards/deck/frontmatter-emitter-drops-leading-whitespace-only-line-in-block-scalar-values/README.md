@@ -1,7 +1,7 @@
 ---
 title: frontmatter-emitter-drops-leading-whitespace-only-line-in-block-scalar-values
 summary: "`_emit_block_field` only emits an explicit indent indicator (`|2`/`|2-`) when the FIRST NON-BLANK content line begins with whitespace. A leading whitespace-only line (e.g. `\"   \"`) that precedes the first non-blank line is skipped by the `first_content` selection, so the bare `|`/`|-` indicator is kept; on re-parse the parser treats that line as a structural blank (`block_indent is None`) and collapses its interior spaces to `\"\"`. Breaks the emit->parse round-trip for the leading-whitespace case left unfixed by the two closed block-scalar siblings."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-24T19:36:16Z"
@@ -22,6 +22,7 @@ definition_of_done: |
         (the engine is vendored into the plugin payloads); plugin mirrors
         re-sync and `python scripts/sync_plugin_assets.py --check` passes.
   - [ ] PROCESS: `uv run goc validate` is clean on this repo's own deck.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Frontmatter emitter drops a leading whitespace-only line in block-scalar values
