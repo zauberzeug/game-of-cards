@@ -2486,5 +2486,74 @@ class UpgradeAppendsPrecommitHookTest(unittest.TestCase):
             self.assertEqual(cfg.read_text().count("id: goc-validate"), 1)
 
 
+class RefreshStalePrecommitHookTest(unittest.TestCase):
+    """Regression: `_append_precommit_hook` must migrate a stale GoC-managed
+    `goc-validate` stanza in place. A repo installed before the deck moved
+    from deck/ to .game-of-cards/deck/ carries a legacy `files: ^deck/.*$`
+    glob; the no-op-when-present short-circuit left it dead (matching no card
+    path) across `goc upgrade`."""
+
+    LEGACY = (
+        "repos:\n"
+        "  - repo: local\n"
+        "    hooks:\n"
+        "      - id: goc-validate\n"
+        "        name: goc validate\n"
+        "        entry: goc validate\n"
+        "        language: system\n"
+        "        pass_filenames: false\n"
+        "        files: ^deck/.*$\n"
+    )
+
+    def _git_dir(self, tmp: str) -> Path:
+        root = Path(tmp)
+        (root / ".git").mkdir()
+        return root
+
+    def test_legacy_files_glob_is_migrated(self) -> None:
+        from goc.install import _append_precommit_hook  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
+            cfg.write_text(self.LEGACY)
+            _append_precommit_hook(cfg)
+            text = cfg.read_text()
+            self.assertNotIn("files: ^deck/.*$", text)
+            self.assertIn(r"files: ^\.game-of-cards/deck/.*$", text)
+            self.assertEqual(text.count("id: goc-validate"), 1)
+
+    def test_current_block_is_byte_identical_noop(self) -> None:
+        from goc.install import PRE_COMMIT_HOOK, _append_precommit_hook  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
+            cfg.write_text("repos:\n" + PRE_COMMIT_HOOK)
+            before = cfg.read_text()
+            _append_precommit_hook(cfg)
+            self.assertEqual(cfg.read_text(), before)
+
+    def test_unrelated_repo_local_hook_is_preserved(self) -> None:
+        from goc.install import _append_precommit_hook  # noqa: PLC0415
+
+        user_block = (
+            "  - repo: local\n"
+            "    hooks:\n"
+            "      - id: my-linter\n"
+            "        name: my linter\n"
+            "        entry: ./lint.sh\n"
+            "        language: system\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
+            cfg.write_text(self.LEGACY + user_block)
+            _append_precommit_hook(cfg)
+            text = cfg.read_text()
+            # GoC stanza refreshed...
+            self.assertIn(r"files: ^\.game-of-cards/deck/.*$", text)
+            # ...user's own hook untouched.
+            self.assertIn("id: my-linter", text)
+            self.assertIn("entry: ./lint.sh", text)
+
+
 if __name__ == "__main__":
     unittest.main()

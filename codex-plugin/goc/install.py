@@ -1257,8 +1257,46 @@ def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
     _write_text_keep_newline(target, text.rstrip() + "\n\n" + block, newline)
 
 
+# A standalone `- repo: local` stanza and the indented lines that belong to it
+# (everything indented deeper than the `- repo: local` list marker, up to the
+# next sibling list item / top-level key / blank line / EOF).
+_PRECOMMIT_LOCAL_BLOCK_RE = re.compile(
+    r"^  - repo: local\n(?:    .*(?:\n|$))*",
+    re.MULTILINE,
+)
+
+
+def _refresh_goc_validate_block(text: str) -> str:
+    """Re-emit the GoC-managed `goc-validate` stanza if it has drifted.
+
+    Finds the standalone `- repo: local` block that carries the
+    `id: goc-validate` hook and replaces it with the current `PRE_COMMIT_HOOK`
+    (e.g. to migrate a legacy `files: ^deck/.*$` glob to the
+    `.game-of-cards/deck` path). Only a single-hook GoC-signature block is
+    rewritten — user-authored hooks co-located in the same stanza, other
+    `repo: local` blocks, and unrelated repos are all left untouched. A block
+    that already matches stays byte-identical.
+    """
+
+    def _replace(match: "re.Match[str]") -> str:
+        block = match.group(0)
+        if "id: goc-validate" not in block:
+            return block
+        # Conservative guard: only refresh a standalone GoC-emitted stanza
+        # (exactly one hook, with the GoC signature). Anything else means a
+        # user has hand-merged content here — never destroy it.
+        if block.count("- id:") != 1 or "entry: goc validate" not in block:
+            return block
+        replacement = PRE_COMMIT_HOOK
+        if not block.endswith("\n"):
+            replacement = replacement.rstrip("\n")
+        return replacement
+
+    return _PRECOMMIT_LOCAL_BLOCK_RE.sub(_replace, text)
+
+
 def _append_precommit_hook(target: Path) -> None:
-    """Append the `goc validate` hook to `.pre-commit-config.yaml` (creating it)."""
+    """Append (or refresh) the `goc validate` hook in `.pre-commit-config.yaml`."""
 
     if not (target.parent / ".git").exists():
         return
@@ -1267,6 +1305,13 @@ def _append_precommit_hook(target: Path) -> None:
         return
     text, newline = _read_text_keep_newline(target)
     if "id: goc-validate" in text:
+        # Already present — but a pre-move install may carry a stale `files:`
+        # glob that no longer matches any card path, silently disabling the
+        # hook. Refresh the GoC-managed stanza in place so `goc upgrade`
+        # carries template fixes forward.
+        refreshed = _refresh_goc_validate_block(text)
+        if refreshed != text:
+            _write_text_keep_newline(target, refreshed, newline)
         return
     if not text.endswith("\n"):
         text += "\n"

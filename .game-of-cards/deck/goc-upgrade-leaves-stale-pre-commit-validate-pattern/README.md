@@ -1,19 +1,19 @@
 ---
 title: goc-upgrade-leaves-stale-pre-commit-validate-pattern
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T08:31:29Z"
-closed_at: null
+closed_at: "2026-06-24T08:35:56Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 summary: "goc upgrade no-ops the pre-commit goc-validate hook whenever its block already exists, so a repo installed before the deck moved from deck/ to .game-of-cards/deck/ keeps the legacy `files: ^deck/.*$` glob. The hook then matches no real card path and the frontmatter-drift gate is silently dead."
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (a legacy `files: ^deck/.*$` block is rewritten to the current `.game-of-cards/deck` pattern on upgrade)
-  - [ ] TDD: regression test in tests/ asserts an upgrade over a legacy-pattern config lands the current `files:` glob, and that an already-current block is left byte-identical (idempotent no-op preserved)
-  - [ ] MECHANICAL: a non-GoC `repo: local` hook or a user-authored hook elsewhere in the file is preserved untouched
+  - [x] TDD: reproduce.py exits zero (a legacy `files: ^deck/.*$` block is rewritten to the current `.game-of-cards/deck` pattern on upgrade)
+  - [x] TDD: regression test in tests/ asserts an upgrade over a legacy-pattern config lands the current `files:` glob, and that an already-current block is left byte-identical (idempotent no-op preserved)
+  - [x] MECHANICAL: a non-GoC `repo: local` hook or a user-authored hook elsewhere in the file is preserved untouched
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -76,22 +76,28 @@ _append_precommit_hook → no-op`.
 
 `reproduce.py` seeds a `.pre-commit-config.yaml` whose `goc-validate` block
 carries the legacy `files: ^deck/.*$`, calls `_append_precommit_hook`, and
-checks the result:
+checks the result. Before the fix it printed `CHANGED: False` / `still legacy
+^deck/: True` / `has new .game-of-cards/deck: False` (exit 1). After the fix:
 
 ```
-CHANGED: False
-still legacy ^deck/: True
-has new .game-of-cards/deck: False
+CHANGED: True
+still legacy ^deck/: False
+has new .game-of-cards/deck: True
+PASS: upgrade migrated the stale validate files: glob.
 ```
 
-Correct behavior: the GoC-managed block's `files:` line should be rewritten to
-`^\.game-of-cards/deck/.*$` so the hook matches real card paths again.
+Exit 0. The full regression suite is green (566 tests) and `goc validate`
+exits 0.
 
-## Fix
+## Fix (applied)
 
-In `_append_precommit_hook`, when a `goc-validate` block is already present but
-its body differs from the current `PRE_COMMIT_HOOK`, re-emit the GoC-managed
-block in place (replace the existing `- repo: local … id: goc-validate …`
-stanza) rather than returning a no-op. Match only the GoC-managed stanza so
-unrelated `repo: local` hooks and user-authored hooks elsewhere in the file are
-preserved. An already-current block stays a byte-identical no-op.
+`_append_precommit_hook` no longer short-circuits to a no-op when the
+`goc-validate` block is already present. It now calls a new
+`_refresh_goc_validate_block`, which locates the standalone `- repo: local`
+stanza carrying the `id: goc-validate` hook and re-emits it from the current
+`PRE_COMMIT_HOOK` (migrating a legacy `files: ^deck/.*$` glob to
+`^\.game-of-cards/deck/.*$`). A conservative guard only refreshes a single-hook
+GoC-signature stanza (`- id:` appears exactly once and `entry: goc validate` is
+present), so user-authored hooks co-located in the same stanza, other
+`repo: local` blocks, and unrelated repos are left untouched. A block that
+already matches stays byte-identical.
