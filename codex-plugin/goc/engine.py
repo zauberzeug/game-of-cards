@@ -2695,18 +2695,30 @@ def _format_value(v: float) -> str:
     return f"{v:.1f}"
 
 
+def _value_path_slugs(path: list[str]) -> list[str]:
+    """The argmax descendant chain as real card slugs.
+
+    `compute_values` terminates every path with an internal sentinel
+    (`["self"]` for a leaf, `["cycle"]` on a validate-failing cyclic
+    deck). Neither is a card title, so both presentation surfaces strip
+    the trailing sentinel before rendering the chain: `_format_why` for
+    the `-v` WHY column and `render_json` for the `value_path` field.
+    Sharing one helper keeps the human and machine surfaces from drifting
+    apart (see the two closed `why-trace-renders-spurious-*-hop` cards).
+    """
+    if path and path[-1] in ("self", "cycle"):
+        return path[:-1]
+    return path
+
+
 def _format_why(path: list[str], by_title: dict[str, Card]) -> str:
     """Format the GRPW propagation trace: 'self' → '' (omit); chain → '→ A (high) → B (med)'."""
     if not path or path == ["self"]:
         return ""
     if path == ["cycle"]:
         return "(cycle)"
-    suffix = ""
-    if path[-1] == "self":
-        path = path[:-1]
-    elif path[-1] == "cycle":
-        path = path[:-1]
-        suffix = " (cycle)"
+    suffix = " (cycle)" if path[-1] == "cycle" else ""
+    path = _value_path_slugs(path)
     if not path:
         return suffix.strip()
     parts = []
@@ -2861,7 +2873,7 @@ def render_json(
                 "stage": t.stage,
                 "contribution": t.contribution,
                 "value": values.get(t.title, (0.0, []))[0],
-                "value_path": values.get(t.title, (0.0, []))[1],
+                "value_path": _value_path_slugs(values.get(t.title, (0.0, []))[1]),
                 "human_gate": t.human_gate,
                 "waiting_on": t.waiting_on,
                 "waiting_until": t.waiting_until,

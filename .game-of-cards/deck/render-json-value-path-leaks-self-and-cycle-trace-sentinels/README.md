@@ -1,19 +1,19 @@
 ---
 title: render-json-value-path-leaks-self-and-cycle-trace-sentinels
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T19:20:44Z"
-closed_at: null
+closed_at: "2026-06-24T19:25:04Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a multi-hop card's `value_path` in `goc --json` contains only real card slugs (no trailing `"self"`), a leaf's `value_path` is `[]`, and the cyclic-deck case drops the `"cycle"` sentinel.
-  - [ ] TDD: `render_json` and `_format_why` derive the slug chain from one shared helper so the machine and human surfaces cannot drift apart again.
-  - [ ] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green (engine mirrors re-synced).
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes.
+  - [x] TDD: reproduce.py exits zero — a multi-hop card's `value_path` in `goc --json` contains only real card slugs (no trailing `"self"`), a leaf's `value_path` is `[]`, and the cyclic-deck case drops the `"cycle"` sentinel.
+  - [x] TDD: `render_json` and `_format_why` derive the slug chain from one shared helper so the machine and human surfaces cannot drift apart again.
+  - [x] MECHANICAL: `uv run goc validate` clean; plugin-asset sync `--check` green (engine mirrors re-synced).
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -54,16 +54,20 @@ a leaf reports `["self"]` instead of `[]`, and every ancestor reports
 
 ## Empirical evidence
 
+Pre-fix, `value_path` leaked the `"self"` sentinel; post-fix it carries
+only real card slugs, matching the WHY column. After the fix
+`reproduce.py` exits zero:
+
 ```
-$ uv run python deck/render-json-value-path-leaks-self-and-cycle-trace-sentinels/reproduce.py
+$ uv run python .game-of-cards/deck/render-json-value-path-leaks-self-and-cycle-trace-sentinels/reproduce.py
 value_path leak in render_json:
-  root-card  -> ['mid-card', 'leaf-card', 'self']
-  mid-card   -> ['leaf-card', 'self']
-  leaf-card  -> ['self']
+  root-card  -> ['mid-card', 'leaf-card']
+  mid-card   -> ['leaf-card']
+  leaf-card  -> []
 WHY column (-v, already correct) for the same chain:
   root-card  -> → mid-card (medium) → leaf-card (high)
   leaf-card  -> (empty)
-LEAK CONFIRMED: value_path emits the 'self' sentinel as a chain member.
+OK: value_path carries only real card slugs (no sentinel leak).
 ```
 
 ## Why it matters
