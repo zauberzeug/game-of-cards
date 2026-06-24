@@ -32,10 +32,19 @@ class WaitingFilterStatusScopeTest(unittest.TestCase):
             check=False,
         )
 
-    def write_card(self, cwd: Path, title: str, status: str, waiting_on: str | None) -> None:
+    def write_card(
+        self,
+        cwd: Path,
+        title: str,
+        status: str,
+        waiting_on: str | None,
+        waiting_until: str | None = None,
+    ) -> None:
         card_dir = cwd / "deck" / title
         card_dir.mkdir(parents=True)
         overlay = f"waiting_on: {waiting_on}\n" if waiting_on is not None else ""
+        if waiting_until is not None:
+            overlay += f"waiting_until: {waiting_until}\n"
         (card_dir / "README.md").write_text(
             "---\n"
             f"title: {title}\n"
@@ -73,6 +82,30 @@ class WaitingFilterStatusScopeTest(unittest.TestCase):
             self.assertIn("open-impeded", titles)
             self.assertIn("active-impeded", titles)
             self.assertNotIn("open-clear", titles)
+
+    def test_waiting_matches_impedes_predicate(self) -> None:
+        """`--waiting` must mirror `waiting_impedes`, not the weaker
+        `waiting_on is not None` condition: a bare `waiting_until`-only
+        deferral (no reason) is impeded and must appear, while an elapsed
+        `waiting_until` has resurfaced and must NOT appear even though its
+        `waiting_on` field is still set.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            # Bare deferral: future waiting_until, no waiting_on → impeded.
+            self.write_card(cwd, "bare-deferral", "open", None, "2099-12-31")
+            # Open-ended block: reason, no date → impeded.
+            self.write_card(cwd, "open-block", "open", "external")
+            # Elapsed wait: reason + past date → resurfaced, NOT impeded.
+            self.write_card(cwd, "elapsed-wait", "open", "external", "2020-01-01")
+
+            result = self.run_goc(cwd, "--waiting", "--json")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            titles = self.titles(result)
+            self.assertIn("bare-deferral", titles)
+            self.assertIn("open-block", titles)
+            self.assertNotIn("elapsed-wait", titles)
 
     def test_explicit_status_open_still_narrows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

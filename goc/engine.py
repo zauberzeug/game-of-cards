@@ -3153,7 +3153,8 @@ def _build_parser() -> argparse.ArgumentParser:
                         "WINDOW (e.g. 24h, 7d, 2w) or since YYYY-MM-DD. "
                         "Auto-extends --status to 'all' when set.")
     parser.add_argument("--waiting", action="store_true",
-                        help="Filter to cards carrying a waiting_on overlay.")
+                        help="Filter to cards with an active impediment overlay "
+                             "(a waiting_on reason or an unelapsed waiting_until).")
     parser.add_argument("--slim", action="store_true",
                         help=f"With --json: emit only {', '.join(SLIM_JSON_KEYS)}.")
     parser.add_argument("--advances", default=None,
@@ -3478,7 +3479,7 @@ def _cmd_default(args):
             and dt >= closed_since_threshold
         ]
     if getattr(args, "waiting", False):
-        filtered = [t for t in filtered if t.waiting_on is not None]
+        filtered = [t for t in filtered if waiting_impedes(t)]
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
