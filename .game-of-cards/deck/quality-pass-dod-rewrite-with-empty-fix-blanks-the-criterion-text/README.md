@@ -1,20 +1,20 @@
 ---
 title: quality-pass-dod-rewrite-with-empty-fix-blanks-the-criterion-text
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-24T07:57:36Z"
-closed_at: null
+closed_at: "2026-06-24T08:02:01Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (an empty/whitespace `fix` no longer blanks the criterion)
-  - [ ] TDD: a regression test asserts an accepted issue with `fix: ""` leaves the targeted DoD line verbatim
-  - [ ] TDD: a non-empty `fix` for another index in the same call still applies (no regression to normal rewrites)
-  - [ ] MECHANICAL: the guard lives in `_apply_dod_rewrite` and preserves the original line; existing rewrite tests stay green
-  - [ ] PROCESS: log.md records the fix and the preserve-original semantics chosen
+  - [x] TDD: reproduce.py exits zero (an empty/whitespace `fix` no longer blanks the criterion)
+  - [x] TDD: a regression test asserts an accepted issue with `fix: ""` leaves the targeted DoD line verbatim
+  - [x] TDD: a non-empty `fix` for another index in the same call still applies (no regression to normal rewrites)
+  - [x] MECHANICAL: the guard lives in `_apply_dod_rewrite` and preserves the original line; existing rewrite tests stay green
+  - [x] PROCESS: log.md records the fix and the preserve-original semantics chosen
 worker: {who: "claude[bot]", where: main}
 ---
 

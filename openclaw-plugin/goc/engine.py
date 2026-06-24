@@ -3712,7 +3712,14 @@ def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:
     dod_text = fm.get("definition_of_done") or ""
     lines = dod_text.splitlines()
     box_indices = _dod_box_indices(lines)
-    fix_by_idx = {issue["idx"]: issue["fix"] for issue in issues if "idx" in issue and "fix" in issue}
+    # An empty/whitespace-only `fix` means "no rewrite offered" — keep the
+    # original item verbatim (per this function's contract) rather than
+    # blanking it to "- [ ] ". Mirrors the `fixless` (no-`fix`-key) path.
+    fix_by_idx = {
+        issue["idx"]: issue["fix"]
+        for issue in issues
+        if "idx" in issue and "fix" in issue and issue["fix"].strip()
+    }
     for box_idx, line_idx in enumerate(box_indices):
         if box_idx in fix_by_idx:
             indent = re.match(r"[ \t]*", lines[line_idx]).group(0)
