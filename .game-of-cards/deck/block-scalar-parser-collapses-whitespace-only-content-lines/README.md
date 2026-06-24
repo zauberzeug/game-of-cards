@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-26T22:21:44Z"
 closed_at: "2026-05-26T22:47:29Z"
 human_gate: none
-advances: []
+advances:
+  - block-scalar-emitter-reenumerates-parser-whitespace-rules-and-keeps-drifting
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
