@@ -669,6 +669,35 @@ class NonLFLineBreakRefusalTest(unittest.TestCase):
         self.assertFalse(e._contains_line_break("ordinary single line"))
         self.assertFalse(e._contains_line_break(""))
 
+    def test_emit_frontmatter_refuses_dod_with_non_lf_break(self):
+        # The definition_of_done branch always uses literal-block style, which
+        # round-trips only LF. A non-LF break embedded in a checkbox item (atop
+        # the legitimate LF item separators) must be refused at the boundary,
+        # not silently rewritten to LF — which would fabricate/destroy a
+        # `- [ ]` boundary and corrupt the closure count. Regression for
+        # definition-of-done-emitter-silently-splits-checkboxes-on-non-lf-line-breaks.
+        from goc import engine as e
+
+        for name, ch in self.NON_LF_BREAKS.items():
+            fm = {
+                "title": "t",
+                "status": "open",
+                "tags": ["bug"],
+                "definition_of_done": f"- [ ] keep this item{ch}not two\n- [ ] second\n",
+            }
+            with self.assertRaises(e.FrontmatterError, msg=f"{name} not refused"):
+                e.emit_frontmatter(fm, body="x")
+
+    def test_plain_lf_dod_still_block_emits_and_round_trips(self):
+        # The DoD guard must not regress the ordinary multi-line case: a
+        # pure-LF DoD still round-trips faithfully through literal-block style.
+        from goc import engine as e
+
+        dod = "- [ ] alpha\n- [x] beta\n"
+        fm = {"title": "t", "status": "open", "definition_of_done": dod}
+        out = e.emit_frontmatter(fm, body="x")
+        self.assertEqual(e.parse_frontmatter(out)[0]["definition_of_done"], dod)
+
 
 class DeckRoundTripTest(unittest.TestCase):
     """Parse every README.md in the real deck and verify key fields are present."""

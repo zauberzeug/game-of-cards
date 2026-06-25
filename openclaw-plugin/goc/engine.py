@@ -352,7 +352,17 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     lines = ["---"]
     for key, value in fm.items():
         if key == "definition_of_done":
-            lines.extend(_emit_block_field(key, value or "", indicator="|"))
+            dod = value or ""
+            if isinstance(dod, str) and _contains_line_break(dod.replace("\n", "")):
+                # DoD always uses literal-block style, which round-trips only
+                # LF: _emit_block_field splits on str.splitlines() and the
+                # parser rejoins with LF, so a non-LF break (CR/VT/FF/...)
+                # would be silently rewritten to LF — fabricating or
+                # destroying a `- [ ]` checkbox and thus the closure count.
+                # Refuse it at the boundary via the shared message, the same
+                # posture every other multi-line field already takes.
+                _yaml_inline(dod)
+            lines.extend(_emit_block_field(key, dod, indicator="|"))
             continue
         if key in _BLOCK_LIST_FIELDS and isinstance(value, list) and value:
             lines.append(f"{key}:")

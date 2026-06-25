@@ -18,6 +18,7 @@ advanced_by:
   - frontmatter-emitter-writes-float-values-bare-that-parse-back-as-strings
   - inline-emitter-writes-multi-line-strings-bare-destroying-subsequent-frontmatter
   - inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
+  - definition-of-done-emitter-silently-splits-checkboxes-on-non-lf-line-breaks
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.
