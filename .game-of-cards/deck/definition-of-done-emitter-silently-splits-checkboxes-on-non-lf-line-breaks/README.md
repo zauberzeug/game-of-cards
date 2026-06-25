@@ -1,7 +1,7 @@
 ---
 title: definition-of-done-emitter-silently-splits-checkboxes-on-non-lf-line-breaks
 summary: "The `definition_of_done` branch in `emit_frontmatter` (engine.py:354) routes the value unconditionally through `_emit_block_field`, which splits on `str.splitlines()` and rejoins with LF — so a DoD carrying a non-LF break (VT/FF/NEL/U+2028/U+2029) is silently split into extra lines, fabricating or destroying a `- [ ]` checkbox and changing the closure count `goc done` gates on. Every OTHER multi-line field already refuses such a break via the `_contains_line_break` guard at engine.py:368; the DoD branch is the lone exemption. Sibling of the closed inline-emitter-writes-non-newline-line-breaks-bare card, which hardened the generic branch but not this one."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-25T07:41:20Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: a regression test in tests/ asserts the DoD branch's behaviour on a non-LF break (matching the existing summary/generic-field test posture) — round-trip or raise, never silent rewrite.
   - [ ] MECHANICAL: the DoD branch reuses the existing `_contains_line_break` predicate (single source of truth), not a fresh hand-maintained char list — consistent with the emitter quote-trigger meta-fix this card advances.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green (the emitter is mirrored into the plugin payloads).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # definition-of-done-emitter-silently-splits-checkboxes-on-non-lf-line-breaks
