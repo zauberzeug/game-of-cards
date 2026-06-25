@@ -179,6 +179,33 @@ replaces the old, flip the old card to `status: superseded` and
 record the replacement in its `log.md`. Use a shared epic tag or
 `advanced_by` edge to express machine-readable dependency.
 
+## Worker (optional, assignment / ownership)
+
+`worker` is a free-form identifier naming who should or does work on a
+card. It matters when multiple humans or agents share a deck and you
+want a runner-scoped queue view; otherwise it can be omitted.
+
+**Format:**
+
+- Flat string for a single identifier: `worker: rodja`. Sugar for
+  `{who: rodja}`.
+- Mapping when branch context is known:
+  `worker: {who: rodja, where: feature/foo}`.
+
+The value is unregistered — use a person slug, a machine name, or a
+capability tag (e.g. `gpu-required`, `human`, `rendering-expert`). The
+field persists after close as a historical record.
+
+`goc status <title> active` auto-populates `worker` with the current
+identity at claim time, so a card pulled by an autonomous runner carries
+its owner without manual editing.
+
+**Filter the queue by worker:**
+
+- `goc --worker <X>` — limit listings to cards owned by `X`.
+- Set the `GOC_WORKER` env var so a runner sees only its own queue
+  without typing the flag every time.
+
 ## Contribution scale
 
 The per-card axis answering: **how much does closing this card

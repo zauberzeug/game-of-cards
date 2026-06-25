@@ -1,21 +1,21 @@
 ---
 title: card-schema-skill-body-omits-worker-optional-field-documentation
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-25T01:58:12Z"
-closed_at: null
+closed_at: "2026-06-25T02:04:05Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract]
 summary: "The `card-schema` skill advertises itself as the canonical reference for optional fields and documents 10 of the 11 — but `worker` has no field-reference section in the body, even though the sibling bundled `schema.yaml` lists it under `optional_fields` and the engine fully implements it. A reader asking the skill about `worker` semantics finds nothing. The corrective content already exists verbatim in AGENTS.md; this is a doc-only relocation, not a design call."
 definition_of_done: |
-  - [ ] Add a `worker` optional-field subsection to `goc/templates/skills/card-schema/SKILL.md`, in the same style as the other optional-field sections, porting the spec from AGENTS.md "Card authoring rules → `worker` field" (flat-string vs `{who, where}` mapping; flat form is sugar for `{who: <value>}`; unregistered free-form value; persists after close; auto-populated at claim; filter via `goc --worker` / `GOC_WORKER`).
-  - [ ] `grep -niw worker goc/templates/skills/card-schema/SKILL.md` returns the new field-reference subsection (not just the unrelated prose line).
-  - [ ] Plugin/skill mirrors regenerated via the sync hook (`.claude/`, `.codex/`, plugin payloads) and the OpenClaw port; `python scripts/sync_plugin_assets.py --check` and `scripts/port_skills_to_openclaw.py --check` pass.
-  - [ ] `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes.
-  - [ ] (Optional) a regression test asserting every `optional_fields` entry in the bundled `schema.yaml` is mentioned in the SKILL.md body, to close the class.
+  - [x] Add a `worker` optional-field subsection to `goc/templates/skills/card-schema/SKILL.md`, in the same style as the other optional-field sections, porting the spec from AGENTS.md "Card authoring rules → `worker` field" (flat-string vs `{who, where}` mapping; flat form is sugar for `{who: <value>}`; unregistered free-form value; persists after close; auto-populated at claim; filter via `goc --worker` / `GOC_WORKER`).
+  - [x] `grep -niw worker goc/templates/skills/card-schema/SKILL.md` returns the new field-reference subsection (not just the unrelated prose line).
+  - [x] Plugin/skill mirrors regenerated via the sync hook (`.claude/`, `.codex/`, plugin payloads) and the OpenClaw port; `python scripts/sync_plugin_assets.py --check` and `scripts/port_skills_to_openclaw.py --check` pass.
+  - [x] `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes.
+  - [x] (Optional) a regression test asserting every `optional_fields` entry in the bundled `schema.yaml` is mentioned in the SKILL.md body, to close the class.
 worker: {who: "claude[bot]", where: main}
 ---
 
