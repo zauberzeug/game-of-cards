@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "The machine-readable `value_path` emitted by `goc --json` appends the internal `compute_values` terminators `'self'` / `'cycle'` (documented sentinels, not card slugs) to the value chain, so a leaf reports `['self']` instead of `[]` and every ancestor reports `[..., 'self']`, breaking consumers that expect only real card slugs on the argmax value chain."
 definition_of_done: |
   - [x] TDD: reproduce.py exits zero — a multi-hop card's `value_path` in `goc --json` contains only real card slugs (no trailing `"self"`), a leaf's `value_path` is `[]`, and the cyclic-deck case drops the `"cycle"` sentinel.
   - [x] TDD: `render_json` and `_format_why` derive the slug chain from one shared helper so the machine and human surfaces cannot drift apart again.

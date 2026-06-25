@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "`goc attest` raises an uncaught `TypeError` when a skipped closure check's config entry carries an explicit `description: null`: the skip branch slices `check.get('description', '')[:60]`, whose `''` default only guards an absent key, so a present-but-`None` value reaches `None[:60]` and blows up."
 definition_of_done: |
   - [x] TDD: a regression test builds the skipped-check result dict (or runs `_cmd_attest`) with a check whose `description` is `None` and asserts no `TypeError` and a `SKIPPED (...)` summary
   - [x] TDD: the same path with an absent `description` key and a non-empty `description` string still produce the previously-correct summaries (no regression)

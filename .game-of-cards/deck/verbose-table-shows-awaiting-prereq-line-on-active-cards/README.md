@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "The verbose `render_table` prints the `awaiting: <prereq> (you may start)` dependency advisory for any non-terminal card because `dependency_advisory` gates only on terminal status, so an active (already-claimed) card still shows the pull-queue hint that `render_board`'s not-ready gate suppresses via an extra `status == 'open'` check. Fixed by inlining the same open-only guard into the table."
 definition_of_done: |
   - [x] TDD: reproduce.py exits zero — the verbose table omits the `awaiting: ... (you may start)` line for an `active` card with an open `advanced_by` prereq, while still showing it for an `open` card with the same prereq.
   - [x] TDD: a regression test asserts the table and board agree on the dependency advisory for an active card (table omits the awaiting line; board omits the `⏳`).

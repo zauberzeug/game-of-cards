@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, meta-fix, bug]
+summary: "`sort_default`'s docstring (`goc/engine.py:2599`) explains why a genuinely dangling `advances` edge contributes 0 to the near-term-flow tiebreak and cross-references the analogous prune in the value walk, but cites the wrong `engine.py` line for that dangling-edge drop — a doc-drift fix with no behavior change."
 definition_of_done: |
   - [x] `sort_default`'s docstring no longer cites a hardcoded `engine.py:NNNN`
         line for the value walk's dangling-edge drop.

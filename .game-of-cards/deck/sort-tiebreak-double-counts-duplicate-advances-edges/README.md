@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "`sort_default`'s near-term-flow tiebreak (`live_direct`, `goc/engine.py:2637-2649`) counts raw `advances` list elements rather than distinct workable targets, so a card padding its `advances` list with a repeated slug inflates its tiebreak score and can out-rank a card that genuinely unblocks more distinct downstream work."
 definition_of_done: |
   - [x] EMPIRICAL: `reproduce.py` builds a clean-validating deck where one
         card has a duplicated `advances` edge and another has two distinct

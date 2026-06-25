@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, meta-fix, api-contract]
+summary: "Follow-on to the dependency-advisory drift meta-fix: the advisory is gated on two status dimensions — a terminal gate (already centralized into the `dependency_advisory` helper) and an open-only slice that suppresses 'you may start' on active cards in the two human-facing renderers but not JSON. The meta-fix centralized dimension 1 but left the open-only slice inlined as two independent copies; this card centralizes that slice too."
 definition_of_done: |
   - [x] MECHANICAL: the `status == "open"` slice for the dependency advisory is expressed once (a shared helper or a `queue_only`-style parameter on `dependency_advisory`), and both human-facing renderers — `render_table` and `render_board`'s `card_cell` — consume it instead of each inlining `t.status == "open"`.
   - [x] TDD: a unit test pins the helper's contract — open card with an open prereq → advisory shown; active/terminal card with the same prereq → advisory suppressed; and asserts table and board agree for each.

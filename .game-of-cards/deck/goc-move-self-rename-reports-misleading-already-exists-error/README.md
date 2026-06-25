@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "`goc move <title> <title>` (old == new) resolves `src` and `dst` to the same directory, so the source-exists check passes and the destination-exists check then fires — because `dst` is `src` — aborting with a phantom `ERROR: <dst> already exists` collision instead of a clean no-op or a self-rename-specific message."
 definition_of_done: |
   - [x] TDD: reproduce.py exits zero (self-rename no longer reports a phantom collision)
   - [x] TDD: `goc move <X> <X>` errors with a self-rename message (exit 2) and the stderr does NOT contain "already exists"

@@ -9,6 +9,7 @@ human_gate: decision
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract, unverified]
+summary: "UNVERIFIED. The plugin-context refusal only guards the `--local-skills` flag (`goc/install.py:1438`), but Codex `install`/`upgrade` always vendors skills regardless of any flag (`_should_use_local_skills`, `goc/install.py:530-536`), so it reaches the skill-tree walk that `.iterdir()`s `templates/skills` — a directory the plugin payloads deliberately omit. The hypothesis is an uncaught `FileNotFoundError` (no `.exists()` guard at `_iter_skill_assets`/`_sync_skill_tree`) when a Codex install runs from inside a bundled plugin engine, vs. the clean refusal the Claude `--local-skills` path produces. Code shape confirmed; runtime reachability (does `_is_plugin_context()` fire and does a Codex plugin ever invoke install?) is not yet proven by a reproduce.py."
 definition_of_done: |
   - [ ] EMPIRICAL: `reproduce.py` drives a Codex `install`/`upgrade` with the
         module globals set to a plugin-payload root (so `_is_plugin_context()`

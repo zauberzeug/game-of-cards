@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-29T19:29:58Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |

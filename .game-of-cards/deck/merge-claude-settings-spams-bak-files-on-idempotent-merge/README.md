@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
+summary: "`_merge_claude_settings` writes a fresh timestamped `settings.json.<UTC>.bak` and prints a warning on every run when the user's `.claude/settings.json` has a non-object item inside a `hooks.<event>[].hooks` list — even when the merge changes nothing. The prior fix gated the final `write_text` on a `changed` flag but left this no-op branch's backup side effect ungated, so repeated `goc upgrade` runs accumulate dead `.bak` files."
 definition_of_done: |
   - [x] TDD: a new test in tests/test_install.py merges a settings file that already carries every GoC hook AND contains a non-object hook item, twice; asserts zero `settings.json.*.bak` siblings are created and the file is byte-for-byte unchanged
   - [x] TDD: a companion assertion confirms the non-object-items warning/backup STILL fires when GoC must rewrite the file (a hook is missing), so the safety copy is preserved on a real mutation

@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "DISPROVED 2026-06-24. The claim that the VALUE column header is left-justified over right-justified data is unobservable: the VALUE data string is bounded at 4 chars (`30.0`), strictly shorter than the 5-char `VALUE` header, so the column width is always pinned to 5 by the header, and at width 5 `_display_ljust` and `_display_rjust` return the identical unpadded `VALUE`. No misalignment occurs in any shipping flow."
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — the VALUE header and its data cells share the same justification (both right-edge-aligned within the column).
   - [ ] TDD: a regression test asserts the VALUE header's right edge lines up with its data cells' right edge in `render_table` (both verbose>=1 and verbose==0 layouts).

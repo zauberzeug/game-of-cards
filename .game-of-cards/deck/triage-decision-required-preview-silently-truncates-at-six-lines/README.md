@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "The text-mode `goc triage` view caps each parked card's `## Decision required` preview at the first 6 lines (`goc/engine.py:5505-5508`) with no `… +N more` continuation marker, so a reader scanning parked decisions sees a section that looks complete but isn't and may record a decision without seeing constraints stated on line 7+."
 definition_of_done: |
   - [x] TDD: a regression test feeds a parked card whose `## Decision required` section has more than 6 lines, runs `goc triage`, and asserts an overflow marker (`… +N more`) appears
   - [x] TDD: the same test asserts the marker count matches the number of dropped lines and names `goc show <title>` so the reader can recover the full text

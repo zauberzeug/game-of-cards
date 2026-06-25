@@ -9,6 +9,7 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
+summary: "`_apply_dod_rewrite` (`goc/engine.py:3707-3725`) replaces DoD checkbox lines by index using each verdict issue's `fix` string, applying any issue that merely has an `idx` and `fix` key with no check that `fix` is non-empty — so an empty `fix` blanks the criterion text to a bare `- [ ]`, contradicting the docstring's 'other items preserved verbatim' promise."
 definition_of_done: |
   - [x] TDD: reproduce.py exits zero (an empty/whitespace `fix` no longer blanks the criterion)
   - [x] TDD: a regression test asserts an accepted issue with `fix: ""` leaves the targeted DoD line verbatim
