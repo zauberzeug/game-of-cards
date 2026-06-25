@@ -104,6 +104,45 @@ class BoardRenderingTest(unittest.TestCase):
         self.assertIn("REVIEW", board)
         self.assertIn("in-review-card", board)
 
+    def test_board_surfaces_card_with_status_outside_schema_enum(self) -> None:
+        """A card whose status is NOT in `schema.status_values` (a legacy
+        status left over after an enum migration, a custom-workflow status the
+        local schema later dropped, or a typo) must still appear on the board
+        under its own trailing column — the board renders every card the table
+        does, never silently dropping one. Mirrors `render_table`'s
+        show-everything contract; `goc validate` is the channel that flags the
+        status as invalid, not the read view."""
+        from goc import engine
+
+        custom = replace(
+            engine.load_schema(),
+            status_values=["open", "active", "done", "disproved", "superseded"],
+        )
+        in_enum = engine.Card(
+            title="alpha-open",
+            path=Path("/tmp/alpha-open"),
+            frontmatter={"title": "alpha-open", "status": "open", "human_gate": "none"},
+            body="",
+            dod_open=0,
+            dod_done=0,
+        )
+        off_enum = engine.Card(
+            title="legacy-blocked",
+            path=Path("/tmp/legacy-blocked"),
+            frontmatter={"title": "legacy-blocked", "status": "blocked", "human_gate": "none"},
+            body="",
+            dod_open=0,
+            dod_done=0,
+        )
+        with mock.patch.object(engine, "load_schema", return_value=custom):
+            board = engine.render_board([in_enum, off_enum], max_rows=20, no_color=True)
+            table = engine.render_table([in_enum, off_enum], verbose=0, no_color=True)
+
+        # The table already shows every card; the board must agree.
+        self.assertIn("legacy-blocked", table)
+        self.assertIn("legacy-blocked", board)
+        self.assertIn("BLOCKED", board)
+
     def test_board_preserves_title_when_worker_suffix_expands_cell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

@@ -1,21 +1,21 @@
 ---
 title: board-drops-cards-whose-status-is-outside-the-schema-enum
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-25T20:20:50Z"
-closed_at: null
+closed_at: "2026-06-25T20:31:35Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 summary: "`render_board` files cards into columns keyed solely by the schema's status enum and drops any card whose status is not one of those keys — no column, no diagnostic, not counted in the `… +N more` overflow. `render_table` (the default view) keeps the card, so the two human-facing renderers disagree about which cards exist, and the board's own comment claims it `never silently drops a card`."
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (board surfaces an off-enum card; defect no longer fires)
-  - [ ] TDD: a regression test asserts a card whose status is outside `schema.status_values` appears in `render_board` output, mirroring `test_board_columns_derive_from_schema_status_values`
-  - [ ] MECHANICAL: `render_board` renders off-enum statuses as extra trailing columns (first-seen order) so every card the table shows, the board shows too
-  - [ ] MECHANICAL: behavior-preserving for the shipped six-status enum (no output diff when every card's status is in the enum)
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
+  - [x] TDD: reproduce.py exits zero (board surfaces an off-enum card; defect no longer fires)
+  - [x] TDD: a regression test asserts a card whose status is outside `schema.status_values` appears in `render_board` output, mirroring `test_board_columns_derive_from_schema_status_values`
+  - [x] MECHANICAL: `render_board` renders off-enum statuses as extra trailing columns (first-seen order) so every card the table shows, the board shows too
+  - [x] MECHANICAL: behavior-preserving for the shipped six-status enum (no output diff when every card's status is in the enum)
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -63,15 +63,30 @@ disagree about which cards exist.
 
 ## Empirical evidence
 
+Before the fix, `reproduce.py` exited non-zero:
+
 ```
 schema enum: ['open', 'active', 'done', 'disproved', 'superseded']
 legacy-blocked in BOARD? False
 legacy-blocked in TABLE? True
+DEFECT: render_table shows the off-enum card but render_board drops it.
 ```
 
-A card with `status: blocked` and a schema enum that no longer lists
-`blocked` vanishes from `goc --board` but stays in the default `goc`
-table. See `reproduce.py`.
+After the fix it exits zero and the off-enum card gets its own
+trailing column:
+
+```
+schema enum: ['open', 'active', 'done', 'disproved', 'superseded']
+legacy-blocked in BOARD? True
+legacy-blocked in TABLE? True
+
+--- BOARD ---
+OPEN           | ACTIVE | DONE | DISPROVED | SUPERSEDED | BLOCKED
+...            |        |      |           |            | legacy-blocked [m]
+OK: render_board surfaces the off-enum card.
+```
+
+See `reproduce.py`.
 
 ## Why it matters
 
@@ -94,14 +109,17 @@ from the schema. This card is the residual silent-drop class for
 statuses outside the schema enum — a different defect the column-derive
 fix did not address.
 
-## Fix
+## Fix (applied)
 
-In `render_board`, after building `by_status` from the schema enum,
-collect any statuses present in `cards` but absent from the enum (in
-first-seen order) and append them as extra trailing columns before the
-per-column sort/overflow loop. This mirrors `render_table`'s
-"show everything" contract and makes the existing block comment true.
-Rendering each off-enum status under its own labelled column (rather
-than one merged "OTHER" bucket) keeps the board's column-per-status
-model intact and shows the operator exactly which legacy status the
-straggler carries.
+In `render_board`, after building `by_status` from the schema enum, a
+pre-pass walks `cards` and, for any status not already a column,
+appends it to `columns` and seeds an empty bucket — in first-seen
+order. The per-card filing loop then files unconditionally
+(`by_status[t.status].append(t)`), so every card lands in a column.
+This mirrors `render_table`'s "show everything" contract and makes the
+existing block comment ("never silently drops a card") true. Rendering
+each off-enum status under its own labelled column (rather than one
+merged "OTHER" bucket) keeps the board's column-per-status model intact
+and shows the operator exactly which legacy status the straggler
+carries. Regression coverage:
+`tests/test_board.py::test_board_surfaces_card_with_status_outside_schema_enum`.

@@ -2993,9 +2993,21 @@ def render_board(
     by_status: dict[str, list[Card]] = {c: [] for c in columns}
     if by_title is None:
         by_title = {t.title: t for t in cards}
+    # A card whose status is not in the schema enum (a legacy status left
+    # over after an enum migration, a custom-workflow status the local
+    # schema later dropped, or a hand-edit typo) still belongs on the
+    # board: the table renderer shows every card, and the comment above
+    # promises the board "never silently drops a card". Give each such
+    # status its own trailing column, in first-seen order, so the board
+    # surfaces the straggler under its real status label instead of
+    # discarding it. `goc validate` is the channel that flags the status
+    # as invalid; the read view's job is to show it, not hide it.
     for t in cards:
-        if t.status in by_status:
-            by_status[t.status].append(t)
+        if t.status not in by_status:
+            columns.append(t.status)
+            by_status[t.status] = []
+    for t in cards:
+        by_status[t.status].append(t)
     hidden_by_status: dict[str, int] = {}
     for c in columns:
         sorted_col = sort_default(by_status[c], values=values, by_title=by_title)
