@@ -39,12 +39,14 @@ class WaitingFilterStatusScopeTest(unittest.TestCase):
         status: str,
         waiting_on: str | None,
         waiting_until: str | None = None,
+        closed_at: str | None = None,
     ) -> None:
         card_dir = cwd / "deck" / title
         card_dir.mkdir(parents=True)
         overlay = f"waiting_on: {waiting_on}\n" if waiting_on is not None else ""
         if waiting_until is not None:
             overlay += f"waiting_until: {waiting_until}\n"
+        closed = f'"{closed_at}"' if closed_at is not None else "null"
         (card_dir / "README.md").write_text(
             "---\n"
             f"title: {title}\n"
@@ -53,7 +55,7 @@ class WaitingFilterStatusScopeTest(unittest.TestCase):
             "stage: null\n"
             "contribution: low\n"
             "created: 2026-05-04\n"
-            "closed_at: null\n"
+            f"closed_at: {closed}\n"
             "human_gate: none\n"
             "advances: []\n"
             "advanced_by: []\n"
@@ -106,6 +108,32 @@ class WaitingFilterStatusScopeTest(unittest.TestCase):
             self.assertIn("bare-deferral", titles)
             self.assertIn("open-block", titles)
             self.assertNotIn("elapsed-wait", titles)
+
+    def test_waiting_excludes_terminal_cards_with_stale_overlay(self) -> None:
+        """`--waiting` surfaces *active* impediments only. Closing a card
+        never clears its `waiting_on` / `waiting_until` overlay (a
+        documented invariant), so a terminal card carries a stale overlay
+        forever. It must NOT appear in the impeded view — mirroring the
+        board renderer's `live` gate — while live impeded cards still do.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "open-impeded", "open", "external")
+            self.write_card(cwd, "active-impeded", "active", "external")
+            for term in ("done", "disproved", "superseded"):
+                self.write_card(
+                    cwd, f"{term}-stale", term, "external",
+                    waiting_until="2099-12-31", closed_at="2026-05-10",
+                )
+
+            result = self.run_goc(cwd, "--waiting", "--json")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            titles = self.titles(result)
+            self.assertIn("open-impeded", titles)
+            self.assertIn("active-impeded", titles)
+            for term in ("done", "disproved", "superseded"):
+                self.assertNotIn(f"{term}-stale", titles)
 
     def test_explicit_status_open_still_narrows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -3496,7 +3496,16 @@ def _cmd_default(args):
             and dt >= closed_since_threshold
         ]
     if getattr(args, "waiting", False):
-        filtered = [t for t in filtered if waiting_impedes(t)]
+        # `--waiting` surfaces *active* impediments. A terminal card can
+        # still carry an overlay (closing never clears `waiting_on` /
+        # `waiting_until`), but that overlay is stale by definition and is
+        # not an actionable wait — mirror the board renderer's `live` gate
+        # (`engine.py` `card_cell`) so the impeded view and the board cannot
+        # disagree about what counts as impeded.
+        filtered = [
+            t for t in filtered
+            if t.status not in TERMINAL_STATUSES and waiting_impedes(t)
+        ]
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
