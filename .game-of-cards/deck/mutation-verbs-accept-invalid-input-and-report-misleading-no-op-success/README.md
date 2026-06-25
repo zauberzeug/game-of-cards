@@ -5,7 +5,7 @@ stage: null
 contribution: medium
 created: "2026-06-25T01:36:42Z"
 closed_at: null
-human_gate: none
+human_gate: decision
 advances: []
 advanced_by:
   - goc-advance-claims-success-when-adding-an-already-existing-edge
@@ -46,6 +46,66 @@ of the target's status. The two families overlap conceptually (both are
 "missing a precondition guard") but are disjoint in their cards and in
 their fix: a terminal-status guard checks `card.status`, an
 input-validation guard checks the *arguments*.
+
+## Decision required
+
+This epic cannot be drained by an autonomous puller: its DoD requires a
+shared validation-failure-shape decision (DoD item 1) **and** closing
+all eight children — each of which carries its own `human_gate:
+decision` per-verb option menu. The gate was raised here (by a
+2026-06-25 pull-card pass) precisely to record the shared-shape bundle
+before authorising a single implementation series, exactly as the
+original scope note anticipated. A human (or a session with authority
+to make API-contract taste calls) needs to pick **one** shared shape so
+the eight children stop re-deriving it eight ways.
+
+### The three candidate shapes (DoD item 1)
+
+1. **Strict-refuse** — print `goc: error: <reason>` (or `ERROR: …`) to
+   stderr, mutate nothing, `sys.exit(2)`.
+2. **Exit-0-with-stderr-WARNING** — perform/skip as today but emit a
+   `WARNING:` line to stderr; exit stays 0.
+3. **Distinct no-op success message** — exit 0, but the stdout line
+   honestly states no mutation occurred (e.g. `advance: edge already
+   exists; no change`).
+
+### Recommended default: strict-refuse (exit 2)
+
+The codebase already establishes strict-refuse as *the* precondition-
+failure shape, so this is a small confirmation rather than an open
+design space:
+
+- `_cmd_advance` already rejects a self-target with
+  `print("ERROR: cannot advance a card with itself", file=sys.stderr);
+  sys.exit(2)` and rejects a would-be cycle the same way
+  (`goc/engine.py:5233`, `:5237`). The
+  `goc-unadvance-with-self-target` child is literally asking for the
+  symmetric guard `advance` already has.
+- Argument/precondition errors throughout `engine.py` use the
+  `print("goc: error: …", file=sys.stderr); sys.exit(2)` pattern
+  (`:2496`, `:2510`, `:2541`, `:3437`, `:3463`, …); exit 1 is reserved
+  for validation-graph failures and exit 3 for FATAL schema/IO.
+- Strict-refuse is the only shape that protects the `--commit`-driven
+  scripts and agents the "Why it matters" section names: a non-zero
+  exit is the contract those callers already check.
+
+The two no-op-success siblings (`advance`/`unadvance` redundant edge)
+want one shape applied symmetrically to BOTH directions; strict-refuse
+satisfies that (redundant add → exit 2; redundant remove → exit 2).
+
+### Factoring sub-decision (also DoD item 1)
+
+A reusable helper (e.g. `_refuse(reason: str)` that prints
+`goc: error: {reason}` and `sys.exit(2)`) vs. per-verb inline checks.
+Recommendation: a one-line helper for the message+exit, with the
+*precondition predicate* inline per verb (each verb's invalid-input
+test is verb-specific — redundant edge, empty string, mode conflict,
+non-active transition — so only the failure emission is shared).
+
+**To proceed:** `Skill(decide-card)
+mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
+--decision "<shape + factoring>" --because "<why>"`, then a follow-on
+series can close the eight children under the recorded shape.
 
 ## Family roster (open children, wired via `advanced_by`)
 
