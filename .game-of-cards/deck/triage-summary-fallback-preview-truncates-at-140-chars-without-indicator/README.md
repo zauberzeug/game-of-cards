@@ -1,21 +1,21 @@
 ---
 title: triage-summary-fallback-preview-truncates-at-140-chars-without-indicator
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-25T01:52:22Z"
-closed_at: null
+closed_at: "2026-06-25T01:57:04Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 summary: "`goc triage`'s summary-fallback preview hard-cuts a card's summary at 140 characters with a bare `[:140]` slice and prints the fragment raw — no `…`, no `(see goc show …)` pointer. A long summary masquerades as complete and is clipped mid-word. The sibling `decision_required` branch already advertises its clip; this branch silently does not."
 definition_of_done: |
-  - [ ] `reproduce.py` exits non-zero against the current engine (defect present) and zero after the fix.
-  - [ ] The summary-fallback branch in `_cmd_triage` advertises the clip when the preview is shortened (append `…` and a `(see goc show <title>)` pointer), matching the `decision_required` branch convention.
-  - [ ] Short summaries (≤140 chars, single line) are printed unchanged — no spurious indicator.
-  - [ ] A regression test in `tests/` asserts a clipped summary preview carries an indicator and a short one does not.
-  - [ ] `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes.
+  - [x] `reproduce.py` exits non-zero against the current engine (defect present) and zero after the fix.
+  - [x] The summary-fallback branch in `_cmd_triage` advertises the clip when the preview is shortened (append `…` and a `(see goc show <title>)` pointer), matching the `decision_required` branch convention.
+  - [x] Short summaries (≤140 chars, single line) are printed unchanged — no spurious indicator.
+  - [x] A regression test in `tests/` asserts a clipped summary preview carries an indicator and a short one does not.
+  - [x] `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
