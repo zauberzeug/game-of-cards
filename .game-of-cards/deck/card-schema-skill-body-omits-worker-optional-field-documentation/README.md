@@ -1,6 +1,6 @@
 ---
 title: card-schema-skill-body-omits-worker-optional-field-documentation
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-25T01:58:12Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] Plugin/skill mirrors regenerated via the sync hook (`.claude/`, `.codex/`, plugin payloads) and the OpenClaw port; `python scripts/sync_plugin_assets.py --check` and `scripts/port_skills_to_openclaw.py --check` pass.
   - [ ] `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes.
   - [ ] (Optional) a regression test asserting every `optional_fields` entry in the bundled `schema.yaml` is mentioned in the SKILL.md body, to close the class.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `card-schema` skill body omits documentation of the `worker` optional field
