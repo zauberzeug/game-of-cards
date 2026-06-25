@@ -1,6 +1,6 @@
 ---
 title: block-scalar-emitter-reenumerates-parser-whitespace-rules-and-keeps-drifting
-summary: "The block-scalar emitter (`_emit_block_field`, engine.py:287) and the vendored block-scalar parser (`_parse_block_scalar`, _vendor/yaml_lite.py) hand-maintain mirror-image rules for which lines carry meaningful whitespace and how the block indent is fixed. Because each side restates the other's whitespace handling rather than sharing one contract, the two keep drifting — 5 separate bug cards have now patched this one family one whitespace edge case at a time (leading, interior, trailing, less-indented, leading-only). Decision-gated on how to make the emit->parse round-trip whitespace-faithful by construction."
+summary: "The block-scalar emitter (`_emit_block_field`, engine.py:287) and the vendored block-scalar parser (`_parse_block_scalar`, _vendor/yaml_lite.py) hand-maintain mirror-image rules for which lines carry meaningful whitespace and how the block indent is fixed. Because each side restates the other's whitespace handling rather than sharing one contract, the two keep drifting — 6 separate bug cards have now patched this one family one edge case at a time (leading, interior, trailing, less-indented, leading-only whitespace, plus the `|`/`|-`/`|+` chomp-indicator choice). Decision-gated on how to make the emit->parse round-trip whitespace-faithful by construction."
 status: open
 stage: null
 contribution: medium
@@ -14,6 +14,7 @@ advanced_by:
   - block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip
   - frontmatter-emitter-mangles-block-scalar-values-that-carry-leading-whitespace
   - frontmatter-emitter-drops-leading-whitespace-only-line-in-block-scalar-values
+  - emit-frontmatter-drops-trailing-blank-lines-from-multi-line-string-fields
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.
@@ -37,8 +38,9 @@ indicator), and what counts as meaningful trailing/leading whitespace.
 Because the emitter's knowledge is a *copy* of the parser's rather than
 *derived* from it, the two keep drifting: every time one side is hardened or
 a new whitespace shape is noticed, a fresh per-shape round-trip bug lands.
-**Five separate bug cards have now patched this one family one whitespace
-edge case at a time.** That is the missing-abstraction signal.
+**Six separate bug cards have now patched this one family one edge case
+at a time** — five whitespace shapes plus the chomp-indicator (`|`/`|-`/`|+`)
+choice. That is the missing-abstraction signal.
 
 This is the block-scalar sibling of the inline-scalar root card
 [frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting](../frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting/),
@@ -75,6 +77,12 @@ all of them:
   — first non-blank content line begins with whitespace.
 - [frontmatter-emitter-drops-leading-whitespace-only-line-in-block-scalar-values](../frontmatter-emitter-drops-leading-whitespace-only-line-in-block-scalar-values/)
   — a leading whitespace-only line before the first non-blank line.
+- [emit-frontmatter-drops-trailing-blank-lines-from-multi-line-string-fields](../emit-frontmatter-drops-trailing-blank-lines-from-multi-line-string-fields/)
+  — the chomp *indicator* dimension: the emitter chose only `|`/`|-` and
+  never `|+`, so a value ending in a trailing blank line lost it on
+  re-emit even though the parser already supported keep. This is the
+  same drift on the "indicator decision" half of the contract (which the
+  DoD already names), not the whitespace-line half.
 
 ## Why it matters
 

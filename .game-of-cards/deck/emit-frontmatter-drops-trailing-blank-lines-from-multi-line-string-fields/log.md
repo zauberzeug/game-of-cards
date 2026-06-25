@@ -50,6 +50,16 @@ clip/strip round-trips and DoD emission remain green, both function
 docstrings describe the three-way chomp choice, and `goc validate` is
 clean. Closed as a fix-through fix during a pull-card drain.
 
+## 2026-06-25 — wired into the drift family
+
+Post-close, this card was added as the 6th `advanced_by` instance of
+[block-scalar-emitter-reenumerates-parser-whitespace-rules-and-keeps-drifting](../block-scalar-emitter-reenumerates-parser-whitespace-rules-and-keeps-drifting/)
+— the open, decision-gated root that tracks `_emit_block_field`
+re-enumerating `_parse_block_scalar`'s contract instead of sharing one.
+This fix patched the chomp-indicator face of that drift in isolation; the
+root's eventual unified mechanism should subsume it. (`advances` edge set
+via `goc advance`.)
+
 ## Closure verification (2026-06-25T19:40:16Z)
 
 ### Layer-3 (GoC DoD)
