@@ -133,6 +133,25 @@ class BoardRenderingTest(unittest.TestCase):
             self.assertIn("@claude[bot]", result.stdout)
             self.assertNotIn("@claude[b ", result.stdout)
 
+    def test_board_worker_filter_spans_all_status_columns(self) -> None:
+        """`goc --board --worker X` must render X's cards across every status
+        column, not just X's open cards. The worker-scoped board consumes the
+        `filtered` set; without auto-extending the implicit status default to
+        `all` for a board request, that set carries the open-only default and
+        the ACTIVE / DONE / … columns silently empty out — hiding exactly the
+        active work the board exists to surface.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "alice-open-card", "open", worker="alice")
+            self.write_card(cwd, "alice-active-card", "active", worker="alice")
+
+            result = self.run_goc(cwd, "--board", "--worker", "alice", "--no-color")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("alice-open-card", result.stdout)
+            self.assertIn("alice-active-card", result.stdout)
+
     def _open_card(self, title: str):
         from goc import engine
 

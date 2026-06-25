@@ -1,19 +1,19 @@
 ---
 title: board-worker-filter-hides-active-cards-by-applying-open-only-default
 summary: "`goc --board --worker X` shows only X's *open* cards — the ACTIVE / DONE / DISPROVED / SUPERSEDED columns are empty. The worker-scoped board path consumes the `filtered` list, which carries the implicit `status: open` default, so every non-open card for that worker vanishes. The board's whole purpose is cross-status flow, and its own active-card banner tells users to `Check goc --board` to find active work — but adding `--worker` then hides exactly that."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-25T01:29:02Z"
-closed_at: null
+closed_at: "2026-06-25T01:32:30Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: regression test asserts that `goc --board --worker X` renders X's `active` (and other non-open) cards, not only X's `open` cards — i.e. the worker-scoped board spans every status column, matching `goc --status all --board --worker X`.
-  - [ ] MECHANICAL: `engine.py` extends the implicit-status auto-default so a board request (no explicit `--status`/`--done`) resolves `status` to `all`, mirroring the existing `--waiting` / `--closed-since` auto-extend. The contested `board_cards = filtered if (status_filter_explicit or args.worker) else cards` gate line is left untouched (it is owned by `board-view-silently-ignores-filters-other-than-status-and-worker`).
-  - [ ] TDD: `reproduce.py` exits zero (defect no longer fires).
+  - [x] TDD: regression test asserts that `goc --board --worker X` renders X's `active` (and other non-open) cards, not only X's `open` cards — i.e. the worker-scoped board spans every status column, matching `goc --status all --board --worker X`.
+  - [x] MECHANICAL: `engine.py` extends the implicit-status auto-default so a board request (no explicit `--status`/`--done`) resolves `status` to `all`, mirroring the existing `--waiting` / `--closed-since` auto-extend. The contested `board_cards = filtered if (status_filter_explicit or args.worker) else cards` gate line is left untouched (it is owned by `board-view-silently-ignores-filters-other-than-status-and-worker`).
+  - [x] TDD: `reproduce.py` exits zero (defect no longer fires).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -103,10 +103,10 @@ and `active`, then runs the CLI:
 - `goc --status all --board --worker alice` → both cards rendered
   (the workaround).
 
-## Proposed fix
+## Fix (applied)
 
-Add the board request to the implicit-status auto-extend, alongside
-`--waiting` / `--closed-since`:
+The board request was added to the implicit-status auto-extend,
+alongside `--waiting` / `--closed-since`:
 
 ```python
 elif args.status_flag is None:

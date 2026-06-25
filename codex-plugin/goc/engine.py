@@ -3443,9 +3443,16 @@ def _cmd_default(args):
         # --waiting and --closed-since both surface cards beyond the open
         # queue (active-impeded cards, closed cards): auto-extend the default
         # status to "all" so the subsequent filter has something to narrow.
+        # --board spans every status column by design; when it consumes the
+        # filtered set (worker-scoped path), the open-only default would
+        # otherwise hide the worker's active/closed cards, so extend here too.
         status = (
             "all"
-            if (closed_since_threshold is not None or getattr(args, "waiting", False))
+            if (
+                closed_since_threshold is not None
+                or getattr(args, "waiting", False)
+                or args.board
+            )
             else "open"
         )
     else:
