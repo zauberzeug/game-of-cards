@@ -184,5 +184,71 @@ class DocstringCitationAccuracyTest(unittest.TestCase):
         )
 
 
+class CreateCardScaffoldClaimAccuracyTest(unittest.TestCase):
+    """`goc new` (engine._cmd_new) writes exactly README.md + log.md. Any skill
+    description that advertises a reproduce.py *stub* as a scaffold deliverable
+    overstates the tool — reproduce.py is hand-authored in create-card Step 6."""
+
+    # The stale promise: reproduce.py named as a scaffolded stub.
+    _STALE_STUB = re.compile(r"reproduce\.py\s+stub", re.IGNORECASE)
+    _DESCRIPTION_FILES = [
+        ROOT / "goc" / "templates" / "skills" / "create-card" / "SKILL.md",
+        ROOT / "goc" / "templates" / "skills" / "deck" / "SKILL.md",
+        ROOT / ".claude" / "skills" / "create-card" / "SKILL.md",
+        ROOT / ".claude" / "skills" / "deck" / "SKILL.md",
+    ]
+
+    def test_no_skill_advertises_reproduce_py_stub_scaffold(self) -> None:
+        for path in self._DESCRIPTION_FILES:
+            if not path.exists():
+                continue
+            matches = self._STALE_STUB.findall(path.read_text())
+            self.assertFalse(
+                matches,
+                msg=(
+                    f"{path.relative_to(ROOT)}: advertises a 'reproduce.py stub' "
+                    f"({len(matches)} occurrence(s)), but `goc new` never writes one. "
+                    "reproduce.py is hand-authored in create-card Step 6; reword the claim."
+                ),
+            )
+
+    def test_goc_new_writes_only_readme_and_log(self) -> None:
+        """Pin the actual scaffold contract the descriptions must not overstate."""
+        import tempfile
+
+        import goc.engine as engine
+
+        saved = (engine.DECK_DIR, engine.DECK_ROOT, engine.REPO_ROOT)
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                deck = Path(td) / "deck"
+                deck.mkdir()
+                engine.DECK_DIR = deck
+                engine.DECK_ROOT = Path(td)
+                engine.REPO_ROOT = Path(td)
+                title = "scaffold-contract-probe-card"
+                args = argparse.Namespace(
+                    title=title,
+                    contribution="low",
+                    gate="none",
+                    tags=["bug"],
+                    worker=None,
+                    allow_jargon=False,
+                    commit=False,
+                    no_commit=True,
+                    advances_wire=[],
+                    advanced_by_wire=[],
+                )
+                engine._cmd_new(args)
+                written = sorted(p.name for p in (deck / title).iterdir())
+        finally:
+            engine.DECK_DIR, engine.DECK_ROOT, engine.REPO_ROOT = saved
+        self.assertEqual(
+            written,
+            ["README.md", "log.md"],
+            msg="goc new's file set changed; revisit the skill descriptions that document it.",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

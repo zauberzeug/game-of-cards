@@ -244,8 +244,9 @@ One skill per job; compose, don't bundle.
   default; the Q&A mode calls the `decide-card` skill per answer.
 - the `next-card` skill — auto-pick the highest-leverage open
   `gate=none` card to work on next. Read-only; does NOT flip status.
-- the `create-card` skill — file a new card with proper frontmatter,
-  DoD scaffold, and (for bug-class) reproduce.py stub.
+- the `create-card` skill — file a new card with proper frontmatter
+  and a DoD scaffold (reproduce.py is authored by hand for bug-class
+  cards, not scaffolded by the tool).
 - the `advance-card` skill — flip status (open→active, *→open, *→disproved,
   *→superseded) and manage the `waiting_on` impediment overlay
   (`goc wait`). Wraps `goc status` and `goc wait`. Status + overlay
