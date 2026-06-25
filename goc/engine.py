@@ -5599,8 +5599,14 @@ def _cmd_triage(args):
                         f"(see `goc show {entry['title']}`)"
                     )
             elif entry["summary"]:
-                first = entry["summary"].splitlines()[0][:140]
-                lines.append(f"  > {first}")
+                summary_lines = entry["summary"].splitlines()
+                first_line = summary_lines[0] if summary_lines else ""
+                clipped = len(summary_lines) > 1 or len(first_line) > 140
+                first = first_line[:140].rstrip()
+                if clipped:
+                    lines.append(f"  > {first} … (see `goc show {entry['title']}`)")
+                else:
+                    lines.append(f"  > {first}")
             lines.append("")
     lines.append("Next: ask your agent \"decisions to make\" (Skill(scan-deck)) to walk each card and record decisions via Skill(decide-card).")
     print("\n".join(lines))
