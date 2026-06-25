@@ -128,7 +128,12 @@ LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"
 # ────────────────────────────────────────────────────────────────────────────
 # Frontmatter parser — used for SCHEMA.md AND every card's README.md
 
-FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)$", re.DOTALL)
+# The `(\n+)` group captures the blank line(s) between the last frontmatter
+# field and the closing `---` so that yaml_lite — not the delimiter — decides
+# their fate (a `|+` keep scalar must retain its trailing blank line, while a
+# bare scalar ignores it). A naive `(.*?)\n---` lets the delimiter swallow that
+# newline, silently shortening a final keep block scalar on every round-trip.
+FRONTMATTER_RE = re.compile(r"^---\n(.*?)(\n+)---[ \t]*(?:\n(.*))?$", re.DOTALL)
 
 
 class FrontmatterError(ValueError):
@@ -157,8 +162,11 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             "frontmatter unterminated: opening '---' at line 1 has no "
             "matching closing '---' delimiter"
         )
+    # group(2) is the blank line(s) before the closing `---`; hand them to
+    # yaml_lite so a final `|+` keep scalar keeps its trailing blank line.
+    # group(3) is the body (None when `---` sits at EOF with no trailing line).
     try:
-        data = yaml.safe_load(m.group(1))
+        data = yaml.safe_load(m.group(1) + m.group(2))
     except ValueError as exc:
         raise FrontmatterError(
             f"YAML parse error inside frontmatter: {exc}"
@@ -170,7 +178,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             "frontmatter is not a mapping: the YAML between the '---' "
             f"delimiters parsed to a {type(data).__name__}, expected key/value pairs"
         )
-    return data, m.group(2)
+    return data, m.group(3) or ""
 
 
 _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
@@ -432,7 +440,13 @@ def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
     if not m:
         raise ValueError("no frontmatter found")
     fm_text = m.group(1)
-    body = m.group(2)
+    # group(2) is the blank-line run before the closing `---` (a final `|+`
+    # keep scalar's trailing blank line lives here); group(3) is the body.
+    # Re-emit the blank run between the frontmatter and `---` so the keep
+    # scalar round-trips. For the common single-newline separator this is
+    # byte-identical to the prior two-group behavior.
+    trailing = m.group(2)
+    body = m.group(3) or ""
     # Match the field header and any block continuation that belongs to it.
     # A continuation only opens with an indented line directly after the
     # header, so a flat scalar (`status: x`) followed by a blank line keeps
@@ -450,7 +464,7 @@ def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
         fm_text = fm_text.rstrip() + f"\n{field_name}: {new_value}"
     else:
         fm_text = pattern.sub(lambda _: f"{field_name}: {new_value}", fm_text, count=1)
-    return f"---\n{fm_text}\n---\n{body}"
+    return f"---\n{fm_text}{trailing}---\n{body}"
 
 
 DECISION_REQUIRED_RE = re.compile(

@@ -626,6 +626,66 @@ class BlockScalarIndicatorRoundTripTest(unittest.TestCase):
             )
 
 
+class FinalKeepScalarParseBoundaryTest(unittest.TestCase):
+    """parse_frontmatter must not let the closing `---` delimiter swallow the
+    trailing blank line of a `|+` (keep) block scalar that is the LAST
+    frontmatter field. Regression for
+    frontmatter-re-drops-trailing-blank-line-of-final-keep-block-scalar — the
+    parse-side mirror of the emitter keep fix, which
+    BlockScalarIndicatorRoundTripTest explicitly scoped out ("a multi-line
+    `summary` is never the last frontmatter field").
+    """
+
+    def test_final_keep_scalar_round_trips_trailing_blank(self):
+        from goc import engine as e
+
+        # `summary` ends in a blank line AND is the final frontmatter field, so
+        # its trailing `\n` sits immediately before the closing `---`.
+        fm = {"title": "x", "summary": "ends with blank\n\n"}
+        emitted = e.emit_frontmatter(fm)
+        self.assertIn("summary: |+\n", emitted)
+        parsed, _ = e.parse_frontmatter(emitted)
+        self.assertEqual(parsed["summary"], "ends with blank\n\n")
+
+    def test_final_keep_scalar_round_trips_with_body(self):
+        from goc import engine as e
+
+        fm = {"title": "x", "summary": "alpha\nbeta\n\n"}
+        emitted = e.emit_frontmatter(fm, body="\n# heading\n\nprose\n")
+        parsed, body = e.parse_frontmatter(emitted)
+        self.assertEqual(parsed["summary"], "alpha\nbeta\n\n")
+        self.assertEqual(body, "\n# heading\n\nprose\n")
+
+    def test_mutate_frontmatter_preserves_final_keep_scalar(self):
+        # mutate_frontmatter_field is the second FRONTMATTER_RE consumer; a gate
+        # flip via `goc decide` must not destroy the body or shorten a final
+        # keep scalar.
+        from goc import engine as e
+
+        fm = {"title": "x", "human_gate": "decision", "summary": "keep me\n\n"}
+        emitted = e.emit_frontmatter(fm, body="\n# body\n\ntext\n")
+        mutated = e.mutate_frontmatter_field(emitted, "human_gate", "none")
+        parsed, body = e.parse_frontmatter(mutated)
+        self.assertEqual(parsed["human_gate"], "none")
+        self.assertEqual(parsed["summary"], "keep me\n\n")
+        self.assertEqual(body, "\n# body\n\ntext\n")
+
+    def test_body_containing_triple_dash_still_splits(self):
+        from goc import engine as e
+
+        doc = "---\ntitle: y\n---\nbody with --- inside\nmore\n"
+        data, body = e.parse_frontmatter(doc)
+        self.assertEqual(data["title"], "y")
+        self.assertEqual(body, "body with --- inside\nmore\n")
+
+    def test_frontmatter_at_eof_without_trailing_newline(self):
+        from goc import engine as e
+
+        data, body = e.parse_frontmatter("---\na: 1\n---")
+        self.assertEqual(data["a"], 1)
+        self.assertEqual(body, "")
+
+
 class NonLFLineBreakRefusalTest(unittest.TestCase):
     """A single-line scalar carrying a non-LF line-break character must never be
     emitted bare. The vendored parser splits the document with str.splitlines(),
