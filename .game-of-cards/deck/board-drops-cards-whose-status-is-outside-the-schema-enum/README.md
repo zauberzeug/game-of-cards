@@ -1,6 +1,6 @@
 ---
 title: board-drops-cards-whose-status-is-outside-the-schema-enum
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-25T20:20:50Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `render_board` renders off-enum statuses as extra trailing columns (first-seen order) so every card the table shows, the board shows too
   - [ ] MECHANICAL: behavior-preserving for the shipped six-status enum (no output diff when every card's status is in the enum)
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Board drops cards whose status is outside the schema enum
