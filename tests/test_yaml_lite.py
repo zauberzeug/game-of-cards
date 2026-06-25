@@ -535,11 +535,44 @@ class BlockScalarIndicatorRoundTripTest(unittest.TestCase):
         self.assertIn("summary: |-\n", out)
         self.assertEqual(e.parse_frontmatter(out)[0]["summary"], "alpha\nbeta")
 
+    def test_value_with_trailing_blank_line_emits_keep(self):
+        # Regression for
+        # emit-frontmatter-drops-trailing-blank-lines-from-multi-line-string-fields:
+        # a value ending in a blank line (>=2 trailing newlines) must emit the
+        # keep indicator (`|+`), not clip (`|`), so the trailing blank line(s)
+        # survive the emit->parse round-trip instead of being chomped to one.
+        # `status` follows `summary` so the block is bounded by a sibling key —
+        # a multi-line `summary` is never the last frontmatter field.
+        from goc import engine as e
+
+        cases = [
+            "foo\n\n",                    # one trailing blank line
+            "first\nsecond\n\n",          # multi-line body + trailing blank
+            "x\n\n\n",                    # two trailing blank lines
+            "  indented\nmore\n\n",       # leading-indent forces |2+ header
+        ]
+        for summary in cases:
+            # `summary` before `status` so the block is bounded by a sibling
+            # key, the way a real card's frontmatter is shaped.
+            fm = {"title": "t", "summary": summary, "status": "open"}
+            out = e.emit_frontmatter(fm, body="x")
+            # Keep chomp: bare `|+`, or `|2+` when a leading-indent content line
+            # forces the explicit indentation indicator.
+            self.assertRegex(
+                out, r"summary: \|\d*\+", msg=f"not keep for {summary!r}"
+            )
+            self.assertEqual(
+                e.parse_frontmatter(out)[0]["summary"], summary,
+                msg=f"trailing blank line(s) lost for {summary!r}",
+            )
+
     def test_reemit_is_idempotent_for_both_states(self):
         from goc import engine as e
 
-        for summary in ("a\nb\n", "a\nb"):
-            fm = {"title": "t", "status": "open", "summary": summary}
+        for summary in ("a\nb\n", "a\nb", "a\nb\n\n"):
+            # `summary` before `status` so the keep block is bounded by a
+            # sibling key (a multi-line `summary` is never the last field).
+            fm = {"title": "t", "summary": summary, "status": "open"}
             once = e.emit_frontmatter(fm, body="x")
             twice = e.emit_frontmatter(e.parse_frontmatter(once)[0], body="x")
             self.assertEqual(once, twice, msg=f"non-idempotent for {summary!r}")

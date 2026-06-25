@@ -300,8 +300,19 @@ def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
     parser, which treats any blank-after-rstrip line as a structural blank while
     the block indent is still unknown (`block_indent is None`).
     """
-    text = (value or "").rstrip("\n")
-    lines = text.splitlines()
+    raw = value or ""
+    if indicator.endswith("+"):
+        # Keep chomp (`|+`): preserve every trailing blank line. The parser
+        # reads a keep block back as "\n".join(chunks) + "\n", so the content
+        # lines to emit are exactly `raw` minus its single final newline —
+        # rstrip()ing here would discard the very blank lines keep exists to
+        # preserve.
+        text = raw[:-1] if raw.endswith("\n") else raw
+        lines = text.split("\n")
+    else:
+        # Clip (`|`) and strip (`|-`) both drop trailing blank lines.
+        text = raw.rstrip("\n")
+        lines = text.splitlines()
     first_idx = next((i for i, ln in enumerate(lines) if ln.strip()), len(lines))
     first_content = lines[first_idx] if first_idx < len(lines) else ""
     if first_content[:1].isspace() or any(
@@ -345,8 +356,10 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     (one `- item` per line) when non-empty; empty lists still render as `[]`.
     `worker` emits as a flat string when only `who` is set, or an inline
     mapping when `where` is also set. Other multi-line strings pick their block
-    chomp indicator from the value: `|` (clip) when the value ends in a newline,
-    `|-` (strip) when it does not, so the emit->parse round-trip is faithful.
+    chomp indicator three ways from the value's trailing-newline state so the
+    emit->parse round-trip is faithful: `|+` (keep) when the value ends in a
+    blank line (`\\n\\n`), `|` (clip) when it ends in a single newline, and
+    `|-` (strip) when it ends in neither.
     Single-line strings are rendered inline.
     """
     lines = ["---"]
@@ -385,12 +398,20 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
             # which refuses it at the boundary rather than corrupting it here.
             #
             # Pick the chomp indicator from the value's own trailing-newline
-            # state so the emit->parse round-trip is faithful: the parser reads
-            # a clip block (`|`) back with one trailing newline and a strip
-            # block (`|-`) back with none. Hard-coding `|-` silently dropped a
-            # trailing newline (and flipped an authored `|` to `|-`) on every
-            # re-emit of a clip-style field such as a multi-line `summary`.
-            indicator = "|" if value.endswith("\n") else "|-"
+            # state so the emit->parse round-trip is faithful. The parser reads
+            # a keep block (`|+`) back with every trailing blank line intact, a
+            # clip block (`|`) back with exactly one trailing newline, and a
+            # strip block (`|-`) back with none. The three-way choice is
+            # required: hard-coding `|-` silently dropped a trailing newline,
+            # and the two-way `|`/`|-` choice silently dropped a *trailing
+            # blank line* (a value ending in `\n\n` clipped down to one `\n`)
+            # on every re-emit of such a field — e.g. a multi-line `summary`.
+            if value.endswith("\n\n"):
+                indicator = "|+"
+            elif value.endswith("\n"):
+                indicator = "|"
+            else:
+                indicator = "|-"
             lines.extend(_emit_block_field(key, value, indicator=indicator))
             continue
         lines.append(f"{key}: {_yaml_inline(value)}")
