@@ -3646,6 +3646,8 @@ def _cmd_validate(args):
         print(w.message, file=sys.stderr)
     for w in validate_decision_verdict_coherence(cards):
         print(w.message, file=sys.stderr)
+    for w in validate_plugin_hook_double_fire():
+        print(w.message, file=sys.stderr)
     for e in detect_advance_cycles(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
@@ -4544,6 +4546,112 @@ def effective_skills_source() -> str:
     if configured != "auto":
         return configured
     return "plugin" if _claude_plugin_present() else "vendored"
+
+
+GOC_PLUGIN_NAME = "game-of-cards"
+
+
+def _read_enabled_plugins(settings_path: Path) -> dict:
+    """Return one settings file's `enabledPlugins` map, or {} on any problem.
+
+    Tolerates a missing/unreadable file, non-JSON content, a non-dict root,
+    or an `enabledPlugins` value that is not a dict — every such case yields
+    {} so the caller can merge without special-casing.
+    """
+    try:
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    enabled = data.get("enabledPlugins")
+    return enabled if isinstance(enabled, dict) else {}
+
+
+def _resolve_enabled_plugins(repo_root: Path, home: Path) -> dict:
+    """Merge `enabledPlugins` across the settings cascade, most-specific last.
+
+    Precedence (low → high): user `~/.claude/settings.json`, project
+    `<repo>/.claude/settings.json`, project-local
+    `<repo>/.claude/settings.local.json`. A later source overrides an earlier
+    one per plugin key, matching Claude Code's own resolution.
+    """
+    merged: dict = {}
+    for path in (
+        home / ".claude" / "settings.json",
+        repo_root / ".claude" / "settings.json",
+        repo_root / ".claude" / "settings.local.json",
+    ):
+        merged.update(_read_enabled_plugins(path))
+    return merged
+
+
+def _enabled_goc_plugin_key(repo_root: Path, home: Path) -> str | None:
+    """Return the enabled GoC plugin key (e.g. `game-of-cards@mkt`), or None.
+
+    Matches by the plugin name before `@`, so any marketplace qualifier is
+    accepted; truthiness follows the resolved cascade value.
+    """
+    for key, value in _resolve_enabled_plugins(repo_root, home).items():
+        if value and isinstance(key, str) and key.split("@", 1)[0] == GOC_PLUGIN_NAME:
+            return key
+    return None
+
+
+def _goc_hook_basenames() -> set[str]:
+    """The GoC lifecycle-hook script basenames, derived from the registry."""
+    from goc.install import GOC_CLAUDE_HOOKS
+
+    return {command.split("/")[-1].strip() for command in GOC_CLAUDE_HOOKS.values()}
+
+
+def _vendored_goc_hooks_registered(repo_root: Path) -> list[str]:
+    """GoC hook basenames registered as vendored in the repo's settings.
+
+    Scans `<repo>/.claude/settings.json`'s `hooks` block for `command`
+    strings invoking `${CLAUDE_PROJECT_DIR}/.claude/hooks/<basename>` — the
+    vendored form, distinct from the plugin's `${CLAUDE_PLUGIN_ROOT}`
+    registration. Returns the sorted GoC hook basenames found.
+    """
+    try:
+        data = json.loads((repo_root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    blob = json.dumps(data.get("hooks", {}))
+    return sorted(n for n in _goc_hook_basenames() if f".claude/hooks/{n}" in blob)
+
+
+def validate_plugin_hook_double_fire(
+    repo_root: Path | None = None, home: Path | None = None
+) -> list[BlockerWarning]:
+    """Warn when GoC hooks will fire twice: enabled plugin AND vendored copy.
+
+    Advisory only — the double-registration wastes tokens and doubles the
+    interruption rate but does not break the deck. Gated on plugin
+    *enablement* (resolved from the settings cascade), not mere payload
+    presence, so disabling the plugin for the repo clears the warning even
+    while the payload stays cached. Reads host config that is absent in CI,
+    so the caller must not let it gate exit.
+    """
+    repo_root = REPO_ROOT if repo_root is None else repo_root
+    home = Path.home() if home is None else home
+    key = _enabled_goc_plugin_key(repo_root, home)
+    if not key:
+        return []
+    vendored = _vendored_goc_hooks_registered(repo_root)
+    if not vendored:
+        return []
+    return [BlockerWarning(
+        "PLUGIN_AND_VENDORED_HOOKS_DOUBLE_FIRE",
+        key,
+        f"the Claude Code GoC plugin is enabled for this repo AND these hooks "
+        f"are also vendored in .claude/ ({', '.join(vendored)}); each fires "
+        f"twice per turn. Resolve by disabling the plugin for this repo "
+        f"(set \"{key}\": false under enabledPlugins, or run /plugin) OR switch "
+        f"to skills_source: plugin and remove .claude/hooks/.",
+    )]
 
 
 def _run_automated_check(check: dict) -> tuple[bool, str]:
