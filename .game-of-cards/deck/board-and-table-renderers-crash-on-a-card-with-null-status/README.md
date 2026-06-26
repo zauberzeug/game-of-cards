@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-06-26T02:06:09Z"
 closed_at: "2026-06-26T02:10:28Z"
 human_gate: none
-advances: []
+advances:
+  - bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
 advanced_by: []
 tags: [bug, api-contract]
 summary: "A single card with `status: null` (or an empty `status:`) parses to a Python `None`, and `Card.status` returns it verbatim. Both `render_table` (the default `goc` view) and `render_board` then call string methods on the value (`_display_width(None)`, `None.upper()`) and crash with a `TypeError`/`AttributeError` — so one malformed card makes the WHOLE deck unlistable, not just the offending row. `goc validate` flags the bad status but you can no longer reach a view to find it."

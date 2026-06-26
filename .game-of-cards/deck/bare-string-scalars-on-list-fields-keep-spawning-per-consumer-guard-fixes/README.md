@@ -15,6 +15,7 @@ advanced_by:
   - render-json-emits-bare-string-edge-fields-as-json-strings-not-lists
   - repair-edges-crashes-with-traceback-on-bare-string-inverse-edge-field
   - consuming-repo-tags-loader-crashes-or-pollutes-on-non-string-list-element
+  - board-and-table-renderers-crash-on-a-card-with-null-status
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (loader-time shape rejection), B (centralized `_field_as_list` helper routing all reads), or C (continue per-consumer guards) — record in log.md with the rationale. See `## Decision required` below.
