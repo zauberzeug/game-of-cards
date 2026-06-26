@@ -1,7 +1,7 @@
 ---
 title: goc-validate-misses-plugin-and-vendored-hook-double-registration
 summary: "When a repo has GoC hooks vendored in .claude/ AND the Claude Code GoC plugin is also enabled for that repo, both register the same lifecycle hooks and each fires twice (wasted tokens, double interruption). goc validate has no check for this — add an advisory warning that detects the overlap by resolving the enabledPlugins settings cascade against the repo's vendored .claude/hooks registrations."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-26T06:36:40Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the warning names the enabled plugin key, the overlapping hooks, and both remediations (disable the plugin for this repo, or switch to `skills_source: plugin` + drop `.claude/hooks/`)
   - [ ] PROCESS: asset mirrors synced (engine.py → claude/codex/openclaw `goc/` mirrors); parity + porter checks green
   - [ ] PROCESS: full suite green and `uv run goc validate` clean (self-check: this dogfood repo currently triggers the warning until the plugin is disabled for it — confirm the message reads correctly here)
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # goc-validate-misses-plugin-and-vendored-hook-double-registration
