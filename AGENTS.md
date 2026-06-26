@@ -77,25 +77,44 @@ Canonical flow:
 gh workflow run release.yml -f version=X.Y.Z
 ```
 
-That single command publishes to PyPI, npm, AND ClawHub from one
-`workflow_dispatch` event. The workflow itself commits the version
-literals back to `main` and tags the rewrite commit as `vX.Y.Z` (as
-the last two steps of the build job, after every consistency check
-passes), then the three publish jobs run in parallel. ClawHub's OIDC
-trusted publisher accepts `workflow_dispatch` events regardless of ref,
-so a dispatch from `refs/heads/main` publishes the ClawHub leg natively
-— no second event needed. There is no `CLAWHUB_TOKEN` secret; adding
-one actively breaks releases (the reusable workflow's token-override
-path authenticates as a different publisher than the OIDC path that
-registered the package, and the Convex store rejects publishes with
-`Package already exists and belongs to another publisher`).
+That single command publishes to PyPI, npm, AND ClawHub. The workflow
+commits the version literals back to `main` and tags the rewrite commit
+as `vX.Y.Z` (the last two steps of the build job, after every
+consistency check passes). PyPI and npm publish from that same run.
+ClawHub is the exception: its OIDC trusted-publish requires the
+published source commit to equal the OIDC-verified `sha`, but a
+from-`main` dispatch mints that token for the pre-rewrite HEAD while the
+bundle is the bot's post-rewrite tag commit — they never match (this is
+why a single from-`main` dispatch could not publish ClawHub starting
+with v0.0.25). So after pushing the tag, the build job **auto-dispatches
+`release.yml` again on the tag ref** with `clawhub_only=true` (the
+`redispatch-clawhub` job). That second run is a `workflow_dispatch` on
+`refs/tags/vX.Y.Z`, so its OIDC `sha` IS the tag commit and the ClawHub
+publish clears the guard; it skips smoke/PyPI/npm. It is still ONE human
+command — the tag re-dispatch is automatic. No PAT is needed
+(`workflow_dispatch` is the documented exception to the rule that
+`GITHUB_TOKEN`-triggered events do not start new runs), and no ClawHub
+reconfiguration is needed (the trusted publisher pins the caller
+workflow *filename* — which stays `release.yml` — via the OIDC
+`workflow_ref` claim, not the ref). There is no `CLAWHUB_TOKEN` secret;
+adding one actively breaks releases (the reusable workflow's
+token-override path authenticates as a different publisher than the OIDC
+path that registered the package, and the Convex store rejects publishes
+with `Package already exists and belongs to another publisher`).
 
 Recovery / republish on an existing tag (if a publish job
 transient-failed):
 
 ```bash
-gh workflow run release.yml --ref vX.Y.Z
+gh workflow run release.yml --ref vX.Y.Z                       # re-run all publishes
+gh workflow run release.yml --ref vX.Y.Z -f clawhub_only=true  # ClawHub leg only
 ```
+
+The first re-runs every publish job from the tag (PyPI/npm no-op or fail
+on the already-published version; ClawHub succeeds because, dispatched
+from the tag, the OIDC `sha` now equals the published commit). The
+second is the lean path that mirrors what `redispatch-clawhub` fires
+automatically — it skips smoke/PyPI/npm and publishes only ClawHub.
 
 `git push origin vX.Y.Z` from a maintainer machine no longer triggers
 a release — the workflow only runs on `workflow_dispatch`. The closed
@@ -103,8 +122,13 @@ predecessor card `auto-publish-npm-and-clawhub-on-tag-push` documented
 a two-step tag-push + workflow-dispatch flow; that conclusion was
 superseded by
 `find-single-trigger-release-flow-for-all-three-registries`, which
-verified that the workflow_dispatch event type (not the ref) is what
-the ClawHub validator cares about.
+verified that the workflow_dispatch *event type* is what unlocks OIDC
+publishing. That remains true, but it is not sufficient on its own:
+ClawHub's trusted-publish *source-commit* guard additionally requires
+the dispatched commit to equal the published commit, which is why the
+ClawHub leg is published by a re-dispatch on the tag (see the ClawHub
+paragraph above) — tracked by
+`clawhub-publish-fails-on-every-release-until-manual-tag-redispatch`.
 
 See `.github/workflows/release.yml` header comment for trusted
 publisher configuration details.

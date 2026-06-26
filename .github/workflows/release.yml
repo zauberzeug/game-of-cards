@@ -164,6 +164,10 @@ on:
         description: 'Build + smoke only; do not publish'
         type: boolean
         default: false
+      clawhub_only:
+        description: 'Internal: publish ONLY the ClawHub leg, from a tag ref. Auto-set when release.yml re-dispatches itself on vX.Y.Z so the OIDC sha equals the tag commit (ClawHub trusted-publish requires source commit == verified SHA). Do not set by hand for a normal release; for manual ClawHub recovery use `--ref vX.Y.Z -f clawhub_only=true`.'
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -468,7 +472,11 @@ jobs:
     # historically rejected the `push` event family, so smoke would fail
     # at action startup). If the action ever supports push events, this
     # gate can be removed.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    #
+    # `!inputs.clawhub_only`: the tag-triggered ClawHub-only re-dispatch
+    # publishes the same commit the parent run already smoke-tested, so it
+    # skips this ~3.5-min gate. `publish-clawhub` accepts a skipped smoke.
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.clawhub_only }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -580,13 +588,13 @@ jobs:
     needs: [build, smoke]
     runs-on: ubuntu-latest
     # `always()` keeps this from being auto-skipped if smoke is skipped
-    # (no path skips it today, but the gate is kept defensive). The
-    # explicit result checks then require build to succeed and smoke to
-    # either succeed or be skipped — never to have failed. The
-    # `release` mode publishes from `refs/heads/main` (the workflow
-    # created the tag in this run); the `tag` mode publishes from
-    # `refs/tags/vX.Y.Z` (recovery / republish).
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run }}
+    # (the ClawHub-only re-dispatch skips smoke; this job is gated off in
+    # that mode anyway via `!inputs.clawhub_only`). The explicit result
+    # checks then require build to succeed and smoke to either succeed or
+    # be skipped — never to have failed. The `release` mode publishes from
+    # `refs/heads/main` (the workflow created the tag in this run); the
+    # `tag` mode publishes from `refs/tags/vX.Y.Z` (recovery / republish).
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run && !inputs.clawhub_only }}
     environment:
       name: pypi
       url: https://pypi.org/project/game-of-cards/
@@ -611,7 +619,7 @@ jobs:
     name: Publish to npm
     needs: [build, smoke]
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run }}
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && (needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run && !inputs.clawhub_only }}
     environment:
       name: npm
       url: https://www.npmjs.com/package/game-of-cards
@@ -668,10 +676,19 @@ jobs:
     # workflow_dispatch only — ClawHub's OIDC TP refuses any other event
     # type. The whole workflow now triggers only on workflow_dispatch
     # (no `push: tags:`), so the event-name check is structurally always
-    # true today; kept defensive in case `push:` is ever re-added. Both
-    # the new-release path (`release` mode) and the recovery path
-    # (`tag` mode) are accepted, plus dry-run preview.
-    if: ${{ always() && needs.build.result == 'success' && needs.smoke.result == 'success' && github.event_name == 'workflow_dispatch' && (((needs.build.outputs.mode == 'tag' || needs.build.outputs.mode == 'release') && !inputs.dry_run) || inputs.dry_run == true) }}
+    # true today; kept defensive in case `push:` is ever re-added.
+    #
+    # Runs ONLY in `tag` mode (or dry-run), NOT in `release` mode.
+    # ClawHub's trusted-publish requires the published source commit to
+    # equal the OIDC-verified `sha`. In a from-`main` `release` run the
+    # OIDC `sha` is the pre-rewrite dispatch HEAD, but we publish the
+    # bot's post-rewrite tag commit — they never match. So the `release`
+    # run delegates ClawHub to `redispatch-clawhub`, which re-dispatches
+    # this workflow on the tag ref (`mode == tag`, `clawhub_only`); there
+    # the OIDC `sha` IS the tag commit. `tag` mode also covers manual
+    # recovery (`--ref vX.Y.Z [-f clawhub_only=true]`). Smoke is accepted
+    # as skipped because the clawhub_only re-dispatch skips it.
+    if: ${{ always() && needs.build.result == 'success' && (needs.smoke.result == 'success' || needs.smoke.result == 'skipped') && github.event_name == 'workflow_dispatch' && ((needs.build.outputs.mode == 'tag' && !inputs.dry_run) || inputs.dry_run == true) }}
     permissions:
       # id-token: write is required for OIDC trusted publishing. The
       # reusable workflow uses audience `clawhub-workflow-source` to
@@ -697,3 +714,45 @@ jobs:
       # from the bundle-file source path.
       version: ${{ needs.build.outputs.release_version }}
       dry_run: ${{ inputs.dry_run == true }}
+
+  redispatch-clawhub:
+    # ClawHub's OIDC trusted-publish requires the published source commit
+    # to equal the OIDC-verified `sha` (see `publish-clawhub`). A from-main
+    # `release` dispatch cannot satisfy that: its OIDC `sha` is the
+    # pre-rewrite `main` HEAD, but we publish the bot's post-rewrite tag
+    # commit. So once the tag is pushed (build) and smoke passes,
+    # re-dispatch THIS workflow on the tag ref with `clawhub_only=true`.
+    # That run is `workflow_dispatch` on `refs/tags/vX.Y.Z`, so its OIDC
+    # `sha` IS the tag commit and `publish-clawhub` clears the guard.
+    #
+    # No PAT: `workflow_dispatch` is an explicit exception to the rule that
+    # GITHUB_TOKEN-triggered events do not start new runs (GitHub changelog
+    # 2022-09-08), so the default token with `actions: write` can
+    # self-dispatch a run that actually executes. No ClawHub
+    # reconfiguration: the entry workflow filename stays `release.yml`
+    # (ClawHub's trusted publisher pins the caller filename, not the ref).
+    #
+    # Only the `release` path delegates. In `tag` mode the dispatch already
+    # happened (or a maintainer is recovering by hand), so this is gated off
+    # to prevent an infinite re-dispatch loop; `dry_run` publishes nothing.
+    name: Dispatch ClawHub publish from the release tag
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    if: ${{ needs.build.result == 'success' && needs.smoke.result == 'success' && needs.build.outputs.mode == 'release' && !inputs.dry_run && !inputs.clawhub_only }}
+    permissions:
+      actions: write   # required for `gh workflow run` (workflow_dispatch)
+      contents: read
+    steps:
+      - name: Re-dispatch release.yml on the tag in ClawHub-only mode
+        # Pass values via env (not inline ${{ }}) so nothing untrusted ever
+        # reaches the shell; RELEASE_VERSION is the maintainer-supplied
+        # version the build job already validated.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ needs.build.outputs.release_version }}
+        run: |
+          gh workflow run release.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "v$RELEASE_VERSION" \
+            -f clawhub_only=true
+          echo "::notice::Dispatched ClawHub-only publish on tag v$RELEASE_VERSION."
