@@ -12,8 +12,8 @@ name: Audit Deck
 
 on:
   schedule:
-    # cadence: audit-deck every 3d (minute offset :15) — managed by scripts/set_cadence.py; retune via that script, not the two lines below
-    - cron: '15 0 */3 * *'
+    # cadence: audit-deck every 1w (minute offset :15) — managed by scripts/set_cadence.py; retune via that script, not the two lines below
+    - cron: '15 0 * * 1'
   workflow_dispatch:
 
 permissions:

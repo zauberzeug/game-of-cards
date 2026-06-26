@@ -88,6 +88,15 @@ class IntervalToCronTest(unittest.TestCase):
         # 31d is the last representable day-of-month step.
         self.assertEqual(setc.interval_to_cron("31d", 0), "0 0 */31 * *")
 
+    def test_weekly_exact_via_dow(self) -> None:
+        # 1w -> exact weekly via the day-of-week field (Monday), drift-free.
+        self.assertEqual(setc.interval_to_cron("1w", 15), "15 0 * * 1")
+        self.assertEqual(setc.interval_to_cron("1w", 45), "45 0 * * 1")
+
+    def test_multi_week_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            setc.interval_to_cron("2w", 0)
+
     def test_garbage_rejected(self) -> None:
         for bad in ("", "h", "1m", "abc", "1.5h"):
             with self.assertRaises(ValueError):

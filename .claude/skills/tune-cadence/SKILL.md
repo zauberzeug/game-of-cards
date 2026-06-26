@@ -32,10 +32,11 @@ python3 scripts/set_cadence.py --pull 1h --audit 3h --refine 3h
 
 - Pass only the workflows you want to change; omit the rest to leave them.
 - Interval specs: `<N>h` where N divides 24 (1, 2, 3, 4, 6, 8, 12) or
-  `24h`; and `<N>d` for every-N-days. Note `Nd` (N≥2) becomes a
-  day-of-month `*/N` cron step that realigns each month, so it's "roughly
-  every N days" — the gap across a month boundary is shorter. There is no
-  exact every-N-days cron.
+  `24h`; `<N>d` for every-N-days; and `1w` for exact weekly. Note `Nd`
+  (N≥2) becomes a day-of-month `*/N` cron step that realigns each month,
+  so it's "roughly every N days" — the gap across a month boundary is
+  shorter. `1w` is exact (day-of-week, every Monday); there is no clean
+  cron for every-N-days or every-N-weeks.
 - Minute offsets are fixed (pull `:13`, audit `:15`, refine `:45`) so the
   three deck-mutating agents never launch on the same minute and race on
   `main`.

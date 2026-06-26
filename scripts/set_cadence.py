@@ -17,11 +17,12 @@ from the *default branch*)::
     python3 scripts/set_cadence.py --pull 1h --audit 3h --refine 3h
 
 Interval specs: ``<N>h`` where N divides 24 (1, 2, 3, 4, 6, 8, 12) or
-``24h``; and ``<N>d`` for every-N-days (``1d`` is daily; ``Nd`` maps to a
+``24h``; ``<N>d`` for every-N-days (``1d`` is daily; ``Nd`` maps to a
 day-of-month ``*/N`` step, which realigns at each month boundary — gaps
-near month-end are shorter than N days). Per-workflow minute offsets are
-fixed (pull :13, audit :15, refine :45) so the three deck-mutating cloud
-agents never launch on the same minute and race each other on ``main``.
+near month-end are shorter than N days); and ``1w`` for exact weekly
+(every Monday, via the drift-free day-of-week field). Per-workflow minute
+offsets are fixed (pull :13, audit :15, refine :45) so the three
+deck-mutating cloud agents never launch on the same minute on ``main``.
 
 This tool is intentionally **repo-local**: it targets THIS repo's own
 autonomous workflow files, which ``goc install`` does not ship to
@@ -56,7 +57,7 @@ WORKFLOWS: dict[str, tuple[str, int, str]] = {
 
 _CRON_RE = re.compile(r"^[ \t]*- cron: .*$", re.MULTILINE)
 _CADENCE_RE = re.compile(r"^[ \t]*# cadence: .*$", re.MULTILINE)
-_SPEC_RE = re.compile(r"^(\d+)\s*([hd])$")
+_SPEC_RE = re.compile(r"^(\d+)\s*([hdw])$")
 
 
 def interval_to_cron(spec: str, offset: int) -> str:
@@ -72,6 +73,8 @@ def interval_to_cron(spec: str, offset: int) -> str:
       approximation; there is no exact every-N-days cron. N > 31 is
       rejected: cron's day-of-month field caps at 31, so a larger step
       matches only the 1st and cannot represent the requested cadence.
+    - ``1w`` → exact weekly via the day-of-week field (every Monday); this
+      one is drift-free. ``Nw`` (N≥2) has no clean cron and is rejected.
 
     Anything else raises ``ValueError``.
     """
@@ -80,9 +83,17 @@ def interval_to_cron(spec: str, offset: int) -> str:
     m = _SPEC_RE.match(spec.strip().lower())
     if not m:
         raise ValueError(
-            f"unrecognized interval {spec!r}; use <N>h (1,2,3,4,6,8,12), 24h, or <N>d"
+            f"unrecognized interval {spec!r}; use <N>h (1,2,3,4,6,8,12), 24h, <N>d, or 1w"
         )
     n, unit = int(m.group(1)), m.group(2)
+    if unit == "w":
+        if n != 1:
+            raise ValueError(
+                f"{spec!r}: only 1w is expressible in cron (exact weekly via the "
+                "day-of-week field); every-N-weeks has no clean cron — use 1w or <N>d"
+            )
+        # exact weekly: every Monday (matches this repo's historical weekly slot).
+        return f"{offset} 0 * * 1"
     if unit == "d":
         if n < 1:
             raise ValueError(f"{spec!r}: day interval must be >= 1")
