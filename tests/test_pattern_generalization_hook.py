@@ -10,11 +10,14 @@ generalization reminders.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 HOOK = ROOT / "goc" / "templates" / "hooks" / "pattern_generalization_check.py"
@@ -235,6 +238,93 @@ class ReminderWordingTest(unittest.TestCase):
 
     def test_dedup_first(self):
         self.assertIn("dedup first", self.hook.REMINDER)
+
+
+class OptInDefaultTest(unittest.TestCase):
+    """The hook is opt-in (default off): it runs only when
+    `.game-of-cards/config.yaml` explicitly sets
+    `pattern_generalization_check: true`. Absent config, an absent key, or an
+    explicit `false` all leave it a no-op — even on a code-mutating turn.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _project_dir(self, config_text: str | None) -> str:
+        d = Path(tempfile.mkdtemp())
+        if config_text is not None:
+            goc = d / ".game-of-cards"
+            goc.mkdir(parents=True, exist_ok=True)
+            (goc / "config.yaml").write_text(config_text, encoding="utf-8")
+        return str(d)
+
+    # --- the _enabled gate -------------------------------------------------
+    def test_absent_config_is_disabled(self):
+        self.assertFalse(self.hook._enabled(self._project_dir(None)))
+
+    def test_config_without_key_is_disabled(self):
+        self.assertFalse(
+            self.hook._enabled(self._project_dir("workflow:\n  auto_commit: true\n"))
+        )
+
+    def test_explicit_false_is_disabled(self):
+        self.assertFalse(
+            self.hook._enabled(
+                self._project_dir("hooks:\n  pattern_generalization_check: false\n")
+            )
+        )
+
+    def test_explicit_true_is_enabled(self):
+        self.assertTrue(
+            self.hook._enabled(
+                self._project_dir("hooks:\n  pattern_generalization_check: true\n")
+            )
+        )
+
+    # --- main() end-to-end: no-op when disabled, blocks when enabled -------
+    def _run_main(self, config_text: str | None, *, mutation: bool = True):
+        content = (
+            [{"type": "tool_use", "name": "Edit", "input": {}}]
+            if mutation
+            else [{"type": "text", "text": "hi"}]
+        )
+        tf = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
+        )
+        tf.write(json.dumps({"role": "assistant", "content": content}) + "\n")
+        tf.close()
+
+        project_dir = self._project_dir(config_text)
+        stdin = io.StringIO(
+            json.dumps(
+                {
+                    "transcript_path": tf.name,
+                    "cwd": project_dir,
+                    "stop_hook_active": False,
+                }
+            )
+        )
+        err = io.StringIO()
+        with mock.patch.object(self.hook.sys, "stdin", stdin), mock.patch.dict(
+            self.hook.os.environ, {"CLAUDE_PROJECT_DIR": project_dir}
+        ), contextlib.redirect_stderr(err):
+            rc = self.hook.main()
+        return rc, err.getvalue()
+
+    def test_main_is_noop_when_disabled_even_on_mutation(self):
+        rc, err = self._run_main("hooks:\n  pattern_generalization_check: false\n")
+        self.assertEqual(rc, 0)
+        self.assertEqual(err, "")
+
+    def test_main_is_noop_when_key_absent_even_on_mutation(self):
+        rc, _ = self._run_main(None)
+        self.assertEqual(rc, 0)
+
+    def test_main_blocks_when_enabled_on_mutation(self):
+        rc, err = self._run_main("hooks:\n  pattern_generalization_check: true\n")
+        self.assertEqual(rc, 2)
+        self.assertIn("pattern-check", err)
 
 
 if __name__ == "__main__":

@@ -33,7 +33,7 @@ the `uv` tool manager that ships with most developer environments.
 |---|---|---|
 | `SessionStart` | `deck_session_start` | Prints active-card reminder; silent when no cards are in-flight |
 | `UserPromptSubmit` | `deck_prompt_router` | Detects work-initiating prompts; injects a deck-first reminder |
-| `Stop` | `pattern_generalization_check` | After code-mutating turns, prompts the agent to consider filing a generalization card |
+| `Stop` | `pattern_generalization_check` | After code-mutating turns, prompts the agent to consider filing a generalization card. Off by default; enable with `hooks.pattern_generalization_check: true` in `.game-of-cards/config.yaml` |
 
 ## Install
 

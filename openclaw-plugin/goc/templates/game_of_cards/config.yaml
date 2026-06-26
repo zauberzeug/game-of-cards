@@ -44,9 +44,11 @@ workflow:
   #                         # GOC_WORKTREE_DECK=shared environment variable.
 
 hooks:
-  # Set to false to disable the Stop hook that prompts the agent to file
-  # generalization cards after code-mutating turns.
-  pattern_generalization_check: true
+  # Set to true to enable the Stop hook that prompts the agent to file
+  # generalization cards after code-mutating turns. Off by default: the hook
+  # blocks every code-mutating turn to inject its reminder, spending an extra
+  # agent round-trip even when no generalization is warranted.
+  pattern_generalization_check: false
 
 # Optional top-level field: how the queue gets drained. Written by the
 # `kickoff` skill's Stage 6 when the user picks a mode; absent means

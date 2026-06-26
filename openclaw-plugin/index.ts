@@ -465,11 +465,13 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-async function isOptedOut(projectDir: string): Promise<boolean> {
+// Opt-in (default off): the GoC project config must explicitly enable the
+// hook. Absent config, absent key, or any other value leaves it disabled.
+async function isEnabled(projectDir: string): Promise<boolean> {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
     const text = await readFile(configPath, "utf8");
-    return /pattern_generalization_check\s*:\s*false/i.test(text);
+    return /pattern_generalization_check\s*:\s*true/i.test(text);
   } catch {
     return false;
   }
@@ -643,13 +645,15 @@ export default definePluginEntry({
     //         hooks:
     //           allowConversationAccess: true
     //
-    // Opt-out per workspace via .game-of-cards/config.yaml
+    // Opt-in per workspace via .game-of-cards/config.yaml (default off)
     //   hooks:
-    //     pattern_generalization_check: false
+    //     pattern_generalization_check: true
     api.on("agent_end", async (ctx: any) => {
       const projectDir = (ctx?.projectDir as string | undefined) ?? process.cwd();
-      if (await isOptedOut(projectDir)) return;
-      if (ctx?.config?.pattern_generalization_check === false) return;
+      // Run only when explicitly enabled, via either the GoC project config
+      // file or the OpenClaw plugin config.
+      if (!(await isEnabled(projectDir)) &&
+          ctx?.config?.pattern_generalization_check !== true) return;
 
       // TODO(verify-context-shape): agent_end is documented as observing
       // "final messages, success state, and run duration" but the precise

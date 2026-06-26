@@ -13,9 +13,12 @@ The host's own `stop_hook_active` flag (checked below) prevents an infinite
 re-block loop: the second Stop after the agent's continuation turn carries
 `stop_hook_active: true` and is a no-op.
 
-Opt-out per-repo in .game-of-cards/config.yaml:
+Off by default (opt-in): because the hook blocks every code-mutating turn
+to inject the reminder — spending an extra agent round-trip even when no
+generalization is warranted — it runs only when a repo explicitly enables
+it in .game-of-cards/config.yaml:
   hooks:
-    pattern_generalization_check: false
+    pattern_generalization_check: true
 """
 
 from __future__ import annotations
@@ -80,7 +83,13 @@ REMINDER = (
 )
 
 
-def _opted_out(project_dir: str) -> bool:
+def _enabled(project_dir: str) -> bool:
+    """Opt-in (default off): run only when config explicitly enables the hook.
+
+    Returns True iff `.game-of-cards/config.yaml` sets
+    `pattern_generalization_check: true`. Absent config, absent key, or any
+    other value leaves the hook disabled.
+    """
     config = Path(project_dir) / ".game-of-cards" / "config.yaml"
     if not config.exists():
         return False
@@ -88,7 +97,7 @@ def _opted_out(project_dir: str) -> bool:
         m = re.search(
             r"pattern_generalization_check\s*:\s*(false|true)", config.read_text()
         )
-        return bool(m and m.group(1) == "false")
+        return bool(m and m.group(1) == "true")
     except OSError:
         return False
 
@@ -198,7 +207,7 @@ def main() -> int:
         return 0
 
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or "."
-    if _opted_out(project_dir):
+    if not _enabled(project_dir):
         return 0
 
     transcript_path = data.get("transcript_path", "")
