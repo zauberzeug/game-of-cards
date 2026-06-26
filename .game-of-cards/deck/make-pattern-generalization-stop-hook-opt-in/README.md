@@ -1,23 +1,23 @@
 ---
 title: make-pattern-generalization-stop-hook-opt-in
 summary: "Flip the pattern-generalization Stop hook from default-on (opt-out via hooks.pattern_generalization_check: false) to default-off (opt-in via hooks.pattern_generalization_check: true). A blocking Stop hook fires an extra agent round-trip on every code-mutating turn while a generalization card is warranted only occasionally — a poor ratio for an out-of-box default, and blocking Stop is the most intrusive hook class. User decided default-off on 2026-06-26."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-26T02:58:20Z"
-closed_at: null
+closed_at: "2026-06-26T04:10:53Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] TDD: a new test asserts the hook is a no-op when config is absent or has no `pattern_generalization_check` key (default-off), and fires only when the key is explicitly `true` — `tests/test_pattern_generalization_hook.py`
-  - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` detection inverted (enable only on explicit `true`; absent/anything-else → no-op), docstring rewritten opt-out → opt-in
-  - [ ] MECHANICAL: `goc/templates/game_of_cards/config.yaml` ships `pattern_generalization_check: false` with a "set true to enable" comment
-  - [ ] MECHANICAL: OpenClaw TS port (`openclaw-plugin/index.ts`) inverted at BOTH default-on checks (`isOptedOut` regex ~L472 and the `ctx.config.pattern_generalization_check === false` guard ~L652)
-  - [ ] MECHANICAL: `goc/templates/skills/claude-kickoff/SKILL.md:168` hook-catalogue row reworded opt-out → opt-in
-  - [ ] PROCESS: asset mirrors synced (`python scripts/sync_plugin_assets.py`) and OpenClaw re-ported if needed (`python3 scripts/port_skills_to_openclaw.py`); parity checks green
-  - [ ] PROCESS: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
+  - [x] TDD: a new test asserts the hook is a no-op when config is absent or has no `pattern_generalization_check` key (default-off), and fires only when the key is explicitly `true` — `tests/test_pattern_generalization_hook.py` (`OptInDefaultTest`, 7 cases)
+  - [x] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` detection inverted (`_opted_out` → `_enabled`; enable only on explicit `true`; absent/anything-else → no-op), docstring rewritten opt-out → opt-in
+  - [x] MECHANICAL: `goc/templates/game_of_cards/config.yaml` ships `pattern_generalization_check: false` with a "set true to enable" comment
+  - [x] MECHANICAL: OpenClaw TS port (`openclaw-plugin/index.ts`) inverted at BOTH default-on checks (`isOptedOut` → `isEnabled` regex on `true`, and the `agent_end` guard now requires `=== true`)
+  - [x] MECHANICAL: hook-catalogue doc rows reworded opt-out → opt-in (`claude-kickoff/SKILL.md` + claude-plugin/openclaw-plugin READMEs)
+  - [x] PROCESS: asset mirrors synced (`scripts/sync_plugin_assets.py` — 10 files) and OpenClaw porter `--check` clean; both parity checks green
+  - [x] PROCESS: `goc validate` clean; suite green except one pre-existing macOS-local environmental failure (`test_git_auto_commit_rebase_guard` — needs `git rebase -i`, unrelated to this change, passes in CI)
 worker: {who: Rodja Trappe, where: main}
 ---
 
