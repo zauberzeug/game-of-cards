@@ -1,22 +1,22 @@
 ---
 title: goc-validate-misses-plugin-and-vendored-hook-double-registration
 summary: "When a repo has GoC hooks vendored in .claude/ AND the Claude Code GoC plugin is also enabled for that repo, both register the same lifecycle hooks and each fires twice (wasted tokens, double interruption). goc validate has no check for this — add an advisory warning that detects the overlap by resolving the enabledPlugins settings cascade against the repo's vendored .claude/hooks registrations."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-26T06:36:40Z"
-closed_at: null
+closed_at: "2026-06-26T06:42:54Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] TDD: tests cover the matrix — (plugin enabled + vendored hooks) → warns; (plugin disabled/absent + vendored) → silent; (plugin enabled + no vendored hooks) → silent; malformed/missing settings → silent (no crash) — `tests/test_validate_plugin_hook_double_fire.py`
-  - [ ] MECHANICAL: `goc/engine.py` gains `validate_plugin_hook_double_fire(repo_root, home)` returning `BlockerWarning`s, plus helpers to (a) resolve `enabledPlugins` across the user→project→local settings cascade and (b) detect vendored GoC-hook registrations in the repo's `.claude/settings.json`
-  - [ ] MECHANICAL: wired into `_cmd_validate` as an ADVISORY warning (printed, NOT appended to `errors` — must not gate exit 1, since it reads host config absent in CI)
-  - [ ] MECHANICAL: the warning names the enabled plugin key, the overlapping hooks, and both remediations (disable the plugin for this repo, or switch to `skills_source: plugin` + drop `.claude/hooks/`)
-  - [ ] PROCESS: asset mirrors synced (engine.py → claude/codex/openclaw `goc/` mirrors); parity + porter checks green
-  - [ ] PROCESS: full suite green and `uv run goc validate` clean (self-check: this dogfood repo currently triggers the warning until the plugin is disabled for it — confirm the message reads correctly here)
+  - [x] TDD: tests cover the matrix — (plugin enabled + vendored hooks) → warns; (plugin disabled/absent + vendored) → silent; (plugin enabled + no vendored hooks) → silent; malformed/missing settings → silent (no crash); cascade precedence (local disable overrides user enable) — `tests/test_validate_plugin_hook_double_fire.py` (8 cases)
+  - [x] MECHANICAL: `goc/engine.py` gains `validate_plugin_hook_double_fire(repo_root, home)` returning `BlockerWarning`s, plus helpers to (a) resolve `enabledPlugins` across the user→project→local settings cascade and (b) detect vendored GoC-hook registrations in the repo's `.claude/settings.json`
+  - [x] MECHANICAL: wired into `_cmd_validate` as an ADVISORY warning (printed, NOT appended to `errors` — must not gate exit 1, since it reads host config absent in CI)
+  - [x] MECHANICAL: the warning names the enabled plugin key, the overlapping hooks, and both remediations (disable the plugin for this repo, or switch to `skills_source: plugin` + drop `.claude/hooks/`)
+  - [x] PROCESS: asset mirrors synced (engine.py → claude/codex/openclaw `goc/` mirrors — 3 files); parity + porter checks green
+  - [x] PROCESS: `goc validate` runs clean here — now SILENT because the plugin was disabled for this repo, which live-demonstrates the enablement-gating (a synthetic-enabled probe confirmed the message lists all three vendored hooks + both remediations); suite green except the pre-existing macOS-local `test_git_auto_commit_rebase_guard` env failure
 worker: {who: Rodja Trappe, where: main}
 ---
 
