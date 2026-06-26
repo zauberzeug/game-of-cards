@@ -1,7 +1,7 @@
 ---
 title: make-pattern-generalization-stop-hook-opt-in
 summary: "Flip the pattern-generalization Stop hook from default-on (opt-out via hooks.pattern_generalization_check: false) to default-off (opt-in via hooks.pattern_generalization_check: true). A blocking Stop hook fires an extra agent round-trip on every code-mutating turn while a generalization card is warranted only occasionally — a poor ratio for an out-of-box default, and blocking Stop is the most intrusive hook class. User decided default-off on 2026-06-26."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-26T02:58:20Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/skills/claude-kickoff/SKILL.md:168` hook-catalogue row reworded opt-out → opt-in
   - [ ] PROCESS: asset mirrors synced (`python scripts/sync_plugin_assets.py`) and OpenClaw re-ported if needed (`python3 scripts/port_skills_to_openclaw.py`); parity checks green
   - [ ] PROCESS: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # make-pattern-generalization-stop-hook-opt-in
