@@ -1,21 +1,21 @@
 ---
 title: board-and-table-renderers-crash-on-a-card-with-null-status
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-26T02:06:09Z"
-closed_at: null
+closed_at: "2026-06-26T02:10:28Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 summary: "A single card with `status: null` (or an empty `status:`) parses to a Python `None`, and `Card.status` returns it verbatim. Both `render_table` (the default `goc` view) and `render_board` then call string methods on the value (`_display_width(None)`, `None.upper()`) and crash with a `TypeError`/`AttributeError` — so one malformed card makes the WHOLE deck unlistable, not just the offending row. `goc validate` flags the bad status but you can no longer reach a view to find it."
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (both renderers emit output for a null-status card; defect no longer fires)
-  - [ ] TDD: a regression test asserts `render_table` and `render_board` both render a card whose `status` parses to `None` without raising
-  - [ ] MECHANICAL: `Card.status` coerces a `None`/non-string frontmatter value to a string, mirroring the `Card.contribution` property
-  - [ ] MECHANICAL: behavior-preserving for cards whose status is a normal string (no output diff)
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
+  - [x] TDD: reproduce.py exits zero (both renderers emit output for a null-status card; defect no longer fires)
+  - [x] TDD: a regression test asserts `render_table` and `render_board` both render a card whose `status` parses to `None` without raising
+  - [x] MECHANICAL: `Card.status` coerces a `None`/non-string frontmatter value to a string, mirroring the `Card.contribution` property
+  - [x] MECHANICAL: behavior-preserving for cards whose status is a normal string (no output diff)
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -81,11 +81,22 @@ status is always a string.
 
 ## Empirical evidence
 
+Before the fix, `Card.status` returned `None` and both renderers crashed:
+
 ```
-$ uv run python deck/board-and-table-renderers-crash-on-a-card-with-null-status/reproduce.py
 parsed Card.status: None
 render_table:  CRASH TypeError: 'NoneType' object is not iterable
 render_board:  CRASH AttributeError: 'NoneType' object has no attribute 'upper'
+```
+
+After coercing in the property, `Card.status` is `""` and both renderers
+produce output (reproduce.py exits zero):
+
+```
+$ uv run python .game-of-cards/deck/board-and-table-renderers-crash-on-a-card-with-null-status/reproduce.py
+parsed Card.status: ''
+render_table:  OK
+render_board:  OK
 ```
 
 ## Why it matters

@@ -326,6 +326,27 @@ class BoardRenderingTest(unittest.TestCase):
         engine.render_table([card], values=vals, verbose=1, no_color=True)
         self.assertIn("bug,42", table)
 
+    def test_renderers_tolerate_null_status(self) -> None:
+        """A card with `status: null` (or a bare `status:`) parses to a Python
+        None with the key present, so `Card.status` must coerce to `str` — else
+        `render_table` (`_display_width`) and `render_board` (`.upper()` on the
+        off-enum column key) crash the ENTIRE deck view on one bad card.
+        Sibling of the non-string-contribution crash; `goc validate` is the
+        channel that flags the invalid status, not the read view."""
+        from goc import engine
+
+        card = self._open_card("null-status")
+        card.frontmatter["status"] = None
+
+        # The property hands a string to every downstream consumer.
+        self.assertEqual("", card.status)
+
+        vals = engine.compute_values([card])
+        # Neither renderer raises.
+        engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        engine.render_board([card], values=vals, max_rows=20, no_color=True)
+
     def test_board_marks_none_contribution_with_placeholder(self) -> None:
         """Coercion must not regress the empty/None case: a blank
         `contribution:` (parses to None) stays falsy and keeps the `[?]`

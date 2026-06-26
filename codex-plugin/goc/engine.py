@@ -733,7 +733,14 @@ class Card:
 
     @property
     def status(self) -> str:
-        return self.frontmatter.get("status", "")
+        # Coerce None/non-string to a string, mirroring `contribution` below.
+        # A card with `status: null` (or a bare `status:`) parses to a Python
+        # None with the key present, so a plain `.get("status", "")` returns
+        # None — which then crashes the table/board renderers that call string
+        # methods on the value. `goc validate` still flags the bad status from
+        # the raw `fm["status"]`, so coercing here only protects the renderers.
+        v = self.frontmatter.get("status")
+        return "" if v is None else str(v)
 
     @property
     def stage(self):
