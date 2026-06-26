@@ -623,7 +623,12 @@ def _load_consuming_repo_tags() -> set[str]:
         value = block.get("canonical_tags") or []
         if not isinstance(value, list):
             continue
-        out.update(value)
+        # Guard elements, not just the container: a non-string element
+        # would either crash (`set.update` raises TypeError on an
+        # unhashable nested list/dict) or silently pollute the tag set
+        # (an int/bool can never match a string tag). Filter to str,
+        # matching the engine's non-string-element guard family.
+        out.update(t for t in value if isinstance(t, str))
     return out
 
 

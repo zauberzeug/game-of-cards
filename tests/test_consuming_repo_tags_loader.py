@@ -48,6 +48,25 @@ class ConsumingRepoTagsLoaderGuardTest(unittest.TestCase):
             with self.subTest(shape=label):
                 self.assertEqual(self._run_with_canonical_tags_md(body), set())
 
+    def test_unhashable_list_element_does_not_crash(self) -> None:
+        # A nested list under canonical_tags is unhashable; the buggy
+        # `set.update(value)` raised TypeError (unhashable type: 'list')
+        # and, via load_schema(), crashed every goc command. The guard
+        # must drop the bad element and keep the valid string tags.
+        loaded = self._run_with_canonical_tags_md(
+            "```yaml\ncanonical_tags:\n  - good-tag\n  - [nested, list]\n```\n"
+        )
+        self.assertEqual(loaded, {"good-tag"})
+
+    def test_hashable_non_string_list_elements_are_dropped(self) -> None:
+        # Ints/bools are hashable, so the buggy code silently added them
+        # to the set ({'good-tag', 123, True}) where they can never match
+        # a string tag. The guard must filter them out.
+        loaded = self._run_with_canonical_tags_md(
+            "```yaml\ncanonical_tags:\n  - good-tag\n  - 123\n  - true\n```\n"
+        )
+        self.assertEqual(loaded, {"good-tag"})
+
     def test_multiple_blocks_accumulate_only_valid_lists(self) -> None:
         # One well-formed block, one malformed bare-string block. The
         # accumulator must keep the valid block's entries and drop the

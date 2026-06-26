@@ -1,20 +1,20 @@
 ---
 title: consuming-repo-tags-loader-crashes-or-pollutes-on-non-string-list-element
 summary: "`_load_consuming_repo_tags()` (engine.py:620-627) guards the *shape* of a `canonical_tags:` block (list vs non-list) but never type-checks its *elements*. A non-string element crashes the entire CLI on unhashable values (`TypeError: unhashable type` via `set.update`) or silently pollutes the canonical-tag set on hashable ones (ints, bools). Because `load_schema()` calls this loader, the crash takes down every `goc` command, not just `validate`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-26T01:48:08Z"
-closed_at: null
+closed_at: "2026-06-26T01:52:50Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `_load_consuming_repo_tags()` against a `canonical-tags.md` whose `canonical_tags:` list contains an unhashable element (nested list) returns the valid string tags rather than raising `TypeError`, and a list with hashable non-string elements (int, bool) drops them rather than adding them to the set.
-  - [ ] MECHANICAL: `_load_consuming_repo_tags()` (engine.py:620-627) filters list elements to `str` before `out.update`, matching the established non-string-element guard family.
-  - [ ] TDD: regression test in `tests/test_consuming_repo_tags_loader.py` covers both the unhashable-element crash case and the hashable-non-string pollution case (extending the existing shape-guard tests).
-  - [ ] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `pre-commit run --all-files` clean (plugin mirrors auto-sync).
+  - [x] TDD: `reproduce.py` exits zero — `_load_consuming_repo_tags()` against a `canonical-tags.md` whose `canonical_tags:` list contains an unhashable element (nested list) returns the valid string tags rather than raising `TypeError`, and a list with hashable non-string elements (int, bool) drops them rather than adding them to the set.
+  - [x] MECHANICAL: `_load_consuming_repo_tags()` (engine.py:620-627) filters list elements to `str` before `out.update`, matching the established non-string-element guard family.
+  - [x] TDD: regression test in `tests/test_consuming_repo_tags_loader.py` covers both the unhashable-element crash case and the hashable-non-string pollution case (extending the existing shape-guard tests).
+  - [x] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `pre-commit run --all-files` clean (plugin mirrors auto-sync).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -75,14 +75,22 @@ user-authored `.game-of-cards/canonical-tags.md`:
 
 ## Empirical evidence
 
+Before the fix, `reproduce.py` printed (defect present):
+
 ```
-$ uv run python deck/consuming-repo-tags-loader-crashes-or-pollutes-on-non-string-list-element/reproduce.py
 unhashable element: CRASH: TypeError unhashable type: 'list'
 hashable non-string elements: RESULT: {'good-tag', True, 123}
+FAIL: defect present
 ```
 
-(Output pasted after `reproduce.py` lands; the assertions above are the
-falsifiable predictions.)
+After the element-filter guard, it exits 0:
+
+```
+$ uv run python deck/consuming-repo-tags-loader-crashes-or-pollutes-on-non-string-list-element/reproduce.py
+unhashable element: RESULT: {'good-tag'}
+hashable non-string elements: RESULT: {'good-tag'}
+PASS: non-string list elements are filtered, not crashed/added
+```
 
 ## Why it matters
 
