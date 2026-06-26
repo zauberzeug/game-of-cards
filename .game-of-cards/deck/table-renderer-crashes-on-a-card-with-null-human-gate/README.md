@@ -1,10 +1,10 @@
 ---
 title: table-renderer-crashes-on-a-card-with-null-human-gate
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-26T02:25:06Z"
-closed_at: null
+closed_at: "2026-06-26T02:30:06Z"
 human_gate: none
 advances: []
 advanced_by: []

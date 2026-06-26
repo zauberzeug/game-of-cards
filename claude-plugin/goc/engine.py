@@ -753,7 +753,15 @@ class Card:
 
     @property
     def human_gate(self) -> str:
-        return self.frontmatter.get("human_gate", "")
+        # Coerce None/non-string to a string, mirroring `status` / `contribution`
+        # above. A card with `human_gate: null` (or a bare `human_gate:`) parses
+        # to a Python None with the key present, so a plain `.get("human_gate",
+        # "")` returns None — which then crashes the table renderer
+        # (`_display_width`) on the GATE cell. `goc validate` still flags the bad
+        # value from the raw `fm["human_gate"]`; coercing to "" keeps the
+        # readiness predicate (`human_gate != "none"`) treating it as gated.
+        v = self.frontmatter.get("human_gate")
+        return "" if v is None else str(v)
 
     @property
     def tags(self) -> list[str]:

@@ -347,6 +347,28 @@ class BoardRenderingTest(unittest.TestCase):
         engine.render_table([card], values=vals, verbose=1, no_color=True)
         engine.render_board([card], values=vals, max_rows=20, no_color=True)
 
+    def test_renderers_tolerate_null_human_gate(self) -> None:
+        """A card with `human_gate: null` (or a bare `human_gate:`) parses to a
+        Python None with the key present, so `Card.human_gate` must coerce to
+        `str` — else `render_table` (`_display_width` on the GATE cell) crashes
+        the ENTIRE deck view on one bad card. Sibling of the null-`status`
+        crash; `render_board` and the JSON dump already tolerate the value, and
+        `goc validate` is the channel that flags the invalid gate, not the read
+        view. Coercing to "" keeps the readiness predicate treating it as gated."""
+        from goc import engine
+
+        card = self._open_card("null-gate")
+        card.frontmatter["human_gate"] = None
+
+        # The property hands a string to every downstream consumer.
+        self.assertEqual("", card.human_gate)
+
+        vals = engine.compute_values([card])
+        # The table renderer (the crashing path) raises on neither verbosity.
+        engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        engine.render_board([card], values=vals, max_rows=20, no_color=True)
+
     def test_board_marks_none_contribution_with_placeholder(self) -> None:
         """Coercion must not regress the empty/None case: a blank
         `contribution:` (parses to None) stays falsy and keeps the `[?]`
