@@ -122,7 +122,11 @@ That one command:
 2. Builds the wheel + sdist with the new version pinned.
 3. Runs the end-to-end auto-bootstrap smoke test.
 4. Creates and pushes the tag `vX.Y.Z` from HEAD.
-5. Publishes to PyPI, npm, and ClawHub in parallel via OIDC.
+5. Publishes to PyPI and npm via OIDC, then auto-dispatches the workflow
+   again on the tag to publish ClawHub. ClawHub's trusted-publish
+   requires the dispatched commit to equal the published commit, so its
+   leg must run from the tag ref rather than the from-`main` dispatch —
+   this second dispatch is automatic, so it stays one human command.
 
 **The git tag IS the version.** Humans never edit version literals —
 the workflow is the version writer. A commit that touches a version
@@ -132,13 +136,16 @@ literal trips an in-job tripwire and fails the release.
 transient-fails):
 
 ```bash
-gh workflow run release.yml --ref vX.Y.Z
+gh workflow run release.yml --ref vX.Y.Z                       # all legs
+gh workflow run release.yml --ref vX.Y.Z -f clawhub_only=true  # ClawHub only
 ```
 
 This re-runs the publish path on the existing tag; the tag-creation
 step is a no-op in `mode=tag`. Registries reject duplicate publishes,
 so this is idempotent for already-shipped channels and a fresh
-publish for any that failed.
+publish for any that failed. The `clawhub_only` form is the lean path
+that mirrors the automatic tag re-dispatch — it skips smoke/PyPI/npm and
+publishes only ClawHub.
 
 **Dry-run preview** (build + smoke, no publishes):
 
