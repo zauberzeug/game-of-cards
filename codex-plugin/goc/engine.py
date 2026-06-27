@@ -5485,7 +5485,7 @@ def _move_iter_tracked_text_files():
     try:
         result = subprocess.run(
             ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-            cwd=str(REPO_ROOT), capture_output=True, check=True, timeout=30,
+            cwd=str(DECK_ROOT), capture_output=True, check=True, timeout=30,
         )
         seen: set[str] = set()
         paths = []
@@ -5498,9 +5498,9 @@ def _move_iter_tracked_text_files():
             if rel in seen:
                 continue
             seen.add(rel)
-            paths.append(REPO_ROOT / rel)
+            paths.append(DECK_ROOT / rel)
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-        paths = [p for p in REPO_ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
+        paths = [p for p in DECK_ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
     for path in paths:
         if not path.is_file():
             continue
@@ -5531,7 +5531,7 @@ def _move_preview_sites(old: str, new: str) -> list[str]:
         rewritten = _move_text_rewrite(original, old, new)
         if rewritten == original:
             continue
-        rel = str(path.relative_to(REPO_ROOT))
+        rel = str(path.relative_to(DECK_ROOT))
         orig_lines = original.splitlines()
         new_lines = rewritten.splitlines()
         for i, (ol, nl) in enumerate(zip(orig_lines, new_lines), 1):
@@ -5588,7 +5588,7 @@ def _cmd_move(args):
         return
 
     try:
-        subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True, capture_output=True)
+        subprocess.run(["git", "mv", str(src), str(dst)], cwd=DECK_ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         shutil.move(str(src), str(dst))
 

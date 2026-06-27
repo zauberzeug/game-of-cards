@@ -1,21 +1,21 @@
 ---
 title: goc-move-runs-git-operations-in-the-wrong-tree-under-shared-deck-worktree-mode
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-26T02:31:35Z"
-closed_at: null
+closed_at: "2026-06-27T01:20:19Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug]
 definition_of_done: |
-  - [ ] `_cmd_move`'s `git mv` (`engine.py:5483`) and `_move_iter_tracked_text_files`'s `git ls-files` (`engine.py:5380`) run with `cwd=str(DECK_ROOT)`, matching `_git_auto_commit` / `_git_claim_push_with_retry` / `_enforce_closure_on_integration_or_exit`
-  - [ ] under shared-deck worktree mode, `goc move <old> <new>` produces a clean `R` rename in the deck tree (not `D old` + `?? new`)
-  - [ ] the moved card's own `title:` field is rewritten (not left stale, which would fail `goc validate`)
-  - [ ] regression test covering the shared-deck-worktree move path (or a unit test asserting the move helpers resolve their git cwd to `DECK_ROOT`)
-  - [ ] `reproduce.py` exits non-zero before the fix, zero after
-  - [ ] full suite + `goc validate` clean
+  - [x] `_cmd_move`'s `git mv` (`engine.py:5483`) and `_move_iter_tracked_text_files`'s `git ls-files` (`engine.py:5380`) run with `cwd=str(DECK_ROOT)`, matching `_git_auto_commit` / `_git_claim_push_with_retry` / `_enforce_closure_on_integration_or_exit`
+  - [x] under shared-deck worktree mode, `goc move <old> <new>` produces a clean `R` rename in the deck tree (not `D old` + `?? new`)
+  - [x] the moved card's own `title:` field is rewritten (not left stale, which would fail `goc validate`)
+  - [x] regression test covering the shared-deck-worktree move path (or a unit test asserting the move helpers resolve their git cwd to `DECK_ROOT`)
+  - [x] `reproduce.py` exits non-zero before the fix, zero after
+  - [x] full suite + `goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
