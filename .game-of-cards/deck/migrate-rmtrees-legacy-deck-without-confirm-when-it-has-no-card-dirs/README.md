@@ -1,20 +1,20 @@
 ---
 title: migrate-rmtrees-legacy-deck-without-confirm-when-it-has-no-card-dirs
 summary: "`goc migrate` only runs its confirm prompt inside `if to_copy or identical:`. When the legacy `deck/` holds no card subdirectories (only loose files like `.goc-version`, `README.md`, notes) but a canonical tree also exists, both lists are empty, the early return is suppressed by the dual-tree-conflict guard, the confirm gate is skipped entirely, and `shutil.rmtree(legacy)` deletes the loose files unconditionally — no prompt, no `--auto-yes`."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-27T02:07:34Z"
-closed_at: null
+closed_at: "2026-06-27T02:12:29Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — with a dual-tree state whose legacy `deck/` has no card subdirectories, `goc migrate` (no `--auto-yes`, empty stdin) does NOT delete the legacy tree.
-  - [ ] TDD: regression test asserts `confirm()` is invoked before `rmtree` on the no-card-dirs fall-through path, and that declining (`n`) leaves the legacy tree intact.
-  - [ ] TDD: existing migrate behavior preserved — the `to_copy`/`identical` confirm path and the `--auto-yes` skip-prompt path still work.
-  - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green).
+  - [x] TDD: reproduce.py exits zero — with a dual-tree state whose legacy `deck/` has no card subdirectories, `goc migrate` (no `--auto-yes`, empty stdin) does NOT delete the legacy tree.
+  - [x] TDD: regression test asserts `confirm()` is invoked before `rmtree` on the no-card-dirs fall-through path, and that declining (`n`) leaves the legacy tree intact.
+  - [x] TDD: existing migrate behavior preserved — the `to_copy`/`identical` confirm path and the `--auto-yes` skip-prompt path still work.
+  - [x] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green).
 worker: {who: "claude[bot]", where: main}
 ---
 

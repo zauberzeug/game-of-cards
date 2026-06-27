@@ -2001,6 +2001,51 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(result)
             self.assertIn("No legacy deck/", result.stdout)
 
+    def test_migrate_confirms_before_removing_legacy_with_no_card_dirs(self) -> None:
+        # Dual-tree conflict where the legacy deck/ holds only loose files
+        # (no card subdirectories): the destructive rmtree must still go
+        # through the confirm gate. Declining (empty stdin -> default False)
+        # leaves the legacy tree and its loose files intact.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_canonical_deck(cwd)
+            legacy = cwd / "deck"
+            legacy.mkdir()
+            (legacy / ".goc-version").write_text("0.0.0\n")
+            (legacy / "NOTES.txt").write_text("keep me\n")
+
+            result = subprocess.run(
+                [sys.executable, "-m", "goc.cli", "migrate"],
+                cwd=cwd,
+                env={**os.environ, "PYTHONPATH": str(ROOT)},
+                input="",  # confirm() default is False on empty stdin -> abort
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertNotEqual(0, result.returncode, msg=result.stdout)
+            self.assertTrue(legacy.exists(), "declined confirm must not remove legacy tree")
+            self.assertTrue((legacy / "NOTES.txt").is_file())
+            self.assertNotIn("Removed legacy tree", result.stdout)
+
+    def test_migrate_auto_yes_removes_legacy_with_no_card_dirs(self) -> None:
+        # --auto-yes still skips the prompt and removes a loose-file-only
+        # legacy tree in a dual-tree conflict.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_canonical_deck(cwd)
+            legacy = cwd / "deck"
+            legacy.mkdir()
+            (legacy / ".goc-version").write_text("0.0.0\n")
+            (legacy / "NOTES.txt").write_text("keep me\n")
+
+            result = self.run_goc(cwd, "migrate", "--yes")
+
+            self.assert_goc_ok(result)
+            self.assertFalse(legacy.exists())
+            self.assertIn("Removed legacy tree", result.stdout)
+
     def test_install_detects_legacy_deck_as_existing_install(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

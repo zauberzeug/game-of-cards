@@ -5931,10 +5931,22 @@ def _cmd_migrate(args):
         print("Dry run — no changes made.")
         return
 
-    if to_copy or identical:
-        if not auto_yes:
-            if not confirm(f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?"):
-                sys.exit(1)
+    # Confirm before the destructive rmtree on EVERY non-dry-run path that
+    # reaches it — including the empty-legacy_dirs fall-through, which only
+    # gets here under a dual-tree conflict (the non-conflict empty case already
+    # returned above). Nesting the gate inside `if to_copy or identical:` let
+    # that fall-through delete loose legacy files (sentinel, notes) with no
+    # prompt and without --auto-yes.
+    if not auto_yes:
+        if to_copy or identical:
+            prompt = f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?"
+        else:
+            prompt = (
+                "\nLegacy deck/ has no card directories but still contains files.\n"
+                f"Remove legacy tree {legacy}?"
+            )
+        if not confirm(prompt):
+            sys.exit(1)
 
     for name in to_copy:
         shutil.copytree(str(legacy_dirs[name]), str(canonical / name))
