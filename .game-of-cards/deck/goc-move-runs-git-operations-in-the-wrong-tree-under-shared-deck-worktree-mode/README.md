@@ -1,6 +1,6 @@
 ---
 title: goc-move-runs-git-operations-in-the-wrong-tree-under-shared-deck-worktree-mode
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-26T02:31:35Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] regression test covering the shared-deck-worktree move path (or a unit test asserting the move helpers resolve their git cwd to `DECK_ROOT`)
   - [ ] `reproduce.py` exits non-zero before the fix, zero after
   - [ ] full suite + `goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-move-runs-git-operations-in-the-wrong-tree-under-shared-deck-worktree-mode
