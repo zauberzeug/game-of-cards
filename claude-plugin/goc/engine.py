@@ -3148,15 +3148,27 @@ def render_active_notice(
     cards: list[Card],
     *,
     values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
 ) -> str:
-    """Warn open-queue readers about claimed cards outside the open filter."""
+    """Warn open-queue readers about claimed cards outside the open filter.
+
+    `cards` may be a worker-scoped subset (see `_cmd_default` under
+    `--worker`). Thread `by_title` with the full-deck lookup so
+    `sort_default`'s near-term-flow tiebreak counts live downstream cards
+    that the worker filter hid — mirroring `render_leverage_line` /
+    `render_table` / `render_board`, which all take a full-deck `by_title`
+    for the same reason. When omitted it is built from `cards`, correct
+    only when `cards` is the full deck.
+    """
 
     if values is None:
         values = compute_values(cards)
+    if by_title is None:
+        by_title = {t.title: t for t in cards}
     active = sort_default(
         [t for t in cards if t.status == "active"],
         values=values,
-        by_title={t.title: t for t in cards},
+        by_title=by_title,
     )
     if not active:
         return ""
@@ -3598,7 +3610,7 @@ def _cmd_default(args):
              if args.worker.lower() in _worker_who(t.frontmatter.get("worker")).lower()]
             if args.worker else cards
         )
-        active_notice = render_active_notice(notice_cards, values=full_values) if status == "open" else ""
+        active_notice = render_active_notice(notice_cards, values=full_values, by_title=full_by_title) if status == "open" else ""
         leverage = (
             render_leverage_line(filtered, cards, values=full_values)
             if args.ready else ""

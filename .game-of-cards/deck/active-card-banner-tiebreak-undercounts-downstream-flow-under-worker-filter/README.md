@@ -1,18 +1,18 @@
 ---
 title: active-card-banner-tiebreak-undercounts-downstream-flow-under-worker-filter
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-27T01:36:40Z"
-closed_at: null
+closed_at: "2026-06-27T01:39:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (the active-card banner ranks the higher-live-flow card first under a --worker filter)
-  - [ ] TDD: a regression test asserts render_active_notice orders equal-value active cards by full-deck live_direct even when the downstream targets are absent from the worker-scoped subset
-  - [ ] MECHANICAL: render_active_notice accepts a full-deck by_title and threads it into sort_default (mirroring render_leverage_line / render_table / render_board); _cmd_default passes full_by_title
+  - [x] TDD: reproduce.py exits zero (the active-card banner ranks the higher-live-flow card first under a --worker filter)
+  - [x] TDD: a regression test asserts render_active_notice orders equal-value active cards by full-deck live_direct even when the downstream targets are absent from the worker-scoped subset
+  - [x] MECHANICAL: render_active_notice accepts a full-deck by_title and threads it into sort_default (mirroring render_leverage_line / render_table / render_board); _cmd_default passes full_by_title
 worker: {who: "claude[bot]", where: main}
 ---
 
