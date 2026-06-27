@@ -1,7 +1,7 @@
 ---
 title: migrate-rmtrees-legacy-deck-without-confirm-when-it-has-no-card-dirs
 summary: "`goc migrate` only runs its confirm prompt inside `if to_copy or identical:`. When the legacy `deck/` holds no card subdirectories (only loose files like `.goc-version`, `README.md`, notes) but a canonical tree also exists, both lists are empty, the early return is suppressed by the dual-tree-conflict guard, the confirm gate is skipped entirely, and `shutil.rmtree(legacy)` deletes the loose files unconditionally — no prompt, no `--auto-yes`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-27T02:07:34Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: regression test asserts `confirm()` is invoked before `rmtree` on the no-card-dirs fall-through path, and that declining (`n`) leaves the legacy tree intact.
   - [ ] TDD: existing migrate behavior preserved — the `to_copy`/`identical` confirm path and the `--auto-yes` skip-prompt path still work.
   - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc migrate` rmtrees the legacy deck/ without confirming when it has no card dirs
