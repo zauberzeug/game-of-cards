@@ -1,20 +1,20 @@
 ---
 title: quality-pass-renderer-counts-whitespace-only-fix-dod-issue-as-rewrite
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-27T01:53:16Z"
-closed_at: null
+closed_at: "2026-06-27T01:58:24Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py feeds `_render_verdict` an OK title/summary and one `dod_issues` entry with `{"idx": 0, "fix": "   "}` (whitespace-only), and asserts the buggy `has_rewrite == True` while `_apply_dod_rewrite` would write nothing for the same input.
-  - [ ] FIX: in `goc/engine.py` `_render_verdict`, the `fixable` classifier mirrors `_apply_dod_rewrite`'s full guard — `"idx" in issue and "fix" in issue and issue["fix"].strip()` — so a whitespace-only `fix` is demoted to the `fixless` (no-rewrite) path.
-  - [ ] TDD: after the fix, the whitespace-`fix` verdict returns `has_rewrite == False` and prints under "flagged, no rewrite offered"; an issue with a real non-empty `fix` still returns `True` (no regression).
-  - [ ] EMPIRICAL: rerun reproduce.py against the patched engine; record before/after output in this body's "Empirical evidence" section.
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] TDD: reproduce.py feeds `_render_verdict` an OK title/summary and one `dod_issues` entry with `{"idx": 0, "fix": "   "}` (whitespace-only), and asserts the buggy `has_rewrite == True` while `_apply_dod_rewrite` would write nothing for the same input.
+  - [x] FIX: in `goc/engine.py` `_render_verdict`, the `fixable` classifier mirrors `_apply_dod_rewrite`'s full guard — `"idx" in issue and "fix" in issue and issue["fix"].strip()` — so a whitespace-only `fix` is demoted to the `fixless` (no-rewrite) path.
+  - [x] TDD: after the fix, the whitespace-`fix` verdict returns `has_rewrite == False` and prints under "flagged, no rewrite offered"; an issue with a real non-empty `fix` still returns `True` (no regression). Covered by `tests/test_render_verdict_rewrite_count.py::test_whitespace_only_fix_dod_issue_not_counted` and `::test_mixed_whitespace_fix_and_real_fix_dod_issues`.
+  - [x] EMPIRICAL: rerun reproduce.py against the patched engine; record before/after output in this body's "Empirical evidence" section.
+  - [x] PROCESS: `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -65,9 +65,10 @@ rewrite work.
 
 ## Empirical evidence
 
-`reproduce.py` (run on a clean checkout) feeds the verdict
-`{"idx": 0, "issue": "vague item", "fix": "   "}`. Before the fix it
-exits non-zero:
+`reproduce.py` feeds the verdict
+`{"idx": 0, "issue": "vague item", "fix": "   "}`.
+
+Before the fix it exited non-zero:
 
 ```
 === x ===
@@ -80,6 +81,21 @@ has_rewrite (renderer)      = True
 apply path would write      = {}  (empty -> no rewrite)
 
 FAIL: renderer counts this as a rewrite (has_rewrite=True) but the apply path writes nothing — render/apply disagree on a whitespace-only fix.
+```
+
+After the fix it exits zero — the renderer demotes the whitespace-only
+fix to the "no rewrite offered" path, matching the apply path:
+
+```
+=== x ===
+title:   OK
+summary: OK
+dod:     1 flagged, no rewrite offered
+  [0] vague item
+has_rewrite (renderer)      = False
+apply path would write      = {}  (empty -> no rewrite)
+
+PASS: renderer agrees with the apply path (whitespace-only fix is not a rewrite).
 ```
 
 ## Why it matters

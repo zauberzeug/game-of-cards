@@ -88,6 +88,43 @@ class RenderVerdictRewriteCountTest(unittest.TestCase):
         self.assertNotIn("fix: ?", out)
         self.assertIn("no rewrite offered", out)
 
+    def test_whitespace_only_fix_dod_issue_not_counted(self) -> None:
+        """A DoD issue whose `fix` is whitespace-only is NOT applicable —
+        `_apply_dod_rewrite` filters it out with `issue["fix"].strip()` and
+        preserves the original criterion. `_render_verdict` must mirror that
+        full guard, so a whitespace-only fix must NOT count toward has_rewrite
+        and must print under "no rewrite offered", not as a bogus rewrite."""
+        has_rewrite, out = self._render(
+            {
+                "title": "c",
+                "title_verdict": {"ok": True},
+                "summary_verdict": {"ok": True},
+                "dod_issues": [{"idx": 0, "issue": "vague", "fix": "   "}],
+            }
+        )
+        self.assertFalse(has_rewrite)
+        self.assertNotIn("issue(s)", out)
+        self.assertIn("no rewrite offered", out)
+
+    def test_mixed_whitespace_fix_and_real_fix_dod_issues(self) -> None:
+        """A verdict mixing a real fix with a whitespace-only fix counts as a
+        rewrite (the real one), and only the real fix advertises under
+        `dod: ... issue(s)`; the whitespace one is flagged as no-rewrite."""
+        has_rewrite, out = self._render(
+            {
+                "title": "c",
+                "title_verdict": {"ok": True},
+                "summary_verdict": {"ok": True},
+                "dod_issues": [
+                    {"idx": 0, "issue": "vague", "fix": "do X"},
+                    {"idx": 1, "issue": "also vague", "fix": "  "},  # whitespace-only
+                ],
+            }
+        )
+        self.assertTrue(has_rewrite)
+        self.assertIn("fix: do X", out)
+        self.assertIn("no rewrite offered", out)
+
     def test_mixed_fixable_and_fixless_dod_issues(self) -> None:
         """A verdict mixing an applicable fix with a fixless flag counts as a
         rewrite (the fixable one), and only the fixable issue advertises a fix."""
