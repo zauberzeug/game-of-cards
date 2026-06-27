@@ -1,6 +1,6 @@
 ---
 title: quality-pass-renderer-counts-whitespace-only-fix-dod-issue-as-rewrite
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-27T01:53:16Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: after the fix, the whitespace-`fix` verdict returns `has_rewrite == False` and prints under "flagged, no rewrite offered"; an issue with a real non-empty `fix` still returns `True` (no regression).
   - [ ] EMPIRICAL: rerun reproduce.py against the patched engine; record before/after output in this body's "Empirical evidence" section.
   - [ ] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # quality-pass renderer counts a whitespace-only-`fix` DoD issue as a proposed rewrite
