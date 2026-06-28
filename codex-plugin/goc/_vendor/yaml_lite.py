@@ -32,7 +32,12 @@ class ParseError(ValueError):
 
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_INT_RE = re.compile(r"^-?\d+$")
+# Canonical decimal integer (YAML 1.2 / PyYAML decimal resolver): an optional
+# sign, then `0` alone or a non-zero digit followed by more digits. Leading-zero
+# runs (`00`, `007`, `008`, `0123`) are NOT integers — they stay strings, so the
+# parser preserves the literal a human hand-authored instead of `int()`-stripping
+# the zeros (which silently changes `008` to `8`).
+_INT_RE = re.compile(r"^-?(0|[1-9][0-9]*)$")
 # Literal block scalar header: `|`, with an optional explicit indentation
 # indicator (`|2`) and an optional chomping indicator (`-` strip / `+` keep).
 _BLOCK_INDICATOR_RE = re.compile(r"^\|(\d+)?([-+]?)$")

@@ -41,6 +41,18 @@ class ScalarTest(unittest.TestCase):
     def test_integer(self):
         self.assertEqual(self._load("42"), 42)
         self.assertEqual(self._load("-1"), -1)
+        self.assertEqual(self._load("0"), 0)
+
+    def test_leading_zero_scalar_stays_string(self):
+        # yaml-lite-coerces-leading-zero-scalars-to-int-corrupting-string-values:
+        # a leading-zero decimal run is NOT a canonical YAML integer (YAML 1.2
+        # and PyYAML's 1.1 resolver both read it as a string). The parser must
+        # preserve the literal instead of int()-stripping the zeros (which
+        # silently changed `008` to `8`).
+        for raw in ("008", "009", "0123", "00", "007"):
+            got = self._load(raw)
+            self.assertIsInstance(got, str, f"{raw!r} should parse as str")
+            self.assertEqual(got, raw)
 
     def test_date_string(self):
         self.assertEqual(self._load("2026-05-09"), "2026-05-09")
