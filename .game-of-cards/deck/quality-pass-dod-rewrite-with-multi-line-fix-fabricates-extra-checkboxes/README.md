@@ -1,20 +1,20 @@
 ---
 title: quality-pass-dod-rewrite-with-multi-line-fix-fabricates-extra-checkboxes
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-28T02:27:51Z"
-closed_at: null
+closed_at: "2026-06-28T02:32:13Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: regression test proving a multi-line `fix` no longer changes the DoD box count (failing before the fix, passing after)
-  - [ ] `_apply_dod_rewrite` collapses embedded newlines in a `fix` so a single-item rewrite stays one physical line
-  - [ ] The fix preserves existing behavior (indent restoration, the `- [ ]` prefix injection, the empty-fix no-op guard)
-  - [ ] `uv run goc validate` passes
-  - [ ] `uv run python -m unittest discover -s tests` passes
+  - [x] TDD: regression test proving a multi-line `fix` no longer changes the DoD box count (failing before the fix, passing after)
+  - [x] MECHANICAL: `_apply_dod_rewrite` collapses embedded newlines in a `fix` so a single-item rewrite stays one physical line
+  - [x] MECHANICAL: the fix preserves existing behavior (indent restoration, the `- [ ]` prefix injection, the empty-fix no-op guard)
+  - [x] PROCESS: `uv run goc validate` passes
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

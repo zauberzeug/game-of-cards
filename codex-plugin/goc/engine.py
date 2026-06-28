@@ -3858,7 +3858,13 @@ def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:
     for box_idx, line_idx in enumerate(box_indices):
         if box_idx in fix_by_idx:
             indent = re.match(r"[ \t]*", lines[line_idx]).group(0)
-            new_text = fix_by_idx[box_idx]
+            # A DoD item is a single line; this function replaces ONE item by
+            # index, it does not split one item into several. An LLM-authored
+            # `fix` may arrive with embedded newlines (a wrapped rewrite, or an
+            # accidental second `- [ ]` line). Collapse them to a single space
+            # so the rewrite stays one physical line and cannot fabricate an
+            # extra checkbox that inflates the box count.
+            new_text = re.sub(r"\s*\n\s*", " ", fix_by_idx[box_idx])
             new_text = new_text.lstrip()
             if not new_text.startswith("- ["):
                 new_text = f"- [ ] {new_text}"
