@@ -1,18 +1,18 @@
 ---
 title: title-antipattern-check-docstring-describes-wrong-return-type
 summary: "`_check_title_antipatterns` is annotated `-> list[str]` and returns a list of reason strings, and every caller iterates it as strings — but its docstring claims it returns `(matched_substring, reason)` tuples. Stale docstring contradicting the implementation and the type annotation; a maintainer trusting the docstring would unpack each element as a 2-tuple and break."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-28T01:37:05Z"
-closed_at: null
+closed_at: "2026-06-28T01:40:30Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: the docstring of `_check_title_antipatterns` no longer claims it returns tuples; it describes the actual return value (a list of reason strings) and matches the `-> list[str]` annotation.
-  - [ ] TDD: a regression test asserts every element returned by `_check_title_antipatterns` for a jargon title is a `str` (not a tuple), pinning the contract the docstring now describes.
+  - [x] MECHANICAL: the docstring of `_check_title_antipatterns` no longer claims it returns tuples; it describes the actual return value (a list of reason strings) and matches the `-> list[str]` annotation.
+  - [x] TDD: a regression test asserts every element returned by `_check_title_antipatterns` for a jargon title is a `str` (not a tuple), pinning the contract the docstring now describes.
 worker: {who: "claude[bot]", where: main}
 ---
 

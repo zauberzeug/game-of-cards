@@ -5041,7 +5041,7 @@ TITLE_ANTIPATTERNS = [
 
 
 def _check_title_antipatterns(title: str) -> list[str]:
-    """Return list of (matched_substring, reason) tuples; empty if title is clean."""
+    """Return the list of antipattern reason strings matched by `title`; empty if clean."""
     return [reason for pat, reason in TITLE_ANTIPATTERNS if pat.search(title)]
 
 
