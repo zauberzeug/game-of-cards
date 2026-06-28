@@ -179,6 +179,33 @@ replaces the old, flip the old card to `status: superseded` and
 record the replacement in its `log.md`. Use a shared epic tag or
 `advanced_by` edge to express machine-readable dependency.
 
+## Worker (optional, assignment / ownership)
+
+`worker` is a free-form identifier naming who should or does work on a
+card. It matters when multiple humans or agents share a deck and you
+want a runner-scoped queue view; otherwise it can be omitted.
+
+**Format:**
+
+- Flat string for a single identifier: `worker: rodja`. Sugar for
+  `{who: rodja}`.
+- Mapping when branch context is known:
+  `worker: {who: rodja, where: feature/foo}`.
+
+The value is unregistered — use a person slug, a machine name, or a
+capability tag (e.g. `gpu-required`, `human`, `rendering-expert`). The
+field persists after close as a historical record.
+
+`goc status <title> active` auto-populates `worker` with the current
+identity at claim time, so a card pulled by an autonomous runner carries
+its owner without manual editing.
+
+**Filter the queue by worker:**
+
+- `goc --worker <X>` — limit listings to cards owned by `X`.
+- Set the `GOC_WORKER` env var so a runner sees only its own queue
+  without typing the flag every time.
+
 ## Contribution scale
 
 The per-card axis answering: **how much does closing this card
@@ -241,6 +268,23 @@ judgement, stakeholder alignment, prioritization, or a live
 discussion. If an agent can periodically check the wait and
 proceed when the external condition changes, the gate stays `none`
 and the wait lives in the `waiting_on` overlay.
+
+**Decide ↔ close symmetry.** `goc decide` refuses to run on a card
+whose gate is already `none` (no decision pending), and the four
+terminal-close paths (`goc done`, `goc done --bundle`,
+`goc status <t> disproved`, `goc status <t> superseded`) symmetrically
+refuse when `human_gate != none` and tell the operator to run
+`goc decide` first. The validator enforces the same invariant — a card
+with `status` in `{done, disproved, superseded}` AND
+`human_gate != none` is a frontmatter contradiction — so a hand-edited
+deck that lands in that state is surfaced by CI rather than silently
+shipping a closed card whose `## Decision required` body is still
+advertising an open pick. Because the validator flags that contradiction,
+`goc decide` doubles as its **repair** verb: it lowers a still-raised gate
+even on an already-terminal card (recording the resolving decision, leaving
+the card closed). The only terminal cards it touches are the broken ones —
+a cleanly closed card already carries `gate: none`, so the "gate already
+none" refusal covers it.
 
 Default for new cards created via `goc new`: `decision`.
 Auto-agents (audit-deck, next-card reclassification) should pick a more

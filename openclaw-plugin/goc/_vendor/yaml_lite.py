@@ -32,10 +32,19 @@ class ParseError(ValueError):
 
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_INT_RE = re.compile(r"^-?\d+$")
+# Canonical decimal integer (YAML 1.2 / PyYAML decimal resolver): an optional
+# sign, then `0` alone or a non-zero digit followed by more digits. Leading-zero
+# runs (`00`, `007`, `008`, `0123`) are NOT integers — they stay strings, so the
+# parser preserves the literal a human hand-authored instead of `int()`-stripping
+# the zeros (which silently changes `008` to `8`).
+_INT_RE = re.compile(r"^-?(0|[1-9][0-9]*)$")
 # Literal block scalar header: `|`, with an optional explicit indentation
 # indicator (`|2`) and an optional chomping indicator (`-` strip / `+` keep).
 _BLOCK_INDICATOR_RE = re.compile(r"^\|(\d+)?([-+]?)$")
+# Folded block scalar header: `>` with the same optional indent/chomp
+# indicators. Folded scalars are unsupported and must raise — this regex
+# catches every variant (`>-`, `>+`, `>2`, `>2-`, …), not just the bare `>`.
+_FOLDED_INDICATOR_RE = re.compile(r"^>(\d+)?([-+]?)$")
 _NULL_SET = frozenset(("null", "Null", "NULL", "~"))
 _TRUE_SET = frozenset(("true", "True", "TRUE", "yes", "Yes", "YES"))
 _FALSE_SET = frozenset(("false", "False", "FALSE", "no", "No", "NO"))
@@ -69,11 +78,24 @@ class _Parser:
     # ── Line helpers ──────────────────────────────────────────────────────────
 
     def _peek(self) -> str | None:
-        """Return first non-blank, non-comment line; advance past skipped lines."""
+        """Return first non-blank, non-comment line; advance past skipped lines.
+
+        Every structurally-significant line (mapping keys, sequence items,
+        value continuations) is fetched through here, while block-scalar
+        content is read directly from ``self._lines``. So this is the one
+        chokepoint at which indentation is structural — and the right place
+        to enforce the docstring's "Tabs as indentation -> ParseError"
+        contract without rejecting legitimate tabs inside literal blocks.
+        """
         while self._pos < len(self._lines):
             line = self._lines[self._pos]
             bare = line.rstrip().lstrip()
             if bare and not bare.startswith("#"):
+                lead = line[: len(line) - len(line.lstrip())]
+                if "\t" in lead:
+                    raise ParseError(
+                        f"line {self._pos + 1}: tabs are not allowed as indentation"
+                    )
                 return self._lines[self._pos].rstrip()
             self._pos += 1
         return None
@@ -93,10 +115,38 @@ class _Parser:
             curr = self._indent(line)
             if curr < indent:
                 break
+            if curr > indent:
+                # In every valid parse path the line at the top of this loop
+                # is at <= indent: nested mappings/sequences/block scalars are
+                # consumed in full by _resolve_value before control returns
+                # here. A more-indented line is therefore malformed — an
+                # over-indented key (silently promoted to a sibling) or a bare
+                # plain-scalar continuation (which would otherwise truncate
+                # every following key). Fail loud, matching the tab guard in
+                # _peek and the ambiguous-indent guard in _parse_block_scalar.
+                raise ParseError(
+                    f"line {self._pos + 1}: line is indented {curr}, more than "
+                    f"the surrounding mapping at {indent}; unexpected indentation"
+                )
             bare = line.lstrip()
             key, rest = _split_key(bare)
             if key is None:
-                break
+                # A line at the mapping indent that is not a recognizable
+                # `key: value` entry — most commonly a missing space after the
+                # colon (`status:open`), which YAML treats as a plain scalar,
+                # not a key, but also a bare scalar with no colon at all. The
+                # dedent (`curr < indent`) and over-indent (`curr > indent`)
+                # cases are already handled above, so anything reaching here is
+                # a malformed sibling entry. Silently breaking would drop this
+                # line AND every key below it from the document — the exact
+                # truncation the over-indent guard above and the tab guard in
+                # _peek exist to prevent. Fail loud to match that posture.
+                raise ParseError(
+                    f"line {self._pos + 1}: {bare!r} is not a valid "
+                    f"'key: value' mapping entry (a ':' key separator must be "
+                    f"followed by a space); breaking here would silently drop "
+                    f"it and every following key"
+                )
             self._pos += 1
             result[key] = self._resolve_value(rest, indent)
         return result
@@ -112,6 +162,20 @@ class _Parser:
             curr = self._indent(line)
             if curr < indent:
                 break
+            if curr > indent:
+                # The mirror of the _parse_block_mapping guard: in every valid
+                # parse path the line at the top of this loop is at <= indent.
+                # A nested sequence's more-indented items are consumed in full
+                # by the recursive _parse_block_sequence(ni) call below before
+                # control returns here, so a more-indented `- item` line is
+                # malformed — an over-indented item that would otherwise be
+                # silently absorbed as a same-level sibling. Fail loud, matching
+                # the mapping guard, the tab guard in _peek, and the
+                # ambiguous-indent guard in _parse_block_scalar.
+                raise ParseError(
+                    f"line {self._pos + 1}: line is indented {curr}, more than "
+                    f"the surrounding sequence at {indent}; unexpected indentation"
+                )
             bare = line.lstrip()
             if not (bare.startswith("- ") or bare == "-"):
                 break
@@ -243,7 +307,7 @@ class _Parser:
             return self._parse_block_scalar(
                 parent_indent, chomp, explicit_indent=explicit_indent
             )
-        if rest == ">":
+        if _FOLDED_INDICATOR_RE.match(rest):
             raise ParseError(f"line {self._pos + 1}: folded scalars (>) not supported")
         if rest in ("&", "*") or rest.startswith("&") or rest.startswith("*"):
             raise ParseError(f"line {self._pos + 1}: anchors/aliases not supported")
@@ -315,8 +379,20 @@ def _parse_single_quoted(text: str) -> str:
 
 
 def _parse_flow_sequence(text: str) -> list:
-    if not (text.startswith("[") and text.endswith("]")):
+    if not text.startswith("["):
         return [text]
+    if not text.endswith("]"):
+        # A leading `[` with no matching trailing `]` is malformed flow
+        # input — most commonly an inline sequence followed by trailing
+        # content that is not a (space-preceded) comment, e.g.
+        # `tags: [bug, api]# recategorize`. Returning [text] would bury the
+        # whole raw line as a single phantom element. Fail loud, matching
+        # the over-indent and missing-space-after-colon guards above.
+        raise ParseError(
+            f"flow sequence {text!r} has trailing content after its "
+            f"closing ']' (an end-of-line '#' comment must be preceded "
+            f"by a space)"
+        )
     inner = text[1:-1].strip()
     if not inner:
         return []
@@ -324,8 +400,20 @@ def _parse_flow_sequence(text: str) -> list:
 
 
 def _parse_flow_mapping(text: str) -> dict:
-    if not (text.startswith("{") and text.endswith("}")):
+    if not text.startswith("{"):
         return {}
+    if not text.endswith("}"):
+        # A leading `{` with no matching trailing `}` is malformed flow
+        # input — e.g. an inline mapping followed by trailing content that
+        # is not a (space-preceded) comment, `worker: {who: a}# note`.
+        # Returning {} would silently drop every key/value pair. Fail loud,
+        # matching the sequence guard above and the parser's documented
+        # posture for malformed structural input.
+        raise ParseError(
+            f"flow mapping {text!r} has trailing content after its "
+            f"closing '}}' (an end-of-line '#' comment must be preceded "
+            f"by a space)"
+        )
     inner = text[1:-1].strip()
     if not inner:
         return {}
@@ -419,10 +507,15 @@ def _strip_comment(text: str) -> str:
     flow = text[:1] in ("[", "{")
     quoted = text[:1] in ('"', "'")
     in_q: str | None = None
+    escaped = False
     depth = 0
     for i, c in enumerate(text):
-        if in_q:
-            if c == in_q:
+        if escaped:
+            escaped = False
+        elif in_q:
+            if c == "\\" and in_q == '"':
+                escaped = True  # double-quoted YAML escapes the next char
+            elif c == in_q:
                 in_q = None
         elif flow and c in ("[", "{"):
             depth += 1

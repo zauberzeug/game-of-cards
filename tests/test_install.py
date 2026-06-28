@@ -259,8 +259,9 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("name: pull-card", codex_skill)
             self.assertIn("description: ", codex_skill)
             self.assertIn("# Pull a card", codex_skill)
+            self.assertIn("## Codex GoC Command", codex_skill)
             self.assertIn("!`goc", codex_skill)
-            self.assertNotIn("_goc-bootstrap.sh", codex_skill)
+            self.assertIn("_goc-bootstrap.sh", codex_skill)
             self.assertNotIn("CLAUDE_SKILL_DIR", codex_skill)
 
             self.assert_goc_ok(
@@ -466,6 +467,41 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 goc_cmds = [c for c in all_commands if c and ".claude/hooks/" in c]
                 self.assertEqual([], goc_cmds, "GoC hook registrations should be stripped after migration")
 
+    def test_strip_vendored_harness_survives_absent_template_skill_tree(self) -> None:
+        """Cleanup must not crash when the engine omits templates/skills/.
+
+        The bundled plugin engine deliberately ships no templates/skills/
+        subdir. The vendored->plugin cleanup iterates that tree to learn the
+        GoC-owned skill names; with the tree absent it must yield an empty set
+        (skip skill-dir removal, never destroy authored content) rather than
+        raising FileNotFoundError.
+        """
+        from goc.install import _strip_claude_vendored_harness, _templates_root
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            # Mimic the plugin payload: every template subtree EXCEPT skills/.
+            templates = tmp / "templates"
+            shutil.copytree(
+                _templates_root(), templates, ignore=shutil.ignore_patterns("skills")
+            )
+            self.assertFalse((templates / "skills").exists())
+
+            target = tmp / "repo"
+            goc_skill = target / ".claude" / "skills" / "deck"
+            goc_skill.mkdir(parents=True)
+            (goc_skill / "SKILL.md").write_text("goc-managed\n")
+            user_skill = target / ".claude" / "skills" / "my-custom-skill"
+            user_skill.mkdir(parents=True)
+            (user_skill / "SKILL.md").write_text("user-authored\n")
+
+            # Must not raise FileNotFoundError.
+            _strip_claude_vendored_harness(target, templates)
+
+            # Authored content is never destroyed when GoC-owned names are unknown.
+            self.assertTrue(user_skill.exists())
+            self.assertTrue(goc_skill.exists())
+
     def test_upgrade_keep_local_skills_preserves_vendored_layout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
@@ -605,6 +641,100 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 config_path.read_text(),
                 "# top comment\n\nskills_source: plugin\n",
             )
+
+    def test_write_skills_source_rewrites_active_key_not_preceding_comment(self) -> None:
+        """Regression: prefer the active key over a preceding comment example.
+
+        A single `#?`-optional pattern with `count=1` rewrote whichever
+        `skills_source:` line came first in document order. When a commented
+        documentation example preceded the active key, the comment got
+        un-commented to the new value while the real active line was left
+        stale — producing two conflicting `skills_source:` keys and silently
+        dropping the requested mode switch.
+        """
+        from goc.install import _write_skills_source
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.parent.mkdir(parents=True)
+
+            # Commented doc example FIRST, active key SECOND: the active key
+            # must be rewritten, the comment must stay a comment, and there
+            # must be exactly one active `skills_source:` key.
+            config_path.write_text(
+                "# skills_source: auto\n\nskills_source: vendored\n"
+            )
+            _write_skills_source(cwd, "plugin")
+            result = config_path.read_text()
+            self.assertEqual(result, "# skills_source: auto\n\nskills_source: plugin\n")
+            active_keys = [
+                ln
+                for ln in result.splitlines()
+                if ln.lstrip().startswith("skills_source")
+                and not ln.lstrip().startswith("#")
+            ]
+            self.assertEqual(len(active_keys), 1)
+
+            # Comment-only config still un-comments to an active key.
+            config_path.write_text("# skills_source: auto\n")
+            _write_skills_source(cwd, "plugin")
+            self.assertEqual(config_path.read_text(), "skills_source: plugin\n")
+
+    def test_write_skills_source_preserves_crlf_line_endings(self) -> None:
+        """Regression: a CRLF-authored config.yaml must keep its CRLF endings.
+
+        `_write_skills_source` read with `Path.read_text()` (universal-newline
+        translation: CRLF -> LF) and wrote back with `Path.write_text()` (LF
+        only), so the first install/upgrade/mode-switch silently rewrote a
+        Windows consumer's whole config to LF. It must route through
+        `_read_text_keep_newline` / `_write_text_keep_newline` so only the
+        targeted `skills_source:` line changes.
+        """
+        from goc.install import _write_skills_source
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.parent.mkdir(parents=True)
+
+            # CRLF-authored config with a commented example line.
+            raw = (
+                "# GoC project config\r\n"
+                "deck_dir: .game-of-cards/deck\r\n"
+                "# skills_source: auto\r\n"
+                "some_key: value\r\n"
+            ).encode("utf-8")
+            config_path.write_bytes(raw)
+
+            before = config_path.read_bytes().count(b"\r")
+            _write_skills_source(cwd, "vendored")
+            after_bytes = config_path.read_bytes()
+
+            self.assertEqual(
+                after_bytes.count(b"\r"),
+                before,
+                "CRLF line endings must be preserved across the rewrite",
+            )
+            self.assertIn(b"skills_source: vendored\r\n", after_bytes)
+            # The untouched lines keep their CRLF too.
+            self.assertIn(b"# GoC project config\r\n", after_bytes)
+
+    def test_write_skills_source_lf_config_stays_lf(self) -> None:
+        """An LF-authored config must not gain spurious CR bytes."""
+        from goc.install import _write_skills_source
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            config_path = cwd / ".game-of-cards" / "config.yaml"
+            config_path.parent.mkdir(parents=True)
+
+            config_path.write_bytes(b"# header\nskills_source: auto\n")
+            _write_skills_source(cwd, "plugin")
+            after_bytes = config_path.read_bytes()
+
+            self.assertEqual(after_bytes.count(b"\r"), 0)
+            self.assertEqual(after_bytes, b"# header\nskills_source: plugin\n")
 
     def test_plugin_mode_upgrade_preserves_non_goc_skills(self) -> None:
         """Regression: upgrade in plugin mode must not delete user-owned skills.
@@ -850,6 +980,127 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             goc_count = sum(1 for c in session_cmds if "deck_session_start" in (c or ""))
             self.assertEqual(1, goc_count)
 
+    def test_merge_claude_settings_idempotent_merge_leaves_file_untouched(self) -> None:
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # A user-owned file that already carries every GoC hook, written
+            # with the user's own 4-space indentation and key ordering.
+            hooks: dict = {}
+            for event, command in GOC_CLAUDE_HOOKS.items():
+                hooks.setdefault(event, []).append(
+                    {"hooks": [{"type": "command", "command": command}]}
+                )
+            original = json.dumps(
+                {
+                    "permissions": {"allow": ["Bash(uv run goc:*)"]},
+                    "hooks": hooks,
+                    "env": {"MY_VAR": "1"},
+                },
+                indent=4,
+            ) + "\n"
+            settings_path.write_text(original)
+
+            _merge_claude_settings(settings_path)
+
+            # No hook needed adding -> the user's bytes are preserved verbatim
+            # (indentation, key order, trailing newline), not reflowed.
+            self.assertEqual(original, settings_path.read_text())
+
+    def test_merge_claude_settings_idempotent_merge_with_non_object_item_makes_no_backup(self) -> None:
+        """A settings file that already carries every GoC hook AND contains a
+        non-object item in a `hooks[event][].hooks` list is fully idempotent.
+        The merge must not spawn a `.bak` sibling or rewrite the file — the
+        no-op non-object-items branch used to back up on every run.
+        """
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+            hooks: dict = {}
+            for event, command in GOC_CLAUDE_HOOKS.items():
+                hooks.setdefault(event, []).append(
+                    {"hooks": [{"type": "command", "command": command}]}
+                )
+            first_event = next(iter(GOC_CLAUDE_HOOKS))
+            hooks[first_event][0]["hooks"].append("literal-user-item")
+            original = json.dumps({"hooks": hooks}, indent=2) + "\n"
+            settings_path.write_text(original)
+
+            _merge_claude_settings(settings_path)
+            _merge_claude_settings(settings_path)
+
+            backups = list(settings_path.parent.glob("settings.json.*.bak"))
+            self.assertEqual([], backups, msg=f"backups={backups}")
+            # Idempotent merge leaves the user's bytes untouched.
+            self.assertEqual(original, settings_path.read_text())
+
+    def test_merge_claude_settings_backs_up_non_object_item_when_rewriting(self) -> None:
+        """The non-object-items safety copy must still be made when GoC
+        actually rewrites the file (a GoC hook is missing). The backup is the
+        pristine pre-reflow copy — deferring it to the write must not drop it.
+        """
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # A user group with a non-object item, but NO GoC hooks present —
+            # so the merge must add them and rewrite the file.
+            original = json.dumps(
+                {"hooks": {"SessionStart": [{"hooks": ["literal-user-item"]}]}},
+                indent=2,
+            ) + "\n"
+            settings_path.write_text(original)
+
+            _merge_claude_settings(settings_path)
+
+            # File was rewritten with GoC hooks added.
+            merged = json.loads(settings_path.read_text())
+            cmds = [
+                h.get("command")
+                for group in merged["hooks"].get("SessionStart", [])
+                if isinstance(group, dict)
+                for h in group.get("hooks", [])
+                if isinstance(h, dict)
+            ]
+            self.assertIn(GOC_CLAUDE_HOOKS["SessionStart"], cmds)
+            # Exactly one pristine backup of the original bytes was made.
+            backups = list(settings_path.parent.glob("settings.json.*.bak"))
+            self.assertEqual(1, len(backups), msg=f"backups={backups}")
+            self.assertEqual(original, backups[0].read_text())
+            # The non-object item survives the rewrite verbatim.
+            self.assertIn(
+                "literal-user-item",
+                merged["hooks"]["SessionStart"][0]["hooks"],
+            )
+
+    def test_merge_claude_settings_writes_when_a_hook_is_missing(self) -> None:
+        from goc.install import GOC_CLAUDE_HOOKS, _merge_claude_settings
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / ".claude" / "settings.json"
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.write_text(json.dumps({"theme": "dark"}, indent=2) + "\n")
+
+            _merge_claude_settings(settings_path)
+
+            merged = json.loads(settings_path.read_text())
+            self.assertEqual("dark", merged.get("theme"))
+            for event, command in GOC_CLAUDE_HOOKS.items():
+                cmds = [
+                    h.get("command")
+                    for group in merged["hooks"].get(event, [])
+                    for h in group.get("hooks", [])
+                ]
+                self.assertIn(command, cmds)
+
     def test_strip_goc_settings_entries_removes_only_goc_hooks(self) -> None:
         from goc.install import _strip_goc_settings_entries
 
@@ -889,6 +1140,366 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("echo user-hook", session_cmds)
             # UserPromptSubmit emptied → removed
             self.assertNotIn("UserPromptSubmit", result["hooks"])
+
+    def test_strip_goc_settings_entries_preserves_user_authored_empty_event_lists(self) -> None:
+        """A hook event the user authored as an empty placeholder (e.g.
+        `"MyUserEvent": []`) must survive the strip pass. The cleanup loop
+        should only delete events the function itself emptied — not ones
+        that were empty before the strip began. Sibling of the
+        emptied-by-us deletion path already covered above.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {
+                "hooks": {
+                    # GoC-managed; sole hook → emptied → must be removed.
+                    "SessionStart": [
+                        {"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"}]},
+                    ],
+                    # User-authored placeholder; already empty → must survive.
+                    "MyUserEvent": [],
+                },
+            }
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            # GoC-emptied event removed by the cleanup pass.
+            self.assertNotIn("SessionStart", result.get("hooks", {}))
+            # User-authored empty placeholder preserved.
+            self.assertEqual([], result["hooks"]["MyUserEvent"])
+
+    def test_strip_goc_settings_entries_preserves_lone_user_authored_empty_event(self) -> None:
+        """When the strip pass finds no GoC entries to remove (e.g. a repo
+        whose only `hooks` entry is a user-authored empty placeholder),
+        nothing should change. The previous behavior wiped the entire
+        `hooks` key, silently deleting user state.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {"hooks": {"MyUserEvent": []}}
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            self.assertEqual({"MyUserEvent": []}, result.get("hooks"))
+
+    def test_strip_goc_settings_entries_preserves_user_authored_empty_hook_groups(self) -> None:
+        """A user-authored hook *group* with `hooks: []` (e.g.
+        `{"matcher": "startup", "hooks": []}`) must survive the strip pass.
+        The per-group gate at the bottom of the filter must only drop groups
+        whose `hooks` list the function itself emptied, not ones that were
+        empty before the strip began. Sibling of the event-level guard
+        already covered above, one layer deeper.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {
+                "hooks": {
+                    "SessionStart": [
+                        # GoC-managed group; only hook command is GoC-owned
+                        # → filter empties it → must be dropped.
+                        {"hooks": [{"type": "command", "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"}]},
+                        # User-authored placeholder group; already empty → must survive.
+                        {"matcher": "startup", "hooks": []},
+                    ],
+                },
+            }
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            # User-authored placeholder group preserved verbatim;
+            # GoC-managed group dropped.
+            self.assertEqual(
+                [{"matcher": "startup", "hooks": []}],
+                result["hooks"]["SessionStart"],
+            )
+
+    def test_strip_goc_settings_entries_preserves_lone_user_authored_empty_group(self) -> None:
+        """When the strip pass finds no GoC entries to remove (a repo whose
+        only group under an event is a user-authored placeholder with
+        `hooks: []`), nothing should change. The previous behavior dropped
+        the group, then cleared the event, then wiped the entire `hooks`
+        key — silently deleting user state.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings: dict = {
+                "hooks": {
+                    "SessionStart": [
+                        {"matcher": "startup", "hooks": []},
+                    ],
+                },
+            }
+            settings_path.write_text(json.dumps(settings, indent=2))
+            _strip_goc_settings_entries(settings_path)
+            result = json.loads(settings_path.read_text())
+
+            self.assertEqual(
+                {"SessionStart": [{"matcher": "startup", "hooks": []}]},
+                result.get("hooks"),
+            )
+
+    def test_merge_claude_settings_handles_non_dict_json_shapes(self) -> None:
+        """Settings file containing valid JSON of a non-dict shape (`null`,
+        list, string, number) must not crash `_merge_claude_settings`; the
+        original bytes are preserved in a timestamped `.bak` sibling and a
+        warning is printed, matching the existing `JSONDecodeError` branch.
+        """
+        from goc.install import _merge_claude_settings
+
+        for body in ("null", "[]", '"hello"', "42"):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                # The settings file is rewritten with a valid GoC-hooks dict.
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged, dict, msg=f"input={body!r}")
+                self.assertIn("hooks", merged, msg=f"input={body!r}")
+                # Original bytes preserved in a `.bak` sibling.
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+    def test_strip_goc_settings_entries_handles_non_dict_json_shapes(self) -> None:
+        """`_strip_goc_settings_entries` must warn and return — not crash —
+        when the file is valid JSON but parses to a non-dict, mirroring the
+        existing `JSONDecodeError` branch's behavior. The original bytes
+        stay on disk (the strip path does not back up).
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        for body in ("null", "[]", '"hello"', "42"):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
+    def test_merge_claude_settings_handles_non_dict_nested_hooks_shapes(self) -> None:
+        """Wrong-shape nested `hooks` and `hooks[event]` values must surface a
+        coherent warning, back up the user's original bytes, and let the merge
+        proceed — not raise `AttributeError` from `setdefault`/`append` calls
+        on the wrong type. Mirrors the closed top-level sibling at the layer
+        below it.
+        """
+        from goc.install import _merge_claude_settings
+
+        # hooks is a non-dict scalar / list / null — entire field is reset.
+        for body in ('{"hooks": []}', '{"hooks": null}', '{"hooks": "oops"}', '{"hooks": 42}'):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged.get("hooks"), dict, msg=f"input={body!r}")
+                # GoC's three hook events are now wired.
+                self.assertIn("SessionStart", merged["hooks"], msg=f"input={body!r}")
+                self.assertIn("UserPromptSubmit", merged["hooks"], msg=f"input={body!r}")
+                self.assertIn("Stop", merged["hooks"], msg=f"input={body!r}")
+                # Original bytes preserved in a single backup sibling.
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+        # hooks is a dict but hooks[event] is the wrong shape — only that
+        # event's value is reset; user data is preserved in a backup.
+        for event_val in ('"oops"', "42", "null", '{"x": 1}'):
+            body = '{"hooks": {"SessionStart": ' + event_val + '}}'
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged["hooks"]["SessionStart"], list, msg=f"input={body!r}")
+                # The GoC hook for SessionStart is registered.
+                session_cmds = [
+                    h.get("command")
+                    for group in merged["hooks"]["SessionStart"]
+                    for h in group.get("hooks", [])
+                ]
+                self.assertIn(
+                    "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py",
+                    session_cmds,
+                    msg=f"input={body!r}",
+                )
+                # Backup preserved (single .bak even if multiple wrong-shape
+                # event values triggered a reset).
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+    def test_strip_goc_settings_entries_handles_non_dict_nested_hooks_shapes(self) -> None:
+        """`_strip_goc_settings_entries` must NOT char-explode a wrong-shape
+        nested value into a list of characters. When `hooks` itself is non-dict
+        or `hooks[event]` is non-list, leave the file untouched and warn.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        # hooks itself is a non-dict shape.
+        for body in ('{"hooks": []}', '{"hooks": null}', '{"hooks": "oops"}', '{"hooks": 42}'):
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
+        # hooks[event] is non-list (the silent-char-explode regression).
+        for event_val in ('"oops"', "42", "null", '{"x": 1}'):
+            body = '{"hooks": {"SessionStart": ' + event_val + '}}'
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched — specifically, the event value is NOT
+                # char-exploded into a list of single-character strings.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
+    def test_merge_claude_settings_handles_non_dict_group_hooks_shapes(self) -> None:
+        """Layer-4 guard: `hooks[event][i]["hooks"]` may itself be a wrong
+        shape (`str`, `int`, `dict`, or list with non-dict items). Merge must
+        back up the original bytes, sanitize the offending sub-value, and
+        proceed — not raise `AttributeError`/`TypeError`.
+        """
+        from goc.install import _merge_claude_settings
+
+        session_cmd = "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"
+
+        # group["hooks"] is non-list scalar / dict.
+        for inner_val in ('"oops"', "42", '{"x": 1}', "null"):
+            body = (
+                '{"hooks": {"SessionStart": [{"hooks": ' + inner_val + '}]}}'
+            )
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _merge_claude_settings(settings_path)
+
+                merged = json.loads(settings_path.read_text())
+                self.assertIsInstance(merged["hooks"]["SessionStart"], list, msg=f"input={body!r}")
+                session_cmds = [
+                    h.get("command")
+                    for group in merged["hooks"]["SessionStart"]
+                    if isinstance(group, dict) and isinstance(group.get("hooks"), list)
+                    for h in group["hooks"]
+                    if isinstance(h, dict)
+                ]
+                self.assertIn(session_cmd, session_cmds, msg=f"input={body!r}")
+                # Original bytes preserved in a backup sibling.
+                backups = list(Path(tmp).glob("settings.json.*.bak"))
+                self.assertEqual(1, len(backups), msg=f"input={body!r} backups={backups}")
+                self.assertEqual(body + "\n", backups[0].read_text(), msg=f"input={body!r}")
+
+        # group["hooks"] is a list with non-dict items mixed in.
+        body = (
+            '{"hooks": {"SessionStart": [{"hooks": ['
+            '{"type": "command", "command": "echo user-hook"}, "literal"'
+            ']}]}}'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings_path.write_text(body + "\n")
+
+            _merge_claude_settings(settings_path)
+
+            merged = json.loads(settings_path.read_text())
+            # Original bytes preserved in a backup sibling.
+            backups = list(Path(tmp).glob("settings.json.*.bak"))
+            self.assertEqual(1, len(backups), msg=f"backups={backups}")
+            self.assertEqual(body + "\n", backups[0].read_text())
+            # User's dict hook AND the non-dict "literal" survive verbatim;
+            # GoC's hook is appended as a new group.
+            session_groups = merged["hooks"]["SessionStart"]
+            self.assertEqual(2, len(session_groups))
+            self.assertEqual(
+                [{"type": "command", "command": "echo user-hook"}, "literal"],
+                session_groups[0]["hooks"],
+            )
+            self.assertEqual(
+                [{"type": "command", "command": session_cmd}],
+                session_groups[1]["hooks"],
+            )
+
+    def test_strip_goc_settings_entries_handles_non_dict_group_hooks_shapes(self) -> None:
+        """Layer-4 guard for strip: when `hooks[event][i]["hooks"]` is a
+        wrong shape, strip must leave the file untouched (no char-explode);
+        when it is a list with non-dict items mixed with a GoC command, the
+        non-dict items survive verbatim and only the GoC command is removed.
+        """
+        from goc.install import _strip_goc_settings_entries
+
+        # group["hooks"] is non-list — file left untouched byte-for-byte.
+        for inner_val in ('"oops"', "42", '{"x": 1}', "null"):
+            body = (
+                '{"hooks": {"SessionStart": [{"hooks": ' + inner_val + '}]}}'
+            )
+            with tempfile.TemporaryDirectory() as tmp:
+                settings_path = Path(tmp) / "settings.json"
+                settings_path.write_text(body + "\n")
+
+                _strip_goc_settings_entries(settings_path)
+
+                # File left untouched — specifically, the inner value is NOT
+                # char-exploded into a list of single-character strings.
+                self.assertEqual(body + "\n", settings_path.read_text(), msg=f"input={body!r}")
+
+        # group["hooks"] is a list with non-dict items + a GoC command:
+        # strip the GoC command, preserve the non-dict items verbatim.
+        session_cmd = "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/deck_session_start.py"
+        settings: dict = {
+            "hooks": {
+                "SessionStart": [
+                    {"hooks": [
+                        {"type": "command", "command": session_cmd},
+                        "literal",
+                        {"type": "command", "command": "echo user-hook"},
+                    ]},
+                ],
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            settings_path.write_text(json.dumps(settings, indent=2))
+
+            _strip_goc_settings_entries(settings_path)
+
+            result = json.loads(settings_path.read_text())
+            session_groups = result["hooks"]["SessionStart"]
+            self.assertEqual(1, len(session_groups))
+            # GoC's command removed; user's dict hook and the non-dict
+            # "literal" both preserved verbatim.
+            self.assertEqual(
+                [
+                    {"type": "command", "command": "echo user-hook"},
+                    "literal",
+                ],
+                session_groups[0]["hooks"],
+            )
 
     # ── Bootstrap wrapper ─────────────────────────────────────────────────────
 
@@ -962,16 +1573,57 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertEqual("fake:show smoke-card\n", current.stdout)
             self.assertEqual("", current.stderr)
 
-    def test_skill_command_injections_call_goc_directly(self) -> None:
-        # Skills shell out to `goc` directly (not via a bootstrap shim) so
-        # plugin-installed skills don't trip Claude Code's bash-policy ban
-        # on executing scripts shipped from a plugin cache directory.
+    def test_bootstrap_wrapper_execs_plugin_sibling_cli_without_path_goc(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            downstream = tmp_path / "downstream"
+            plugin_root = tmp_path / "plugin-cache" / "game-of-cards" / "0.0.99"
+            downstream_deck = downstream / ".game-of-cards" / "deck"
+            downstream_deck.mkdir(parents=True)
+            (downstream_deck / ".goc-version").write_text(f"{self._goc_version()}\n")
+
+            skills_dir = plugin_root / "skills"
+            bin_dir = plugin_root / "bin"
+            skills_dir.mkdir(parents=True)
+            bin_dir.mkdir()
+            wrapper_src = ROOT / "goc" / "templates" / "bootstrap" / "_goc-bootstrap.sh"
+            wrapper = skills_dir / "_goc-bootstrap.sh"
+            shutil.copy2(wrapper_src, wrapper)
+            fake_goc = bin_dir / "goc"
+            fake_goc.write_text(
+                "#!/bin/sh\n"
+                f'if [ "$1" = "--version" ]; then echo "goc, version {self._goc_version()}"; exit 0; fi\n'
+                'printf "plugin:%s\\n" "$*"\n'
+            )
+            fake_goc.chmod(0o755)
+
+            env = os.environ.copy()
+            env["PATH"] = "/usr/bin:/bin"
+            result = subprocess.run(
+                [str(wrapper), "show", "smoke-card"],
+                cwd=downstream,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode)
+            self.assertEqual("plugin:show smoke-card\n", result.stdout)
+            self.assertEqual("", result.stderr)
+
+    def test_skill_command_injections_keep_claude_skills_direct_and_codex_skills_resolved(self) -> None:
+        # Claude skills shell out to `goc` directly so plugin-installed Claude
+        # skills don't trip Claude Code's bash-policy ban on executing scripts
+        # shipped from a plugin cache directory. Codex skills carry a resolver
+        # paragraph because Codex does not currently expose plugin bin/ on PATH.
         from goc.install import skill_for_agent
 
         roots = [
             (ROOT / "goc" / "templates" / "skills", None),
             (ROOT / ".claude" / "skills", "claude"),
             (ROOT / ".codex" / "skills", "codex"),
+            (ROOT / "codex-plugin" / "skills", "codex"),
         ]
         for root, agent in roots:
             for skill_name in SKILL_NAMES:
@@ -979,8 +1631,14 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                     continue
                 skill = root / skill_name / "SKILL.md"
                 text = skill.read_text()
-                self.assertNotIn("_goc-bootstrap.sh", text, msg=str(skill))
                 self.assertNotIn("CLAUDE_SKILL_DIR", text, msg=str(skill))
+                if agent == "codex":
+                    self.assertIn("## Codex GoC Command", text, msg=str(skill))
+                    self.assertIn("_goc-bootstrap.sh", text, msg=str(skill))
+                elif skill_name == "codex-kickoff":
+                    self.assertIn("_goc-bootstrap.sh", text, msg=str(skill))
+                else:
+                    self.assertNotIn("_goc-bootstrap.sh", text, msg=str(skill))
 
     # ── Other install/upgrade tests ───────────────────────────────────────────
 
@@ -1008,6 +1666,160 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assert_goc_ok(attest)
             self.assertIn("Layer-3 (GoC) checks", attest.stdout)
             self.assertIn("dod-100-percent", (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text())
+
+    def test_attest_refuses_when_both_layers_are_empty_and_leaves_log_untouched(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            config.write_text("layer_2_project_dod: []\nlayer_3_goc_dod: []\n")
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+
+            attest = self.run_goc(cwd, "attest", "smoke-card", "--non-interactive")
+
+            self.assertEqual(2, attest.returncode, msg=f"stdout:\n{attest.stdout}\n\nstderr:\n{attest.stderr}")
+            self.assertIn("no closure checks configured", attest.stderr)
+            self.assertNotIn("Attestation OK", attest.stdout)
+            log_path = cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md"
+            log_text = log_path.read_text() if log_path.exists() else ""
+            self.assertNotIn(
+                "## Closure verification",
+                log_text,
+                msg="log.md must not gain a Closure verification header when no checks are configured",
+            )
+
+    def test_attest_refuses_when_every_configured_check_is_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            config.write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod:\n"
+                "  - name: advanced-by-closed\n"
+                "    kind: derived\n"
+                "  - name: dod-100-percent\n"
+                "    kind: derived\n"
+                "  - name: log-md-closure-entry\n"
+                "    kind: derived\n"
+            )
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+
+            attest = self.run_goc(
+                cwd,
+                "attest",
+                "smoke-card",
+                "--skip",
+                "advanced-by-closed",
+                "--skip",
+                "dod-100-percent",
+                "--skip",
+                "log-md-closure-entry",
+                "--non-interactive",
+            )
+
+            self.assertEqual(2, attest.returncode, msg=f"stdout:\n{attest.stdout}\n\nstderr:\n{attest.stderr}")
+            self.assertIn("every configured closure check was skipped", attest.stderr)
+            self.assertNotIn("Attestation OK", attest.stdout)
+            log_path = cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md"
+            log_text = log_path.read_text() if log_path.exists() else ""
+            self.assertNotIn(
+                "## Closure verification",
+                log_text,
+                msg="log.md must not gain a Closure verification header when every check is skipped",
+            )
+
+    def test_attest_runs_when_only_some_checks_are_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            config.write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod:\n"
+                "  - name: advanced-by-closed\n"
+                "    kind: derived\n"
+                "  - name: dod-100-percent\n"
+                "    kind: derived\n"
+            )
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+            readme = cwd / ".game-of-cards" / "deck" / "smoke-card" / "README.md"
+            readme.write_text(readme.read_text().replace("- [ ] (replace with real criteria)", "- [x] closure ok"))
+
+            # One check skipped, one still runs — the guard must NOT fire.
+            attest = self.run_goc(
+                cwd,
+                "attest",
+                "smoke-card",
+                "--skip",
+                "advanced-by-closed",
+                "--non-interactive",
+            )
+
+            self.assert_goc_ok(attest)
+            self.assertIn("Attestation OK", attest.stdout)
+            log_text = (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text()
+            self.assertIn("## Closure verification", log_text)
+
+    def test_attest_skip_with_null_check_description_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install"))
+            config = cwd / ".game-of-cards" / "config.yaml"
+            # The skipped check carries an explicit `description: null`; a
+            # sibling check still runs so the all-skipped guard does not fire
+            # before the skip branch builds its summary.
+            config.write_text(
+                "layer_2_project_dod: []\n"
+                "layer_3_goc_dod:\n"
+                "  - name: dod-100-percent\n"
+                "    kind: derived\n"
+                "  - name: log-md-closure-entry\n"
+                "    kind: derived\n"
+                "    description: null\n"
+                "  - name: advanced-by-closed\n"
+                "    kind: derived\n"
+                "    description: edge prereq check\n"
+            )
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", "smoke-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+            )
+            readme = cwd / ".game-of-cards" / "deck" / "smoke-card" / "README.md"
+            readme.write_text(readme.read_text().replace("- [ ] (replace with real criteria)", "- [x] closure ok"))
+
+            # Skip the null-description check (the crash trigger) and the
+            # string-description check (no-regression); dod-100-percent runs.
+            attest = self.run_goc(
+                cwd,
+                "attest",
+                "smoke-card",
+                "--skip",
+                "log-md-closure-entry",
+                "--skip",
+                "advanced-by-closed",
+                "--non-interactive",
+            )
+
+            self.assert_goc_ok(attest)
+            self.assertNotIn("TypeError", attest.stderr)
+            self.assertIn("log-md-closure-entry — SKIPPED", attest.stdout)
+            self.assertIn("advanced-by-closed — SKIPPED", attest.stdout)
+            self.assertIn("Attestation OK", attest.stdout)
+            # The null description renders as an empty parenthetical; a string
+            # description still renders its text (the pre-fix behavior).
+            log_text = (cwd / ".game-of-cards" / "deck" / "smoke-card" / "log.md").read_text()
+            self.assertIn("log-md-closure-entry SKIPPED — SKIPPED ()", log_text)
+            self.assertIn("advanced-by-closed SKIPPED — SKIPPED (edge prereq check)", log_text)
 
     def test_state_mutations_respect_auto_commit_config_and_cli_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1161,6 +1973,24 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertTrue((cwd / "deck").exists(), "dry run must not remove legacy tree")
             self.assertFalse((cwd / ".game-of-cards" / "deck" / "legacy-card").exists())
 
+    def test_migrate_dry_run_announces_removal_for_identical_only_tree(self) -> None:
+        # When every legacy card is byte-identical to its canonical
+        # counterpart, the real `goc migrate` still rmtree's the legacy
+        # tree — so --dry-run must announce that deletion, not hide it.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_legacy_card(cwd)
+            canonical = self._make_canonical_deck(cwd)
+            (canonical / "legacy-card").mkdir()
+            (canonical / "legacy-card" / "README.md").write_text(self._LEGACY_CARD_FRONTMATTER)
+
+            result = self.run_goc(cwd, "migrate", "--dry-run")
+
+            self.assert_goc_ok(result)
+            self.assertIn("identical", result.stdout)
+            self.assertIn("Would remove legacy tree", result.stdout)
+            self.assertTrue((cwd / "deck").exists(), "dry run must not remove legacy tree")
+
     def test_migrate_no_legacy_reports_nothing_to_do(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
@@ -1170,6 +2000,51 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(result)
             self.assertIn("No legacy deck/", result.stdout)
+
+    def test_migrate_confirms_before_removing_legacy_with_no_card_dirs(self) -> None:
+        # Dual-tree conflict where the legacy deck/ holds only loose files
+        # (no card subdirectories): the destructive rmtree must still go
+        # through the confirm gate. Declining (empty stdin -> default False)
+        # leaves the legacy tree and its loose files intact.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_canonical_deck(cwd)
+            legacy = cwd / "deck"
+            legacy.mkdir()
+            (legacy / ".goc-version").write_text("0.0.0\n")
+            (legacy / "NOTES.txt").write_text("keep me\n")
+
+            result = subprocess.run(
+                [sys.executable, "-m", "goc.cli", "migrate"],
+                cwd=cwd,
+                env={**os.environ, "PYTHONPATH": str(ROOT)},
+                input="",  # confirm() default is False on empty stdin -> abort
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertNotEqual(0, result.returncode, msg=result.stdout)
+            self.assertTrue(legacy.exists(), "declined confirm must not remove legacy tree")
+            self.assertTrue((legacy / "NOTES.txt").is_file())
+            self.assertNotIn("Removed legacy tree", result.stdout)
+
+    def test_migrate_auto_yes_removes_legacy_with_no_card_dirs(self) -> None:
+        # --auto-yes still skips the prompt and removes a loose-file-only
+        # legacy tree in a dual-tree conflict.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._make_canonical_deck(cwd)
+            legacy = cwd / "deck"
+            legacy.mkdir()
+            (legacy / ".goc-version").write_text("0.0.0\n")
+            (legacy / "NOTES.txt").write_text("keep me\n")
+
+            result = self.run_goc(cwd, "migrate", "--yes")
+
+            self.assert_goc_ok(result)
+            self.assertFalse(legacy.exists())
+            self.assertIn("Removed legacy tree", result.stdout)
 
     def test_install_detects_legacy_deck_as_existing_install(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1584,6 +2459,145 @@ class AppendPrecommitHookWorktreeTest(unittest.TestCase):
             target = Path(tmp) / ".pre-commit-config.yaml"
             _append_precommit_hook(target)
             self.assertFalse(target.exists())
+
+
+class UpgradeAppendsPrecommitHookTest(unittest.TestCase):
+    """Regression: `goc upgrade`'s dry-run plan lists the pre-commit hook
+    append, so the real upgrade must perform it too. The install path skips
+    the hook when run before `git init` (no `.git` yet); the documented
+    remedy (`git init` then `goc upgrade`) must actually install it instead
+    of merely promising to in the dry-run plan."""
+
+    def run_goc(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        pythonpath = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
+        return subprocess.run(
+            [sys.executable, "-m", "goc.cli", *args],
+            cwd=cwd, env=env, text=True, capture_output=True, check=False,
+        )
+
+    def test_upgrade_appends_pre_commit_hook_after_late_git_init(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            cfg = cwd / ".pre-commit-config.yaml"
+
+            # Install before the directory is a git checkout — hook skipped.
+            install = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills")
+            self.assertEqual(install.returncode, 0, msg=install.stdout + install.stderr)
+            self.assertFalse(cfg.exists())
+
+            subprocess.run(["git", "init", "-q"], cwd=cwd, check=True, capture_output=True)
+
+            # The dry-run plan promises the append...
+            plan = self.run_goc(cwd, "upgrade", "--keep-local-skills", "--dry-run")
+            self.assertEqual(plan.returncode, 0, msg=plan.stdout + plan.stderr)
+            self.assertIn("append .pre-commit-config.yaml", plan.stdout)
+
+            # ...so the real run must perform it (dry-run/real parity).
+            real = self.run_goc(cwd, "upgrade", "--keep-local-skills")
+            self.assertEqual(real.returncode, 0, msg=real.stdout + real.stderr)
+            self.assertTrue(cfg.is_file(), msg=".pre-commit-config.yaml not written by upgrade")
+            self.assertIn("id: goc-validate", cfg.read_text())
+
+    def test_dry_run_omits_pre_commit_append_in_non_git_dir(self) -> None:
+        # Inverse of the git-repo case: in a non-git dir the executor skips the
+        # pre-commit append, so the dry-run plan must omit it too (no phantom
+        # write, no inflated "N writes planned" count).
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            cfg = cwd / ".pre-commit-config.yaml"
+
+            plan = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills", "--dry-run")
+            self.assertEqual(plan.returncode, 0, msg=plan.stdout + plan.stderr)
+            self.assertNotIn(".pre-commit-config.yaml", plan.stdout)
+
+            real = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills")
+            self.assertEqual(real.returncode, 0, msg=real.stdout + real.stderr)
+            self.assertFalse(cfg.exists(), msg="real install wrote .pre-commit-config.yaml in non-git dir")
+
+    def test_upgrade_does_not_duplicate_existing_pre_commit_hook(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            cfg = cwd / ".pre-commit-config.yaml"
+
+            subprocess.run(["git", "init", "-q"], cwd=cwd, check=True, capture_output=True)
+            install = self.run_goc(cwd, "install", "--agents", "claude", "--local-skills")
+            self.assertEqual(install.returncode, 0, msg=install.stdout + install.stderr)
+            self.assertEqual(cfg.read_text().count("id: goc-validate"), 1)
+
+            real = self.run_goc(cwd, "upgrade", "--keep-local-skills")
+            self.assertEqual(real.returncode, 0, msg=real.stdout + real.stderr)
+            self.assertEqual(cfg.read_text().count("id: goc-validate"), 1)
+
+
+class RefreshStalePrecommitHookTest(unittest.TestCase):
+    """Regression: `_append_precommit_hook` must migrate a stale GoC-managed
+    `goc-validate` stanza in place. A repo installed before the deck moved
+    from deck/ to .game-of-cards/deck/ carries a legacy `files: ^deck/.*$`
+    glob; the no-op-when-present short-circuit left it dead (matching no card
+    path) across `goc upgrade`."""
+
+    LEGACY = (
+        "repos:\n"
+        "  - repo: local\n"
+        "    hooks:\n"
+        "      - id: goc-validate\n"
+        "        name: goc validate\n"
+        "        entry: goc validate\n"
+        "        language: system\n"
+        "        pass_filenames: false\n"
+        "        files: ^deck/.*$\n"
+    )
+
+    def _git_dir(self, tmp: str) -> Path:
+        root = Path(tmp)
+        (root / ".git").mkdir()
+        return root
+
+    def test_legacy_files_glob_is_migrated(self) -> None:
+        from goc.install import _append_precommit_hook  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
+            cfg.write_text(self.LEGACY)
+            _append_precommit_hook(cfg)
+            text = cfg.read_text()
+            self.assertNotIn("files: ^deck/.*$", text)
+            self.assertIn(r"files: ^\.game-of-cards/deck/.*$", text)
+            self.assertEqual(text.count("id: goc-validate"), 1)
+
+    def test_current_block_is_byte_identical_noop(self) -> None:
+        from goc.install import PRE_COMMIT_HOOK, _append_precommit_hook  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
+            cfg.write_text("repos:\n" + PRE_COMMIT_HOOK)
+            before = cfg.read_text()
+            _append_precommit_hook(cfg)
+            self.assertEqual(cfg.read_text(), before)
+
+    def test_unrelated_repo_local_hook_is_preserved(self) -> None:
+        from goc.install import _append_precommit_hook  # noqa: PLC0415
+
+        user_block = (
+            "  - repo: local\n"
+            "    hooks:\n"
+            "      - id: my-linter\n"
+            "        name: my linter\n"
+            "        entry: ./lint.sh\n"
+            "        language: system\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
+            cfg.write_text(self.LEGACY + user_block)
+            _append_precommit_hook(cfg)
+            text = cfg.read_text()
+            # GoC stanza refreshed...
+            self.assertIn(r"files: ^\.game-of-cards/deck/.*$", text)
+            # ...user's own hook untouched.
+            self.assertIn("id: my-linter", text)
+            self.assertIn("entry: ./lint.sh", text)
 
 
 if __name__ == "__main__":

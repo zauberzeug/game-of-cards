@@ -90,6 +90,141 @@ class SessionStartHookTest(unittest.TestCase):
         self.assertEqual(self.hook._card_human_gate(p), "none")
 
 
+class SessionStartHookInlineCommentTest(unittest.TestCase):
+    """The four frontmatter readers must strip a trailing YAML `# comment`.
+
+    Regression for the latent defect where hand-authored inline comments on
+    `status`, `human_gate`, `waiting_on`, or `waiting_until` would leak into
+    the parsed value and silently misclassify the card.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _readme(self, content: str) -> Path:
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        )
+        tmp.write(content)
+        tmp.flush()
+        return Path(tmp.name)
+
+    def test_status_strips_trailing_comment(self):
+        p = self._readme("---\nstatus: active # resumable note\ntitle: t\n---\nbody\n")
+        self.assertEqual(self.hook._card_status(p), "active")
+
+    def test_human_gate_strips_trailing_comment(self):
+        p = self._readme(
+            "---\nstatus: active\nhuman_gate: decision # parked\ntitle: t\n---\nbody\n"
+        )
+        self.assertEqual(self.hook._card_human_gate(p), "decision")
+
+    def test_waiting_on_strips_trailing_comment(self):
+        p = self._readme(
+            "---\nstatus: active\nwaiting_on: external # see GH-123\ntitle: t\n---\nbody\n"
+        )
+        self.assertEqual(self.hook._card_waiting_on(p), "external")
+
+    def test_waiting_until_strips_trailing_comment(self):
+        p = self._readme(
+            "---\nstatus: active\nwaiting_until: 2026-06-05 # deferred\ntitle: t\n---\nbody\n"
+        )
+        self.assertEqual(self.hook._card_waiting_until(p), "2026-06-05")
+
+    def test_hash_inside_bare_value_is_preserved(self):
+        """YAML: `#` terminates a value only when preceded by whitespace.
+
+        A `#` glued to a non-whitespace character is part of the scalar — the
+        helper must not amputate `foo#bar` into `foo`.
+        """
+        p = self._readme("---\nstatus: foo#bar\ntitle: t\n---\nbody\n")
+        self.assertEqual(self.hook._card_status(p), "foo#bar")
+
+    def test_quoted_then_comment_unwraps_to_inner_value(self):
+        p = self._readme(
+            '---\nstatus: "active" # quoted then commented\ntitle: t\n---\nbody\n'
+        )
+        self.assertEqual(self.hook._card_status(p), "active")
+
+
+class SessionStartHookQuotedHashParityTest(unittest.TestCase):
+    """A `#` *inside* a quoted scalar is content, not a comment.
+
+    Regression for the drift where `_comment_free_tail` amputated a quoted
+    value at the first whitespace-preceded `#` regardless of quote state,
+    diverging from the engine's quote-aware `yaml_lite._strip_comment`. The
+    helper must keep the `#` (and everything after it) when it sits between
+    the quotes, byte-identical to how the engine parses the same line.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+        from goc import engine
+        from goc._vendor import yaml_lite
+
+        cls.engine = engine
+        cls.yaml_lite = yaml_lite
+
+    def _readme(self, content: str) -> Path:
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        )
+        tmp.write(content)
+        tmp.flush()
+        return Path(tmp.name)
+
+    def test_readers_match_engine_for_hash_inside_quotes(self):
+        cases = {
+            "status": 'status: "done # closed early"',
+            "human_gate": 'human_gate: "decision # needs sign-off"',
+            "waiting_on": 'waiting_on: "external # waiting on PR review"',
+            "waiting_until": 'waiting_until: "2020-01-01 # deferred note"',
+        }
+        readers = {
+            "status": self.hook._card_status,
+            "human_gate": self.hook._card_human_gate,
+            "waiting_on": self.hook._card_waiting_on,
+            "waiting_until": self.hook._card_waiting_until,
+        }
+        for key, line in cases.items():
+            with self.subTest(field=key):
+                engine_val = self.yaml_lite.safe_load(line + "\n")[key]
+                p = self._readme(f"---\n{line}\ntitle: t\n---\nbody\n")
+                self.assertEqual(readers[key](p), engine_val)
+                self.assertIn("#", readers[key](p))
+
+    def test_is_impeded_matches_engine_for_quoted_commented_waiting_until(self):
+        """A quoted past `waiting_until` carrying an inline comment is
+        unparseable to the engine (backstop → impeded); the hook must agree
+        rather than truncating to the leading date and reading it as elapsed.
+        """
+        content = (
+            "---\n"
+            "title: t\n"
+            "status: active\n"
+            "human_gate: none\n"
+            "waiting_on: null\n"
+            'waiting_until: "2020-01-01 # deferred, see note"\n'
+            "definition_of_done: |\n"
+            "  - [ ] x\n"
+            "---\n"
+            "body\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            card_dir = Path(td) / "card"
+            card_dir.mkdir()
+            readme = card_dir / "README.md"
+            readme.write_text(content, encoding="utf-8")
+            card = self.engine.load_card(card_dir)
+            self.assertTrue(self.engine.waiting_impedes(card))
+            self.assertEqual(
+                self.hook._is_impeded(readme),
+                self.engine.waiting_impedes(card),
+            )
+
+
 class SessionStartHookGatedActiveCardsTest(unittest.TestCase):
     """The hook must not label `human_gate != none` active cards as resumable.
 
@@ -353,6 +488,118 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
                 f"non-canonical waiting_on={value!r} must still impede",
             )
 
+    def test_coerced_bool_int_waiting_on_resolves_to_none(self):
+        """Opposite cell to the non-canonical-string case: a `waiting_on`
+        token the yaml-lite parser coerces away from `str` (`false` / `true`
+        / `yes` / `no` / `42`) must read as None — matching the engine's
+        `isinstance(v, str)` guard in `Card.waiting_on`. The reader, not the
+        shared `_scalar_or_none`, drops the coerced token (the sibling
+        `waiting_until` reader keeps the engine's no-isinstance contract).
+        """
+        for value in ("false", "true", "yes", "no", "42"):
+            p = self._readme_path(f"status: active\nwaiting_on: {value}")
+            self.assertIsNone(
+                self.hook._card_waiting_on(p),
+                f"coerced waiting_on={value!r} must resolve to None",
+            )
+
+    def test_coerced_bool_int_waiting_on_not_impeded_agrees_with_engine(self):
+        """A coerced bool/int `waiting_on` with no `waiting_until` must NOT
+        impede, mirroring `engine.waiting_impedes` (which sees `waiting_on`
+        as None after the `isinstance` guard). Before the fix the hook
+        over-fired `_is_impeded=True` while the engine reported resumable.
+        """
+        from goc import engine  # local import: engine on sys.path via ROOT
+
+        sys.path.insert(0, str(ROOT))
+        for value in ("false", "true", "yes", "no", "42"):
+            with tempfile.TemporaryDirectory() as tmp:
+                card_dir = Path(tmp)
+                readme = card_dir / "README.md"
+                readme.write_text(
+                    "---\ntitle: demo\nstatus: active\ncontribution: medium\n"
+                    f"human_gate: none\nwaiting_on: {value}\ntags: []\n---\n"
+                    "# Demo\n\n## Definition of Done\n- [ ] x\n",
+                    encoding="utf-8",
+                )
+                card = engine.load_card(card_dir)
+                self.assertFalse(
+                    engine.waiting_impedes(card),
+                    f"engine must treat coerced waiting_on={value!r} as resumable",
+                )
+                self.assertFalse(
+                    self.hook._is_impeded(readme),
+                    f"hook must agree: coerced waiting_on={value!r} is resumable",
+                )
+
+    def test_quoted_waiting_on_stays_a_live_reason(self):
+        """A *quoted* `waiting_on: "true"` / `"42"` / `"null"` is parsed by
+        yaml-lite as a live `str` the engine keeps (and treats as impeded),
+        so the reader must NOT coerce it to None. The coercion narrowing
+        applies only to *unquoted* tokens; running it on the quote-stripped
+        value (the pre-fix behavior) wrongly dropped quoted reasons.
+        """
+        for value in ('"true"', '"false"', '"42"', "'yes'", '"null"'):
+            p = self._readme_path(f"status: active\nwaiting_on: {value}")
+            self.assertEqual(
+                self.hook._card_waiting_on(p),
+                value.strip("\"'"),
+                f"quoted waiting_on={value} must stay a live reason",
+            )
+
+    def test_quoted_waiting_scalars_impede_agreeing_with_engine(self):
+        """Quoted `waiting_on: "true"` and `waiting_until: "null"` are live
+        string values the engine impedes on (a quoted `"null"` waiting_until
+        is unparseable → the engine's backstop hides the card). The hook must
+        agree. Unquoted forms keep coercing to absent, so they must NOT
+        impede — both directions are asserted to guard the boundary.
+        """
+        from goc import engine  # local import: engine on sys.path via ROOT
+
+        sys.path.insert(0, str(ROOT))
+        impede_cases = [
+            'waiting_on: "true"',
+            'waiting_on: "42"',
+            'waiting_on: "null"',
+            'waiting_until: "null"',
+        ]
+        resumable_cases = [
+            "waiting_on: true",
+            "waiting_on: 42",
+            "waiting_on: null",
+            "waiting_until: null",
+        ]
+        for fm, expect in [(c, True) for c in impede_cases] + [
+            (c, False) for c in resumable_cases
+        ]:
+            with tempfile.TemporaryDirectory() as tmp:
+                card_dir = Path(tmp)
+                readme = card_dir / "README.md"
+                readme.write_text(
+                    "---\ntitle: demo\nstatus: active\ncontribution: medium\n"
+                    f"human_gate: none\n{fm}\ntags: []\n---\n"
+                    "# Demo\n\n## Definition of Done\n- [ ] x\n",
+                    encoding="utf-8",
+                )
+                card = engine.load_card(card_dir)
+                self.assertEqual(
+                    engine.waiting_impedes(card),
+                    expect,
+                    f"engine impede mismatch for {fm!r}",
+                )
+                self.assertEqual(
+                    self.hook._is_impeded(readme),
+                    expect,
+                    f"hook must agree with engine for {fm!r}",
+                )
+
+    def _readme_path(self, frontmatter: str) -> Path:
+        p = Path(
+            tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name
+        )
+        p.write_text(f"---\n{frontmatter}\n---\nbody\n", encoding="utf-8")
+        return p
+
     def test_four_card_matrix_only_a_appears_under_resumable(self):
         """DoD fixture: (a) plain active, (b) waiting_on: external,
         (c) waiting_on: deferred + future waiting_until, (d) human_gate: decision.
@@ -482,3 +729,56 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
         self.assertNotIn("impeded", gate_lines[0])
         self.assertIn("impeded", impeded_lines[0])
         self.assertNotIn("gated", impeded_lines[0])
+
+    def test_explicit_yaml_null_waiting_fields_are_not_an_impediment(self):
+        """Explicit YAML null literals in `waiting_on`/`waiting_until` read as absent.
+
+        The engine parses frontmatter through `yaml_lite`, whose `_NULL_SET`
+        ({null, Null, NULL, ~}) resolves those literals to None, so
+        `engine.waiting_impedes` returns False for `waiting_on: null`. The hook
+        re-implements the parse with its own mini-frontmatter reader; before the
+        fix it returned the raw token `"null"`, which `_is_impeded` mistook for a
+        live reason — framing a resumable active card as
+        `Impeded active card(s) — agent cannot resume` at session start.
+
+        Pin the hook against `engine.waiting_impedes` so the two never drift.
+        Reachability is the hand-edit / external-tool / pre-validate path the
+        rest of this hook family already accepts (the engine never emits an
+        explicit-null overlay).
+        """
+        import goc.engine as engine
+
+        for field in ("waiting_on", "waiting_until"):
+            for literal in ("null", "Null", "NULL", "~"):
+                frontmatter = f"status: active\n{field}: {literal}"
+                p = Path(
+                    tempfile.NamedTemporaryFile(
+                        mode="w", suffix=".md", delete=False
+                    ).name
+                )
+                p.write_text(f"---\n{frontmatter}\n---\nbody\n", encoding="utf-8")
+
+                card_dir = Path(tempfile.mkdtemp())
+                (card_dir / "README.md").write_text(
+                    f"---\n{frontmatter}\n---\nbody\n", encoding="utf-8"
+                )
+                engine_view = engine.waiting_impedes(engine.load_card(card_dir))
+
+                self.assertFalse(
+                    self.hook._is_impeded(p),
+                    f"{field}: {literal} is an explicit YAML null, not an impediment",
+                )
+                self.assertEqual(
+                    self.hook._is_impeded(p),
+                    engine_view,
+                    f"hook must agree with engine for {field}: {literal}",
+                )
+
+        # Control: a real reason still impedes (and agrees with the engine).
+        p = Path(
+            tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False).name
+        )
+        p.write_text(
+            "---\nstatus: active\nwaiting_on: external\n---\nbody\n", encoding="utf-8"
+        )
+        self.assertTrue(self.hook._is_impeded(p))

@@ -3,6 +3,29 @@ name: next-card
 description: "Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status. AUTO-INVOKE when user says \"what's next\", \"pick something\", \"work on the queue\", \"what should I do\", \"next item\", \"drain the deck\", or initiates autonomous-loop work. Filters to `human_gate: none` for loop safety; Kanban pull principle (work is taken, not pushed)."
 ---
 
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
+
 ## Preflight
 
 If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.

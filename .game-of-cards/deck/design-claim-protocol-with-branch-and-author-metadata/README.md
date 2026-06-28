@@ -11,6 +11,7 @@ advances:
   - support-worktrees-and-multi-agent-deck-sync
 advanced_by:
   - add-worker-field-and-filter-to-cards
+  - parallel-agents-double-close-cards-because-claim-protections-are-disabled
 tags: [story, infra]
 definition_of_done: |
   - [x] Identity model decided: `worker.who` is a free-form string. Decision + rationale recorded in the `## Decision` section.

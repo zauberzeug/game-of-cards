@@ -28,6 +28,8 @@ definition_of_done: |
   - [ ] Smoke test or release-verification step covers both channels
   - [ ] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
+supersedes:
+  - publish-game-of-cards-agent-plugins
 ---
 
 # Publish the OpenClaw plugin

@@ -5,7 +5,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +72,77 @@ class BoardRenderingTest(unittest.TestCase):
                 self.assertIn(f"{status}-card", result.stdout)
 
 
+    def test_board_columns_derive_from_schema_status_values(self) -> None:
+        """A status the schema declares but the old hardcoded literal omitted
+        must still get a column and render its cards — the board reads its
+        status enum from `schema.status_values`, not a hardcoded list."""
+        from goc import engine
+
+        custom = replace(
+            engine.load_schema(),
+            status_values=[
+                "open", "active", "review", "blocked",
+                "done", "disproved", "superseded",
+            ],
+        )
+        card = engine.Card(
+            title="in-review-card",
+            path=Path("/tmp/in-review-card"),
+            frontmatter={
+                "title": "in-review-card",
+                "status": "review",
+                "contribution": "medium",
+                "human_gate": "none",
+            },
+            body="",
+            dod_open=0,
+            dod_done=0,
+        )
+        with mock.patch.object(engine, "load_schema", return_value=custom):
+            board = engine.render_board([card], max_rows=20, no_color=True)
+
+        self.assertIn("REVIEW", board)
+        self.assertIn("in-review-card", board)
+
+    def test_board_surfaces_card_with_status_outside_schema_enum(self) -> None:
+        """A card whose status is NOT in `schema.status_values` (a legacy
+        status left over after an enum migration, a custom-workflow status the
+        local schema later dropped, or a typo) must still appear on the board
+        under its own trailing column — the board renders every card the table
+        does, never silently dropping one. Mirrors `render_table`'s
+        show-everything contract; `goc validate` is the channel that flags the
+        status as invalid, not the read view."""
+        from goc import engine
+
+        custom = replace(
+            engine.load_schema(),
+            status_values=["open", "active", "done", "disproved", "superseded"],
+        )
+        in_enum = engine.Card(
+            title="alpha-open",
+            path=Path("/tmp/alpha-open"),
+            frontmatter={"title": "alpha-open", "status": "open", "human_gate": "none"},
+            body="",
+            dod_open=0,
+            dod_done=0,
+        )
+        off_enum = engine.Card(
+            title="legacy-blocked",
+            path=Path("/tmp/legacy-blocked"),
+            frontmatter={"title": "legacy-blocked", "status": "blocked", "human_gate": "none"},
+            body="",
+            dod_open=0,
+            dod_done=0,
+        )
+        with mock.patch.object(engine, "load_schema", return_value=custom):
+            board = engine.render_board([in_enum, off_enum], max_rows=20, no_color=True)
+            table = engine.render_table([in_enum, off_enum], verbose=0, no_color=True)
+
+        # The table already shows every card; the board must agree.
+        self.assertIn("legacy-blocked", table)
+        self.assertIn("legacy-blocked", board)
+        self.assertIn("BLOCKED", board)
+
     def test_board_preserves_title_when_worker_suffix_expands_cell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
@@ -80,6 +153,283 @@ class BoardRenderingTest(unittest.TestCase):
             self.assertEqual(0, result.returncode, msg=result.stderr)
             self.assertIn("active-card [l] @Rodja Tr", result.stdout)
             self.assertNotIn("active [l] @Rodja Tr", result.stdout)
+
+    def test_board_renders_full_worker_label_over_eight_chars(self) -> None:
+        """The worker suffix must render in full, not truncated to 8 chars.
+
+        Columns auto-size to their widest rendered cell, so a long `who`
+        like `claude[bot]` widens the column rather than overflowing. A
+        silent `who[:8]` slice would mangle it to `@claude[b`, hiding the
+        coordination info the board exists to surface.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "active-card", "active", worker='{who: "claude[bot]"}')
+
+            result = self.run_goc(cwd, "--board", "--no-color")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("@claude[bot]", result.stdout)
+            self.assertNotIn("@claude[b ", result.stdout)
+
+    def test_board_worker_filter_spans_all_status_columns(self) -> None:
+        """`goc --board --worker X` must render X's cards across every status
+        column, not just X's open cards. The worker-scoped board consumes the
+        `filtered` set; without auto-extending the implicit status default to
+        `all` for a board request, that set carries the open-only default and
+        the ACTIVE / DONE / … columns silently empty out — hiding exactly the
+        active work the board exists to surface.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "alice-open-card", "open", worker="alice")
+            self.write_card(cwd, "alice-active-card", "active", worker="alice")
+
+            result = self.run_goc(cwd, "--board", "--worker", "alice", "--no-color")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            self.assertIn("alice-open-card", result.stdout)
+            self.assertIn("alice-active-card", result.stdout)
+
+    def _open_card(self, title: str):
+        from goc import engine
+
+        return engine.Card(
+            title=title,
+            path=Path(f"/tmp/{title}"),
+            frontmatter={
+                "title": title,
+                "status": "open",
+                "contribution": "medium",
+                "human_gate": "none",
+                "advances": [],
+                "advanced_by": [],
+                "tags": ["bug"],
+            },
+            body="",
+            dod_open=1,
+            dod_done=0,
+        )
+
+    def test_board_advertises_hidden_rows_when_truncated(self) -> None:
+        """A column with more cards than max_rows must surface the overflow
+        count, not silently slice the tail away."""
+        from goc import engine
+
+        cards = [self._open_card(f"card-{i:02d}") for i in range(25)]
+        board = engine.render_board(cards, max_rows=5, no_color=True)
+
+        self.assertIn("+20 more", board)
+
+        # Indicator count equals (total - rows shown).
+        open_rows = [
+            line.split(" | ")[0].strip()
+            for line in board.splitlines()[2:]
+            if line.split(" | ")[0].strip()
+        ]
+        self.assertEqual(5, sum(1 for r in open_rows if r.startswith("card-")))
+        self.assertEqual(1, sum(1 for r in open_rows if "more" in r))
+
+    def test_board_omits_indicator_when_not_truncated(self) -> None:
+        """A column at or below the cap must not emit a false '+0 more'."""
+        from goc import engine
+
+        cards = [self._open_card(f"card-{i:02d}") for i in range(5)]
+        board = engine.render_board(cards, max_rows=5, no_color=True)
+
+        self.assertNotIn("more", board)
+
+    def test_board_truncation_indicator_keeps_grid_aligned(self) -> None:
+        """The indicator row participates in width sizing — every rendered
+        row has identical display width."""
+        from goc import engine
+
+        cards = [self._open_card(f"card-{i:02d}") for i in range(25)]
+        board = engine.render_board(cards, max_rows=5, no_color=True)
+
+        widths = {engine._display_width(line) for line in board.splitlines()}
+        self.assertEqual(1, len(widths), msg=f"misaligned rows: {widths}")
+
+    def test_board_marks_human_gate_parked_card_not_pullable(self) -> None:
+        """An open card parked behind a human gate is not pullable
+        (`card_is_ready` False), so the board must paint it with the ⏳
+        not-pullable marker — just like the equally-un-pullable
+        `waiting_impedes` card — not render it identically to a freely
+        pullable card. Regression for the board's `not_ready` predicate
+        omitting the `human_gate` axis that `card_is_ready` /
+        `card_is_workable_for_scheduler` both reject on."""
+        from goc import engine
+
+        gated = self._open_card("gated-decision")
+        gated.frontmatter["human_gate"] = "decision"
+        impeded = self._open_card("impeded")
+        impeded.frontmatter["waiting_on"] = "external"
+        impeded.frontmatter["waiting_until"] = "2099-01-01"
+        free = self._open_card("free")
+        cards = [gated, impeded, free]
+        by_title = {c.title: c for c in cards}
+
+        # Preconditions: gated and impeded are not pullable; free is.
+        self.assertFalse(engine.card_is_ready(gated, by_title))
+        self.assertFalse(engine.card_is_ready(impeded, by_title))
+        self.assertTrue(engine.card_is_ready(free, by_title))
+
+        board = engine.render_board(cards, max_rows=20, no_color=True, by_title=by_title)
+
+        def open_cell(title: str) -> str:
+            for line in board.splitlines():
+                if line.startswith(title):
+                    return line.split("|")[0].rstrip()
+            self.fail(f"{title!r} not found on board")
+
+        self.assertIn("⏳", open_cell("gated-decision"))
+        self.assertIn("⏳", open_cell("impeded"))
+        self.assertNotIn("⏳", open_cell("free"))
+
+    def test_renderers_tolerate_non_string_contribution(self) -> None:
+        """A hand-edited or legacy card with a non-string scalar
+        `contribution` (e.g. `42`) loads cleanly (`load_all_cards` only
+        skips `FrontmatterError`, not schema violations) and the read-only
+        views render BEFORE validation. `Card.contribution` must coerce to
+        `str` so `render_table` (`len`/`ljust`) and `render_board` (`[0]`)
+        don't crash the entire deck view on one bad card. Regression for the
+        non-string shape left open by `board-crashes-when-a-card-has-no-
+        contribution-value` (which fixed only the empty/None case)."""
+        from goc import engine
+
+        card = self._open_card("int-contribution")
+        card.frontmatter["contribution"] = 42
+
+        # The property hands a string to every downstream consumer.
+        self.assertEqual("42", card.contribution)
+
+        vals = engine.compute_values([card])
+        # Neither renderer raises.
+        engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        board = engine.render_board([card], values=vals, max_rows=20, no_color=True)
+        self.assertIn("[4]", board)  # marker is first char of "42"
+
+    def test_table_tolerates_non_string_tag_element(self) -> None:
+        """`render_table` joins the first four tags; a non-string element
+        (e.g. `42` from a hand edit or legacy card) loads cleanly and must
+        not crash the whole queue view on the join. Sibling of the
+        non-string-contribution crash; only the table renders tags, so the
+        board and JSON paths already tolerate the shape."""
+        from goc import engine
+
+        card = self._open_card("int-tag")
+        card.frontmatter["tags"] = ["bug", 42]
+
+        vals = engine.compute_values([card])
+        table = engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        self.assertIn("bug,42", table)
+
+    def test_renderers_tolerate_null_status(self) -> None:
+        """A card with `status: null` (or a bare `status:`) parses to a Python
+        None with the key present, so `Card.status` must coerce to `str` — else
+        `render_table` (`_display_width`) and `render_board` (`.upper()` on the
+        off-enum column key) crash the ENTIRE deck view on one bad card.
+        Sibling of the non-string-contribution crash; `goc validate` is the
+        channel that flags the invalid status, not the read view."""
+        from goc import engine
+
+        card = self._open_card("null-status")
+        card.frontmatter["status"] = None
+
+        # The property hands a string to every downstream consumer.
+        self.assertEqual("", card.status)
+
+        vals = engine.compute_values([card])
+        # Neither renderer raises.
+        engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        engine.render_board([card], values=vals, max_rows=20, no_color=True)
+
+    def test_renderers_tolerate_null_human_gate(self) -> None:
+        """A card with `human_gate: null` (or a bare `human_gate:`) parses to a
+        Python None with the key present, so `Card.human_gate` must coerce to
+        `str` — else `render_table` (`_display_width` on the GATE cell) crashes
+        the ENTIRE deck view on one bad card. Sibling of the null-`status`
+        crash; `render_board` and the JSON dump already tolerate the value, and
+        `goc validate` is the channel that flags the invalid gate, not the read
+        view. Coercing to "" keeps the readiness predicate treating it as gated."""
+        from goc import engine
+
+        card = self._open_card("null-gate")
+        card.frontmatter["human_gate"] = None
+
+        # The property hands a string to every downstream consumer.
+        self.assertEqual("", card.human_gate)
+
+        vals = engine.compute_values([card])
+        # The table renderer (the crashing path) raises on neither verbosity.
+        engine.render_table([card], values=vals, verbose=0, no_color=True)
+        engine.render_table([card], values=vals, verbose=1, no_color=True)
+        engine.render_board([card], values=vals, max_rows=20, no_color=True)
+
+    def test_board_marks_none_contribution_with_placeholder(self) -> None:
+        """Coercion must not regress the empty/None case: a blank
+        `contribution:` (parses to None) stays falsy and keeps the `[?]`
+        marker rather than becoming the truthy string ``"None"`` → `[N]`."""
+        from goc import engine
+
+        card = self._open_card("none-contribution")
+        card.frontmatter["contribution"] = None
+
+        self.assertEqual("", card.contribution)
+        board = engine.render_board([card], max_rows=20, no_color=True)
+        self.assertIn("[?]", board)
+        self.assertNotIn("[N]", board)
+
+    def test_table_aligns_columns_for_wide_character_row(self) -> None:
+        """`render_table` (the default `goc` queue view) must size and pad
+        columns by *display* width, not codepoint count, so a row whose title
+        holds an East-Asian wide glyph (two terminal columns) doesn't skew the
+        grid. Regression for the table renderer being left on the `len()` /
+        `str.ljust` path after `render_board` was switched to
+        `_display_width` / `_display_ljust`
+        (board-grid-misaligns-when-a-row-contains-the-wide-hourglass-glyph)."""
+        from goc import engine
+
+        wide = self._open_card("日本語-title")  # 3 wide glyphs, len()==9, display 12
+        ascii_card = self._open_card("ascii-title")
+        cards = [wide, ascii_card]
+
+        def status_col_start(line: str) -> int:
+            """Display column where the second (STATUS) column begins."""
+            i = 0
+            while i < len(line) and line[i] != " ":
+                i += 1
+            while i < len(line) and line[i] == " ":
+                i += 1
+            return engine._display_width(line[:i])
+
+        table = engine.render_table(cards, verbose=0, no_color=True).splitlines()
+        wide_row = next(ln for ln in table if ln.startswith("日本語"))
+        ascii_row = next(ln for ln in table if ln.startswith("ascii-title"))
+        self.assertEqual(
+            status_col_start(wide_row),
+            status_col_start(ascii_row),
+            msg="table STATUS column misaligned across a wide-glyph row",
+        )
+
+        # The table and board agree on inter-column alignment: every rendered
+        # board line shares one display width (already asserted elsewhere), and
+        # the table's data rows likewise share one display width.
+        data_rows = [wide_row, ascii_row]
+        self.assertEqual(
+            1,
+            len({engine._display_width(r) for r in data_rows}),
+            msg="table data rows differ in display width on a wide-glyph row",
+        )
+        board = engine.render_board(cards, max_rows=20, no_color=True)
+        self.assertEqual(
+            1,
+            len({engine._display_width(ln) for ln in board.splitlines()}),
+            msg="board rows differ in display width on a wide-glyph row",
+        )
 
     def test_board_rejects_negative_max_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

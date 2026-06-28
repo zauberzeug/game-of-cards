@@ -23,6 +23,8 @@ definition_of_done: |
   - [x] README + llms.txt document the install path and compatibility — LLM-direction block synced from website to README; `/llms.txt` gains a "Lean alternative for Claude Code" section with the marketplace install commands; canonical pipx-install recipe unchanged
   - [x] Smoke-test or release-verification step confirms skills + hooks resolve through the plugin path on a clean repo (verified 2026-05-07 by Rodja in coffee-sort: `/plugin marketplace add zauberzeug/game-of-cards` + `/plugin install game-of-cards@game-of-cards` delivers all 12 skills and 3 hooks intact, and `/extend-deck` runs end-to-end after the bootstrap-routed `Bash(goc:*)` permission is added; automated equivalent tracked separately as `release-smoke-test-plugin-auto-bootstrap`)
   - [x] `uv run goc validate` passes
+supersedes:
+  - publish-game-of-cards-agent-plugins
 ---
 
 # Publish the Claude Code plugin

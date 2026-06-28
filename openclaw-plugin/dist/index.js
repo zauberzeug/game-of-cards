@@ -875,14 +875,14 @@ function Number2(options = {}) {
 }
 
 // node_modules/@sinclair/typebox/build/esm/type/string/string.mjs
-function String(options = {}) {
+function String2(options = {}) {
   return { ...options, [Kind]: "String", type: "string" };
 }
 
 // node_modules/@sinclair/typebox/build/esm/type/template-literal/syntax.mjs
 function* FromUnion(syntax) {
   const trim = syntax.trim().replace(/"|'/g, "");
-  return trim === "boolean" ? yield Boolean2() : trim === "number" ? yield Number2() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String() : yield (() => {
+  return trim === "boolean" ? yield Boolean2() : trim === "number" ? yield Number2() : trim === "bigint" ? yield BigInt() : trim === "string" ? yield String2() : yield (() => {
     const literals = trim.split("|").map((literal) => Literal(literal.trim()));
     return literals.length === 0 ? Never() : literals.length === 1 ? literals[0] : UnionEvaluated(literals);
   })();
@@ -1660,7 +1660,7 @@ function FromPromise3(left, right) {
   return IsStructuralRight(right) ? StructuralRight(left, right) : type_exports.IsObject(right) && IsObjectPromiseLike(right) ? ExtendsResult.True : !type_exports.IsPromise(right) ? ExtendsResult.False : IntoBooleanResult(Visit3(left.item, right.item));
 }
 function RecordKey(schema) {
-  return PatternNumberExact in schema.patternProperties ? Number2() : PatternStringExact in schema.patternProperties ? String() : Throw("Unknown record key pattern");
+  return PatternNumberExact in schema.patternProperties ? Number2() : PatternStringExact in schema.patternProperties ? String2() : Throw("Unknown record key pattern");
 }
 function RecordValue(schema) {
   return PatternNumberExact in schema.patternProperties ? schema.patternProperties[PatternNumberExact] : PatternStringExact in schema.patternProperties ? schema.patternProperties[PatternStringExact] : Throw("Unable to get record value schema");
@@ -1680,8 +1680,8 @@ function FromRecord(left, right) {
   return IsStructuralRight(right) ? StructuralRight(left, right) : type_exports.IsObject(right) ? FromObjectRight(left, right) : !type_exports.IsRecord(right) ? ExtendsResult.False : Visit3(RecordValue(left), RecordValue(right));
 }
 function FromRegExp(left, right) {
-  const L = type_exports.IsRegExp(left) ? String() : left;
-  const R = type_exports.IsRegExp(right) ? String() : right;
+  const L = type_exports.IsRegExp(left) ? String2() : left;
+  const R = type_exports.IsRegExp(right) ? String2() : right;
   return Visit3(L, R);
 }
 function FromStringRight(left, right) {
@@ -2358,7 +2358,7 @@ __export(type_exports3, {
   Rest: () => Rest,
   ReturnType: () => ReturnType,
   Strict: () => Strict,
-  String: () => String,
+  String: () => String2,
   Symbol: () => Symbol2,
   TemplateLiteral: () => TemplateLiteral,
   Transform: () => Transform,
@@ -2447,7 +2447,6 @@ function buildArgs(input) {
   return [...flagTokens, input.verb, ...input.args ?? []];
 }
 var FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
-var IMPEDED_WAITING_ON = /* @__PURE__ */ new Set(["external", "resource", "deferred"]);
 var ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 var ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 function stripQuotes(s) {
@@ -2455,18 +2454,30 @@ function stripQuotes(s) {
 }
 function frontmatterTail(line) {
   const i = line.indexOf(":");
-  return i < 0 ? "" : line.slice(i + 1).trim();
+  if (i < 0) return "";
+  let tail = line.slice(i + 1);
+  for (let j = 0; j < tail.length; j++) {
+    if (tail[j] === "#" && (j === 0 || /\s/.test(tail[j - 1]))) {
+      tail = tail.slice(0, j);
+      break;
+    }
+  }
+  return tail.trim();
 }
 function parseWaitingUntil(value) {
+  let t;
   if (ISO_DATETIME_UTC_RE.test(value)) {
-    const t = Date.parse(value);
-    return Number.isNaN(t) ? null : new Date(t);
+    t = Date.parse(value);
+  } else if (ISO_DATE_RE.test(value)) {
+    t = Date.parse(`${value}T00:00:00Z`);
+  } else {
+    return null;
   }
-  if (ISO_DATE_RE.test(value)) {
-    const t = Date.parse(`${value}T00:00:00Z`);
-    return Number.isNaN(t) ? null : new Date(t);
-  }
-  return null;
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  const ymd = `${String(d.getUTCFullYear()).padStart(4, "0")}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+  if (ymd !== value.slice(0, 10)) return null;
+  return d;
 }
 function isImpeded(waitingOn, waitingUntil, now) {
   let untilDt = null;
@@ -2476,11 +2487,11 @@ function isImpeded(waitingOn, waitingUntil, now) {
     if (untilDt === null) untilUnparseable = true;
   }
   const untilFuture = untilDt !== null && untilDt.getTime() > now.getTime();
-  if (IMPEDED_WAITING_ON.has(waitingOn)) {
+  if (waitingOn !== "") {
     if (untilDt !== null && !untilFuture) return false;
     return true;
   }
-  if (waitingOn === "" && untilDt === null) return untilUnparseable;
+  if (untilDt === null) return untilUnparseable;
   return untilFuture;
 }
 async function findActiveCards(deckDir) {
@@ -2534,14 +2545,15 @@ async function resolveDeckDir(projectDir) {
     return resolve(projectDir, "deck");
   }
 }
+var WORK_VERBS = "add|build|change|create|delete|extract|fix|implement|introduce|move|refactor|remove|rename|update|write";
 var WORK_INITIATING = [
-  /\blet'?s\s+(do|build|implement|make|add|create|fix|introduce|write|refactor)\b/i,
-  /\b(implement|build|introduce|refactor)\s+\w/i,
-  /\b(fix|add|create|write)\s+(a|an|the|this|that|some)\b/i,
+  new RegExp(String.raw`\blet'?s\s+(do|make|ship|${WORK_VERBS})\b`, "i"),
+  new RegExp(String.raw`\b(${WORK_VERBS})\s+\w`, "i"),
+  new RegExp(String.raw`\b(${WORK_VERBS})\s+(a|an|the|this|that|some)\b`, "i"),
   /\bi\s+(want|need)\s+(to|a|an|the|this)\b/i,
   /\bwe\s+(need|should|want)\s+to\b/i,
-  /\bcan\s+you\s+(add|fix|build|create|implement|introduce|write)\b/i,
-  /\bplease\s+(add|fix|build|create|implement|introduce|write)\b/i,
+  new RegExp(String.raw`\bcan\s+you\s+(${WORK_VERBS})\b`, "i"),
+  new RegExp(String.raw`\bplease\s+(${WORK_VERBS})\b`, "i"),
   /\bmake\s+it\s+(work|do|so|happen)\b/i,
   /\bship\s+(it|this|the)\b/i
 ];
@@ -2573,9 +2585,70 @@ var DECK_REMINDER = [
   `DO NOT announce card operations to the user ("I'll file a card now\u2026", "closing the card\u2026").`,
   "The user is a vibe coder; they see code, not bookkeeping."
 ].join("\n");
-var PATTERN_REMINDER = `[GoC | pattern-check] Before yielding: did your recent change touch a pattern with broader applicability? If yes, file a generalization card via goc verb='new' before stopping. If no generalization is warranted, respond "no generalization needed" and stop.`;
-var CODE_MUTATING_TOOLS = /* @__PURE__ */ new Set(["Edit", "Write"]);
-var BASH_COMMIT_PATTERNS = [/\bgit\s+commit\b/, /\bgit\s+add\s+[-.]/];
+var PATTERN_REMINDER = `[GoC | pattern-check] Before yielding: did your recent change touch a pattern with broader applicability? If NO, respond "no generalization needed" and stop. If YES, dedup first (scan the deck): if a generalization/root card already exists, CONNECT this instance to it (cross-reference or an advances edge) and name it \u2014 do not file a duplicate; only if none exists, file a new card via goc verb='new'.`;
+var CODE_MUTATING_TOOLS = /* @__PURE__ */ new Set(["Edit", "Write", "NotebookEdit"]);
+var BROAD_STAGING_FLAGS = /* @__PURE__ */ new Set([
+  "-A",
+  "-p",
+  "-u",
+  "--all",
+  "--update",
+  "--patch"
+]);
+function shellSplit(s) {
+  const tokens = [];
+  let current = "";
+  let started = false;
+  let inSingle = false;
+  let inDouble = false;
+  let escaped = false;
+  for (const ch of s) {
+    if (escaped) {
+      current += ch;
+      started = true;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && !inSingle) {
+      escaped = true;
+      continue;
+    }
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      started = true;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      started = true;
+      continue;
+    }
+    if (!inSingle && !inDouble && /\s/.test(ch)) {
+      if (started) {
+        tokens.push(current);
+        current = "";
+        started = false;
+      }
+      continue;
+    }
+    current += ch;
+    started = true;
+  }
+  if (inSingle || inDouble) return null;
+  if (started) tokens.push(current);
+  return tokens;
+}
+function isBroadGitMutation(cmd) {
+  const tokens = shellSplit(cmd);
+  if (!tokens || tokens.length < 2 || tokens[0] !== "git") return false;
+  if (tokens[1] === "commit") return true;
+  if (tokens[1] !== "add") return false;
+  for (const tok of tokens.slice(2)) {
+    if (tok === "--") return false;
+    if (tok === "." || BROAD_STAGING_FLAGS.has(tok)) return true;
+  }
+  return false;
+}
 async function pathExists(p) {
   try {
     await access(p);
@@ -2719,7 +2792,7 @@ ${stderrJoined}` : "")).trim() || `goc ${params.verb} returned exit ${result.exi
         if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;
         if (tc?.name === "exec" || tc?.name === "Bash") {
           const cmd = tc?.params?.command ?? tc?.params?.cmd ?? "";
-          return BASH_COMMIT_PATTERNS.some((re) => re.test(cmd));
+          return isBroadGitMutation(cmd);
         }
         return false;
       });

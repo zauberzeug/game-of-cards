@@ -5,7 +5,7 @@ status: done
 stage: null
 contribution: medium
 created: "2026-05-30T08:30:36Z"
-closed_at: "2026-05-30T08:47:31Z"
+closed_at: "2026-05-30T08:54:33Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -16,7 +16,7 @@ definition_of_done: |
   - [x] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` `CODE_MUTATING_TOOLS` extends to `frozenset({"Edit", "Write", "NotebookEdit"})`; `claude-plugin/hooks/` and `codex-plugin/hooks/` mirrors regenerated via the sync script; `openclaw-plugin/index.ts` `CODE_MUTATING_TOOLS` mirror updated by hand (it is hand-ported, not auto-synced)
   - [x] PROCESS: tests/test_pattern_generalization_hook.py adds a regression row for `NotebookEdit`
   - [x] PROCESS: closure logged in log.md with the reproduce.py before/after output
-worker: {who: zoe-cron, where: hourly-goc-pull-card}
+worker: {who: "claude[bot]", where: main}
 ---
 
 # pattern-generalization-mutation-detector-skips-notebookedit-tool-calls

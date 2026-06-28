@@ -1,6 +1,6 @@
 ---
 title: bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
-summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:4172) has now surfaced — the family will keep recurring until the loader rejects the malformed shape at the source or every consumer routes through a shared shape-coercing helper."
+summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:4172) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:2552) have now surfaced. A 2026-06-21 audit added a second failure mode in the same root cause — a non-string *scalar* on a field whose consumer assumes a string (`contribution: 42`; a non-string element in `tags`) crashes the queue/board renderer with a hard TypeError before validate runs, and `contribution` is a scalar field outside the five list-typed ones, so the family is broader than list fields alone. The family will keep recurring until the loader rejects/coerces the malformed shape at the source (approach A, generalized to all schema-typed fields) or every consumer routes through a shared shape-coercing helper."
 status: open
 stage: null
 contribution: medium
@@ -12,10 +12,15 @@ advanced_by:
   - canonical-tags-loader-iterates-bare-string-scalar-character-by-character
   - goc-unadvance-rewrites-bare-string-edge-field-as-character-list
   - goc-validate-crashes-with-typeerror-on-non-string-element-in-tags-list
+  - render-json-emits-bare-string-edge-fields-as-json-strings-not-lists
+  - repair-edges-crashes-with-traceback-on-bare-string-inverse-edge-field
+  - consuming-repo-tags-loader-crashes-or-pollutes-on-non-string-list-element
+  - board-and-table-renderers-crash-on-a-card-with-null-status
+  - table-renderer-crashes-on-a-card-with-null-human-gate
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (loader-time shape rejection), B (centralized `_field_as_list` helper routing all reads), or C (continue per-consumer guards) — record in log.md with the rationale. See `## Decision required` below.
-  - [ ] MECHANICAL: implement the chosen approach. For A: extend `parse_frontmatter` / `Card` construction to reject (or coerce) non-list scalars on the schema's list-typed fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). For B: introduce a single helper and migrate every documented consumer (the six closed-sibling sites plus `_remove_from_list_field`) through it; a regression test asserts no `frontmatter.get("<list-field>") or []` pattern remains outside the helper. For C: just file the one outstanding sibling (`_remove_from_list_field`).
+  - [ ] MECHANICAL: implement the chosen approach. For A: extend `parse_frontmatter` / `Card` construction to reject (or coerce) non-list scalars on the schema's list-typed fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). For B: introduce a single helper and migrate every documented consumer (the six closed-sibling sites plus `_remove_from_list_field` and the `render_table` verbose `-vv` raw-dump loop, engine.py:2552-2556) through it; a regression test asserts no `frontmatter.get("<list-field>") or []` pattern remains outside the helper. For C: just file the one outstanding sibling (`_remove_from_list_field`).
   - [ ] TDD: a reproduce.py builds a card with `advanced_by: "A"` (bare scalar) and exercises `_remove_from_list_field` via `goc unadvance` — currently produces a list of single characters in the rewritten card; after the fix, either the load fails cleanly (A) or the helper treats the bare scalar as empty / shape-coerces (B). Same reproducer demonstrates the family is closed at the chosen layer.
   - [ ] PROCESS: cross-link the six closed siblings via `advanced_by` (or document them in the body) so a cold reader sees the family this card retires.
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
@@ -108,6 +113,88 @@ def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
 The asymmetry between the add and remove paths is the most direct
 evidence the per-consumer-guard model is failing — even paired
 helpers in the same file drifted apart.
+
+But the guard `_add_to_list_field` "DOES carry" is not even safe: its
+`raise ValueError(f"{field}: not a list")` propagates uncaught and
+**crashes `goc repair-edges`** (both the dry-run diff path at
+`engine.py:_repair_edge_diff` and the `--apply` path via `_mutate_pair`)
+with a Python traceback. The trigger is exactly the half-edge that
+sibling #6 (`repair-edges-misses-half-edge-when-inverse-side-is-a-bare-string`)
+taught `find_half_edges` to *detect*: card A has `advances: [card-b]`
+while card B has a bare-string `advanced_by: card-a`. The detection fix
+now reports that half-edge as repairable, and the repair path then feeds
+the bare-string card into `_add_to_list_field`, whose "guard" turns the
+repair into a crash. So the per-consumer-guard model isn't merely
+incomplete (silent char-iteration on the unguarded sites) — on a guarded
+site it actively breaks a shipping verb, and two already-shipped fixes
+contradict each other. This is direct evidence against approach C
+(continue per-consumer guards): a load-time normalization/rejection
+(approach A) or a shared shape-coercing helper (approach B) would let
+`repair-edges` heal the half-edge instead of aborting on it.
+
+## An eighth unguarded site (surfaced by a later audit)
+
+`goc/engine.py:2552-2556` — the verbose (`-vv`) branch of
+`render_table` dumps every relationship field raw:
+
+```python
+if verbose >= 2:
+    for field in LIST_REL_FIELDS:          # advances, advanced_by, supersedes, superseded_by
+        v = t.frontmatter.get(field) or []
+        if v:
+            out_lines.append(f"    {field}: {list(v)}")   # list(v) on a bare string
+```
+
+This is a *distinct* site from sibling #3: that card patched the
+`dependency_blockers` "awaiting" line and the per-field renderers it
+named, but this `LIST_REL_FIELDS` raw-dump loop at `verbose >= 2`
+carries no `isinstance(v, list)` guard. On a card hand-edited to
+`advances: some-card` (bare scalar), `goc --status open -vv` renders:
+
+```text
+    advances: ['s', 'o', 'm', 'e', '-', 'c', 'a', 'r', 'd']
+```
+
+Reproduced directly against `LIST_REL_FIELDS` on 2026-06-08 — the
+char-list output above is verbatim. The display is read-only (no file
+corruption), so the impact is lower than the mutating siblings, but it
+is one more consumer that joins the family, and it must be on the
+migration checklist for whichever central fix (A or B) is chosen.
+
+## A second failure mode — non-string *scalars* crash the render path (closed render-path siblings)
+
+The eight sites above all share one failure mode: a *bare string where a
+list is expected*, iterated character-by-character. A later audit
+(2026-06-21) surfaced a **second failure mode in the same root cause** —
+the loader equally tolerates a *non-string scalar* on a field whose
+read-time consumer assumes a string, and the queue/board renderers then
+crash with a hard `TypeError` (not silent char-iteration) before
+`validate` ever runs. Two closed render-path siblings:
+
+- [goc-queue-and-board-crash-on-a-non-string-contribution-value](../goc-queue-and-board-crash-on-a-non-string-contribution-value/)
+  — `contribution: 42` (a **scalar** field, outside the five list-typed
+  fields above) reaches `render_table` (`len()`/`.ljust()`) and
+  `render_board` (`c[0]`) and crashes the whole deck view. Fixed by
+  coercing in the `Card.contribution` getter.
+- [goc-queue-table-crashes-on-a-non-string-tag-element](../goc-queue-table-crashes-on-a-non-string-tag-element/)
+  — `tags: [bug, 42]` (a correct list, but a **non-string element**)
+  crashes `render_table`'s `",".join(...)`. This is the render-path twin
+  of the already-tracked `advanced_by` sibling
+  `goc-validate-crashes-with-typeerror-on-non-string-element-in-tags-list`
+  (same shape, different consumer). Fixed by coercing each element in the
+  join.
+
+Both were fixed at their consumer (the audit's fix-through), but they
+matter to *this* card because they widen the root cause: the parser
+accepts **any scalar shape on any field**, and each read-time consumer
+independently (and inconsistently) assumes the shape it wants — the same
+disease as the bare-string-on-list family, a different symptom.
+**Approach A, generalized to validate/coerce every schema-typed field's
+shape at load time (not only the five list-typed fields), closes both
+failure modes at once;** a per-field-type approach-B helper would need a
+scalar variant too. The render-path coercions already shipped are
+per-consumer guards — i.e. more instances of exactly the model this card
+argues against.
 
 ## Reachability path
 

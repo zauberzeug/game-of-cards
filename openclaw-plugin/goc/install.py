@@ -561,31 +561,117 @@ def _merge_claude_settings(settings_path: Path) -> None:
     """
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings: dict = {}
+    original: str = ""
+    backup_path: Path | None = None
+    changed = False
+
+    def _ensure_backup() -> Path:
+        nonlocal backup_path
+        if backup_path is None:
+            backup_path = _backup_unparseable_settings(settings_path, original)
+        return backup_path
+
     if settings_path.exists():
         original = settings_path.read_text()
         try:
             settings = json.loads(original)
         except json.JSONDecodeError as exc:
-            backup = _backup_unparseable_settings(settings_path, original)
+            backup = _ensure_backup()
             print(
                 f"  warning: {settings_path} is not valid JSON ({exc}); "
                 f"backed it up to {backup.name} before writing GoC hooks. "
                 f"Merge your keys back in by hand.",
                 file=sys.stderr,
             )
+        if not isinstance(settings, dict):
+            backup = _ensure_backup()
+            print(
+                f"  warning: {settings_path} is valid JSON but not an object "
+                f"(got {type(settings).__name__}); backed it up to {backup.name} "
+                f"before writing GoC hooks. Merge your keys back in by hand.",
+                file=sys.stderr,
+            )
+            settings = {}
+            changed = True
+
+    non_object_item_events: list[str] = []
 
     hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        backup = _ensure_backup()
+        print(
+            f"  warning: {settings_path} has a non-object `hooks` field "
+            f"(got {type(hooks).__name__}); backed it up to {backup.name} "
+            f"before writing GoC hooks. Merge your keys back in by hand.",
+            file=sys.stderr,
+        )
+        settings["hooks"] = {}
+        hooks = settings["hooks"]
+        changed = True
+
     for event, command in GOC_CLAUDE_HOOKS.items():
-        event_hooks: list = hooks.setdefault(event, [])
+        event_hooks = hooks.setdefault(event, [])
+        if not isinstance(event_hooks, list):
+            backup = _ensure_backup()
+            print(
+                f"  warning: {settings_path} hooks.{event} is "
+                f"{type(event_hooks).__name__} (expected list); backed it up "
+                f"to {backup.name} and reset to []. Merge your value back in "
+                f"by hand.",
+                file=sys.stderr,
+            )
+            hooks[event] = []
+            event_hooks = hooks[event]
+            changed = True
+        for group in event_hooks:
+            if not isinstance(group, dict):
+                continue
+            if "hooks" not in group:
+                continue
+            group_hooks = group["hooks"]
+            if not isinstance(group_hooks, list):
+                backup = _ensure_backup()
+                print(
+                    f"  warning: {settings_path} hooks.{event}[].hooks is "
+                    f"{type(group_hooks).__name__} (expected list); backed it "
+                    f"up to {backup.name} and reset to []. Merge your value "
+                    f"back in by hand.",
+                    file=sys.stderr,
+                )
+                group["hooks"] = []
+                changed = True
+            elif any(not isinstance(h, dict) for h in group_hooks):
+                # No mutation here — the non-object items are kept as-is. Defer
+                # the backup+warning until we know GoC is actually going to
+                # rewrite the file (an idempotent merge must not spawn a .bak).
+                if event not in non_object_item_events:
+                    non_object_item_events.append(event)
         already = any(
-            any(h.get("command") == command for h in group.get("hooks", []))
+            isinstance(h, dict) and h.get("command") == command
             for group in event_hooks
-            if isinstance(group, dict)
+            if isinstance(group, dict) and isinstance(group.get("hooks"), list)
+            for h in group["hooks"]
         )
         if not already:
             event_hooks.append({"hooks": [{"type": "command", "command": command}]})
+            changed = True
 
-    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    # Mirror `_strip_goc_settings_entries`: only rewrite the user-owned
+    # file when GoC actually changed something. An idempotent merge (every
+    # hook already present) must leave the user's bytes — indentation, key
+    # order, trailing newline — untouched rather than reflowing them. The
+    # backup is part of that contract: it is the pristine copy made before
+    # GoC reflows the file, so it only makes sense when a write happens.
+    if changed:
+        for event in non_object_item_events:
+            backup = _ensure_backup()
+            print(
+                f"  warning: {settings_path} hooks.{event}[].hooks contains "
+                f"non-object items; backed it up to {backup.name}. The "
+                f"non-object items are preserved verbatim.",
+                file=sys.stderr,
+            )
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
 
 def _strip_goc_settings_entries(settings_path: Path) -> None:
@@ -601,27 +687,100 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
             file=sys.stderr,
         )
         return
+    if not isinstance(settings, dict):
+        print(
+            f"  warning: {settings_path} is valid JSON but not an object "
+            f"(got {type(settings).__name__}); leaving it untouched "
+            f"(GoC hook entries not removed).",
+            file=sys.stderr,
+        )
+        return
 
     goc_commands = set(GOC_CLAUDE_HOOKS.values())
     hooks = settings.get("hooks", {})
+    if not isinstance(hooks, dict):
+        print(
+            f"  warning: {settings_path} has a non-object `hooks` field "
+            f"(got {type(hooks).__name__}); leaving it untouched "
+            f"(GoC hook entries not removed).",
+            file=sys.stderr,
+        )
+        return
+
+    # Events that were already empty before the strip pass are
+    # user-authored placeholders the function never touched; the cleanup
+    # below must skip them so it only removes events the function itself
+    # emptied. Without this snapshot, an upgrade-time `goc upgrade`
+    # cleanup deletes user state it has no business deleting.
+    preexisting_empty = {
+        event for event, value in hooks.items()
+        if isinstance(value, list) and not value
+    }
+
     changed = False
     for event in list(hooks.keys()):
+        event_value = hooks[event]
+        if not isinstance(event_value, list):
+            print(
+                f"  warning: {settings_path} hooks.{event} is "
+                f"{type(event_value).__name__} (expected list); leaving it "
+                f"untouched (GoC hook entries not removed for this event).",
+                file=sys.stderr,
+            )
+            continue
         new_groups: list = []
-        for group in hooks[event]:
+        for group in event_value:
             if not isinstance(group, dict):
                 new_groups.append(group)
                 continue
-            filtered = [h for h in group.get("hooks", []) if h.get("command") not in goc_commands]
-            if len(filtered) != len(group.get("hooks", [])):
+            if "hooks" not in group:
+                new_groups.append(group)
+                continue
+            group_hooks = group["hooks"]
+            if not isinstance(group_hooks, list):
+                print(
+                    f"  warning: {settings_path} hooks.{event}[].hooks is "
+                    f"{type(group_hooks).__name__} (expected list); leaving "
+                    f"this group untouched (GoC hook entries not removed for "
+                    f"this group).",
+                    file=sys.stderr,
+                )
+                new_groups.append(group)
+                continue
+            filtered: list = []
+            non_dicts: list = []
+            removed_any = False
+            for h in group_hooks:
+                if not isinstance(h, dict):
+                    non_dicts.append(h)
+                    continue
+                if h.get("command") in goc_commands:
+                    removed_any = True
+                    continue
+                filtered.append(h)
+            if non_dicts:
+                print(
+                    f"  warning: {settings_path} hooks.{event}[].hooks contains "
+                    f"non-object items; preserving them verbatim.",
+                    file=sys.stderr,
+                )
+            if removed_any:
                 changed = True
-            if filtered:
-                new_groups.append({**group, "hooks": filtered})
-        if new_groups != hooks[event]:
+            new_hooks = filtered + non_dicts
+            # Preserve user-authored placeholder groups whose `hooks` list
+            # was already empty before the filter ran (the strip pass did
+            # not produce that emptiness). Mirrors the event-level guard
+            # via `preexisting_empty` above.
+            if new_hooks or not group_hooks:
+                new_groups.append({**group, "hooks": new_hooks})
+        if new_groups != event_value:
             changed = True
         hooks[event] = new_groups
 
     for event in list(hooks.keys()):
-        if not hooks[event]:
+        if event in preexisting_empty:
+            continue
+        if isinstance(hooks[event], list) and not hooks[event]:
             del hooks[event]
             changed = True
 
@@ -646,10 +805,14 @@ def _strip_claude_vendored_harness(target: Path, templates: Path) -> None:
         skills_dir = target / shim.skills.target
         if skills_dir.is_dir():
             skills_src = templates / "skills"
+            # The bundled plugin engine omits templates/skills/, so the set of
+            # GoC-owned skill names cannot be derived there. Skip skill-dir
+            # removal in that case (never destroy authored content) and let the
+            # hook-file and settings-entry cleanup below proceed.
             goc_owned = {
                 p.name for p in skills_src.iterdir()
                 if p.is_dir() and skill_for_agent(p.name, "claude")
-            }
+            } if skills_src.is_dir() else set()
             for child in list(skills_dir.iterdir()):
                 if child.is_dir() and child.name in goc_owned:
                     shutil.rmtree(child)
@@ -722,7 +885,8 @@ def _plan_writes(
                 writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
         if is_local and shim.settings_json:
             writes.append(PlannedWrite(agent, "merge", target / shim.settings_json, "harness"))
-    writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
+    if (target / ".git").exists():
+        writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
     return writes
 
 
@@ -734,7 +898,16 @@ def _plan_upgrade_writes(
     local_skills_agents: frozenset[str] = frozenset(),
     briefing_target: str = DEFAULT_BRIEFING_TARGET,
 ) -> list[PlannedWrite]:
-    """Compute the list of writes the upgrader will perform."""
+    """Compute the list of writes the upgrader will perform.
+
+    Project-state `.game-of-cards/` files are labeled with the ownership-aware
+    `create` / `unchanged` / `preserved` actions rather than the blanket
+    `sync`, so a dry-run truthfully reports which authored files will be
+    preserved on the real run vs which absent files will be scaffolded.
+    """
+
+    classifications = _user_owned_classifications(target, templates)
+    config_root = target / ".game-of-cards"
 
     writes: list[PlannedWrite] = []
     for write in _plan_writes(
@@ -746,6 +919,16 @@ def _plan_upgrade_writes(
     ):
         if write.path.name == "log.md":
             continue
+        if write.category == "project-state":
+            try:
+                rel = write.path.relative_to(config_root)
+            except ValueError:
+                rel = None
+            if rel is not None and rel in classifications:
+                writes.append(
+                    PlannedWrite(write.owner, classifications[rel], write.path, write.category)
+                )
+                continue
         action = "sync" if write.action == "write" else write.action
         writes.append(PlannedWrite(write.owner, action, write.path, write.category))
     return writes
@@ -787,8 +970,100 @@ def _copy_tree(src: Path, dst: Path, *, skip_existing: set[Path] | None = None) 
         shutil.copy2(asset, target)
 
 
-def _sync_game_of_cards_config(target: Path, templates: Path, *, migrate_legacy: bool = False) -> None:
-    """Sync `.game-of-cards/` assets, preserving migrated closure config."""
+# Files under `.game-of-cards/` that are "evolving" — goc ships real content
+# that may change across versions, AND the consumer is allowed to customize.
+# On upgrade the engine still preserves the consumer's bytes (deterministic
+# safety), but the divergence report tags these so the `upgrade` skill knows
+# to offer a 2-way LLM reconcile rather than just "kept yours".
+# Every other shipped file is "user-owned" (a content stub or workflow hook
+# whose template ships permanently blank).
+_EVOLVING_USER_OWNED_FILES = frozenset({Path("README.md"), Path("config.yaml")})
+
+# Sentinel marker the `upgrade` skill greps for in stdout to extract the
+# JSON divergence report. Single-line JSON on the line immediately after.
+_DIVERGENCE_REPORT_MARKER = "GoC project-state divergence report (JSON):"
+
+
+def _classify_user_owned_file(template: Path, dest: Path) -> str:
+    """Classify a `.game-of-cards/` file against its shipped template.
+
+    Returns one of: `create` (destination absent), `unchanged` (byte-identical),
+    or `preserved` (diverged — never overwrite on upgrade).
+    """
+
+    if not dest.exists():
+        return "create"
+    try:
+        return "unchanged" if dest.read_bytes() == template.read_bytes() else "preserved"
+    except OSError:
+        return "preserved"
+
+
+def _user_owned_classifications(target: Path, templates: Path) -> dict[Path, str]:
+    """Map each shipped `.game-of-cards/<rel>` to its `create`/`unchanged`/`preserved` label."""
+
+    src = templates / "game_of_cards"
+    result: dict[Path, str] = {}
+    if not src.exists():
+        return result
+    for asset in src.rglob("*"):
+        if asset.is_dir() or "__pycache__" in asset.parts:
+            continue
+        rel = asset.relative_to(src)
+        dest = target / ".game-of-cards" / rel
+        result[rel] = _classify_user_owned_file(asset, dest)
+    return result
+
+
+def _emit_divergence_report(
+    classifications: dict[Path, str], templates_src: Path
+) -> None:
+    """Print a single-line JSON divergence report after a sentinel marker.
+
+    The `upgrade` skill parses the JSON on the line immediately after the
+    marker to drive the reconciliation pass. Safety does NOT depend on this
+    report — the engine has already preserved every diverged file before the
+    report is emitted.
+    """
+
+    files = []
+    for rel in sorted(classifications):
+        ownership = "evolving" if rel in _EVOLVING_USER_OWNED_FILES else "user-owned"
+        files.append(
+            {
+                "path": rel.as_posix(),
+                "status": classifications[rel],
+                "ownership": ownership,
+            }
+        )
+    payload = {
+        "version": 1,
+        "templates_root": str(templates_src),
+        "files": files,
+    }
+    print(_DIVERGENCE_REPORT_MARKER)
+    print(json.dumps(payload))
+
+
+def _sync_game_of_cards_config(
+    target: Path,
+    templates: Path,
+    *,
+    migrate_legacy: bool = False,
+    emit_report: bool = False,
+) -> None:
+    """Sync `.game-of-cards/` assets without ever overwriting authored content.
+
+    Per file: absent → scaffold from template; identical to template → no-op
+    (existing bytes left in place); diverged → preserve, do NOT overwrite.
+    This is the unconditional safety guarantee — it holds for every consumer
+    (CI runs, headless cron, agent sessions) regardless of whether the
+    `upgrade` skill is in the loop.
+
+    When `emit_report=True`, after the sync prints a sentinel-marked JSON
+    divergence report the `upgrade` skill consumes to drive its reconciliation
+    pass (2-way reconcile for evolving files, confirmation for user-owned).
+    """
 
     config_dst = target / ".game-of-cards"
     config_dst.mkdir(parents=True, exist_ok=True)
@@ -796,8 +1071,18 @@ def _sync_game_of_cards_config(target: Path, templates: Path, *, migrate_legacy:
     legacy_config = target / ".claude" / "deck-config.yaml"
     if migrate_legacy and not config_file.exists() and legacy_config.exists():
         shutil.copy2(legacy_config, config_file)
-    skip_existing = {Path("config.yaml")} if migrate_legacy else set()
-    _copy_tree(templates / "game_of_cards", config_dst, skip_existing=skip_existing)
+
+    src = templates / "game_of_cards"
+    classifications = _user_owned_classifications(target, templates)
+    for rel, status in classifications.items():
+        if status != "create":
+            continue
+        dest = config_dst / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src / rel, dest)
+
+    if emit_report:
+        _emit_divergence_report(classifications, src)
 
 
 def _frontmatter_value(text: str, key: str) -> str:
@@ -808,10 +1093,44 @@ def _frontmatter_value(text: str, key: str) -> str:
         if not line.startswith(prefix):
             continue
         value = line[len(prefix) :].strip()
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            try:
+                decoded = json.loads(value)
+            except json.JSONDecodeError:
+                return value[1:-1]
+            return decoded if isinstance(decoded, str) else str(decoded)
+        if len(value) >= 2 and value[0] == value[-1] == "'":
+            return value[1:-1].replace("''", "'")
         if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
             return value[1:-1]
         return value
     return ""
+
+
+CODEX_GOC_COMMAND_RESOLVER = """
+
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+"""
 
 
 def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
@@ -839,7 +1158,7 @@ def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
         )
     )
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(codex_frontmatter + body)
+    dst.write_text(codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body)
 
 
 def skill_for_agent(
@@ -938,8 +1257,46 @@ def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
     _write_text_keep_newline(target, text.rstrip() + "\n\n" + block, newline)
 
 
+# A standalone `- repo: local` stanza and the indented lines that belong to it
+# (everything indented deeper than the `- repo: local` list marker, up to the
+# next sibling list item / top-level key / blank line / EOF).
+_PRECOMMIT_LOCAL_BLOCK_RE = re.compile(
+    r"^  - repo: local\n(?:    .*(?:\n|$))*",
+    re.MULTILINE,
+)
+
+
+def _refresh_goc_validate_block(text: str) -> str:
+    """Re-emit the GoC-managed `goc-validate` stanza if it has drifted.
+
+    Finds the standalone `- repo: local` block that carries the
+    `id: goc-validate` hook and replaces it with the current `PRE_COMMIT_HOOK`
+    (e.g. to migrate a legacy `files: ^deck/.*$` glob to the
+    `.game-of-cards/deck` path). Only a single-hook GoC-signature block is
+    rewritten — user-authored hooks co-located in the same stanza, other
+    `repo: local` blocks, and unrelated repos are all left untouched. A block
+    that already matches stays byte-identical.
+    """
+
+    def _replace(match: "re.Match[str]") -> str:
+        block = match.group(0)
+        if "id: goc-validate" not in block:
+            return block
+        # Conservative guard: only refresh a standalone GoC-emitted stanza
+        # (exactly one hook, with the GoC signature). Anything else means a
+        # user has hand-merged content here — never destroy it.
+        if block.count("- id:") != 1 or "entry: goc validate" not in block:
+            return block
+        replacement = PRE_COMMIT_HOOK
+        if not block.endswith("\n"):
+            replacement = replacement.rstrip("\n")
+        return replacement
+
+    return _PRECOMMIT_LOCAL_BLOCK_RE.sub(_replace, text)
+
+
 def _append_precommit_hook(target: Path) -> None:
-    """Append the `goc validate` hook to `.pre-commit-config.yaml` (creating it)."""
+    """Append (or refresh) the `goc validate` hook in `.pre-commit-config.yaml`."""
 
     if not (target.parent / ".git").exists():
         return
@@ -948,6 +1305,13 @@ def _append_precommit_hook(target: Path) -> None:
         return
     text, newline = _read_text_keep_newline(target)
     if "id: goc-validate" in text:
+        # Already present — but a pre-move install may carry a stale `files:`
+        # glob that no longer matches any card path, silently disabling the
+        # hook. Refresh the GoC-managed stanza in place so `goc upgrade`
+        # carries template fixes forward.
+        refreshed = _refresh_goc_validate_block(text)
+        if refreshed != text:
+            _write_text_keep_newline(target, refreshed, newline)
         return
     if not text.endswith("\n"):
         text += "\n"
@@ -1085,15 +1449,24 @@ def _write_skills_source(target: Path, value: str) -> None:
     config_path = target / ".game-of-cards" / "config.yaml"
     if not config_path.exists():
         return
-    text = config_path.read_text()
-    pattern = re.compile(r"^[ \t]*#?[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
+    text, newline = _read_text_keep_newline(config_path)
+    # Prefer the active (non-commented) key; fall back to un-commenting a
+    # commented example only when no active line exists. A single
+    # `#?`-optional pattern with `count=1` would rewrite whichever line
+    # comes first in document order, so a commented doc example preceding
+    # an active key gets un-commented while the real key is left stale —
+    # producing two conflicting `skills_source:` keys.
+    active_pat = re.compile(r"^[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
+    commented_pat = re.compile(r"^[ \t]*#[ \t]*skills_source[ \t]*:.*$", re.MULTILINE)
     replacement = f"skills_source: {value}"
-    if pattern.search(text):
-        new_text = pattern.sub(lambda _: replacement, text, count=1)
+    if active_pat.search(text):
+        new_text = active_pat.sub(lambda _: replacement, text, count=1)
+    elif commented_pat.search(text):
+        new_text = commented_pat.sub(lambda _: replacement, text, count=1)
     else:
         sep = "" if text.endswith("\n") else "\n"
         new_text = f"{text}{sep}\n{replacement}\n"
-    config_path.write_text(new_text)
+    _write_text_keep_newline(config_path, new_text, newline)
 
 
 def install(
@@ -1251,7 +1624,10 @@ def _resolve_upgrade_briefing_target(
         choice = found[0]
     else:
         try:
-            choice = found[int(raw) - 1]
+            idx = int(raw)
+            if not 1 <= idx <= len(found):
+                raise IndexError
+            choice = found[idx - 1]
         except (ValueError, IndexError):
             print(f"goc: error: invalid selection {raw!r}; aborting upgrade.", file=sys.stderr)
             sys.exit(2)
@@ -1398,7 +1774,7 @@ def upgrade(
         replace = agent in local_skills_agents
         _sync_agent_harness(target, templates, agent, guidance_only=guidance_only, replace_skills=replace)
 
-    _sync_game_of_cards_config(target, templates, migrate_legacy=True)
+    _sync_game_of_cards_config(target, templates, migrate_legacy=True, emit_report=True)
     # Pin the resolved mode so future runs don't re-detect host state.
     if "claude" in agents:
         _write_skills_source(target, claude_skills_mode)
@@ -1406,6 +1782,10 @@ def upgrade(
     for stale in legacy_briefings_to_strip:
         _strip_goc_block(target / stale)
     _sync_methodology_blocks(target, templates, resolved_briefing, agents=agents)
+    # Match the dry-run plan, which lists this append only in a git repo
+    # (see _plan_writes). Idempotent: no-ops when the hook is already present
+    # or `.git` is absent.
+    _append_precommit_hook(target / ".pre-commit-config.yaml")
 
     (deck_dir / ".goc-version").write_text(__version__ + "\n")
 

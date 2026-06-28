@@ -17,7 +17,7 @@ stage: null
 contribution: medium
 created: 2026-05-03
 closed_at: 2026-05-03
-human_gate: session
+human_gate: none
 advances: []
 advanced_by: []
 tags: [epic, infra]

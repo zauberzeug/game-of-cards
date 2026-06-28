@@ -1,7 +1,30 @@
 ---
 name: create-card
-description: "File a new card with frontmatter, DoD scaffold, and (for bugs) reproduce.py stub. AUTO-INVOKE when user says \"let's do X\", \"implement Y\", \"fix Z\", \"add support for\", \"I want to\", \"we need to\", describes a bug, requests a feature, or initiates ANY persistent work item. The card is filed BEFORE implementation — the body is the briefing the next reader (human or AI agent) needs to act cold. Title must be user-facing, descriptive, PO-readable (not engineer's jargon)."
+description: "File a new card with frontmatter and a DoD scaffold (reproduce.py is authored by hand in Step 6 for bug-class cards, not scaffolded by the tool). AUTO-INVOKE when user says \"let's do X\", \"implement Y\", \"fix Z\", \"add support for\", \"I want to\", \"we need to\", describes a bug, requests a feature, or initiates ANY persistent work item. The card is filed BEFORE implementation — the body is the briefing the next reader (human or AI agent) needs to act cold. Title must be user-facing, descriptive, PO-readable (not engineer's jargon)."
 ---
+
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
 
 ## Preflight
 
@@ -135,7 +158,8 @@ goc new <title> \
   --tag bug \
   --tag <area-tag> \
   --advances <target-title> \
-  --advanced-by <parent-title>
+  --advanced-by <parent-title> \
+  --commit
 ```
 
 The CLI creates `deck/<title>/README.md` with valid flat frontmatter
@@ -154,9 +178,15 @@ when a new tag is warranted vs. an existing one fits.
 
 When the value-flow relationship is known at filing time, pass
 repeatable `--advances` / `--advanced-by` flags so `goc new` writes
-both sides of the edge in one command. Use the older `goc new` then
-`goc advance` two-step only as a fallback for adding edges to an
-existing card or when the relationship is discovered after creation.
+both sides of the edge in one command, and pass `--commit` so the
+new card directory and the wired endpoints land in a single atomic
+commit. Without `--commit`, the edge mutation on the existing
+endpoint lingers in the worktree as ambient ` M`; an agent that
+then commits only the new card directory (per AGENTS.md's
+explicit-pathspec rule) ships a half-edge. Use the older `goc new`
+then `goc advance` two-step only as a fallback for adding edges to
+an existing card or when the relationship is discovered after
+creation.
 
 **Edge direction for coordinating cards (the three-way fork).** When
 the card you're filing coordinates other work, decide which of three
@@ -167,7 +197,7 @@ governing cluster" for the full rules; the short form:
 - **Aggregation epic** (its value chain *is* its children; closes
   when they close) → `child.advances: [epic]`. The child contributes
   upward; the epic aggregates downward via `advanced_by`. Concretely
-  on a child filing: `goc new <child> --advances <epic>`.
+  on a child filing: `goc new <child> --advances <epic> --commit`.
 - **Governing cluster** (a decision or standard-setting card that
   closes when *decided*, independent of the cluster's work) → a
   **shared tag**, no `advances` edge in either direction. Add the

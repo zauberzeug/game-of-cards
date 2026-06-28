@@ -40,6 +40,7 @@ def _card(title: str, contribution: str, status: str, advances: list[str]) -> en
             "title": title,
             "contribution": contribution,
             "status": status,
+            "human_gate": "none",
             "advances": advances,
         },
         body="",

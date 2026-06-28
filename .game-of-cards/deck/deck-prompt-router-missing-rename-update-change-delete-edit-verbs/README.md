@@ -1,21 +1,22 @@
 ---
 title: deck-prompt-router-missing-rename-update-change-delete-edit-verbs
 summary: "The shipping `deck_prompt_router.py` WORK_INITIATING list is missing the edit verbs `rename | update | change | delete | remove | move`, so prompts like `rename the button to Export` no longer fire the GoC reminder — the exact failure mode the closed card `prompt-hook-misses-rename-work-requests` (done 2026-05-05) claimed to have fixed. Root cause is a stale-tree merge: commit 33d000a (2026-05-05 08:27) introduced `deck_prompt_router.py` as a fresh copy of an older `user-prompt-submit.py` version, and commit 14864cc (2026-05-05 22:56) then added the rename verbs to the now-orphaned `user-prompt-submit.py`. Commit 8277962 (2026-05-09) deleted the orphan, taking the fix with it. The closed card's DoD never re-checked the renamed file."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T02:15:24Z"
-closed_at: null
-human_gate: decision
+closed_at: "2026-05-30T16:45:32Z"
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the canonical AGENTS examples (`rename the button to Export`, `add a CSV export`, `fix the auth bug`) AND four sibling edit verbs (`update the timeout to 30s`, `change the default port`, `delete the legacy module`, `move the helper to utils/`) all fire the GoC reminder.
-  - [ ] TDD: existing regression cases stay green — exploration prompts that today are silent (`we should review the recent commits`) remain silent.
-  - [ ] MECHANICAL: the same verb additions land in the OpenClaw plugin's TypeScript port at `openclaw-plugin/index.ts` so the three-host parity is restored.
-  - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py --check` clean (the hook file ships in three plugin payloads + the `.claude/hooks/` dogfood copy).
-  - [ ] PROCESS: amend the closed card `prompt-hook-misses-rename-work-requests` with a forward pointer to this card per AGENTS.md's "Closure is not frozenness" rule — append to its `log.md` documenting the regression and the date.
+  - [x] TDD: `reproduce.py` exits zero — the canonical AGENTS examples (`rename the button to Export`, `add a CSV export`, `fix the auth bug`) AND four sibling edit verbs (`update the timeout to 30s`, `change the default port`, `delete the legacy module`, `move the helper to utils/`) all fire the GoC reminder.
+  - [x] TDD: existing regression cases stay green — exploration prompts that today are silent (`we should review the recent commits`) remain silent.
+  - [x] MECHANICAL: the same verb additions land in the OpenClaw plugin's TypeScript port at `openclaw-plugin/index.ts` so the three-host parity is restored.
+  - [x] MECHANICAL: `python scripts/sync_plugin_assets.py --check` clean (the hook file ships in three plugin payloads + the `.claude/hooks/` dogfood copy).
+  - [x] PROCESS: amend the closed card `prompt-hook-misses-rename-work-requests` with a forward pointer to this card per AGENTS.md's "Closure is not frozenness" rule — append to its `log.md` documenting the regression and the date.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `deck_prompt_router` WORK_INITIATING list is missing rename/update/change/delete/remove/move
@@ -121,35 +122,9 @@ hook on every UserPromptSubmit event. The prompts most affected are the
 day-to-day edit verbs (`rename`, `update`, `change`, `delete`, `remove`,
 `move`) — i.e. the most common kinds of work requests.
 
-## Decision required
+## Decision
 
-Two reasonable fix paths.
+*Resolved 2026-05-30T14:00:15Z:* Option 2 (meta-fix): extract a shared WORK_VERBS regex constant (including rename/update/change/remove/delete/move/ship/extract) and reference it from every WORK_INITIATING pattern site; mirror the same constant in the openclaw-plugin TS port
 
-1. **Restore the closed-card fix verbatim on `deck_prompt_router.py`.**
-   Re-apply the `14864cc` diff to the new filename. Adds the six verbs to
-   the three pattern locations (patterns 1, 3, 6 — pattern 7 `please …`
-   too). Smallest possible diff; keeps WORK_INITIATING's structure intact.
+*Reasoning:* collapses the four-edit-site maintenance shape that caused the original regression into one source of truth, makes the next missing-verb a one-line fix, keeps the TS port in lockstep, and enables a coordinated rewrite that can also address the sibling over-fire card
 
-2. **Refactor WORK_INITIATING to a shared `WORK_VERBS` constant.** Same
-   semantics, but extract `WORK_VERBS = r"(add|fix|build|create|write|
-   implement|refactor|introduce|rename|update|change|remove|delete|move
-   |ship|extract)"` and reference it from every pattern. Makes the next
-   "you missed verb X" miss a one-line fix and lets the TypeScript port
-   in `openclaw-plugin/index.ts` mirror the same constant. Slightly
-   bigger diff; reduces the chance of a third regression by collapsing
-   four edit sites into one.
-
-Option 2 is the meta-fix path — it removes the maintenance shape that
-caused the original miss. Option 1 is the literal "restore the closed
-card's fix" path.
-
-### Sibling defect (separately filed)
-
-The same WORK_INITIATING list is also mis-tuned in the **opposite**
-direction — pattern 4 (`i (want|need) (to|a|an|the|this)`) matches purely
-exploratory prompts like `I want to understand X`. Tracked as
-[deck-prompt-router-i-want-to-pattern-fires-on-pure-exploration-prompts](../deck-prompt-router-i-want-to-pattern-fires-on-pure-exploration-prompts/).
-A single coordinated rewrite of WORK_INITIATING (option 2 above) can
-fix both, but the two cards stay separate because the decision-required
-trade-offs differ (over-fire vs under-fire, conservative whitelist vs
-liberal whitelist).

@@ -1,6 +1,6 @@
 ---
 name: kickoff
-description: Kick off GoC in a fresh repo — introduce GoC, ask which persona fits, confirm AGENTS.md merge, scaffold project state via `goc install`. AUTO-INVOKE when the user says "kickoff", "use GoC here", "set up game of cards", "initialize GoC", or when any GoC skill is first used in a repo with no `.game-of-cards/deck/` directory. Host-agnostic: per-host complements (`claude-kickoff`, future `openclaw-kickoff`) handle host-specific UX.
+description: "Kick off GoC in a fresh repo — introduce GoC, ask which persona fits, confirm AGENTS.md merge, scaffold project state via `goc install`. AUTO-INVOKE when the user says \"kickoff\", \"use GoC here\", \"set up game of cards\", \"initialize GoC\", or when any GoC skill is first used in a repo with no `.game-of-cards/deck/` directory. Host-agnostic: per-host complements (`claude-kickoff`, future `openclaw-kickoff`) handle host-specific UX."
 ---
 
 # Kick off GoC in this repo

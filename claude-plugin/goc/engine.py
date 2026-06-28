@@ -128,7 +128,12 @@ LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"
 # ────────────────────────────────────────────────────────────────────────────
 # Frontmatter parser — used for SCHEMA.md AND every card's README.md
 
-FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)$", re.DOTALL)
+# The `(\n+)` group captures the blank line(s) between the last frontmatter
+# field and the closing `---` so that yaml_lite — not the delimiter — decides
+# their fate (a `|+` keep scalar must retain its trailing blank line, while a
+# bare scalar ignores it). A naive `(.*?)\n---` lets the delimiter swallow that
+# newline, silently shortening a final keep block scalar on every round-trip.
+FRONTMATTER_RE = re.compile(r"^---\n(.*?)(\n+)---[ \t]*(?:\n(.*))?$", re.DOTALL)
 
 
 class FrontmatterError(ValueError):
@@ -157,8 +162,11 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             "frontmatter unterminated: opening '---' at line 1 has no "
             "matching closing '---' delimiter"
         )
+    # group(2) is the blank line(s) before the closing `---`; hand them to
+    # yaml_lite so a final `|+` keep scalar keeps its trailing blank line.
+    # group(3) is the body (None when `---` sits at EOF with no trailing line).
     try:
-        data = yaml.safe_load(m.group(1))
+        data = yaml.safe_load(m.group(1) + m.group(2))
     except ValueError as exc:
         raise FrontmatterError(
             f"YAML parse error inside frontmatter: {exc}"
@@ -170,7 +178,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             "frontmatter is not a mapping: the YAML between the '---' "
             f"delimiters parsed to a {type(data).__name__}, expected key/value pairs"
         )
-    return data, m.group(2)
+    return data, m.group(3) or ""
 
 
 _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
@@ -180,10 +188,31 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
 _YAML_INDICATOR_FIRST = frozenset("&*")
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
 # Covers both bare-indicator forms (`|`, `|-`, `>+`) and the explicit-indent
-# forms the vendored parser's `_BLOCK_INDICATOR_RE` accepts (`|2`, `|3`,
-# `|10`, `|2-`, `|2+`). Coupled by shape to `yaml._BLOCK_INDICATOR_RE` so the
-# emitter's quote-trigger cannot drift from the parser's recognizer.
-_YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>[-+]?)$")
+# forms the vendored parser's `_BLOCK_INDICATOR_RE` / `_FOLDED_INDICATOR_RE`
+# accept (`|2`, `|3`, `|10`, `|2-`, `|2+`, and the folded peers `>2`, `>10`,
+# `>2-`, `>2+`). Both branches carry `\d*` so the explicit-indent digit run is
+# recognized on the folded side too — the parser's folded recognizer accepts
+# it, so an unquoted `>2` would crash on re-parse. Coupled by shape to
+# `yaml._BLOCK_INDICATOR_RE` / `yaml._FOLDED_INDICATOR_RE` so the emitter's
+# quote-trigger cannot drift from the parser's recognizers.
+_YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>\d*[-+]?)$")
+
+
+def _contains_line_break(s: str) -> bool:
+    """True when `s` holds any character str.splitlines() treats as a line
+    boundary (LF plus CR, VT, FF, FS, GS, RS, NEL, U+2028, U+2029).
+
+    The vendored parser splits the document with str.splitlines()
+    (`yaml_lite._Parser(text.splitlines())`), so any such character — not just
+    LF — breaks a scalar on re-parse, truncating its value and dropping every
+    frontmatter field below it. Deriving the predicate from str.splitlines()
+    itself is what keeps the emitter's line-break guard from drifting from the
+    parser's line-splitting: a hand-maintained character list near the `"\\n"`
+    check would inevitably miss the other nine. `"".join(s.splitlines())` drops
+    exactly the break characters and nothing else, so it differs from `s` iff
+    `s` contains at least one.
+    """
+    return "".join(s.splitlines()) != s
 
 
 def _parser_coerces_scalar(s: str) -> bool:
@@ -230,6 +259,26 @@ def _yaml_inline(value) -> str:
             "store the value as a string or int."
         )
     s = str(value)
+    if _contains_line_break(s):
+        # The inline emitter has no double-quoted escape for line breaks that
+        # round-trips through the vendored parser, and emitting bare destroys
+        # every frontmatter field below this one (the parser splits the scalar
+        # on the break via str.splitlines(), so the trailing lines are read as
+        # top-level non-key text and end the mapping early). LF-delimited text
+        # must route through `emit_frontmatter`, which detects it and uses
+        # literal-block style (`|-`) — see the docstring above. Other line
+        # breaks (CR, VT, FF, FS, GS, RS, NEL, U+2028, U+2029) cannot round-trip
+        # at all — literal-block style would silently rewrite them to LF and the
+        # parser has no escape that decodes them — so they are refused outright,
+        # the same boundary posture as the float branch above.
+        raise FrontmatterError(
+            "frontmatter scalar contains a line-break character the vendored "
+            "parser splits on (str.splitlines breaks on LF plus CR/VT/FF/FS/GS/"
+            "RS/NEL/U+2028/U+2029); emitting it bare would truncate the value "
+            "and drop every field below it. Route LF-delimited text through "
+            "emit_frontmatter (block-scalar `|-`); other line breaks are "
+            "unsupported."
+        )
     if (
         _YAML_NEEDS_QUOTE.search(s)
         or _parser_coerces_scalar(s)
@@ -250,15 +299,33 @@ def _emit_block_field(key: str, value: str, *, indicator: str) -> list[str]:
     indent from the first content line, so a content line whose own text begins
     with whitespace would otherwise corrupt the round-trip: the inflated first
     line either raises (a later, less-indented line is judged ambiguous) or
-    silently folds a shared leading indent into the block indent. When the first
-    content line begins with whitespace, emit an explicit indentation indicator
-    (`|2` / `|2-`) that pins the block indent to the 2-space prefix regardless of
-    the content's own leading whitespace.
+    silently folds a shared leading indent into the block indent. We therefore
+    emit an explicit indentation indicator (`|2` / `|2-`) — which pins the block
+    indent to the 2-space prefix regardless of the content's own leading
+    whitespace — in either of two cases: the first non-blank content line begins
+    with whitespace, OR a whitespace-only (but non-empty) line precedes the first
+    non-blank line. The latter line would otherwise be collapsed to "" by the
+    parser, which treats any blank-after-rstrip line as a structural blank while
+    the block indent is still unknown (`block_indent is None`).
     """
-    text = (value or "").rstrip("\n")
-    lines = text.splitlines()
-    first_content = next((ln for ln in lines if ln.strip()), "")
-    if first_content[:1].isspace():
+    raw = value or ""
+    if indicator.endswith("+"):
+        # Keep chomp (`|+`): preserve every trailing blank line. The parser
+        # reads a keep block back as "\n".join(chunks) + "\n", so the content
+        # lines to emit are exactly `raw` minus its single final newline —
+        # rstrip()ing here would discard the very blank lines keep exists to
+        # preserve.
+        text = raw[:-1] if raw.endswith("\n") else raw
+        lines = text.split("\n")
+    else:
+        # Clip (`|`) and strip (`|-`) both drop trailing blank lines.
+        text = raw.rstrip("\n")
+        lines = text.splitlines()
+    first_idx = next((i for i, ln in enumerate(lines) if ln.strip()), len(lines))
+    first_content = lines[first_idx] if first_idx < len(lines) else ""
+    if first_content[:1].isspace() or any(
+        ln and not ln.strip() for ln in lines[:first_idx]
+    ):
         indicator = f"{indicator[0]}2{indicator[1:]}"
     out = [f"{key}: {indicator}"]
     for ln in lines:
@@ -291,16 +358,32 @@ def _emit_worker(value) -> str:
 def emit_frontmatter(fm: dict, *, body: str = "") -> str:
     """Render frontmatter as flat YAML matching the schema's example format.
 
-    `definition_of_done` always uses `|` block style. `advances` and
-    `advanced_by` use block-style lists (one `- item` per line) when non-empty;
-    empty lists still render as `[]`. `worker` emits as a flat string when only
-    `who` is set, or an inline mapping when `where` is also set. Other multi-line
-    strings use `|-` block style. Single-line strings are rendered inline.
+    `definition_of_done` always uses `|` block style. Every member of
+    `_BLOCK_LIST_FIELDS` — the four bidirectional-edge fields `advances`,
+    `advanced_by`, `supersedes`, and `superseded_by` — uses block-style lists
+    (one `- item` per line) when non-empty; empty lists still render as `[]`.
+    `worker` emits as a flat string when only `who` is set, or an inline
+    mapping when `where` is also set. Other multi-line strings pick their block
+    chomp indicator three ways from the value's trailing-newline state so the
+    emit->parse round-trip is faithful: `|+` (keep) when the value ends in a
+    blank line (`\\n\\n`), `|` (clip) when it ends in a single newline, and
+    `|-` (strip) when it ends in neither.
+    Single-line strings are rendered inline.
     """
     lines = ["---"]
     for key, value in fm.items():
         if key == "definition_of_done":
-            lines.extend(_emit_block_field(key, value or "", indicator="|"))
+            dod = value or ""
+            if isinstance(dod, str) and _contains_line_break(dod.replace("\n", "")):
+                # DoD always uses literal-block style, which round-trips only
+                # LF: _emit_block_field splits on str.splitlines() and the
+                # parser rejoins with LF, so a non-LF break (CR/VT/FF/...)
+                # would be silently rewritten to LF — fabricating or
+                # destroying a `- [ ]` checkbox and thus the closure count.
+                # Refuse it at the boundary via the shared message, the same
+                # posture every other multi-line field already takes.
+                _yaml_inline(dod)
+            lines.extend(_emit_block_field(key, dod, indicator="|"))
             continue
         if key in _BLOCK_LIST_FIELDS and isinstance(value, list) and value:
             lines.append(f"{key}:")
@@ -310,8 +393,34 @@ def emit_frontmatter(fm: dict, *, body: str = "") -> str:
         if key == "worker":
             lines.append(f"{key}: {_emit_worker(value)}")
             continue
-        if isinstance(value, str) and "\n" in value:
-            lines.extend(_emit_block_field(key, value, indicator="|-"))
+        if (
+            isinstance(value, str)
+            and "\n" in value
+            and not _contains_line_break(value.replace("\n", ""))
+        ):
+            # Literal-block style faithfully round-trips ONLY LF line breaks:
+            # _emit_block_field splits on str.splitlines() and the parser reads
+            # the lines back joined with LF, so any *other* break character
+            # (CR/VT/FF/...) would be silently rewritten to LF. A value carrying
+            # such a character therefore falls through to `_yaml_inline` below,
+            # which refuses it at the boundary rather than corrupting it here.
+            #
+            # Pick the chomp indicator from the value's own trailing-newline
+            # state so the emit->parse round-trip is faithful. The parser reads
+            # a keep block (`|+`) back with every trailing blank line intact, a
+            # clip block (`|`) back with exactly one trailing newline, and a
+            # strip block (`|-`) back with none. The three-way choice is
+            # required: hard-coding `|-` silently dropped a trailing newline,
+            # and the two-way `|`/`|-` choice silently dropped a *trailing
+            # blank line* (a value ending in `\n\n` clipped down to one `\n`)
+            # on every re-emit of such a field — e.g. a multi-line `summary`.
+            if value.endswith("\n\n"):
+                indicator = "|+"
+            elif value.endswith("\n"):
+                indicator = "|"
+            else:
+                indicator = "|-"
+            lines.extend(_emit_block_field(key, value, indicator=indicator))
             continue
         lines.append(f"{key}: {_yaml_inline(value)}")
     lines.append("---")
@@ -331,7 +440,13 @@ def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
     if not m:
         raise ValueError("no frontmatter found")
     fm_text = m.group(1)
-    body = m.group(2)
+    # group(2) is the blank-line run before the closing `---` (a final `|+`
+    # keep scalar's trailing blank line lives here); group(3) is the body.
+    # Re-emit the blank run between the frontmatter and `---` so the keep
+    # scalar round-trips. For the common single-newline separator this is
+    # byte-identical to the prior two-group behavior.
+    trailing = m.group(2)
+    body = m.group(3) or ""
     # Match the field header and any block continuation that belongs to it.
     # A continuation only opens with an indented line directly after the
     # header, so a flat scalar (`status: x`) followed by a blank line keeps
@@ -349,7 +464,7 @@ def mutate_frontmatter_field(text: str, field_name: str, new_value: str) -> str:
         fm_text = fm_text.rstrip() + f"\n{field_name}: {new_value}"
     else:
         fm_text = pattern.sub(lambda _: f"{field_name}: {new_value}", fm_text, count=1)
-    return f"---\n{fm_text}\n---\n{body}"
+    return f"---\n{fm_text}{trailing}---\n{body}"
 
 
 DECISION_REQUIRED_RE = re.compile(
@@ -362,6 +477,57 @@ def extract_decision_required_section(body: str) -> str | None:
     """Return the body of the `## Decision required` section, or None if absent."""
     m = DECISION_REQUIRED_RE.search(body)
     return m.group(1).strip() if m else None
+
+
+# A *resolved* `## Decision` block, as opposed to a pending `## Decision
+# required` section. Two shipped forms count as resolved: the bare
+# `## Decision` heading `goc decide` writes, and the `## Decision
+# (rubric-derived)` heading `Skill(create-card)` pre-writes when the project
+# rubric resolves a gate-`none` card. The optional `(…)` qualifier admits the
+# rubric-derived form (and any future parenthetical variant); the pending
+# `## Decision required` section is still excluded because its heading carries a
+# bare word, not a parenthetical, before the newline.
+RESOLVED_DECISION_RE = re.compile(
+    r"^## Decision(?: \([^)\n]*\))?[ \t]*\n(.*?)(?=^## |\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def extract_resolved_decision_text(body: str) -> str | None:
+    """Return the text of a resolved `## Decision` block, or None if absent."""
+    m = RESOLVED_DECISION_RE.search(body)
+    return m.group(1).strip() if m else None
+
+
+# Re-scope / reversal language in a recorded decision. When `goc decide`'s
+# `--decision` matches this, the decision is overturning or re-framing a
+# verdict the card already states elsewhere (summary, body banner, DoD,
+# neighbor references) — surfaces `goc decide` does NOT auto-update. Drives
+# both the decide-time reconciliation reminder and the advisory validator
+# `validate_decision_verdict_coherence`. See
+# goc-decide-leaves-stale-verdict-content-when-recording-a-rescope.
+RESCOPE_MARKERS_RE = re.compile(
+    r"\b(?:re-?scop\w*|supersed\w*|revers\w*|overturn\w*|no longer|"
+    r"instead of|was wrong|now\s+viable|actually\s+viable)\b",
+    re.IGNORECASE,
+)
+
+# Strong negative-verdict tokens. A summary or body banner carrying one of
+# these alongside a re-scope/reversal decision is the self-contradiction we
+# flag (a "REFUTED" summary over a "viable" decision). Bare "viable" is
+# deliberately absent — only the negated forms count as a negative verdict.
+NEGATIVE_VERDICT_RE = re.compile(
+    r"\b(?:refuted|disproved|disproven|unviable|not viable|do not pursue|"
+    r"don't pursue|does\s+not\s+(?:work|converge)|doesn't\s+(?:work|converge)|"
+    r"won't\s+work|will\s+not\s+work)\b",
+    re.IGNORECASE,
+)
+
+
+def _body_banner_lines(body: str) -> list[str]:
+    """Blockquote (`> …`) banner lines in a card body — the `> ⚠ VERDICT`
+    callouts a re-scope can leave stale."""
+    return [ln for ln in body.splitlines() if ln.lstrip().startswith(">")]
 
 
 def replace_or_append_decision(body: str, decision: str, reasoning: str, today: str) -> str:
@@ -457,7 +623,12 @@ def _load_consuming_repo_tags() -> set[str]:
         value = block.get("canonical_tags") or []
         if not isinstance(value, list):
             continue
-        out.update(value)
+        # Guard elements, not just the container: a non-string element
+        # would either crash (`set.update` raises TypeError on an
+        # unhashable nested list/dict) or silently pollute the tag set
+        # (an int/bool can never match a string tag). Filter to str,
+        # matching the engine's non-string-element guard family.
+        out.update(t for t in value if isinstance(t, str))
     return out
 
 
@@ -470,14 +641,72 @@ DOD_DONE_BOX = re.compile(r"^[ \t]*- \[x\]", re.MULTILINE | re.IGNORECASE)
 # agrees with DOD_OPEN_BOX + DOD_DONE_BOX on the same `[X]`/`[x]` set.
 DOD_ANY_BOX = re.compile(r"^[ \t]*- \[[ xX]\]")
 
+# A ```- or ~~~-fenced code block inside the (block-scalar) definition_of_done
+# field shows checkbox lines as *examples*, not real DoD items. The scanners
+# below must skip those lines, otherwise an illustrative `- [ ]` inflates the
+# unchecked-box count and makes the card impossible to close.
+DOD_FENCE_DELIM = re.compile(r"^[ \t]*((`{3,})|(~{3,}))")
+
+
+def _dod_fenced_mask(lines: list[str]) -> list[bool]:
+    """Per-line flag: True when the line opens/closes or sits inside a fenced
+    code block, and so must not be treated as a DoD checkbox. All three DoD
+    scanners (count_dod_boxes, _dod_box_indices, untagged_dod_items) route
+    through this so they cannot drift apart on fence handling.
+
+    Fence matching follows CommonMark §4.5: a block opened with a run of one
+    fence character (``` or ~~~) is closed only by a fence of the *same*
+    character whose run length is >= the opener's. A ``~~~`` line inside a
+    backtick block (or vice versa, or a shorter run) is content, not a close —
+    so it stays masked and the mask cannot desynchronize on mismatched fences.
+    """
+    mask: list[bool] = []
+    fence_char: str | None = None  # "`" or "~" while inside a block; None outside
+    fence_len = 0
+    for ln in lines:
+        m = DOD_FENCE_DELIM.match(ln)
+        if m:
+            run = m.group(1)
+            char = run[0]
+            length = len(run)
+            # Text after the fence run. An opening fence may carry an info
+            # string (e.g. ```yaml); a *closing* fence may not (CommonMark
+            # §4.5) — it may be followed only by spaces or tabs.
+            trailing = ln[m.end():]
+            if fence_char is None:
+                # Opening fence: remember its character and run length. Any
+                # info string after the run is ignored for masking purposes.
+                fence_char = char
+                fence_len = length
+                mask.append(True)
+                continue
+            if char == fence_char and length >= fence_len and not trailing.strip():
+                # Matching closing fence (bare — no info string).
+                fence_char = None
+                fence_len = 0
+                mask.append(True)
+                continue
+            # A fence delimiter that does not close the current block is just
+            # content inside it (e.g. an illustrative ~~~ in a backtick block,
+            # or a same-char run bearing an info string like ```yaml).
+            mask.append(True)
+        else:
+            mask.append(fence_char is not None)
+    return mask
+
 
 def _dod_box_indices(lines: list[str]) -> list[int]:
     """0-based line indices of DoD checkbox lines, counted the same way the
     canonical box counter (DOD_OPEN_BOX + DOD_DONE_BOX) counts them — i.e.
-    case-insensitively. This is the index space LLM quality-pass verdicts
-    target, so the rewriter must agree with the counter on which lines are
-    boxes."""
-    return [i for i, ln in enumerate(lines) if DOD_ANY_BOX.match(ln)]
+    case-insensitively and skipping fenced-code-block lines. This is the index
+    space LLM quality-pass verdicts target, so the rewriter must agree with the
+    counter on which lines are boxes."""
+    fenced = _dod_fenced_mask(lines)
+    return [
+        i
+        for i, ln in enumerate(lines)
+        if not fenced[i] and DOD_ANY_BOX.match(ln)
+    ]
 
 # Method-class tags declare each DoD item's closure semantic with a one-token
 # colon-suffixed prefix (e.g. "- [ ] TDD: ..."). See Skill(card-schema)
@@ -504,7 +733,14 @@ class Card:
 
     @property
     def status(self) -> str:
-        return self.frontmatter.get("status", "")
+        # Coerce None/non-string to a string, mirroring `contribution` below.
+        # A card with `status: null` (or a bare `status:`) parses to a Python
+        # None with the key present, so a plain `.get("status", "")` returns
+        # None — which then crashes the table/board renderers that call string
+        # methods on the value. `goc validate` still flags the bad status from
+        # the raw `fm["status"]`, so coercing here only protects the renderers.
+        v = self.frontmatter.get("status")
+        return "" if v is None else str(v)
 
     @property
     def stage(self):
@@ -512,11 +748,20 @@ class Card:
 
     @property
     def contribution(self) -> str:
-        return self.frontmatter.get("contribution", "")
+        v = self.frontmatter.get("contribution")
+        return "" if v is None else str(v)
 
     @property
     def human_gate(self) -> str:
-        return self.frontmatter.get("human_gate", "")
+        # Coerce None/non-string to a string, mirroring `status` / `contribution`
+        # above. A card with `human_gate: null` (or a bare `human_gate:`) parses
+        # to a Python None with the key present, so a plain `.get("human_gate",
+        # "")` returns None — which then crashes the table renderer
+        # (`_display_width`) on the GATE cell. `goc validate` still flags the bad
+        # value from the raw `fm["human_gate"]`; coercing to "" keeps the
+        # readiness predicate (`human_gate != "none"`) treating it as gated.
+        v = self.frontmatter.get("human_gate")
+        return "" if v is None else str(v)
 
     @property
     def tags(self) -> list[str]:
@@ -579,7 +824,17 @@ def _worker_who(raw) -> str:
 def count_dod_boxes(dod_field: str) -> tuple[int, int]:
     if not isinstance(dod_field, str):
         return 0, 0
-    return len(DOD_OPEN_BOX.findall(dod_field)), len(DOD_DONE_BOX.findall(dod_field))
+    lines = dod_field.splitlines()
+    fenced = _dod_fenced_mask(lines)
+    open_n = done_n = 0
+    for ln, in_fence in zip(lines, fenced):
+        if in_fence:
+            continue
+        if DOD_DONE_BOX.match(ln):
+            done_n += 1
+        elif DOD_OPEN_BOX.match(ln):
+            open_n += 1
+    return open_n, done_n
 
 
 def untagged_dod_items(dod_field: str) -> list[str]:
@@ -590,10 +845,12 @@ def untagged_dod_items(dod_field: str) -> list[str]:
     """
     if not isinstance(dod_field, str):
         return []
+    lines = dod_field.splitlines()
+    fenced = _dod_fenced_mask(lines)
     return [
         line.strip()
-        for line in dod_field.splitlines()
-        if DOD_ANY_BOX.match(line) and not DOD_TAGGED_BOX.match(line)
+        for line, in_fence in zip(lines, fenced)
+        if not in_fence and DOD_ANY_BOX.match(line) and not DOD_TAGGED_BOX.match(line)
     ]
 
 
@@ -711,6 +968,22 @@ def _is_iso_date(value) -> bool:
     return True
 
 
+def _is_date_only(value) -> bool:
+    """True when an ISO timestamp carries only day granularity.
+
+    A bare `date` (not its `datetime` subclass) or a `YYYY-MM-DD` string
+    names a calendar day, not an instant — callers that compare such a
+    value against a full datetime must compare at day granularity rather
+    than promoting it to midnight UTC. Returns False for datetimes,
+    datetime-shaped strings, and non-ISO values.
+    """
+    if isinstance(value, datetime):
+        return False
+    if isinstance(value, date):
+        return True
+    return isinstance(value, str) and bool(_ISO_DATE_RE.match(value))
+
+
 def _utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -770,6 +1043,41 @@ def _now_instant(today: "date | datetime | None") -> datetime:
     if isinstance(today, datetime):
         return today if today.tzinfo is not None else today.replace(tzinfo=timezone.utc)
     return datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
+
+
+def _format_waiting_until_for_message(value) -> str:
+    """Echo the stored `waiting_until` shape for operator-facing messages.
+
+    Bare date (string `YYYY-MM-DD` or `date` instance) stays rendered as
+    `YYYY-MM-DD`. Datetime (string `YYYY-MM-DDTHH:MM:SSZ` or `datetime`
+    instance) is rendered as its stored UTC instant. The validator's
+    rendered output thus agrees with the read guard's full-timestamp
+    predicate, all the way through to what the operator reads.
+    """
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str) and _ISO_DATETIME_UTC_RE.match(value):
+        return value
+    return _date_part(value)
+
+
+def _format_elapsed(delta: timedelta) -> str:
+    """Render an elapsed wait at the coarsest precision that does not lie.
+
+    Under one hour → minutes (`Nm`). Under one day → hours (`Nh`).
+    Otherwise → days (`Nd`). Floors to the chosen unit. Matches the
+    granularity the docstring at `validate_waiting_overlay` promises the
+    read guard preserves: a sub-day overrun is reported as such, not
+    collapsed to `0d ago`.
+    """
+    total = int(delta.total_seconds())
+    if total < 3600:
+        return f"{total // 60}m"
+    if total < 86400:
+        return f"{total // 3600}h"
+    return f"{total // 86400}d"
 
 
 LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")
@@ -942,6 +1250,34 @@ def validate_hook_registration() -> list[str]:
     return errors
 
 
+class _DeepDircmp(filecmp.dircmp):
+    """`filecmp.dircmp` variant that compares file contents (`shallow=False`).
+
+    The stdlib default declares two files identical when their size, mtime,
+    and mode match; a same-length hand-edit to a plugin-mirror file then
+    slips past the tripwire (a fresh `git checkout` stamps every working-tree
+    file with the same mtime, so the false-same hit is routine on CI). The
+    sibling `scripts/sync_plugin_assets.py` already passes `shallow=False`;
+    this subclass aligns the engine's directory walk with that contract.
+    Subdirectories propagate via `self.__class__` in `phase4`.
+    """
+
+    def phase3(self):
+        same, diff, funny = filecmp.cmpfiles(
+            self.left, self.right, self.common_files, shallow=False
+        )
+        self.same_files = same
+        self.diff_files = diff
+        self.funny_files = funny
+
+    methodmap = dict(
+        filecmp.dircmp.methodmap,
+        same_files=phase3,
+        diff_files=phase3,
+        funny_files=phase3,
+    )
+
+
 def validate_plugin_mirror_parity() -> list[str]:
     """Check that plugin/ mirrors match their source-of-truth trees byte-for-byte.
 
@@ -953,10 +1289,12 @@ def validate_plugin_mirror_parity() -> list[str]:
     mirror; fix is to run `python scripts/sync_plugin_assets.py` and commit
     the result. CI runs the same script with `--check`.
 
-    The hook pairs (flat `<plugin>/hooks/<name>.py` ↔ source
-    `goc/templates/hooks/<name>.py`) are enumerated from
-    `goc/templates/hooks/*.py` so adding a hook updates the parity check
-    automatically. Skills are excluded from the deep `goc/` mirror because
+    The flat hook mirrors (`<plugin>/hooks/` ↔ source `goc/templates/hooks/`)
+    are compared as whole directories — not per-file pairs enumerated from the
+    current template set — so adding a hook updates the parity check
+    automatically AND a stale dst-only copy of a renamed/retired hook
+    registers as drift. The hand-maintained `hooks.json` is excluded from
+    that comparison. Skills are excluded from the deep `goc/` mirror because
     plugin install paths refuse `--local-skills`, so the bundled engine
     never reads `templates/skills/`.
 
@@ -964,7 +1302,12 @@ def validate_plugin_mirror_parity() -> list[str]:
     in TypeScript inside `openclaw-plugin/index.ts`, so its deep mirror also
     omits `templates/hooks/*.py`.
     """
-    from goc.install import _frontmatter_value, deck_hook_scripts, skill_for_agent
+    from goc.install import (
+        CODEX_GOC_COMMAND_RESOLVER,
+        _frontmatter_value,
+        deck_hook_scripts,
+        skill_for_agent,
+    )
     claude_plugin_root = REPO_ROOT / "claude-plugin"
     codex_plugin_root = REPO_ROOT / "codex-plugin"
     openclaw_plugin_root = REPO_ROOT / "openclaw-plugin"
@@ -1042,27 +1385,28 @@ def validate_plugin_mirror_parity() -> list[str]:
         pairs.append(
             (templates_root / "skills", claude_plugin_root / "skills", non_claude_skills)
         )
-        for name in hook_names:
-            pairs.append(
-                (
-                    templates_root / "hooks" / name,
-                    claude_plugin_root / "hooks" / name,
-                    frozenset(),
-                )
+        # Whole-directory mirror (not per-file pairs from the current template
+        # set) so a dst-only stale hook file registers as drift. `hooks.json`
+        # is hand-maintained plugin config with no src counterpart — excluded.
+        pairs.append(
+            (
+                templates_root / "hooks",
+                claude_plugin_root / "hooks",
+                frozenset({"hooks.json"}),
             )
+        )
         pairs.append(
             (REPO_ROOT / "goc", claude_plugin_root / "goc", claude_goc_excludes)
         )
 
     if codex_plugin_root.exists():
-        for name in hook_names:
-            pairs.append(
-                (
-                    templates_root / "hooks" / name,
-                    codex_plugin_root / "hooks" / name,
-                    frozenset(),
-                )
+        pairs.append(
+            (
+                templates_root / "hooks",
+                codex_plugin_root / "hooks",
+                frozenset({"hooks.json"}),
             )
+        )
         pairs.append(
             (REPO_ROOT / "goc", codex_plugin_root / "goc", claude_goc_excludes)
         )
@@ -1095,7 +1439,7 @@ def validate_plugin_mirror_parity() -> list[str]:
                 "---",
             )
         )
-        return codex_frontmatter + body
+        return codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body
 
     def _validate_codex_skill_mirror(dst: Path) -> None:
         src = templates_root / "skills"
@@ -1128,6 +1472,13 @@ def validate_plugin_mirror_parity() -> list[str]:
             if "__pycache__" in dst_item.parts or dst_item.is_dir():
                 continue
             rel = dst_item.relative_to(dst)
+            if rel.as_posix() == "_goc-bootstrap.sh":
+                bootstrap_src = templates_root / "bootstrap" / "_goc-bootstrap.sh"
+                if not bootstrap_src.exists():
+                    diffs.append(f"{rel.as_posix()} (only in {dst_rel})")
+                elif dst_item.read_text() != bootstrap_src.read_text():
+                    diffs.append(f"{rel.as_posix()} (differs)")
+                continue
             if not rel.parts or rel.parts[0] not in eligible or not (src / rel).exists():
                 diffs.append(f"{rel.as_posix()} (only in {dst_rel})")
         if diffs:
@@ -1147,7 +1498,7 @@ def validate_plugin_mirror_parity() -> list[str]:
             if not dst.exists():
                 errors.append(f"plugin mirror: {dst_rel} missing; copy from {src_rel}")
                 continue
-            diffs = _walk(filecmp.dircmp(src, dst), src_rel, dst_rel, exclude=exclude)
+            diffs = _walk(_DeepDircmp(src, dst), src_rel, dst_rel, exclude=exclude)
             if diffs:
                 errors.append(
                     f"plugin mirror drift: {src_rel} vs {dst_rel}: " + ", ".join(diffs)
@@ -1196,6 +1547,33 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
     if closed_at is not None and not _is_iso_date(closed_at):
         errors.append(f"{t.title}: closed_at: {closed_at!r} not null/ISO date/datetime")
 
+    # Cross-field ordering: a card cannot enter a terminal status before it
+    # was created. Compare instants (not lexically) so a date-only `created`
+    # and a same-day datetime `closed_at` sort correctly. Both parses must
+    # succeed — a value that already failed its shape check above is skipped
+    # so the comparison never crashes. When either operand is a bare date,
+    # only the calendar day is known: compare at day granularity so a
+    # same-day close with a sub-day `created` datetime (whose bare-date
+    # `closed_at` promotes to that day's midnight) isn't spuriously flagged.
+    # Genuine inversions — an earlier `closed_at` day, or a both-datetime
+    # intra-day reversal — still fire.
+    created_value = fm.get("created")
+    if created_value is not None and closed_at is not None:
+        created_instant = _waiting_until_instant(created_value)
+        closed_instant = _waiting_until_instant(closed_at)
+        if created_instant is not None and closed_instant is not None:
+            if _is_date_only(created_value) or _is_date_only(closed_at):
+                predates = closed_instant.date() < created_instant.date()
+            else:
+                predates = closed_instant < created_instant
+        else:
+            predates = False
+        if predates:
+            errors.append(
+                f"{t.title}: closed_at: {closed_at!r} predates created "
+                f"{created_value!r} (a card cannot close before it was created)"
+            )
+
     if "definition_of_done" in fm and not isinstance(fm["definition_of_done"], str):
         errors.append(f"{t.title}: definition_of_done: must be a string")
 
@@ -1215,24 +1593,41 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             errors.append(f"{t.title}: closed_at: must be set when status={status_value}")
         if status_value == "done" and t.dod_open > 0:
             errors.append(f"{t.title}: definition_of_done: status=done with {t.dod_open} unchecked boxes")
+        gate_value = fm.get("human_gate")
+        if gate_value not in (None, "none"):
+            errors.append(
+                f"{t.title}: human_gate: must be 'none' when status={status_value} "
+                f"(got {gate_value!r}); run `goc decide` to resolve the gate before closing."
+            )
     elif closed_at is not None:
         errors.append(
             f"{t.title}: closed_at: must be null when status is non-terminal"
             f" (status={status_value!r}, closed_at={closed_at!r})"
         )
 
+    summary_value = fm.get("summary")
+    if summary_value is not None:
+        if not isinstance(summary_value, str):
+            errors.append(f"{t.title}: summary: must be a string")
+        elif not summary_value.strip():
+            errors.append(f"{t.title}: summary: must not be empty or whitespace-only")
+
     worker = fm.get("worker")
     if worker is not None:
         if isinstance(worker, str):
-            if not worker:
-                errors.append(f"{t.title}: worker: must not be an empty string")
+            if not worker.strip():
+                errors.append(f"{t.title}: worker: must not be empty or whitespace-only")
         elif isinstance(worker, dict):
             if "who" not in worker:
                 errors.append(f"{t.title}: worker: mapping must have a 'who' key")
-            elif not isinstance(worker.get("who"), str) or not worker["who"]:
-                errors.append(f"{t.title}: worker: 'who' must be a non-empty string")
-            if "where" in worker and not isinstance(worker.get("where"), str):
-                errors.append(f"{t.title}: worker: 'where' must be a string")
+            elif not isinstance(worker.get("who"), str) or not worker["who"].strip():
+                errors.append(f"{t.title}: worker: 'who' must be a non-empty, non-whitespace string")
+            if "where" in worker and (
+                not isinstance(worker.get("where"), str) or not worker["where"].strip()
+            ):
+                errors.append(
+                    f"{t.title}: worker: 'where' must be a non-empty, non-whitespace string"
+                )
         else:
             errors.append(f"{t.title}: worker: must be a string or mapping with 'who'")
 
@@ -1263,6 +1658,11 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         errors.append(
             f"{t.title}: superseded_by: non-empty requires status: superseded "
             f"(status={status_value!r})"
+        )
+    if status_value == "superseded" and not superseded_by:
+        errors.append(
+            f"{t.title}: status: superseded requires non-empty superseded_by "
+            f"(forward routing pointer; set via `goc status {t.title} superseded --by <new>`)"
         )
 
     return errors
@@ -1313,8 +1713,42 @@ def validate_supersedes_targets(cards: list[Card]) -> list[str]:
     return errors
 
 
+def validate_superseded_by_targets(cards: list[Card]) -> list[str]:
+    """Type-guard `superseded_by`: it must be a list, not a bare string.
+
+    A bare-string scalar is iterated character-by-character and silently
+    matches single-character titles, so it earns a distinct diagnostic
+    rather than the generic "must be a list" message — symmetric with the
+    same guard in `validate_supersedes_targets`.
+
+    The forward routing target may carry ANY status. A supersession's
+    successor is the live work that replaces the old card, and that work
+    is *meant to be completed* — so a `superseded_by` pointer legitimately
+    lands on a `done` card (the replacement finished: the walk has reached
+    the resolution, not a dead end), a `superseded` card (the chain routes
+    onward through that card's own `superseded_by`), or a live
+    `open`/`active` card. Requiring a *live* target would make the
+    successor of every supersession permanently un-closeable and would
+    contradict the record-axis contract (AGENTS.md: edges are walked and
+    integrity enforced "regardless of either endpoint's status").
+    Referential integrity — the target must *exist* — is enforced
+    generically for every relationship field in `validate_card`.
+    """
+    errors: list[str] = []
+    for t in cards:
+        refs = t.frontmatter.get("superseded_by") or []
+        if not isinstance(refs, list):
+            errors.append(
+                f"{t.title}: superseded_by: must be a list, got "
+                f"{type(refs).__name__} value={refs!r}; a bare-string "
+                f"scalar is iterated character-by-character and silently "
+                f"matches single-character titles"
+            )
+    return errors
+
+
 def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
-    """Return structured advances↔advanced_by asymmetries."""
+    """Return structured bidirectional-edge asymmetries (advances↔advanced_by, supersedes↔superseded_by)."""
     half_edges: list[HalfEdge] = []
     by_title = {t.title: t for t in cards}
     for t in cards:
@@ -1493,8 +1927,8 @@ def validate_waiting_overlay(cards: list[Card], *, today: "date | datetime | Non
         warnings.append(BlockerWarning(
             "WAITING_OVERDUE",
             c.title,
-            f"waiting_on={reason} waiting_until={until_dt.date().isoformat()} "
-            f"elapsed {(now - until_dt).days}d ago — re-triage or clear",
+            f"waiting_on={reason} waiting_until={_format_waiting_until_for_message(until)} "
+            f"elapsed {_format_elapsed(now - until_dt)} ago — re-triage or clear",
         ))
     return warnings
 
@@ -1693,15 +2127,63 @@ def validate_dod_method_tags(cards: list[Card]) -> list[BlockerWarning]:
     return warnings
 
 
+def validate_decision_verdict_coherence(cards: list[Card]) -> list[BlockerWarning]:
+    """Surface the self-contradiction `goc decide` leaves behind on an in-place
+    re-scope: a resolved `## Decision` that re-scopes/reverses a prior verdict
+    while the card's summary or a body banner still asserts that (negative)
+    verdict.
+
+    Advisory only — never contributes to `validate`'s exit code. The trigger is
+    deliberately narrow to stay low-false-positive: the recorded decision must
+    *literally* contain re-scope/reversal language (`RESCOPE_MARKERS_RE`), AND a
+    strong negative-verdict token (`NEGATIVE_VERDICT_RE`) must survive in the
+    summary or a `> …` banner. Terminal cards are exempt — a `disproved` card
+    legitimately states a negative verdict. The decide-time reconciliation
+    reminder is the point-of-action guard; this validator is the safety net for
+    the record (a re-scope recorded before the reminder existed, or one whose
+    operator skipped the reconciliation). See
+    goc-decide-leaves-stale-verdict-content-when-recording-a-rescope.
+    """
+    warnings: list[BlockerWarning] = []
+    for c in cards:
+        if c.status in TERMINAL_STATUSES:
+            continue
+        decision_text = extract_resolved_decision_text(c.body)
+        if not decision_text or not RESCOPE_MARKERS_RE.search(decision_text):
+            continue
+        surfaces = [c.summary or "", *_body_banner_lines(c.body)]
+        hit = next((m for m in (NEGATIVE_VERDICT_RE.search(s) for s in surfaces) if m), None)
+        if hit is None:
+            continue
+        warnings.append(BlockerWarning(
+            "DECISION_CONTRADICTS_VERDICT",
+            c.title,
+            f"resolved ## Decision re-scopes/reverses a prior verdict, but the "
+            f"summary/banner still asserts it (token: {hit.group(0)!r}) — "
+            f"reconcile the summary/banner, or supersede+create instead",
+        ))
+    return warnings
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Filtering + sorting
 
-STATUS_VALUES = ("open", "active", "blocked", "done", "disproved", "superseded")
+# Enum membership/order constants derive from schema.yaml — the documented
+# single source of truth — so a value added to (or reordered in) the schema
+# flows here without a parallel literal edit. Hardcoding these is the drift
+# family closed by `schema-enum-surfaces-keep-drifting-into-hardcoded-literals`;
+# `tests/test_schema_enum_surface_parity.py` guards against re-introducing one.
+# TERMINAL_STATUSES is NOT a schema enum: "terminal" is a semantic subset
+# (closure-bearing statuses) the schema does not declare, so it stays a literal.
+_ENUM_SCHEMA = load_schema()
+STATUS_VALUES = tuple(_ENUM_SCHEMA.status_values)
 STATUS_FILTER_VALUES = (*STATUS_VALUES, "all")
 MUTABLE_STATUS_VALUES = tuple(status for status in STATUS_VALUES if status != "done")
 TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})
-CONTRIBUTION_ORDER = {"high": 0, "medium": 1, "low": 2}
-STAGE_ORDER = ["null", "alpha", "beta", "stable"]
+CONTRIBUTION_ORDER = {c: i for i, c in enumerate(_ENUM_SCHEMA.contribution_values)}
+# schema stage_values carries a YAML `null` first entry (the "no stage" state);
+# STAGE_ORDER renders it as the string "null" the CLI/filters compare against.
+STAGE_ORDER = ["null" if v is None else v for v in _ENUM_SCHEMA.stage_values]
 
 
 def dependency_blockers(card: Card, by_title: dict[str, Card]) -> list[str]:
@@ -1732,6 +2214,44 @@ def dependency_blocked(card: Card, by_title: dict[str, Card]) -> bool:
     return bool(dependency_blockers(card, by_title))
 
 
+def dependency_advisory(
+    card: Card, by_title: dict[str, Card], queue_only: bool = False
+) -> tuple[list[str], bool]:
+    """Liveness-gated dependency advisory for the renderers.
+
+    The "awaiting: X — you may start" advisory is a *display* of
+    `dependency_blockers` / `dependency_blocked` that is meaningless on
+    a terminal card: a `done`/`disproved`/`superseded` card never
+    "starts", so a leftover advisory is just stale noise (and shipped as
+    a bug twice — once each in the table and JSON renderers). This helper
+    applies the `status not in TERMINAL_STATUSES` gate once so every
+    renderer consumes a pre-gated result instead of re-inlining it.
+
+    The advisory is gated along two independent status dimensions:
+
+    1. **Terminal gate** (default, `queue_only=False`) — never show it on
+       a terminal card. The machine surface (`render_json`) consumes this
+       form: it exposes the raw advisory plus a separate, status-gated
+       `ready` field.
+    2. **Open-only slice** (`queue_only=True`) — additionally suppress the
+       advisory on `active` cards. "You may start" is a pull-queue hint
+       with no audience once a card is claimed, so the two human-facing
+       renderers (`render_table`, `render_board`'s `card_cell`) consume
+       this stricter form. Centralized here so the slice cannot drift into
+       a per-renderer copy again (it already shipped one bug per
+       un-centralized dimension).
+
+    Returns `([], False)` for terminal cards (and, when `queue_only`, for
+    any non-open card), else `(blockers, bool(blockers))`.
+    """
+    if card.status in TERMINAL_STATUSES:
+        return [], False
+    if queue_only and card.status != "open":
+        return [], False
+    blockers = dependency_blockers(card, by_title)
+    return blockers, bool(blockers)
+
+
 def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
@@ -1745,8 +2265,38 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     "must wait to start" signal is the explicit impediment overlay
     (`waiting_on` / `waiting_until`). See `dependency_blockers` /
     `dependency_blocked`, which remain as advisory display only.
+
+    Paired with `card_is_workable_for_scheduler` — the queue axis vs.
+    the scheduler axis. A future axis added here must be added there in
+    the same edit; `tests/test_scheduler_workable_predicate_coupling.py`
+    fails loud on drift.
     """
     if card.status != "open":
+        return False
+    if card.human_gate != "none":
+        return False
+    if waiting_impedes(card):
+        return False
+    return True
+
+
+def card_is_workable_for_scheduler(card: Card) -> bool:
+    """True iff a descendant may amplify an ancestor's GRPW value.
+
+    Mirrors `card_is_ready` for the scheduler axis: `card_is_ready`
+    minus the `status == "open"` clause. `active` descendants stay
+    workable because the scheduler walks live work, not just queueable
+    work; a terminal, impediment-hidden, or human-gate-parked descendant
+    contributes zero to a live ancestor's priority and is pruned.
+
+    Consulted by both descendant-walk sites — `value_for` in
+    `compute_values` and `live_direct` in `sort_default` — so the
+    live-AND-workable rule is defined once. A future axis added to
+    `card_is_ready` must be added here in the same edit;
+    `tests/test_scheduler_workable_predicate_coupling.py` enforces this
+    invariant.
+    """
+    if card.status in TERMINAL_STATUSES:
         return False
     if card.human_gate != "none":
         return False
@@ -1809,7 +2359,13 @@ def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bo
 # RCPSP literature precedent (Hartmann 1999) and the May 3 design
 # discussion. log-spaced ranks are RICE-derived (Intercom): a `high`
 # dominates three `medium`s when both reach the same downstream sink.
-CONTRIBUTION_RANK: dict[str, float] = {"high": 9.0, "medium": 3.0, "low": 1.0}
+# Log-spaced (base-3) ranks derived from contribution order: each level
+# dominates three of the next (a `high` outscores three `medium`s reaching
+# the same sink). Position 0 is the strongest, so rank = 3^(N-1-index) —
+# {high: 9.0, medium: 3.0, low: 1.0} for the shipped three-level enum.
+CONTRIBUTION_RANK: dict[str, float] = {
+    c: 3.0 ** (len(CONTRIBUTION_ORDER) - 1 - i) for c, i in CONTRIBUTION_ORDER.items()
+}
 GAMMA = 0.7
 
 
@@ -1830,17 +2386,22 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
 
     Live-and-workable descendants: a descendant is skipped from the
     value walk when it is either (a) terminal in status
-    (`done`/`disproved`/`superseded`) or (b) carrying an active
-    impediment overlay (`waiting_impedes` — a `waiting_on` reason or a
-    future `waiting_until`, the same guard that hides it from the pull
-    queue). The scheduler axis walks `advances` across *live, workable*
-    cards only (AGENTS.md "deck as scheduler vs record"). Completed work
-    can no longer be unblocked, and an impeded descendant cannot be
-    pulled for the duration of its wait, so neither may amplify a live
-    card's scheduling priority. Terminal edges belong to the record axis
-    instead; the impediment prune is self-clearing (an elapsed
-    `waiting_until` or a cleared `waiting_on` re-admits the descendant on
-    the next recompute, no manual action).
+    (`done`/`disproved`/`superseded`), (b) carrying an active impediment
+    overlay (`waiting_impedes` — a `waiting_on` reason or a future
+    `waiting_until`), or (c) parked behind a `human_gate` of `decision`
+    or `session`. The prune mirrors every gate in `card_is_ready` (the
+    pull-queue predicate) except its `status == "open"` clause —
+    `active` descendants stay workable for the scheduler axis. The
+    scheduler axis walks `advances` across *live, workable* cards only
+    (AGENTS.md "deck as scheduler vs record"). Completed work can no
+    longer be unblocked, an impeded descendant cannot be pulled for the
+    duration of its wait, and a gate-parked descendant cannot be pulled
+    until the human lowers the gate — so none may amplify a live card's
+    scheduling priority. Terminal edges belong to the record axis
+    instead; the impediment and human-gate prunes are self-clearing (an
+    elapsed `waiting_until`, a cleared `waiting_on`, or a `decide-card`
+    invocation re-admits the descendant on the next recompute, no manual
+    action).
 
     Switched from saturating-max (`max(own, γ·best)`) on 2026-05-03
     after the formula was identified as making native-high cards lose
@@ -1902,18 +2463,23 @@ def compute_values(cards: list[Card]) -> dict[str, tuple[float, list[str]]]:
                     )
                 continue
             dest_card = by_title[dest]
-            if dest_card.status in TERMINAL_STATUSES or waiting_impedes(dest_card):
+            if not card_is_workable_for_scheduler(dest_card):
                 # Scheduler axis is live-AND-workable only (AGENTS.md "deck
-                # as scheduler vs record"): a terminal descendant can no
-                # longer be unblocked, and an impeded descendant (active
-                # `waiting_on` overlay, hidden from the queue by
-                # `card_is_ready`/`waiting_impedes`) cannot be pulled for the
-                # duration of its wait — so neither may amplify a live card's
-                # priority. The impediment prune is self-clearing: when a
-                # `waiting_until` elapses or `waiting_on` is cleared, the
-                # descendant re-enters the walk on the next recompute with no
-                # manual action. Terminal edges live on the record axis,
-                # walked elsewhere.
+                # as scheduler vs record"): the prune mirrors every gate in
+                # `card_is_ready` except the `status == "open"` clause
+                # (`active` descendants stay workable for the scheduler).
+                # A terminal descendant can no longer be unblocked; an
+                # impeded descendant (active `waiting_on` overlay) cannot be
+                # pulled for the duration of its wait; a `human_gate`-parked
+                # descendant (decision/session) cannot be pulled until the
+                # human lowers the gate. None of the three may amplify a live
+                # card's priority — `card_is_ready` already hides them from
+                # the queue, and the value walk follows. Both the
+                # impediment and human-gate prunes are self-clearing: when
+                # `waiting_until` elapses, `waiting_on` is cleared, or the
+                # gate is lowered via `decide-card`, the descendant re-enters
+                # the walk on the next recompute with no manual action.
+                # Terminal edges live on the record axis, walked elsewhere.
                 continue
             d_value, d_path = value_for(dest, in_progress)
             if d_value > best[0]:
@@ -2041,7 +2607,14 @@ def parse_closed_since(value: str | None, *, now: datetime | None = None) -> dat
             )
             sys.exit(2)
         hours = {"h": n, "d": n * 24, "w": n * 24 * 7}[unit]
-        return base - timedelta(hours=hours)
+        try:
+            return base - timedelta(hours=hours)
+        except OverflowError:
+            print(
+                "goc: error: --closed-since: window too large",
+                file=sys.stderr,
+            )
+            sys.exit(2)
     if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
         try:
             d = date.fromisoformat(value)
@@ -2095,45 +2668,60 @@ def validate_tag_filters(tags: list[str]) -> list[str] | None:
     return list(tags)
 
 
-def sort_default(cards: list[Card], values: dict[str, tuple[float, list[str]]] | None = None) -> list[Card]:
+def sort_default(
+    cards: list[Card],
+    values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
+) -> list[Card]:
     """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
 
     Key tuple: (-value, -live_direct_advances_count, age_days)
     - primary: highest computed value first (graph-amplified contribution)
     - tiebreak: more *live* direct downstream cards = unblock more flow now.
       Counts only `advances` targets the value walk would traverse — target
-      exists in `by_title`, status not terminal, and not impeded by an active
-      `waiting_on` overlay. A terminal or impeded downstream unblocks zero
-      flow now, so it contributes 0 — mirroring the prune `compute_values`
-      applies at engine.py:1751. (Without this, a card whose downstream is
-      fully closed would out-rank an equal-value card that unblocks no less
-      live flow, contradicting the tiebreak's own rationale.)
+      exists in `by_title`, status not terminal, not impeded by an active
+      `waiting_on` overlay, and not parked behind a non-`none` `human_gate`.
+      A terminal, impeded, or gate-parked downstream unblocks zero flow now,
+      so it contributes 0 — mirroring the prune `compute_values` applies in
+      `value_for`. (Without this, a card whose downstream is fully un-pullable
+      would out-rank an equal-value card that unblocks no less live flow,
+      contradicting the tiebreak's own rationale.)
     - final: oldest-created first (kanban WIP-aging discipline)
 
-    `values` should be precomputed on the FULL deck (not the filtered
-    subset) so chains through filtered-out cards still amplify open cards.
-    If omitted, computed locally over `cards` — only correct when `cards`
-    IS the full deck. The live-edge tiebreak builds `by_title` from whatever
-    `cards` is passed; a dangling edge (target not in the subset) counts 0,
-    consistent with the value walk's dangling-edge drop at engine.py:1739.
+    Both axes must see the FULL deck, not the filtered subset being sorted.
+    `values` should be precomputed on the full deck so chains through
+    filtered-out cards still amplify open cards; pass `by_title` (the full
+    deck's title→Card lookup) for the same reason on the tiebreak axis — a
+    downstream card the *display filter* hid (e.g. an `active` target while
+    sorting the `open` column) is still live and still unblocks flow, so it
+    must count. Only a genuinely dangling edge — target absent from the whole
+    deck — counts 0, because `card_is_workable_for_scheduler` never sees it,
+    matching the value walk's dangling-edge drop in `compute_values`'s
+    `value_for`. When
+    `by_title` is omitted it is built from `cards`, which is only correct
+    when `cards` IS the full deck; callers that sort a subset must thread
+    the full-deck lookup (every renderer already holds one as `full_by_title`).
     """
     if values is None:
         values = compute_values(cards)
-    by_title = {c.title: c for c in cards}
+    if by_title is None:
+        by_title = {c.title: c for c in cards}
 
     def live_direct(t: Card) -> int:
-        n = 0
         advances = t.frontmatter.get("advances") or []
         if not isinstance(advances, list):
             return 0
+        # Count distinct workable downstream cards, not raw list elements:
+        # a duplicated edge (`advances: [B, B]`) unblocks one card, not two.
+        live = set()
         for dest in advances:
             dc = by_title.get(dest)
             if dc is None:
                 continue
-            if dc.status in TERMINAL_STATUSES or waiting_impedes(dc):
+            if not card_is_workable_for_scheduler(dc):
                 continue
-            n += 1
-        return n
+            live.add(dest)
+        return len(live)
 
     def key(t: Card):
         v, _ = values.get(t.title, (0.0, []))
@@ -2179,18 +2767,30 @@ def _format_value(v: float) -> str:
     return f"{v:.1f}"
 
 
+def _value_path_slugs(path: list[str]) -> list[str]:
+    """The argmax descendant chain as real card slugs.
+
+    `compute_values` terminates every path with an internal sentinel
+    (`["self"]` for a leaf, `["cycle"]` on a validate-failing cyclic
+    deck). Neither is a card title, so both presentation surfaces strip
+    the trailing sentinel before rendering the chain: `_format_why` for
+    the `-v` WHY column and `render_json` for the `value_path` field.
+    Sharing one helper keeps the human and machine surfaces from drifting
+    apart (see the two closed `why-trace-renders-spurious-*-hop` cards).
+    """
+    if path and path[-1] in ("self", "cycle"):
+        return path[:-1]
+    return path
+
+
 def _format_why(path: list[str], by_title: dict[str, Card]) -> str:
     """Format the GRPW propagation trace: 'self' → '' (omit); chain → '→ A (high) → B (med)'."""
     if not path or path == ["self"]:
         return ""
     if path == ["cycle"]:
         return "(cycle)"
-    suffix = ""
-    if path[-1] == "self":
-        path = path[:-1]
-    elif path[-1] == "cycle":
-        path = path[:-1]
-        suffix = " (cycle)"
+    suffix = " (cycle)" if path[-1] == "cycle" else ""
+    path = _value_path_slugs(path)
     if not path:
         return suffix.strip()
     parts = []
@@ -2222,7 +2822,7 @@ def render_table(
         headers = ["TITLE", "STATUS", "CONTR.", "VALUE", "GATE", "TAGS", "DOD"]
     rows: list[tuple[str, ...]] = []
     for t in cards:
-        tags = ",".join(t.tags[:4])
+        tags = ",".join(str(x) for x in t.tags[:4])
         if len(t.tags) > 4:
             tags += "+"
         dod = "prose" if t.dod_freeform else f"{t.dod_done}/{t.dod_done + t.dod_open}"
@@ -2233,32 +2833,35 @@ def render_table(
             rows.append((t.title, t.status, stage, t.contribution, value_str, t.human_gate, t.created, tags, dod))
         else:
             rows.append((t.title, t.status, t.contribution, value_str, t.human_gate, tags, dod))
-    widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
+    widths = [
+        max(_display_width(h), max((_display_width(r[i]) for r in rows), default=0))
+        for i, h in enumerate(headers)
+    ]
     out_lines: list[str] = []
-    out_lines.append("  ".join(h.ljust(widths[i]) for i, h in enumerate(headers)))
+    out_lines.append("  ".join(_display_ljust(h, widths[i]) for i, h in enumerate(headers)))
     out_lines.append("  ".join("-" * widths[i] for i in range(len(headers))))
     for t, r in zip(cards, rows):
         if verbose >= 1:
             cells = [
-                r[0].ljust(widths[0]),
-                _wrap(r[1].ljust(widths[1]), t.status, enabled),
-                r[2].ljust(widths[2]),
-                _wrap(r[3].ljust(widths[3]), t.contribution, enabled),
-                r[4].rjust(widths[4]),
-                _wrap(r[5].ljust(widths[5]), t.human_gate, enabled),
-                r[6].ljust(widths[6]),
-                r[7].ljust(widths[7]),
-                r[8].ljust(widths[8]),
+                _display_ljust(r[0], widths[0]),
+                _wrap(_display_ljust(r[1], widths[1]), t.status, enabled),
+                _display_ljust(r[2], widths[2]),
+                _wrap(_display_ljust(r[3], widths[3]), t.contribution, enabled),
+                _display_rjust(r[4], widths[4]),
+                _wrap(_display_ljust(r[5], widths[5]), t.human_gate, enabled),
+                _display_ljust(r[6], widths[6]),
+                _display_ljust(r[7], widths[7]),
+                _display_ljust(r[8], widths[8]),
             ]
         else:
             cells = [
-                r[0].ljust(widths[0]),
-                _wrap(r[1].ljust(widths[1]), t.status, enabled),
-                _wrap(r[2].ljust(widths[2]), t.contribution, enabled),
-                r[3].rjust(widths[3]),
-                _wrap(r[4].ljust(widths[4]), t.human_gate, enabled),
-                r[5].ljust(widths[5]),
-                r[6].ljust(widths[6]),
+                _display_ljust(r[0], widths[0]),
+                _wrap(_display_ljust(r[1], widths[1]), t.status, enabled),
+                _wrap(_display_ljust(r[2], widths[2]), t.contribution, enabled),
+                _display_rjust(r[3], widths[3]),
+                _wrap(_display_ljust(r[4], widths[4]), t.human_gate, enabled),
+                _display_ljust(r[5], widths[5]),
+                _display_ljust(r[6], widths[6]),
             ]
         out_lines.append("  ".join(cells))
         if verbose >= 1:
@@ -2268,7 +2871,12 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
-            blockers = dependency_blockers(t, by_title)
+            # Liveness-gated dependency advisory (see `dependency_advisory`):
+            # the human-facing `queue_only=True` slice gates out terminal
+            # *and* active cards, so "you may start" surfaces only on open
+            # cards — the same stricter slice the board applies. Centralized
+            # in the helper so table and board cannot drift apart again.
+            blockers, _ = dependency_advisory(t, by_title, queue_only=True)
             if blockers:
                 out_lines.append(f"    awaiting: {', '.join(blockers)} (you may start)")
             w = t.worker
@@ -2284,7 +2892,7 @@ def render_table(
                 v = t.frontmatter.get(field) or []
                 if v:
                     out_lines.append(f"    {field}: {list(v)}")
-            dod = t.frontmatter.get("definition_of_done", "")
+            dod = t.frontmatter.get("definition_of_done") or ""
             for line in dod.splitlines():
                 out_lines.append(f"    {line.rstrip()}")
     return "\n".join(out_lines)
@@ -2337,7 +2945,7 @@ def render_json(
                 "stage": t.stage,
                 "contribution": t.contribution,
                 "value": values.get(t.title, (0.0, []))[0],
-                "value_path": values.get(t.title, (0.0, []))[1],
+                "value_path": _value_path_slugs(values.get(t.title, (0.0, []))[1]),
                 "human_gate": t.human_gate,
                 "waiting_on": t.waiting_on,
                 "waiting_until": t.waiting_until,
@@ -2348,8 +2956,12 @@ def render_json(
                 "advanced_by": t.frontmatter.get("advanced_by") or [],
                 "supersedes": t.frontmatter.get("supersedes") or [],
                 "superseded_by": t.frontmatter.get("superseded_by") or [],
-                "dependency_awaiting": dependency_blocked(t, by_title),
-                "awaiting": dependency_blockers(t, by_title),
+                # Liveness-gated dependency advisory (see
+                # `dependency_advisory`): the "you may start" hint is
+                # meaningless on a terminal card. `ready` is already
+                # status-gated by `card_is_ready` (open-only).
+                "awaiting": advisory[0],
+                "dependency_awaiting": advisory[1],
                 "ready": card_is_ready(t, by_title),
                 "worker": t.worker,
                 "dod_open": t.dod_open,
@@ -2357,6 +2969,7 @@ def render_json(
                 "dod_freeform": t.dod_freeform,
             }
             for t in cards
+            for advisory in (dependency_advisory(t, by_title),)
         ]
     return json.dumps(records, indent=2, default=str)
 
@@ -2376,6 +2989,12 @@ def _display_ljust(text: str, width: int) -> str:
     return text + " " * pad if pad > 0 else text
 
 
+def _display_rjust(text: str, width: int) -> str:
+    """Right-justify to a target display width (not codepoint count)."""
+    pad = width - _display_width(text)
+    return " " * pad + text if pad > 0 else text
+
+
 def render_board(
     cards: list[Card],
     *,
@@ -2386,32 +3005,78 @@ def render_board(
 ) -> str:
     if values is None:
         values = compute_values(cards)
-    columns = ["open", "active", "blocked", "done", "disproved", "superseded"]
+    # Columns derive from the schema's status enum — the single source of
+    # truth — not a hardcoded literal. This keeps the board in lockstep with
+    # `status_values` (custom workflows, enum migrations) and never silently
+    # drops a card whose status the renderer "forgot" to list.
+    columns = list(load_schema().status_values)
     by_status: dict[str, list[Card]] = {c: [] for c in columns}
     if by_title is None:
         by_title = {t.title: t for t in cards}
+    # A card whose status is not in the schema enum (a legacy status left
+    # over after an enum migration, a custom-workflow status the local
+    # schema later dropped, or a hand-edit typo) still belongs on the
+    # board: the table renderer shows every card, and the comment above
+    # promises the board "never silently drops a card". Give each such
+    # status its own trailing column, in first-seen order, so the board
+    # surfaces the straggler under its real status label instead of
+    # discarding it. `goc validate` is the channel that flags the status
+    # as invalid; the read view's job is to show it, not hide it.
     for t in cards:
-        if t.status in by_status:
-            by_status[t.status].append(t)
+        if t.status not in by_status:
+            columns.append(t.status)
+            by_status[t.status] = []
+    for t in cards:
+        by_status[t.status].append(t)
+    hidden_by_status: dict[str, int] = {}
     for c in columns:
-        by_status[c] = sort_default(by_status[c], values=values)[:max_rows]
+        sorted_col = sort_default(by_status[c], values=values, by_title=by_title)
+        hidden_by_status[c] = max(0, len(sorted_col) - max_rows)
+        by_status[c] = sorted_col[:max_rows]
     def card_cell(t: Card) -> str:
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
         live = t.status not in TERMINAL_STATUSES
+        # Mark a card not-pullable on the board whenever any queue-hiding
+        # axis fires. This mirrors `card_is_ready` /
+        # `card_is_workable_for_scheduler`: a human_gate parks an open card
+        # out of the pull queue just as hard as an impediment overlay, so it
+        # must carry the same ⏳. `dependency_blocked` stays included as an
+        # advisory "has an open prereq" hint (it does not hide the card from
+        # the queue, but the board flags it). The `queue_only=True` slice is
+        # the board's own stricter gate — open cards only — shared with the
+        # table so the two human-facing renderers cannot drift apart.
         not_ready = live and (
-            (t.status == "open" and dependency_blocked(t, by_title)) or waiting_impedes(t)
+            t.human_gate != "none"
+            or dependency_advisory(t, by_title, queue_only=True)[1]
+            or waiting_impedes(t)
         )
         if not_ready:
             marker += " ⏳"
         who = _worker_who(t.frontmatter.get("worker"))
         if who:
-            marker += f" @{who[:8]}"
+            # Render the full worker identifier, not a fixed-width prefix.
+            # Columns auto-size to their widest rendered cell (see
+            # `col_widths` below), so a long `who` widens its column rather
+            # than overflowing — the same contract the title already enjoys
+            # (board-active-card-worker-label-not-truncated). A silent
+            # `who[:8]` slice would mangle common values like `claude[bot]`
+            # into `claude[b`, hiding coordination info the board exists to
+            # surface.
+            marker += f" @{who}"
         return f"{t.title}{marker}"
 
     rendered_by_status: dict[str, list[str]] = {
         c: [card_cell(t) for t in by_status[c]] for c in columns
     }
+    # Surface the row cap rather than hiding it: every other capped list in
+    # the tool (render_active_notice, the tag-sample renderer, the validate
+    # report) advertises its overflow, so the board does too. The indicator
+    # is appended before col_widths is computed below, so it participates in
+    # width sizing and the grid stays aligned.
+    for c in columns:
+        if hidden_by_status[c] > 0:
+            rendered_by_status[c].append(f"… +{hidden_by_status[c]} more")
     col_widths = [
         max(
             20,
@@ -2466,7 +3131,9 @@ def render_leverage_line(
     ]
     if not open_gated:
         return ""
-    gated_top = sort_default(open_gated, values=values)[0]
+    gated_top = sort_default(
+        open_gated, values=values, by_title={t.title: t for t in all_cards}
+    )[0]
     pulled = ready[0]
     pulled_value = values.get(pulled.title, (0.0, []))[0]
     gated_value = values.get(gated_top.title, (0.0, []))[0]
@@ -2481,12 +3148,28 @@ def render_active_notice(
     cards: list[Card],
     *,
     values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
 ) -> str:
-    """Warn open-queue readers about claimed cards outside the open filter."""
+    """Warn open-queue readers about claimed cards outside the open filter.
+
+    `cards` may be a worker-scoped subset (see `_cmd_default` under
+    `--worker`). Thread `by_title` with the full-deck lookup so
+    `sort_default`'s near-term-flow tiebreak counts live downstream cards
+    that the worker filter hid — mirroring `render_leverage_line` /
+    `render_table` / `render_board`, which all take a full-deck `by_title`
+    for the same reason. When omitted it is built from `cards`, correct
+    only when `cards` is the full deck.
+    """
 
     if values is None:
         values = compute_values(cards)
-    active = sort_default([t for t in cards if t.status == "active"], values=values)
+    if by_title is None:
+        by_title = {t.title: t for t in cards}
+    active = sort_default(
+        [t for t in cards if t.status == "active"],
+        values=values,
+        by_title=by_title,
+    )
     if not active:
         return ""
     shown = ", ".join(t.title for t in active[:3])
@@ -2530,16 +3213,24 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Game of Cards deck CLI",
     )
 
+    # --version / -V: a first-class argparse action so it works at any
+    # top-level position (e.g. `goc --no-color --version`) and is listed
+    # in `goc --help`. argparse handles it during parse_args — before the
+    # dual-tree/legacy-tree guards in cli() — printing and exiting 0.
+    from goc import __version__
+    parser.add_argument("--version", "-V", action="version",
+                        version=f"goc, version {__version__}")
+
     # Global options (used when no subcommand is given)
     parser.add_argument("--tag", dest="tags", action="append", default=[], metavar="TAG",
                         help="Filter by tag (repeatable; AND).")
-    parser.add_argument("--contribution", choices=["high", "medium", "low"],
+    parser.add_argument("--contribution", choices=schema.contribution_values,
                         help="Filter by contribution level.")
     parser.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES), default=None,
                         help="One status, or 'all'. Default: open.")
     parser.add_argument("--stage", dest="stage_flag", default=None,
                         help="Stage filter; supports range like 'alpha-beta'.")
-    parser.add_argument("--human-gate", choices=["none", "decision", "session"],
+    parser.add_argument("--human-gate", choices=schema.human_gate_values,
                         help="Filter by human gate value.")
     parser.add_argument("--done", dest="done_flag", action="store_true",
                         help="Shortcut for --status done.")
@@ -2551,7 +3242,8 @@ def _build_parser() -> argparse.ArgumentParser:
                         "WINDOW (e.g. 24h, 7d, 2w) or since YYYY-MM-DD. "
                         "Auto-extends --status to 'all' when set.")
     parser.add_argument("--waiting", action="store_true",
-                        help="Filter to cards carrying a waiting_on overlay.")
+                        help="Filter to cards with an active impediment overlay "
+                             "(a waiting_on reason or an unelapsed waiting_until).")
     parser.add_argument("--slim", action="store_true",
                         help=f"With --json: emit only {', '.join(SLIM_JSON_KEYS)}.")
     parser.add_argument("--advances", default=None,
@@ -2582,13 +3274,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # quality-pass
     p_qp = subparsers.add_parser("quality-pass", help="Surface engineer-jargon titles + missing summaries.")
-    p_qp.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES), default="open",
-                      help="Filter by status (default: open).")
+    p_qp.add_argument("--status", dest="status_flag", choices=list(STATUS_FILTER_VALUES),
+                      default=argparse.SUPPRESS,
+                      help="Filter by status (overrides global --status; default: open).")
     p_qp.add_argument("--llm", action="store_true", default=False,
                       help="Also run a Sonnet-batched summary+DoD audit.")
     p_qp.add_argument("--no-llm", dest="llm", action="store_false",
                       help="Disable LLM audit.")
-    p_qp.add_argument("--limit", type=int, default=None,
+    p_qp.add_argument("--limit", type=_non_negative_int, default=None,
                       help="With --llm: cap card count (testing/sampling).")
     p_qp.add_argument("--dry-run", action="store_true",
                       help="With --llm: print verdicts; skip the interactive accept/reject walk.")
@@ -2637,21 +3330,37 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
   goc new child-card --advances parent-card
-  goc new child-card --advanced-by parent-card""",
+  goc new child-card --advanced-by parent-card
+  goc new child-card --advances parent-card --commit""",
     )
     p_new.add_argument("title")
     p_new.add_argument("--contribution", choices=schema.contribution_values,
-                       default="medium" if "medium" in schema.contribution_values else schema.contribution_values[0])
+                       default=argparse.SUPPRESS,
+                       help="Contribution level (overrides global --contribution; default: medium).")
     p_new.add_argument("--gate", choices=schema.human_gate_values, default=schema.human_gate_default)
-    p_new.add_argument("--tag", dest="tags", action="append", default=[])
-    p_new.add_argument("--advances", action="append", default=[], metavar="TITLE",
+    # --tag, --worker share `dest` with global filters; SUPPRESS lets the
+    # parent value flow through when the subparser flag isn't passed.
+    p_new.add_argument("--tag", dest="tags", action="append", default=argparse.SUPPRESS,
+                       help="Card tag (repeatable; overrides global --tag).")
+    # --advances and --advanced-by collide with global *filters* of the
+    # same name but with incompatible types (global = single-value
+    # filter; new = list of titles to wire). Use distinct dests so the
+    # parent string can't silently coerce into the wiring list.
+    p_new.add_argument("--advances", dest="advances_wire", action="append", default=[], metavar="TITLE",
                        help="Wire the new card as advancing TITLE (repeatable).")
-    p_new.add_argument("--advanced-by", dest="advanced_by", action="append", default=[], metavar="TITLE",
+    p_new.add_argument("--advanced-by", dest="advanced_by_wire", action="append", default=[], metavar="TITLE",
                        help="Wire TITLE as advancing the new card (repeatable).")
-    p_new.add_argument("--worker", default=None,
-                       help="Worker designation — person, machine, or capability tag.")
+    p_new.add_argument("--worker", default=argparse.SUPPRESS,
+                       help="Worker designation (overrides global --worker / $GOC_WORKER; "
+                            "person, machine, or capability tag).")
     p_new.add_argument("--allow-jargon", action="store_true",
                        help="Bypass the title-antipattern check (rare; used by migration tools).")
+    p_new.add_argument("--commit", action="store_true",
+                       help="Commit the new card and any --advances/--advanced-by endpoints atomically "
+                            "(recommended for wired filings; default is no-commit so the "
+                            "scaffold-then-fill-in workflow is unchanged).")
+    p_new.add_argument("--no-commit", action="store_true",
+                       help="Skip auto-commit (the default for goc new).")
 
     # wait
     p_wait = subparsers.add_parser(
@@ -2659,7 +3368,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Set or clear the impediment overlay (waiting_on + waiting_until).",
     )
     p_wait.add_argument("title")
-    p_wait.add_argument("--reason", choices=["external", "resource", "deferred"], default=None,
+    p_wait.add_argument("--reason", choices=schema.waiting_on_values, default=None,
                         help="Exogenous wait reason. Composes with --until.")
     p_wait.add_argument("--until", default=None,
                         help="ISO date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ) the wait is expected to clear. "
@@ -2694,7 +3403,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # repair-edges
     p_repair_edges = subparsers.add_parser(
         "repair-edges",
-        help="Preview or repair asymmetric advances/advanced_by edges.",
+        help="Preview or repair asymmetric advances/advanced_by and supersedes/superseded_by edges.",
     )
     p_repair_edges.add_argument(
         "--apply",
@@ -2725,10 +3434,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # triage
     p_triage = subparsers.add_parser("triage", help="List parked cards (gate ≠ none), grouped by gate, oldest-first.")
-    p_triage.add_argument("--json", dest="as_json", action="store_true",
-                          help="Emit JSON for Q&A consumers.")
-    p_triage.add_argument("--worker", default=os.environ.get("GOC_WORKER"),
-                          help="Filter parked cards by worker.who (substring match).")
+    p_triage.add_argument("--json", dest="as_json", action="store_true", default=argparse.SUPPRESS,
+                          help="Emit JSON for Q&A consumers (overrides global --json).")
+    p_triage.add_argument("--worker", default=argparse.SUPPRESS,
+                          help="Filter parked cards by worker.who (substring match; "
+                               "overrides global --worker / $GOC_WORKER).")
 
     # show
     p_show = subparsers.add_parser("show", help="Print full README.md to stdout.")
@@ -2743,7 +3453,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # migrate-list-style
     p_mls = subparsers.add_parser("migrate-list-style",
-                                  help="Re-emit every card to convert advances/advanced_by to block-style lists.")
+                                  help="Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style.")
     p_mls.add_argument("--dry-run", action="store_true",
                        help="Show which cards would change without writing files.")
 
@@ -2819,7 +3529,21 @@ def _cmd_default(args):
     if args.done_flag:
         status = "done"
     elif args.status_flag is None:
-        status = "all" if closed_since_threshold is not None else "open"
+        # --waiting and --closed-since both surface cards beyond the open
+        # queue (active-impeded cards, closed cards): auto-extend the default
+        # status to "all" so the subsequent filter has something to narrow.
+        # --board spans every status column by design; when it consumes the
+        # filtered set (worker-scoped path), the open-only default would
+        # otherwise hide the worker's active/closed cards, so extend here too.
+        status = (
+            "all"
+            if (
+                closed_since_threshold is not None
+                or getattr(args, "waiting", False)
+                or args.board
+            )
+            else "open"
+        )
     else:
         status = args.status_flag
     status_filter_explicit = bool(args.done_flag or args.status_flag is not None)
@@ -2851,9 +3575,18 @@ def _cmd_default(args):
             and dt >= closed_since_threshold
         ]
     if getattr(args, "waiting", False):
-        filtered = [t for t in filtered if t.waiting_on is not None]
+        # `--waiting` surfaces *active* impediments. A terminal card can
+        # still carry an overlay (closing never clears `waiting_on` /
+        # `waiting_until`), but that overlay is stale by definition and is
+        # not an actionable wait — mirror the board renderer's `live` gate
+        # (`engine.py` `card_cell`) so the impeded view and the board cannot
+        # disagree about what counts as impeded.
+        filtered = [
+            t for t in filtered
+            if t.status not in TERMINAL_STATUSES and waiting_impedes(t)
+        ]
     full_values = compute_values(cards)
-    filtered = sort_default(filtered, values=full_values)
+    filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
         board_cards = filtered if (status_filter_explicit or args.worker) else cards
         print(
@@ -2869,7 +3602,15 @@ def _cmd_default(args):
         ))
     else:
         out = render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
-        active_notice = render_active_notice(cards, values=full_values) if status == "open" else ""
+        # Scope the active-card banner to --worker, mirroring the board path
+        # above: the banner is a per-queue "before you claim work" hint, so a
+        # worker-scoped queue must see only that worker's claimed cards.
+        notice_cards = (
+            [t for t in cards
+             if args.worker.lower() in _worker_who(t.frontmatter.get("worker")).lower()]
+            if args.worker else cards
+        )
+        active_notice = render_active_notice(notice_cards, values=full_values, by_title=full_by_title) if status == "open" else ""
         leverage = (
             render_leverage_line(filtered, cards, values=full_values)
             if args.ready else ""
@@ -2915,6 +3656,10 @@ def _cmd_validate(args):
         print(w.message, file=sys.stderr)
     for w in validate_dod_method_tags(cards):
         print(w.message, file=sys.stderr)
+    for w in validate_decision_verdict_coherence(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_plugin_hook_double_fire():
+        print(w.message, file=sys.stderr)
     for e in detect_advance_cycles(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
@@ -2928,6 +3673,9 @@ def _cmd_validate(args):
     if half_edge_errors:
         print("Run 'goc repair-edges --apply' to fix.", file=sys.stderr)
     for e in validate_supersedes_targets(cards):
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
+    for e in validate_superseded_by_targets(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     if errors:
@@ -3034,35 +3782,61 @@ def _render_verdict(verdict: dict) -> bool:
     tv = verdict.get("title_verdict") or {}
     if tv.get("ok"):
         print("title:   OK")
-    else:
+    elif tv.get("rewrite"):
+        # Mirror _apply_verdict_interactive's guard: only a verdict carrying a
+        # rewrite string is an applicable rewrite, so only it counts.
         has_rewrite = True
         print(f"title:   REWRITE — {tv.get('reason', '?')}")
-        print(f"  proposed: {tv.get('rewrite', '?')}")
+        print(f"  proposed: {tv['rewrite']}")
+    else:
+        print(f"title:   flagged, no rewrite offered — {tv.get('reason', '?')}")
     sv = verdict.get("summary_verdict") or {}
     if sv.get("ok"):
         print("summary: OK")
-    else:
+    elif sv.get("rewrite"):
         has_rewrite = True
         print(f"summary: REWRITE — {sv.get('reason', '?')}")
-        print(f"  proposed: {sv.get('rewrite', '?')}")
-    dod_issues = verdict.get("dod_issues") or []
-    if dod_issues:
-        has_rewrite = True
-        print(f"dod:     {len(dod_issues)} issue(s)")
-        for issue in dod_issues:
-            print(f"  [{issue.get('idx', '?')}] {issue.get('issue', '?')}")
-            print(f"      fix: {issue.get('fix', '?')}")
+        print(f"  proposed: {sv['rewrite']}")
     else:
+        print(f"summary: flagged, no rewrite offered — {sv.get('reason', '?')}")
+    dod_issues = verdict.get("dod_issues") or []
+    # Mirror _apply_dod_rewrite's guard exactly: an applicable rewrite carries
+    # `idx`, `fix`, AND a non-whitespace `fix` (a whitespace-only `fix` means
+    # "no rewrite offered" — the apply path preserves the original item). A
+    # flagged-but-fixless issue prints for visibility but does NOT count toward
+    # has_rewrite.
+    def _is_fixable(issue: dict) -> bool:
+        return "idx" in issue and "fix" in issue and bool(issue["fix"].strip())
+
+    fixable = [issue for issue in dod_issues if _is_fixable(issue)]
+    fixless = [issue for issue in dod_issues if not _is_fixable(issue)]
+    if fixable:
+        has_rewrite = True
+        print(f"dod:     {len(fixable)} issue(s)")
+        for issue in fixable:
+            print(f"  [{issue['idx']}] {issue.get('issue', '?')}")
+            print(f"      fix: {issue['fix']}")
+    if fixless:
+        print(f"dod:     {len(fixless)} flagged, no rewrite offered")
+        for issue in fixless:
+            print(f"  [{issue.get('idx', '?')}] {issue.get('issue', '?')}")
+    if not dod_issues:
         print("dod:     OK")
     return has_rewrite
 
 
 def _apply_summary_rewrite(card: Card, new_summary: str) -> None:
-    """In-place YAML-safe rewrite of the `summary:` field on this card's README.md."""
+    """In-place YAML-safe rewrite of the `summary:` field on this card's README.md.
+
+    Routes through `emit_frontmatter` (same pattern as `_apply_dod_rewrite`) so
+    a multi-line LLM-authored summary emits as a `|-` block scalar instead of
+    a bare unquoted value that would destroy every frontmatter field below it.
+    """
     readme = card.path / "README.md"
     text = readme.read_text()
-    rewritten = mutate_frontmatter_field(text, "summary", _yaml_inline(new_summary))
-    readme.write_text(rewritten)
+    fm, body = parse_frontmatter(text)
+    fm["summary"] = new_summary
+    readme.write_text(emit_frontmatter(fm, body=body))
 
 
 def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:
@@ -3073,14 +3847,28 @@ def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:
     dod_text = fm.get("definition_of_done") or ""
     lines = dod_text.splitlines()
     box_indices = _dod_box_indices(lines)
-    fix_by_idx = {issue["idx"]: issue["fix"] for issue in issues if "idx" in issue and "fix" in issue}
+    # An empty/whitespace-only `fix` means "no rewrite offered" — keep the
+    # original item verbatim (per this function's contract) rather than
+    # blanking it to "- [ ] ". Mirrors the `fixless` (no-`fix`-key) path.
+    fix_by_idx = {
+        issue["idx"]: issue["fix"]
+        for issue in issues
+        if "idx" in issue and "fix" in issue and issue["fix"].strip()
+    }
     for box_idx, line_idx in enumerate(box_indices):
         if box_idx in fix_by_idx:
-            new_text = fix_by_idx[box_idx]
+            indent = re.match(r"[ \t]*", lines[line_idx]).group(0)
+            # A DoD item is a single line; this function replaces ONE item by
+            # index, it does not split one item into several. An LLM-authored
+            # `fix` may arrive with embedded newlines (a wrapped rewrite, or an
+            # accidental second `- [ ]` line). Collapse them to a single space
+            # so the rewrite stays one physical line and cannot fabricate an
+            # extra checkbox that inflates the box count.
+            new_text = re.sub(r"\s*\n\s*", " ", fix_by_idx[box_idx])
             new_text = new_text.lstrip()
             if not new_text.startswith("- ["):
                 new_text = f"- [ ] {new_text}"
-            lines[line_idx] = new_text
+            lines[line_idx] = indent + new_text
     fm["definition_of_done"] = "\n".join(lines) + ("\n" if not dod_text.endswith("\n") else "")
     readme.write_text(emit_frontmatter(fm, body=body))
 
@@ -3140,7 +3928,11 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
 
 def _cmd_quality_pass(args):
     """Surface engineer-jargon titles + missing summaries across the existing deck."""
-    status_flag = args.status_flag
+    status_flag = getattr(args, "status_flag", None)
+    if getattr(args, "done_flag", False) and status_flag is None:
+        status_flag = "done"
+    if status_flag is None:
+        status_flag = "open"
     llm = args.llm
     limit = args.limit
     dry_run = args.dry_run
@@ -3239,12 +4031,6 @@ def _cmd_done(args):
     title = titles[0]
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
-    if t.dod_freeform and not force:
-        print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
-        sys.exit(2)
-    if t.dod_open > 0:
-        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
-        sys.exit(2)
     prior = t.status
     if prior == "done":
         print(f"{title}: already done; closed_at unchanged")
@@ -3253,6 +4039,20 @@ def _cmd_done(args):
         print(
             f"ERROR: {title}: status is {prior!r} (terminal); "
             f"use the supersede/disprove workflow — 'done' cannot overwrite terminal states",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if t.dod_freeform and not force:
+        print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
+        sys.exit(2)
+    if t.dod_open > 0:
+        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
+        sys.exit(2)
+    if t.human_gate != "none":
+        print(
+            f"ERROR: {title}: human_gate is {t.human_gate!r}; "
+            f"run `goc decide {title} --decision <choice> --because <reason>` "
+            f"to lower the gate before closing.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -3304,6 +4104,19 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
     for title in deduped:
         card_dir = DECK_DIR / title
         t = load_card_or_exit(card_dir, title)
+        if t.status == "done":
+            print(
+                f"ERROR: {title}: already done; --bundle refuses to re-close",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if t.status in TERMINAL_STATUSES:
+            print(
+                f"ERROR: {title}: status is {t.status!r} (terminal); "
+                f"use the supersede/disprove workflow — --bundle cannot overwrite terminal states",
+                file=sys.stderr,
+            )
+            sys.exit(2)
         if t.dod_freeform and not force:
             print(
                 f"ERROR: {title}: free-form DoD; use --force to bypass enforcement",
@@ -3316,16 +4129,11 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
                 file=sys.stderr,
             )
             sys.exit(2)
-        if t.status == "done":
+        if t.human_gate != "none":
             print(
-                f"ERROR: {title}: already done; --bundle refuses to re-close",
-                file=sys.stderr,
-            )
-            sys.exit(2)
-        if t.status in TERMINAL_STATUSES:
-            print(
-                f"ERROR: {title}: status is {t.status!r} (terminal); "
-                f"use the supersede/disprove workflow — --bundle cannot overwrite terminal states",
+                f"ERROR: {title}: human_gate is {t.human_gate!r}; "
+                f"run `goc decide {title} --decision <choice> --because <reason>` "
+                f"to lower the gate before closing.",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -3387,7 +4195,14 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         git_dir = Path(repo_check.stdout.strip())
         if not git_dir.is_absolute():
             git_dir = DECK_ROOT / git_dir
-        if any((git_dir / sf).exists() for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD")):
+        # REBASE_HEAD alone is insufficient: it is absent at a paused
+        # interactive-rebase stop (break/edit step). The rebase state
+        # directory (rebase-merge for the merge backend, rebase-apply for
+        # the apply backend) is present for the whole rebase, so check it too.
+        if any(
+            (git_dir / sf).exists()
+            for sf in ("MERGE_HEAD", "REBASE_HEAD", "CHERRY_PICK_HEAD", "rebase-merge", "rebase-apply")
+        ):
             print("  (auto-commit skipped: merge/rebase/cherry-pick in progress)", file=sys.stderr)
             return False
         paths: list[str] = [
@@ -3406,7 +4221,7 @@ def _git_auto_commit(card_dirs: list[Path], message: str) -> bool:  # noqa: PLR0
         )
         if diff_check.returncode == 0:
             return False
-        subprocess.run(["git", "commit", "-m", message], check=True, cwd=git_cwd)
+        subprocess.run(["git", "commit", "-m", message, "--", *paths], check=True, cwd=git_cwd)
         return True
     except subprocess.CalledProcessError as e:
         print(f"  (auto-commit failed: {e})", file=sys.stderr)
@@ -3427,6 +4242,15 @@ def _coerce_config_bool(value, *, default: bool) -> bool:
         if normalized in {"0", "false", "no", "off"}:
             return False
     return bool(value)
+
+
+def _validate_commit_flags(commit: bool, no_commit: bool) -> None:
+    """Exit 2 on mutually-exclusive --commit / --no-commit BEFORE any disk
+    write. Mutating verbs must call this at entry so a flag-conflict error
+    can never leave a card half-mutated on disk without an auto-commit."""
+    if commit and no_commit:
+        print("ERROR: pass only one of --commit / --no-commit", file=sys.stderr)
+        sys.exit(2)
 
 
 def _commit_override(commit: bool, no_commit: bool) -> bool | None:
@@ -3519,7 +4343,7 @@ def _enforce_closure_on_integration_or_exit(title: str) -> None:
         cwd=git_cwd,
         check=False,
     )
-    if check.returncode != 0:
+    if check.returncode == 1:
         print(
             f"ERROR: {title}: closure_on_integration is enabled and HEAD is not"
             " reachable from origin/main. Integrate the work (merge or push)"
@@ -3527,6 +4351,14 @@ def _enforce_closure_on_integration_or_exit(title: str) -> None:
             file=sys.stderr,
         )
         sys.exit(2)
+    if check.returncode != 0:
+        print(
+            "  Warning: closure_on_integration is enabled but `git merge-base"
+            " --is-ancestor` could not determine reachability (git error);"
+            " skipping check",
+            file=sys.stderr,
+        )
+        return
 
 
 def claim_push_enabled() -> bool:
@@ -3739,6 +4571,112 @@ def effective_skills_source() -> str:
     return "plugin" if _claude_plugin_present() else "vendored"
 
 
+GOC_PLUGIN_NAME = "game-of-cards"
+
+
+def _read_enabled_plugins(settings_path: Path) -> dict:
+    """Return one settings file's `enabledPlugins` map, or {} on any problem.
+
+    Tolerates a missing/unreadable file, non-JSON content, a non-dict root,
+    or an `enabledPlugins` value that is not a dict — every such case yields
+    {} so the caller can merge without special-casing.
+    """
+    try:
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    enabled = data.get("enabledPlugins")
+    return enabled if isinstance(enabled, dict) else {}
+
+
+def _resolve_enabled_plugins(repo_root: Path, home: Path) -> dict:
+    """Merge `enabledPlugins` across the settings cascade, most-specific last.
+
+    Precedence (low → high): user `~/.claude/settings.json`, project
+    `<repo>/.claude/settings.json`, project-local
+    `<repo>/.claude/settings.local.json`. A later source overrides an earlier
+    one per plugin key, matching Claude Code's own resolution.
+    """
+    merged: dict = {}
+    for path in (
+        home / ".claude" / "settings.json",
+        repo_root / ".claude" / "settings.json",
+        repo_root / ".claude" / "settings.local.json",
+    ):
+        merged.update(_read_enabled_plugins(path))
+    return merged
+
+
+def _enabled_goc_plugin_key(repo_root: Path, home: Path) -> str | None:
+    """Return the enabled GoC plugin key (e.g. `game-of-cards@mkt`), or None.
+
+    Matches by the plugin name before `@`, so any marketplace qualifier is
+    accepted; truthiness follows the resolved cascade value.
+    """
+    for key, value in _resolve_enabled_plugins(repo_root, home).items():
+        if value and isinstance(key, str) and key.split("@", 1)[0] == GOC_PLUGIN_NAME:
+            return key
+    return None
+
+
+def _goc_hook_basenames() -> set[str]:
+    """The GoC lifecycle-hook script basenames, derived from the registry."""
+    from goc.install import GOC_CLAUDE_HOOKS
+
+    return {command.split("/")[-1].strip() for command in GOC_CLAUDE_HOOKS.values()}
+
+
+def _vendored_goc_hooks_registered(repo_root: Path) -> list[str]:
+    """GoC hook basenames registered as vendored in the repo's settings.
+
+    Scans `<repo>/.claude/settings.json`'s `hooks` block for `command`
+    strings invoking `${CLAUDE_PROJECT_DIR}/.claude/hooks/<basename>` — the
+    vendored form, distinct from the plugin's `${CLAUDE_PLUGIN_ROOT}`
+    registration. Returns the sorted GoC hook basenames found.
+    """
+    try:
+        data = json.loads((repo_root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    blob = json.dumps(data.get("hooks", {}))
+    return sorted(n for n in _goc_hook_basenames() if f".claude/hooks/{n}" in blob)
+
+
+def validate_plugin_hook_double_fire(
+    repo_root: Path | None = None, home: Path | None = None
+) -> list[BlockerWarning]:
+    """Warn when GoC hooks will fire twice: enabled plugin AND vendored copy.
+
+    Advisory only — the double-registration wastes tokens and doubles the
+    interruption rate but does not break the deck. Gated on plugin
+    *enablement* (resolved from the settings cascade), not mere payload
+    presence, so disabling the plugin for the repo clears the warning even
+    while the payload stays cached. Reads host config that is absent in CI,
+    so the caller must not let it gate exit.
+    """
+    repo_root = REPO_ROOT if repo_root is None else repo_root
+    home = Path.home() if home is None else home
+    key = _enabled_goc_plugin_key(repo_root, home)
+    if not key:
+        return []
+    vendored = _vendored_goc_hooks_registered(repo_root)
+    if not vendored:
+        return []
+    return [BlockerWarning(
+        "PLUGIN_AND_VENDORED_HOOKS_DOUBLE_FIRE",
+        key,
+        f"the Claude Code GoC plugin is enabled for this repo AND these hooks "
+        f"are also vendored in .claude/ ({', '.join(vendored)}); each fires "
+        f"twice per turn. Resolve by disabling the plugin for this repo "
+        f"(set \"{key}\": false under enabledPlugins, or run /plugin) OR switch "
+        f"to skills_source: plugin and remove .claude/hooks/.",
+    )]
+
+
 def _run_automated_check(check: dict) -> tuple[bool, str]:
     cmd = check["cmd"]
     try:
@@ -3835,7 +4773,18 @@ def _format_attestation_block(today: str, results: list[dict]) -> str:
 
 
 def _cmd_attest(args):
-    """Run layer-2 + layer-3 closure checks; append "Closure verification" block to log.md."""
+    """Run layer-2 + layer-3 closure checks; append "Closure verification" block to log.md.
+
+    Empty-config contract: when both ``layer_2_project_dod`` and ``layer_3_goc_dod``
+    are empty/unset, refuse the call (non-zero exit, no log.md mutation). Writing
+    a bare ``## Closure verification`` header would satisfy the bundled
+    ``log-md-closure-entry`` derived check on content that proves nothing.
+
+    All-skipped contract: the same refusal applies when checks ARE configured
+    but every one of them is covered by ``--skip`` — no check actually runs, so
+    the all-``[~] SKIPPED`` block proves exactly as little as the bare header.
+    "No check ran" is refused regardless of why none ran.
+    """
     title = args.title
     skips = args.skips
     non_interactive = args.non_interactive
@@ -3847,6 +4796,28 @@ def _cmd_attest(args):
     skips_set = set(skips)
     results: list[dict] = []
     any_failed = False
+
+    layer_2_checks = config.get("layer_2_project_dod") or []
+    layer_3_checks = config.get("layer_3_goc_dod") or []
+    if not layer_2_checks and not layer_3_checks:
+        print(
+            "ERROR: no closure checks configured (both layer_2_project_dod and "
+            "layer_3_goc_dod are empty in .game-of-cards/config.yaml). "
+            "goc attest refuses to run; configure at least one check or skip attestation.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    all_check_names = {c["name"] for c in layer_2_checks} | {c["name"] for c in layer_3_checks}
+    if all_check_names and all_check_names <= skips_set:
+        print(
+            "ERROR: every configured closure check was skipped via --skip "
+            f"({', '.join(sorted(all_check_names))}). goc attest refuses to write a "
+            "Closure verification block when no check actually runs; un-skip at "
+            "least one check.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     for layer_key, layer_num in [("layer_2_project_dod", 2), ("layer_3_goc_dod", 3)]:
         layer_checks = config.get(layer_key) or []
@@ -3862,7 +4833,7 @@ def _cmd_attest(args):
                         "name": name,
                         "passed": True,
                         "skipped": True,
-                        "summary": f"SKIPPED ({check.get('description', '')[:60]})",
+                        "summary": f"SKIPPED ({(check.get('description') or '')[:60]})",
                     }
                 )
                 print(f"  [~] {name} — SKIPPED")
@@ -3939,12 +4910,22 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
         where = r.stdout.strip() if r.returncode == 0 else None
         if where in ("", "HEAD"):
             where = None
+        if where is None:
+            # No detectable branch (detached HEAD / fresh checkout): preserve any
+            # stored branch context rather than dropping it. A detectable branch
+            # still updates `where` (the documented "add/update where" intent).
+            where = existing_dict.get("where")
 
-    if not who and not where:
+    # A worker mapping requires a non-empty `who`; a `where`-only worker is
+    # rejected by validate_card. So if `who` is unknown (e.g. git user.name is
+    # unset on a CI/container checkout) there is no valid worker to stamp — even
+    # when a branch is known — and we leave the card untouched rather than write
+    # an invalid `{who: "", where: <branch>}` that self-corrupts the card.
+    if not who:
         return text
 
     # Build the YAML inline value and mutate the frontmatter line-anchored.
-    who_yaml = _yaml_inline(who) if who else '""'
+    who_yaml = _yaml_inline(who)
     if where:
         where_yaml = _yaml_inline(where)
         worker_yaml = f"{{who: {who_yaml}, where: {where_yaml}}}"
@@ -3959,6 +4940,7 @@ def _cmd_status(args):
     new_status = args.new_status
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     worker_who = args.worker_who
     worker_where = args.worker_where
     successor = args.superseded_by
@@ -3969,11 +4951,25 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if new_status == "superseded" and successor is None:
+        print(
+            f"ERROR: status superseded requires --by <successor> "
+            f"(the typed forward routing pointer; without it a cold reader "
+            f"landing on {title!r} has nowhere to go)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     if successor is not None and successor == title:
         print(f"ERROR: --by {successor!r} cannot equal the card being superseded", file=sys.stderr)
         sys.exit(2)
     if successor is not None:
         successor_dir = DECK_DIR / successor
+        # Existence/loadability check only — the successor may carry any
+        # status. A supersession's successor is the work that replaces the
+        # old card and is meant to be completed, so the typed forward
+        # pointer may legitimately land on a terminal card (a `done`
+        # resolution, or a `superseded` card that routes onward). See
+        # `validate_superseded_by_targets` for the full rationale.
         load_card_or_exit(successor_dir, successor)
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
@@ -3992,6 +4988,14 @@ def _cmd_status(args):
         print(
             f"ERROR: {title}: status is {prior!r} (terminal);"
             f" terminal cards cannot be moved backward through `goc status`",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if new_status in TERMINAL_STATUSES and t.human_gate != "none":
+        print(
+            f"ERROR: {title}: human_gate is {t.human_gate!r}; "
+            f"run `goc decide {title} --decision <choice> --because <reason>` "
+            f"to lower the gate before closing into {new_status!r}.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -4043,7 +5047,7 @@ TITLE_ANTIPATTERNS = [
 
 
 def _check_title_antipatterns(title: str) -> list[str]:
-    """Return list of (matched_substring, reason) tuples; empty if title is clean."""
+    """Return the list of antipattern reason strings matched by `title`; empty if clean."""
     return [reason for pat, reason in TITLE_ANTIPATTERNS if pat.search(title)]
 
 
@@ -4099,14 +5103,19 @@ def _validate_new_edge_flags(
 def _cmd_new(args):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
     title = args.title
-    contribution = args.contribution
+    schema = load_schema()
+    contribution = args.contribution or (
+        "medium" if "medium" in schema.contribution_values else schema.contribution_values[0]
+    )
     gate = args.gate
     tags = args.tags
     worker = args.worker
     allow_jargon = args.allow_jargon
-    advances = _unique_preserving_order(args.advances or [])
-    advanced_by = _unique_preserving_order(args.advanced_by or [])
-    schema = load_schema()
+    commit = args.commit
+    no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
+    advances = _unique_preserving_order(args.advances_wire or [])
+    advanced_by = _unique_preserving_order(args.advanced_by_wire or [])
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(title)
         if antipatterns_hit:
@@ -4139,7 +5148,6 @@ def _cmd_new(args):
     now = _utc_now_iso()
     fm = {
         "title": title,
-        "summary": "",
         "status": "open",
         "stage": None,
         "contribution": contribution,
@@ -4160,8 +5168,21 @@ def _cmd_new(args):
         _mutate_pair(target, title, "advanced_by", "advances", add=True)
     for advancer in advanced_by:
         _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
-    print(f"created {card_dir.relative_to(REPO_ROOT)}/")
-    print(f"Next: edit {card_dir.relative_to(REPO_ROOT)}/README.md to fill the body and DoD; then ask your agent to implement the card.")
+    # card_dir is always under DECK_DIR ⊆ DECK_ROOT, which is NOT REPO_ROOT in
+    # shared-worktree-deck mode (DECK_ROOT is the primary tree, REPO_ROOT the
+    # linked worktree). relative_to(DECK_ROOT) is crash-proof and matches the
+    # deck-path display used elsewhere (e.g. the rebase-conflict path above).
+    rel = card_dir.relative_to(DECK_ROOT)
+    print(f"created {rel}/")
+    print(f"Next: edit {rel}/README.md to fill the body and DoD; then ask your agent to implement the card.")
+    # Default for `goc new` is NO commit so the scaffold-then-fill-in
+    # workflow is unchanged; --commit is the opt-in for wired filings so
+    # the new card's edge writes to existing endpoints don't linger as
+    # ambient ` M` in the worktree (the half-edge defect).
+    if _commit_override(commit, no_commit) is True:
+        commit_targets = [card_dir, *(DECK_DIR / t for t in advances + advanced_by)]
+        if _git_auto_commit(commit_targets, f"deck: new {title}"):
+            print("  committed")
 
 
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
@@ -4258,22 +5279,58 @@ def _print_structural_edge_problems(problems: list[tuple[HalfEdge, str]]) -> Non
         print(f"  {edge.message}: {problem}", file=sys.stderr)
 
 
-def _cmd_repair_edges(args):
-    """Preview or repair asymmetric advances/advanced_by half-edges."""
-    cards = load_all_cards()
-    half_edges = find_half_edges(cards)
-    if not half_edges:
-        print("No half-edges found.")
-        return
+def _simulate_repair(by_title: dict[str, "Card"], edge: HalfEdge) -> None:
+    """Mirror `_mutate_pair`'s on-disk effect in memory.
 
+    A repair adds the missing reverse half (`edge.src` → `edge.ref.inverse`);
+    the forward half already exists by construction, so it is a no-op. Applying
+    just the reverse half to the shared in-memory `Card` objects lets later
+    cycle checks in the same classification pass observe this repair — exactly
+    as `--apply` would by re-loading from disk before each edge.
+    """
+    target = by_title.get(edge.ref)
+    if target is None:
+        return
+    cur = target.frontmatter.get(edge.inverse) or []
+    if not isinstance(cur, list):
+        cur = []
+    if edge.src not in cur:
+        target.frontmatter[edge.inverse] = [*cur, edge.src]
+
+
+def _classify_half_edges(
+    half_edges: list[HalfEdge], cards: list["Card"]
+) -> tuple[list[HalfEdge], list[tuple[HalfEdge, str]]]:
+    """Split half-edges into (fixable, structural) against an evolving graph.
+
+    Single source of truth for both the dry-run preview and `--apply`: each
+    edge is classified, then — if fixable — its repair is simulated in memory
+    so subsequent cycle checks see the forward edges earlier repairs add. This
+    is what keeps the preview honest: when repairing one half-edge closes a
+    cycle for a later one, both passes classify the later edge as structural.
+    """
+    by_title = {c.title: c for c in cards}
     fixable: list[HalfEdge] = []
     structural: list[tuple[HalfEdge, str]] = []
     for edge in half_edges:
         problem = _repair_edge_cycle_problem(edge, cards)
         if problem:
             structural.append((edge, problem))
-        else:
-            fixable.append(edge)
+            continue
+        fixable.append(edge)
+        _simulate_repair(by_title, edge)
+    return fixable, structural
+
+
+def _cmd_repair_edges(args):
+    """Preview or repair asymmetric bidirectional half-edges (advances/advanced_by, supersedes/superseded_by)."""
+    cards = load_all_cards()
+    half_edges = find_half_edges(cards)
+    if not half_edges:
+        print("No half-edges found.")
+        return
+
+    fixable, structural = _classify_half_edges(half_edges, cards)
 
     if not args.apply:
         if fixable:
@@ -4290,18 +5347,12 @@ def _cmd_repair_edges(args):
         return
 
     repaired = 0
-    structural = []
-    for edge in half_edges:
-        # Re-load before each mutation so cycle checks see earlier repairs from
-        # this invocation.
-        current_cards = load_all_cards()
-        problem = _repair_edge_cycle_problem(edge, current_cards)
-        if problem:
-            structural.append((edge, problem))
-            continue
-        # Apply the missing reverse half: add edge.src to edge.ref's inverse list.
-        # The forward edge already exists by construction, so this idempotently
-        # restores symmetry for any LIST_REL_FIELDS pair.
+    # `fixable` was classified against the same evolving graph `--apply` would
+    # observe by reloading before each edge (see `_classify_half_edges`), so it
+    # already excludes edges made structural by an earlier same-run repair.
+    # Applying the missing reverse half is idempotent for any LIST_REL_FIELDS
+    # pair, since the forward edge exists by construction.
+    for edge in fixable:
         _mutate_pair(edge.ref, edge.src, edge.inverse, edge.field, add=True)
         print(f"repaired: {edge.message}")
         repaired += 1
@@ -4322,6 +5373,7 @@ def _cmd_wait(args):
     impeded. `--clear` drops both fields; otherwise `--reason` and/or
     `--until` set the overlay.
     """
+    _validate_commit_flags(args.commit, args.no_commit)
     title = args.title
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
@@ -4394,6 +5446,7 @@ def _cmd_advance(args):
     advancer = args.advancer
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     if title == advancer:
         print("ERROR: cannot advance a card with itself", file=sys.stderr)
         sys.exit(2)
@@ -4415,6 +5468,7 @@ def _cmd_unadvance(args):
     advancer = args.advancer
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     _mutate_pair(title, advancer, "advanced_by", "advances", add=False)
     print(f"unadvance: {title}.advanced_by -= {advancer}; {advancer}.advances -= {title}")
     commit_policy = _commit_override(commit, no_commit)
@@ -4439,19 +5493,37 @@ def _move_text_rewrite(text: str, old: str, new: str) -> str:
 
 
 def _move_iter_tracked_text_files():
-    """Yield (Path, str) for tracked text files; falls back to rglob outside git."""
+    """Yield (Path, str) for in-repo text files; falls back to rglob outside git.
+
+    Enumerates tracked AND untracked-but-not-ignored files (`--cached --others
+    --exclude-standard`), not tracked files alone. A card filed with `goc new`
+    is untracked until its first commit, so the routine file-then-rename flow
+    (`goc new <slug>` → `goc move <slug> <better-slug>` before committing) would
+    otherwise have the moved card's own README.md/log.md skipped by the rewrite
+    — the directory gets renamed (via the `shutil.move` fallback, since `git mv`
+    also refuses an untracked source) while the in-file `title:` field stays
+    stale, leaving a card that fails `goc validate`. Ignored files (venv, build
+    artifacts) stay excluded, matching the `.git`-pruning rglob fallback's intent.
+    """
     try:
         result = subprocess.run(
-            ["git", "ls-files", "-z"],
-            cwd=str(REPO_ROOT), capture_output=True, check=True, timeout=30,
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            cwd=str(DECK_ROOT), capture_output=True, check=True, timeout=30,
         )
-        paths = [
-            REPO_ROOT / entry.decode("utf-8", errors="replace")
-            for entry in result.stdout.split(b"\x00")
-            if entry
-        ]
+        seen: set[str] = set()
+        paths = []
+        for entry in result.stdout.split(b"\x00"):
+            if not entry:
+                continue
+            rel = entry.decode("utf-8", errors="replace")
+            # --cached and --others are disjoint, but dedupe defensively so a
+            # path is never rewritten twice.
+            if rel in seen:
+                continue
+            seen.add(rel)
+            paths.append(DECK_ROOT / rel)
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-        paths = [p for p in REPO_ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
+        paths = [p for p in DECK_ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
     for path in paths:
         if not path.is_file():
             continue
@@ -4482,7 +5554,7 @@ def _move_preview_sites(old: str, new: str) -> list[str]:
         rewritten = _move_text_rewrite(original, old, new)
         if rewritten == original:
             continue
-        rel = str(path.relative_to(REPO_ROOT))
+        rel = str(path.relative_to(DECK_ROOT))
         orig_lines = original.splitlines()
         new_lines = rewritten.splitlines()
         for i, (ol, nl) in enumerate(zip(orig_lines, new_lines), 1):
@@ -4516,6 +5588,9 @@ def _cmd_move(args):
     if not re.match(schema.title_pattern, new_title):
         print(f"ERROR: title {new_title!r} does not match {schema.title_pattern!r}", file=sys.stderr)
         sys.exit(2)
+    if old_title == new_title:
+        print(f"ERROR: cannot move a card to itself (old and new titles are both {new_title!r})", file=sys.stderr)
+        sys.exit(2)
     src = DECK_DIR / old_title
     dst = DECK_DIR / new_title
     if not src.exists():
@@ -4536,7 +5611,7 @@ def _cmd_move(args):
         return
 
     try:
-        subprocess.run(["git", "mv", str(src), str(dst)], cwd=REPO_ROOT, check=True, capture_output=True)
+        subprocess.run(["git", "mv", str(src), str(dst)], cwd=DECK_ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
         shutil.move(str(src), str(dst))
 
@@ -4553,30 +5628,80 @@ def _cmd_move(args):
     print(f"{old_title} → {new_title}")
 
 
+def _rescope_reconciliation_notice(t: Card, persisted_body: str) -> str:
+    """Build the post-`goc decide` reminder shown when a decision re-scopes or
+    reverses a prior verdict.
+
+    `goc decide` updates only the `## Decision` block and the gate. A re-scope
+    leaves the card's *other* verdict-bearing surfaces — its `summary`, a body
+    `> ⚠` banner, DoD wording — and any reference to the card in its
+    `advances`/`advanced_by` neighbors asserting the *old* verdict. Those are
+    not auto-updated; this notice names them so the operator reconciles by hand
+    (or, for a true re-scope, supersedes + creates instead). See
+    `Skill(decide-card)` "Reconcile a re-scope".
+    """
+    lines = [
+        "⚠ This decision reads like a re-scope/reversal of a prior verdict.",
+        "  goc decide updated only the ## Decision block and the gate. These "
+        "verdict-bearing surfaces are NOT auto-updated — reconcile them so the "
+        "card stops contradicting itself:",
+    ]
+    summary = (t.summary or "").strip()
+    if summary:
+        flag = " ← still asserts a negative verdict" if NEGATIVE_VERDICT_RE.search(summary) else ""
+        snippet = summary if len(summary) <= 100 else summary[:99] + "…"
+        lines.append(f"  • summary: {snippet!r}{flag}")
+    else:
+        lines.append("  • summary: (empty — add one stating the current verdict)")
+    if _body_banner_lines(persisted_body):
+        lines.append("  • a ⚠/verdict banner in the body still asserts the old verdict")
+    lines.append("  • DoD wording that encodes the old verdict")
+    neighbors: list[str] = []
+    for field in ("advances", "advanced_by"):
+        vals = t.frontmatter.get(field) or []
+        if isinstance(vals, list):
+            neighbors.extend(str(v) for v in vals)
+    if neighbors:
+        lines.append(
+            "  • references to this card in its neighbors are NOT auto-updated: "
+            + ", ".join(neighbors)
+        )
+    lines.append(
+        f"  For a true re-scope, prefer: goc status {t.title} superseded --by <new-card> "
+        "(records a typed forward link a reader can follow)."
+    )
+    return "\n".join(lines)
+
+
 def _cmd_decide(args):
-    """Record a decision in the body + log; lower the human gate to `none`."""
+    """Record a decision in the body + log; lower the human gate to `none`.
+
+    On a non-terminal card this is the normal Andon-cord lowering — a
+    parked card becomes pullable. On a *terminal* card with a still-raised
+    gate it is the **repair** path for the `status: terminal` +
+    `human_gate != none` contradiction the validator flags. A cleanly
+    closed card always carries `gate: none` (the close-time verbs enforce
+    it), so the only terminal cards that get past the "gate already none"
+    guard below are the broken ones — older closures that predate the
+    gate guard, hand-edits, or `goc migrate` imports — whose dangling gate
+    must be cleared for `goc validate` to pass. The card stays closed; the
+    decision block documents the resolution for the record axis.
+    """
     title = args.title
     decision = args.decision
     reasoning = args.reasoning
     commit = args.commit
     no_commit = args.no_commit
+    _validate_commit_flags(commit, no_commit)
     card_dir = DECK_DIR / title
     t = load_card_or_exit(card_dir, title)
-    if t.status in TERMINAL_STATUSES:
-        print(
-            f"ERROR: {title}: status is {t.status!r} (terminal); "
-            f"`goc decide` records a *pending* decision — terminal cards "
-            f"cannot be re-decided. To replace a recorded decision, file "
-            f"a new card and link it via `goc status <old> superseded --by <new>`.",
-            file=sys.stderr,
-        )
-        sys.exit(2)
     if t.human_gate == "none":
         print(
             f"ERROR: {title}: gate already 'none' (no decision pending)",
             file=sys.stderr,
         )
         sys.exit(2)
+    is_terminal = t.status in TERMINAL_STATUSES
     prior_gate = t.human_gate
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -4600,14 +5725,26 @@ def _cmd_decide(args):
             "decision below.\n\n"
             f"{archived}\n"
         )
-    entries.append(
-        f"## {now}: decision recorded\n\n"
-        f"{decision} — {reasoning}. Gate {prior_gate} → none.\n"
-    )
+    recorded_note = f"{decision} — {reasoning}. Gate {prior_gate} → none."
+    if is_terminal:
+        recorded_note += (
+            f" (Post-closure gate repair on a {t.status} card — the card "
+            f"stays closed; this clears the dangling gate so `goc validate` "
+            f"passes.)"
+        )
+    entries.append(f"## {now}: decision recorded\n\n{recorded_note}\n")
     sep = "\n\n" if existing.strip() else ""
     log_path.write_text(existing.rstrip("\n") + sep + "\n\n".join(entries))
     print(f"{title}: decision recorded; gate {prior_gate} → none")
-    print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
+    if is_terminal:
+        print(
+            f"Next: gate cleared on a {t.status} card — record-axis repair; "
+            f"the card stays closed and `goc validate` now passes."
+        )
+    else:
+        print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
+    if RESCOPE_MARKERS_RE.search(decision):
+        print(_rescope_reconciliation_notice(t, body), file=sys.stderr)
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         decision_short = decision[:60] + ("…" if len(decision) > 60 else "")
@@ -4670,11 +5807,23 @@ def _cmd_triage(args):
             lines.append(f"- {entry['title']} · aged {entry['aged_days']}d · contribution:{entry['contribution']}")
             preview = entry["decision_required"]
             if preview:
-                for ln in preview.splitlines()[:6]:
+                preview_lines = preview.splitlines()
+                for ln in preview_lines[:6]:
                     lines.append(f"  > {ln}" if ln else "  >")
+                if len(preview_lines) > 6:
+                    lines.append(
+                        f"  > … +{len(preview_lines) - 6} more lines "
+                        f"(see `goc show {entry['title']}`)"
+                    )
             elif entry["summary"]:
-                first = entry["summary"].splitlines()[0][:140]
-                lines.append(f"  > {first}")
+                summary_lines = entry["summary"].splitlines()
+                first_line = summary_lines[0] if summary_lines else ""
+                clipped = len(summary_lines) > 1 or len(first_line) > 140
+                first = first_line[:140].rstrip()
+                if clipped:
+                    lines.append(f"  > {first} … (see `goc show {entry['title']}`)")
+                else:
+                    lines.append(f"  > {first}")
             lines.append("")
     lines.append("Next: ask your agent \"decisions to make\" (Skill(scan-deck)) to walk each card and record decisions via Skill(decide-card).")
     print("\n".join(lines))
@@ -4778,15 +5927,32 @@ def _cmd_migrate(args):
             return
 
     if dry_run:
-        if to_copy or not legacy_dirs:
+        # Mirror the real run: it reaches `rmtree(legacy)` whenever
+        # `to_copy or identical` passes the confirm gate (or when the
+        # legacy tree is empty and falls through). Announce the removal
+        # in all of those cases so --dry-run never understates the
+        # deletion — in particular the identical-only case.
+        if to_copy or identical or not legacy_dirs:
             print(f"Would remove legacy tree: {legacy}")
         print("Dry run — no changes made.")
         return
 
-    if to_copy or identical:
-        if not auto_yes:
-            if not confirm(f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?"):
-                sys.exit(1)
+    # Confirm before the destructive rmtree on EVERY non-dry-run path that
+    # reaches it — including the empty-legacy_dirs fall-through, which only
+    # gets here under a dual-tree conflict (the non-conflict empty case already
+    # returned above). Nesting the gate inside `if to_copy or identical:` let
+    # that fall-through delete loose legacy files (sentinel, notes) with no
+    # prompt and without --auto-yes.
+    if not auto_yes:
+        if to_copy or identical:
+            prompt = f"\nMigrate {len(to_copy)} card(s) and remove legacy deck/?"
+        else:
+            prompt = (
+                "\nLegacy deck/ has no card directories but still contains files.\n"
+                f"Remove legacy tree {legacy}?"
+            )
+        if not confirm(prompt):
+            sys.exit(1)
 
     for name in to_copy:
         shutil.copytree(str(legacy_dirs[name]), str(canonical / name))
@@ -4799,7 +5965,7 @@ def _cmd_migrate(args):
 
 
 def _cmd_migrate_list_style(args):
-    """Re-emit every card to convert advances/advanced_by to block-style lists."""
+    """Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style."""
     dry_run = args.dry_run
     if not DECK_DIR.exists():
         print(f"ERROR: {DECK_DIR} does not exist", file=sys.stderr)
@@ -4825,7 +5991,7 @@ def _cmd_migrate_list_style(args):
                 readme.write_text(rewritten)
 
     if not changed:
-        print("All cards already use block-style for advances/advanced_by — nothing to do.")
+        print("All cards already use block-style for advances/advanced_by/supersedes/superseded_by — nothing to do.")
         return
 
     if dry_run:

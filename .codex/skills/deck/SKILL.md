@@ -3,6 +3,29 @@ name: deck
 description: "Front door for the deck — the operating substrate for ALL persistent work. AUTO-INVOKE when the user references the deck/methodology/workflow OR at session start as a reminder that every user request producing persistent work must flow through Skill(create-card) → Skill(advance-card) → Skill(finish-card). XP-style story cards on a kanban board, designed for AI-agent collaborators."
 ---
 
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
+
 # The Deck
 
 `deck/` is the project's work-tracking surface. Each subdirectory is one
@@ -128,7 +151,7 @@ claims and implements per the recorded decision.
 | Verb | What it does |
 |---|---|
 | `goc` | Show the open queue (value-sorted). |
-| `goc --board` | Multi-column kanban view. A `⏳` after an open card's `[contribution]` marker means "not ready to pull" — either a derived dependency-block (a non-terminal `advanced_by` prereq) or an active impediment overlay (`waiting_on` / future `waiting_until`). No `⏳` ⇒ pullable. |
+| `goc --board` | Multi-column kanban view. A `⏳` after an open card's `[contribution]` marker flags any of three signals: `human_gate != none` (parked for a human — **not pullable**), an active impediment overlay (`waiting_on` / future `waiting_until` — **not pullable**), or an advisory derived dependency-block (a non-terminal `advanced_by` prereq — **still pullable**, just flagged as "has an open upstream"). Only the first two hide a card from `pull-card` / `next-card` / `goc --ready`; a dependency-block does not. So `⏳` ⇏ unpullable — check the cause. |
 | `goc --status done --since YYYY-MM-DD` | Recently closed cards. |
 | `goc new <title>` | Scaffold a new card under `.game-of-cards/deck/<title>/`. |
 | `goc status <title> <state>` | Flip status (open/active/disproved/superseded). |
@@ -244,8 +267,9 @@ One skill per job; compose, don't bundle.
   default; the Q&A mode calls `Skill(decide-card)` per answer.
 - `Skill(next-card)` — auto-pick the highest-leverage open
   `gate=none` card to work on next. Read-only; does NOT flip status.
-- `Skill(create-card)` — file a new card with proper frontmatter,
-  DoD scaffold, and (for bug-class) reproduce.py stub.
+- `Skill(create-card)` — file a new card with proper frontmatter
+  and a DoD scaffold (reproduce.py is authored by hand for bug-class
+  cards, not scaffolded by the tool).
 - `Skill(advance-card)` — flip status (open→active, *→open, *→disproved,
   *→superseded) and manage the `waiting_on` impediment overlay
   (`goc wait`). Wraps `goc status` and `goc wait`. Status + overlay

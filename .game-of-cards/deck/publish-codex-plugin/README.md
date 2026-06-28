@@ -21,6 +21,8 @@ definition_of_done: |
   - [x] Smoke test or release-verification step covers Codex artifacts — `goc validate`'s `validate_plugin_mirror_parity` (CI on every commit) covers Codex hook scripts and the bundled engine; `tests/test_plugin_mirror_parity.py` and `tests/test_version_surfaces.py` enforce structural and version-literal integrity for `codex-plugin/`; `tests/test_install.py` covers the `goc install --agents codex` consumer path
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
+supersedes:
+  - publish-game-of-cards-agent-plugins
 ---
 
 # Publish the Codex plugin

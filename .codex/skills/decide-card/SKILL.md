@@ -3,6 +3,29 @@ name: decide-card
 description: "Record a decision (what + why) on a parked card and lower the human gate from `decision` or `session` to `none`. AUTO-INVOKE when the user says \"I decided X\", \"let's go with Y\", \"the answer is Z\", \"go ahead with\", \"approved\", or otherwise resolves a parked card. The Andon-cord lowering action — pull-card raises the gate; this skill is the human's one-action handoff so pull-card can resume."
 ---
 
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
+
 # Decide a card
 
 Lean's **Andon cord** (Toyota production system): when a worker hits a
@@ -139,6 +162,41 @@ project-specific reasoning is decisive.
    invocation, or `--commit` to force a state-only commit when the repo
    config disables automatic commits. See `Skill(advance-card)` Step 5
    for the multi-branch coordination rationale.
+
+## Reconcile a re-scope (decide updates only two things)
+
+`goc decide` touches exactly two surfaces: it writes the `## Decision`
+block and lowers the gate. It does **not** rewrite anything else on the
+card. That is correct for a *first* decision — but when your decision
+**reverses or re-scopes a verdict the card already states**, every other
+place that still asserts the old verdict is now stale, and the card
+contradicts itself. The stale top-framing (the `summary:`, a body banner)
+is exactly what the next agent reads first, so it drives wrong downstream
+actions.
+
+The CLI helps: when `--decision` contains re-scope/reversal language
+(`re-scope`, `supersede`, `reverse`, `overturn`, `no longer`, `instead
+of`, `was wrong`, …), `goc decide` prints a reconciliation reminder
+listing the surfaces it did NOT update (and `goc validate` emits an
+advisory `DECISION_CONTRADICTS_VERDICT` if a re-scoped decision is left
+sitting over a still-negative summary/banner). After recording such a
+decision, reconcile by hand:
+
+1. **`summary:` frontmatter** — the first thing triage views and agents
+   read. Rewrite it to state the *current* verdict.
+2. **Body banner / callout** — any `> ⚠ …` line asserting the old verdict.
+3. **DoD wording** — items phrased around the old verdict.
+4. **Neighbor references** — every mention of this card in its
+   `advances` / `advanced_by` cards (status tables, member lists). These
+   live in *other* card files; `goc decide` cannot see or update them.
+
+**Prefer supersede + create for a true re-scope.** If the decision
+genuinely reframes the card rather than resolving it, the cleaner move is
+`Skill(advance-card) <title> superseded` + `Skill(create-card)` for the
+replacement — that records a typed `superseded_by` / `supersedes` link so
+a reader landing on the old card is routed forward, instead of an
+in-place rewrite a cold reader must reconcile by eye. See "When NOT to
+use this skill → Decision changes scope" below.
 
 ## When an agent invokes this skill (lazy Andon)
 

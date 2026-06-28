@@ -1,21 +1,23 @@
 ---
 title: inline-emitter-writes-multi-line-strings-bare-destroying-subsequent-frontmatter
 summary: "`_yaml_inline` documents (engine.py:208-209) that \"Multi-line strings are NOT supported here — emit_frontmatter detects them and uses literal-block style (`|-`) instead,\" but does not enforce the contract: its quote-trigger set (`_YAML_NEEDS_QUOTE`, `_parser_coerces_scalar`, `_YAML_BLOCK_TOKENS`, `_YAML_INDICATOR_FIRST`, `s != s.strip()`) contains no newline test, so a multi-line value falls through to a bare unquoted emit at `engine.py:239`. `_apply_summary_rewrite` (engine.py:3053-3058) feeds the result straight into `mutate_frontmatter_field` without going through `emit_frontmatter`, so any multi-line summary the human accepts via `goc quality-pass --llm` writes `summary: line1\\nline2` to disk — and `line2` (plus every frontmatter field below it) becomes garbage outside any key. The next `parse_frontmatter` silently drops `status`, `contribution`, `tags`, etc.; subsequent `goc validate` reports the card as missing required fields with no hint that the rewrite is the cause."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T23:38:41Z"
-closed_at: null
-human_gate: decision
-advances: []
+closed_at: "2026-05-30T16:35:09Z"
+human_gate: none
+advances:
+  - frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] PROCESS: decide between (a) `_yaml_inline` refuses multi-line input — raises `FrontmatterError`, parallel to the existing float-refusal branch (engine.py:219-227) — and the caller falls back to a full re-emit through `emit_frontmatter`, or (b) the `_apply_summary_rewrite` caller stops bypassing `emit_frontmatter` and instead re-emits the whole frontmatter so a multi-line summary goes out as a `|-` block (the same path `_apply_dod_rewrite` already takes at engine.py:3077-3078). Record the call in log.md. See `## Decision required` below.
-  - [ ] TDD: `deck/<title>/reproduce.py` exits zero — a card with `status`, `contribution`, `tags` after `summary` survives a `_apply_summary_rewrite(card, "Line one.\nLine two.")` call: every field is still present in the parsed frontmatter, and the summary's two lines round-trip.
-  - [ ] TDD: a sibling assertion confirms `_yaml_inline` no longer falls through to a bare unquoted multi-line emit (under choice (a): raises; under choice (b): unreached on this caller path because `_apply_summary_rewrite` no longer routes through it for multi-line input).
-  - [ ] MECHANICAL: `uv run goc validate` passes on the modified deck.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green.
+  - [x] PROCESS: decide between (a) `_yaml_inline` refuses multi-line input — raises `FrontmatterError`, parallel to the existing float-refusal branch (engine.py:219-227) — and the caller falls back to a full re-emit through `emit_frontmatter`, or (b) the `_apply_summary_rewrite` caller stops bypassing `emit_frontmatter` and instead re-emits the whole frontmatter so a multi-line summary goes out as a `|-` block (the same path `_apply_dod_rewrite` already takes at engine.py:3077-3078). Record the call in log.md. See `## Decision required` below.
+  - [x] TDD: `deck/<title>/reproduce.py` exits zero — a card with `status`, `contribution`, `tags` after `summary` survives a `_apply_summary_rewrite(card, "Line one.\nLine two.")` call: every field is still present in the parsed frontmatter, and the summary's two lines round-trip.
+  - [x] TDD: a sibling assertion confirms `_yaml_inline` no longer falls through to a bare unquoted multi-line emit (under choice (a): raises; under choice (b): unreached on this caller path because `_apply_summary_rewrite` no longer routes through it for multi-line input).
+  - [x] MECHANICAL: `uv run goc validate` passes on the modified deck.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Inline frontmatter emitter writes multi-line strings bare, destroying subsequent frontmatter
@@ -146,52 +148,11 @@ the regex-template injection; it does not change the newline-handling
 behavior of `_yaml_inline`, so this defect remains after that one
 lands.
 
-## Decision required
+## Decision
 
-The fix has two credible paths. Both close the defect; they differ in
-which layer takes responsibility.
+*Resolved 2026-05-30T13:57:04Z:* Both paths: (b) rewire _apply_summary_rewrite to parse->mutate->emit_frontmatter (matching _apply_dod_rewrite) to stop the live data loss locally, PLUS (a) add a multi-line refusal branch in _yaml_inline alongside the float-refusal and a ratchet test asserting no other caller bypasses emit_frontmatter with free-form input
 
-**(a) Refuse multi-line input at the `_yaml_inline` boundary.** Add a
-sibling branch alongside the float refusal (engine.py:219-227):
-
-```python
-if "\n" in s:
-    raise FrontmatterError(
-        f"multi-line frontmatter values are not supported by _yaml_inline; "
-        "route through emit_frontmatter for literal-block style."
-    )
-```
-
-`_apply_summary_rewrite` then catches the error and falls back to a
-full `emit_frontmatter` re-emit. Pro: enforces the docstring contract
-at the function boundary, matches the float-refusal posture, surfaces
-every bypassing caller as a loud failure. Con: every existing call site
-that might pass a free-form string has to be audited and possibly
-wrapped — `worker` rewrites (engine.py:3468), `closed_at`/`status`
-(throughout), `human_gate` (engine.py:4359, 4579), and any future
-caller.
-
-**(b) Rewire the caller to go through `emit_frontmatter`.** Replace
-`_apply_summary_rewrite`'s body with a parse-mutate-re-emit pattern
-parallel to `_apply_dod_rewrite` (engine.py:3061-3078):
-
-```python
-def _apply_summary_rewrite(card: Card, new_summary: str) -> None:
-    readme = card.path / "README.md"
-    text = readme.read_text()
-    fm, body = parse_frontmatter(text)
-    fm["summary"] = new_summary
-    readme.write_text(emit_frontmatter(fm, body=body))
-```
-
-Pro: `emit_frontmatter` already handles every value shape correctly
-(including multi-line via `_emit_block_field`); the fix is local and
-mechanical. Con: the broader `_yaml_inline` contract violation remains
-latent — any *other* caller that bypasses `emit_frontmatter` keeps the
-silent-data-loss footgun.
-
-The two are not mutually exclusive: (b) is the minimal local fix, (a)
-is the structural guard that prevents the family from spawning siblings.
+*Reasoning:* this is a silent data-corruption bug so (b) is needed immediately as the minimal local fix, while (a) is the structural boundary guard that prevents the documented recurring bug family from spawning siblings via any other bypassing caller
 
 ## Fix (after decision lands)
 

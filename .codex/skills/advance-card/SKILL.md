@@ -3,6 +3,29 @@ name: advance-card
 description: "Mutate a card's status (open / active / disproved / superseded — everything except `done`), record relationship edges between cards (`goc advance` / `goc unadvance`), or set the impediment overlay (`goc wait`). AUTO-INVOKE when user says \"I'll start on X\", \"I'm working on\", \"mark this disproved\", \"supersede with Z\", \"this is part of X\", \"make this depend on Y\", \"these should be linked\", \"should this be an edge or a tag?\", \"remove this dependency\", \"unlink these\", or describes any non-done status change or relationship-modeling intent. For \"this is blocked by Y\" / \"unblock\", set or clear the impediment overlay with `goc wait` (Step 6) instead of flipping status. Status transitions and relationship edges are documented agreements (Kanban explicit policies, Anderson)."
 ---
 
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
+
 ## Preflight
 
 If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
@@ -306,8 +329,9 @@ goc advance <title> --by <other>
 # Retract a value-flow edge:
 goc unadvance <title> --by <other>
 
-# At filing time, both sides at once:
-goc new <child-title> --advances <epic-title>
+# At filing time, both sides at once (--commit so the new card AND
+# the epic's edge mutation land in one atomic commit):
+goc new <child-title> --advances <epic-title> --commit
 ```
 
 `goc advance` / `unadvance` maintain the bidirectional invariant

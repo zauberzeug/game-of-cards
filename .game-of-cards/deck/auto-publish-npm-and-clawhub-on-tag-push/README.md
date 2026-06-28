@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-10
 closed_at: 2026-05-10
-human_gate: session
+human_gate: none
 advances:
   - publish-openclaw-plugin
   - provide-openclaw-plugin-for-skills-and-hooks

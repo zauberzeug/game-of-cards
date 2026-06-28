@@ -10,7 +10,6 @@ from __future__ import annotations
 import signal
 import sys
 
-from goc import __version__
 from goc.engine import _build_parser, cli as engine_cli
 from goc.install import (
     BRIEFING_TARGET_HELP,
@@ -37,10 +36,10 @@ def main() -> None:
 
     argv = sys.argv[1:]
 
-    # --version / -V before any other parsing
-    if argv and argv[0] in ("-V", "--version"):
-        print(f"goc, version {__version__}")
-        return
+    # --version / -V is registered as an argparse action on the engine
+    # parser (see goc.engine._build_parser), so it works at any top-level
+    # position and is listed in `goc --help`. It is handled inside
+    # engine_cli below alongside every other global flag.
 
     # Route install / upgrade to their argparse-independent functions
     if argv and argv[0] in ("install", "upgrade"):

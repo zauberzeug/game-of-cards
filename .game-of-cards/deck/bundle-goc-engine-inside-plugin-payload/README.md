@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-07
 closed_at: 2026-05-08
-human_gate: session
+human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
   - support-external-game-of-cards-state-location

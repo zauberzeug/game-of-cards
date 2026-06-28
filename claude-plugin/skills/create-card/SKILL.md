@@ -1,6 +1,6 @@
 ---
 name: create-card
-description: File a new card with frontmatter, DoD scaffold, and (for bugs) reproduce.py stub. AUTO-INVOKE when user says "let's do X", "implement Y", "fix Z", "add support for", "I want to", "we need to", describes a bug, requests a feature, or initiates ANY persistent work item. The card is filed BEFORE implementation — the body is the briefing the next reader (human or AI agent) needs to act cold. Title must be user-facing, descriptive, PO-readable (not engineer's jargon).
+description: File a new card with frontmatter and a DoD scaffold (reproduce.py is authored by hand in Step 6 for bug-class cards, not scaffolded by the tool). AUTO-INVOKE when user says "let's do X", "implement Y", "fix Z", "add support for", "I want to", "we need to", describes a bug, requests a feature, or initiates ANY persistent work item. The card is filed BEFORE implementation — the body is the briefing the next reader (human or AI agent) needs to act cold. Title must be user-facing, descriptive, PO-readable (not engineer's jargon).
 argument-hint: <title> [--contribution high|medium|low] [--gate none|decision|session] [--tag <canonical-tag>]
 ---
 
@@ -136,7 +136,8 @@ goc new <title> \
   --tag bug \
   --tag <area-tag> \
   --advances <target-title> \
-  --advanced-by <parent-title>
+  --advanced-by <parent-title> \
+  --commit
 ```
 
 The CLI creates `deck/<title>/README.md` with valid flat frontmatter
@@ -155,9 +156,15 @@ when a new tag is warranted vs. an existing one fits.
 
 When the value-flow relationship is known at filing time, pass
 repeatable `--advances` / `--advanced-by` flags so `goc new` writes
-both sides of the edge in one command. Use the older `goc new` then
-`goc advance` two-step only as a fallback for adding edges to an
-existing card or when the relationship is discovered after creation.
+both sides of the edge in one command, and pass `--commit` so the
+new card directory and the wired endpoints land in a single atomic
+commit. Without `--commit`, the edge mutation on the existing
+endpoint lingers in the worktree as ambient ` M`; an agent that
+then commits only the new card directory (per AGENTS.md's
+explicit-pathspec rule) ships a half-edge. Use the older `goc new`
+then `goc advance` two-step only as a fallback for adding edges to
+an existing card or when the relationship is discovered after
+creation.
 
 **Edge direction for coordinating cards (the three-way fork).** When
 the card you're filing coordinates other work, decide which of three
@@ -168,7 +175,7 @@ governing cluster" for the full rules; the short form:
 - **Aggregation epic** (its value chain *is* its children; closes
   when they close) → `child.advances: [epic]`. The child contributes
   upward; the epic aggregates downward via `advanced_by`. Concretely
-  on a child filing: `goc new <child> --advances <epic>`.
+  on a child filing: `goc new <child> --advances <epic> --commit`.
 - **Governing cluster** (a decision or standard-setting card that
   closes when *decided*, independent of the cluster's work) → a
   **shared tag**, no `advances` edge in either direction. Add the

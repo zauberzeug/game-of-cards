@@ -59,7 +59,8 @@ Categories:
   grouping tag.
 - **Orphaned dependencies** — relational rot. Epics with zero
   linked children; meta-fix cards whose body lists a family roster
-  but `advances: []`; open cards with legacy `**Depends on:** /
+  but carry zero edges (neither `advances` nor `advanced_by`); open
+  cards with legacy `**Depends on:** /
   **Next:** / **Part of:**` markers in body but empty schema
   arrays; unactioned `log.md` migration TODOs (`formerly parent: X`
   / `formerly spawned_from: X`). The schema validator already
@@ -181,19 +182,23 @@ for ep in epics:
         print(f'{ep[\"title\"]}: epic with zero linked children')
 "
 
-# 2. Meta-fix cards with empty advances (family roster declared
-#    in body but not wired). A surfaced card is either (a) a
-#    genuine meta-fix whose family wasn't wired, or (b) a
-#    mistagged instance that should not carry the meta-fix tag —
-#    distinguish by reading the body for "## Family roster" / "n
-#    instances" prose.
+# 2. Meta-fix cards with zero edges (neither advances nor
+#    advanced_by — family roster declared in body but not wired).
+#    Count BOTH edge fields: a correctly-wired umbrella carries
+#    advanced_by=[siblings] with advances=[], so testing advances
+#    alone false-positives every wired family. A surfaced card is
+#    either (a) a genuine meta-fix whose family wasn't wired, or
+#    (b) a mistagged instance that should not carry the meta-fix
+#    tag — distinguish by reading the body for "## Family roster" /
+#    "n instances" prose.
 goc --tag meta-fix --status open --json | \
   python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 for c in d:
-    if not (c.get('advances') or []):
-        print(f'{c[\"title\"]}: meta-fix with empty advances (family unwired or mistagged?)')
+    n = len(c.get('advances') or []) + len(c.get('advanced_by') or [])
+    if n == 0:
+        print(f'{c[\"title\"]}: meta-fix with zero edges (family unwired or mistagged?)')
 "
 
 # 3. Open cards with legacy markers in body but empty schema arrays

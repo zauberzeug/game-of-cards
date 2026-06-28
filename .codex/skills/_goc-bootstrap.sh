@@ -2,24 +2,42 @@
 
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 GOC_BIN=$(command -v goc 2>/dev/null || true)
+PLUGIN_GOC_BIN=""
+script_path=${GOC_BOOTSTRAP_PATH:-}
+if [ -z "$script_path" ]; then
+    case "$0" in
+        */*) script_path=$0 ;;
+    esac
+fi
+if [ -n "$script_path" ]; then
+    case "$script_path" in
+        */*) script_dir_path=${script_path%/*} ;;
+        *) script_dir_path=. ;;
+    esac
+    script_dir=$(CDPATH= cd -- "$script_dir_path" 2>/dev/null && pwd || true)
+    if [ -n "$script_dir" ] && [ -x "$script_dir/../bin/goc" ]; then
+        PLUGIN_GOC_BIN=$(CDPATH= cd -- "$script_dir/../bin" 2>/dev/null && pwd)/goc
+    fi
+fi
 USE_UV_GOC=0
-if [ -z "$GOC_BIN" ] \
-    && [ -f "$repo_root/pyproject.toml" ] \
+if [ -f "$repo_root/pyproject.toml" ] \
     && grep -q 'name = "game-of-cards"' "$repo_root/pyproject.toml" \
     && command -v uv >/dev/null 2>&1; then
     USE_UV_GOC=1
 fi
 
-if [ -z "$GOC_BIN" ] && [ "$USE_UV_GOC" -eq 0 ]; then
+if [ -z "$GOC_BIN" ] && [ -z "$PLUGIN_GOC_BIN" ] && [ "$USE_UV_GOC" -eq 0 ]; then
     printf '%s\n' "Game of Cards CLI not found. Install with: pipx install game-of-cards" >&2
     exit 127
 fi
 
 run_goc() {
-    if [ -n "$GOC_BIN" ]; then
-        "$GOC_BIN" "$@"
-    else
+    if [ "$USE_UV_GOC" -eq 1 ]; then
         uv run goc "$@"
+    elif [ -n "$PLUGIN_GOC_BIN" ]; then
+        "$PLUGIN_GOC_BIN" "$@"
+    else
+        "$GOC_BIN" "$@"
     fi
 }
 
@@ -50,7 +68,10 @@ if [ -n "$required" ]; then
     fi
 fi
 
-if [ -n "$GOC_BIN" ]; then
+if [ "$USE_UV_GOC" -eq 1 ]; then
+    exec uv run goc "$@"
+elif [ -n "$PLUGIN_GOC_BIN" ]; then
+    exec "$PLUGIN_GOC_BIN" "$@"
+else
     exec "$GOC_BIN" "$@"
 fi
-exec uv run goc "$@"

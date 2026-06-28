@@ -51,7 +51,11 @@ def _run_hook(entries: list[dict]) -> tuple[int, str]:
         capture_output=True,
         text=True,
     )
-    return proc.returncode, proc.stdout
+    # The channel fix routes REMINDER to stderr with exit 2 (Claude Code feeds
+    # Stop-hook stderr back to the model on block); stdout is the legacy path
+    # the sibling card disproved. Inspect both so the reproducer survives any
+    # future channel swap.
+    return proc.returncode, proc.stdout + proc.stderr
 
 
 def main() -> int:
@@ -99,8 +103,8 @@ def main() -> int:
         ("B degenerate Edit-last     ", case_b, True),
         ("C no-tool baseline         ", case_c, False),
     ]:
-        rc, stdout = _run_hook(entries)
-        fired = "[GoC | pattern-check]" in stdout
+        rc, output = _run_hook(entries)
+        fired = "[GoC | pattern-check]" in output
         ok = fired is should_fire
         results.append((label, should_fire, fired, ok))
         print(

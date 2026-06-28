@@ -1,21 +1,22 @@
 ---
 title: goc-new-with-advances-leaves-parent-card-mutation-uncommitted
 summary: "`goc new <child> --advances <parent>` writes the parent's `advanced_by` edge to disk but never commits it, leaving the parent README as ambient `M` in the worktree. An agent that follows AGENTS.md's explicit-pathspec rule and commits only the new card directory ships a half-edge — exactly the integrity defect `goc repair-edges` exists to clean up."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-29T16:21:00Z"
-closed_at: null
-human_gate: decision
+closed_at: "2026-05-30T14:28:38Z"
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `tests/test_new_wires_edges.py` adds a case asserting that after `goc new child --advances parent` returns, `git status --porcelain` is clean for the parent card path (no ` M` on `<deck>/parent/README.md`)
-  - [ ] TDD: same test asserts the new card directory is either tracked by the same commit OR explicitly left untracked, matching the chosen option below
-  - [ ] EMPIRICAL: reproduce.py exits zero (defect no longer fires)
-  - [ ] MECHANICAL: `goc new --help` lists `--commit` / `--no-commit` if the chosen option introduces them, matching the flag surface of `goc advance` / `goc unadvance` / `goc wait` / `goc decide`
-  - [ ] PROCESS: `Skill(create-card)` Step 4 examples and `card-schema` "Coordinating cards" reference reflect the new commit semantics (no manual `git add` follow-up implied by the example flow)
+  - [x] TDD: `tests/test_new_wires_edges.py` adds a case asserting that after `goc new child --advances parent --commit` returns, `git status --porcelain` is clean for the parent card path (no ` M` on `<deck>/parent/README.md`) — `test_new_with_commit_flag_commits_both_endpoints_and_new_card`
+  - [x] TDD: same test asserts the new card directory is tracked by the same commit (Option C with `--commit`); a sibling `test_new_default_does_not_commit` pins the default-leaves-it-untracked branch of the contract
+  - [x] EMPIRICAL: reproduce.py exits zero (defect no longer fires) — verified by running it locally
+  - [x] MECHANICAL: `goc new --help` lists `--commit` / `--no-commit`, matching the flag surface of `goc advance` / `goc unadvance` / `goc wait` / `goc decide`
+  - [x] PROCESS: `Skill(create-card)` Step 4 examples and `Skill(advance-card)` "Verbs" reference now recommend `--commit` for wired filings, removing the implicit manual `git add` follow-up
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-new-with-advances-leaves-parent-card-mutation-uncommitted
@@ -113,58 +114,11 @@ Cross-references:
 - [half-edge-repair-requires-manual-multi-file-edits](../half-edge-repair-requires-manual-multi-file-edits/) — the family `meta-fix` tag links this to.
 - [repair-edges-misses-half-edge-when-inverse-side-is-a-bare-string](../repair-edges-misses-half-edge-when-inverse-side-is-a-bare-string/) — the cleanup path that exists *because* half-edges keep being generated.
 
-## Decision required
+## Decision
 
-Three credible options:
+*Resolved 2026-05-30T13:56:48Z:* Option C: add --commit/--no-commit flags to goc new (matching the sibling edge verbs' flag surface), default no-commit so today's scaffold-then-fill-in behavior is unchanged; create-card Step 4 recommends --commit for wired filings
 
-### Option A — auto-commit only the parent-edge mutations when `--advances` / `--advanced-by` is used
-
-Leave the new card itself untracked (preserving today's behavior of
-"scaffold for editing"), but auto-commit the parent README updates
-under a `deck: <child> advances <parent>` message — mirroring the
-existing `advance` / `unadvance` commit messages.
-
-- Pros: minimal behavior change. The user's typical "scaffold, fill
-  in body, commit" loop is untouched. Half-edge gap closed.
-- Cons: asymmetric — `goc new` commits something only sometimes.
-  Two commits in the agent flow when the agent later commits the
-  new card itself (one autocommit for the parent edge, one explicit
-  commit for the child body).
-
-### Option B — auto-commit everything: the new card directory AND any parent-edge mutations, in one commit
-
-Mirror `goc advance` exactly. After `goc new child --advances parent`,
-the worktree is clean.
-
-- Pros: symmetric with the four sibling edge-mutating verbs.
-  Single commit per `goc new` invocation. The agent's job
-  simplifies to "fill in the README, then `goc done` or
-  `goc advance ...`-driven follow-up".
-- Cons: significant default-behavior change. Today users expect
-  `goc new` to scaffold a card they then fill in and commit
-  themselves; auto-committing an empty-body card creates noise in
-  `git log` and a "fix up the placeholder DoD" follow-up commit
-  per card.
-
-### Option C — add `--commit` / `--no-commit` flags with default `no-commit`, leave today's behavior unchanged
-
-Match the flag surface of the four sibling verbs but keep the
-current "user commits explicitly" default. Agents opt in via
-`goc new --commit ...`; `Skill(create-card)` Step 4 recommends
-`--commit` for wired filings.
-
-- Pros: zero default-behavior surprise. Maximum control. Cheapest
-  to land.
-- Cons: still wrong-by-default for the common case (an agent
-  forgets the flag and ships a half-edge anyway). Skill-body
-  guidance becomes the only enforcement, which AGENTS.md's
-  predecessor history shows is not sufficient — guidance drift is
-  why this family of bugs recurs.
-
-The implementer should pick one; the DoD already encodes the
-neutral set of asserts (status clean for the parent path; new card
-directory tracked OR explicitly untracked, matching the chosen
-option).
+*Reasoning:* preserves the zero-default-surprise scaffold workflow that is the point of goc new while giving agents an explicit opt-in to close the half-edge; the maintainer accepts that skill-body guidance is the enforcement surface for the common case
 
 ## Fix sketch (any option)
 

@@ -3,6 +3,29 @@ name: kickoff
 description: "Kick off GoC in a fresh repo — introduce GoC, ask which persona fits, confirm AGENTS.md merge, scaffold project state via `goc install`. AUTO-INVOKE when the user says \"kickoff\", \"use GoC here\", \"set up game of cards\", \"initialize GoC\", or when any GoC skill is first used in a repo with no `.game-of-cards/deck/` directory. Host-agnostic: per-host complements (`claude-kickoff`, future `openclaw-kickoff`) handle host-specific UX."
 ---
 
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
+
 # Kick off GoC in this repo
 
 This skill is the **host-agnostic onboarding dialog**: it introduces GoC,

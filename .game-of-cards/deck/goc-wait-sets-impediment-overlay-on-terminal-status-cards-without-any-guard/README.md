@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-29T15:56:05Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - terminal-status-guard-missing-across-mutation-verbs
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |

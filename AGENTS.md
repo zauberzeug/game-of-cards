@@ -77,25 +77,44 @@ Canonical flow:
 gh workflow run release.yml -f version=X.Y.Z
 ```
 
-That single command publishes to PyPI, npm, AND ClawHub from one
-`workflow_dispatch` event. The workflow itself commits the version
-literals back to `main` and tags the rewrite commit as `vX.Y.Z` (as
-the last two steps of the build job, after every consistency check
-passes), then the three publish jobs run in parallel. ClawHub's OIDC
-trusted publisher accepts `workflow_dispatch` events regardless of ref,
-so a dispatch from `refs/heads/main` publishes the ClawHub leg natively
-— no second event needed. There is no `CLAWHUB_TOKEN` secret; adding
-one actively breaks releases (the reusable workflow's token-override
-path authenticates as a different publisher than the OIDC path that
-registered the package, and the Convex store rejects publishes with
-`Package already exists and belongs to another publisher`).
+That single command publishes to PyPI, npm, AND ClawHub. The workflow
+commits the version literals back to `main` and tags the rewrite commit
+as `vX.Y.Z` (the last two steps of the build job, after every
+consistency check passes). PyPI and npm publish from that same run.
+ClawHub is the exception: its OIDC trusted-publish requires the
+published source commit to equal the OIDC-verified `sha`, but a
+from-`main` dispatch mints that token for the pre-rewrite HEAD while the
+bundle is the bot's post-rewrite tag commit — they never match (this is
+why a single from-`main` dispatch could not publish ClawHub starting
+with v0.0.25). So after pushing the tag, the build job **auto-dispatches
+`release.yml` again on the tag ref** with `clawhub_only=true` (the
+`redispatch-clawhub` job). That second run is a `workflow_dispatch` on
+`refs/tags/vX.Y.Z`, so its OIDC `sha` IS the tag commit and the ClawHub
+publish clears the guard; it skips smoke/PyPI/npm. It is still ONE human
+command — the tag re-dispatch is automatic. No PAT is needed
+(`workflow_dispatch` is the documented exception to the rule that
+`GITHUB_TOKEN`-triggered events do not start new runs), and no ClawHub
+reconfiguration is needed (the trusted publisher pins the caller
+workflow *filename* — which stays `release.yml` — via the OIDC
+`workflow_ref` claim, not the ref). There is no `CLAWHUB_TOKEN` secret;
+adding one actively breaks releases (the reusable workflow's
+token-override path authenticates as a different publisher than the OIDC
+path that registered the package, and the Convex store rejects publishes
+with `Package already exists and belongs to another publisher`).
 
 Recovery / republish on an existing tag (if a publish job
 transient-failed):
 
 ```bash
-gh workflow run release.yml --ref vX.Y.Z
+gh workflow run release.yml --ref vX.Y.Z                       # re-run all publishes
+gh workflow run release.yml --ref vX.Y.Z -f clawhub_only=true  # ClawHub leg only
 ```
+
+The first re-runs every publish job from the tag (PyPI/npm no-op or fail
+on the already-published version; ClawHub succeeds because, dispatched
+from the tag, the OIDC `sha` now equals the published commit). The
+second is the lean path that mirrors what `redispatch-clawhub` fires
+automatically — it skips smoke/PyPI/npm and publishes only ClawHub.
 
 `git push origin vX.Y.Z` from a maintainer machine no longer triggers
 a release — the workflow only runs on `workflow_dispatch`. The closed
@@ -103,8 +122,13 @@ predecessor card `auto-publish-npm-and-clawhub-on-tag-push` documented
 a two-step tag-push + workflow-dispatch flow; that conclusion was
 superseded by
 `find-single-trigger-release-flow-for-all-three-registries`, which
-verified that the workflow_dispatch event type (not the ref) is what
-the ClawHub validator cares about.
+verified that the workflow_dispatch *event type* is what unlocks OIDC
+publishing. That remains true, but it is not sufficient on its own:
+ClawHub's trusted-publish *source-commit* guard additionally requires
+the dispatched commit to equal the published commit, which is why the
+ClawHub leg is published by a re-dispatch on the tag (see the ClawHub
+paragraph above) — tracked by
+`clawhub-publish-fails-on-every-release-until-manual-tag-redispatch`.
 
 See `.github/workflows/release.yml` header comment for trusted
 publisher configuration details.
@@ -175,6 +199,27 @@ the `.goc-version` sentinel are rewritten by the release workflow
 (see release section above), so they're also out of scope for the
 pre-commit sync.
 
+### `.game-of-cards/` ownership model and `goc upgrade` contract
+
+Per-file ownership determines how each file under `.game-of-cards/`
+behaves on `goc upgrade`:
+
+| Ownership | Files | Engine behavior on upgrade |
+|---|---|---|
+| **user-owned** | the 6 content stubs (`canonical-tags.md`, `domain-vocabulary.md`, `domain-examples.md`, `file-path-map.md`, `tooling-conventions.md`, `documentation-conventions.md`) + `hooks/*.md` | absent → scaffold blank stub; identical → no-op; diverged → **preserve** (never overwrite) |
+| **evolving** | `README.md`, `config.yaml` | same engine behavior (never overwrite); the `Skill(upgrade)` reconciliation pass offers a 2-way LLM merge of upstream changes into the local copy |
+| **goc-owned** | the marker-bounded block in `AGENTS.md` / `CLAUDE.md` / `CLAUDE.local.md` | regenerated wholesale via `_append_marker_block` (the contract is "do not edit between the markers") |
+
+`goc upgrade`'s safety is unconditional — the engine never destroys
+authored content under `.game-of-cards/`, regardless of whether an
+agent is present. The new `Skill(upgrade)` runs the engine and then
+reads the engine's machine-readable divergence report (printed after
+the sentinel `GoC project-state divergence report (JSON):`) to drive
+LLM reconciliation of the *evolving* files where real upstream
+changes need a judgment call. Headless / CI / scripted upgrades
+(e.g., the `--keep-local-skills` path) preserve content with no agent
+in the loop.
+
 ### `skills_source` — which install path owns `.claude/skills/`
 
 `.game-of-cards/config.yaml` holds a `skills_source` key, written by
@@ -236,12 +281,13 @@ principle, with Codex-specific frontmatter normalization for skills:
 The flat `claude-plugin/skills/` and `claude-plugin/hooks/` paths exist
 so Claude Code's plugin runtime auto-discovers them at the layout it
 expects. The nested `claude-plugin/goc/templates/...` mirrors the rest
-of the package (engine, schema, agents, game_of_cards templates, etc.)
-but **deliberately omits** `templates/skills/` and the
-`deck_prompt_router` / `deck_session_start` hook templates: the bundled
+of the package (engine, schema, agents, game_of_cards templates, hook
+templates — the bundled engine derives its hook list from
+`templates/hooks/*.py`, so those ARE included) but **deliberately
+omits** `templates/skills/`: the bundled
 engine refuses `--local-skills` on `goc install` and `--keep-local-skills`
 on `goc upgrade` (see `_is_plugin_context` in `goc/install.py`), so
-those templates are never read from inside the plugin payload. To
+the skill templates are never read from inside the plugin payload. To
 vendor skills into source control, install via `pipx install
 game-of-cards` instead — that path keeps the full template tree.
 
@@ -294,23 +340,31 @@ shape from Claude Code's:
 |---|---|
 | `openclaw-plugin/goc/` | `goc/` (engine, schema, templates — auto-synced) |
 | `openclaw-plugin/skills/<name>/SKILL.md` | `goc/templates/skills/<name>/SKILL.md` (hand-ported with invocation-neutral edits via `scripts/port_skills_to_openclaw.py`) |
+| `openclaw-plugin/skills/<name>/<sibling>` | `goc/templates/skills/<name>/<sibling>` (any non-`SKILL.md` file in the source skill dir — copied verbatim, no host-neutral rewrite, `__pycache__`/`*.pyc` excluded mirroring `goc/install._iter_skill_assets`) |
 
 The auto-synced engine pair (`goc -> openclaw-plugin/goc`) is enforced
 by the same byte-for-byte tripwire as the Claude one. Skills are NOT
 auto-synced into the commit — they go through the porting script, whose
 output is reviewed and committed by hand (unlike the claude/codex
 mirrors, the porter applies non-trivial normalization worth eyeballing).
-To re-port (e.g., after editing a source skill), re-run
-`python3 scripts/port_skills_to_openclaw.py` and review the diff.
+The same script handles sibling asset files (e.g.
+`card-schema/schema.yaml`) by verbatim copy, matching the full-tree walk
+the other four plugin consumers (`goc install`, the claude/codex sync,
+the in-repo `.claude/skills/` and `.codex/skills/` mirrors) already do.
+To re-port (e.g., after editing a source skill or adding a sibling
+asset), re-run `python3 scripts/port_skills_to_openclaw.py` and review
+the diff.
 
 The port is deterministic, so a drift guard keeps it honest even though
 it is not auto-staged: `scripts/port_skills_to_openclaw.py --check`
 re-ports into memory and fails on any difference from the committed
-`openclaw-plugin/skills/`. The same comparison is enforced in CI by
+`openclaw-plugin/skills/`. The check covers SKILL.md content, sibling
+assets (missing, extra, or content-mismatched), and orphaned ported
+skill dirs symmetrically. The same comparison is enforced in CI by
 `tests/test_plugin_mirror_parity.py` (it calls the porter's
 `drifted_skills()` from the regression-test suite), so a template edit
-that is not followed by a re-port turns the build red instead of rotting
-silently. The guard lives in a test, not a `ci.yml` step, because the
+or sibling addition that is not followed by a re-port turns the build
+red instead of rotting silently. The guard lives in a test, not a `ci.yml` step, because the
 autonomous bot's `GITHUB_TOKEN` cannot edit files under
 `.github/workflows/`. The porter is idempotent — re-running `--check`
 immediately after a re-port is always green.
@@ -381,11 +435,13 @@ When filing GoC cards in this repo:
   bodies. State the technical motivation directly. If a card needs
   context that only an internal source provides, summarize the
   technical fact, not its origin.
-- **YAML format for list fields:** `advances` and `advanced_by` use
-  block-style (one `- item` per line) when non-empty; empty lists
-  stay as `[]`. The `tags` field uses inline flow style. The emitter
-  enforces this automatically; when editing frontmatter by hand,
-  follow the same convention to avoid merge conflicts.
+- **YAML format for list fields:** All four bidirectional-edge list
+  fields — `advances`, `advanced_by`, `supersedes`, and
+  `superseded_by` — use block-style (one `- item` per line) when
+  non-empty; empty lists stay as `[]`. The `tags` field uses inline
+  flow style. The emitter enforces this automatically; when editing
+  frontmatter by hand, follow the same convention to avoid merge
+  conflicts.
 - **`worker` field:** Optional free-form identifier naming who should or
   does work on a card. Use a flat string for a single identifier
   (`worker: rodja`), or a mapping when branch context is known
@@ -397,7 +453,7 @@ When filing GoC cards in this repo:
   Filter with `goc --worker <X>` or set `GOC_WORKER` env var for
   runner-specific queue views.
 
-<!-- BEGIN GOC v0.0.21 -->
+<!-- BEGIN GOC v0.0.25 -->
 ## Game of Cards — methodology runtime
 
 This repo uses [Game of Cards](https://github.com/zauberzeug/game-of-cards):
@@ -420,6 +476,22 @@ or `goc --board` (kanban) only if they ask.
 Project-local extensions live under `.game-of-cards/`; see its
 `README.md` if present. The `<!-- BEGIN GOC -->` markers above are the
 discovery signal that this repo uses GoC.
+
+**The README is a dashboard, not a changelog.** A card's `README.md`
+shows only what is true *now*; `log.md` is the append-only journal of
+how it got there. When new evidence corrects, refutes, or re-scopes a
+finding the README already asserts, **rewrite the section that stated
+it in place** — do not append a "Correction" / "Update" / "Latest
+finding" block below it and leave the now-false claim standing. A card
+that asserts both the old verdict and the new one contradicts itself,
+and the stale top-framing is exactly what the next agent reads first.
+In the same pass, reconcile the `summary:` frontmatter and any `> ⚠`
+verdict banner, and record the *why* plus the demoted claim in
+`log.md`. `goc decide` reminds you of this for re-scopes and `goc
+validate` flags `DECISION_CONTRADICTS_VERDICT`, but the discipline
+applies to every hand edit, not just the decide path — the lone
+exception is a closed card's post-close amendment (next). See
+`Skill(card-schema)` "What goes where" for the full contract.
 
 **Closure is not frozenness.** When new evidence surfaces after a card
 closes, file a new card for the new work and amend the closed card

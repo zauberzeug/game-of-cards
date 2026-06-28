@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-27T09:34:08Z"
 closed_at: "2026-05-27T09:39:53Z"
 human_gate: none
-advances: []
+advances:
+  - yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |

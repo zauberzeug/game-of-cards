@@ -35,7 +35,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from goc.install import _frontmatter_value, deck_hook_scripts, skill_for_agent  # noqa: E402
+from goc.install import (  # noqa: E402
+    CODEX_GOC_COMMAND_RESOLVER,
+    _frontmatter_value,
+    deck_hook_scripts,
+    skill_for_agent,
+)
 
 
 SyncPair = tuple[Path, Path, frozenset[str], frozenset[str]]
@@ -52,11 +57,18 @@ different template path, or generated state that has no src counterpart.
 def _build_sync_pairs() -> list[SyncPair]:
     """Compute (src, dst, excludes, preserve_files) pairs by deriving the hook list from templates/hooks/.
 
-    Plugin-specific files NOT touched by this sync (`claude-plugin/hooks/hooks.json`,
-    `claude-plugin/bin/`, `claude-plugin/pyproject.toml`,
-    `codex-plugin/.codex-plugin/plugin.json`, `codex-plugin/hooks/hooks.json`,
+    Plugin-specific files NOT touched by this sync (`claude-plugin/bin/`,
+    `claude-plugin/pyproject.toml`, `codex-plugin/.codex-plugin/plugin.json`,
     `codex-plugin/bin/`, `openclaw-plugin/index.ts`, `openclaw-plugin/package.json`,
     `openclaw-plugin/skills/`, etc.) are not in the pair list and stay untouched.
+    The hand-maintained `hooks.json` inside `claude-plugin/hooks/` and
+    `codex-plugin/hooks/` sits inside a synced directory, so it is protected
+    via `preserve_files` instead.
+
+    The flat hook mirrors (`claude-plugin/hooks/`, `codex-plugin/hooks/`,
+    `.claude/hooks/`) are directory syncs of `templates/hooks/` — NOT per-file
+    pairs enumerated from the current template set — so a renamed or retired
+    hook template is pruned from the mirrors and `--check` flags a stale copy.
 
     The bundled engine in `claude-plugin/goc/` refuses `--local-skills` and
     `--keep-local-skills` (see `_is_plugin_context` in goc/install.py), so it
@@ -99,15 +111,16 @@ def _build_sync_pairs() -> list[SyncPair]:
             frozenset(),
         )
     )
-    for name in hook_names:
-        pairs.append(
-            (
-                templates / "hooks" / name,
-                ROOT / "claude-plugin" / "hooks" / name,
-                frozenset(),
-                frozenset(),
-            )
+    pairs.append(
+        (
+            templates / "hooks",
+            ROOT / "claude-plugin" / "hooks",
+            frozenset(),
+            # `hooks.json` is hand-maintained plugin config (event → command
+            # mapping) with no src counterpart — the dir-sync must not prune it.
+            frozenset({"hooks.json"}),
         )
+    )
     pairs.append(
         (
             ROOT / "goc",
@@ -121,15 +134,14 @@ def _build_sync_pairs() -> list[SyncPair]:
     # Skills use Codex frontmatter normalization and are synced by the
     # specialized codex-skill tree functions below. Hook scripts and the bundled
     # engine are byte mirrors.
-    for name in hook_names:
-        pairs.append(
-            (
-                templates / "hooks" / name,
-                ROOT / "codex-plugin" / "hooks" / name,
-                frozenset(),
-                frozenset(),
-            )
+    pairs.append(
+        (
+            templates / "hooks",
+            ROOT / "codex-plugin" / "hooks",
+            frozenset(),
+            frozenset({"hooks.json"}),
         )
+    )
     pairs.append(
         (
             ROOT / "goc",
@@ -165,7 +177,11 @@ def _build_sync_pairs() -> list[SyncPair]:
             # `templates/bootstrap/_goc-bootstrap.sh` (a different src path
             # than templates/skills/). Preserve it during the dir sync; a
             # separate single-file sync pair below keeps it current.
-            frozenset({"_goc-bootstrap.sh"}),
+            # `tune-cadence/SKILL.md` is a repo-local Claude Code dev skill
+            # (wraps scripts/set_cadence.py) with no template source and
+            # ships to no consumer — preserve it so the dir sync doesn't
+            # delete it as "not in src".
+            frozenset({"_goc-bootstrap.sh", "tune-cadence/SKILL.md"}),
         )
     )
     pairs.append(
@@ -176,13 +192,12 @@ def _build_sync_pairs() -> list[SyncPair]:
             frozenset(),
         )
     )
-    for name in hook_names:
-        pairs.append(
-            (
-                templates / "hooks" / name,
-                ROOT / ".claude" / "hooks" / name,
-                frozenset(),
-                frozenset(),
+    pairs.append(
+        (
+            templates / "hooks",
+            ROOT / ".claude" / "hooks",
+            frozenset(),
+            frozenset(),
         )
     )
 
@@ -344,7 +359,7 @@ def _codex_skill_text(src: Path, *, skill_name: str) -> str:
             "---",
         )
     )
-    return codex_frontmatter + body
+    return codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body
 
 
 def _sync_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = frozenset()) -> list[Path]:
@@ -374,14 +389,18 @@ def _sync_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = frozen
             continue
         dst_item = dst / rel
         dst_item.parent.mkdir(parents=True, exist_ok=True)
-        expected = (
-            _codex_skill_text(src_item, skill_name=rel.parts[0])
-            if src_item.name == "SKILL.md"
-            else src_item.read_text()
-        )
-        if not dst_item.exists() or dst_item.read_text() != expected:
-            dst_item.write_text(expected)
-            changed.append(dst_item)
+        if src_item.name == "SKILL.md":
+            expected = _codex_skill_text(src_item, skill_name=rel.parts[0])
+            if not dst_item.exists() or dst_item.read_text() != expected:
+                dst_item.write_text(expected)
+                changed.append(dst_item)
+        else:
+            # Non-SKILL.md siblings copy byte-for-byte (matching `goc install`,
+            # the OpenClaw porter, and the Claude dir-sync) so a CRLF or
+            # otherwise text-round-trip-sensitive asset is not LF-normalized.
+            if not dst_item.exists() or dst_item.read_bytes() != src_item.read_bytes():
+                shutil.copy2(src_item, dst_item)
+                changed.append(dst_item)
 
     # Prune empty orphan dirs (a skill dir whose source was removed or made
     # ineligible). Same rationale as `_sync_dir`: git masks empty dirs so they
@@ -415,13 +434,15 @@ def _check_codex_skill_tree(dst: Path, *, preserve_files: frozenset[str] = froze
         if rel.parts[0] not in eligible:
             continue
         dst_item = dst / rel
-        expected = (
-            _codex_skill_text(src_item, skill_name=rel.parts[0])
-            if src_item.name == "SKILL.md"
-            else src_item.read_text()
-        )
-        if not dst_item.exists() or dst_item.read_text() != expected:
-            out.append(dst_item)
+        if src_item.name == "SKILL.md":
+            expected = _codex_skill_text(src_item, skill_name=rel.parts[0])
+            if not dst_item.exists() or dst_item.read_text() != expected:
+                out.append(dst_item)
+        else:
+            # Siblings compared by bytes so install-vs-mirror newline skew is
+            # CI-detectable (matching the byte-exact sync above).
+            if not dst_item.exists() or dst_item.read_bytes() != src_item.read_bytes():
+                out.append(dst_item)
 
     if dst.exists():
         for dst_item in sorted(dst.rglob("*")):
@@ -452,7 +473,16 @@ def _compute_changes() -> list[Path]:
             changed.extend(_sync_dir(src, dst, excludes, preserve_files))
         else:
             changed.extend(_sync_file(src, dst))
-    changed.extend(_sync_codex_skill_tree(ROOT / "codex-plugin" / "skills"))
+    changed.extend(
+        _sync_codex_skill_tree(
+            ROOT / "codex-plugin" / "skills",
+            preserve_files=frozenset({"_goc-bootstrap.sh"}),
+        )
+    )
+    changed.extend(_sync_file(
+        ROOT / "goc" / "templates" / "bootstrap" / "_goc-bootstrap.sh",
+        ROOT / "codex-plugin" / "skills" / "_goc-bootstrap.sh",
+    ))
     changed.extend(
         _sync_codex_skill_tree(
             ROOT / ".codex" / "skills",
@@ -502,7 +532,18 @@ def _check_changes() -> list[Path]:
         else:
             if not dst.exists() or not filecmp.cmp(src, dst, shallow=False):
                 out.append(dst)
-    out.extend(_check_codex_skill_tree(ROOT / "codex-plugin" / "skills"))
+    out.extend(_check_codex_skill_tree(
+        ROOT / "codex-plugin" / "skills",
+        preserve_files=frozenset({"_goc-bootstrap.sh"}),
+    ))
+    codex_bootstrap_src = ROOT / "goc" / "templates" / "bootstrap" / "_goc-bootstrap.sh"
+    codex_bootstrap_dst = ROOT / "codex-plugin" / "skills" / "_goc-bootstrap.sh"
+    if not codex_bootstrap_dst.exists() or not filecmp.cmp(
+        codex_bootstrap_src,
+        codex_bootstrap_dst,
+        shallow=False,
+    ):
+        out.append(ROOT / "codex-plugin" / "skills" / "_goc-bootstrap.sh")
     out.extend(
         _check_codex_skill_tree(
             ROOT / ".codex" / "skills",

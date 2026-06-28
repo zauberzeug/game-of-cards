@@ -124,5 +124,29 @@ Alternatively, expose `waiting_impedes` as a precomputed JSON field
 alongside `ready` — a one-line addition to `render_json` — and let
 the skill check that directly.
 
+A third option now exists: as of
+[goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue](../goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue/)
+(closed), `goc --waiting` itself filters on `waiting_impedes`, so the
+Context block can simply run `goc --waiting --json` instead of
+re-deriving the predicate at all — the engine then owns the matrix and
+the standup section inherits the fix for free. (The status-scope nuance
+from `test_waiting_filter_status_scope` applies: `--waiting` surfaces
+impeded cards across statuses, so add `--status open` if this section
+should stay open-only.)
+
 Either way, the skill should not be re-deriving the predicate from a
 single field when both inputs are already in the JSON payload.
+
+## Related — same root shape
+
+This is the skill-template instance of a recurring shape: an
+impediment-overlay *consumer* re-states `waiting_on` truthiness by hand
+instead of calling the canonical `waiting_impedes` predicate. The
+engine-side instance — the `goc --waiting` filter — was fixed in
+[goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue](../goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue/)
+by replacing the hand-rolled condition with `waiting_impedes(t)`; this
+card is the same defect one layer out, in a skill body that cannot
+import the engine and so reimplements it in an inline `python3`
+one-liner. The OpenClaw TS port carries a third copy of the same
+`isImpeded ⟷ waiting_impedes` reimplementation, tracked under
+[openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting](../openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting/).

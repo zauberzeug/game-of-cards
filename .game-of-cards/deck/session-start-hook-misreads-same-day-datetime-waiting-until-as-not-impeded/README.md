@@ -7,7 +7,8 @@ contribution: high
 created: "2026-05-29T09:50:13Z"
 closed_at: "2026-05-29T09:58:40Z"
 human_gate: none
-advances: []
+advances:
+  - session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting
 advanced_by:
   - session-start-hook-impeded-check-ignores-elapsed-waiting-until
 tags: [bug, infra]

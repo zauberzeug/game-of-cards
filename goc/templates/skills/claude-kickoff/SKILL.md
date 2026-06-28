@@ -165,7 +165,7 @@ When the GoC plugin is installed, three hooks fire automatically:
 |---|---|---|
 | `SessionStart` | `deck_session_start` | Prints active-card reminder at session start; silent when no cards are in-flight. |
 | `UserPromptSubmit` | `deck_prompt_router` | Detects work-initiating prompts; injects a deck-first reminder into Claude's view. |
-| `Stop` | `pattern_generalization_check` | After code-mutating turns, asks the agent to self-assess whether the change warrants a generalization card. Opt-out: set `hooks.pattern_generalization_check: false` in `.game-of-cards/config.yaml`. |
+| `Stop` | `pattern_generalization_check` | After code-mutating turns, asks the agent to self-assess whether the change warrants a generalization card. **Off by default** — it blocks every code-mutating turn to inject the reminder. Opt-in: set `hooks.pattern_generalization_check: true` in `.game-of-cards/config.yaml`. |
 
 The hooks are optional. Repos without the plugin still get full GoC
 functionality through the `goc` CLI and AGENTS.md guidance. Other

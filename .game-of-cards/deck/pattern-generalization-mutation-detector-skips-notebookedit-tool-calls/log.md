@@ -1,6 +1,19 @@
-## 2026-05-30T08:55Z - zoe-cron
+## 2026-05-30 — closed
 
-Pulled and implemented the `NotebookEdit` matcher gap. Before the fix, `python3 .game-of-cards/deck/pattern-generalization-mutation-detector-skips-notebookedit-tool-calls/reproduce.py` failed with:
+Extended the hand-enumerated `CODE_MUTATING_TOOLS` set in
+`goc/templates/hooks/pattern_generalization_check.py` from
+`frozenset({"Edit", "Write"})` to
+`frozenset({"Edit", "Write", "NotebookEdit"})`, and updated the module
+docstring's tool enumeration to match. Mirrored the literal in the
+hand-ported OpenClaw TS port at `openclaw-plugin/index.ts:292`.
+
+`scripts/sync_plugin_assets.py` mirrored the Python change into
+`.claude/hooks/`, `claude-plugin/hooks/`,
+`claude-plugin/goc/templates/hooks/`, `codex-plugin/hooks/`, and
+`codex-plugin/goc/templates/hooks/`. The OpenClaw TS port is not
+auto-synced — edited directly.
+
+Before (reproduce.py):
 
 ```
 tool                 expected   actual     verdict
@@ -10,10 +23,11 @@ Write                True       True       ok
 NotebookEdit         True       False      DEFECT
 Read                 False      False      ok
 
-FAIL: 1 row(s) diverged from intended behavior. See `CODE_MUTATING_TOOLS` at goc/templates/hooks/pattern_generalization_check.py:22.
+FAIL: 1 row(s) diverged from intended behavior. See `CODE_MUTATING_TOOLS` at
+goc/templates/hooks/pattern_generalization_check.py:22.
 ```
 
-Changed the Python hook template and OpenClaw TypeScript port to treat `NotebookEdit` as code-mutating, added regression rows for `Edit`, `Write`, `NotebookEdit`, and `Read`, and regenerated plugin/dogfood mirrors with `python3 scripts/sync_plugin_assets.py`. After the fix:
+After:
 
 ```
 tool                 expected   actual     verdict
@@ -26,8 +40,7 @@ Read                 False      False      ok
 PASS: matcher covers all canonical code-mutating tools.
 ```
 
-Verification:
-
-- `python3 -m unittest tests/test_pattern_generalization_hook.py` -> 14 tests OK
-- `python3 scripts/sync_plugin_assets.py --check` -> OK
-- `python3 -m pytest tests/test_pattern_generalization_hook.py` could not run because `pytest` is not installed in this runtime; covered with unittest instead.
+Regression coverage: `tests/test_pattern_generalization_hook.py`
+gains a `CodeMutatingToolSetTest` class that pins one row per
+canonical mutator (`Edit`, `Write`, `NotebookEdit`) plus the
+read-only baseline (`Read`).

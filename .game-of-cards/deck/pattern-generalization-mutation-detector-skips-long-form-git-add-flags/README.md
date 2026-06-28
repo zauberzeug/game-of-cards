@@ -1,21 +1,23 @@
 ---
 title: pattern-generalization-mutation-detector-skips-long-form-git-add-flags
 summary: "After the substring→regex rewrite, the pattern-generalization stop hook's matcher `git\\s+add\\s+(?:-[A-Za-z]|\\.)` accepts only short single-letter staging flags (-A, -p, -u) or `.`. The long-form aliases documented in `git-add(1)` — `git add --all`, `--update`, `--patch` — are not matched, so a turn whose only mutating action is `git add --all foo/` bypasses the generalization self-assessment prompt entirely."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-05-30T08:00:18Z"
-closed_at: null
-human_gate: decision
-advances: []
+closed_at: "2026-05-30T17:00:19Z"
+human_gate: none
+advances:
+  - pattern-generalization-mutation-detector-matches-git-staging-by-literal-flag-tokens
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (mutation detector returns True on synthetic transcripts whose only Bash call is `git add --all foo`, `--update`, or `--patch`)
-  - [ ] TDD: the same script still returns True on the short-flag forms `-A`, `-p`, `-u`, `.` and on `git commit ...` (positive baseline preserved); still returns False on `git add -- foo.py` and bare `git add foo.py` (negative baseline preserved)
-  - [ ] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` `_BASH_COMMIT_RE` extends the alternation to cover the documented long-form aliases (e.g. `(?:-[A-Za-z]|--(?:all|update|patch)|\.)`); `claude-plugin/hooks/`, `codex-plugin/hooks/`, and `openclaw-plugin/index.ts` mirror updated via the sync + porter scripts
-  - [ ] PROCESS: tests/test_pattern_generalization_hook.py adds regression rows for the three long-form flags
-  - [ ] PROCESS: closure logged in log.md with the reproduce.py before/after output
+  - [x] TDD: reproduce.py exits zero (mutation detector returns True on synthetic transcripts whose only Bash call is `git add --all foo`, `--update`, or `--patch`)
+  - [x] TDD: the same script still returns True on the short-flag forms `-A`, `-p`, `-u`, `.` and on `git commit ...` (positive baseline preserved); still returns False on `git add -- foo.py` and bare `git add foo.py` (negative baseline preserved)
+  - [x] MECHANICAL: `goc/templates/hooks/pattern_generalization_check.py` replaced `_BASH_COMMIT_RE` with a tokenized `shlex.split` parser (`_is_broad_git_mutation` matches `{-A,-p,-u,--all,--update,--patch,.}` per the recorded decision); `claude-plugin/hooks/`, `codex-plugin/hooks/`, and `openclaw-plugin/index.ts` mirror updated via the sync + porter scripts
+  - [x] PROCESS: tests/test_pattern_generalization_hook.py adds regression rows for the three long-form flags
+  - [x] PROCESS: closure logged in log.md with the reproduce.py before/after output
+worker: {who: "claude[bot]", where: main}
 ---
 
 # pattern-generalization-mutation-detector-skips-long-form-git-add-flags
@@ -158,29 +160,9 @@ and (via the hand-port) `openclaw-plugin/index.ts`. Add three
 regression rows to `tests/test_pattern_generalization_hook.py` pinning
 the long-form positive cases.
 
-## Decision required
+## Decision
 
-Two credible paths for the matcher extension:
+*Resolved 2026-05-30T14:00:28Z:* Option 2: replace the git-add regex matcher with a tokenized shlex.split parser that inspects tokens — match when the command is git add with any flag in {-A,-p,-u,--all,--update,--patch} or the bare '.' token, rejecting 'git add foo.py' and 'git add -- foo.py'
 
-1. **Enumerate the three documented aliases in the regex** — the
-   minimal fix shown above. Mirrors the existing alternation shape
-   and the family precedent (the prior card's fix was also a regex
-   tweak). Cost: one regex term plus three test rows. Risk: a future
-   git release that adds a new long-form alias (precedent: `--no-ignore-removal`
-   was a later addition) reopens the gap.
+*Reasoning:* this code path has churned twice for matcher bugs this quarter; a tokenized parser is resilient to future git long-form alias additions and closes the meta-fix loop so no fourth card in the family is needed, at a cost of ~10 LOC
 
-2. **Switch to a tokenized parser** — `shlex.split` the command,
-   then inspect tokens: `git`, `add`, and any token that starts with
-   `-` and is in the set `{-A, -p, -u, --all, --update, --patch}`,
-   OR the bare token `.`. More resilient to future git flag
-   additions; rejects `git add foo.py` and `git add -- foo.py`
-   naturally. Cost: ~10 LOC, slightly slower than regex (negligible
-   on a single command string), and the parser must handle quoting.
-
-The family precedent and the maintenance ratio (this code path has
-churned twice for matcher bugs in the last quarter) point at option
-2; option 1 keeps the diff minimal and preserves the family's
-visual shape. The choice also affects whether a fourth card in this
-family is plausible — option 2 closes the meta-fix loop; option 1
-leaves the "what about `--no-all`?" / "what about `--intent-to-add`?"
-question open by default.

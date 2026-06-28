@@ -93,6 +93,26 @@ test("bare deferral with malformed waiting_until is impeded (engine backstop)", 
   assert.strictEqual(isImpeded("", "2026-99-99", NOW), true);
 }});
 
+test("bare deferral with calendar-impossible waiting_until is impeded", () => {{
+  // `2026-02-30` is regex-valid (\\d{{2}} month/day) but a calendar-impossible
+  // date. JS Date.parse rolls it forward to 2026-03-02 (past relative to NOW),
+  // which would silently un-defer the card; the engine's `_is_iso_date`
+  // rejects it (date.fromisoformat raises), so parseWaitingUntil must return
+  // null and isImpeded must hit the unparseable backstop. Regression for
+  // openclaw-session-start-hook-accepts-calendar-impossible-waiting-until.
+  assert.strictEqual(parseWaitingUntil("2026-02-30"), null);
+  assert.strictEqual(isImpeded("", "2026-02-30", NOW), true);
+}});
+
+test("waiting_on=external with calendar-impossible waiting_until is impeded", () => {{
+  assert.strictEqual(isImpeded("external", "2026-02-30", NOW), true);
+}});
+
+test("calendar-impossible datetime waiting_until is rejected", () => {{
+  // Datetime shape rolls forward too (2026-06-31T... -> 2026-07-01T...).
+  assert.strictEqual(parseWaitingUntil("2026-06-31T00:00:00Z"), null);
+}});
+
 // waiting_on-set matrix — should match the prior behavior, unaffected by this fix.
 test("waiting_on=external with no waiting_until is impeded", () => {{
   assert.strictEqual(isImpeded("external", "", NOW), true);
@@ -123,6 +143,65 @@ test("non-canonical waiting_on with no waiting_until is impeded", () => {{
 test("non-canonical waiting_on with malformed waiting_until is impeded", () => {{
   assert.strictEqual(isImpeded("customer-call", "not-a-date", NOW), true);
 }});
+
+// Explicit-YAML-null reader matrix — the cell this fix patched. A hand-edited
+// card that blanks the field by writing `waiting_on: null` / `~` / `Null` /
+// `NULL` (instead of deleting the line) must read as NOT impeded, mirroring the
+// Python hook's `_scalar_or_none` / `yaml_lite._NULL_SET`. Pre-fix the raw
+// token survived as the truthy string "null" and isImpeded reported impeded,
+// falsely announcing a resumable active card as "agent cannot resume." This
+// exercises the real reader path (scalarOrEmpty ∘ frontmatterTail) the way
+// findActiveCards does, not isImpeded in isolation.
+for (const lit of ["null", "Null", "NULL", "~"]) {{
+  test(`explicit-null waiting_on literal ${{lit}} reads as NOT impeded`, () => {{
+    const waitingOn = scalarOrEmpty("waiting_on: " + lit);
+    assert.strictEqual(isImpeded(waitingOn, "", NOW), false);
+  }});
+}}
+
+test("explicit-null waiting_until literal reads as NOT impeded (not malformed)", () => {{
+  // `waiting_until: null` must resolve to absent, NOT hit the unparseable
+  // backstop. With no waiting_on and a null-resolved waiting_until, the card
+  // is a bare un-deferred active card → not impeded.
+  const waitingUntil = scalarOrEmpty("waiting_until: null");
+  assert.strictEqual(isImpeded("", waitingUntil, NOW), false);
+}});
+
+// Coerced-bool/int reader matrix — the opposite cell of the non-canonical-
+// string case. A `waiting_on` token the yaml-lite parser coerces away from
+// `str` (true/false/yes/no/<int>) must read as "" via waitingOnScalar so the
+// card is NOT impeded, mirroring the engine's `isinstance(v, str)` guard. The
+// `waiting_until` reader is deliberately NOT narrowed the same way (the engine
+// has no isinstance guard there).
+for (const lit of ["false", "true", "yes", "no", "42"]) {{
+  test(`coerced waiting_on literal ${{lit}} reads as NOT impeded`, () => {{
+    const waitingOn = waitingOnScalar("waiting_on: " + lit);
+    assert.strictEqual(waitingOn, "");
+    assert.strictEqual(isImpeded(waitingOn, "", NOW), false);
+  }});
+}}
+
+// Quoted-scalar matrix — a *quoted* null/bool/int token is parsed by yaml-lite
+// as a live string the engine keeps and impedes on, so the readers must NOT
+// coerce it. The coercion narrowing applies only to *bare* tokens; pre-fix the
+// readers stripped quotes before the null/bool/int check and wrongly dropped a
+// quoted `"true"` / `"42"` / `"null"` (and a quoted `waiting_until: "null"`).
+for (const lit of ['"true"', '"42"', '"null"', "'yes'"]) {{
+  test(`quoted waiting_on literal ${{lit}} stays a live reason (impeded)`, () => {{
+    const waitingOn = waitingOnScalar("waiting_on: " + lit);
+    assert.notStrictEqual(waitingOn, "");
+    assert.strictEqual(isImpeded(waitingOn, "", NOW), true);
+  }});
+}}
+
+test("quoted waiting_until null literal is unparseable → impeded", () => {{
+  // A quoted `waiting_until: "null"` stays the live string "null", which is
+  // unparseable as a date → the engine's backstop impedes. scalarOrEmpty must
+  // keep the token (not resolve it to absent).
+  const waitingUntil = scalarOrEmpty('waiting_until: "null"');
+  assert.strictEqual(waitingUntil, "null");
+  assert.strictEqual(isImpeded("", waitingUntil, NOW), true);
+}});
 """
 
 
@@ -144,6 +223,13 @@ class OpenclawIsImpededMatrixTest(unittest.TestCase):
             [
                 _extract_const_line(src, "ISO_DATE_RE"),
                 _extract_const_line(src, "ISO_DATETIME_UTC_RE"),
+                _extract_const_line(src, "NULL_LITERALS"),
+                _extract_const_line(src, "BOOL_LITERALS"),
+                _extract_const_line(src, "INT_RE"),
+                _extract_top_level_function(src, "stripQuotes"),
+                _extract_top_level_function(src, "frontmatterTail"),
+                _extract_top_level_function(src, "scalarOrEmpty"),
+                _extract_top_level_function(src, "waitingOnScalar"),
                 _extract_top_level_function(src, "parseWaitingUntil"),
                 _extract_top_level_function(src, "isImpeded"),
             ]

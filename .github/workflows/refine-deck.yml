@@ -1,0 +1,81 @@
+# Refine the Game of Cards deck from GitHub Actions.
+#
+# Each run invokes Skill(refine-deck), a deck-hygiene pass: it retags
+# stale cards, prunes long-unverified parks, fixes defunct file:line
+# citations, wires orphaned dependency edges, and files structural
+# findings as new cards. Mechanical fixes are applied and committed in
+# place; the pull-card workflow drains any cards it files.
+#
+# Cadence is managed by scripts/set_cadence.py (see the `# cadence:`
+# marker below). Required repository secret:
+#   CLAUDE_CODE_OAUTH_TOKEN  (provisioned by the Claude GitHub App)
+
+name: Refine Deck
+
+on:
+  schedule:
+    # cadence: refine-deck every 1w (minute offset :45) — managed by scripts/set_cadence.py; retune via that script, not the two lines below
+    - cron: '45 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: refine-deck-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  refine-deck:
+    name: Run refine-deck skill
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.12'
+
+      - name: Prepare Python environment
+        run: uv sync
+
+      - name: Run one refine-deck hygiene pass
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          show_full_output: true
+          prompt: |
+            Run Skill(refine-deck) once in this repository.
+
+            Perform one deck-hygiene pass. Follow the skill body
+            verbatim — it handles its own sanity-floor validate,
+            category survey, mechanical-apply path, the mandatory
+            Step 4.5 park-or-disprove rule, and the commit step.
+
+            This repository is the source tree for the `goc` package.
+            Translate every bare `goc ...` command in skill guidance
+            to `uv run goc ...` while working here.
+
+            You are running in a cloud runner with no human in the
+            loop. Do not raise gates to `decision`/`session` for
+            taste calls — apply mechanical hygiene directly and file
+            structural findings at `human_gate: none` with your best
+            evidence-anchored framing. The next reader can still
+            raise the gate after the fact.
+
+            Follow CLAUDE.md and AGENTS.md. Commit and push the
+            hygiene edits and any cards you file before exiting.
+          claude_args: |
+            --max-turns 200
+            --permission-mode bypassPermissions
+            --model opus

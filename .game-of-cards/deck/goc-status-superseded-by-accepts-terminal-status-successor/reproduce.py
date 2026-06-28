@@ -2,11 +2,12 @@
 
 Runs the goc CLI against a throwaway deck directory and exercises the
 three terminal statuses (`done`, `disproved`, `superseded`) as the
-successor. Each case currently succeeds (defect fires); after the fix,
-each must exit non-zero with an error mentioning the terminal status.
+successor. After the fix, each invocation must exit non-zero with an
+error mentioning the terminal status.
 
-Exit code 0 means the script ran cleanly — the BEFORE/AFTER verdict
-must be read from the printed table.
+Exit code 0 means every terminal-successor attempt was rejected as
+expected; non-zero means at least one terminal status slipped through
+(defect still fires).
 """
 
 from __future__ import annotations
@@ -119,6 +120,22 @@ def main() -> int:
         print("  BEFORE fix — every row exits 0 (defect fires; dead-end link written).")
         print("  AFTER  fix — every row exits non-zero with an error mentioning")
         print("               the terminal status; no supersession transition occurs.")
+
+        failures = [(term, code, tail) for term, code, tail in rows if code == 0]
+        if failures:
+            print()
+            print("FAIL: the following terminal-successor attempts were not rejected:")
+            for term, code, tail in failures:
+                print(f"  - successor.status={term}: exitcode={code}, stderr={tail!r}")
+            return 1
+
+        for term, code, tail in rows:
+            assert "terminal" in tail, (
+                f"expected stderr to mention 'terminal' for successor.status={term}, got {tail!r}"
+            )
+            assert term in tail, (
+                f"expected stderr to name the successor status ({term}), got {tail!r}"
+            )
 
         return 0
 

@@ -120,6 +120,17 @@ function buildArgs(input: GocToolInput): string[] {
 const FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+// Mirrors `goc._vendor.yaml_lite._NULL_SET` (and the Python hook's `_NULL_SET`):
+// explicit YAML null literals that resolve to absent, so `waiting_on: null` / `~`
+// reads as "no reason", not the truthy string "null".
+const NULL_LITERALS = new Set(["null", "Null", "NULL", "~"]);
+// Mirrors `goc._vendor.yaml_lite._TRUE_SET` / `_FALSE_SET` / `_INT_RE` (and the
+// Python hook's same-named constants): tokens the yaml-lite parser coerces away
+// from `str` (to bool / int). The engine's `Card.waiting_on` drops a non-`str`
+// value via `isinstance(v, str)`, so the `waiting_on` read resolves these to ""
+// too — see `cardWaitingOn`.
+const BOOL_LITERALS = new Set(["true", "True", "TRUE", "yes", "Yes", "YES", "false", "False", "FALSE", "no", "No", "NO"]);
+const INT_RE = /^-?\d+$/;
 
 interface ActiveCard {
   name: string;
@@ -138,8 +149,58 @@ function frontmatterTail(line: string): string {
   // result array to `limit` elements (it does NOT cap the number of
   // splits), so `split(":", 2)[1]` drops everything past the second
   // colon and corrupts colon-bearing values like ISO datetimes.
+  //
+  // Also strips a trailing YAML inline `# comment` from the bare scalar
+  // tail, mirroring `_frontmatter_tail` in the Python hook. YAML 1.1/1.2
+  // rule: a `#` terminates a bare scalar only when preceded by whitespace
+  // (or at the very start), so `status: active # note` yields `'active'`
+  // while `status: foo#bar` yields `'foo#bar'`.
   const i = line.indexOf(":");
-  return i < 0 ? "" : line.slice(i + 1).trim();
+  if (i < 0) return "";
+  let tail = line.slice(i + 1);
+  for (let j = 0; j < tail.length; j++) {
+    if (tail[j] === "#" && (j === 0 || /\s/.test(tail[j - 1]))) {
+      tail = tail.slice(0, j);
+      break;
+    }
+  }
+  return tail.trim();
+}
+
+function scalarOrEmpty(line: string): string {
+  // Mirrors the Python hook's `_scalar_or_none`: resolve an *unquoted*
+  // explicit YAML null literal on the scalar tail to "absent" (empty string)
+  // so a hand-edited `waiting_on: null` / `~` reads as no impediment rather
+  // than the truthy token "null". The null coercion is quote-aware —
+  // yaml-lite coerces only *bare* null literals, so a quoted `"null"` stays
+  // the live string the engine keeps; resolving it to "" here would diverge.
+  // Used only for the `waiting_on` / `waiting_until` reads — `status` /
+  // `human_gate` keep the raw tail, matching the Python hook, which routes
+  // only the two waiting fields through `_scalar_or_none`.
+  const raw = frontmatterTail(line);
+  const quoted = raw[0] === '"' || raw[0] === "'";
+  const value = quoted ? stripQuotes(raw) : raw;
+  if (value === "") return "";
+  if (!quoted && NULL_LITERALS.has(value)) return "";
+  return value;
+}
+
+function waitingOnScalar(line: string): string {
+  // Scoped narrowing beyond scalarOrEmpty for the `waiting_on` read only:
+  // the engine's Card.waiting_on drops any *unquoted* value the yaml-lite
+  // parser coerces away from `str` via `isinstance(v, str)`, so a null/bool
+  // literal (null/true/yes/false/no …) or an integer token reads as "" (no
+  // reason) here too. The coercion is quote-aware: a quoted `"true"` / `"42"`
+  // / `"null"` is parsed as a live string reason the engine keeps, so it must
+  // not be coerced. The `waiting_until` read keeps scalarOrEmpty — the
+  // engine's waiting_until property has no isinstance guard, so its
+  // unparseable backstop must still see the raw token.
+  const raw = frontmatterTail(line);
+  const quoted = raw[0] === '"' || raw[0] === "'";
+  const value = quoted ? stripQuotes(raw) : raw;
+  if (value === "") return "";
+  if (!quoted && (NULL_LITERALS.has(value) || BOOL_LITERALS.has(value) || INT_RE.test(value))) return "";
+  return value;
 }
 
 function parseWaitingUntil(value: string): Date | null {
@@ -147,15 +208,34 @@ function parseWaitingUntil(value: string): Date | null {
   // midnight UTC of that day; a datetime YYYY-MM-DDTHH:MM:SSZ is honored
   // at full precision so a same-day future timestamp does not collapse
   // to "today" and clear early.
+  //
+  // The regexes check shape only (`\d{2}` for month/day), so a
+  // calendar-impossible-but-shaped value like `2026-02-30` reaches
+  // Date.parse — which is lenient and ROLLS it forward (2026-02-30 ->
+  // 2026-03-02) instead of rejecting it. The engine parses with the real
+  // calendar (`date.fromisoformat` / `strptime` via `_is_iso_date`) and
+  // rejects these, so `_waiting_until_instant` returns None and
+  // `waiting_impedes` keeps the card impeded via its `until_unparseable`
+  // backstop. Round-trip the parsed UTC Y-M-D against the input's date
+  // prefix and return null on mismatch, matching the engine's strict
+  // calendar check (a rolled-forward instant would re-admit a deferred
+  // card to the queue — the bug this guards against).
+  let t: number;
   if (ISO_DATETIME_UTC_RE.test(value)) {
-    const t = Date.parse(value);
-    return Number.isNaN(t) ? null : new Date(t);
+    t = Date.parse(value);
+  } else if (ISO_DATE_RE.test(value)) {
+    t = Date.parse(`${value}T00:00:00Z`);
+  } else {
+    return null;
   }
-  if (ISO_DATE_RE.test(value)) {
-    const t = Date.parse(`${value}T00:00:00Z`);
-    return Number.isNaN(t) ? null : new Date(t);
-  }
-  return null;
+  if (Number.isNaN(t)) return null;
+  const d = new Date(t);
+  const ymd =
+    `${String(d.getUTCFullYear()).padStart(4, "0")}-` +
+    `${String(d.getUTCMonth() + 1).padStart(2, "0")}-` +
+    `${String(d.getUTCDate()).padStart(2, "0")}`;
+  if (ymd !== value.slice(0, 10)) return null;
+  return d;
 }
 
 function isImpeded(waitingOn: string, waitingUntil: string, now: Date): boolean {
@@ -218,9 +298,9 @@ async function findActiveCards(deckDir: string): Promise<ActiveCard[]> {
         const val = stripQuotes(frontmatterTail(line));
         if (val) humanGate = val;
       } else if (line.startsWith("waiting_on:")) {
-        waitingOn = stripQuotes(frontmatterTail(line));
+        waitingOn = waitingOnScalar(line);
       } else if (line.startsWith("waiting_until:")) {
-        waitingUntil = stripQuotes(frontmatterTail(line));
+        waitingUntil = scalarOrEmpty(line);
       }
     }
     if (status !== "active") continue;
@@ -241,14 +321,20 @@ async function resolveDeckDir(projectDir: string): Promise<string> {
 }
 
 // Patterns mirror goc/templates/hooks/deck_prompt_router.py exactly.
+// WORK_VERBS is the single source-of-truth verb list — keep in sync with the
+// Python hook's WORK_VERBS constant.
+const WORK_VERBS =
+  "add|build|change|create|delete|extract|fix|implement|" +
+  "introduce|move|refactor|remove|rename|update|write";
+
 const WORK_INITIATING = [
-  /\blet'?s\s+(do|build|implement|make|add|create|fix|introduce|write|refactor)\b/i,
-  /\b(implement|build|introduce|refactor)\s+\w/i,
-  /\b(fix|add|create|write)\s+(a|an|the|this|that|some)\b/i,
+  new RegExp(String.raw`\blet'?s\s+(do|make|ship|${WORK_VERBS})\b`, "i"),
+  new RegExp(String.raw`\b(${WORK_VERBS})\s+\w`, "i"),
+  new RegExp(String.raw`\b(${WORK_VERBS})\s+(a|an|the|this|that|some)\b`, "i"),
   /\bi\s+(want|need)\s+(to|a|an|the|this)\b/i,
   /\bwe\s+(need|should|want)\s+to\b/i,
-  /\bcan\s+you\s+(add|fix|build|create|implement|introduce|write)\b/i,
-  /\bplease\s+(add|fix|build|create|implement|introduce|write)\b/i,
+  new RegExp(String.raw`\bcan\s+you\s+(${WORK_VERBS})\b`, "i"),
+  new RegExp(String.raw`\bplease\s+(${WORK_VERBS})\b`, "i"),
   /\bmake\s+it\s+(work|do|so|happen)\b/i,
   /\bship\s+(it|this|the)\b/i,
 ];
@@ -286,19 +372,89 @@ const DECK_REMINDER = [
 
 const PATTERN_REMINDER =
   "[GoC | pattern-check] Before yielding: did your recent change touch a pattern with broader applicability? " +
-  "If yes, file a generalization card via goc verb='new' before stopping. " +
-  'If no generalization is warranted, respond "no generalization needed" and stop.';
+  'If NO, respond "no generalization needed" and stop. ' +
+  "If YES, dedup first (scan the deck): if a generalization/root card already exists, " +
+  "CONNECT this instance to it (cross-reference or an advances edge) and name it — " +
+  "do not file a duplicate; only if none exists, file a new card via goc verb='new'.";
 
 const CODE_MUTATING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
-// Match `git commit ...` and the staging forms that mutate the index broadly
-// (`git add -A`, `git add -p`, `git add -u`, `git add .`). Deliberately reject
-// the pathspec-separator form `git add -- <path>` and bare `git add <path>`:
-// those stage explicit paths and are the documented safe parallel-agent
-// staging idiom in AGENTS.md.
-const BASH_COMMIT_PATTERNS = [
-  /\bgit\s+commit\b/,
-  /\bgit\s+add\s+(?:-[A-Za-z]|\.)/,
-];
+
+// Broad-staging flags for `git add`: short single-letter forms plus their
+// long-form aliases documented in `git-add(1)`. The bare `.` pathspec is
+// handled separately as a non-flag token.
+const BROAD_STAGING_FLAGS = new Set([
+  "-A",
+  "-p",
+  "-u",
+  "--all",
+  "--update",
+  "--patch",
+]);
+
+// Minimal shell tokenizer mirroring `shlex.split(..., posix=True)` for the
+// command strings we care about: handles single/double quotes and
+// backslash escapes. Returns null on unbalanced quotes so the caller can
+// fall through to "not a mutation".
+function shellSplit(s: string): string[] | null {
+  const tokens: string[] = [];
+  let current = "";
+  let started = false;
+  let inSingle = false;
+  let inDouble = false;
+  let escaped = false;
+  for (const ch of s) {
+    if (escaped) {
+      current += ch;
+      started = true;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && !inSingle) {
+      escaped = true;
+      continue;
+    }
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      started = true;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      started = true;
+      continue;
+    }
+    if (!inSingle && !inDouble && /\s/.test(ch)) {
+      if (started) {
+        tokens.push(current);
+        current = "";
+        started = false;
+      }
+      continue;
+    }
+    current += ch;
+    started = true;
+  }
+  if (inSingle || inDouble) return null;
+  if (started) tokens.push(current);
+  return tokens;
+}
+
+// Match `git commit ...` (any form) and `git add` with one of the broad-
+// staging flags in BROAD_STAGING_FLAGS or the bare `.` pathspec.
+// Deliberately reject `git add -- <path>` and bare `git add <path>`: those
+// stage explicit paths and are the documented safe parallel-agent staging
+// idiom in AGENTS.md.
+function isBroadGitMutation(cmd: string): boolean {
+  const tokens = shellSplit(cmd);
+  if (!tokens || tokens.length < 2 || tokens[0] !== "git") return false;
+  if (tokens[1] === "commit") return true;
+  if (tokens[1] !== "add") return false;
+  for (const tok of tokens.slice(2)) {
+    if (tok === "--") return false;
+    if (tok === "." || BROAD_STAGING_FLAGS.has(tok)) return true;
+  }
+  return false;
+}
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -338,11 +494,13 @@ async function bestFallbackProjectDir(sessionProjectDir?: string): Promise<strin
   return undefined;
 }
 
-async function isOptedOut(projectDir: string): Promise<boolean> {
+// Opt-in (default off): the GoC project config must explicitly enable the
+// hook. Absent config, absent key, or any other value leaves it disabled.
+async function isEnabled(projectDir: string): Promise<boolean> {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
     const text = await readFile(configPath, "utf8");
-    return /pattern_generalization_check\s*:\s*false/i.test(text);
+    return /pattern_generalization_check\s*:\s*true/i.test(text);
   } catch {
     return false;
   }
@@ -513,13 +671,15 @@ export default definePluginEntry({
     //         hooks:
     //           allowConversationAccess: true
     //
-    // Opt-out per workspace via .game-of-cards/config.yaml
+    // Opt-in per workspace via .game-of-cards/config.yaml (default off)
     //   hooks:
-    //     pattern_generalization_check: false
+    //     pattern_generalization_check: true
     api.on("agent_end", async (ctx: any) => {
       const projectDir = (ctx?.projectDir as string | undefined) ?? process.cwd();
-      if (await isOptedOut(projectDir)) return;
-      if (ctx?.config?.pattern_generalization_check === false) return;
+      // Run only when explicitly enabled, via either the GoC project config
+      // file or the OpenClaw plugin config.
+      if (!(await isEnabled(projectDir)) &&
+          ctx?.config?.pattern_generalization_check !== true) return;
 
       // TODO(verify-context-shape): agent_end is documented as observing
       // "final messages, success state, and run duration" but the precise
@@ -530,7 +690,7 @@ export default definePluginEntry({
         if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;
         if (tc?.name === "exec" || tc?.name === "Bash") {
           const cmd = (tc?.params?.command ?? tc?.params?.cmd ?? "") as string;
-          return BASH_COMMIT_PATTERNS.some((re) => re.test(cmd));
+          return isBroadGitMutation(cmd);
         }
         return false;
       });

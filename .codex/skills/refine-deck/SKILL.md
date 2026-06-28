@@ -3,6 +3,29 @@ name: refine-deck
 description: "Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct file:line references, surface orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surface engineer-jargon titles for retitling, propose new canonical tags. AUTO-INVOKE when user says \"tidy up the deck\", \"check for stale cards\", \"hygiene pass\", \"clean up the queue\", \"archive old\", \"audit the deck\", or invokes /refine-deck. The board itself gets refactored each iteration (XP refactor mercilessly + Kanban continuous improvement)."
 ---
 
+## Codex GoC Command
+
+When this skill says `goc ...`, resolve the executable before running the
+command:
+
+- In the `game-of-cards` source checkout, use `uv run goc ...`.
+- If `goc` is already on `PATH`, use `goc ...`.
+- If this skill is loaded from the Game of Cards Codex plugin, use the
+  bundled helper at `<plugin-root>/skills/_goc-bootstrap.sh ...`; the plugin
+  root is the parent directory that contains both `skills/` and `bin/`.
+- If the plugin root is not obvious from the loaded skill path, locate the
+  helper with:
+
+```bash
+GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 2>/dev/null | sort | tail -n 1)
+test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; exit 127; }
+"$GOC_BOOTSTRAP" --help
+```
+
+Use that helper path in place of bare `goc` for the rest of the skill. Do not
+edit deck files directly just because `goc` is not on `PATH`.
+
+
 ## Preflight
 
 If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
@@ -61,7 +84,8 @@ Categories:
   grouping tag.
 - **Orphaned dependencies** — relational rot. Epics with zero
   linked children; meta-fix cards whose body lists a family roster
-  but `advances: []`; open cards with legacy `**Depends on:** /
+  but carry zero edges (neither `advances` nor `advanced_by`); open
+  cards with legacy `**Depends on:** /
   **Next:** / **Part of:**` markers in body but empty schema
   arrays; unactioned `log.md` migration TODOs (`formerly parent: X`
   / `formerly spawned_from: X`). The schema validator already
@@ -183,19 +207,23 @@ for ep in epics:
         print(f'{ep[\"title\"]}: epic with zero linked children')
 "
 
-# 2. Meta-fix cards with empty advances (family roster declared
-#    in body but not wired). A surfaced card is either (a) a
-#    genuine meta-fix whose family wasn't wired, or (b) a
-#    mistagged instance that should not carry the meta-fix tag —
-#    distinguish by reading the body for "## Family roster" / "n
-#    instances" prose.
+# 2. Meta-fix cards with zero edges (neither advances nor
+#    advanced_by — family roster declared in body but not wired).
+#    Count BOTH edge fields: a correctly-wired umbrella carries
+#    advanced_by=[siblings] with advances=[], so testing advances
+#    alone false-positives every wired family. A surfaced card is
+#    either (a) a genuine meta-fix whose family wasn't wired, or
+#    (b) a mistagged instance that should not carry the meta-fix
+#    tag — distinguish by reading the body for "## Family roster" /
+#    "n instances" prose.
 goc --tag meta-fix --status open --json | \
   python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 for c in d:
-    if not (c.get('advances') or []):
-        print(f'{c[\"title\"]}: meta-fix with empty advances (family unwired or mistagged?)')
+    n = len(c.get('advances') or []) + len(c.get('advanced_by') or [])
+    if n == 0:
+        print(f'{c[\"title\"]}: meta-fix with zero edges (family unwired or mistagged?)')
 "
 
 # 3. Open cards with legacy markers in body but empty schema arrays

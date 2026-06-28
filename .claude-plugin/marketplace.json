@@ -6,13 +6,13 @@
   },
   "metadata": {
     "description": "Single-plugin marketplace for the Game of Cards Claude Code plugin. The plugin lives under ./claude-plugin and ships skills + hooks for the goc CLI methodology.",
-    "version": "0.0.21"
+    "version": "0.0.25"
   },
   "plugins": [
     {
       "name": "game-of-cards",
       "source": "./claude-plugin",
-      "description": "Game of Cards skills and hooks for Claude Code. Bundles the goc CLI; requires uv on host PATH."
+      "description": "Game of Cards skills and hooks for Claude Code. Bundles the goc CLI; requires Python 3.10+ on host PATH."
     }
   ]
 }

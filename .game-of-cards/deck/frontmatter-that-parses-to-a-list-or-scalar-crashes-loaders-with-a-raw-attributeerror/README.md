@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-27T13:49:20Z"
 closed_at: "2026-05-27T13:54:52Z"
 human_gate: none
-advances: []
+advances:
+  - unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |

@@ -1,0 +1,8 @@
+## 2026-05-30T17:19:48Z — Closure
+
+- **What changed**: `goc/install.py` — added a "valid JSON but not a dict" guard after the existing `JSONDecodeError` branch in both `_merge_claude_settings` and `_strip_goc_settings_entries`. The merge guard backs up the original bytes to a timestamped `.bak` sibling via the existing `_backup_unparseable_settings` helper and falls back to `{}`; the strip guard warns and returns. Plugin mirrors (`claude-plugin/goc/install.py`, `codex-plugin/goc/install.py`, `openclaw-plugin/goc/install.py`) re-synced via `scripts/sync_plugin_assets.py`.
+- **Verification**: `reproduce.py` exits 0 (was 1, with `AttributeError` on all four non-dict shapes). New regression tests `test_merge_claude_settings_handles_non_dict_json_shapes` and `test_strip_goc_settings_entries_handles_non_dict_json_shapes` in `tests/test_install.py` cover all four shapes (`null`, `[]`, `"hello"`, `42`) against both helpers and assert no exception escapes plus correct backup behavior. Empirical end-to-end: `goc install --local-skills` and `goc upgrade --agents claude --keep-local-skills` both complete cleanly against a repo with `.claude/settings.json` containing `null`, with the original `null` bytes preserved in a `.bak` sibling. Full regression suite `python -m unittest discover -s tests`: 328/328 passing.
+- **Audit**: PASS — no project rubric configured; mirrors the closed sibling `install-overwrites-malformed-claude-settings-json-instead-of-merging` exactly (same backup-and-warn / warn-and-return contract, applied to the previously uncovered valid-JSON-wrong-shape input).
+- **Project impact**: n/a
+- **Tests**: 2 new regression tests in `tests/test_install.py`; reproduce.py kept in card dir for future verification.
+- **Bundled with**: none

@@ -22,6 +22,8 @@ definition_of_done: |
   - [x] `goc upgrade` on a repo previously installed with `Skill(bootstrap)` cleanly transitions to `Skill(kickoff)` — old skill folder removed, no orphan files
   - [x] On close, file a closure entry in `make-claude-md-and-agents-md-merge-opt-in-via-skill/log.md` noting it is superseded by this card and close that card
 worker: {who: "claude[bot]", where: main}
+supersedes:
+  - make-claude-md-and-agents-md-merge-opt-in-via-skill
 ---
 
 # rename-bootstrap-to-kickoff-as-onboarding-dialog
