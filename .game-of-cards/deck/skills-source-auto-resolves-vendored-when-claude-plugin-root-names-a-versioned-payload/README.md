@@ -1,21 +1,21 @@
 ---
 title: skills-source-auto-resolves-vendored-when-claude-plugin-root-names-a-versioned-payload
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-29T02:39:33Z"
-closed_at: null
+closed_at: "2026-06-29T02:44:44Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] `_claude_plugin_present()` returns True when `CLAUDE_PLUGIN_ROOT` points at a payload root whose `skills/` subtree exists, regardless of the root's basename.
-  - [ ] The `~/.claude/plugins` container candidate still requires a `game-of-cards*` payload (no new false positive from a non-GoC `skills/` dir there).
-  - [ ] Regression test added covering `CLAUDE_PLUGIN_ROOT` pointing at a versioned payload root (e.g. `.../game-of-cards/0.0.25`).
-  - [ ] `reproduce.py` prints PASS after the fix.
-  - [ ] `uv run goc validate` passes and the full regression suite stays green.
-worker: {who: "{who: \"claude[bot]\", where: main}", where: main}
+  - [x] `_claude_plugin_present()` returns True when `CLAUDE_PLUGIN_ROOT` points at a payload root whose `skills/` subtree exists, regardless of the root's basename.
+  - [x] The `~/.claude/plugins` container candidate still requires a `game-of-cards*` payload (no new false positive from a non-GoC `skills/` dir there).
+  - [x] Regression test added covering `CLAUDE_PLUGIN_ROOT` pointing at a versioned payload root (e.g. `.../game-of-cards/0.0.25`).
+  - [x] `reproduce.py` prints PASS after the fix.
+  - [x] `uv run goc validate` passes and the full regression suite stays green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `skills_source: auto` resolves to `vendored` when `CLAUDE_PLUGIN_ROOT` names a versioned payload

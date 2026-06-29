@@ -4527,18 +4527,25 @@ def _claude_plugin_present() -> bool:
     (covering the `<plugin>/<version>/skills/` layout). `Path.rglob` does
     not follow symlinks in CPython 3.10+, so symlink loops can't hang it.
     """
-    candidates: list[Path] = []
+    candidates: list[tuple[Path, bool]] = []
     env_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
     if env_root:
-        candidates.append(Path(env_root))
-    candidates.append(Path.home() / ".claude" / "plugins")
-    for root in candidates:
+        candidates.append((Path(env_root), True))
+    candidates.append((Path.home() / ".claude" / "plugins", False))
+    for root, is_env_root in candidates:
         try:
             if not root.exists() or not root.is_dir():
                 continue
         except OSError:
             continue
-        if (root / "skills").is_dir() and root.name.startswith("game-of-cards"):
+        # CLAUDE_PLUGIN_ROOT is set only for the GoC plugin's own payload root,
+        # so `<root>/skills/` alone confirms presence — its basename is the
+        # version (e.g. `0.0.25`) on marketplace installs, not `game-of-cards`.
+        # The `~/.claude/plugins` container holds many plugins, so there the
+        # name guard still avoids a false positive from a non-GoC `skills/` dir.
+        if (root / "skills").is_dir() and (
+            is_env_root or root.name.startswith("game-of-cards")
+        ):
             return True
         try:
             for plugin_dir in root.rglob("game-of-cards*"):
