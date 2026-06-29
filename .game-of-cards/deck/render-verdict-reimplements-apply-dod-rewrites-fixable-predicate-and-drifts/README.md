@@ -9,6 +9,7 @@ human_gate: decision
 advances: []
 advanced_by:
   - quality-pass-llm-counts-fixless-dod-issue-as-proposed-rewrite
+  - quality-pass-renderer-counts-whitespace-only-fix-dod-issue-as-rewrite
 tags: [bug, meta-fix, api-contract]
 summary: "`_render_verdict` and `_apply_dod_rewrite` each carry their own copy of the predicate 'this DoD issue is an applicable rewrite' (`idx` + `fix` + non-whitespace `fix`). The two copies have already drifted apart twice, each time fixed pointwise by a separate card. Extract a single shared predicate both call so they cannot diverge again."
 definition_of_done: |

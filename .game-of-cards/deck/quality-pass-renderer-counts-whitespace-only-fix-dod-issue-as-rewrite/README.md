@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-27T01:53:16Z"
 closed_at: "2026-06-27T01:58:24Z"
 human_gate: none
-advances: []
+advances:
+  - render-verdict-reimplements-apply-dod-rewrites-fixable-predicate-and-drifts
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
