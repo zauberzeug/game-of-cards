@@ -1,5 +1,6 @@
 ---
 title: goc-move-runs-git-operations-in-the-wrong-tree-under-shared-deck-worktree-mode
+summary: "`goc move` was the only deck-mutating verb that ran its git operations in `REPO_ROOT` instead of `DECK_ROOT` (`_move_iter_tracked_text_files` engine.py:5380, `_cmd_move` engine.py:5483), while every other deck git op uses `git_cwd = str(DECK_ROOT)`. Under shared-deck-worktree mode that targets the wrong tree; fixed by switching the move path to `DECK_ROOT`."
 status: done
 stage: null
 contribution: medium

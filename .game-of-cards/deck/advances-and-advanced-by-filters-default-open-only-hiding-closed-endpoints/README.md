@@ -1,5 +1,6 @@
 ---
 title: advances-and-advanced-by-filters-default-open-only-hiding-closed-endpoints
+summary: "`goc --advances X` and `goc --advanced-by X` are relationship queries, but with no explicit `--status` they inherit the open-only queue default, so any edge endpoint that has since closed (done/disproved/superseded) silently vanishes and a cold reader walking the record axis sees a truncated graph. The auto-extend list in `_cmd_default` (engine.py:3531-3546) names every status-spanning filter (`--closed-since`, `--waiting`, `--board`) but omits the two edge filters. Whether they should auto-extend to `all` or stay open-only is the open decision."
 status: open
 stage: null
 contribution: medium

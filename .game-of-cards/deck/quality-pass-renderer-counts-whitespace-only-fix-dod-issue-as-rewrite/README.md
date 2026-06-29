@@ -1,5 +1,6 @@
 ---
 title: quality-pass-renderer-counts-whitespace-only-fix-dod-issue-as-rewrite
+summary: "`_render_verdict` (engine.py:3803-3807) classified a DoD issue as a `fixable` rewrite whenever it carried both `idx` and `fix`, but `_apply_dod_rewrite` carries a third guard — `issue['fix'].strip()` — so a whitespace-only `fix` is treated there as 'no rewrite offered'. The two disagreed: the renderer counted such an issue toward `has_rewrite` and printed `dod: 1 issue(s)` with an empty `fix:`, while apply preserved the item verbatim. Fixed by mirroring the strip guard in the classifier."
 status: done
 stage: null
 contribution: medium

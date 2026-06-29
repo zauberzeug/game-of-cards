@@ -1,5 +1,6 @@
 ---
 title: active-card-banner-tiebreak-undercounts-downstream-flow-under-worker-filter
+summary: "`render_active_notice` (engine.py ~3147) built its `sort_default` tiebreak `by_title` lookup from the passed-in `cards` subset rather than accepting a `by_title` parameter like its sibling renderers, so once `active-card-banner-ignores-worker-filter` changed the call site to pass a worker-scoped subset, live downstream `advances` targets outside that subset scored zero and equal-value active cards fell through to the oldest-first `created` tiebreak instead of highest-live-flow-first. Fixed by threading the full-deck `by_title` into the banner renderer."
 status: done
 stage: null
 contribution: low
