@@ -1,5 +1,6 @@
 ---
 title: create-card-and-deck-skills-claim-goc-new-scaffolds-a-reproduce-py-stub
+summary: "Two shipped skill descriptions advertised a `reproduce.py` stub as a co-equal deliverable of `goc new`, alongside the frontmatter and DoD scaffold the tool genuinely writes — but `goc new` never writes a `reproduce.py` (the skill's own Step 6 correctly frames it as a manual authoring step). The descriptions overstated the tool's behavior; fixed by correcting the skill descriptions."
 status: done
 stage: null
 contribution: medium

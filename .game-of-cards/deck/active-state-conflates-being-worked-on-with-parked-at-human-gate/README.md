@@ -8,7 +8,10 @@ created: "2026-05-30T11:39:59Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - session-start-hook-shows-gated-active-cards-as-resumable
+  - parked-active-cards-are-missing-from-goc-triage
+  - parked-active-cards-are-missing-from-goc-ready-leverage-line
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: pick the architectural shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`). The pick determines DoD items below.

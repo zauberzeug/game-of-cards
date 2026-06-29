@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-25T01:29:02Z"
 closed_at: "2026-06-25T01:32:30Z"
 human_gate: none
-advances: []
+advances:
+  - board-renderer-keeps-dropping-cards-the-table-shows
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

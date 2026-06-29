@@ -1,0 +1,8 @@
+## 2026-06-29T02:50:00Z — Closure
+
+- **What changed**: `goc/engine.py:4530-4549` — `_claude_plugin_present()` now tracks whether each candidate is the `CLAUDE_PLUGIN_ROOT` env-root. For the env-root, `<root>/skills/` existing confirms presence regardless of the root's basename (it is the version on marketplace installs, e.g. `0.0.25`). The `~/.claude/plugins` container candidate keeps the `game-of-cards*` name guard so a non-GoC `skills/` dir there cannot produce a false positive. The fix makes the code honour the docstring's documented layout-1 claim.
+- **Verification**: `reproduce.py` PASS (exit 0) — `_claude_plugin_present()` returns True and `effective_skills_source()` resolves `plugin` for a versioned env-root payload. TDD: the two env-root regression tests fail on pre-fix `engine.py` (`git stash` confirmed `FAILED (failures=2)`).
+- **Audit**: PASS — mechanical guard fix; the env-root is the authoritative GoC-only pointer, so dropping its name check is sound. No project principle touched.
+- **Project impact**: marketplace-installed plugin-mode repos on `skills_source: auto` no longer get mis-pinned to `vendored` on `goc upgrade`, and `goc validate` no longer fires a spurious vendored-parity "missing skills" error.
+- **Tests**: 645 passed / 0 failed (full `unittest discover -s tests`); added `tests/test_plugin_present_detection.py` (4 cases: versioned env-root, arbitrary-basename env-root, container false-positive guard, container rglob descent). Plugin mirrors re-synced; `sync_plugin_assets.py --check` and `port_skills_to_openclaw.py --check` both green.
+- **Bundled with**: n/a

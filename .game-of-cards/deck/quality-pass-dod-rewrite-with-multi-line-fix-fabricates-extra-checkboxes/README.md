@@ -1,5 +1,6 @@
 ---
 title: quality-pass-dod-rewrite-with-multi-line-fix-fabricates-extra-checkboxes
+summary: "`_apply_dod_rewrite` (engine.py:3842) replaces DoD items by index into a single line slot, but a verdict `fix` string containing a newline survived into the line, so joining the lines split one logical item into multiple physical lines; any injected `- [ ]` / `- [x]`-shaped line was then counted as a real checkbox, inflating the closure box count beyond what the operator authored. Fixed by collapsing multi-line fixes so the rewrite cannot fabricate extra checkboxes."
 status: done
 stage: null
 contribution: medium

@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-29T08:06:58Z"
 closed_at: "2026-05-29T09:18:43Z"
 human_gate: none
-advances: []
+advances:
+  - active-state-conflates-being-worked-on-with-parked-at-human-gate
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |

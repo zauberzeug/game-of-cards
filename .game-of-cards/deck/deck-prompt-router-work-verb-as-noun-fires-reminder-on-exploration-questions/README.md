@@ -1,5 +1,6 @@
 ---
 title: deck-prompt-router-work-verb-as-noun-fires-reminder-on-exploration-questions
+summary: "The UserPromptSubmit hook's `WORK_INITIATING` work-verb-plus-any-word pattern (deck_prompt_router.py:28) matches a work verb followed by any word anywhere in a prompt, so a pure exploration question that merely names a work verb as a noun ('how does the update logic work?') sets has_work True and the precedence rule fires the GoC reminder, contradicting the hook's 'silent for pure exploration' contract. Distinct trigger from the sibling `deck-prompt-router-i-want-to-pattern-fires-on-pure-exploration-prompts` (that card blames the i-want-to / we-need-to patterns; this one is the general work-verb matcher)."
 status: open
 stage: null
 contribution: medium

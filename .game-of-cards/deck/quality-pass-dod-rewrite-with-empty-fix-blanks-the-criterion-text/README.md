@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-06-24T07:57:36Z"
 closed_at: "2026-06-24T08:02:01Z"
 human_gate: none
-advances: []
+advances:
+  - render-verdict-reimplements-apply-dod-rewrites-fixable-predicate-and-drifts
 advanced_by: []
 tags: [bug, api-contract]
 summary: "`_apply_dod_rewrite` (`goc/engine.py:3707-3725`) replaces DoD checkbox lines by index using each verdict issue's `fix` string, applying any issue that merely has an `idx` and `fix` key with no check that `fix` is non-empty — so an empty `fix` blanks the criterion text to a bare `- [ ]`, contradicting the docstring's 'other items preserved verbatim' promise."

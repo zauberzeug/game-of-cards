@@ -1,5 +1,6 @@
 ---
 title: table-renderer-crashes-on-a-card-with-null-human-gate
+summary: "A card with a bare `human_gate:` key (or `human_gate: null`) parses to Python `None` with the key present, so `Card.human_gate` (engine.py:755) returns `None` instead of the empty-string default, and the table renderer's `_display_width` then raises `TypeError: 'NoneType' object is not iterable`. One malformed card made the entire queue view (`goc`, `goc --status open`, ...) unrenderable."
 status: done
 stage: null
 contribution: medium

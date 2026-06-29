@@ -1295,6 +1295,28 @@ def _refresh_goc_validate_block(text: str) -> str:
     return _PRECOMMIT_LOCAL_BLOCK_RE.sub(_replace, text)
 
 
+def _precommit_refresh_pending(target: Path) -> bool:
+    """True iff `_append_precommit_hook` would rewrite a drifted stanza.
+
+    Detects the one case the same-version `upgrade()` short-circuit must
+    not skip: a real git repo whose `.pre-commit-config.yaml` carries a
+    GoC-managed `goc-validate` stanza that `_refresh_goc_validate_block`
+    would change (e.g. a legacy `files: ^deck/.*$` glob). Pure check — no
+    write — so it can gate the "nothing to do" guard. Returns False when
+    the stanza is already current (the refresh would be a byte-identical
+    no-op), so the existing no-op path is preserved.
+    """
+
+    if not (target.parent / ".git").exists():
+        return False
+    if not target.exists():
+        return False
+    text, _ = _read_text_keep_newline(target)
+    if "id: goc-validate" not in text:
+        return False
+    return _refresh_goc_validate_block(text) != text
+
+
 def _append_precommit_hook(target: Path) -> None:
     """Append (or refresh) the `goc validate` hook in `.pre-commit-config.yaml`."""
 
@@ -1716,6 +1738,13 @@ def upgrade(
 
     pending_cleanup = needs_vendored_cleanup and not dry_run
     pending_briefing_migration = bool(legacy_briefings_to_strip) and not dry_run
+    # A stale pre-commit goc-validate glob (e.g. legacy `^deck/.*$`) must be
+    # migrated even at the same version — otherwise the drift-gate hook stays
+    # silently dead. _append_precommit_hook (run below) is idempotent, so this
+    # only defeats the short-circuit when there is a real drifted stanza to fix.
+    pending_precommit_refresh = (
+        _precommit_refresh_pending(target / ".pre-commit-config.yaml") and not dry_run
+    )
 
     if (
         existing == __version__
@@ -1724,6 +1753,7 @@ def upgrade(
         and not pending_cleanup
         and not keep_local_skills
         and not pending_briefing_migration
+        and not pending_precommit_refresh
         and briefing_target is None
     ):
         print(f"already at goc {__version__} — nothing to do.")

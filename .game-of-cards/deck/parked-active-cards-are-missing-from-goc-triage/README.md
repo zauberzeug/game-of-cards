@@ -9,6 +9,7 @@ closed_at: null
 human_gate: decision
 advances:
   - parked-active-cards-are-missing-from-goc-ready-leverage-line
+  - active-state-conflates-being-worked-on-with-parked-at-human-gate
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

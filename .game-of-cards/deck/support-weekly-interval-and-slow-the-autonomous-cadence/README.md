@@ -1,5 +1,6 @@
 ---
 title: support-weekly-interval-and-slow-the-autonomous-cadence
+summary: "Slowed the autonomous loop to daily-pull / weekly-audit-and-refine and taught `set_cadence.py` the exact weekly interval that cadence needs."
 status: done
 stage: null
 contribution: low

@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-29T18:40:13Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - active-state-conflates-being-worked-on-with-parked-at-human-gate
 advanced_by:
   - parked-active-cards-are-missing-from-goc-triage
 tags: [bug, api-contract]

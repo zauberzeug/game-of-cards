@@ -9,6 +9,7 @@ closed_at: 2026-05-04
 human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
+  - board-renderer-keeps-dropping-cards-the-table-shows
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |

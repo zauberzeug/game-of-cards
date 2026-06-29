@@ -8,7 +8,8 @@ created: "2026-06-25T14:07:05Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - waiting-filter-shows-terminal-cards-with-stale-overlay
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
   - [ ] PROCESS: decision recorded — pick the helper shape (single `active_impediment(card, *, queue_only=False)` vs a thin `live_impeded`/`queueable_impeded` pair); see "## Decision required"
