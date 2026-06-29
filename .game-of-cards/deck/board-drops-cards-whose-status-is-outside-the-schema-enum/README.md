@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-06-25T20:20:50Z"
 closed_at: "2026-06-25T20:31:35Z"
 human_gate: none
-advances: []
+advances:
+  - board-renderer-keeps-dropping-cards-the-table-shows
 advanced_by: []
 tags: [bug, api-contract]
 summary: "`render_board` files cards into columns keyed solely by the schema's status enum and drops any card whose status is not one of those keys — no column, no diagnostic, not counted in the `… +N more` overflow. `render_table` (the default view) keeps the card, so the two human-facing renderers disagree about which cards exist, and the board's own comment claims it `never silently drops a card`."
