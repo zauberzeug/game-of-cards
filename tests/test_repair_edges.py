@@ -115,6 +115,36 @@ class RepairEdgesTest(unittest.TestCase):
             self.assertIn("c-card \u2192 a-card would create a cycle in the advances graph", result.stderr)
             self.assertNotIn("c-card", self.readme(cwd, "a-card"))
 
+    def test_repair_edges_dry_run_exits_nonzero_on_structural_half_edge(self) -> None:
+        # Regression: the read-only preview must signal the same non-zero exit
+        # on an unfixable structural half-edge that --apply does, so a CI gate
+        # or &&-chained script using the safe preview does not silently pass a
+        # deck carrying half-edges no verb can repair.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            for title in ("a-card", "b-card", "c-card"):
+                self.new_card(cwd, title)
+            self.assert_goc_ok(self.run_goc(cwd, "advance", "b-card", "--by", "a-card", "--no-commit"))
+            self.assert_goc_ok(self.run_goc(cwd, "advance", "c-card", "--by", "b-card", "--no-commit"))
+            self.write_readme(
+                cwd,
+                "c-card",
+                self.readme(cwd, "c-card").replace(
+                    "advances: []\n",
+                    "advances:\n  - a-card\n",
+                ),
+            )
+
+            dry = self.run_goc(cwd, "repair-edges")
+
+            self.assertEqual(
+                1, dry.returncode, msg=f"stdout:\n{dry.stdout}\nstderr:\n{dry.stderr}"
+            )
+            self.assertIn("Structural problems requiring human review:", dry.stderr)
+            self.assertIn("Dry run", dry.stdout)
+            # Dry-run must NOT mutate the deck despite the non-zero exit.
+            self.assertNotIn("c-card", self.readme(cwd, "a-card"))
+
     def interacting_advances_half_edges(self, cwd: Path) -> None:
         """Two Type-β advances half-edges that form a cycle once both reverse
         halves are added: each card's advanced_by names the other, but neither
@@ -142,7 +172,12 @@ class RepairEdgesTest(unittest.TestCase):
             self.interacting_advances_half_edges(cwd)
 
             dry = self.run_goc(cwd, "repair-edges")
-            self.assert_goc_ok(dry)
+            # Parity with --apply extends to the exit code: a structural
+            # half-edge is a hard failure even when some edges are fixable, so
+            # the read-only preview exits non-zero just as --apply does below.
+            self.assertEqual(
+                1, dry.returncode, msg=f"stdout:\n{dry.stdout}\nstderr:\n{dry.stderr}"
+            )
             self.assertIn("Half-edges that would be repaired (1):", dry.stdout)
             # The structural edge is surfaced in the preview too (to stderr),
             # not silently folded into the fixable count.

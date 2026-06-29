@@ -1,21 +1,21 @@
 ---
 title: repair-edges-dry-run-exits-zero-despite-structural-half-edges
 summary: "`goc repair-edges` dry-run prints structural half-edge problems then exits 0, while `--apply` exits 1 on the same input. A CI gate or &&-chained script using the safe read-only preview silently passes a deck carrying half-edges no verb can auto-fix. The two modes must agree on the success contract."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-29T01:34:22Z"
-closed_at: null
+closed_at: "2026-06-29T01:40:18Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (asserts dry-run returns 1 when the deck has a structural half-edge, matching `--apply`)
-  - [ ] TDD: a regression test in tests/ covers the dry-run exit-code parity with `--apply`
-  - [ ] MECHANICAL: the dry-run branch in `_cmd_repair_edges` exits non-zero when `structural` is non-empty, mirroring the apply branch
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (asserts dry-run returns 1 when the deck has a structural half-edge, matching `--apply`)
+  - [x] TDD: a regression test in tests/ covers the dry-run exit-code parity with `--apply`
+  - [x] MECHANICAL: the dry-run branch in `_cmd_repair_edges` exits non-zero when `structural` is non-empty, mirroring the apply branch
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` passes
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -62,16 +62,21 @@ that just printed `Structural problems requiring human review:` exits 0.
 
 ## Empirical evidence
 
-```
-=== Dry-run with ONLY structural problems ===
-Structural problems requiring human review:
-  cyc-a: advances contains 'cyc-b' but cyc-b.advanced_by is missing 'cyc-a' (half-edge): cyc-a -> cyc-b would create a cycle in the advances graph
-  cyc-b: advances contains 'cyc-a' but cyc-a.advanced_by is missing 'cyc-b' (half-edge): cyc-b -> cyc-a would create a cycle in the advances graph
-Dry run -- no changes made. Run 'goc repair-edges --apply' to write fixes.
-DRY-RUN exit=0          <-- reports clean
+Before the fix the read-only preview reported clean (exit 0) on a deck the
+executor rejected (exit 1):
 
-=== --apply on the SAME deck ===
-APPLY exit=1            <-- reports failure
+```
+dry-run exit code: 0
+--apply  exit code: 1
+```
+
+After the fix, `reproduce.py` confirms both modes agree:
+
+```
+dry-run exit code: 1
+--apply  exit code: 1
+
+PASS: both modes agree (exit 1) on structural half-edges
 ```
 
 (See `reproduce.py` for the generator.)

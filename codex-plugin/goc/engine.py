@@ -5344,6 +5344,8 @@ def _cmd_repair_edges(args):
                     print("(already repaired on disk)")
         _print_structural_edge_problems(structural)
         print("\nDry run — no changes made. Run 'goc repair-edges --apply' to write fixes.")
+        if structural:
+            sys.exit(1)
         return
 
     repaired = 0
