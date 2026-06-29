@@ -28,6 +28,7 @@ def _mk(
     status: str,
     human_gate: str,
     waiting_on: str | None,
+    draft: bool = False,
 ) -> Card:
     fm: dict = {
         "title": "C",
@@ -41,6 +42,8 @@ def _mk(
     }
     if waiting_on is not None:
         fm["waiting_on"] = waiting_on
+    if draft:
+        fm["draft"] = True
     return Card(
         title="C",
         path=Path("/tmp/C"),
@@ -54,6 +57,7 @@ def _mk(
 STATUSES = ("open", "active", "done", "disproved", "superseded")
 GATES = ("none", "decision", "session")
 WAITING = (None, "external", "resource", "deferred")
+DRAFTS = (False, True)
 
 
 class SchedulerWorkablePredicateCouplingTest(unittest.TestCase):
@@ -61,26 +65,33 @@ class SchedulerWorkablePredicateCouplingTest(unittest.TestCase):
         for status in STATUSES:
             for gate in GATES:
                 for waiting in WAITING:
-                    card = _mk(status=status, human_gate=gate, waiting_on=waiting)
-                    ready = card_is_ready(card, {card.title: card})
-                    workable = card_is_workable_for_scheduler(card)
-                    with self.subTest(status=status, gate=gate, waiting=waiting):
-                        if status == "active" and gate == "none" and waiting is None:
-                            # The only documented divergence: the helper
-                            # accepts `active` (live work amplifies value)
-                            # while `card_is_ready` rejects it (cannot be
-                            # pulled — already claimed).
-                            self.assertFalse(ready)
-                            self.assertTrue(workable)
-                        else:
-                            self.assertEqual(
-                                ready,
-                                workable,
-                                f"predicate drift at status={status!r} "
-                                f"gate={gate!r} waiting={waiting!r}: "
-                                f"card_is_ready={ready} "
-                                f"card_is_workable_for_scheduler={workable}",
-                            )
+                    for draft in DRAFTS:
+                        card = _mk(status=status, human_gate=gate, waiting_on=waiting, draft=draft)
+                        ready = card_is_ready(card, {card.title: card})
+                        workable = card_is_workable_for_scheduler(card)
+                        with self.subTest(status=status, gate=gate, waiting=waiting, draft=draft):
+                            if (
+                                status == "active"
+                                and gate == "none"
+                                and waiting is None
+                                and not draft
+                            ):
+                                # The only documented divergence: the helper
+                                # accepts `active` (live work amplifies value)
+                                # while `card_is_ready` rejects it (cannot be
+                                # pulled — already claimed). A draft collapses
+                                # this — both reject it (the new shared axis).
+                                self.assertFalse(ready)
+                                self.assertTrue(workable)
+                            else:
+                                self.assertEqual(
+                                    ready,
+                                    workable,
+                                    f"predicate drift at status={status!r} "
+                                    f"gate={gate!r} waiting={waiting!r} draft={draft!r}: "
+                                    f"card_is_ready={ready} "
+                                    f"card_is_workable_for_scheduler={workable}",
+                                )
 
 
 if __name__ == "__main__":

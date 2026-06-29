@@ -17,6 +17,14 @@ workflow:
   # State-change commands auto-commit by default so active-card claims and
   # decision handoffs are visible to parallel agents. Set false to leave those
   # mutations in the working tree unless a command is run with `--commit`.
+  #
+  # Draft cards (unauthored `goc new` scaffolds carrying `draft: true`) are
+  # never auto-committed by goc: an unauthored placeholder must not reach shared
+  # state, where dedup/supersede automation could act on its title alone. The
+  # flag clears on `goc publish` / `goc status active` / `goc done`, after which
+  # the card commits normally. NOTE: an *external* auto-commit service (one that
+  # runs `git add -A` outside goc) bypasses this filter and must skip draft
+  # cards itself, or it reintroduces the unauthored-supersede race.
   auto_commit: true
 
   # claim_push: true        # uncomment for multi-human / multi-agent setups.

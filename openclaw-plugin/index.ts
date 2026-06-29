@@ -56,6 +56,7 @@ const GOC_VERBS = [
   "repair-edges",
   "move",
   "decide",
+  "publish",
   "triage",
   "show",
   "migrate",

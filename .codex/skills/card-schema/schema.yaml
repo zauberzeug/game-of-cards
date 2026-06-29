@@ -18,6 +18,7 @@ optional_fields:
   - worker
   - waiting_on
   - waiting_until
+  - draft
 title_pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
 status_values:        [open, active, blocked, done, disproved, superseded]
 stage_values:         [null, alpha, beta, stable]

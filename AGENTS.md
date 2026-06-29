@@ -144,7 +144,7 @@ The Python package is intentionally small:
 - **`goc/engine.py`** — the bulk of the tool: frontmatter parser, schema
   loader, card loader, validator, value/edge graph, table/board
   renderers, and every verb except install/upgrade (`new`, `status`,
-  `done`, `attest`, `decide`, `advance`, `unadvance`, `wait`,
+  `done`, `attest`, `decide`, `publish`, `advance`, `unadvance`, `wait`,
   `repair-edges`, `move`, `triage`, `show`, `quality-pass`, `validate`,
   `migrate`, `migrate-list-style`).
 - **`goc/install.py`** — `install` and `upgrade` commands. Reads

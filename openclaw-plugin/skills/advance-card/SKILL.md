@@ -70,6 +70,15 @@ dependency-readiness** signal reads — it self-clears when the prereq
 closes, so no status flip is needed to park the card on an upstream
 sibling.
 
+**Draft cards.** `open → active` also clears any `draft: true` flag —
+claiming a card proves it is authored. To release an authored draft to the
+queue *without* claiming it for work, use `goc publish <title>` (not a status
+change; it only clears the flag, and refuses on an unwritten placeholder). A
+draft cannot be moved to `superseded` / `disproved`: the CLI refuses, since a
+title-only scaffold has no authored scope to judge as a duplicate — the
+dedup/supersede race the draft state guards against. See
+the `card-schema` skill "Draft".
+
 **Parking a card on an external wait:** use the impediment overlay
 (Step 6), not `status: blocked`. For an agent-observable wait
 (upstream release, PR merge, dependency publication) the card stays

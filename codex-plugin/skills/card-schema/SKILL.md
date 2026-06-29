@@ -229,6 +229,36 @@ its owner without manual editing.
 - Set the `GOC_WORKER` env var so a runner sees only its own queue
   without typing the flag every time.
 
+## Draft (optional, unauthored-scaffold flag)
+
+`draft` is a boolean overlay marking a card as an unauthored scaffold —
+created but not yet written. It is orthogonal to `status`: a draft card is
+still `status: open`; `draft: true` says "not yet real," the way a
+`waiting_on` overlay says "not yet workable." Absent means authored (the
+default — every card predating the flag is authored).
+
+**Lifecycle:**
+
+- `goc new` stamps `draft: true` on the scaffold it creates.
+- The flag clears automatically when the card is claimed or closed
+  (`goc status <title> active`, `goc done`), and explicitly via
+  `goc publish <title>` — which refuses if the card is still a pure
+  placeholder (there is nothing to publish until you write the body and DoD).
+
+**What the flag suppresses** — so unauthored work cannot be acted on by
+automation (the dedup/supersede race that motivated it):
+
+- Hidden from the default queue (`goc`, `goc next`, `card_is_ready`) and the
+  scheduler; surfaced only under `goc --status all`, and marked `✎` on the board.
+- `goc status <title> {superseded,disproved}` refuses on a draft — a
+  title-only placeholder must not be closed as a "duplicate."
+- `goc`'s auto-commit skips draft cards, so an unauthored scaffold never
+  reaches shared state through goc. (An *external* auto-commit service bypasses
+  goc and must filter drafts itself.)
+
+A draft card may not be terminal: `goc validate` rejects `draft: true` on a
+`done` / `disproved` / `superseded` card.
+
 ## Contribution scale
 
 The per-card axis answering: **how much does closing this card

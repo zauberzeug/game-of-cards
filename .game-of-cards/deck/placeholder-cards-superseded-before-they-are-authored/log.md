@@ -31,3 +31,20 @@ schema/skill docs if a draft state is introduced).
 ## 2026-06-29T04:06:45Z: decision recorded
 
 Implement all three as defense-in-depth — A: engine guard rejecting terminal transitions (superseded/disproved) on placeholder cards; B: first-class draft state that queue/dedup/supersede skip; C: auto_commit excludes unauthored placeholder cards. — Maintainer call — B's authored/draft flag becomes the shared basis A and C key off (more robust than matching placeholder strings); A also protects legacy decks and non-goc callers, C cuts commit noise from unauthored scaffolds (the stated reason C was added).. Gate decision → none.
+
+## 2026-06-29T05:08:02Z — Closure
+
+- **What changed**: `goc/engine.py` — new optional `draft` frontmatter field + `Card.draft` + the single `card_is_draft` predicate (mirrors `waiting_impedes`). A: terminal-transition guard in `_cmd_status` (refuses superseded/disproved on a draft). B: `goc publish` verb + auto-clear on `status active` / `done`; drafts hidden from queue / `card_is_ready` / scheduler / `filter_cards`, marked `✎` on the board, `draft` field in `render_json`; `validate` rejects `draft:true` on a terminal card. C: `_git_auto_commit` `exclude_draft=True` default (opt-out only on `goc new --commit`). Plus schema (both copies), `card-schema`/`create-card`/`advance-card` skills, `AGENTS.md` verb list, `config.yaml` external-service caveat, and all five plugin mirrors.
+- **Verification**: full `unittest` suite — 665 passed, 1 skipped; sole failure is the pre-existing macOS BSD-`sed` rebase-guard *setup* (verified red on pristine `origin/main` too; green on Linux CI). `goc validate` clean; `sync_plugin_assets.py --check` + `port_skills_to_openclaw.py --check` green.
+- **Audit**: PASS — no project rubric configured (hook empty); the fix binds to the orthogonal-overlay design pattern (`draft` mirrors `waiting_on` / `human_gate` — a status-independent "not yet real" flag) and the backward-compatibility principle (absent field = authored, so all pre-existing cards are unaffected).
+- **Project impact**: n/a
+- **Tests**: 665 passed / 1 failed (pre-existing macOS `sed`, not this change) / 1 skipped
+- **Bundled with**: n/a
+
+## Closure verification (2026-06-29T05:08:48Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 6/6 ticked
+- [x] log-md-closure-entry — '## 2026-06-29 — Closure' present

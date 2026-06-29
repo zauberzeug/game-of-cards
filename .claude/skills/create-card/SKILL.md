@@ -190,6 +190,15 @@ The tell: if the coordinating card itself has `--gate decision` or
 otherwise closes on its own deliverable rather than on its cluster's
 completion, it's a governing cluster → use a tag, not an edge.
 
+**The scaffold is born a draft.** `goc new` stamps `draft: true`, so the
+fresh card is hidden from the queue (`goc`, `goc next`) and protected from
+dedup/supersede automation until it is authored — Steps 5–7 below. The flag
+clears automatically when you claim the card (`goc status <title> active`,
+the usual next step) or close it; release an authored-but-unclaimed card to
+the queue explicitly with `goc publish <title>`. This closes the window where
+a half-written scaffold could be superseded as a "duplicate" on its title
+alone. See `Skill(card-schema)` "Draft" for the full contract.
+
 ## Step 5 — write the body (the dashboard)
 
 The README body is the card's **dashboard**: a snapshot of latest
