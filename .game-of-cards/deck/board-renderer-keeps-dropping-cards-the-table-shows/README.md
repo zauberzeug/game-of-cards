@@ -11,6 +11,7 @@ advanced_by:
   - negative-board-row-limit-hides-cards
   - superseded-cards-hidden-from-board
   - surface-active-cards-in-board
+  - board-worker-filter-hides-active-cards-by-applying-open-only-default
 tags: [meta-fix, api-contract, infra]
 summary: "`render_board` re-derives, by hand, which cards from the input set appear on the board — and that derivation has silently dropped cards five separate times (row-limit, superseded, active, worker-filter default, off-enum status), each fixed one card at a time. `render_table` shows every card in its input; the board does not, so the two human-facing renderers disagree about which cards exist. The fix family is structural: guard or share the board's card-inclusion so a card present in the input can no longer be silently excluded."
 definition_of_done: |
