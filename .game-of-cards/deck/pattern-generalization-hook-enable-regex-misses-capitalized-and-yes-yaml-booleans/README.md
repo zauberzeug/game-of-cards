@@ -1,6 +1,6 @@
 ---
 title: pattern-generalization-hook-enable-regex-misses-capitalized-and-yes-yaml-booleans
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-06-29T02:44:58Z"
