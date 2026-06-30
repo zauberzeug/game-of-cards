@@ -1,20 +1,20 @@
 ---
 title: goc-triage-lists-unauthored-draft-scaffolds-as-parked-cards
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-30T01:31:35Z"
-closed_at: null
+closed_at: "2026-06-30T01:37:17Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: a regression test asserts `goc triage` (and `--json`) omits an `open` + `human_gate != none` card carrying `draft: true`
-  - [ ] The `_cmd_triage` candidate filter excludes drafts via the shared `card_is_draft` predicate (not a re-hand-rolled flag read)
-  - [ ] reproduce.py exits zero (draft no longer leaks into either triage path)
-  - [ ] `uv run python -m unittest discover -s tests` passes
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: a regression test asserts `goc triage` (and `--json`) omits an `open` + `human_gate != none` card carrying `draft: true`
+  - [x] The `_cmd_triage` candidate filter excludes drafts via the shared `card_is_draft` predicate (not a re-hand-rolled flag read)
+  - [x] reproduce.py exits zero (draft no longer leaks into either triage path)
+  - [x] `uv run python -m unittest discover -s tests` passes
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 

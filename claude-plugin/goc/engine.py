@@ -5962,7 +5962,11 @@ def _cmd_triage(args):
     """List parked cards (gate ≠ none), grouped by gate, oldest-first."""
     as_json = args.as_json
     worker = args.worker
-    all_cards = [t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"]
+    all_cards = [
+        t
+        for t in load_all_cards()
+        if t.status == "open" and t.human_gate != "none" and not card_is_draft(t)
+    ]
     if worker:
         needle = worker.lower()
         cards = [t for t in all_cards if needle in _worker_who(t.frontmatter.get("worker")).lower()]
