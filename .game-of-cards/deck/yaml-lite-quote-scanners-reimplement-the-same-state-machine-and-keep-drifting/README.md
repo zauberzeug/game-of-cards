@@ -13,6 +13,7 @@ advanced_by:
   - yaml-lite-truncates-flow-collection-with-hash-in-quoted-element
   - yaml-lite-flow-collection-mis-splits-on-backslash-escaped-quote
   - strip-comment-closes-double-quoted-scalar-on-backslash-escaped-quote
+  - yaml-lite-flow-collection-mis-splits-on-bare-quote-in-unquoted-element
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.

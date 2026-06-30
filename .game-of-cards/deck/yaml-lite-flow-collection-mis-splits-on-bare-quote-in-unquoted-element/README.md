@@ -1,22 +1,22 @@
 ---
 title: yaml-lite-flow-collection-mis-splits-on-bare-quote-in-unquoted-element
 summary: "`_split_flow` flips quote-mode on ANY quote char mid-element, with no guard that the element is genuinely quoted. A flow mapping/sequence element carrying a bare apostrophe (`{who: o'connor, where: x}`) swallows the comma separator and drops every following field — `where` is silently lost. The sibling scanner `_strip_comment` already carries the element-start guard this one lacks."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-30T02:11:27Z"
-closed_at: null
+closed_at: "2026-06-30T02:19:03Z"
 human_gate: none
 advances:
   - yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting
 advanced_by: []
 tags: [bug, api-contract, infra, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — a bare apostrophe in a flow mapping/sequence element no longer swallows the comma separator.
-  - [ ] TDD: `parse_frontmatter` on `worker: {who: o'connor, where: feature/x}` yields `{'who': "o'connor", 'where': "feature/x"}` (no field dropped).
-  - [ ] TDD: regression — a genuinely quoted element with an internal comma (`"x, y", z`) still splits into two parts (the comma stays content).
-  - [ ] MECHANICAL: `_split_flow` only enters quote-mode at element start (or inside a nested flow collection), matching the `quoted`/`flow` gate `_strip_comment` already uses.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (vendored parser mirrored into the plugin payloads).
+  - [x] TDD: `reproduce.py` exits zero — a bare apostrophe in a flow mapping/sequence element no longer swallows the comma separator.
+  - [x] TDD: `parse_frontmatter` on `worker: {who: o'connor, where: feature/x}` yields `{'who': "o'connor", 'where': "feature/x"}` (no field dropped).
+  - [x] TDD: regression — a genuinely quoted element with an internal comma (`"x, y", z`) still splits into two parts (the comma stays content).
+  - [x] MECHANICAL: `_split_flow` only enters quote-mode at a node-start position (start, after `,`/`:`/`[`/`{`), so a quote that opens a value after `key: ` still delimits while a bare apostrophe is content.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (vendored parser mirrored into the plugin payloads).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -63,26 +63,25 @@ same gate, so it still treats a bare apostrophe as a quote opener.
 
 ## Empirical evidence
 
-`reproduce.py` on a clean checkout (defect fires):
+Before the fix, `reproduce.py` reported the `where` field silently dropped
+and `who` corrupted to `"o'connor, where: feature/x"` (1 element instead of
+2). After adding the node-start gate, `reproduce.py` passes:
 
 ```
 _split_flow("who: o'connor, where: feature/x")
-  -> ["who: o'connor, where: feature/x"]
-  FAIL: expected 2 elements, got 1 (comma swallowed by bare quote)
+  -> ["who: o'connor", ' where: feature/x']
+  ok: split into 2 elements
 _split_flow("a'b, c")
-  -> ["a'b, c"]
-  FAIL: expected 2 elements, got 1
-parse_frontmatter worker -> {'who': "o'connor, where: feature/x"}
-  FAIL: worker mapping corrupted (where dropped / who mangled)
+  -> ["a'b", ' c']
+  ok: split into 2 elements
+parse_frontmatter worker -> {'who': "o'connor", 'where': 'feature/x'}
+  ok: who and where parsed correctly
 _split_flow('"x, y", z')
   -> ['"x, y"', ' z']
   ok: quoted internal comma preserved
 
-RESULT: FAIL (defect fires)
+RESULT: PASS (defect fixed)
 ```
-
-The `where` field is silently dropped and `who` is corrupted to
-`"o'connor, where: feature/x"`.
 
 ## Why it matters — reachability
 
@@ -115,10 +114,20 @@ to stop the next divergence.
 
 ## Fix
 
-Give `_split_flow` the element-start guard that `_strip_comment` already
-uses. Track whether the current element began with a quote (or is a
-nested flow collection), and only enter quote-mode for such elements; a
-quote that appears mid-element is bare content. Reset the per-element
-"started with a quote" flag at each top-level comma (and at the start of
-the scan). The four existing yaml_lite regression tests plus the new
-ones in this card's DoD are the contract the change must preserve.
+Applied (`goc/_vendor/yaml_lite.py`, `_split_flow`): the splitter now tracks
+the previous significant (non-whitespace) char processed outside quotes and
+opens quote-mode only when that char is a node-start indicator — start of
+content, or just after `,`, `:`, `[`, `{`. This is a superset of the
+element-start gate `_strip_comment` carries: because `_split_flow` also sees
+`key:` prefixes and nesting (where a quoted value/element legitimately begins
+mid-content), a flat `text[:1]` check is insufficient, so the structural
+previous-char gate is used instead. A quote at any other position — the `'`
+in `o'connor`, an `O'Brien` — is treated as ordinary content. The fix also
+covers the nested-collection variant (`{a: [o'b], c: d}`), where a leaked
+quote-mode previously prevented the bracket from closing and swallowed the
+next top-level pair.
+
+A new `BareQuoteFlowSplitTest` in `tests/test_yaml_lite.py` locks in the
+bare-apostrophe cases plus the quoted-value-after-`key:` and quoted-sequence
+regression guards; the four pre-existing scanner regression tests still pass
+unchanged.

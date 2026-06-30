@@ -443,12 +443,28 @@ def _parse_flow_mapping(text: str) -> dict:
 
 
 def _split_flow(text: str) -> list[str]:
-    """Split comma-separated flow content, respecting nesting and quotes."""
+    """Split comma-separated flow content, respecting nesting and quotes.
+
+    A quote char opens a quoted scalar ONLY at a position where a flow node
+    can begin: the start of the content, just after a `,` separator, just
+    after a `:` key indicator, or just after an opening `[`/`{` (whitespace
+    between is skipped). A quote that appears anywhere else is ordinary
+    content — the apostrophe in `who: o'connor`, the `'` in `5 o'clock`, an
+    `O'Brien`. Without this structural-position gate a bare apostrophe was
+    mistaken for a quote opener, so quote-mode never closed and the
+    following top-level comma was swallowed, dropping every later
+    field/element. This mirrors the element-start gate `_strip_comment`
+    already carries (it works on a single value, so a simple `text[:1]`
+    check suffices there; `_split_flow` also sees `key:` prefixes and
+    nesting, so it tracks the previous significant char instead).
+    """
     parts: list[str] = []
     depth = 0
     in_q: str | None = None
     buf: list[str] = []
     escaped = False
+    prev = ""  # last significant (non-space) char processed outside quotes
+    _node_start = ("", ",", ":", "[", "{")
     for c in text:
         if escaped:
             buf.append(c)
@@ -459,20 +475,26 @@ def _split_flow(text: str) -> list[str]:
                 escaped = True  # double-quoted YAML escapes the next char
             elif c == in_q:
                 in_q = None
-        elif c in ('"', "'"):
+                prev = c
+        elif c in ('"', "'") and prev in _node_start:
             in_q = c
             buf.append(c)
         elif c in ("[", "{"):
             depth += 1
             buf.append(c)
+            prev = c
         elif c in ("]", "}"):
             depth -= 1
             buf.append(c)
+            prev = c
         elif c == "," and depth == 0:
             parts.append("".join(buf))
             buf = []
+            prev = c
         else:
             buf.append(c)
+            if not c.isspace():
+                prev = c
     if buf:
         parts.append("".join(buf))
     return parts

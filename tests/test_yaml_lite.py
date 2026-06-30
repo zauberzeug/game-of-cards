@@ -510,6 +510,51 @@ class EscapedQuoteFlowSplitTest(unittest.TestCase):
         self.assertEqual(e.parse_frontmatter(text)[0]["worker"], worker)
 
 
+class BareQuoteFlowSplitTest(unittest.TestCase):
+    """_split_flow must not treat a bare quote char (apostrophe) inside an
+    unquoted flow element as a quote opener. A quote opens a scalar only at a
+    node-start position (start, after `,`, `:`, `[`, `{`); anywhere else it is
+    ordinary content. Regression for
+    yaml-lite-flow-collection-mis-splits-on-bare-quote-in-unquoted-element."""
+
+    def test_flow_mapping_value_with_bare_apostrophe_keeps_later_keys(self):
+        # The bare apostrophe in `o'connor` must not swallow the comma; the
+        # `where` key must survive and `who` must dequote cleanly.
+        self.assertEqual(
+            safe_load("worker: {who: o'connor, where: feature/x}\n")["worker"],
+            {"who": "o'connor", "where": "feature/x"},
+        )
+
+    def test_flow_sequence_element_with_bare_apostrophe_keeps_later_elements(self):
+        self.assertEqual(
+            safe_load("sample: [a'b, c]\n")["sample"],
+            ["a'b", "c"],
+        )
+
+    def test_bare_apostrophe_inside_nested_collection_keeps_outer_keys(self):
+        # The apostrophe lives inside a nested `[...]`; quote-mode must not
+        # leak past the closing bracket and swallow the next top-level pair.
+        self.assertEqual(
+            safe_load("k: {a: [o'b], c: d}\n")["k"],
+            {"a": ["o'b"], "c": "d"},
+        )
+
+    def test_quoted_value_after_key_still_protects_internal_comma(self):
+        # The element-start gate must NOT regress a genuinely quoted value
+        # that begins mid-element after `key: ` — its internal comma stays
+        # content, not a separator.
+        self.assertEqual(
+            safe_load('k: {a: "x, y", b: z}\n')["k"],
+            {"a": "x, y", "b": "z"},
+        )
+
+    def test_quoted_sequence_element_internal_comma_preserved(self):
+        self.assertEqual(
+            safe_load('s: ["x, y", z]\n')["s"],
+            ["x, y", "z"],
+        )
+
+
 class DoubleQuotedUnrecognizedEscapeTest(unittest.TestCase):
     """_parse_double_quoted must fail loud on an escape it does not decode,
     not silently drop the backslash. Regression for
