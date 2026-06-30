@@ -495,13 +495,20 @@ async function bestFallbackProjectDir(sessionProjectDir?: string): Promise<strin
   return undefined;
 }
 
+// YAML-true spellings the engine's yaml_lite coerces to True. Mirrors the
+// Python hook's `_TRUE_SET` so the accepted opt-in set is identical across
+// hosts (true/True/TRUE/yes/Yes/YES).
+const TRUE_SET = new Set(["true", "True", "TRUE", "yes", "Yes", "YES"]);
+
 // Opt-in (default off): the GoC project config must explicitly enable the
-// hook. Absent config, absent key, or any other value leaves it disabled.
+// hook with a YAML-true value. Absent config, absent key, `false`, or any
+// other value leaves it disabled.
 async function isEnabled(projectDir: string): Promise<boolean> {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
     const text = await readFile(configPath, "utf8");
-    return /pattern_generalization_check\s*:\s*true/i.test(text);
+    const m = /pattern_generalization_check\s*:\s*(\S+)/.exec(text);
+    return !!m && TRUE_SET.has(m[1]);
   } catch {
     return false;
   }

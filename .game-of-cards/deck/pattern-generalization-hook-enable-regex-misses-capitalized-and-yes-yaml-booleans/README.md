@@ -1,20 +1,20 @@
 ---
 title: pattern-generalization-hook-enable-regex-misses-capitalized-and-yes-yaml-booleans
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-06-29T02:44:58Z"
-closed_at: null
+closed_at: "2026-06-30T01:20:15Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] `_enabled()` in `goc/templates/hooks/pattern_generalization_check.py` enables the hook for every YAML-true spelling the engine's own `yaml_lite` coerces to True: `true`, `True`, `TRUE`, `yes`, `Yes`, `YES`.
-  - [ ] `false`/absent/absent-key still leave the hook disabled (opt-in default off preserved).
-  - [ ] Regression test added covering the capitalized + `yes` spellings.
-  - [ ] `reproduce.py` prints PASS after the fix.
-  - [ ] Plugin mirrors re-synced (`sync_plugin_assets.py --check` green); cross-host divergence with `openclaw-plugin/index.ts:474` (already case-insensitive) noted/resolved.
+  - [x] `_enabled()` in `goc/templates/hooks/pattern_generalization_check.py` enables the hook for every YAML-true spelling the engine's own `yaml_lite` coerces to True: `true`, `True`, `TRUE`, `yes`, `Yes`, `YES`.
+  - [x] `false`/absent/absent-key still leave the hook disabled (opt-in default off preserved).
+  - [x] Regression test added covering the capitalized + `yes` spellings.
+  - [x] `reproduce.py` prints PASS after the fix.
+  - [x] Plugin mirrors re-synced (`sync_plugin_assets.py --check` green); cross-host divergence with `openclaw-plugin/index.ts:474` (already case-insensitive) noted/resolved.
 worker: {who: "claude[bot]", where: main}
 ---
 

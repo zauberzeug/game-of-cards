@@ -309,6 +309,30 @@ class OptInDefaultTest(unittest.TestCase):
             )
         )
 
+    def test_capitalized_and_yes_true_spellings_are_enabled(self):
+        # Every YAML-true spelling yaml_lite coerces to True must enable the
+        # hook, matching the sibling deck_session_start.py _TRUE_SET.
+        for spelling in ("True", "TRUE", "yes", "Yes", "YES"):
+            with self.subTest(spelling=spelling):
+                self.assertTrue(
+                    self.hook._enabled(
+                        self._project_dir(
+                            f"hooks:\n  pattern_generalization_check: {spelling}\n"
+                        )
+                    )
+                )
+
+    def test_false_spellings_stay_disabled(self):
+        for spelling in ("false", "False", "FALSE", "no", "No"):
+            with self.subTest(spelling=spelling):
+                self.assertFalse(
+                    self.hook._enabled(
+                        self._project_dir(
+                            f"hooks:\n  pattern_generalization_check: {spelling}\n"
+                        )
+                    )
+                )
+
     # --- main() end-to-end: no-op when disabled, blocks when enabled -------
     def _run_main(self, config_text: str | None, *, mutation: bool = True):
         content = (

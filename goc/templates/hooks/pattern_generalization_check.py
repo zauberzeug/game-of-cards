@@ -32,6 +32,12 @@ from pathlib import Path
 
 CODE_MUTATING_TOOLS = frozenset({"Edit", "Write", "NotebookEdit"})
 
+# YAML-true spellings the engine's yaml_lite coerces to True. Mirrors the
+# sibling `deck_session_start.py` `_TRUE_SET` so `pattern_generalization_check:
+# True` / `yes` enable the hook the same way `true` does (see card
+# pattern-generalization-hook-enable-regex-misses-capitalized-and-yes-yaml-booleans).
+_TRUE_SET = frozenset(("true", "True", "TRUE", "yes", "Yes", "YES"))
+
 # Broad-staging flags for `git add`: short single-letter forms plus their
 # long-form aliases documented in `git-add(1)`. The bare `.` pathspec is
 # handled separately as a non-flag token.
@@ -87,17 +93,18 @@ def _enabled(project_dir: str) -> bool:
     """Opt-in (default off): run only when config explicitly enables the hook.
 
     Returns True iff `.game-of-cards/config.yaml` sets
-    `pattern_generalization_check: true`. Absent config, absent key, or any
-    other value leaves the hook disabled.
+    `pattern_generalization_check` to any YAML-true spelling in
+    :data:`_TRUE_SET` (`true`, `True`, `TRUE`, `yes`, `Yes`, `YES`). Absent
+    config, absent key, `false`, or any other value leaves the hook disabled.
     """
     config = Path(project_dir) / ".game-of-cards" / "config.yaml"
     if not config.exists():
         return False
     try:
         m = re.search(
-            r"pattern_generalization_check\s*:\s*(false|true)", config.read_text()
+            r"pattern_generalization_check\s*:\s*(\S+)", config.read_text()
         )
-        return bool(m and m.group(1) == "true")
+        return bool(m and m.group(1) in _TRUE_SET)
     except OSError:
         return False
 
