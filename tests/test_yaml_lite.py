@@ -510,6 +510,24 @@ class EscapedQuoteFlowSplitTest(unittest.TestCase):
         self.assertEqual(e.parse_frontmatter(text)[0]["worker"], worker)
 
 
+class DoubleQuotedUnrecognizedEscapeTest(unittest.TestCase):
+    """_parse_double_quoted must fail loud on an escape it does not decode,
+    not silently drop the backslash. Regression for
+    yaml-lite-double-quoted-decoder-silently-drops-backslash-on-unrecognized-escape.
+    The four recognized escapes (\\n \\t \\" \\\\) still decode unchanged."""
+
+    def test_unrecognized_escape_raises(self):
+        for raw in ('"C:\\Users"', '"a\\rb"', '"caf\\u00e9"', '"x\\zy"'):
+            with self.assertRaises(ParseError, msg=f"{raw!r} should raise"):
+                safe_load(f"k: {raw}\n")
+
+    def test_recognized_escapes_still_decode(self):
+        self.assertEqual(safe_load('k: "a\\nb"\n')["k"], "a\nb")
+        self.assertEqual(safe_load('k: "a\\tb"\n')["k"], "a\tb")
+        self.assertEqual(safe_load('k: "it\\"s"\n')["k"], 'it"s')
+        self.assertEqual(safe_load('k: "a\\\\b"\n')["k"], "a\\b")
+
+
 class BlockScalarIndicatorRoundTripTest(unittest.TestCase):
     """emit_frontmatter must pick the chomp indicator from a multi-line string
     value's own trailing-newline state, so the emit->parse round-trip is

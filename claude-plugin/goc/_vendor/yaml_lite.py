@@ -364,7 +364,19 @@ def _parse_double_quoted(text: str) -> str:
     while i < len(inner):
         if inner[i] == "\\" and i + 1 < len(inner):
             esc = inner[i + 1]
-            out.append({"n": "\n", "t": "\t", '"': '"', "\\": "\\"}.get(esc, esc))
+            decoded = {"n": "\n", "t": "\t", '"': '"', "\\": "\\"}.get(esc)
+            if decoded is None:
+                # Fail loud on an unrecognized escape rather than silently
+                # dropping the backslash (`"C:\Users"` -> `C:Users`). The
+                # lite parser only decodes the four escapes the emitter
+                # produces; anything else is unsupported input and is
+                # rejected, matching the fail-loud posture of
+                # `_parse_flow_sequence` / `_parse_flow_mapping`.
+                raise ParseError(
+                    f"unsupported escape sequence '\\{esc}' in double-quoted "
+                    f"scalar {text!r} (yaml-lite decodes only \\n \\t \\\" \\\\)"
+                )
+            out.append(decoded)
             i += 2
         else:
             out.append(inner[i])
