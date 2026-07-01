@@ -11,6 +11,7 @@ advances: []
 advanced_by:
   - waiting-filter-shows-terminal-cards-with-stale-overlay
   - waiting-filter-surfaces-draft-scaffolds-as-active-impediments
+  - ready-leverage-line-names-draft-scaffolds-as-the-highest-gated-card
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
   - [ ] PROCESS: decision recorded — pick the helper shape (single `active_impediment(card, *, queue_only=False)` vs a thin `live_impeded`/`queueable_impeded` pair); see "## Decision required"
