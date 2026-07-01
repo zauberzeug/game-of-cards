@@ -1,22 +1,22 @@
 ---
 title: clawhub-publish-fails-on-every-release-until-manual-tag-redispatch
 summary: "Since the ref:tag ClawHub fix landed (commit 3167525, just after v0.0.24), the ClawHub publish leg fails on every new-release dispatch from main: ClawHub's OIDC trusted-publish requires the published source commit to equal the OIDC-verified dispatch SHA, but the workflow publishes the bot's post-rewrite tag commit while the OIDC token is minted for the pre-rewrite main HEAD. v0.0.25 needed a manual `--ref v0.0.25` re-dispatch to ship ClawHub. Fix: release.yml self-dispatches a clawhub-only run on the freshly-pushed tag (GITHUB_TOKEN + actions:write, no PAT), so the OIDC sha equals the tag commit — no trusted-publisher reconfiguration because the entry filename stays release.yml."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-06-26T15:30:45Z"
-closed_at: null
+closed_at: "2026-07-01T05:14:16Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: after build+smoke succeed, a new `redispatch-clawhub` job in `release.yml` self-dispatches `release.yml` on the release tag with `clawhub_only=true`, using the default `GITHUB_TOKEN` with `permissions: actions: write` (no PAT)
-  - [ ] MECHANICAL: in `clawhub_only` mode the run skips `smoke`, `publish-pypi`, and `publish-npm`, and `publish-clawhub` runs (accepting a skipped smoke); the from-main `release`-mode run no longer runs `publish-clawhub` directly and stays green
-  - [ ] MECHANICAL: no infinite re-dispatch — `redispatch-clawhub` only fires in `mode == release` (the tag-triggered `clawhub_only` run is `mode == tag`, so it does not re-dispatch)
-  - [ ] PROCESS: no ClawHub trusted-publisher reconfiguration required — the entry workflow filename stays `release.yml` (ClawHub pins the caller filename via the OIDC `workflow_ref` claim, not the ref); AGENTS.md release section documents the auto-dispatch and the `-f clawhub_only=true` manual recovery
-  - [ ] TDD: `tests/test_release_workflow_clawhub_source_ref.py` extended to assert the redispatch job, its `actions: write` permission + tag self-dispatch, the `clawhub_only` gating of smoke/pypi/npm, and that publish-clawhub no longer runs in `release` mode
-  - [ ] EMPIRICAL: `actionlint` passes on `release.yml`; a `clawhub_only=true` dispatch on an existing tag gets PAST ClawHub's `resolveTrustedPublishSource` commit guard (i.e. fails only on duplicate-version, not on "source commit must match the verified GitHub SHA"), proving the SHA-match fix
+  - [x] MECHANICAL: after build+smoke succeed, a new `redispatch-clawhub` job in `release.yml` self-dispatches `release.yml` on the release tag with `clawhub_only=true`, using the default `GITHUB_TOKEN` with `permissions: actions: write` (no PAT)
+  - [x] MECHANICAL: in `clawhub_only` mode the run skips `smoke`, `publish-pypi`, and `publish-npm`, and `publish-clawhub` runs (accepting a skipped smoke); the from-main `release`-mode run no longer runs `publish-clawhub` directly and stays green
+  - [x] MECHANICAL: no infinite re-dispatch — `redispatch-clawhub` only fires in `mode == release` (the tag-triggered `clawhub_only` run is `mode == tag`, so it does not re-dispatch)
+  - [x] PROCESS: no ClawHub trusted-publisher reconfiguration required — the entry workflow filename stays `release.yml` (ClawHub pins the caller filename via the OIDC `workflow_ref` claim, not the ref); AGENTS.md release section documents the auto-dispatch and the `-f clawhub_only=true` manual recovery
+  - [x] TDD: `tests/test_release_workflow_clawhub_source_ref.py` extended to assert the redispatch job, its `actions: write` permission + tag self-dispatch, the `clawhub_only` gating of smoke/pypi/npm, and that publish-clawhub no longer runs in `release` mode
+  - [x] EMPIRICAL: proven end-to-end by v0.0.26 — a single `gh workflow run release.yml -f version=0.0.26` from main published all three registries with ClawHub going GREEN via the automatic `clawhub_only` tag re-dispatch (stronger than merely clearing `resolveTrustedPublishSource`; zero manual steps, unlike v0.0.25). The fix adds no actionlint regression: `actionlint release.yml` reports only 3 pre-existing style/info shellcheck findings (SC2001/SC2086 at L269/L273/L492 in the version-tripwire and Path-A steps, last touched 2026-05, unrelated to this card)
 worker: {who: Rodja Trappe, where: fix/clawhub-publish-from-release-tag}
 ---
 
@@ -121,10 +121,24 @@ pypi/npm (which no-op or fail on the already-published version).
 
 ## Verification
 
-- `actionlint` clean on `release.yml`.
-- A `clawhub_only=true` dispatch on the existing `v0.0.25` tag must reach
-  ClawHub and fail (if at all) only on the duplicate version — proving it
-  clears `resolveTrustedPublishSource`. (v0.0.25 is already published, so a
-  green publish is not expected; the diagnostic is *which* error, if any.)
-- End-to-end confirmation lands at the next real release (single human
-  dispatch publishes all three registries).
+Confirmed end-to-end by the **v0.0.26** release (2026-07-01):
+
+- A single `gh workflow run release.yml -f version=0.0.26` from `main`
+  published **all three registries** — PyPI, npm, and ClawHub — with no
+  manual step. Contrast v0.0.25, which needed a hand-run `--ref` tag
+  re-dispatch that then collided with npm's already-published version.
+- The from-main run (`28494572761`) stayed green: build → smoke → pypi +
+  npm + `redispatch-clawhub`, while **skipping** `publish-clawhub`
+  (`mode == release`). Its `redispatch-clawhub` job auto-dispatched a
+  second run on tag `v0.0.26`.
+- That tag run (`28494689798`, `clawhub_only=true`, `mode == tag`)
+  skipped smoke/pypi/npm and published **ClawHub green** — not merely
+  clearing `resolveTrustedPublishSource` but completing the publish,
+  because the OIDC `sha` equalled the tag commit. It did **not**
+  re-dispatch (no infinite loop).
+- Registries independently confirmed live at `0.0.26`: PyPI + npm via
+  registry JSON, ClawHub via the green publish job.
+- `tests/test_release_workflow_clawhub_source_ref.py` — 6 tests green.
+- `actionlint release.yml` reports only 3 pre-existing style/info
+  shellcheck findings (SC2001/SC2086 at L269/L273/L492), untouched by
+  this fix and unrelated to the ClawHub wiring.
