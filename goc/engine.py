@@ -3227,6 +3227,7 @@ def render_leverage_line(
     open_gated = [
         t for t in all_cards
         if t.status == "open"
+        and not card_is_draft(t)
         and t.human_gate in ("decision", "session")
         and not waiting_impedes(t)
     ]

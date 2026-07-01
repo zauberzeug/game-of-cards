@@ -95,6 +95,59 @@ class DraftQueueVisibilityTest(unittest.TestCase):
             line = next((ln for ln in result.stdout.splitlines() if "draft-card" in ln), "")
             self.assertIn("✎", line, msg=f"board:\n{result.stdout}")
 
+    def author_and_publish(self, cwd: Path, title: str, *new_args: str) -> None:
+        """Scaffold `title` with the given `goc new` args, fill in real body/DoD,
+        and publish so the draft flag clears while the gate stays as filed."""
+        self.assert_ok(self.run_goc(cwd, "new", title, *new_args))
+        path = cwd / ".game-of-cards" / "deck" / title / "README.md"
+        text = path.read_text()
+        text = text.replace(
+            "- [ ] (replace with real criteria)", "- [x] MECHANICAL: done"
+        ).replace("(write the design doc here)", "Body.")
+        path.write_text(text)
+        self.assert_ok(self.run_goc(cwd, "publish", title, "--no-commit"))
+
+    def leverage_line(self, cwd: Path) -> str:
+        result = self.run_goc(cwd, "--ready", "--no-color")
+        self.assert_ok(result)
+        return next(
+            (ln for ln in result.stdout.splitlines() if ln.startswith("Pulling ")),
+            "",
+        )
+
+    def test_leverage_line_excludes_draft_scaffold(self) -> None:
+        # An authored, ready card plus a gated draft scaffold: the leverage line
+        # must not name the draft. With no real gated card, the clause is omitted
+        # entirely (render_leverage_line returns "").
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.author_and_publish(cwd, "real-ready", "--gate", "none", "--tag", "story")
+            self.assert_ok(
+                self.run_goc(cwd, "new", "phantom-draft", "--gate", "decision", "--tag", "story")
+            )
+            # No real gated card exists, so the leverage line is omitted entirely
+            # (render_leverage_line returns ""): neither the draft name nor the
+            # "Highest gated card" clause may appear.
+            line = self.leverage_line(cwd)
+            self.assertNotIn("phantom-draft", line, msg=line)
+            self.assertNotIn("Highest gated card", line, msg=line)
+
+    def test_leverage_line_names_authored_gated_card(self) -> None:
+        # With both a gated draft and an authored gated card present, the leverage
+        # line names the authored gated card, never the draft scaffold.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.author_and_publish(cwd, "real-ready", "--gate", "none", "--tag", "story")
+            self.author_and_publish(
+                cwd, "authored-gated", "--gate", "decision", "--tag", "story"
+            )
+            self.assert_ok(
+                self.run_goc(cwd, "new", "phantom-draft", "--gate", "decision", "--tag", "story")
+            )
+            line = self.leverage_line(cwd)
+            self.assertIn("Highest gated card: authored-gated", line, msg=line)
+            self.assertNotIn("phantom-draft", line, msg=line)
+
 
 if __name__ == "__main__":
     unittest.main()

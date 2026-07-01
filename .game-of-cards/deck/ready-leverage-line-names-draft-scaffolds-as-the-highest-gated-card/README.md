@@ -1,22 +1,22 @@
 ---
 title: ready-leverage-line-names-draft-scaffolds-as-the-highest-gated-card
 summary: "`goc --ready`'s leverage line (`render_leverage_line`) builds its `open_gated` candidate set filtering on status/human_gate/`waiting_impedes` but omits the `card_is_draft` gate that the sibling open-only predicate `card_is_ready` applies. So an unauthored `goc new` scaffold with the default `decision` gate is surfaced to the operator as the 'Highest gated card' being traded off, even though every other surface (queue, board, `--status open`, the pullable set) correctly hides it. Third live instance of the liveness-gate drift the meta-fix umbrella tracks."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-01T02:28:00Z"
-closed_at: null
+closed_at: "2026-07-01T02:35:27Z"
 human_gate: none
 advances:
   - waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (the leverage line no longer names a draft scaffold).
-  - [ ] TDD: a unit/regression test asserts `render_leverage_line` returns `""` when the only open gated card is a draft, and names an authored gated card when one is also present.
-  - [ ] MECHANICAL: `render_leverage_line`'s `open_gated` comprehension excludes `card_is_draft`, matching `card_is_ready`.
-  - [ ] PROCESS: `waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift` cross-referenced as this instance's umbrella (advances edge wired).
-  - [ ] PROCESS: `uv run goc validate` clean; full regression suite green.
+  - [x] TDD: reproduce.py exits zero (the leverage line no longer names a draft scaffold).
+  - [x] TDD: a unit/regression test asserts `render_leverage_line` returns `""` when the only open gated card is a draft, and names an authored gated card when one is also present.
+  - [x] MECHANICAL: `render_leverage_line`'s `open_gated` comprehension excludes `card_is_draft`, matching `card_is_ready`.
+  - [x] PROCESS: `waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift` cross-referenced as this instance's umbrella (advances edge wired).
+  - [x] PROCESS: `uv run goc validate` clean; full regression suite green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -87,7 +87,19 @@ clause should be omitted entirely.
 
 `phantom-draft` appears in no other view — `goc --board`, `goc --status
 open`, and `--ready`'s own pullable table all correctly exclude it as a
-draft. Only this line leaks it.
+draft. Only this line leaked it.
+
+After the fix, the same deck omits the clause entirely (no real gated card
+exists), and `reproduce.py` exits 0:
+
+```
+=== leverage line ===
+(no leverage line)
+
+leverage line names the draft scaffold : False
+
+OK: the leverage line excludes draft scaffolds (no real gated card -> clause omitted).
+```
 
 ## Why it matters
 
