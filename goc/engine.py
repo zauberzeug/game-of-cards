@@ -3692,12 +3692,17 @@ def _cmd_default(args):
         # `--waiting` surfaces *active* impediments. A terminal card can
         # still carry an overlay (closing never clears `waiting_on` /
         # `waiting_until`), but that overlay is stale by definition and is
-        # not an actionable wait — mirror the board renderer's `live` gate
-        # (`engine.py` `card_cell`) so the impeded view and the board cannot
-        # disagree about what counts as impeded.
+        # not an actionable wait. A draft scaffold (`card_is_draft`) is not
+        # yet real work either — it is hidden from the queue and marked `✎`
+        # (not `⏳`) on the board. Mirror the board renderer's full `live`
+        # gate (`engine.py` `card_cell`: terminal-status AND draft) so the
+        # impeded view and the board cannot disagree about what counts as
+        # impeded.
         filtered = [
             t for t in filtered
-            if t.status not in TERMINAL_STATUSES and waiting_impedes(t)
+            if t.status not in TERMINAL_STATUSES
+            and not card_is_draft(t)
+            and waiting_impedes(t)
         ]
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values, by_title=full_by_title)

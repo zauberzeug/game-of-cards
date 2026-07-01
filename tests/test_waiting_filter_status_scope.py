@@ -40,12 +40,15 @@ class WaitingFilterStatusScopeTest(unittest.TestCase):
         waiting_on: str | None,
         waiting_until: str | None = None,
         closed_at: str | None = None,
+        draft: bool = False,
     ) -> None:
         card_dir = cwd / "deck" / title
         card_dir.mkdir(parents=True)
         overlay = f"waiting_on: {waiting_on}\n" if waiting_on is not None else ""
         if waiting_until is not None:
             overlay += f"waiting_until: {waiting_until}\n"
+        if draft:
+            overlay += "draft: true\n"
         closed = f'"{closed_at}"' if closed_at is not None else "null"
         (card_dir / "README.md").write_text(
             "---\n"
@@ -134,6 +137,28 @@ class WaitingFilterStatusScopeTest(unittest.TestCase):
             self.assertIn("active-impeded", titles)
             for term in ("done", "disproved", "superseded"):
                 self.assertNotIn(f"{term}-stale", titles)
+
+    def test_waiting_excludes_draft_scaffolds_with_overlay(self) -> None:
+        """`--waiting` surfaces *actionable* impediments only. A `draft: true`
+        scaffold is not yet real work — it is hidden from the queue and
+        rendered with the `✎` glyph (never `⏳`) on the board. `--waiting`
+        must apply the same draft exclusion the board's `card_cell` gate does,
+        so the impeded view and the board cannot disagree, while non-draft
+        impeded cards still appear.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_card(cwd, "open-impeded", "open", "external")
+            self.write_card(
+                cwd, "draft-impeded", "open", "external", draft=True,
+            )
+
+            result = self.run_goc(cwd, "--waiting", "--json")
+
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+            titles = self.titles(result)
+            self.assertIn("open-impeded", titles)
+            self.assertNotIn("draft-impeded", titles)
 
     def test_explicit_status_open_still_narrows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

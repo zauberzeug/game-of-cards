@@ -1,21 +1,21 @@
 ---
 title: waiting-filter-surfaces-draft-scaffolds-as-active-impediments
 summary: "`goc --waiting` lists `draft: true` scaffolds that carry a `waiting_on` overlay as actionable impediments, while the board renders the same card with the `✎` draft glyph and never the `⏳` impediment glyph. The `--waiting` post-filter gates on terminal-status and `waiting_impedes` but omits the `card_is_draft` exclusion that `card_cell` applies, so the two human-facing views disagree — contradicting the code comment that promises they cannot."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-01T02:04:32Z"
-closed_at: null
+closed_at: "2026-07-01T02:10:13Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a `draft: true` card carrying a `waiting_on` overlay does NOT appear in the `--waiting` filtered list
-  - [ ] TDD: the same draft renders `✎` (not `⏳`) on the board AND is absent from `--waiting`, so board and impeded-view agree
-  - [ ] MECHANICAL: the `--waiting` post-filter at `engine.py:3698-3701` gains an `and not card_is_draft(t)` clause mirroring `card_cell`
-  - [ ] PROCESS: a non-draft card with an active overlay still appears in `--waiting` (no regression to the intended behavior)
-  - [ ] `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero — a `draft: true` card carrying a `waiting_on` overlay does NOT appear in the `--waiting` filtered list
+  - [x] TDD: the same draft renders `✎` (not `⏳`) on the board AND is absent from `--waiting`, so board and impeded-view agree (also covered by `tests/test_waiting_filter_status_scope.py::test_waiting_excludes_draft_scaffolds_with_overlay`)
+  - [x] MECHANICAL: the `--waiting` post-filter at `engine.py:3698-3701` gains an `and not card_is_draft(t)` clause mirroring `card_cell`
+  - [x] PROCESS: a non-draft card with an active overlay still appears in `--waiting` (no regression to the intended behavior)
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -94,10 +94,10 @@ the closed `goc-triage-lists-unauthored-draft-scaffolds-as-parked-cards`
 `--waiting` its terminal gate). `--waiting` is the lone site that
 received the terminal gate but never the draft gate.
 
-## Fix
+## Fix (applied)
 
-Add the draft exclusion to the `--waiting` comprehension at
-`engine.py:3700`, mirroring `card_cell` and `triage`:
+Added the draft exclusion to the `--waiting` comprehension at
+`engine.py:3698-3706`, mirroring `card_cell` and `triage`:
 
 ```python
 filtered = [
@@ -107,3 +107,7 @@ filtered = [
     and waiting_impedes(t)
 ]
 ```
+
+The comment was updated to state the full board gate (terminal-status
+AND draft). Regression covered by
+`tests/test_waiting_filter_status_scope.py::test_waiting_excludes_draft_scaffolds_with_overlay`.
