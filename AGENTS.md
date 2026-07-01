@@ -453,7 +453,7 @@ When filing GoC cards in this repo:
   Filter with `goc --worker <X>` or set `GOC_WORKER` env var for
   runner-specific queue views.
 
-<!-- BEGIN GOC v0.0.25 -->
+<!-- BEGIN GOC v0.0.26 -->
 ## Game of Cards — methodology runtime
 
 This repo uses [Game of Cards](https://github.com/zauberzeug/game-of-cards):

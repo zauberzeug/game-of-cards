@@ -1,6 +1,6 @@
 {
   "name": "game-of-cards",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "description": "Game of Cards skills and lifecycle hooks for Codex agents.",
   "author": { "name": "Zauberzeug GmbH" },
   "homepage": "https://game-of-cards.com",
