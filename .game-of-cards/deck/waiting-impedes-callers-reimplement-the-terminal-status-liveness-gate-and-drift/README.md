@@ -1,6 +1,6 @@
 ---
 title: waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift
-summary: "Meta-fix: `waiting_impedes(card)` deliberately ignores the card's own status, so every caller that wants 'is this card *actively* impeded' must re-apply a liveness gate (`status not in TERMINAL_STATUSES`, or the stricter `status == open`). That gate is re-inlined at ~5 sites with three different phrasings, and it already drifted into a shipping bug: the `--waiting` filter shipped with no gate and leaked closed cards into the impeded view (fixed in waiting-filter-shows-terminal-cards-with-stale-overlay). This is the exact sibling of the already-centralized dependency-advisory liveness gate."
+summary: "Meta-fix: `waiting_impedes(card)` deliberately ignores the card's own status, so every caller that wants 'is this card *actively* impeded' must re-apply a liveness gate (`status not in TERMINAL_STATUSES`, or the stricter `status == open`; the board's live variant also excludes `card_is_draft`). That gate is re-inlined at ~5 sites with three different phrasings, and the `--waiting` filter has now drifted TWICE: first shipping with no gate and leaking closed cards (fixed in waiting-filter-shows-terminal-cards-with-stale-overlay), then copying only the terminal half of the board gate and leaking draft scaffolds (fixed in waiting-filter-surfaces-draft-scaffolds-as-active-impediments). The centralized live-variant helper must fold in the draft exclusion too. This is the exact sibling of the already-centralized dependency-advisory liveness gate."
 status: open
 stage: null
 contribution: medium
@@ -14,8 +14,8 @@ advanced_by:
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
   - [ ] PROCESS: decision recorded — pick the helper shape (single `active_impediment(card, *, queue_only=False)` vs a thin `live_impeded`/`queueable_impeded` pair); see "## Decision required"
-  - [ ] MECHANICAL: the chosen helper centralizes `status not in TERMINAL_STATUSES and waiting_impedes(card)` (and the open-only variant), and the live-variant callers (board `card_cell`, `--waiting` filter, `card_is_workable_for_scheduler`) and open-only callers (`card_is_ready`, gated-leverage) route through it instead of inlining the gate
-  - [ ] TDD: a unit test covers the helper across {open, active, terminal} x {impeded, clear}; existing regressions (`test_waiting_filter_status_scope`, board/scheduler tests) still pass
+  - [ ] MECHANICAL: the chosen helper centralizes `status not in TERMINAL_STATUSES and waiting_impedes(card)` (and the open-only variant), the live "shows `⏳`" variant ALSO excludes `card_is_draft` (see the second drift in "## Why it matters"), and the live-variant callers (board `card_cell`, `--waiting` filter, `card_is_workable_for_scheduler`) and open-only callers (`card_is_ready`, gated-leverage) route through it instead of inlining the gate
+  - [ ] TDD: a unit test covers the helper across {open, active, terminal} x {draft, non-draft} x {impeded, clear}; existing regressions (`test_waiting_filter_status_scope`, board/scheduler tests) still pass
   - [ ] TDD: no behavior change — pure consolidation; the predicate-coupling guard (`test_scheduler_workable_predicate_coupling.py`) stays green
   - [ ] PROCESS: instance cards cross-referenced; `uv run goc validate` clean; full suite green
 ---
@@ -55,6 +55,21 @@ bug, fixed in
 by hand-inlining the gate — adding a *sixth* copy of the rule rather
 than consolidating it. The next read surface that consults
 `waiting_impedes` will face the same choice and can drift the same way.
+
+The prediction came true at the **same site**:
+[waiting-filter-surfaces-draft-scaffolds-as-active-impediments](../waiting-filter-surfaces-draft-scaffolds-as-active-impediments/)
+(done) found that the hand-inlined `--waiting` gate copied only the
+*terminal-status* half of the board's `card_cell` gate and dropped the
+`card_is_draft` half, so draft scaffolds with an overlay leaked into
+`--waiting` while the board suppressed them. That is a second drift of
+the same rule at the same call site — and it widens the scope of the
+gate this meta-fix must centralize: the board's "actively impeded, show
+`⏳`" predicate is **terminal-status AND `not card_is_draft`** AND
+`waiting_impedes`, not just the terminal-status half. The centralized
+helper (Option A/B below) must therefore fold in the draft exclusion for
+the live variant, or the consolidation will leave `--waiting` /
+`card_cell` needing a separate hand-inlined `card_is_draft` clause that
+can drift a third time.
 
 This is structurally identical to
 [renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift](../renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift/)
