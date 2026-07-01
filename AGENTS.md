@@ -45,6 +45,13 @@ publish target is a one-time configuration (web UI for PyPI/npm,
 `clawhub package trusted-publisher set ...` for ClawHub) that authorizes
 this workflow to mint short-lived publish credentials at run time.
 
+**Stay on the `0.0.x` line for now.** Every release is a patch bump of
+the last `0.0.N` tag (next is `0.0.N+1`); do not jump to `0.1.0` or
+`1.0.0` without an explicit maintainer decision. The project is
+deliberately pre-1.0, and the commit count between tags is *not* a
+signal to bump the minor — most of it is deck-card churn and internal
+engine fixes. When this policy changes, update this note.
+
 **The git tag IS the version** — `pyproject.toml` declares
 `dynamic = ["version"]` and hatch-vcs reads `git describe --tags` at
 build time (overridden in CI by `SETUPTOOLS_SCM_PRETEND_VERSION` so
