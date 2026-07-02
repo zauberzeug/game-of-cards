@@ -67,6 +67,27 @@ class ConsumingRepoTagsLoaderGuardTest(unittest.TestCase):
         )
         self.assertEqual(loaded, {"good-tag"})
 
+    def test_non_mapping_block_is_skipped_not_get_ed(self) -> None:
+        # A fenced ```yaml block that parses to a bare list is not a
+        # mapping. The buggy code called `block.get("canonical_tags")`
+        # unconditionally, raising AttributeError ('list' has no `.get`)
+        # and — via load_schema() at import — crashing every goc command.
+        # The guard must skip the non-mapping block and return set().
+        loaded = self._run_with_canonical_tags_md(
+            "```yaml\n- frontend\n- backend\n```\n"
+        )
+        self.assertEqual(loaded, set())
+
+    def test_non_mapping_block_does_not_poison_valid_block(self) -> None:
+        # A valid mapping block followed by a bare-list block: the valid
+        # tags must survive and the list block must be skipped, not crash.
+        body = (
+            "```yaml\ncanonical_tags:\n  - good-tag\n```\n"
+            "\n"
+            "```yaml\n- frontend\n- backend\n```\n"
+        )
+        self.assertEqual(self._run_with_canonical_tags_md(body), {"good-tag"})
+
     def test_multiple_blocks_accumulate_only_valid_lists(self) -> None:
         # One well-formed block, one malformed bare-string block. The
         # accumulator must keep the valid block's entries and drop the

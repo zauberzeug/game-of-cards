@@ -1,21 +1,21 @@
 ---
 title: canonical-tags-loader-crashes-on-yaml-block-that-is-not-a-mapping
 summary: "`_load_consuming_repo_tags` assumes every fenced YAML block in canonical-tags.md parses to a mapping and calls `block.get(\"canonical_tags\")` unconditionally. A block that is a valid YAML list crashes with AttributeError. Because load_schema() runs at module import, every goc command then dies with a raw traceback."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-02T01:35:17Z"
-closed_at: null
+closed_at: "2026-07-02T01:39:39Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (loader returns set() for a list-shaped fenced block instead of raising AttributeError)
-  - [ ] TDD: a fenced YAML block that parses to a non-mapping (list, scalar, int) is skipped, not `.get()`-ed
-  - [ ] TDD: well-formed `canonical_tags:` mapping blocks still merge as before (no regression)
-  - [ ] MECHANICAL: the `isinstance(block, dict)` guard lands in `_load_consuming_repo_tags` at engine.py
-  - [ ] PROCESS: `uv run goc validate` passes and the regression suite is green
+  - [x] TDD: reproduce.py exits zero (loader returns set() for a list-shaped fenced block instead of raising AttributeError)
+  - [x] TDD: a fenced YAML block that parses to a non-mapping (list, scalar, int) is skipped, not `.get()`-ed
+  - [x] TDD: well-formed `canonical_tags:` mapping blocks still merge as before (no regression)
+  - [x] MECHANICAL: the `isinstance(block, dict)` guard lands in `_load_consuming_repo_tags` at engine.py
+  - [x] PROCESS: `uv run goc validate` passes and the regression suite is green
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -64,11 +64,21 @@ block (` ```yaml\njusttext\n``` `) instead raises `ParseError` inside
 
 ## Empirical evidence
 
+Before the fix, `reproduce.py` crashed:
+
 ```
-$ uv run python .game-of-cards/deck/canonical-tags-loader-crashes-on-yaml-block-that-is-not-a-mapping/reproduce.py
 list-shaped fenced yaml block:
   CRASH: AttributeError 'list' object has no attribute 'get'
 expected: set()  (block is not a mapping -> skip it)
+```
+
+After the `isinstance(block, dict)` guard landed:
+
+```
+$ uv run python .game-of-cards/deck/canonical-tags-loader-crashes-on-yaml-block-that-is-not-a-mapping/reproduce.py
+list-shaped fenced yaml block:
+  result: set()
+  OK: non-mapping block skipped, returned set()
 ```
 
 ## Why it matters
