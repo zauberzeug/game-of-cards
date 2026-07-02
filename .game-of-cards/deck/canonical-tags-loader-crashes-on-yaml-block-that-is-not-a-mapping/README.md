@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-07-02T01:35:17Z"
 closed_at: "2026-07-02T01:39:39Z"
 human_gate: none
-advances: []
+advances:
+  - bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
