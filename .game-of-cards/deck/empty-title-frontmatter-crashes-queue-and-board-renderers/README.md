@@ -1,20 +1,20 @@
 ---
 title: empty-title-frontmatter-crashes-queue-and-board-renderers
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-02T01:56:02Z"
-closed_at: null
+closed_at: "2026-07-02T02:01:17Z"
 human_gate: none
 summary: "A card with a bare `title:` (parses to `None`) makes `Card.title` return `None`, which crashes `goc` and `goc --board` for the WHOLE deck via `_display_width`. `title` is the one member of the status/contribution/human_gate coercion family that was left uncoerced. Fix: `fm.get(\"title\") or card_dir.name` — validate still reads raw `fm[\"title\"]` so the malformed title is still flagged."
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — a card with a bare `title:` renders in the queue (title falls back to dir name) instead of crashing
-  - [ ] TDD: `Card.title` returns the directory name (not `None`) for a card whose frontmatter has a bare/empty `title:`
-  - [ ] MECHANICAL: `goc validate` still reports the malformed title from raw `fm["title"]` (coercion protects only the renderers, mirroring the sibling fields' documented posture)
-  - [ ] PROCESS: regression test added to tests/ and the full suite passes
+  - [x] TDD: reproduce.py exits zero — a card with a bare `title:` renders in the queue (title falls back to dir name) instead of crashing
+  - [x] TDD: `Card.title` returns the directory name (not `None`) for a card whose frontmatter has a bare/empty `title:`
+  - [x] MECHANICAL: `goc validate` still reports the malformed title from raw `fm["title"]` (coercion protects only the renderers, mirroring the sibling fields' documented posture)
+  - [x] PROCESS: regression test added to tests/ and the full suite passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -52,7 +52,21 @@ the reason verbatim:
 
 ## Empirical evidence
 
-(see `reproduce.py` — output pasted here after the fix run)
+Before the fix (`fm.get("title", card_dir.name)`):
+
+```
+Card.title repr: None
+Card.status repr: 'open'
+DEFECT FIRES: renderer crashed: 'NoneType' object is not iterable
+```
+
+After the fix (`fm.get("title") or card_dir.name`):
+
+```
+Card.title repr: 'card-with-empty-title'
+Card.status repr: 'open'
+OK: bare title falls back to dir name; queue and board render
+```
 
 ## Why it matters
 

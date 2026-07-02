@@ -912,7 +912,15 @@ def load_card(card_dir: Path) -> Card | None:
     dod_field = fm.get("definition_of_done", "")
     dod_open, dod_done = count_dod_boxes(dod_field)
     return Card(
-        title=fm.get("title", card_dir.name),
+        # Coerce None/empty to the dir name, mirroring the `status` /
+        # `contribution` / `human_gate` properties above. A card with a bare
+        # `title:` parses to a Python None with the key present, so a plain
+        # `.get("title", card_dir.name)` returns None (the default only applies
+        # when the key is absent) — which then crashes the table/board renderers
+        # that iterate the title in `_display_width`. `goc validate` still flags
+        # the bad title from the raw `fm["title"]`, so coercing here only
+        # protects the renderers.
+        title=fm.get("title") or card_dir.name,
         path=card_dir,
         frontmatter=fm,
         body=body,
