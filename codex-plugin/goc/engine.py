@@ -4646,10 +4646,21 @@ def _git_claim_push_with_retry(card_dir: Path, title: str) -> bool:
 
 
 def load_deck_config() -> dict:
-    if GAME_OF_CARDS_CONFIG_FILE.exists():
-        return yaml.safe_load(GAME_OF_CARDS_CONFIG_FILE.read_text()) or {}
-    if LEGACY_DECK_CONFIG_FILE.exists():
-        return yaml.safe_load(LEGACY_DECK_CONFIG_FILE.read_text()) or {}
+    # Guard the parsed result, not just its falsy case: a non-mapping
+    # config.yaml (a bare list, a scalar) parses to a list/str with no
+    # `.get`, which would crash every mutating verb via
+    # `auto_commit_enabled()` and `goc validate`/`upgrade` via
+    # `get_skills_source()`. A parse error is likewise coerced to {} so a
+    # malformed config surfaces as "no config" rather than a raw traceback.
+    # Mirrors the isinstance guards in `_resolve_deck_root` and
+    # `_load_consuming_repo_tags`.
+    for path in (GAME_OF_CARDS_CONFIG_FILE, LEGACY_DECK_CONFIG_FILE):
+        if path.exists():
+            try:
+                data = yaml.safe_load(path.read_text())
+            except Exception:
+                return {}
+            return data if isinstance(data, dict) else {}
     return {"layer_2_project_dod": [], "layer_3_goc_dod": []}
 
 
