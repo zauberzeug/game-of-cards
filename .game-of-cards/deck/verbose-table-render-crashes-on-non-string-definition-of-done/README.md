@@ -6,7 +6,8 @@ contribution: medium
 created: "2026-07-03T01:30:45Z"
 closed_at: "2026-07-03T01:37:24Z"
 human_gate: none
-advances: []
+advances:
+  - bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
 advanced_by: []
 tags: [bug, api-contract]
 summary: "`goc -vv` crashes with `AttributeError: 'list' object has no attribute 'splitlines'` on a card whose `definition_of_done:` parses to a YAML list (or any truthy non-string). The closed sibling swapped the read to the `or \"\"` idiom, but `or \"\"` only rescues *falsy* values — a truthy non-string passes straight through. Fix: coerce with `isinstance`, matching `count_dod_boxes`/`untagged_dod_items`."

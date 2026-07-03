@@ -18,6 +18,7 @@ advanced_by:
   - board-and-table-renderers-crash-on-a-card-with-null-status
   - table-renderer-crashes-on-a-card-with-null-human-gate
   - canonical-tags-loader-crashes-on-yaml-block-that-is-not-a-mapping
+  - verbose-table-render-crashes-on-non-string-definition-of-done
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (loader-time shape rejection), B (centralized `_field_as_list` helper routing all reads), or C (continue per-consumer guards) — record in log.md with the rationale. See `## Decision required` below.
