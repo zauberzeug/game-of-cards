@@ -1,6 +1,6 @@
 ---
 title: canonical-tags-loader-crashes-on-unparseable-yaml-block
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-07-03T01:05:48Z"
@@ -9,7 +9,6 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
-draft: true
 summary: |
   `_load_consuming_repo_tags` calls `yaml.safe_load` on every fenced YAML
   block in `canonical-tags.md` without a try/except, so an unparseable
@@ -23,6 +22,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero after the fix (import + load succeeds; malformed block skipped silently)
   - [ ] MECHANICAL: the `yaml.safe_load(match.group(1))` at goc/engine.py:646 is wrapped in try/except that skips the block on ParseError, mirroring load_deck_config's guard
   - [ ] PROCESS: log.md records the fix and the sibling-guard family it completes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # canonical-tags-loader-crashes-on-unparseable-yaml-block
