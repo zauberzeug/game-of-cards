@@ -643,11 +643,21 @@ def _load_consuming_repo_tags() -> set[str]:
         return set()
     out: set[str] = set()
     for match in _FENCED_YAML.finditer(extension_file.read_text()):
-        block = yaml.safe_load(match.group(1)) or {}
-        # Guard the block itself, not just its value: `_FENCED_YAML`
-        # matches every ```yaml block in the file, and a non-mapping
-        # block (a bare list, a scalar) has no `.get` — calling it would
-        # crash every goc command via `load_schema()` at import time.
+        # Guard the parse itself, not just the shape: `_FENCED_YAML`
+        # matches every ```yaml block in the file, and the vendored
+        # `yaml_lite` parser raises `ParseError` (a `ValueError`) on YAML
+        # features it doesn't support (folded `>` scalars, anchors/aliases,
+        # tab indentation). An unparseable illustrative block would
+        # otherwise crash every goc command via `load_schema()` at import
+        # time. Skip the bad block; sibling blocks still contribute. This
+        # mirrors the `try/except` guards in `load_deck_config`,
+        # `parse_frontmatter`, and `_resolve_deck_root`.
+        try:
+            block = yaml.safe_load(match.group(1)) or {}
+        except Exception:
+            continue
+        # Guard the block shape too: a non-mapping block (a bare list, a
+        # scalar) has no `.get` — calling it would crash the same way.
         if not isinstance(block, dict):
             continue
         value = block.get("canonical_tags") or []

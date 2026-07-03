@@ -99,6 +99,31 @@ class ConsumingRepoTagsLoaderGuardTest(unittest.TestCase):
         )
         self.assertEqual(self._run_with_canonical_tags_md(body), {"good-tag"})
 
+    def test_unparseable_block_is_skipped_not_raised(self) -> None:
+        # A fenced ```yaml block using a YAML feature the vendored
+        # yaml_lite parser rejects (a folded `>` scalar) raises ParseError
+        # from `yaml.safe_load`. The buggy code did not wrap the call, so
+        # the exception propagated out of load_schema() at import and
+        # crashed every goc command. The guard must skip the bad block.
+        body = (
+            "```yaml\ncanonical_tags:\n  - some-tag\n"
+            "description: >\n  folded example text\n```\n"
+        )
+        # Must not raise; a returned set (any content) proves the guard held.
+        self.assertIsInstance(self._run_with_canonical_tags_md(body), set)
+
+    def test_unparseable_block_does_not_poison_valid_block(self) -> None:
+        # A well-formed block followed by an unparseable one: the valid
+        # tags must survive and the bad block must be skipped, not abort
+        # the whole loader.
+        body = (
+            "```yaml\ncanonical_tags:\n  - good-tag\n```\n"
+            "\n"
+            "```yaml\ncanonical_tags:\n  - example-tag\n"
+            "description: >\n  folded example text\n```\n"
+        )
+        self.assertEqual(self._run_with_canonical_tags_md(body), {"good-tag"})
+
 
 if __name__ == "__main__":
     unittest.main()
