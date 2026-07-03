@@ -1,10 +1,10 @@
 ---
 title: canonical-tags-loader-crashes-on-unparseable-yaml-block
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-07-03T01:05:48Z"
-closed_at: null
+closed_at: "2026-07-03T01:11:32Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -17,11 +17,11 @@ summary: |
   loaders (`load_deck_config`, `parse_frontmatter`, `_resolve_deck_root`)
   already guard this; this one is the lone gap.
 definition_of_done: |
-  - [ ] TDD: a regression test in tests/test_consuming_repo_tags_loader.py drives a canonical-tags.md whose fenced block uses an unsupported YAML feature (folded `>` scalar) and asserts `_load_consuming_repo_tags()` returns a set (no raised ParseError)
-  - [ ] TDD: the same test confirms a well-formed sibling block in the same file still contributes its tags (a parse error in one block does not drop the others)
-  - [ ] TDD: reproduce.py exits zero after the fix (import + load succeeds; malformed block skipped silently)
-  - [ ] MECHANICAL: the `yaml.safe_load(match.group(1))` at goc/engine.py:646 is wrapped in try/except that skips the block on ParseError, mirroring load_deck_config's guard
-  - [ ] PROCESS: log.md records the fix and the sibling-guard family it completes
+  - [x] TDD: a regression test in tests/test_consuming_repo_tags_loader.py drives a canonical-tags.md whose fenced block uses an unsupported YAML feature (folded `>` scalar) and asserts `_load_consuming_repo_tags()` returns a set (no raised ParseError)
+  - [x] TDD: the same test confirms a well-formed sibling block in the same file still contributes its tags (a parse error in one block does not drop the others)
+  - [x] TDD: reproduce.py exits zero after the fix (import + load succeeds; malformed block skipped silently)
+  - [x] MECHANICAL: the `yaml.safe_load(match.group(1))` at goc/engine.py:646 is wrapped in try/except that skips the block on ParseError, mirroring load_deck_config's guard
+  - [x] PROCESS: log.md records the fix and the sibling-guard family it completes
 worker: {who: "claude[bot]", where: main}
 ---
 
