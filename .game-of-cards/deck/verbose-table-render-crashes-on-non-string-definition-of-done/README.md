@@ -1,20 +1,20 @@
 ---
 title: verbose-table-render-crashes-on-non-string-definition-of-done
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-03T01:30:45Z"
-closed_at: null
+closed_at: "2026-07-03T01:37:24Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 summary: "`goc -vv` crashes with `AttributeError: 'list' object has no attribute 'splitlines'` on a card whose `definition_of_done:` parses to a YAML list (or any truthy non-string). The closed sibling swapped the read to the `or \"\"` idiom, but `or \"\"` only rescues *falsy* values — a truthy non-string passes straight through. Fix: coerce with `isinstance`, matching `count_dod_boxes`/`untagged_dod_items`."
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — `render_table` at `verbose=2` over a card whose `definition_of_done` is a `list` returns a string instead of raising `AttributeError`.
-  - [ ] TDD: a regression test in `tests/` asserts the `-vv` render survives a non-string (list) DoD, alongside the existing `None`-DoD test.
-  - [ ] MECHANICAL: the `verbose >= 2` DoD read uses an `isinstance(..., str)` guard, matching `count_dod_boxes`/`untagged_dod_items`.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green; `uv run goc validate` clean.
+  - [x] TDD: reproduce.py exits zero — `render_table` at `verbose=2` over a card whose `definition_of_done` is a `list` returns a string instead of raising `AttributeError`.
+  - [x] TDD: a regression test in `tests/` asserts the `-vv` render survives a non-string (list) DoD, alongside the existing `None`-DoD test.
+  - [x] MECHANICAL: the `verbose >= 2` DoD read uses an `isinstance(..., str)` guard, matching `count_dod_boxes`/`untagged_dod_items`.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` stays green; `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -55,18 +55,30 @@ it is the lone site that crashes on a truthy non-string.
 is the YAML list `["- a", "- b"]` and drives the real CLI at three
 verbosity levels:
 
+Before the fix:
+
 ```
 v0 (plain goc): renders OK (DoD shows "prose")
 v1 (goc -v):    renders OK (DoD shows "prose")
 v2 (goc -vv):   AttributeError: 'list' object has no attribute 'splitlines'
 ```
 
-Plain `goc` and `goc -v` survive because they read the DoD only
-through the type-guarded `count_dod_boxes`. `goc validate` correctly
-flags the card (`definition_of_done: must be a string`), but the
-read views must survive a validate-rejected card — the same contract
-the empty-title / null-status / null-human-gate closed cards
-established. Only `-vv` dies.
+After the fix (`isinstance` coercion at the read site):
+
+```
+v0: renders OK
+v1: renders OK
+v2: renders OK
+
+OK: all verbosity levels survived a non-string DoD.
+```
+
+Plain `goc` and `goc -v` survived even before the fix because they
+read the DoD only through the type-guarded `count_dod_boxes`. `goc
+validate` correctly flags the card (`definition_of_done: must be a
+string`), but the read views must survive a validate-rejected card —
+the same contract the empty-title / null-status / null-human-gate
+closed cards established. Only `-vv` died.
 
 ## Why it matters
 
