@@ -15,6 +15,7 @@ advanced_by:
   - pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries
   - claude-settings-group-hooks-list-and-items-bypass-nested-isinstance-guards
   - load-deck-config-crashes-on-non-mapping-config-yaml
+  - canonical-tags-loader-crashes-on-unparseable-yaml-block
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (shared `load_mapping_or_warn` helper that wraps json.loads / yaml.safe_load and routes every user-editable load through it), B (per-callsite `isinstance(_, dict)` guard at each remaining site), or C (status-quo per-site whack-a-mole). Record the decision in log.md with the rationale. See `## Decision required` below.
