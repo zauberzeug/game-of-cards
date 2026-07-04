@@ -19,6 +19,12 @@ worker: {who: Rodja Trappe, where: main}
 
 # pin-autonomous-workflows-to-opus-while-fable-5-disabled
 
+> Later evidence: Claude Fable 5 was re-enabled; the re-pin recorded in
+> this card's summary happened via
+> [re-pin-autonomous-workflows-to-fable-5-after-re-enable](../re-pin-autonomous-workflows-to-fable-5-after-re-enable/)
+> (2026-07-04). The `--model opus` state this card established is no
+> longer current.
+
 ## Location
 
 - `.github/workflows/audit-deck.yml:77` — `--model opus` (was `--model claude-fable-5`)

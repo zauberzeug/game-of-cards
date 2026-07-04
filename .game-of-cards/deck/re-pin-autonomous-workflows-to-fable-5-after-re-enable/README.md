@@ -1,21 +1,21 @@
 ---
 title: re-pin-autonomous-workflows-to-fable-5-after-re-enable
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-04T13:16:15Z"
-closed_at: null
+closed_at: "2026-07-04T13:19:00Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra]
 summary: "Claude Fable 5 is available again, so the autonomous-agent workflows (pull-card, audit-deck, refine-deck) should run on it instead of the `--model opus` fallback they were reverted to while it was disabled. Set all three `claude_args` model overrides back to `--model claude-fable-5`. Reverses pin-autonomous-workflows-to-opus-while-fable-5-disabled."
 definition_of_done: |
-  - [ ] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model claude-fable-5` in `claude_args`
-  - [ ] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model claude-fable-5` in `claude_args`
-  - [ ] MECHANICAL: `.github/workflows/refine-deck.yml` passes `--model claude-fable-5` in `claude_args`
-  - [ ] MECHANICAL: `grep -rn -- "--model" .github/workflows/` shows no remaining `opus` override
-  - [ ] PROCESS: closed predecessor card pin-autonomous-workflows-to-opus-while-fable-5-disabled amended with a forward pointer to this card
+  - [x] MECHANICAL: `.github/workflows/pull-card.yml` passes `--model claude-fable-5` in `claude_args`
+  - [x] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--model claude-fable-5` in `claude_args`
+  - [x] MECHANICAL: `.github/workflows/refine-deck.yml` passes `--model claude-fable-5` in `claude_args`
+  - [x] MECHANICAL: `grep -rn -- "--model" .github/workflows/` shows no remaining `opus` override
+  - [x] PROCESS: closed predecessor card pin-autonomous-workflows-to-opus-while-fable-5-disabled amended with a forward pointer to this card
 worker: {who: Rodja Trappe, where: main}
 ---
 

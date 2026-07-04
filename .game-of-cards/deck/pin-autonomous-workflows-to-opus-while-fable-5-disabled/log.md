@@ -14,3 +14,12 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-06-15 — Closure' present
+
+## 2026-07-04 — Post-close amendment
+
+Claude Fable 5 is available again. The re-pin condition this card's
+summary anticipated ("re-pin fable-5 once it is re-enabled") was
+fulfilled by
+[re-pin-autonomous-workflows-to-fable-5-after-re-enable](../re-pin-autonomous-workflows-to-fable-5-after-re-enable/),
+which also covers refine-deck.yml (created after this card closed,
+born with the opus fallback). Forward pointer added atop the README.

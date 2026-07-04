@@ -98,7 +98,7 @@ jobs:
           claude_args: |
             --max-turns 120
             --permission-mode bypassPermissions
-            --model opus
+            --model claude-fable-5
 
       - name: Re-check queue
         id: post
