@@ -136,6 +136,17 @@
 # the reusable workflow fetches `vX.Y.Z` for real publishes. The
 # `version:` override remains as the explicit metadata source.
 #
+# Distribution does NOT end at publish: the Anthropic community
+# marketplace (`anthropics/claude-plugins-community`) pins game-of-cards
+# to an exact commit and only updates through Anthropic's internal
+# review pipeline (the repo is a read-only mirror — direct PRs are
+# auto-closed; re-pins go via https://clau.de/plugin-directory-submission).
+# `marketplace-pin-check.yml` watches that pin daily and maintains a
+# `marketplace-pin` tracking issue while it lags the latest release tag,
+# with a 48h grace window after a release. If that issue appears, a
+# human must request the re-pin — see issue #6 for the failure mode and
+# card `community-marketplace-pin-drifts-silently-behind-releases`.
+#
 # Security note for run: blocks below:
 #   workflow_dispatch inputs (`version`, `dry_run`) and other untrusted
 #   context values are passed into run: steps only via `env:` (never
