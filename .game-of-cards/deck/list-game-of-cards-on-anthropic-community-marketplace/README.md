@@ -19,6 +19,7 @@ advanced_by:
   - cut-v0-0-7-release-before-openclaw-publish
   - pattern-generalization-hook-missing-from-local-skills-install
   - llms-txt-still-recommends-uv-tool-install-as-preferred
+  - community-marketplace-pin-drifts-silently-behind-releases
 tags: [story, infra, documentation]
 definition_of_done: |
   - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README)
