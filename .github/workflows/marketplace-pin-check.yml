@@ -1,0 +1,136 @@
+# Detect when the Anthropic community-marketplace pin falls behind our
+# latest release.
+#
+# `anthropics/claude-plugins-community` pins each plugin to an exact
+# commit sha and is a read-only mirror of Anthropic's internal review
+# pipeline — direct PRs are auto-closed, entries sync nightly, and
+# updates are requested via https://clau.de/plugin-directory-submission.
+# That means a new game-of-cards release does NOT reach marketplace
+# users until the pin is re-submitted/re-scanned on Anthropic's side.
+# Issue #6 showed the failure mode: the pin sat on a pre-v0.0.24 commit
+# whose skill frontmatter failed `claude plugin validate` long after the
+# fix had shipped.
+#
+# This workflow closes the gap on our side: it compares the marketplace
+# pin against the latest release commit every day and maintains a single
+# `marketplace-pin` tracking issue while they diverge (created after a
+# grace window so the nightly sync can catch up first, updated in place,
+# auto-closed once the pin contains the release).
+#
+# See card: .game-of-cards/deck/community-marketplace-pin-drifts-silently-behind-releases/
+
+name: Marketplace Pin Check
+
+on:
+  schedule:
+    # Daily, after Anthropic's nightly marketplace sync window.
+    - cron: '43 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: marketplace-pin-check
+  cancel-in-progress: false
+
+env:
+  MARKETPLACE_JSON_URL: https://raw.githubusercontent.com/anthropics/claude-plugins-community/main/.claude-plugin/marketplace.json
+  PLUGIN_NAME: game-of-cards
+  ISSUE_LABEL: marketplace-pin
+  GRACE_HOURS: '48'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare marketplace pin against latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # ---- Latest release tag (the release workflow pushes tags but
+          # creates no GitHub Releases, so `releases/latest` is empty —
+          # pick the highest `vX.Y.Z` tag by version sort instead).
+          tag=$(gh api --paginate "repos/$REPO/tags?per_page=100" --jq '.[].name' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          if [ -z "$tag" ]; then
+            echo "No release tag yet — nothing to compare."
+            exit 0
+          fi
+          # `commits/{tag}` derefs annotated tags to the commit.
+          commit_json=$(gh api "repos/$REPO/commits/$tag")
+          release_sha=$(jq -r .sha <<<"$commit_json")
+          published_at=$(jq -r .commit.committer.date <<<"$commit_json")
+          echo "Latest release: $tag → $release_sha (committed $published_at)"
+
+          # ---- Marketplace pin.
+          pin=$(curl -fsSL "$MARKETPLACE_JSON_URL" \
+            | jq -r --arg name "$PLUGIN_NAME" \
+                '.plugins[] | select(.name == $name) | .source.sha // empty')
+
+          stale_reason=""
+          if [ -z "$pin" ]; then
+            stale_reason="The \`$PLUGIN_NAME\` entry is missing from the community marketplace (delisted?)."
+            echo "Marketplace entry not found — flagging."
+          else
+            echo "Marketplace pin: $pin"
+            # ---- Does the pin contain the release commit?
+            status=$(gh api "repos/$REPO/compare/$release_sha...$pin" --jq .status 2>/dev/null || echo 'unknown')
+            echo "compare $release_sha...$pin → $status"
+            case "$status" in
+              identical|ahead)
+                echo "Pin contains the latest release — fresh."
+                ;;
+              *)
+                stale_reason="The marketplace pins [\`${pin:0:7}\`](https://github.com/$REPO/commit/$pin), which does **not** contain the latest release \`$tag\` ([\`${release_sha:0:7}\`](https://github.com/$REPO/commit/$release_sha)) — compare status: \`$status\`."
+                ;;
+            esac
+          fi
+
+          # ---- Grace window: give the nightly sync time after a release.
+          if [ -n "$stale_reason" ]; then
+            release_epoch=$(date -d "$published_at" +%s)  # tag commit committer date
+            age_hours=$(( ( $(date +%s) - release_epoch ) / 3600 ))
+            if [ "$age_hours" -lt "$GRACE_HOURS" ]; then
+              echo "Stale, but release is only ${age_hours}h old (< ${GRACE_HOURS}h grace) — not flagging yet."
+              exit 0
+            fi
+          fi
+
+          # ---- Maintain the single tracking issue.
+          gh label create "$ISSUE_LABEL" --repo "$REPO" \
+            --description "Community-marketplace pin lags behind the latest release" \
+            --color D93F0B --force
+          open_issue=$(gh issue list --repo "$REPO" --label "$ISSUE_LABEL" \
+            --state open --json number --jq '.[0].number // empty')
+
+          if [ -z "$stale_reason" ]; then
+            if [ -n "$open_issue" ]; then
+              gh issue close "$open_issue" --repo "$REPO" --comment \
+                "The marketplace pin now contains release \`$tag\` — closing automatically. 🤖"
+              echo "Closed tracking issue #$open_issue."
+            fi
+            exit 0
+          fi
+
+          body="$stale_reason
+
+          Marketplace users install the pinned commit, so they are not getting \`$tag\`.
+
+          **What to do:** the marketplace repo is a read-only mirror (direct PRs are auto-closed). Request a re-pin via https://clau.de/plugin-directory-submission or coordinate with the marketplace maintainers (see issue #6 for the contact trail). This issue closes itself once the pin catches up.
+
+          _Last checked: $(date -u +'%Y-%m-%d %H:%M UTC') · [workflow run]($GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID)_"
+
+          if [ -n "$open_issue" ]; then
+            gh issue edit "$open_issue" --repo "$REPO" --body "$body"
+            echo "Updated tracking issue #$open_issue."
+          else
+            gh issue create --repo "$REPO" --label "$ISSUE_LABEL" \
+              --title "Community-marketplace pin is behind the latest release" \
+              --body "$body"
+            echo "Opened tracking issue."
+          fi
