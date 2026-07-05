@@ -1,19 +1,19 @@
 ---
 title: engine-module-docstring-describes-pre-package-skill-layout
 summary: "The `goc/engine.py` module docstring still describes the pre-package era: it names the file `deck.py`, says it lives inside the deck skill, instructs running `.claude/skills/deck/deck.py`, locates the schema at `.claude/skills/card-schema/schema.yaml`, and puts cards at a project-root `deck/` directory — all contradicted by the code directly below it."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-05T01:33:09Z"
-closed_at: null
+closed_at: "2026-07-05T01:44:39Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation]
 definition_of_done: |
-  - [ ] MECHANICAL: `goc/engine.py` module docstring names the real module (`goc/engine.py`, `goc` CLI entry point), the real schema path (`goc/schema.yaml` package data), and the real deck location (`.game-of-cards/deck/` with legacy `deck/` fallback)
-  - [ ] MECHANICAL: plugin mirrors regenerated (`sync-plugin-assets` pre-commit) so the corrected header ships in all three payloads
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+  - [x] MECHANICAL: `goc/engine.py` module docstring names the real module (`goc/engine.py`, `goc` CLI entry point), the real schema path (`goc/schema.yaml` package data), and the real deck location (`.game-of-cards/deck/` with legacy `deck/` fallback)
+  - [x] MECHANICAL: plugin mirrors regenerated (`sync-plugin-assets` pre-commit) so the corrected header ships in all three payloads
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
 worker: {who: "claude[bot]", where: main}
 ---
 

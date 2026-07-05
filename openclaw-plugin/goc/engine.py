@@ -1,14 +1,14 @@
-"""deck.py — deck CLI; lives inside the deck skill.
+"""goc engine — deck verbs, card loader/validator, and kanban-style views.
 
-Computes filtered kanban-style views over `deck/<title>/README.md` frontmatter.
-The deck is the project's card-tracking surface — one card per work item, with
-status (open/active/blocked/done/disproved/superseded) on a kanban board.
+Computes filtered views over `.game-of-cards/deck/<title>/README.md`
+frontmatter (legacy project-root `deck/` is supported as a fallback, with
+dual-tree conflict detection). The deck is the project's card-tracking
+surface — one card per work item on a kanban board.
 
-Run via `uv run python .claude/skills/deck/deck.py …` per project's `uv run`
-discipline. The schema is a YAML data file at the sibling card-schema skill:
-`.claude/skills/card-schema/schema.yaml`. Cards (the data instances) live at
-the project-root `deck/` directory; only the methodology (CLI + schema +
-skill bodies) lives under `.claude/skills/`.
+Invoked via the `goc` console script (`goc.cli:main`), which wires this
+module's parser plus the install/upgrade verbs from `goc.install`. The card
+frontmatter schema is package data at `goc/schema.yaml` (`SCHEMA_FILE`
+below); the methodology skills ship as templates under `goc/templates/`.
 """
 
 from __future__ import annotations
