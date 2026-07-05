@@ -1,20 +1,20 @@
 ---
 title: claiming-a-card-crashes-when-git-is-not-on-path
 summary: "`goc status <title> active` aborts with a raw FileNotFoundError traceback when the `git` binary is not on PATH: `_auto_populate_worker` runs `git config user.name` / `git rev-parse --abbrev-ref HEAD` with no FileNotFoundError/TimeoutExpired handling, while every other git call site in the engine tolerates a missing binary. Fix: match the engine's own convention and treat a missing git like a nonzero exit."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-05T01:33:09Z"
-closed_at: null
+closed_at: "2026-07-05T01:43:36Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (claiming with git absent from PATH no longer raises FileNotFoundError)
-  - [ ] TDD: regression test asserts `_auto_populate_worker` leaves the card text unchanged when the git binary is missing (no worker stamped, no exception)
-  - [ ] MECHANICAL: both subprocess calls in `_auto_populate_worker` catch `(FileNotFoundError, subprocess.TimeoutExpired)` and fall back to the same "git said no" branch as a nonzero exit
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+  - [x] TDD: reproduce.py exits zero (claiming with git absent from PATH no longer raises FileNotFoundError)
+  - [x] TDD: regression test asserts `_auto_populate_worker` leaves the card text unchanged when the git binary is missing (no worker stamped, no exception)
+  - [x] MECHANICAL: both subprocess calls in `_auto_populate_worker` catch `(FileNotFoundError, subprocess.TimeoutExpired)` and fall back to the same "git said no" branch as a nonzero exit
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
 worker: {who: "claude[bot]", where: main}
 ---
 

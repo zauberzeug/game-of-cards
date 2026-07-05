@@ -5093,14 +5093,20 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     elif "who" in existing_dict:
         who = existing_dict["who"]
     else:
-        r = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5)
-        who = r.stdout.strip() if r.returncode == 0 else ""
+        try:
+            r = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5)
+            who = r.stdout.strip() if r.returncode == 0 else ""
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            who = ""
 
     if worker_where is not None:
         where: str | None = worker_where
     else:
-        r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5)
-        where = r.stdout.strip() if r.returncode == 0 else None
+        try:
+            r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5)
+            where = r.stdout.strip() if r.returncode == 0 else None
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            where = None
         if where in ("", "HEAD"):
             where = None
         if where is None:
