@@ -1,5 +1,6 @@
 ---
 title: attest-closure-marker-check-rejects-ascii-hyphen-headings-as-missing
+summary: "The `log-md-closure-entry` derived check in `goc attest` matches the closure heading with a hard-coded U+2014 em-dash separator (goc/engine.py:4720-4733), so a closure entry written with an ordinary ASCII hyphen (`## <date> - Closure`) fails the check as 'missing'. The diagnostic asserts the section is absent when it is present but mis-punctuated, sending the closer hunting for a section they already wrote. The fix approach (loosen the separator match vs. keep strict and diagnose the near-miss) awaits the decision this card is gated on."
 status: open
 stage: null
 contribution: medium

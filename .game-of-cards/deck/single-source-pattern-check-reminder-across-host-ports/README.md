@@ -8,7 +8,8 @@ created: "2026-06-09T04:39:15Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - pattern-check-hook-binary-misses-connect-to-existing-root
 tags: [infra, meta-fix]
 definition_of_done: |
   - [ ] DECISION: decide whether single-sourcing is worth it given the Python/TypeScript language boundary, and if so, the mechanism (see "Decision required"). Record the decision on this card.

@@ -1,5 +1,6 @@
 ---
 title: skills-source-auto-resolves-vendored-when-claude-plugin-root-names-a-versioned-payload
+summary: "`_claude_plugin_present()`'s fast path required `CLAUDE_PLUGIN_ROOT`'s basename to start with `game-of-cards`, but real marketplace installs point it at a versioned payload root (e.g. `.../game-of-cards/0.0.25`), so `skills_source: auto` resolved to `vendored` and `goc upgrade` pinned the wrong mode. Fixed by accepting any env-root whose `skills/` subtree exists, while keeping the `game-of-cards*` name requirement for the `~/.claude/plugins` container scan."
 status: done
 stage: null
 contribution: medium

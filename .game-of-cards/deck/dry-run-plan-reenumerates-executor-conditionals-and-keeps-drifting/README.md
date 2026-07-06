@@ -12,6 +12,7 @@ advanced_by:
   - migrate-dry-run-omits-legacy-tree-removal-for-identical-only-trees
   - dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir
   - repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses
+  - dry-run-plan-promises-full-install-that-the-real-run-refuses-as-already-installed
 tags: [meta-fix, infra, api-contract]
 summary: |
   `goc install/upgrade/migrate --dry-run` maintains a hand-written preview

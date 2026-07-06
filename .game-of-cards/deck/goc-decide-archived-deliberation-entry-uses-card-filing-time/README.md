@@ -9,7 +9,7 @@ closed_at: null
 human_gate: decision
 advances: []
 advanced_by: []
-tags: [bug, api-contract, meta-fix]
+tags: [bug, api-contract]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero (log.md headers are in chronological order after `goc decide` on a card whose log.md already has a later entry).
   - [ ] TDD: a regression test asserts that all `## YYYY-…Z:` headers appended by `_cmd_decide` use `_utc_now_iso()` at decide-time, not the card's `created` field.
