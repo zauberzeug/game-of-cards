@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-31T02:38:42Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - goc-upgrade-leaves-stale-prior-version-hook-registrations-in-claude-settings
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
