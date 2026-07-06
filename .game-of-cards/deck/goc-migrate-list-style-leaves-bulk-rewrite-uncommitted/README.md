@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-30T05:42:04Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - goc-repair-edges-apply-leaves-edge-repairs-uncommitted
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
