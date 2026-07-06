@@ -8,7 +8,8 @@ created: "2026-05-31T09:34:33Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - validate-flags-card-states-that-no-verb-can-repair
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` — pick the repair surface (see options): a dedicated `goc repair-closed-at`-style affordance, a general `goc repair`, or a narrowly-scoped flag on an existing verb.
