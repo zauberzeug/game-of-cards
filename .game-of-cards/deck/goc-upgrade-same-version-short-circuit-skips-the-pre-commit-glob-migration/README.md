@@ -1,5 +1,6 @@
 ---
 title: goc-upgrade-same-version-short-circuit-skips-the-pre-commit-glob-migration
+summary: "`goc upgrade`'s same-version 'nothing to do' short-circuit returned before `_append_precommit_hook` ran, so a repo already at the current version never had its legacy `files: ^deck/.*$` pre-commit glob migrated — the repair added for the stale-pattern defect was unreachable from the most common upgrade invocation. Fixed so the short-circuit no longer fires when the pre-commit goc-validate stanza needs refreshing, while preserving the no-op path (and message) for a pristine, already-current repo."
 status: done
 stage: null
 contribution: medium
