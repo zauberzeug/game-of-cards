@@ -15,7 +15,8 @@ contribution: medium
 created: "2026-06-06T06:54:29Z"
 closed_at: null
 human_gate: session
-advances: []
+advances:
+  - single-source-pattern-check-reminder-across-host-ports
 advanced_by: []
 tags: [meta-fix, infra]
 definition_of_done: |
