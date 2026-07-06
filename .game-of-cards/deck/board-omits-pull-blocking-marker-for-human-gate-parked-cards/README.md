@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-06T05:06:15Z"
 closed_at: "2026-06-06T05:10:22Z"
 human_gate: none
-advances: []
+advances:
+  - extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
