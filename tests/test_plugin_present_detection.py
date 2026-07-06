@@ -24,15 +24,22 @@ from goc.engine import _claude_plugin_present  # noqa: E402
 
 
 class ClaudePluginPresentTest(unittest.TestCase):
+    def _tmpdir(self) -> str:
+        # `TestCase.enterContext` needs Python >= 3.11; CI still runs 3.10,
+        # so register cleanup explicitly instead.
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        return tmp.name
+
     def _empty_home(self) -> str:
         # A HOME with no ~/.claude/plugins tree so that candidate cannot mask
         # (or spuriously satisfy) detection — isolating the env-root path.
-        return self.enterContext(tempfile.TemporaryDirectory())
+        return self._tmpdir()
 
     def test_env_root_versioned_payload_is_detected(self) -> None:
         """CLAUDE_PLUGIN_ROOT pointing at a versioned payload root is present."""
         home = self._empty_home()
-        base = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        base = Path(self._tmpdir())
         payload = base / "game-of-cards" / "0.0.25"
         (payload / "skills" / "deck").mkdir(parents=True)
         (payload / "skills" / "deck" / "SKILL.md").write_text("x")
@@ -46,7 +53,7 @@ class ClaudePluginPresentTest(unittest.TestCase):
     def test_env_root_arbitrary_basename_is_detected(self) -> None:
         """The env-root fast-path ignores the root's basename entirely."""
         home = self._empty_home()
-        base = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        base = Path(self._tmpdir())
         payload = base / "some-cache-dir" / "abc123"
         (payload / "skills").mkdir(parents=True)
         with mock.patch.dict(
