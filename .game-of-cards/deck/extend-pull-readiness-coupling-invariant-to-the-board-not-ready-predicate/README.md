@@ -8,7 +8,8 @@ created: "2026-06-06T05:11:35Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - board-omits-pull-blocking-marker-for-human-gate-parked-cards
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
   - [ ] TDD: a regression test asserts the board's not-pullable marker agrees with `card_is_ready` across the `status × human_gate × waiting_on` cross-product (modulo the board's deliberate advisory `dependency_blocked` superset), so a future axis added to `card_is_ready` that is not mirrored into the board fails the build — the same guarantee `tests/test_scheduler_workable_predicate_coupling.py` gives the scheduler predicate.

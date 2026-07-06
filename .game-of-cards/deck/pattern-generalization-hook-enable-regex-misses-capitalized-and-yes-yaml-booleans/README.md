@@ -1,5 +1,6 @@
 ---
 title: pattern-generalization-hook-enable-regex-misses-capitalized-and-yes-yaml-booleans
+summary: "`_enabled()` in the pattern-generalization Stop hook matched only lowercase `true`, so opting in with any other YAML-true spelling (`True`, `TRUE`, `yes`, ...) silently left the hook disabled — intended-on quietly became actually-off. Fixed to accept every spelling the engine's own `yaml_lite` coerces to True, converging with the already case-insensitive OpenClaw port and covered by a regression test."
 status: done
 stage: null
 contribution: low

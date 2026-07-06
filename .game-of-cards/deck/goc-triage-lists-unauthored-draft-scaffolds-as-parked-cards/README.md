@@ -1,5 +1,6 @@
 ---
 title: goc-triage-lists-unauthored-draft-scaffolds-as-parked-cards
+summary: "`_cmd_triage` built its candidate set with a hand-rolled filter that never consulted `card_is_draft`, so a freshly scaffolded `draft: true` card filed with `--gate decision`/`session` showed up in `goc triage` (and `--json`) as 'Waiting on you' while every other listing surface correctly hid it. Fixed by excluding drafts via the shared `card_is_draft` predicate, with a regression test covering both triage paths."
 status: done
 stage: null
 contribution: medium

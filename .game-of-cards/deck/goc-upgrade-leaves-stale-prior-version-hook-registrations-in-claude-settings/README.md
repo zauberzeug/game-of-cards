@@ -8,7 +8,8 @@ created: "2026-06-08T05:22:40Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - goc-upgrade-cleanup-misses-prior-version-skills-and-hooks-renamed-since-install
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: regression test seeds `.claude/settings.json` with a stale prior-version GoC SessionStart registration (command string NOT in `GOC_CLAUDE_HOOKS.values()`) plus the current one, runs `_merge_claude_settings`, and asserts the stale registration is gone (today it survives AND the current one is appended as a duplicate).

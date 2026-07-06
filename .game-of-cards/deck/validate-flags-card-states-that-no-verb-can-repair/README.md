@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-31T08:58:10Z"
 closed_at: "2026-05-31T09:35:31Z"
 human_gate: none
-advances: []
+advances:
+  - no-verb-can-fix-a-closed-at-that-contradicts-the-cards-status
 advanced_by: []
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
