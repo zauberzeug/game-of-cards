@@ -14,14 +14,9 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 # Close a card
 
-Scrum's **Definition of Done** as a machine-checkable closure contract.
-The DoD is the agreement, set when the card was filed, that the work
-is actually complete — not "the test passed once," but every named
-criterion satisfied. An LLM agent reading the card at 3 AM in a /loop
-iteration must not be able to mark the work done by accident; the
-contract is enforced by `goc done`, which counts unchecked boxes
-and refuses to flip the status if any remain. The human-typed checkbox
-list is the audit trail.
+Scrum's **Definition of Done** as a machine-checkable closure
+contract: `goc done` counts unchecked boxes and refuses to flip the
+status while any remain. The ticked checkbox list is the audit trail.
 
 Closure is an eight-step contract — skip a step and the card is dishonest:
 
@@ -29,14 +24,28 @@ Closure is an eight-step contract — skip a step and the card is dishonest:
 2. Run the project-specific closure audit (or honestly note that no project rubric applies).
 3. Tick the DoD checkboxes in the README.
 4. Append closure context to `log.md` (including the audit outcome).
-5. Run `goc attest <title>` to record the Closure-verification block in `log.md` (layer-2 + layer-3 DoDs from `.game-of-cards/config.yaml`).
+5. Run `goc attest <title>` to record the Closure-verification block in `log.md`.
 6. Run `goc done <title>` (DoD-100% gated).
-7. Run any project-specific post-close action (status dashboard, changelog row, etc.) defined in the consuming repo's hook.
-8. Commit or hand off according to the consuming repo's hook / normal runtime workflow.
+7. Run any project-specific post-close action defined in the consuming repo's hook.
+8. Commit or hand off per the consuming repo's hook / normal runtime workflow.
 
-If at any step the work turns out NOT to be a closure (a fix
-attempt regressed, a hypothesis was disproved during verification),
-divert to `Skill(advance-card)` for `disproved` / re-`open` instead.
+If at any step the work turns out NOT to be a closure (a fix attempt
+regressed, a hypothesis was disproved during verification), divert to
+`Skill(advance-card)` for `disproved` / re-`open` instead.
+
+**Edge cases live in `reference.md`** — a sibling file in this
+skill's directory. Read the named section only when the situation
+actually applies:
+
+| Situation | `reference.md` section |
+|---|---|
+| One fix closes several cards | Bundled closures |
+| `advanced-by-closed` FAILs at attest time | Retraction vs waiting |
+| An attest check needs `--skip` | Attest details and skip policy |
+| New evidence after the card closed | After closure |
+| Commit-message shape, commit-failure handling | Commit conventions |
+| Index hygiene when agents share a worktree | Parallel-agent commit safety |
+| Why these gates exist | Rationale |
 
 User argument: $ARGUMENTS — title.
 
@@ -45,95 +54,66 @@ User argument: $ARGUMENTS — title.
 Read the card by running `goc show <title>` yourself with the real
 title bound. Re-confirm each DoD criterion against the actual work:
 
-- For `- [ ] reproduce.py exits zero (defect no longer fires)` —
-  run `uv run python deck/<title>/reproduce.py` and confirm exit 0
-  with the no-defect output.
-- For `- [ ] <metric assertion>` — run the relevant pytest /
-  sweep and capture the verification number.
-- For doc-quality criteria — re-read the cited paper / axiom and
-  confirm the doc now aligns.
+- `- [ ] reproduce.py exits zero (defect no longer fires)` — run
+  `uv run python deck/<title>/reproduce.py`, confirm exit 0 with the
+  no-defect output.
+- `- [ ] <metric assertion>` — run the relevant pytest / sweep and
+  capture the verification number.
+- Doc-quality criteria — re-read the cited paper / axiom and confirm
+  the doc now aligns.
 
-If any criterion is NOT actually satisfied, **stop the closure**:
-- If the fix attempt failed → revert, append a `## Disproved fix
-  attempt` section to `deck/<title>/log.md`, leave status `active`
-  or flip back to `open` via `Skill(advance-card)`.
-- If verification revealed the hypothesis was wrong → divert to
-  `Skill(advance-card) <title> disproved`.
+If any criterion is NOT actually satisfied, **stop the closure**: a
+failed fix attempt → revert, append a `## Disproved fix attempt`
+section to `deck/<title>/log.md`, leave status `active` or re-`open`
+via `Skill(advance-card)`; a disproved hypothesis → divert to
+`Skill(advance-card) <title> disproved`.
 
 ## Step 2 — project-specific closure audit
 
-Closure should align with the consuming repo's project principles, not
-just pass pytest + ruff. A fix that turns its tests green but encodes
-a default the project's documented principles disagree with, silently
-disables a primitive to mask a side-effect, or drifts a documented
-contract is debt-accumulating even when "green". The audit forces the
-closer to articulate *which* project principle the closure aligns with
-— or to honestly note that no principle is touched (mechanical fixes:
-cache invalidation, bounds checks, field-symmetric serialization).
+Closure must align with the consuming repo's documented principles,
+not just pass tests — a green fix can still encode a default the
+project disagrees with. The audit makes the closer name *which*
+principle the closure aligns with, or honestly record that none is
+touched.
 
 !`cat .game-of-cards/hooks/finish-card.md 2>/dev/null || true`
 
-If the consuming repo defined a closure-audit rubric in the hook above,
-follow it. Then write the outcome into the Step 4 `log.md` closure
-entry as exactly ONE of:
+If the hook above defines a closure-audit rubric, follow it, then
+write the outcome into the Step 4 `log.md` entry as exactly ONE of:
 
 - **`<rubric-name> audit: PASS — invokes <principle> + <primary source>`**
-  for fixes that touch a project principle.
 - **`<rubric-name> audit: PASS — no principle touched, mechanical fix`**
-  for fixes that don't bind to any project principle. Be honest — if the
-  fix has *any* principle binding, name it instead.
+  (be honest — if the fix binds *any* principle, name it instead)
 
-If the audit FAILS — the fix encodes a default the project rubric
-disagrees with, masks a missing concept, or contradicts a documented
-principle — STOP the closure. Either redesign the fix to align
-(preferred), or divert to `Skill(advance-card) <title> open` and append
-a `## audit failed` section to `log.md` documenting what's wrong and
-what an aligned resolution would look like.
+If the audit FAILS — the fix encodes a default the rubric disagrees
+with, masks a missing concept, or contradicts a documented principle —
+STOP the closure: redesign the fix to align (preferred), or divert to
+`Skill(advance-card) <title> open` and append an `## audit failed`
+section to `log.md`. If no rubric is defined (hook absent or empty),
+record "no rubric configured; mechanical fix" verbatim.
 
-If no project rubric is defined (the hook above is absent or empty),
-the audit reduces to: "no rubric configured; mechanical fix" — record
-that verbatim.
-
-**No per-card DoD checkbox required.** This audit is a workflow gate
-on every closure, not a per-card promise. Cards inherit the gate from
-`finish-card` mechanics; the closure log entry is the audit trail.
+No per-card DoD checkbox is required for the audit — it is a workflow
+gate on every closure; the closure log entry is the audit trail.
 
 ## Step 3 — tick the DoD checkboxes (update the dashboard)
 
-Closure routes two pieces of writing — the README is the
-**dashboard** showing the card's final state, `log.md` is the
-**append-only journal** capturing the closure transition. Step 3
-updates the dashboard; Step 4 appends to the journal. See
-`Skill(card-schema)`'s "What goes where" subsection.
-
-Edit `deck/<title>/README.md` and mark each criterion `- [x]`. This
-is a dashboard rewrite in place — the ticked DoD is what a cold
-reader sees as the resolved state. If the body's "Fix" or "Empirical
+Edit `deck/<title>/README.md` and mark each criterion `- [x]`. The
+README is the **dashboard**: if the body's "Fix" or "Empirical
 evidence" sections still reflect the pre-resolution framing, rewrite
 them in place to describe the *applied* fix and final measurement.
-Do NOT append a "Resolution (DATE)" block below the original
-framing; the README is the resolved state, the journal entry in
-Step 4 captures the transition.
-
-```yaml
-definition_of_done: |
-  - [x] reproduce.py exits zero (defect no longer fires)
-  - [x] documented contract reflects the new default
-  - [x] regression test added covering the previous-failing path
-```
+Do NOT append a "Resolution (DATE)" block below the original framing
+— the journal entry in Step 4 captures the transition (see
+`Skill(card-schema)` "What goes where").
 
 If the fix added a sub-criterion the original DoD didn't anticipate,
-add a new ticked box and note in the body why. If a criterion
-turned out to be moot (e.g., not reachable in shipping at any
-default), strike it from the DoD with a one-line justification
+add a new ticked box and note in the body why. If a criterion turned
+out to be moot, strike it from the DoD with a one-line justification
 rather than ticking it falsely.
 
 ## Step 4 — append closure context to `log.md` (the journal)
 
-`deck/<title>/log.md` is the **append-only journal** — history,
-details, decisions, and flow preserved verbatim. Never rewrite
-existing entries; the closure entry is one more entry at the
-bottom. Format it:
+`log.md` is the **append-only journal** — never rewrite existing
+entries; the closure entry is one more entry at the bottom:
 
 ```markdown
 ## YYYY-MM-DDTHH:MM:SSZ — Closure
@@ -146,64 +126,30 @@ bottom. Format it:
 - **Bundled with**: <title-A>, <title-B> (if any)
 ```
 
-The timestamp is ISO 8601 UTC. `goc attest`'s closure-marker check
-date-prefix-matches, so legacy date-only entries
-(`## YYYY-MM-DD — Closure`) keep validating without backfill.
+The timestamp is ISO 8601 UTC. (`goc attest`'s closure-marker check
+date-prefix-matches, so legacy date-only headers keep validating.)
 
 ## Step 5 — record the Closure verification (`goc attest`)
-
-Implicit DoD layers — project-wide rules (e.g. "tests pass, ruff
-green, audit pass, doc-consistency-checker") and
-the GoC-wide rules ("schema valid, advanced_by closed, log.md has
-closure entry, DoD 100%") — are the *meta*-contract that applies to
-every closure regardless of what the card does. Today they're invisible:
-a 6-month-old reader sees the layer-1 ticked boxes but no record of
-whether layer-2 or layer-3 was actually verified.
-
-`goc attest` reads `.game-of-cards/config.yaml`, runs each layer-2 +
-layer-3 check (or prompts the closer for manual ones), and appends a
-"Closure verification (DATE)" block to `log.md`. The block is the
-audit trail.
 
 ```bash
 goc attest <title>
 ```
 
-The command:
-- **Automated checks** run as subprocesses (`pytest`, `ruff check`,
-  `ruff format --check`, `goc validate`). Non-zero exit fails.
-- **Derived checks** compute from card state (DoD %, advanced_by
-  closure, log.md grep for the Step 4 closure section).
-- **Manual checks** (`audit`, `no-debug-code`) prompt the
-  closer interactively for pass/fail + a one-line rationale. The
-  rationale is recorded verbatim in the log block.
-- **Agent checks** (`doc-consistency-checker`) prompt the closer to
-  confirm the subagent was run separately and what it reported.
-  Accept `n/a` for pure code/no-doc closures.
-- On any failure: exits non-zero. Closure blocks. Fix the failing
-  check, re-run `attest`. Per the 2026-05-03 decision, no waivers.
+`attest` runs every project-wide (layer-2) and GoC-wide (layer-3)
+check from `.game-of-cards/config.yaml` — automated subprocesses
+(pytest, ruff, `goc validate`), derived card-state checks (DoD %,
+`advanced_by` closure, closure-entry grep), and interactive
+manual / agent confirmations — then appends a "Closure verification"
+block to `log.md`. On any failure it exits non-zero and closure
+blocks: fix the failing check and re-run. No waivers.
 
-To skip a single check (rare, e.g. when an automated check is
-genuinely flaky): `--skip <name>`. The skip is recorded as
-`[~] SKIPPED — <description>` in the block. Do not skip casually.
-
-**`advanced-by-closed` failures — prefer retraction over `--skip`.**
-When this check fails, two honest resolutions exist (see
-`Skill(card-schema)`'s "Value-chain rule"):
-
-1. **Wait** for the named upstream contributors to close, then re-run
-   `attest`.
-2. **Retract a false edge** with
-   `goc unadvance <closing-title> --by <upstream-title>`. The
-   value-chain identity ("X advances Y" ⇔ Y's value chain includes X)
-   says a true edge cannot coexist with a closeable Y; so if Y is
-   genuinely closeable, the edge was modeling the wrong relationship
-   and the right action is to remove it, not skip the check.
-
-`--skip advanced-by-closed` should be the last resort, never the
-first — it leaves a dishonest edge in the deck (the closure log shows
-SKIPPED, the graph still claims X is in Y's value chain, and the next
-reader cannot tell which it was).
+- `--skip <name>` records `[~] SKIPPED` for one genuinely flaky
+  check — last resort, never routine (`reference.md` § Attest details
+  and skip policy).
+- An `advanced-by-closed` FAIL means a card in `advanced_by` is still
+  open: either wait for it to close, or retract a false edge with
+  `goc unadvance <closing-title> --by <upstream-title>`. Do NOT
+  `--skip` past it — see `reference.md` § Retraction vs waiting.
 
 ## Step 6 — close via the CLI
 
@@ -211,157 +157,56 @@ reader cannot tell which it was).
 goc done <title>
 ```
 
-The command:
-- Counts `[ ]` boxes — if any are unchecked, exits 2 with
-  `ERROR: <title>: <n> unchecked DoD boxes`. Tick them and re-run.
-- Sets `status: done` and `closed_at: <today>` via line-anchored
-  regex (no YAML round-trip; comments and key order preserved).
-- Prints `<title>: open → done` on success.
+Refuses (exit 2, `ERROR: <title>: <n> unchecked DoD boxes`) while any
+box is unchecked. On success sets `status: done` + `closed_at` and
+prints `<title>: open → done`.
 
-`done` does NOT auto-commit. The configurable `workflow.auto_commit`
-policy applies to state-only coordination commands (`status`, `decide`,
-`advance`, `unadvance`); closure belongs in the same work commit as the
-code/doc diff. The `done` flip remains in the working tree until Step 8
-stages and commits it, or until the runtime hands it to the user's normal
-commit flow.
-
-For free-form prose DoDs (zero `[ ]` AND zero `[x]` boxes
-detected), `done` requires `--force` to bypass enforcement — but
-prefer adding checkboxes over forcing.
-
-**Bundled closures** (one fix resolves multiple cards):
-
-```bash
-goc done --bundle <title-A> <title-B> [<title-C> ...]
-```
-
-`--bundle` enforces the unchecked-DoD refusal on every member before
-mutating disk (any failure aborts the bundle), then writes one shared
-`## Closure verification (TIMESTAMP) — bundled` block plus a
-`## TIMESTAMP — Closure (bundled)` entry with `Bundled with:`
-cross-references into every member's `log.md`, and flips each card
-to `done` with the same `closed_at`. Use this in place of running
-`goc attest` + `goc done` once per card when the closures genuinely
-share an attestation. For mixed-attestation closures (different
-verification per card), keep the per-card flow.
+- `done` does NOT auto-commit — the closure flip ships with the work
+  commit in Step 8, not as a state-only commit.
+- A free-form prose DoD (zero checkboxes) needs `--force`; prefer
+  adding checkboxes.
+- One fix resolving several cards → `goc done --bundle <A> <B> …`
+  writes one shared attestation and cross-referenced closure entries;
+  read `reference.md` § Bundled closures before first use.
 
 ## Step 7 — project-specific post-close action
 
-If the consuming repo defined a post-close action in
-`.game-of-cards/hooks/finish-card.md` (a status dashboard refresh, a
-changelog row, a release-notes entry, etc.), the hook below carries
-the recipe. Otherwise this step is a no-op.
-
-!`cat .game-of-cards/hooks/finish-card.md 2>/dev/null || true`
-
-Note: the hook file is *also* loaded in Step 2 above; both steps share
-the same hook file because both are project-rubric questions and the
-consuming repo authors them together.
+If the hook file loaded in Step 2 also defines a post-close action (a
+status-dashboard refresh, a changelog row, a release-notes entry),
+run it now; otherwise this step is a no-op. Step 2 and this step
+deliberately share the one hook file
+(`.game-of-cards/hooks/finish-card.md`) — the consuming repo authors
+both rubrics together.
 
 ## Step 8 — commit or hand off
 
-GoC does not ship a commit-helper skill. If the consuming repo wants a
-custom commit flow, it belongs in `.game-of-cards/hooks/finish-card.md`
-and should be followed here. Otherwise use the runtime's normal commit
-workflow: inspect `git status` / `diff`, run the repo's relevant checks,
-stage specific files, and commit the work plus the closure transition.
+Follow the hook's commit flow if it defines one; otherwise use the
+runtime's normal commit workflow. The final commit ships the **work**:
+the code/doc diff plus the closure transition (DoD ticks, log entries
+from Steps 4 + 5, `status: done`). Claim/decide/advance flips usually
+committed earlier under `workflow.auto_commit`.
 
-Note: claim/decide/advance state changes may already have committed earlier
-in the card's lifecycle, depending on `.game-of-cards/config.yaml`
-`workflow.auto_commit` and any per-command `--commit` / `--no-commit`
-override (per `Skill(advance-card)` Step 5).
-The final commit here ships the **work** only — the actual code/doc
-changes plus the closure transition (DoD ticks, log.md entries from
-Steps 4 + 5, `status: done`, `closed_at`).
-
-### Parallel-agent commit safety
-
-On shared local `main`, other agents may be using the same worktree and
-the same Git index. Before staging, run:
+On a shared worktree, guard the index (rationale in `reference.md`
+§ Parallel-agent commit safety):
 
 ```bash
-git diff --cached --name-only
-```
-
-If it lists files you did not stage, another agent is between `git add`
-and `git commit`. Wait with a short backoff or surface the collision;
-do not bundle or unstage their files.
-
-When the index is free, stage only the explicit paths owned by this
-closure:
-
-```bash
-git add <path>...
+git diff --cached --name-only   # foreign staged files? another agent is mid-commit — back off
+git add <path>...               # explicit paths only — never `git add .` / `git add -A`
 git diff --cached --stat
-git commit -- <path>...
+git commit -- <path>...         # pathspec confines the commit to this closure's files
 ```
 
-The `git commit -- <path>...` pathspec is intentional: it restricts the
-commit to this closure's files even if the index becomes contaminated.
-Never use `git add .`, `git add -A`, directory-wide adds, `git stash`,
-or destructive cleanup (`git restore`, `git checkout --`,
-`git reset --hard`, `git clean`) as a commit-isolation technique. For
-non-trivial commits on a busy shared `main`, prefer a temporary worktree
-for commit prep.
+Never use `git stash`, `git restore`, `git checkout --`,
+`git reset --hard`, or `git clean` as a commit-isolation technique.
 
-Override the message:
-
-- **Subject:** `fix(<scope>): <one-line subject> — closes <title>`.
-  Examples:
-  - `fix(api/csv-export): stream rows without 10000-row cap — closes csv-export-button-truncates-rows-over-10000`
-  - `fix(auth/cookie): bump cookie max-age to 24h — closes auth-cookie-expires-too-soon`
-- For bundled closures, append additional slugs:
-  `fix(<scope>): <subject> — closes <title-A>, <title-B>, <title-C>`.
-- **Body:** explain WHY (which user-visible problem this resolves;
-  what measurement bias it removed). Include verification numbers
-  and the closure log. Reference the `deck/<title>/` archive.
-- **Trailer:** follow the consuming repo's authorship convention, if
-  one exists.
-
-If the commit workflow fails *because of this work* (newly broken test,
-lint error you introduced, deck-validate rejection), fix and re-run it.
-If it fails on a pre-existing issue, surface that in chat and stop —
-that's a separate concern.
-
-## After closure — closure is not frozenness
-
-A closed card is the entry point a cold reader navigates to when
-asking "what was decided about X." If new evidence surfaces after the
-card closes — a bug found later, an assumption invalidated, a
-follow-up that reframes the original — file a new card for the new
-work AND amend the closed card to point readers forward. Strict
-immutability orphans the original anchor: future readers walk away
-with stale context, and the kanban accumulates orphan threads.
-
-Two-file routing still applies (see `Skill(card-schema)` "What goes
-where"):
-
-- **`log.md` (append a dated entry).** The post-close amendment IS a
-  valid append — the journal is append-only, and a new entry at the
-  bottom does not rewrite history. Format:
-
-  ```
-  ## YYYY-MM-DDTHH:MM:SSZ — Post-close amendment
-
-  Superseded / extended by [`<new-card-title>`](../<new-card-title>/)
-  — <one-line reason>.
-  ```
-
-- **`README.md` (optional pointer at the top).** If the new evidence
-  materially changes how a reader should interpret the closed card,
-  add a single one-line `> Later evidence: see …` pointer near the
-  top of the body so cold readers see it before the closure narrative.
-  Do NOT rewrite the closure entry itself; treat the amendment as
-  additive.
-
-Update only the **original** card — do not retroactively edit other
-closed cards' bodies to reference the new one. The forward pointer
-from the new card's body, plus the back-reference appended here, is
-the full bidirectional link.
+Subject shape: `fix(<scope>): <one-line subject> — closes <title>`
+(bundled closures append more slugs); body carries the WHY plus
+verification numbers. Full conventions and commit-failure handling:
+`reference.md` § Commit conventions.
 
 ## Cross-references
 
+- `reference.md` (this skill's directory) — every edge case routed in
+  the table above.
 - `Skill(card-schema)` — DoD format + free-form-prose escape.
-- `Skill(advance-card)` — divert here if verification reveals the
-  hypothesis was wrong (`→ disproved`) or the fix needs more work
-  (`→ active` retained or `→ open` re-queued).
+- `Skill(advance-card)` — divert for `→ disproved` or re-`open`.

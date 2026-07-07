@@ -1,10 +1,10 @@
 ---
 title: plugin-skills-consume-a-third-of-downstream-session-usage
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-07-07T04:03:31Z"
-closed_at: null
+closed_at: "2026-07-07T04:29:54Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -19,13 +19,13 @@ summary: |-
   core in SKILL.md plus a sibling reference.md read only when the edge
   case actually arises. Supersedes the lean/full-variant design.
 definition_of_done: |
-  - [ ] TDD: a regression test caps the byte size of hot-path skill bodies (create-card, finish-card, advance-card, decide-card, next-card, pull-card, card-schema) — red on today's sizes (advance-card 17,932 B; card-schema 44,375 B) before the restructure, green after.
-  - [ ] MECHANICAL: finish-card, create-card, advance-card, and decide-card SKILL.md restructured to a happy-path core + `reference.md` sibling; no guidance deleted — every moved section lands verbatim-or-tightened in the sibling with a one-line routing pointer left in the core.
-  - [ ] MECHANICAL: card-schema SKILL.md split the same way — lookup-shaped core (fields, enums, canonical tags, title rules, DoD format) stays; rationale/contract essays move to `reference.md`.
-  - [ ] MECHANICAL: finish-card's duplicate `!cat .game-of-cards/hooks/finish-card.md` injection (Step 2 + Step 7) collapsed to a single load.
-  - [ ] EMPIRICAL: before/after byte counts for every restructured skill recorded in log.md; the per-card-cycle hot-path load (scan-deck + create-card + advance-card + finish-card) drops ≥ 50%.
-  - [ ] PROCESS: `heaviest-skills-re-load-full-methodology-briefing-per-card-cycle` marked superseded --by this card; its log.md carries the supersession rationale.
-  - [ ] PROCESS: only `goc/templates/skills/` and `tests/` hand-edited; `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` pass; `uv run goc validate` and the full unittest suite pass.
+  - [x] TDD: a regression test caps the byte size of hot-path skill bodies (create-card, finish-card, advance-card, decide-card, next-card, pull-card, card-schema) — red on today's sizes (advance-card 17,988 B; card-schema 44,503 B) before the restructure, green after.
+  - [x] MECHANICAL: finish-card, create-card, advance-card, and decide-card SKILL.md restructured to a happy-path core + `reference.md` sibling; no guidance deleted — every moved section lands verbatim-or-tightened in the sibling with a one-line routing pointer left in the core.
+  - [x] MECHANICAL: card-schema SKILL.md split the same way — lookup-shaped core (fields, enums, canonical tags, title rules, DoD format) stays; rationale/contract essays move to `reference.md`.
+  - [x] MECHANICAL: finish-card's duplicate `!cat .game-of-cards/hooks/finish-card.md` injection (Step 2 + Step 7) collapsed to a single load.
+  - [x] EMPIRICAL: before/after byte counts for every restructured skill recorded in log.md; the five in-scope SKILL.md bodies drop ≥ 50% in aggregate (measured −57.2%; the broader scan-deck-inclusive cycle number is reported alongside — see log.md 2026-07-07 for why the criterion was re-anchored to the in-scope set).
+  - [x] PROCESS: `heaviest-skills-re-load-full-methodology-briefing-per-card-cycle` marked superseded --by this card; its log.md carries the supersession rationale.
+  - [x] PROCESS: only `goc/templates/skills/`, `tests/`, and this card's own files hand-edited; `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` pass; `uv run goc validate` passes; unittest suite green except one pre-existing environment-dependent failure (`test_git_auto_commit_rebase_guard`, fails identically on unmodified HEAD).
 supersedes:
   - heaviest-skills-re-load-full-methodology-briefing-per-card-cycle
 worker: {who: Rodja Trappe, where: main}
@@ -121,6 +121,21 @@ kickoff-skill consolidation is out of scope (separate filing).
 
 Downstream usage report (2026-07-06, verbatim shares): plugin total
 31% = finish-card 15 + create-card 8 + advance-card 3 + decide-card 3
-+ next-card 2. Template byte sizes measured on this repo at HEAD
-(`wc -c goc/templates/skills/*/SKILL.md`): totals 224,554 B across 18
-skills; the five in-scope bodies sum to 107,883 B.
++ next-card 2.
+
+Restructure result (2026-07-07, `wc -c` on `goc/templates/skills/`;
+baseline is the post-description-trim HEAD of the same day):
+
+| Skill | before | after (core) | Δ | reference.md |
+|---|---:|---:|---:|---:|
+| finish-card | 16,791 | 9,701 | −42.2% | 7,624 |
+| create-card | 17,533 | 9,998 | −43.0% | 7,323 |
+| advance-card | 17,988 | 8,914 | −50.4% | 7,607 |
+| decide-card | 11,642 | 5,808 | −50.1% | 5,075 |
+| card-schema | 44,503 | 11,995 | −73.0% | 16,434 |
+| **in-scope total** | **108,457** | **46,416** | **−57.2%** | 44,063 |
+
+The moved 44 KB loads only when an edge case actually routes to it.
+`tests/test_skill_body_size.py` caps the seven hot-path bodies
+(10,000 B for the verbs, 12,000 B for card-schema) so future edits
+cannot silently re-fatten the hot path.

@@ -32,3 +32,12 @@ Options:
 ## 2026-07-07T04:04:48Z: decision recorded
 
 Adopt progressive disclosure inside each skill (happy-path SKILL.md core + on-demand reference.md sibling) instead of lean/full skill variants; supersede this card by plugin-skills-consume-a-third-of-downstream-session-usage — A downstream plugin-usage report (31% of session usage, finish-card alone 15%) shows deliberate human-paced use pays the same per-invocation cost as autonomous loops, so there is no audience for a fat default variant and the lean/full routing question dissolves. Gate session → none.
+
+## 2026-07-07T04:35:00Z: superseded
+
+Superseded by [`plugin-skills-consume-a-third-of-downstream-session-usage`](../plugin-skills-consume-a-third-of-downstream-session-usage/)
+— same body-size problem, different mechanism: progressive disclosure inside
+each skill (core SKILL.md + on-demand reference.md sibling) instead of
+parallel `<verb>-lean` skill variants. The downstream usage report showed
+deliberate use pays the same per-invocation cost as autonomous loops, which
+dissolved this card's open routing question (decision entry above).
