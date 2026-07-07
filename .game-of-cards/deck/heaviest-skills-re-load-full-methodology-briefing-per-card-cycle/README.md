@@ -1,11 +1,11 @@
 ---
 title: heaviest-skills-re-load-full-methodology-briefing-per-card-cycle
 summary: "Every autonomous-loop card cycle invokes `create-card` (328 lines) + `finish-card` (352 lines) = ~680 lines of skill body, plus cross-references into `card-schema` (826 lines). The full bodies contain methodology framing (XP/Kanban citations, philosophy, antipatterns, decision-gate body contracts) that a cold reader or new agent needs once, but that the autonomous loop has internalized after the first card of the day. Across the recent 59-card batch, that briefing was re-loaded ~59 times. This card scopes a lean/full split: a small per-skill `<verb>-lean` surface that the autonomous loop uses, and the current full surface preserved for deliberate, human-paced or first-time use. The lean/full boundary itself is the open design question — what stays in lean, what only the full briefing keeps."
-status: open
+status: superseded
 stage: null
 contribution: medium
 created: "2026-05-28T04:02:24Z"
-closed_at: null
+closed_at: "2026-07-07T04:04:54Z"
 human_gate: none
 advances: []
 advanced_by: []
@@ -20,6 +20,8 @@ definition_of_done: |
   - [ ] EMPIRICAL: a deliberate, human-paced invocation (e.g., user-typed "let's do X" → `create-card`) still loads the full skill body; the lean variant is invisible in that flow. Verified by inspection.
   - [ ] PROCESS: only `goc/templates/skills/` is hand-edited; `python scripts/sync_plugin_assets.py --check` passes (mirrors regenerated for the new lean SKILL.md files).
   - [ ] PROCESS: `uv run goc validate` passes; `validate_skill_dir_parity` is extended to recognize the lean variants or explicitly exclude them per the chosen mechanism.
+superseded_by:
+  - plugin-skills-consume-a-third-of-downstream-session-usage
 ---
 
 # heaviest-skills-re-load-full-methodology-briefing-per-card-cycle
