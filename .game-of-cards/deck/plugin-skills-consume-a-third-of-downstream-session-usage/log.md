@@ -35,3 +35,11 @@ guidance deleted", safety rules stay inline).
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 7/7 ticked
 - [x] log-md-closure-entry — '## 2026-07-07 — Closure' present
+
+## 2026-07-07T04:45:00Z — Post-close amendment
+
+Generalization follow-ups filed:
+[`occasional-goc-skills-still-load-full-manuals`](../occasional-goc-skills-still-load-full-manuals/)
+(same split for deck / refine-deck / kickoff / audit-deck) and
+[`kickoff-skill-descriptions-load-in-sessions-that-never-kick-off`](../kickoff-skill-descriptions-load-in-sessions-that-never-kick-off/)
+(kickoff catalog-description consolidation).
