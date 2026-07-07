@@ -1,27 +1,32 @@
 ---
 title: community-marketplace-pin-drifts-silently-behind-releases
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-05T17:36:32Z"
-closed_at: null
+closed_at: "2026-07-07T01:09:20Z"
 human_gate: none
 advances:
   - list-game-of-cards-on-anthropic-community-marketplace
-advanced_by: []
+advanced_by:
+  - marketplace-pin-check-crashes-on-repos-without-version-tags
 tags: [infra]
 definition_of_done: |
-  - [ ] EMPIRICAL: A scheduled workflow compares the `game-of-cards` pin in
+  - [x] EMPIRICAL: A scheduled workflow compares the `game-of-cards` pin in
     `anthropics/claude-plugins-community` against the latest release commit
     and flags drift.
-  - [ ] EMPIRICAL: Drift produces exactly one open tracking issue (created once,
+  - [x] EMPIRICAL: Drift produces exactly one open tracking issue (created once,
     updated in place on later runs — no duplicate issues per run).
-  - [ ] EMPIRICAL: The tracking issue closes automatically once the marketplace pin
+  - [x] EMPIRICAL: The tracking issue closes automatically once the marketplace pin
     contains the latest release commit.
-  - [ ] EMPIRICAL: A fresh release inside the grace window does not fire a false alarm
+  - [x] EMPIRICAL: A fresh release inside the grace window does not fire a false alarm
     (the nightly marketplace sync gets time to catch up).
-  - [ ] MECHANICAL: Repos without a published release, and a delisted marketplace entry,
-    exit cleanly / flag explicitly instead of erroring cryptically.
+  - [x] MECHANICAL: A delisted marketplace entry flags explicitly instead of
+    erroring cryptically. (No-release-repo robustness re-scoped to
+    `marketplace-pin-check-crashes-on-repos-without-version-tags`: the one-line
+    fix is authored and verified but the autonomous bot cannot push
+    `.github/workflows/` changes, and the path is unreachable in this repo —
+    version tags always exist.)
   - [x] MECHANICAL: The release.yml header documents the marketplace-pin follow-up so
     release operators know the distribution chain does not end at publish.
   - [x] PROCESS: `uv run goc validate` passes.
@@ -66,8 +71,35 @@ New workflow `.github/workflows/marketplace-pin-check.yml`:
 
 ## Verification
 
-- `python3 -c "import yaml,sys;..."` — workflow YAML parses (see log.md).
-- Check logic dry-run against live GitHub data at authoring time:
-  latest release v0.0.26 → commit `d19aa09a`, marketplace pin `4e4c5a1`,
-  compare status `behind` → stale → would open the tracking issue. ✓
-- False-alarm path: compare `d19aa09a...d19aa09a` → `identical` → fresh. ✓
+Every DoD path has been exercised against the real workflow script
+(the local runs execute the exact `run:` block extracted from the
+committed workflow YAML, with env overrides only):
+
+- **Drift detection + issue creation (real CI, scheduled):** run
+  [28787589943](https://github.com/zauberzeug/game-of-cards/actions/runs/28787589943)
+  (2026-07-06) compared v0.0.26 → `d19aa09a` against pin `4e4c5a1`,
+  got `behind`, and opened tracking issue
+  [#8](https://github.com/zauberzeug/game-of-cards/issues/8). ✓
+- **Update-in-place, no duplicates (real CI, dispatch):** run
+  [28834156281](https://github.com/zauberzeug/game-of-cards/actions/runs/28834156281)
+  (2026-07-07) found #8 open, edited its body in place; exactly one
+  `marketplace-pin` issue exists after two flagging runs. ✓
+- **Auto-close (local, test label):** with a mocked marketplace JSON
+  pinning `d19aa09a` (compare → `identical`), the script auto-closed
+  the open test issue #9 under the temporary `marketplace-pin-test`
+  label — real tracker #8 untouched. #8 will close the same way once
+  the live pin catches up. ✓
+- **Grace window (local, clock shim):** live stale pin + `date +%s`
+  shimmed to 1h after the v0.0.26 tag commit → "release is only 1h
+  old (< 48h grace) — not flagging yet", exit 0, no issue ops. ✓
+- **No-release repo (local):** this path was found broken — a repo
+  with no `vX.Y.Z` tags dies with a bare exit 1 (`grep` finding no
+  tags fails the pipeline under `set -euo pipefail` before the
+  empty-tag guard runs). The one-line `|| true` fix is authored and
+  verified locally, but the autonomous bot's token cannot push
+  `.github/workflows/` changes, so it is re-scoped to
+  [`marketplace-pin-check-crashes-on-repos-without-version-tags`](../marketplace-pin-check-crashes-on-repos-without-version-tags/)
+  (human-gated). Unreachable in this repo: version tags always exist. ⚠
+- **Delisted entry (local, test label):** mocked marketplace JSON
+  without the `game-of-cards` entry → explicit "entry is missing
+  (delisted?)" flag and a tracking issue, not a cryptic error. ✓
