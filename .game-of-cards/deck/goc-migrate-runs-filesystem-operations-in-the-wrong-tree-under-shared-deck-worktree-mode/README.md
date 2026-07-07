@@ -1,7 +1,7 @@
 ---
 title: goc-migrate-runs-filesystem-operations-in-the-wrong-tree-under-shared-deck-worktree-mode
 summary: "`goc migrate` resolves both deck trees from `REPO_ROOT` (engine.py:6123-6124) instead of `DECK_ROOT`, so under shared-deck-worktree mode it copies cards into the linked worktree's canonical tree and rmtree's the worktree's checkout copy of `deck/`, then prints \"Migration complete\" while the shared primary deck still carries the dual-tree conflict that every subsequent goc invocation refuses on. Same root cause the closed goc-move wrong-tree card fixed for git operations; migrate is the remaining filesystem-operation holdout."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-06T01:18:22Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the `_DUAL_TREE_CONFLICT` flag migrate's empty-legacy fall-through consults (engine.py:6185) agrees with the trees migrate now operates on
   - [ ] TDD: regression test covering the shared-deck-worktree migrate path (or a unit test asserting migrate's tree resolution uses `DECK_ROOT`)
   - [ ] PROCESS: full suite + `goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-migrate-runs-filesystem-operations-in-the-wrong-tree-under-shared-deck-worktree-mode
