@@ -2059,6 +2059,22 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("already installed", result.stderr)
             self.assertIn("deck/.goc-version", result.stderr)
 
+    def test_install_dry_run_reports_already_installed_refusal(self) -> None:
+        # Preview must match reality: on an already-installed repo the real
+        # run refuses with exit 1, so --dry-run must report the same refusal
+        # instead of planning writes the executor can never perform.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            deck = cwd / ".game-of-cards" / "deck"
+            deck.mkdir(parents=True)
+            (deck / ".goc-version").write_text("0.0.30\n")
+
+            result = self.run_goc(cwd, "install", "--dry-run")
+
+            self.assertEqual(1, result.returncode)
+            self.assertIn("already installed", result.stderr)
+            self.assertNotIn("writes planned", result.stdout)
+
     def test_upgrade_works_against_legacy_deck_location(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

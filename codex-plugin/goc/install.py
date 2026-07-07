@@ -1532,6 +1532,17 @@ def install(
 
     local_skills_agents = frozenset(a for a in agents if _should_use_local_skills(a, local_skills=local_skills))
 
+    # Refuse before the dry-run short-circuit: the preview must report the
+    # same already-installed refusal the real run does, never a write plan
+    # the executor can never perform.
+    existing_dir = _find_installed_deck_dir(target)
+    if existing_dir is not None:
+        existing = _detect_existing(existing_dir)
+        rel = existing_dir.relative_to(target)
+        print(f"already installed ({rel}/.goc-version → {existing})", file=sys.stderr)
+        print("Run `goc upgrade` to re-sync templates.", file=sys.stderr)
+        sys.exit(1)
+
     writes = _plan_writes(
         target,
         templates,
@@ -1542,14 +1553,6 @@ def install(
     if dry_run:
         _print_plan("install", target, writes, agents)
         return
-
-    existing_dir = _find_installed_deck_dir(target)
-    if existing_dir is not None:
-        existing = _detect_existing(existing_dir)
-        rel = existing_dir.relative_to(target)
-        print(f"already installed ({rel}/.goc-version → {existing})", file=sys.stderr)
-        print("Run `goc upgrade` to re-sync templates.", file=sys.stderr)
-        sys.exit(1)
 
     for agent in agents:
         guidance_only = agent not in local_skills_agents
