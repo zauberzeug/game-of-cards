@@ -1,21 +1,21 @@
 ---
 title: goc-migrate-runs-filesystem-operations-in-the-wrong-tree-under-shared-deck-worktree-mode
-summary: "`goc migrate` resolves both deck trees from `REPO_ROOT` (engine.py:6123-6124) instead of `DECK_ROOT`, so under shared-deck-worktree mode it copies cards into the linked worktree's canonical tree and rmtree's the worktree's checkout copy of `deck/`, then prints \"Migration complete\" while the shared primary deck still carries the dual-tree conflict that every subsequent goc invocation refuses on. Same root cause the closed goc-move wrong-tree card fixed for git operations; migrate is the remaining filesystem-operation holdout."
-status: active
+summary: "`goc migrate` resolved both deck trees from `REPO_ROOT` (engine.py:6123-6124) instead of `DECK_ROOT`, so under shared-deck-worktree mode it copied cards into the linked worktree's canonical tree and rmtree'd the worktree's checkout copy of `deck/`, then printed \"Migration complete\" while the shared primary deck still carried the dual-tree conflict. Same root cause the closed goc-move wrong-tree card fixed for git operations; fixed by resolving both trees from `DECK_ROOT`, mirroring that fix."
+status: done
 stage: null
 contribution: medium
 created: "2026-07-06T01:18:22Z"
-closed_at: null
+closed_at: "2026-07-07T01:37:20Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (migrate run from a linked worktree under shared-deck mode merges into and removes the PRIMARY tree's decks, and the dual-tree conflict is gone for subsequent invocations)
-  - [ ] TDD: `_cmd_migrate` resolves `canonical` and `legacy` from `DECK_ROOT` (engine.py:6123-6124), matching `_resolve_deck_dir` / `_git_auto_commit` / the fixed `goc move` path
-  - [ ] MECHANICAL: the `_DUAL_TREE_CONFLICT` flag migrate's empty-legacy fall-through consults (engine.py:6185) agrees with the trees migrate now operates on
-  - [ ] TDD: regression test covering the shared-deck-worktree migrate path (or a unit test asserting migrate's tree resolution uses `DECK_ROOT`)
-  - [ ] PROCESS: full suite + `goc validate` clean
+  - [x] TDD: reproduce.py exits zero (migrate run from a linked worktree under shared-deck mode merges into and removes the PRIMARY tree's decks, and the dual-tree conflict is gone for subsequent invocations)
+  - [x] TDD: `_cmd_migrate` resolves `canonical` and `legacy` from `DECK_ROOT` (engine.py:6123-6124), matching `_resolve_deck_dir` / `_git_auto_commit` / the fixed `goc move` path
+  - [x] MECHANICAL: the `_DUAL_TREE_CONFLICT` flag migrate's empty-legacy fall-through consults (engine.py:6185) agrees with the trees migrate now operates on
+  - [x] TDD: regression test covering the shared-deck-worktree migrate path (or a unit test asserting migrate's tree resolution uses `DECK_ROOT`)
+  - [x] PROCESS: full suite + `goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -23,13 +23,14 @@ worker: {who: "claude[bot]", where: main}
 
 `goc migrate` — the one verb exempted from the dual-tree refusal so it can
 *fix* the conflict (`engine.py:3606`: `if _DUAL_TREE_CONFLICT and
-args.command != "migrate"`) — resolves both trees it merges and deletes from
+args.command != "migrate"`) — resolved both trees it merges and deletes from
 `REPO_ROOT` (the cwd) instead of `DECK_ROOT` (the tree the deck actually
-lives in under shared-deck-worktree mode).
+lives in under shared-deck-worktree mode). Fixed by resolving both trees
+from `DECK_ROOT` (see "Fix" below).
 
 ## Location
 
-- `goc/engine.py:6123-6124` (`_cmd_migrate`):
+- `goc/engine.py:6123-6124` (`_cmd_migrate`), pre-fix:
 
   ```python
   canonical = REPO_ROOT / ".game-of-cards" / "deck"
@@ -43,7 +44,7 @@ lives in under shared-deck-worktree mode).
   DECK_ROOT, which is NOT REPO_ROOT in shared-worktree-deck mode
   (DECK_ROOT is the primary tree, REPO_ROOT the linked worktree)."
 
-## What's broken
+## What was broken
 
 In shared-deck-worktree mode (`GOC_WORKTREE_DECK=shared` or
 `workflow.worktree_deck: shared`), `_resolve_deck_root`
@@ -73,7 +74,7 @@ git-cwd sweep that closed that card did not catch it.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/goc-migrate-runs-filesystem-operations-in-the-wrong-tree-under-shared-deck-worktree-mode/reproduce.py`:
+`uv run python .game-of-cards/deck/goc-migrate-runs-filesystem-operations-in-the-wrong-tree-under-shared-deck-worktree-mode/reproduce.py`, pre-fix:
 
 ```
 --- goc migrate (from linked worktree, shared deck mode) ---
@@ -94,6 +95,11 @@ subsequent goc still refuses on dual-tree:    True
 DEFECT: migrate mutated the worktree's trees; shared deck untouched.
 ```
 
+Post-fix the same run merges into and removes the PRIMARY tree's decks,
+leaves the worktree checkout untouched, the dual-tree refusal no longer
+fires on subsequent invocations, and the script exits zero
+(`OK: migrate operated on the shared primary deck (fixed).`).
+
 ## Why it matters
 
 Shared-deck-worktree mode is a shipped, documented feature (built by the
@@ -113,23 +119,27 @@ Reachability: primary repo with both `.game-of-cards/deck/` and legacy
 from the worktree (see `reproduce.py`). Single-tree mode is unaffected
 (`DECK_ROOT == REPO_ROOT` there).
 
-## Fix
+## Fix (applied)
 
-Mirror the `goc move` fix: resolve the trees `_cmd_migrate` merges and
-deletes from `DECK_ROOT`, not `REPO_ROOT` —
+Mirrors the `goc move` fix: `_cmd_migrate` now resolves the trees it
+merges and deletes from `DECK_ROOT`, not `REPO_ROOT` —
 
 ```python
 canonical = DECK_ROOT / ".game-of-cards" / "deck"
 legacy = DECK_ROOT / "deck"
 ```
 
-(`engine.py:6123-6124`). This is the same single-site substitution the
+(`goc/engine.py`, `_cmd_migrate`). Same single-site substitution the
 goc-move card applied to its git cwd, anchored by the documented invariant
-at `engine.py:5420-5422`; note `_DUAL_TREE_CONFLICT` is already computed
+at `engine.py:5420-5422`. `_DUAL_TREE_CONFLICT` is already computed
 against `DECK_ROOT`'s trees (`_resolve_deck_dir(DECK_ROOT)`,
-`engine.py:123`), so migrate's own empty-legacy fall-through
-(`engine.py:6185`) becomes self-consistent with the fix. Do NOT apply the
-fix on this card's filing pass.
+`engine.py:123`), so migrate's empty-legacy fall-through (the
+`not dry_run and not _DUAL_TREE_CONFLICT` early return) is now
+self-consistent with the trees migrate operates on. Regression test:
+`tests/test_migrate_shared_worktree_tree_resolution.py` drives a real
+linked worktree + shared-deck migrate and asserts the primary trees were
+merged/removed, the worktree checkout was left alone, and the dual-tree
+refusal is gone afterwards.
 
 ## Distinct from existing cards
 

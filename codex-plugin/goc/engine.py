@@ -6120,8 +6120,12 @@ def _cmd_migrate(args):
     """Merge legacy deck/ into .game-of-cards/deck/ and remove the stale tree."""
     dry_run = args.dry_run
     auto_yes = args.auto_yes
-    canonical = REPO_ROOT / ".game-of-cards" / "deck"
-    legacy = REPO_ROOT / "deck"
+    # Resolve from DECK_ROOT, not REPO_ROOT: under shared-deck-worktree mode
+    # the deck lives in the primary tree while cwd is a linked worktree, and
+    # migrate must merge/remove the primary's trees (the ones _resolve_deck_dir
+    # computed _DUAL_TREE_CONFLICT against), not the worktree's checkout copies.
+    canonical = DECK_ROOT / ".game-of-cards" / "deck"
+    legacy = DECK_ROOT / "deck"
 
     if not legacy.exists():
         print("No legacy deck/ found; nothing to migrate.")
