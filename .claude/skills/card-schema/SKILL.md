@@ -1,7 +1,11 @@
 ---
 name: card-schema
-description: "Card schema reference — required/optional fields, status/stage/contribution/human_gate enums, canonical tags with predicates, DoD detection, relationship invariants, title naming convention. AUTO-INVOKE when other deck skills need schema context, or when user asks about field semantics, status lifecycle, DoD format, canonical tags, decision-gate body contract, or how to title a card. XP system metaphor — shared vocabulary makes the deck a contract, not a chat thread."
+description: Card schema reference — fields, status/stage/contribution/human_gate enums, canonical tags, DoD detection, relationship invariants, title convention. AUTO-INVOKE when other deck skills need schema context, or when the user asks about field semantics, status lifecycle, DoD format, or card titling.
 ---
+
+## When to invoke
+
+Invoke when other deck skills need schema context, or when the user asks about field semantics, status lifecycle, DoD format, canonical tags, the decision-gate body contract, or how to title a card. XP system metaphor — shared vocabulary makes the deck a contract, not a chat thread.
 
 # Card Schema
 

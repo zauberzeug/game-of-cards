@@ -1,7 +1,11 @@
 ---
 name: retrospective
-description: Backwards analysis of the last N closed cards — cluster by tag, surface recurring failure modes and generalization candidates, give a rough velocity feel. Read-only suggestion mode; may propose the `create-card` skill invocations for generalization candidates but never files them. AUTO-INVOKE when user says "what have we learned", "review recent work", "any patterns lately", "look back", "retrospective", "retro", "what's our velocity", or "what keeps going wrong".
+description: Backwards analysis of the last N closed cards — recurring failure modes, generalization candidates, rough velocity feel. Read-only; never files cards. AUTO-INVOKE on "what have we learned", "retro", "any patterns lately", "what keeps going wrong".
 ---
+
+## When to invoke
+
+Invoke when the user says "what have we learned", "review recent work", "any patterns lately", "look back", "retrospective", "retro", "what's our velocity", or "what keeps going wrong". May propose the `create-card` skill invocations for generalization candidates but never files them.
 
 ## Context
 

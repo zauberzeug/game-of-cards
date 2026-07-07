@@ -1,8 +1,12 @@
 ---
 name: next-card
-description: "Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status. AUTO-INVOKE when user says \"what's next\", \"pick something\", \"work on the queue\", \"what should I do\", \"next item\", \"drain the deck\", or initiates autonomous-loop work. Filters to `human_gate: none` for loop safety; Kanban pull principle (work is taken, not pushed)."
+description: "Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status (pull-card claims). AUTO-INVOKE on \"what's next\", \"pick something\", \"what should I do\", or autonomous-loop work. Filters to `human_gate: none` for loop safety."
 argument-hint: optional area filter (e.g. an area-tag or path prefix); omit for full open queue
 ---
+
+## When to invoke
+
+Invoke when the user says "what's next", "pick something", "work on the queue", "what should I do", "next item", "drain the deck", or initiates autonomous-loop work. Kanban pull principle — work is taken, not pushed.
 
 ## Preflight
 

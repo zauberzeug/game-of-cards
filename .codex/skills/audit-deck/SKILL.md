@@ -1,6 +1,6 @@
 ---
 name: audit-deck
-description: "Hunt for one previously-undocumented defect, derivation gap, doc drift, missing test or wrong concept. Also architectural ugliness, code smells and inconsistencies. Files via Skill(create-card). AUTO-INVOKE when user says \"find me a bug\", \"audit X\", \"check for inconsistencies\", \"what could be wrong\", \"hunt for issues\", \"scan the codebase\", \"look for gaps\", or invokes /audit-deck. Treats nothing as truth — inconsistencies are the primary lead (XP spike + Scrum backlog refinement)."
+description: "Hunt for one previously-undocumented defect, doc drift, missing test, or inconsistency; file it via Skill(create-card). AUTO-INVOKE on \"find me a bug\", \"audit X\", \"check for inconsistencies\", or /audit-deck. Inconsistencies are the primary lead."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke when the user says "find me a bug", "audit X", "check for inconsistencies", "what could be wrong", "hunt for issues", "scan the codebase", "look for gaps", or invokes /audit-deck. Also covers architectural ugliness, code smells, and inconsistencies (XP spike + Scrum backlog refinement).
 
 ## Preflight
 

@@ -1,7 +1,11 @@
 ---
 name: claude-kickoff
-description: Claude Code-specific complement to the generic kickoff skill — handle Bash(goc:*) permission grant, /plugin install cadence, and CLAUDE.md / CLAUDE.local.md merge prompts. AUTO-INVOKE after `Skill(kickoff)` completes on a Claude Code repo, or when the user says "finish kickoff for Claude", "set up Claude Code permissions", "/plugin update for goc", or initiates Claude-specific GoC setup that the generic kickoff intentionally skipped.
+description: Claude Code-specific complement to kickoff — Bash(goc:*) permission grant, /plugin install cadence, CLAUDE.md merge prompts. AUTO-INVOKE after Skill(kickoff) completes on a Claude Code repo, or on "finish kickoff for Claude".
 ---
+
+## When to invoke
+
+Invoke after `Skill(kickoff)` completes on a Claude Code repo, or when the user says "finish kickoff for Claude", "set up Claude Code permissions", "/plugin update for goc", or initiates Claude-specific GoC setup that the generic kickoff intentionally skipped.
 
 # Finish kickoff on Claude Code
 

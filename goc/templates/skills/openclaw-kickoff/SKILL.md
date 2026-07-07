@@ -1,7 +1,11 @@
 ---
 name: openclaw-kickoff
-description: OpenClaw-specific complement to the generic kickoff skill — note the `openclaw plugins update` cadence, surface the `inspect`/`doctor` sanity-check verbs, and confirm the host needs no permission grant or private-notes file. AUTO-INVOKE after the generic kickoff completes on an OpenClaw host, or when the user says "finish kickoff for OpenClaw", "set up OpenClaw for goc", or initiates OpenClaw-specific GoC setup that the generic kickoff intentionally skipped.
+description: OpenClaw-specific complement to the generic kickoff skill — openclaw plugins update cadence, inspect/doctor sanity checks, no permission grant or private-notes file needed. AUTO-INVOKE after the generic kickoff completes on an OpenClaw host, or on "finish kickoff for OpenClaw".
 ---
+
+## When to invoke
+
+Invoke after the generic kickoff completes on an OpenClaw host, or when the user says "finish kickoff for OpenClaw", "set up OpenClaw for goc", or initiates OpenClaw-specific GoC setup that the generic kickoff intentionally skipped.
 
 # Finish kickoff on OpenClaw
 

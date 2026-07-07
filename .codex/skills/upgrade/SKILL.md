@@ -1,6 +1,6 @@
 ---
 name: upgrade
-description: "Run `goc upgrade`, then read the engine's divergence report and drive an LLM-mediated reconciliation pass for evolving `.game-of-cards/` files (README, config) while confirming preservation of user-owned content stubs and hook files. AUTO-INVOKE when the user says \"upgrade goc\", \"pull the latest goc\", \"sync goc templates\", \"run goc upgrade\", or asks how to upgrade the GoC version in this repo. The engine's safety guarantee — never overwrite authored project state — holds with or without this skill; the skill exists to reconcile *evolving* upstream content into the local copy where the engine's \"preserve\" verdict alone leaves real upstream changes on the floor."
+description: "Run goc upgrade, then drive LLM reconciliation of evolving .game-of-cards/ files from the engine's divergence report, preserving user-owned content. AUTO-INVOKE on \"upgrade goc\", \"run goc upgrade\", \"sync goc templates\"."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke when the user says "upgrade goc", "pull the latest goc", "sync goc templates", "run goc upgrade", or asks how to upgrade the GoC version in this repo. The engine's safety guarantee — never overwrite authored project state — holds with or without this skill; the skill exists to reconcile *evolving* upstream content into the local copy where the engine's "preserve" verdict alone leaves real upstream changes on the floor.
 
 # Upgrade GoC
 

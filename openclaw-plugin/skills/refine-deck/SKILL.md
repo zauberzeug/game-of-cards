@@ -1,7 +1,11 @@
 ---
 name: refine-deck
-description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct file:line references, surface orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surface engineer-jargon titles for retitling, propose new canonical tags. AUTO-INVOKE when user says "tidy up the deck", "check for stale cards", "hygiene pass", "clean up the queue", "archive old", "audit the deck", or invokes /refine-deck. The board itself gets refactored each iteration (XP refactor mercilessly + Kanban continuous improvement).
+description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct references, orphaned dependencies, and jargon titles. AUTO-INVOKE on "tidy up the deck", "hygiene pass", "clean up the queue", or /refine-deck. The board itself gets refactored each iteration.
 ---
+
+## When to invoke
+
+Invoke when the user says "tidy up the deck", "check for stale cards", "hygiene pass", "clean up the queue", "archive old", "audit the deck", or invokes /refine-deck. Covers retagging stale cards, pruning 90-day unverified parks, surfacing defunct file:line references, surfacing orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surfacing engineer-jargon titles for retitling, and proposing new canonical tags (XP refactor mercilessly + Kanban continuous improvement).
 
 ## Context (project-local extension)
 

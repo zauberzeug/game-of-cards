@@ -1,6 +1,6 @@
 ---
 name: deck
-description: "Front door for the deck — the operating substrate for ALL persistent work. AUTO-INVOKE when the user references the deck/methodology/workflow OR at session start as a reminder that every user request producing persistent work must flow through Skill(create-card) → Skill(advance-card) → Skill(finish-card). XP-style story cards on a kanban board, designed for AI-agent collaborators."
+description: "Front door for the deck — the operating substrate for ALL persistent work. AUTO-INVOKE when the user references the deck/methodology/workflow, or at session start as a reminder that persistent work flows through Skill(create-card) → Skill(advance-card) → Skill(finish-card)."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke when the user references the deck, the methodology, or the workflow — or at session start as a reminder that every user request producing persistent work must flow through Skill(create-card) → Skill(advance-card) → Skill(finish-card). XP-style story cards on a kanban board, designed for AI-agent collaborators.
 
 # The Deck
 

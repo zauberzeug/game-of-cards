@@ -1,6 +1,6 @@
 ---
 name: codex-kickoff
-description: "Codex-specific complement to the generic kickoff skill — install the GoC Codex plugin from the repo marketplace, explain plugin hook activation, and verify the goc CLI path. AUTO-INVOKE after `Skill(kickoff)` completes in Codex, or when the user says \"finish kickoff for Codex\", \"set up Codex plugin\", \"install the GoC Codex plugin\", or \"enable GoC hooks in Codex\"."
+description: "Codex-specific complement to the generic kickoff skill — install the GoC Codex plugin from the repo marketplace, explain hook activation, verify the goc CLI path. AUTO-INVOKE after Skill(kickoff) completes in Codex, or on \"finish kickoff for Codex\" / \"set up Codex plugin\"."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke after `Skill(kickoff)` completes in Codex, or when the user says "finish kickoff for Codex", "set up Codex plugin", "install the GoC Codex plugin", or "enable GoC hooks in Codex".
 
 # Finish kickoff on Codex
 

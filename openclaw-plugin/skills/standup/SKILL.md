@@ -1,7 +1,11 @@
 ---
 name: standup
-description: Daily-style deck read — list active and impeded cards (carrying a `waiting_on` overlay), show closures from log.md within the last 24h, surface cards waiting on a human decision gate. Read-only, never mutates state. AUTO-INVOKE when user says "what's up", "where do we stand", "what's blocked", "what's stuck", "daily check", "standup", "morning check", or "what happened since yesterday".
+description: Daily-style deck read — active and impeded cards, closures within the last 24h, cards parked on a human decision gate. Read-only, never mutates state. AUTO-INVOKE on "where do we stand", "what's stuck", "standup", "daily check", or "what happened since yesterday".
 ---
+
+## When to invoke
+
+Invoke when the user says "what's up", "where do we stand", "what's blocked", "what's stuck", "daily check", "standup", "morning check", or "what happened since yesterday".
 
 ## Context
 

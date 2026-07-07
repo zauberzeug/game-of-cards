@@ -1,6 +1,6 @@
 ---
 name: scan-deck
-description: "Browse the deck — supportive triage view, filtered queues, kanban board, JSON dump, decision Q&A. Read-only by default. AUTO-INVOKE when user says \"what's up?\", \"where do you need me?\", \"what's open\", \"show me the deck\", \"list cards\", \"kanban view\", or \"decisions to make\". ALSO auto-invoke before Skill(create-card) to dedup against existing titles. Kanban first practice (make work visible)."
+description: "Browse the deck — supportive triage view, filtered queues, kanban board, JSON dump, decision Q&A. Read-only by default. AUTO-INVOKE on \"what's open\", \"show me the deck\", \"kanban view\", or \"decisions to make\" — and ALWAYS before Skill(create-card) to dedup against existing titles."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke when the user says "what's up?", "where do you need me?", "what's open", "show me the deck", "list cards", "kanban view", or "decisions to make" — and always before Skill(create-card) to dedup against existing titles. Kanban first practice (make work visible).
 
 # Scan the deck
 

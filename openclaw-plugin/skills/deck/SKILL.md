@@ -1,7 +1,11 @@
 ---
 name: deck
-description: Front door for the deck — the operating substrate for ALL persistent work. AUTO-INVOKE when the user references the deck/methodology/workflow OR at session start as a reminder that every user request producing persistent work must flow through the `create-card` skill → the `advance-card` skill → the `finish-card` skill. XP-style story cards on a kanban board, designed for AI-agent collaborators.
+description: Front door for the deck — the operating substrate for ALL persistent work. AUTO-INVOKE when the user references the deck/methodology/workflow, or at session start as a reminder that persistent work flows through the `create-card` skill → the `advance-card` skill → the `finish-card` skill.
 ---
+
+## When to invoke
+
+Invoke when the user references the deck, the methodology, or the workflow — or at session start as a reminder that every user request producing persistent work must flow through the `create-card` skill → the `advance-card` skill → the `finish-card` skill. XP-style story cards on a kanban board, designed for AI-agent collaborators.
 
 # The Deck
 

@@ -1,6 +1,6 @@
 ---
 name: retrospective
-description: "Backwards analysis of the last N closed cards — cluster by tag, surface recurring failure modes and generalization candidates, give a rough velocity feel. Read-only suggestion mode; may propose Skill(create-card) invocations for generalization candidates but never files them. AUTO-INVOKE when user says \"what have we learned\", \"review recent work\", \"any patterns lately\", \"look back\", \"retrospective\", \"retro\", \"what's our velocity\", or \"what keeps going wrong\"."
+description: "Backwards analysis of the last N closed cards — recurring failure modes, generalization candidates, rough velocity feel. Read-only; never files cards. AUTO-INVOKE on \"what have we learned\", \"retro\", \"any patterns lately\", \"what keeps going wrong\"."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke when the user says "what have we learned", "review recent work", "any patterns lately", "look back", "retrospective", "retro", "what's our velocity", or "what keeps going wrong". May propose Skill(create-card) invocations for generalization candidates but never files them.
 
 ## Preflight
 

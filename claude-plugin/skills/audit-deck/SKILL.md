@@ -1,8 +1,12 @@
 ---
 name: audit-deck
-description: Hunt for one previously-undocumented defect, derivation gap, doc drift, missing test or wrong concept. Also architectural ugliness, code smells and inconsistencies. Files via Skill(create-card). AUTO-INVOKE when user says "find me a bug", "audit X", "check for inconsistencies", "what could be wrong", "hunt for issues", "scan the codebase", "look for gaps", or invokes /audit-deck. Treats nothing as truth — inconsistencies are the primary lead (XP spike + Scrum backlog refinement).
+description: Hunt for one previously-undocumented defect, doc drift, missing test, or inconsistency; file it via Skill(create-card). AUTO-INVOKE on "find me a bug", "audit X", "check for inconsistencies", or /audit-deck. Inconsistencies are the primary lead.
 argument-hint: optional area filter within the project (consuming repo defines its default scope in `.game-of-cards/hooks/audit-deck.md`)
 ---
+
+## When to invoke
+
+Invoke when the user says "find me a bug", "audit X", "check for inconsistencies", "what could be wrong", "hunt for issues", "scan the codebase", "look for gaps", or invokes /audit-deck. Also covers architectural ugliness, code smells, and inconsistencies (XP spike + Scrum backlog refinement).
 
 ## Preflight
 

@@ -1,6 +1,6 @@
 ---
 name: kickoff
-description: "Kick off GoC in a fresh repo — introduce GoC, ask which persona fits, confirm AGENTS.md merge, scaffold project state via `goc install`. AUTO-INVOKE when the user says \"kickoff\", \"use GoC here\", \"set up game of cards\", \"initialize GoC\", or when any GoC skill is first used in a repo with no `.game-of-cards/deck/` directory. Host-agnostic: per-host complements (`claude-kickoff`, future `openclaw-kickoff`) handle host-specific UX."
+description: "Kick off GoC in a fresh repo — introduce GoC, pick a persona, confirm the AGENTS.md merge, scaffold via goc install. AUTO-INVOKE on \"kickoff\", \"use GoC here\", \"set up game of cards\", or when any GoC skill runs in a repo with no deck directory."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke when the user says "kickoff", "use GoC here", "set up game of cards", "initialize GoC", or when any GoC skill is first used in a repo with no `.game-of-cards/deck/` directory. Host-agnostic: per-host complements (`claude-kickoff`, `codex-kickoff`, `openclaw-kickoff`) handle host-specific UX.
 
 # Kick off GoC in this repo
 

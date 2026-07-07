@@ -1,6 +1,6 @@
 ---
 name: create-card
-description: "File a new card with frontmatter and a DoD scaffold (reproduce.py is authored by hand in Step 6 for bug-class cards, not scaffolded by the tool). AUTO-INVOKE when user says \"let's do X\", \"implement Y\", \"fix Z\", \"add support for\", \"I want to\", \"we need to\", describes a bug, requests a feature, or initiates ANY persistent work item. The card is filed BEFORE implementation — the body is the briefing the next reader (human or AI agent) needs to act cold. Title must be user-facing, descriptive, PO-readable (not engineer's jargon)."
+description: "File a new card with frontmatter and a DoD scaffold BEFORE implementation — the body is the briefing the next reader needs to act cold. AUTO-INVOKE on \"let's do X\", \"implement Y\", \"fix Z\", a described bug, a requested feature, or ANY new persistent work item."
 ---
 
 ## Codex GoC Command
@@ -25,6 +25,10 @@ test -n "$GOC_BOOTSTRAP" || { echo "GoC Codex plugin bootstrap not found" >&2; e
 Use that helper path in place of bare `goc` for the rest of the skill. Do not
 edit deck files directly just because `goc` is not on `PATH`.
 
+
+## When to invoke
+
+Invoke when the user says "let's do X", "implement Y", "fix Z", "add support for", "I want to", "we need to", describes a bug, requests a feature, or initiates ANY persistent work item. Title must be user-facing, descriptive, PO-readable (not engineer's jargon). reproduce.py is authored by hand in Step 6 for bug-class cards, not scaffolded by the tool.
 
 ## Preflight
 
