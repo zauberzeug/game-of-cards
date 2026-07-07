@@ -1,6 +1,6 @@
 ---
 title: skill-descriptions-bloat-every-consumer-session-prompt
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-04T13:47:46Z"
@@ -20,6 +20,7 @@ definition_of_done: |
   - [ ] TDD: a regression test fails when any `goc/templates/skills/*/SKILL.md` frontmatter description exceeds the cap (~300 chars) — red on today's 868-char advance-card before the rewrite, green after.
   - [ ] MECHANICAL: every shipped skill description rewritten to ≤ ~300 chars with the strongest 2–4 AUTO-INVOKE cues retained; exhaustive trigger enumerations moved into the skill body; mirrors re-synced via the pre-commit sync.
   - [ ] EMPIRICAL: total description size before/after recorded in log.md (baseline 8,128 chars ≈ 2,032 tokens; expect ≤ ~50% of that).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Skill descriptions bloat every consumer session prompt
