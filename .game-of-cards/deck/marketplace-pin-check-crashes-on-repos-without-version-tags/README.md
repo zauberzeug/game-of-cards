@@ -36,6 +36,15 @@ update workflow ... without "workflows" permission`), so an agent cannot
 land it. A human session with normal push rights closes this in one
 minute.
 
+This is a known constraint, not a fixable configuration gap:
+[`workflows-write-in-yaml-permissions-block-breaks-autonomous-workflows`](../workflows-write-in-yaml-permissions-block-breaks-autonomous-workflows/)
+(closed) established that the default `GITHUB_TOKEN` can never receive
+the `workflows` scope — GitHub blocks bot edits under
+`.github/workflows/` by design, and naming the scope in a `permissions:`
+block breaks the workflow outright. Human-gating workflow-file changes
+is therefore the standing pattern (same reason the OpenClaw mirror-drift
+guard lives in a test rather than a ci.yml step).
+
 ## Location
 
 `.github/workflows/marketplace-pin-check.yml:58-59` (the `tag=$(...)`
