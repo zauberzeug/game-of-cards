@@ -1,7 +1,7 @@
 ---
 title: dry-run-plan-promises-full-install-that-the-real-run-refuses-as-already-installed
 summary: "`install()` returns the dry-run plan before the `_find_installed_deck_dir` already-installed guard runs (install.py:1542-1552), so on a repo that already has GoC, `goc install --dry-run` prints a full write plan and exits 0 while the real run performs zero writes and exits 1 with \"already installed\". Fifth instance of the dry-run/executor drift family; parked unverified pending a reproduce.py."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-06T01:20:22Z"
@@ -14,6 +14,7 @@ tags: [bug, api-contract, unverified]
 definition_of_done: |
   - [ ] TDD: reproduce.py lands and exits non-zero on current code (dry-run predicts writes the real run refuses), zero after the fix; drop the `unverified` tag when it lands
   - [ ] TDD: on an already-installed repo, `goc install --dry-run` reports the already-installed refusal (matching the real run) instead of a write plan
+worker: {who: "claude[bot]", where: main}
 ---
 
 # dry-run-plan-promises-full-install-that-the-real-run-refuses-as-already-installed
