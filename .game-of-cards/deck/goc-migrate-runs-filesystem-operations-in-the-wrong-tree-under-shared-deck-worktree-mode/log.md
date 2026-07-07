@@ -28,3 +28,16 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-07 — Closure' present
+
+## 2026-07-07T01:42:00Z — Post-close amendment
+
+Generalization sweep at closure: audited every remaining `REPO_ROOT` use
+in `goc/engine.py` against the `DECK_DIR ⊆ DECK_ROOT` invariant
+(engine.py:5420-5422). No further deck-touching holdouts — the remaining
+sites are legitimately repo-scoped (plugin-mirror parity checks on the
+source checkout, `_run_automated_check`'s subprocess cwd for project test
+commands, display-only `_display_path` with a `ValueError` fallback). The
+same root-cause shape in the OpenClaw TS port is already tracked by the
+open card
+[`openclaw-resolve-deck-dir-ignores-git-worktree-shared-deck-resolution`](../openclaw-resolve-deck-dir-ignores-git-worktree-shared-deck-resolution/)
+— no new generalization card needed.
