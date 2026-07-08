@@ -899,11 +899,14 @@ Adding a new generic tag to goc itself requires a PR against the
 
 ## Tag application criteria
 
-A tag is **load-bearing** for a card iff its predicate fires on the
-card's title, H1 title, or first ~2500 chars of body. The criteria
-below are conservative: when in doubt, drop the tag. Every applied tag
-should give a future reader a useful filter; a tag that 70%+ of cards
-carry filters nothing.
+A tag is **load-bearing** for a card iff its predicate fires. The
+default scan surface is the card's title, H1 title, or first ~2500
+chars of body; a row may name a wider surface (e.g. `meta-fix`
+consults the `summary:` field, the full body, and the edge graph,
+because family membership is often declared deep in the body or only
+by wiring). The criteria below are conservative: when in doubt, drop
+the tag. Every applied tag should give a future reader a useful
+filter; a tag that 70%+ of cards carry filters nothing.
 
 | tag | applies iff |
 |---|---|
@@ -915,7 +918,7 @@ carry filters nothing.
 | `test` | title starts `test-` or contains `tolerance` / `vacuous` / `regression`, or body cites `pytest`, `tests/`, `test_`, `assertion`, `tolerance creep` |
 | `api-contract` | title or body cites a public API surface (a class, function, route, schema field that callers depend on) |
 | `infra` | title or body touches infrastructure (`pre-commit`, `pyproject.toml`, `uv.lock`, `tooling`, CI workflows, packaging) |
-| `meta-fix` | literal `meta-fix` / `family meta-fix` in title, title, or body |
+| `meta-fix` | literal `meta-fix` / `family meta-fix` anywhere in the title, `summary:` frontmatter field, or full body (no window cutoff), OR a non-empty `advances` / `advanced_by` edge to a `meta-fix`-tagged card (family membership is wiring, not prose) |
 
 Project-specific tag predicates appended below (consuming-repo authored):
 
