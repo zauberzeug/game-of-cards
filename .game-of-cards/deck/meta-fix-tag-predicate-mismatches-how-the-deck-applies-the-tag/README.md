@@ -1,7 +1,7 @@
 ---
 title: meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag
 summary: "The card-schema tag contract says a tag is load-bearing iff its predicate fires on title / H1 / first ~2500 chars of body, and the `meta-fix` row's predicate is a literal `meta-fix` in title or body. In this deck most genuinely meta-fix-tagged cards fail that window test — wired family heads and members carry the literal only deep in the body, in the `summary:` frontmatter field, or nowhere at all — so a mechanical predicate sweep would strip tags from correctly-wired families. Either the predicate should be widened to match actual practice (e.g. fire on edge-connection to a tagged family head, the summary field, or body-wide literal) or the convention tightened; today refine-deck's two hygiene categories give contradictory verdicts on the same cards."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-06T01:30:52Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the chosen predicate wording lands in `goc/templates/skills/card-schema/SKILL.md` (source of truth; mirrors regenerate via the sync hook), and the refine-deck skill's zero-edge sub-check comment stays consistent with it.
   - [ ] EMPIRICAL: re-running the predicate sweep from Skill(refine-deck) Step 2 over the open meta-fix-tagged cards yields zero false positives under the updated contract (spot-check documented in log.md).
   - [ ] MECHANICAL: `uv run goc validate` passes and `python scripts/sync_plugin_assets.py --check` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The `meta-fix` tag predicate mismatches how the deck applies the tag
