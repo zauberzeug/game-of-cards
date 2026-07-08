@@ -1,7 +1,7 @@
 ---
 title: set-cadence-silently-half-retunes-workflows-with-two-cron-schedule-lines
 summary: "`retune()` in scripts/set_cadence.py substitutes with `count=1`, so its \"expected exactly one `- cron:` line\" guard can never see a count above 1 (dead code); a workflow with two `- cron:` schedule entries is silently half-retuned — the first line is rewritten while the second keeps firing the autonomous agent at the stale cadence, and `--show` reports only the first match. Parked unverified pending a reproduce.py."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-06T01:20:23Z"
@@ -13,6 +13,7 @@ tags: [bug, infra, unverified]
 definition_of_done: |
   - [ ] TDD: reproduce.py lands and exits non-zero on current code (two-cron workflow retunes without error, second schedule untouched), zero after the fix; drop the `unverified` tag when it lands
   - [ ] TDD: `retune()` on a workflow with two `- cron:` lines either raises the multiple-schedules error or rewrites all managed schedule lines; `--show` no longer hides schedules after the first match
+worker: {who: "claude[bot]", where: main}
 ---
 
 # set-cadence-silently-half-retunes-workflows-with-two-cron-schedule-lines
