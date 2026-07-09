@@ -22,3 +22,13 @@ for `move`; and `_cmd_advance`/`_cmd_unadvance` classified **out of
 scope** (supersession edges legitimately mutate closed-card
 relationships — that pre-answers DoD item 5). No code changed this
 session; implementation waits on the decision.
+
+## 2026-07-09T05:30:00Z — Sibling-shape precedent
+
+[`path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck`](../path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck/)
+closed by introducing `resolve_card_dir()` — a single shared helper that every
+title-taking verb routes through — rather than per-verb inline checks. That is
+a working precedent for this epic's "reusable helper that each verb calls"
+option in the PROCESS DoD item, and the helper itself (called at the top of
+each verb's title resolution) is a candidate hang-point for a shared
+terminal-status guard.

@@ -13,3 +13,13 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-07-09 — Closure' present
+
+## 2026-07-09T05:30:00Z — Post-close amendment
+
+Cross-reference: this fix is a worked example of the shared-guard shape the
+epic [`terminal-status-guard-missing-across-mutation-verbs`](../terminal-status-guard-missing-across-mutation-verbs/)
+coordinates — a cross-cutting per-verb invariant (here: title containment;
+there: terminal-status refusal) enforced by one helper every verb routes
+through, instead of N drifting inline checks. `resolve_card_dir` sits at the
+top of each verb's title resolution and is the natural hang-point if that
+epic settles on the same helper pattern.
