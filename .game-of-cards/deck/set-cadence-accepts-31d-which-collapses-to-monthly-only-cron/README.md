@@ -1,19 +1,19 @@
 ---
 title: set-cadence-accepts-31d-which-collapses-to-monthly-only-cron
 summary: "interval_to_cron's day-interval upper bound is off by one: the guard rejects N > 31, but a */31 day-of-month step enumerates days {1, 32} and therefore also matches only the 1st — the exact silent monthly collapse the guard's own error message says it rejects. 30d (days {1, 31}) is the real last representable step; 31d must be rejected too."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-09T01:36:08Z"
-closed_at: null
+closed_at: "2026-07-09T01:43:43Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (interval_to_cron raises ValueError for "31d" instead of returning a cron whose day-of-month step matches only day 1)
-  - [ ] TDD: tests/test_set_cadence.py boundary cases updated — "31d" rejected, "30d" asserted as the last supported day step
-  - [ ] MECHANICAL: docstring and error message state the 1 ≤ N ≤ 30 range with the day-1-collapse rationale
+  - [x] TDD: reproduce.py exits zero (interval_to_cron raises ValueError for "31d" instead of returning a cron whose day-of-month step matches only day 1)
+  - [x] TDD: tests/test_set_cadence.py boundary cases updated — "31d" rejected, "30d" asserted as the last supported day step
+  - [x] MECHANICAL: docstring and error message state the 1 ≤ N ≤ 30 range with the day-1-collapse rationale
 worker: {who: "claude[bot]", where: main}
 ---
 
