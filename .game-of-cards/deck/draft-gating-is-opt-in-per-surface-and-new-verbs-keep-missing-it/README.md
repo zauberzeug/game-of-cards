@@ -9,7 +9,6 @@ human_gate: decision
 advances: []
 advanced_by: []
 tags: [bug, meta-fix, api-contract]
-draft: true
 summary: "card_is_draft gating is opt-in at every call site, and surfaces keep forgetting it: quality-pass audits (and with --llm --yes rewrites) unauthored scaffolds every listing hides, and decide lowers a draft's gate while printing a false 'any agent can now claim this card'. Fourth and fifth instances of the same family — fix the default, not the sites."
 definition_of_done: |
   - [ ] PROCESS: decision recorded — inverted default vs validate-time lint vs per-site fixes (see Decision required)
