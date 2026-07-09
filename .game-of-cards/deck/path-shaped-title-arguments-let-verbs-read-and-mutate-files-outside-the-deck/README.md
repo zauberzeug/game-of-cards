@@ -1,6 +1,6 @@
 ---
 title: path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-07-09T02:03:25Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a shared title-resolution helper rejects any title whose resolved card dir is not strictly inside `DECK_DIR`, and every verb that currently inlines `DECK_DIR / title` goes through it (new/move keep their existing richer slug validation)
   - [ ] TDD: regression test covers at least one read verb (`show`), one overlay verb (`wait`), and one closure verb (`done`) with absolute and `../` titles
   - [ ] MECHANICAL: no remaining bare `DECK_DIR / title` resolution of a user-supplied title outside the helper (grep-verified)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck
