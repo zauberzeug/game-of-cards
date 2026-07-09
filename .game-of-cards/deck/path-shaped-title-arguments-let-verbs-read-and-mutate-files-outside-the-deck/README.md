@@ -9,7 +9,6 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 summary: "Every verb except new/move resolves its title argument as `DECK_DIR / title` with no containment check, so an absolute or ../-relative 'title' reads and MUTATES files outside the deck; the auto-commit path then crashes with an unhandled ValueError after the write, leaving the mutation uncommitted."
 definition_of_done: |
   - [ ] TDD: reproduce.py exits non-zero (defect no longer fires) — `goc show`/`goc wait`/`goc done` with an absolute or `../`-relative title refuse with a clear error before any read or write
