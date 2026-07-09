@@ -1,20 +1,20 @@
 ---
 title: openclaw-skill-porter-inline-bang-regex-misses-indented-blocks
 summary: "The porter's INLINE_BANG_BLOCK_RE anchors at column 0, so an indented `!`-prefixed pre-exec block (pull-card SKILL.md's consultation-hook cat) survives the port verbatim. OpenClaw has no `!` pre-execute, so the shipped npm payload carries dead Claude Code-only syntax at the Andon-cord consultation step; the --check drift guard compares against the porter's own output and cannot catch it."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-09T01:13:57Z"
-closed_at: null
+closed_at: "2026-07-09T01:21:20Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — no ported SKILL.md line carries a `!`-prefixed backtick block at any indentation
-  - [ ] TDD: a regression test asserts `render_skill` neutralizes an indented inline bang block while preserving its indentation
-  - [ ] MECHANICAL: `python3 scripts/port_skills_to_openclaw.py` re-run; the committed openclaw-plugin/skills/pull-card/SKILL.md no longer carries the pre-exec syntax
-  - [ ] MECHANICAL: `python3 scripts/port_skills_to_openclaw.py --check` and the regression suite are green
+  - [x] TDD: reproduce.py exits zero — no ported SKILL.md line carries a `!`-prefixed backtick block at any indentation
+  - [x] TDD: a regression test asserts `render_skill` neutralizes an indented inline bang block while preserving its indentation
+  - [x] MECHANICAL: `python3 scripts/port_skills_to_openclaw.py` re-run; the committed openclaw-plugin/skills/pull-card/SKILL.md no longer carries the pre-exec syntax
+  - [x] MECHANICAL: `python3 scripts/port_skills_to_openclaw.py --check` and the regression suite are green
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -70,16 +70,25 @@ card documented for the `## Context` heading regex.
 
 ## Empirical evidence
 
+Pre-fix, reproduce.py demonstrated the surviving pre-exec block:
+
 ```
-$ uv run python .game-of-cards/deck/openclaw-skill-porter-inline-bang-regex-misses-indented-blocks/reproduce.py
 DEFECT: ported pull-card/SKILL.md line 122 keeps pre-exec syntax: '  !`cat .game-of-cards/hooks/pull-card.md 2>/dev/null || true`'
 exit=1
 ```
 
-## Fix
+Post-fix:
 
-Widen the anchor to tolerate leading whitespace and preserve the
-indentation in the replacement:
+```
+$ uv run python .game-of-cards/deck/openclaw-skill-porter-inline-bang-regex-misses-indented-blocks/reproduce.py
+OK: no ported SKILL.md line carries a `!`-prefixed backtick block
+exit=0
+```
+
+## Fix (applied)
+
+The anchor now tolerates leading whitespace and the replacement
+preserves the indentation (`scripts/port_skills_to_openclaw.py:117`):
 
 ```python
 INLINE_BANG_BLOCK_RE = re.compile(r"^([ \t]*)!`([^`]+)`", re.MULTILINE)
@@ -87,6 +96,11 @@ INLINE_BANG_BLOCK_RE = re.compile(r"^([ \t]*)!`([^`]+)`", re.MULTILINE)
 text = INLINE_BANG_BLOCK_RE.sub(r"\1`\2`", text)
 ```
 
-Then re-run the porter and commit the re-ported
-`openclaw-plugin/skills/pull-card/SKILL.md`. Mechanical, single-file,
-no credible alternative — filed at `human_gate: none`.
+The porter was re-run and the re-ported
+`openclaw-plugin/skills/pull-card/SKILL.md` now carries the neutral
+`` `cat …` `` form. Regression coverage lives in
+`tests/test_plugin_mirror_parity.py`
+(`test_indented_inline_bang_block_is_neutralized`,
+`test_no_ported_skill_retains_pre_exec_syntax` — the latter guards
+every portable skill, closing the drift-guard blind spot for this
+defect shape).
