@@ -1,29 +1,33 @@
 ---
 title: path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-07-09T02:03:25Z"
-closed_at: null
+closed_at: "2026-07-09T02:18:49Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-summary: "Every verb except new/move resolves its title argument as `DECK_DIR / title` with no containment check, so an absolute or ../-relative 'title' reads and MUTATES files outside the deck; the auto-commit path then crashes with an unhandled ValueError after the write, leaving the mutation uncommitted."
+summary: "FIXED: every verb now resolves its title argument through a shared `resolve_card_dir` helper that refuses path-shaped titles (absolute, `../`, any multi-part path) with exit 2 before any read or write; previously the bare `DECK_DIR / title` join let such titles read and MUTATE files outside the deck, then crash the auto-commit path with an unhandled ValueError after the write."
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits non-zero (defect no longer fires) — `goc show`/`goc wait`/`goc done` with an absolute or `../`-relative title refuse with a clear error before any read or write
-  - [ ] TDD: a shared title-resolution helper rejects any title whose resolved card dir is not strictly inside `DECK_DIR`, and every verb that currently inlines `DECK_DIR / title` goes through it (new/move keep their existing richer slug validation)
-  - [ ] TDD: regression test covers at least one read verb (`show`), one overlay verb (`wait`), and one closure verb (`done`) with absolute and `../` titles
-  - [ ] MECHANICAL: no remaining bare `DECK_DIR / title` resolution of a user-supplied title outside the helper (grep-verified)
+  - [x] TDD: reproduce.py exits non-zero (defect no longer fires) — `goc show`/`goc wait`/`goc done` with an absolute or `../`-relative title refuse with a clear error before any read or write
+  - [x] TDD: a shared title-resolution helper rejects any title whose resolved card dir is not strictly inside `DECK_DIR`, and every verb that currently inlines `DECK_DIR / title` goes through it (new/move keep their existing richer slug validation)
+  - [x] TDD: regression test covers at least one read verb (`show`), one overlay verb (`wait`), and one closure verb (`done`) with absolute and `../` titles
+  - [x] MECHANICAL: no remaining bare `DECK_DIR / title` resolution of a user-supplied title outside the helper (grep-verified)
 worker: {who: "claude[bot]", where: main}
 ---
 
 # path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck
 
+> Resolved: `resolve_card_dir` (goc/engine.py, next to `load_card_or_exit`)
+> now guards every title-argument resolution; path-shaped titles exit 2
+> before any read or write.
+
 ## Location
 
-`goc/engine.py` — every verb that takes a `<title>` argument resolves it
-blindly:
+`goc/engine.py` — pre-fix, every verb that took a `<title>` argument
+resolved it blindly (line numbers as filed):
 
 - `engine.py:4178` (`_cmd_done`), `engine.py:4254`, `engine.py:4984`,
   `engine.py:5173` (`_cmd_status`), `engine.py:5262`, `engine.py:5383`,
@@ -41,9 +45,9 @@ blindly:
   str(p.relative_to(DECK_ROOT))
   ```
 
-## What's broken
+## What was broken
 
-No verb checks that `DECK_DIR / title` stays inside `DECK_DIR`. Per
+No verb checked that `DECK_DIR / title` stays inside `DECK_DIR`. Per
 pathlib semantics, joining an **absolute** path replaces `DECK_DIR`
 entirely (`DECK_DIR / "/tmp/x"` == `/tmp/x`), and a `../`-relative
 title walks out of the tree. Only the creation verbs validate: `goc
@@ -69,14 +73,19 @@ Consequences, in increasing severity:
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck/reproduce.py`:
+`uv run python .game-of-cards/deck/path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck/reproduce.py`
+(post-fix, exit 1 = defect no longer fires):
 
 ```
-goc show <abs-path-outside-deck>: exit 0 (read the foreign file)
-goc wait <abs-path-outside-deck>: exit 1 (foreign file mutated: True; unhandled ValueError after the write: True)
+goc show <abs-path-outside-deck>: exit 2 (refused)
+goc wait <abs-path-outside-deck>: exit 2 (foreign file mutated: False; unhandled ValueError after the write: False)
 goc new <abs-path>: exit 2 (refused (guard exists only at creation))
-DEFECT CONFIRMED: title arguments resolve outside DECK_DIR; mutation lands on the foreign file, then auto-commit crashes.
+defect no longer fires (fixed)
 ```
+
+Pre-fix, the same script confirmed the escape: `show` read the foreign
+file (exit 0) and `wait` mutated its frontmatter, then crashed with the
+unhandled `ValueError` in `_git_auto_commit` after the write.
 
 ## Why it matters
 
@@ -93,21 +102,26 @@ which violates both the "engine never mutates outside the deck"
 expectation and the mutate+commit atomicity that `_git_auto_commit`
 exists to provide.
 
-## Fix
+## Fix (applied)
 
-Add one shared resolution helper in `goc/engine.py`, e.g.:
+One shared helper, `resolve_card_dir(title)` in `goc/engine.py` (directly
+after `load_card_or_exit`), refuses with exit 2 when the title has more
+than one path component (`len(Path(title).parts) != 1`), is `..`, or when
+the resolved `(DECK_DIR / title)` is not a direct child of the resolved
+`DECK_DIR` (symlink belt-and-braces). It returns the unresolved
+`DECK_DIR / title` join so downstream `relative_to` behavior is unchanged.
 
-```python
-def resolve_card_dir(title: str) -> Path:
-    card_dir = (DECK_DIR / title).resolve()
-    if card_dir.parent != DECK_DIR.resolve() or not TITLE_RE.match(title):
-        print(f"ERROR: invalid card title {title!r}", file=sys.stderr)
-        sys.exit(2)
-    return card_dir
-```
+Every user-supplied title resolution routes through it: `done` (single +
+`--bundle`), `attest`, `status` (title + `--by` successor + commit
+targets), `publish`, `new` (after its richer slug/antipattern guard, plus
+edge-endpoint commit targets), `_mutate_pair` (covering `advance`,
+`unadvance`, supersession, and `new` edge wiring), the
+advance/unadvance `_git_auto_commit` endpoint joins, `wait`, `move`
+(both `old_title` — previously a rename-a-foreign-dir-into-the-deck
+vector — and `new_title`), `decide`, and `show`. Rejecting at resolution
+time makes the `_git_auto_commit` `ValueError` crash unreachable.
 
-and route every `card_dir = DECK_DIR / title` site (and the
-`_git_auto_commit` endpoint joins at `engine.py:5716`/`5731`) through
-it. Rejecting at resolution time keeps the fix single-site and makes
-the `_git_auto_commit` crash unreachable; `new`/`move` keep their
-existing richer antipattern guard.
+Remaining bare `DECK_DIR /` joins are deck-internal only (loaded-card
+titles, post-`goc move` quality-pass rewrite targets, half-edge repair
+titles that must already exist as loaded cards) — none argv-supplied.
+Regression test: `tests/test_title_resolution_containment.py`.
