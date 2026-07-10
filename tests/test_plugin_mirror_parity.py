@@ -327,6 +327,41 @@ class OpenClawSkillPortDriftTest(unittest.TestCase):
         stale = fresh + "\n<!-- deliberately stale -->\n"
         self.assertNotEqual(fresh, stale)
 
+    def test_indented_inline_bang_block_is_neutralized(self) -> None:
+        """Inline `!`-prefixed pre-exec blocks are Claude Code-only syntax and
+        must be stripped even when indented (e.g. inside a list item), with
+        the indentation preserved. Regression for the column-0-anchored
+        INLINE_BANG_BLOCK_RE that let pull-card's consultation-hook block
+        ship un-neutralized.
+        """
+        porter = _load_porter()
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "SKILL.md"
+            src.write_text(
+                "---\nname: sample\ndescription: sample\n---\n\n"
+                "1. A step with an embedded hook:\n\n"
+                "  !`cat .game-of-cards/hooks/pull-card.md 2>/dev/null || true`\n",
+                encoding="utf-8",
+            )
+            ported = porter.render_skill(src)
+        self.assertNotRegex(ported, r"(?m)^[ \t]*!`")
+        self.assertIn(
+            "  `cat .game-of-cards/hooks/pull-card.md 2>/dev/null || true`",
+            ported,
+        )
+
+    def test_no_ported_skill_retains_pre_exec_syntax(self) -> None:
+        """No rendered port of any source skill may carry a `!`-prefixed
+        backtick block at any indentation — OpenClaw has no pre-execute.
+        """
+        porter = _load_porter()
+        for skill_dir in porter._portable_skill_dirs():
+            ported = porter.render_skill(skill_dir / "SKILL.md")
+            self.assertNotRegex(
+                ported, r"(?m)^[ \t]*!`",
+                msg=f"{skill_dir.name}/SKILL.md port retains pre-exec syntax",
+            )
+
     def test_porter_is_idempotent(self) -> None:
         """Rendering is deterministic — re-rendering every portable skill yields
         byte-identical output, so `--check` after a re-port is always green.

@@ -66,13 +66,14 @@ def interval_to_cron(spec: str, offset: int) -> str:
     Supported:
     - ``<N>h`` for N in {1, 2, 3, 4, 6, 8, 12} (must divide 24 so the
       ``*/N`` hour step doesn't reset at midnight), or ``24h``.
-    - ``<N>d`` for every-N-days, 1 ≤ N ≤ 31: ``1d`` → daily; ``Nd`` (N≥2)
+    - ``<N>d`` for every-N-days, 1 ≤ N ≤ 30: ``1d`` → daily; ``Nd`` (N≥2)
       → a day-of-month ``*/N`` step. cron's ``*/N`` day field realigns at
       each month boundary, so this is "roughly every N days" — the gap
       across a month end is shorter than N. That is the standard cron
-      approximation; there is no exact every-N-days cron. N > 31 is
-      rejected: cron's day-of-month field caps at 31, so a larger step
-      matches only the 1st and cannot represent the requested cadence.
+      approximation; there is no exact every-N-days cron. N > 30 is
+      rejected: cron's day-of-month field caps at 31, so a ``*/N`` step
+      with N ≥ 31 matches only the 1st and cannot represent the requested
+      cadence.
     - ``1w`` → exact weekly via the day-of-week field (every Monday); this
       one is drift-free. ``Nw`` (N≥2) has no clean cron and is rejected.
 
@@ -97,11 +98,11 @@ def interval_to_cron(spec: str, offset: int) -> str:
     if unit == "d":
         if n < 1:
             raise ValueError(f"{spec!r}: day interval must be >= 1")
-        if n > 31:
+        if n > 30:
             raise ValueError(
-                f"{spec!r}: day interval must be <= 31 "
-                "(cron's day-of-month field caps at 31; a larger */N step "
-                "fires only on the 1st)"
+                f"{spec!r}: day interval must be <= 30 "
+                "(cron's day-of-month field caps at 31, so a */N step with "
+                "N >= 31 matches only the 1st and fires monthly)"
             )
         if n == 1:
             return f"{offset} 0 * * *"
@@ -145,16 +146,30 @@ def retune(repo_root: Path, key: str, spec: str) -> tuple[str, bool]:
 
     # Lambda replacements: sidestep re's interpretation of \1 / \g<> in
     # replacement strings (a cron like */3 is fine today, but never risk it).
-    text2, n_cron = _CRON_RE.subn(lambda _m: new_cron_line, text, count=1)
+    # Unbounded subn so the counts see every match — the guards below refuse
+    # multi-schedule workflows instead of half-retuning them (the file is only
+    # written after both guards pass).
+    text2, n_cron = _CRON_RE.subn(lambda _m: new_cron_line, text)
     if n_cron != 1:
-        raise ValueError(
-            f"{filename}: expected exactly one `- cron:` line, found {n_cron}"
+        hint = (
+            "; this tool manages a single schedule per workflow — retune "
+            "multi-schedule workflows by hand"
+            if n_cron > 1
+            else ""
         )
-    text3, n_cad = _CADENCE_RE.subn(lambda _m: new_comment, text2, count=1)
+        raise ValueError(
+            f"{filename}: expected exactly one `- cron:` line, found {n_cron}{hint}"
+        )
+    text3, n_cad = _CADENCE_RE.subn(lambda _m: new_comment, text2)
     if n_cad != 1:
+        hint = (
+            "; add a `    # cadence: ...` line above `- cron:` first"
+            if n_cad == 0
+            else "; remove the duplicate marker lines"
+        )
         raise ValueError(
             f"{filename}: expected exactly one `# cadence:` marker line, found "
-            f"{n_cad}; add a `    # cadence: ...` line above `- cron:` first"
+            f"{n_cad}{hint}"
         )
 
     changed = text3 != text
@@ -172,17 +187,19 @@ def current_cadence(repo_root: Path) -> dict[str, dict[str, str]]:
             out[key] = {"file": filename, "cron": "(missing file)", "comment": ""}
             continue
         text = path.read_text()
-        cron_m = _CRON_RE.search(text)
-        cad_m = _CADENCE_RE.search(text)
-        cron = (
-            cron_m.group().strip()[len("- cron: "):].strip().strip("'\"")
-            if cron_m
-            else "(no cron)"
-        )
-        comment = (
-            cad_m.group().strip()[len("# cadence: "):].strip() if cad_m else ""
-        )
-        out[key] = {"file": filename, "cron": cron, "comment": comment}
+        crons = [
+            m.strip()[len("- cron: "):].strip().strip("'\"")
+            for m in _CRON_RE.findall(text)
+        ]
+        comments = [
+            m.strip()[len("# cadence: "):].strip()
+            for m in _CADENCE_RE.findall(text)
+        ]
+        out[key] = {
+            "file": filename,
+            "cron": ", ".join(crons) if crons else "(no cron)",
+            "comment": "; ".join(comments),
+        }
     return out
 
 
@@ -199,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="set_cadence.py",
         description="Query or retune the autonomous GitHub Actions cadence (repo-local).",
-        epilog="Interval specs: <N>h (1,2,3,4,6,8,12) or 1d/24h. Commit & push to apply.",
+        epilog="Interval specs: <N>h (1,2,3,4,6,8,12), 24h, <N>d (<=31), or 1w. Commit & push to apply.",
     )
     parser.add_argument(
         "--show", action="store_true", help="print the current cadence and exit"

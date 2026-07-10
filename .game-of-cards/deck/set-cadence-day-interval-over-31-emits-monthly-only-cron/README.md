@@ -23,6 +23,13 @@ worker: {who: "claude[bot]", where: main}
 
 # set-cadence-day-interval-over-31-emits-monthly-only-cron
 
+> Later evidence: the N > 31 boundary this card shipped is off by one — a
+> `*/31` step also enumerates only day 1 (`1 + 31 = 32 > 31`), so `31d`
+> collapses to monthly exactly like the `*/40` case rejected here. Fixed by
+> [set-cadence-accepts-31d-which-collapses-to-monthly-only-cron](../set-cadence-accepts-31d-which-collapses-to-monthly-only-cron/),
+> which tightened the guard to N <= 30 and superseded this card's
+> "31d still translates" DoD assertion.
+
 ## Location
 
 `scripts/set_cadence.py:84-90` — the `unit == "d"` branch of `interval_to_cron`.

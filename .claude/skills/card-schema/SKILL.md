@@ -5,13 +5,12 @@ description: Card schema reference — fields, status/stage/contribution/human_g
 
 ## When to invoke
 
-Invoke when other deck skills need schema context, or when the user asks about field semantics, status lifecycle, DoD format, canonical tags, the decision-gate body contract, or how to title a card.
+Invoke when other deck skills need schema context, or when the user asks about field semantics, status lifecycle, DoD format, tags, decision gates, or card titling.
 
 # Card Schema
 
-The shared vocabulary that makes the deck a **contract**: every field
-has defined semantics, a defined enum, and a validator that refuses
-unknown values. Read-only reference; mutations go through
+The shared vocabulary that makes the deck a **contract**: defined
+semantics, enums, and a validator that refuses unknown values. Read-only reference; mutations go through
 `Skill(create-card)` / `Skill(advance-card)` / `Skill(finish-card)`.
 The machine-readable schema ships as the sibling `schema.yaml`.
 
@@ -95,8 +94,7 @@ terminal milestone OR load-bearing infrastructure many cards depend
 on; `medium` — improves a working system (optimization, hardening,
 guard rail); `low` — editorial polish. The sort composes it across
 the `advances` graph (Bellman discount γ=0.7) into the `value` score
-driving `pull-card` — a `medium` card on a chain to a `high` sink can
-outrank an isolated `high`.
+driving `pull-card`.
 
 ### `human_gate`
 
@@ -242,8 +240,8 @@ dimensions across the existing deck.
 Project-specific tags register in `.game-of-cards/canonical-tags.md`
 (merged into the enum by `goc validate`); goc-shipped tags change via
 PR (`reference.md` § Adding new tags). A tag is **load-bearing** iff
-its predicate fires on the title, H1, or first ~2500 chars of body;
-when in doubt, drop it.
+its predicate fires on the title, H1, or first ~2500 chars of body
+(unless its row widens the surface); when in doubt, drop it.
 
 | tag | applies iff |
 |---|---|
@@ -255,7 +253,7 @@ when in doubt, drop it.
 | `test` | title starts `test-` or contains `tolerance`/`vacuous`/`regression`, or body cites pytest / `tests/` |
 | `api-contract` | cites a public API surface callers depend on |
 | `infra` | touches infrastructure (pre-commit, `pyproject.toml`, CI, packaging) |
-| `meta-fix` | literal `meta-fix` / `family meta-fix` in title or body |
+| `meta-fix` | literal `meta-fix` / `family meta-fix` in title, `summary:`, or full body (no cutoff), OR an `advances`/`advanced_by` edge to a `meta-fix`-tagged card |
 
 Project-specific predicates appended below:
 

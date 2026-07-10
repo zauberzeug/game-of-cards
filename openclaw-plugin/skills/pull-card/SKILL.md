@@ -119,7 +119,7 @@ the floor for a second run to trip over.
   reframing, lit-anchored default). The Andon cord is lazy: agents
   try the project-local consultation first, then pull.
 
-  !`cat .game-of-cards/hooks/pull-card.md 2>/dev/null || true`
+  `cat .game-of-cards/hooks/pull-card.md 2>/dev/null || true`
 
   1. If the consuming repo defined a consultation skill or rubric in
      the hook above, follow it. **If it answers confidently:** record

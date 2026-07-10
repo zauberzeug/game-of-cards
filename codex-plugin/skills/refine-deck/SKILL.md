@@ -218,8 +218,12 @@ for ep in epics:
 #    alone false-positives every wired family. A surfaced card is
 #    either (a) a genuine meta-fix whose family wasn't wired, or
 #    (b) a mistagged instance that should not carry the meta-fix
-#    tag — distinguish by reading the body for "## Family roster" /
-#    "n instances" prose.
+#    tag — judge by the card-schema tag predicate (Skill(card-schema)
+#    "Tag application criteria"): literal `meta-fix` anywhere in the
+#    title, `summary:` field, or full body means (a) genuine, wire
+#    the family; no literal anywhere means (b) mistagged, strip.
+#    (Zero-edge cards can't satisfy the predicate's edge clause,
+#    so the literal test is decisive here.)
 goc --tag meta-fix --status open --json | \
   python3 -c "
 import json, sys

@@ -77,16 +77,18 @@ class IntervalToCronTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             setc.interval_to_cron("0d", 0)
 
-    def test_day_interval_over_31_rejected(self) -> None:
-        # cron's day-of-month field caps at 31; a */N step with N > 31
+    def test_day_interval_over_30_rejected(self) -> None:
+        # cron's day-of-month field caps at 31; a */N step with N >= 31
         # matches only the 1st and cannot represent "every N days".
-        for bad in ("32d", "40d", "365d"):
+        for bad in ("31d", "32d", "40d", "365d"):
             with self.assertRaises(ValueError):
                 setc.interval_to_cron(bad, 0)
 
-    def test_day_interval_boundary_31_supported(self) -> None:
-        # 31d is the last representable day-of-month step.
-        self.assertEqual(setc.interval_to_cron("31d", 0), "0 0 */31 * *")
+    def test_day_interval_boundary_30_supported(self) -> None:
+        # 30d (days 1 and 31) is the last day-of-month step that matches
+        # more than one day; */31 would enumerate {1, 32} and collapse to
+        # monthly-on-the-1st.
+        self.assertEqual(setc.interval_to_cron("30d", 0), "0 0 */30 * *")
 
     def test_weekly_exact_via_dow(self) -> None:
         # 1w -> exact weekly via the day-of-week field (Monday), drift-free.
@@ -133,6 +135,44 @@ class RetuneTest(unittest.TestCase):
             cadence = setc.current_cadence(repo)
             self.assertEqual(cadence["refine"]["cron"], "45 */3 * * *")
             self.assertIn("every 3h", cadence["refine"]["comment"])
+
+    def test_two_cron_lines_rejected_and_file_untouched(self) -> None:
+        # A workflow with two schedule entries must be refused, not
+        # half-retuned (first line rewritten, second left at the stale
+        # cadence).
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            p = repo / ".github/workflows/pull-card.yml"
+            before = p.read_text().replace(
+                "    - cron: '0 0 * * *'\n",
+                "    - cron: '0 0 * * *'\n    - cron: '13 9 * * 6,0'\n",
+            )
+            p.write_text(before)
+            with self.assertRaisesRegex(ValueError, "found 2"):
+                setc.retune(repo, "pull", "4h")
+            self.assertEqual(p.read_text(), before)
+
+    def test_duplicate_cadence_marker_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            p = repo / ".github/workflows/pull-card.yml"
+            marker = "    # cadence: placeholder — managed by scripts/set_cadence.py\n"
+            p.write_text(p.read_text().replace(marker, marker * 2))
+            with self.assertRaisesRegex(ValueError, "found 2"):
+                setc.retune(repo, "pull", "1h")
+
+    def test_show_reports_every_schedule_line(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            p = repo / ".github/workflows/pull-card.yml"
+            p.write_text(
+                p.read_text().replace(
+                    "    - cron: '0 0 * * *'\n",
+                    "    - cron: '0 0 * * *'\n    - cron: '13 9 * * 6,0'\n",
+                )
+            )
+            cadence = setc.current_cadence(repo)
+            self.assertEqual(cadence["pull"]["cron"], "0 0 * * *, 13 9 * * 6,0")
 
     def test_missing_cadence_marker_errors(self) -> None:
         with tempfile.TemporaryDirectory() as d:

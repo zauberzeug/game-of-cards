@@ -993,6 +993,33 @@ def load_card_or_exit(card_dir: Path, title: str) -> "Card":
     return card
 
 
+def resolve_card_dir(title: str) -> Path:
+    """Resolve a user-supplied <title> argument to its card directory.
+
+    A bare `DECK_DIR / title` join with a path-shaped title silently leaves
+    the deck: joining an absolute path REPLACES DECK_DIR entirely (pathlib
+    semantics), and a `../` component walks out of the tree — letting read
+    verbs dump, and mutation verbs rewrite, files that belong to no deck
+    (after which `_git_auto_commit` crashes on the escaped path, tearing the
+    mutate+commit atomic step). Titles are bare card-directory names; every
+    verb that resolves a title argument must come through here. `new`/`move`
+    additionally enforce the richer slug/antipattern rules on the titles
+    they create.
+    """
+    if (
+        len(Path(title).parts) != 1
+        or title == ".."
+        or (DECK_DIR / title).resolve().parent != DECK_DIR.resolve()
+    ):
+        print(
+            f"ERROR: invalid card title {title!r} — a title is the bare card "
+            f"directory name inside the deck, not a path",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    return DECK_DIR / title
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Validate
 
@@ -4175,7 +4202,7 @@ def _cmd_done(args):
         )
         sys.exit(2)
     title = titles[0]
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     t = load_card_or_exit(card_dir, title)
     prior = t.status
     if prior == "done":
@@ -4251,7 +4278,7 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
         deduped.append(title)
     plan: list[tuple[str, Path, str, "Card"]] = []
     for title in deduped:
-        card_dir = DECK_DIR / title
+        card_dir = resolve_card_dir(title)
         t = load_card_or_exit(card_dir, title)
         if t.status == "done":
             print(
@@ -4981,7 +5008,7 @@ def _cmd_attest(args):
     title = args.title
     skips = args.skips
     non_interactive = args.non_interactive
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     card = load_card_or_exit(card_dir, title)
     config = load_deck_config()
     all_cards = load_all_cards()
@@ -5162,7 +5189,7 @@ def _cmd_status(args):
         print(f"ERROR: --by {successor!r} cannot equal the card being superseded", file=sys.stderr)
         sys.exit(2)
     if successor is not None:
-        successor_dir = DECK_DIR / successor
+        successor_dir = resolve_card_dir(successor)
         # Existence/loadability check only — the successor may carry any
         # status. A supersession's successor is the work that replaces the
         # old card and is meant to be completed, so the typed forward
@@ -5170,7 +5197,7 @@ def _cmd_status(args):
         # resolution, or a `superseded` card that routes onward). See
         # `validate_superseded_by_targets` for the full rationale.
         load_card_or_exit(successor_dir, successor)
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     t = load_card_or_exit(card_dir, title)
     prior = t.status
     if prior == new_status:
@@ -5239,7 +5266,7 @@ def _cmd_status(args):
     if auto_commit_enabled(commit_policy):
         commit_targets = [card_dir]
         if successor is not None:
-            commit_targets.append(DECK_DIR / successor)
+            commit_targets.append(resolve_card_dir(successor))
         if _git_auto_commit(commit_targets, f"deck: {title} {prior} → {new_status}"):
             print("  committed")
             if new_status == "active" and claim_push_enabled():
@@ -5259,7 +5286,7 @@ def _cmd_publish(args):
     commit = args.commit
     no_commit = args.no_commit
     _validate_commit_flags(commit, no_commit)
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     t = load_card_or_exit(card_dir, title)
     if not card_is_draft(t):
         print(f"{title}: not a draft; nothing to publish")
@@ -5380,7 +5407,7 @@ def _cmd_new(args):
     if not re.match(schema.title_pattern, title):
         print(f"ERROR: title {title!r} does not match {schema.title_pattern!r}", file=sys.stderr)
         sys.exit(2)
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     if card_dir.exists():
         print(f"ERROR: {card_dir} already exists", file=sys.stderr)
         sys.exit(2)
@@ -5429,7 +5456,7 @@ def _cmd_new(args):
     # the new card's edge writes to existing endpoints don't linger as
     # ambient ` M` in the worktree (the half-edge defect).
     if _commit_override(commit, no_commit) is True:
-        commit_targets = [card_dir, *(DECK_DIR / t for t in advances + advanced_by)]
+        commit_targets = [card_dir, *(resolve_card_dir(t) for t in advances + advanced_by)]
         # exclude_draft=False: this is an explicit --commit on a just-created
         # (draft) card. Committing it together with its edge writes avoids a
         # half-edge (endpoint committed, new card left untracked). The default
@@ -5462,8 +5489,8 @@ def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
 
 def _mutate_pair(child_title: str, parent_title: str, field_on_child: str, field_on_parent: str, *, add: bool) -> None:
     """Add or remove a bidirectional edge between two cards."""
-    child_dir = DECK_DIR / child_title
-    parent_dir = DECK_DIR / parent_title
+    child_dir = resolve_card_dir(child_title)
+    parent_dir = resolve_card_dir(parent_title)
     # load_card_or_exit gates on parseable frontmatter so the subsequent
     # parse_frontmatter calls inside _add_to_list_field / _remove_from_list_field
     # never see malformed input.
@@ -5630,7 +5657,7 @@ def _cmd_wait(args):
     """
     _validate_commit_flags(args.commit, args.no_commit)
     title = args.title
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     t = load_card_or_exit(card_dir, title)
     schema = load_schema()
     text = (card_dir / "README.md").read_text()
@@ -5713,7 +5740,7 @@ def _cmd_advance(args):
     print(f"advance: {title}.advanced_by += {advancer}; {advancer}.advances += {title}")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
-        if _git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], f"deck: {advancer} advances {title}"):
+        if _git_auto_commit([resolve_card_dir(title), resolve_card_dir(advancer)], f"deck: {advancer} advances {title}"):
             print("  committed")
 
 
@@ -5728,7 +5755,7 @@ def _cmd_unadvance(args):
     print(f"unadvance: {title}.advanced_by -= {advancer}; {advancer}.advances -= {title}")
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
-        if _git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], f"deck: {advancer} no longer advances {title}"):
+        if _git_auto_commit([resolve_card_dir(title), resolve_card_dir(advancer)], f"deck: {advancer} no longer advances {title}"):
             print("  committed")
 
 
@@ -5846,8 +5873,8 @@ def _cmd_move(args):
     if old_title == new_title:
         print(f"ERROR: cannot move a card to itself (old and new titles are both {new_title!r})", file=sys.stderr)
         sys.exit(2)
-    src = DECK_DIR / old_title
-    dst = DECK_DIR / new_title
+    src = resolve_card_dir(old_title)
+    dst = resolve_card_dir(new_title)
     if not src.exists():
         print(f"ERROR: {src} does not exist", file=sys.stderr)
         sys.exit(2)
@@ -5948,7 +5975,7 @@ def _cmd_decide(args):
     commit = args.commit
     no_commit = args.no_commit
     _validate_commit_flags(commit, no_commit)
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     t = load_card_or_exit(card_dir, title)
     if t.human_gate == "none":
         print(
@@ -6091,7 +6118,7 @@ def _cmd_triage(args):
 def _cmd_show(args):
     """Print full README.md to stdout, followed by sibling artifact filenames."""
     title = args.title
-    card_dir = DECK_DIR / title
+    card_dir = resolve_card_dir(title)
     p = card_dir / "README.md"
     if not p.exists():
         print(f"ERROR: {p} not found", file=sys.stderr)

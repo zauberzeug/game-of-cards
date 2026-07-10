@@ -112,8 +112,9 @@ def transform_context_block(match: re.Match[str]) -> str:
 # Inline `!`backtick`` blocks scattered through the body (outside ## Context).
 # Claude Code pre-executes these and embeds the output; OpenClaw has no
 # equivalent. Convert to a plain backticked example so the skill body still
-# reads as a recipe.
-INLINE_BANG_BLOCK_RE = re.compile(r"^!`([^`]+)`", re.MULTILINE)
+# reads as a recipe. Blocks may be indented (e.g. inside a list item), so
+# match any leading whitespace and preserve it in the replacement.
+INLINE_BANG_BLOCK_RE = re.compile(r"^([ \t]*)!`([^`]+)`", re.MULTILINE)
 
 
 def render_skill(src: Path) -> str:
@@ -127,7 +128,7 @@ def render_skill(src: Path) -> str:
     text = CONTEXT_BLOCK_RE.sub(transform_context_block, text)
 
     # Strip the `!` prefix from any remaining inline backtick blocks.
-    text = INLINE_BANG_BLOCK_RE.sub(r"`\1`", text)
+    text = INLINE_BANG_BLOCK_RE.sub(r"\1`\2`", text)
 
     # Apply the small substitutions.
     for pattern, repl in SUBSTITUTIONS:
