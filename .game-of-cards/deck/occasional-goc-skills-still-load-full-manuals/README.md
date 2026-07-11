@@ -1,6 +1,6 @@
 ---
 title: occasional-goc-skills-still-load-full-manuals
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-07T04:32:43Z"
@@ -22,6 +22,7 @@ definition_of_done: |
   - [ ] TDD: the four skills are added to `tests/test_skill_body_size.py` BODY_CAPS with caps they meet after the restructure (red before, green after).
   - [ ] EMPIRICAL: before/after byte counts recorded in log.md.
   - [ ] PROCESS: sync + porter --check green; `uv run goc validate` and the regression suite pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Occasional GoC skills still load full manuals
