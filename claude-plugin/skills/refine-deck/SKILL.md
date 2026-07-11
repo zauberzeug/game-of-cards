@@ -17,25 +17,11 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 # Refine the deck
 
-Scrum's **Backlog Refinement** (Schwaber & Sutherland) applied to the
-work surface, paired with Kanban's **continuous improvement** (Anderson):
-every iteration the BOARD gets better, not just the code on it. A
-deck read by humans and swarms of agents accumulates rot the moment
-filing slows down — stale parks, defunct cites, missing summaries,
-tags whose predicate no longer fires. The same first-principles edge
-that catches code drift catches deck drift; this skill is the recurring
-tax that keeps the read-pattern guarantee alive.
-
-The consuming repo may extend this hygiene flow via
-`.game-of-cards/hooks/refine-deck.md` (already loaded above) — e.g.,
-to demand a pattern-discovery pass with specialized reviewers,
-override the 90-day decay threshold, surface project-specific
-categories beyond the generic ones below, or declare which artifacts
-(modules, sub-packages, demos) are in-scope for framework-tier
-findings so cluster-finding doesn't span the entire repo
-indiscriminately — out-of-scope artifacts surface as
-`contribution: low` or skip-with-note, never Tier-1/Tier-2 verdicts
-or meta-decision-card cluster members.
+Every iteration the BOARD gets better, not just the code on it: this
+skill is the recurring hygiene tax that keeps the deck's read-pattern
+guarantee alive as filing slows down and rot accumulates. The hook
+above may extend the flow with project-specific categories or
+thresholds (scope rules in `reference.md` § Rationale).
 
 Surface rot and act on it before commit. Two action paths depending
 on the finding's nature:
@@ -52,32 +38,17 @@ on the finding's nature:
   `--tag unverified` per Step 4.5. "Surfaced and discussed in chat"
   is not a disposition.
 
-Categories:
+**Long-form material lives in `reference.md`** — a sibling file in
+this skill's directory. Read the named section only when the
+situation actually applies:
 
-- `tags: [unverified]` parks older than 90 days that nobody has
-  reproduced or refuted.
-- `status: open` cards whose body cites a file path that has since
-  been renamed or deleted (line numbers beyond EOF).
-- Cards missing a `summary:` field, leaving triage views blind.
-- Tags applied without their predicate firing (per
-  `Skill(card-schema)` "Tag application criteria").
-- Coherent epic-shaped bodies of work that lack a canonical
-  grouping tag.
-- **Orphaned dependencies** — relational rot. Epics with zero
-  linked children; meta-fix cards whose body lists a family roster
-  but carry zero edges (neither `advances` nor `advanced_by`); open
-  cards with legacy `**Depends on:** /
-  **Next:** / **Part of:**` markers in body but empty schema
-  arrays; unactioned `log.md` migration TODOs (`formerly parent: X`
-  / `formerly spawned_from: X`). The schema validator already
-  enforces edge SYMMETRY at commit time; this skill catches edge
-  ABSENCE, which is invisible to the validator.
-
-Each surfaced issue gets a disposition before commit. Hygiene
-findings: apply the mechanical edit directly. Structural findings:
-file via `Skill(create-card)`, disprove via
-`Skill(advance-card) <title> disproved`, or park `--tag unverified`
-per Step 4.5 — never leave surfaced findings undisposed.
+| Situation | `reference.md` section |
+|---|---|
+| Why this pass exists; hook scope rules | Rationale |
+| Running the four orphaned-dependency sub-checks | Orphaned-dependency sub-check scripts |
+| `goc quality-pass --llm` | Quality-pass `--llm` flag |
+| What the Step 4 report should look like | Example Step 4 output |
+| Which findings Step 4.5 covers, escape valve | Step 4.5 scope notes |
 
 ## Step 1 — sanity floor
 
@@ -131,17 +102,12 @@ decide if the lead is still real, and either:
 ### Defunct file:line citations
 
 For each open card, check its body cites against current code:
-
-```bash
-# Pseudo: for each cited file:line in body, verify file exists and
-# line ≤ EOF. Cards with broken cites are surfaced.
-```
-
-A defunct citation usually means the cited code was refactored.
-Recommendation: re-read the card; either update the citation in
-place (mechanical edit, no status change) or — if the refactor
-also fixed the defect — close via `Skill(finish-card)` with a
-note "fixed incidentally by <commit-hash>".
+verify each cited file exists and the cited line is ≤ EOF. A defunct
+citation usually means the cited code was refactored. Recommendation:
+re-read the card; either update the citation in place (mechanical
+edit, no status change) or — if the refactor also fixed the defect —
+close via `Skill(finish-card)` with a note "fixed incidentally by
+<commit-hash>".
 
 ### Missing summaries
 
@@ -166,82 +132,16 @@ fire, strip it (mechanical frontmatter edit).
 
 ### Orphaned dependencies
 
-The validator catches asymmetric edges (`A.advances=[B]` but
-`B.advanced_by` missing `A`). It does NOT catch edge ABSENCE — a
-card with `advances: []` looks fine to the schema even when its
-body declares a family roster, an epic membership, or a
-predecessor in prose. This is the failure mode that left 122/126
-open cards naked after the v1→v2 migration.
-
-Four sub-checks:
-
-```bash
-# 1. Epics with no linked children
-goc --status open --json | \
-  python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-epics = [c for c in d if 'epic' in (c.get('tags') or [])]
-for ep in epics:
-    n = len(ep.get('advances') or []) + len(ep.get('advanced_by') or [])
-    if n == 0:
-        print(f'{ep[\"title\"]}: epic with zero linked children')
-"
-
-# 2. Meta-fix cards with zero edges (neither advances nor
-#    advanced_by — family roster declared in body but not wired).
-#    Count BOTH edge fields: a correctly-wired umbrella carries
-#    advanced_by=[siblings] with advances=[], so testing advances
-#    alone false-positives every wired family. A surfaced card is
-#    either (a) a genuine meta-fix whose family wasn't wired, or
-#    (b) a mistagged instance that should not carry the meta-fix
-#    tag — judge by the card-schema tag predicate (Skill(card-schema)
-#    "Tag application criteria"): literal `meta-fix` anywhere in the
-#    title, `summary:` field, or full body means (a) genuine, wire
-#    the family; no literal anywhere means (b) mistagged, strip.
-#    (Zero-edge cards can't satisfy the predicate's edge clause,
-#    so the literal test is decisive here.)
-goc --tag meta-fix --status open --json | \
-  python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-for c in d:
-    n = len(c.get('advances') or []) + len(c.get('advanced_by') or [])
-    if n == 0:
-        print(f'{c[\"title\"]}: meta-fix with zero edges (family unwired or mistagged?)')
-"
-
-# 3. Open cards with legacy markers in body but empty schema arrays
-grep -lE '^\*\*(Depends on|Next|Part of):\*\*' deck/*/README.md | \
-  while read f; do
-    title=$(basename "$(dirname "$f")")
-    arrays=$(goc --json --status all 2>/dev/null | \
-      python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-for c in d:
-    if c['title'] == '$title':
-        n = len(c.get('advances') or []) + len(c.get('advanced_by') or [])
-        print(n)
-        break
-")
-    if [ "$arrays" = "0" ]; then
-      echo "$title: legacy depends-on/next/part-of marker but advances/advanced_by empty"
-    fi
-  done
-
-# 4. Unactioned migration TODOs in log.md
-grep -rE 'Migration v1.v2.*formerly `(parent|spawned_from):' deck/ --include='log.md' | \
-  sed -E "s|deck/([^/]+)/log\.md:.*formerly \`(parent\|spawned_from): ([a-z0-9-]+)\`.*|\1 → \3|" | \
-  sort -u
-```
-
-For each surfaced card: read the body and the migration log
-note, judge the direction (epic-of → epic `advanced_by` child;
-predecessor → child `advanced_by` predecessor; family member →
-instance `advanced_by` meta-fix), and apply via `goc advance X
---by Y`. The advance command is symmetric-by-construction so the
-validator stays happy.
+Relational rot the validator cannot see: it enforces edge SYMMETRY
+at commit time but not edge ABSENCE — epics with zero linked
+children; meta-fix cards whose body lists a family roster but carry
+zero edges; open cards with legacy `**Depends on:** / **Next:** /
+**Part of:**` body markers but empty schema arrays; unactioned
+`log.md` migration TODOs (`formerly parent: X` / `formerly
+spawned_from: X`). Run the four sub-checks in `reference.md`
+§ Orphaned-dependency sub-check scripts, judge each surfaced card's
+edge direction, and wire it via `goc advance X --by Y`
+(symmetric-by-construction, so the validator stays happy).
 
 ### Card metadata quality pass
 
@@ -263,13 +163,6 @@ What it surfaces:
   `summary:` frontmatter field that triage views (`goc -v`)
   depend on. For each: read the body, write a ≤3-sentence summary
   into the YAML.
-
-The optional `--llm` flag is a hook for a Sonnet-batched pass that
-extends the audit to summary quality + per-DoD-item issues. Currently
-a stub; the integration story is tracked in
-`deck/auto-validate-card-titles-summaries-and-dods/log.md`. The
-regex-only mode is sufficient as the always-on baseline; the
-batched LLM pass is a nice-to-have, not load-bearing.
 
 ## Step 3 — file new canonical tag candidates
 
@@ -294,15 +187,7 @@ taken (hygiene) or the card filed / disprove flip / park
 <title>: <issue> → <action>
 ```
 
-Example output:
-
-```
-heuristic-driven-eta: tags=[unverified] created 2026-01-15 (107d) → Skill(advance-card) → disproved (3 rounds without reproduction)
-auth-cookie-expires-too-soon: body cites auth/cookie.ts:84 (file ends at L72) → updated citation to auth/cookie.ts:67
-schultz-eligibility-trace-doc-drift: missing summary → wrote ≤3-sentence summary into frontmatter
-operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → stripped tag
-research-front-emerging-clusters: 6 cards coalescing around <topic>, no canonical tag → Skill(create-card) <new-tag-pr-card>
-```
+Sample lines in `reference.md` § Example Step 4 output.
 
 ## Step 4.5 — Park-or-disprove unfollowed structural candidates (mandatory)
 
@@ -321,20 +206,8 @@ MUST go somewhere durable before commit:
    file:line (verbatim quote), why deferred, falsification recipe,
    the category (Step 2 sub-section) that surfaced it.
 
-The only escape valve: a candidate that's clearly noise (the
-file:line doesn't exist; the predicate that surfaced it has since
-fired correctly elsewhere) AND has no underlying substance can be
-silently dropped.
-
-This rule applies to **structural** candidates only — the kind
-project-local pattern-discovery passes produce. Hygiene findings
-(stale parks, defunct cites, missing summaries, predicate-failing
-tags, orphaned-edge sub-checks) keep their mechanical-apply path —
-they're applied directly in Step 2 and need no Step 4.5 audit.
-
-This rule applies even when the round produces confirmed hygiene
-edits. The "zero applied → ≥1 disposition" rule is the
-_minimum_; this is the _maximum-amnesia bound_.
+Scope, minimum-vs-maximum bound, and the noise escape valve:
+`reference.md` § Step 4.5 scope notes.
 
 ## Cross-references
 

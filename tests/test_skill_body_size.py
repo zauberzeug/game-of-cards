@@ -20,8 +20,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 
-# Bytes of SKILL.md (frontmatter + body). The capped set is the hot path:
-# the per-card-cycle verbs plus the cross-referenced schema skill.
+# Bytes of SKILL.md (frontmatter + body). The capped set is the hot path
+# (the per-card-cycle verbs plus the cross-referenced schema skill) and the
+# occasional skills that got the same progressive-disclosure split later.
+# kickoff's cap is higher because its body is mostly verbatim dialog text
+# delivered to the user, which cannot move to the reference sibling.
 BODY_CAPS = {
     "create-card": 10_000,
     "finish-card": 10_000,
@@ -30,6 +33,10 @@ BODY_CAPS = {
     "next-card": 10_000,
     "pull-card": 10_000,
     "card-schema": 12_000,
+    "deck": 10_000,
+    "refine-deck": 10_000,
+    "kickoff": 11_000,
+    "audit-deck": 10_000,
 }
 
 

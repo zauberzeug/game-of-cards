@@ -13,89 +13,40 @@ Invoke when the user references the deck, the methodology, or the workflow — o
 **card**: a unit of work — bug, story, epic, idea, derivation gap,
 doc-drift catch — with frontmatter-driven status on a kanban board.
 
-## Heritage & philosophy: agile for the age of agents
+The deck is the **runtime of the human's intent, not a ceremony they
+opt into**: rigor (machine-checkable DoDs, audit-trail commits,
+supersession chains) is separated from visibility (zero by default).
+The user sees the code, not the bookkeeping, unless they ask.
 
-The deck inherits three traditions deliberately:
+**Background and rationale live in `reference.md`** — a sibling file
+in this skill's directory. Read the named section only when the
+situation actually calls for it:
 
-- **XP story cards (Beck, 1999).** One card = one unit of work,
-  small enough to fit on an index card, with enough context that any
-  team member can pick it up. We keep the size discipline; the medium
-  is markdown instead of cardboard.
-- **Scrum's Definition of Done (Sutherland & Schwaber).** Every card
-  carries a checkbox-list DoD as a closure contract. `goc done
-  <title>` refuses to flip the status until every box is `- [x]`. The
-  contract is machine-checkable, not a verbal handoff.
-- **Kanban (Anderson, Toyota lineage).** Status mutates; position on
-  disk does NOT. A card stays at `deck/<title>/` for life — no moving
-  to `done/`, no archiving. Cross-references stay valid through every
-  state change.
+| Situation | `reference.md` section |
+|---|---|
+| Why XP/Scrum/Kanban discipline is load-bearing for agent swarms | Heritage & philosophy |
+| Why card operations stay invisible; full operating-mode prose | Game of Cards as the runtime |
+| Why the methodology is named Game of Cards | The worldview |
+| New evidence after a card closed | Closure is not frozenness |
+| How status / `waiting_on` / `human_gate` compose | Status, overlay, and gate are orthogonal axes |
+| Pre-2026-05-01 placeholder DoDs; v1 `find-todo`/`work-todo` names | Migration legacy |
 
-The argument for keeping these now: original agile was a response to
-**human handoff costs** — the 1990s problem of getting a feature from
-analyst to developer to QA without losing intent. AI agents are the
-most aggressive handoff-stress-test ever invented: dozens of
-sub-agents, scheduled cron loops, and parallel /loop iterations all
-read the same cards and mutate the same frontmatter. What was
-"discipline" for human teams becomes **structurally load-bearing**
-under that load:
+## Three operating modes
 
-- **Slug-as-URL.** `deck/<title>/` is a stable handle that survives
-  status changes, agent rewrites, and supersession chains. Renaming
-  breaks every commit message and prior cross-reference.
-- **Machine-checkable DoDs.** A swarm cannot pattern-match "did we
-  really finish this" the way a stand-up meeting can. The CLI's
-  unchecked-box count is the closure gate.
-- **Self-contained card bodies.** Hallway context evaporates between
-  /loop iterations. Each card must carry its own evidence,
-  reproduction recipe, and decision framing — agents cannot rely on
-  conversational continuity.
+- **Session mode.** A human is talking. the agent runs the card pipeline
+  silently while answering; card operations are NEVER announced unless
+  the user explicitly asks to see the deck.
+- **Autonomous mode.** No human is steering. the `pull-card` skill runs
+  on a loop or schedule, draining the `human_gate: none` queue;
+  the `audit-deck` skill keeps the queue fed on a slower cadence.
+- **Andon-cord mode.** A human is unblocking the line: `pull-card`
+  parked a card behind a raised gate; the `scan-deck` skill surfaces
+  parked cards, the `decide-card` skill records the answer and lowers
+  the gate, the next pull resumes the work.
 
-## Game of Cards as the runtime, not a workflow
-
-The deck is the **implementation** of the human's intent, not a
-ceremony they opt into. A vibe coder types "I want a CSV export
-button" and the system silently: files the card, drafts the body
-from their words, advances it, implements, closes, commits. They
-see the button. They do not see the card. If they ever ask "what's
-in flight?", the `scan-deck` skill shows them the bookkeeping. If they
-never ask, they never need to know it exists.
-
-This separates the methodology's **rigor** (machine-checkable DoDs,
-audit-trail commits, supersession chains, hook-enforced routing)
-from its **visibility** (zero by default). Same principle as a
-database engine: the user writes SQL; transactions, locks, and
-write-ahead logs happen invisibly. Our cards are the rows; deck.py
-is the engine; the skills are the query interface.
-
-Three operating modes coexist:
-
-- **Session mode.** A human is talking. The UserPromptSubmit hook
-  detects work intent in their prompt; the agent runs the card pipeline
-  silently while answering. Card operations are NEVER announced
-  unless the user explicitly asks to see the deck.
-- **Autonomous mode.** No human is steering. the `pull-card` skill
-  runs on `/loop pull-card 30m` or `/schedule pull-card
-  weekday 09:00`, draining the `human_gate: none` queue.
-  the `audit-deck` skill runs on a slower cadence to keep the queue
-  fed. The deck advances overnight. The human wakes up to commits
-  that closed cards they never explicitly claimed.
-- **Andon-cord mode.** A human is unblocking the line. When
-  `pull-card` hit a question only a human could answer, it raised
-  the gate (`none → decision` or `none → session`) and parked the
-  card. the `scan-deck` skill surfaces parked cards (triage default
-  on bare invocation or "what's up?"); the `scan-deck` skill (with `decisions
-  to make`) walks each decision-gated card via `AskUserQuestion`
-  and calls the `decide-card` skill per answer. Gate lowered → next
-  `pull-card` claims and implements per the recorded decision.
-  Lean's pulled-cord pattern: humans resolve the cause, agents
-  restart the line.
-
-Multiple the agent sessions on the same project work cards in parallel.
-The `status: active` field is the soft lock; git's merge handles
-the rare race when two sessions claim the same card simultaneously
-(whichever commits first wins). The user can have N parallel chats
-going while M scheduled agents work the deck — they ride the events
-as they occur, present or absent as resources allow.
+Multiple sessions work cards in parallel. `status: active` is the
+soft lock; git's merge handles the rare simultaneous-claim race
+(whichever commits first wins).
 
 ## What this looks like in practice
 
@@ -145,31 +96,6 @@ Run `goc --help` for the full verb list. Schema and enum constraints
 surface in `goc validate` error messages. Project-local tag extensions
 live in `.game-of-cards/canonical-tags.md`.
 
-## The worldview: Game of Cards
-
-The methodology has a name: **Game of Cards** — the *Game of Thrones*
-echo is deliberate. Work in a complex codebase plus an AI-agent swarm
-is **political** (cards have stakeholders, factions, conflicting
-opinions), **unforeseeable** (you cannot predict which threads
-activate or which cards get superseded), **high-stakes** (a wrongly-
-flipped DoD ripples through commit history and supersession chains),
-and **uncontrollable** (you don't drive the swarm; events surface,
-you respond).
-
-The 1990s agile methodologies optimized for human-team handoffs.
-Game of Cards adds the worldview layer: **you ride the events as
-they occur**. the `next-card` skill exists because work is *taken* when
-capacity exists, not *pushed* when work appears (Kanban pull, made
-structural). the `audit-deck` skill exists because the deck reflects
-emergent reality — new cards surface as agents discover gaps the
-original plan didn't anticipate. The architecture already encoded
-the no-control stance; the name finally gives it words.
-
-Hence the rebrand: not "todos" (an undifferentiated list) but **the
-deck** (named cards with stable handles, lifecycle, and contracts).
-Not "ticket tracker" but a card surface designed for the read-pattern
-of a swarm.
-
 ## The deck layout
 
 ```
@@ -215,30 +141,11 @@ dependency-readiness (an `advances` prereq is still open and shows as
 overlay (`waiting_on` + optional `waiting_until`, set via `goc wait`,
 hides the card from the ready queue until cleared or the date
 elapses). See the `card-schema` skill "Three-axis 'stuck' model" for the
-full contract.
+full contract. Closed cards stay amendable, and the three axes are
+orthogonal — `reference.md` § Closure is not frozenness and § Status,
+overlay, and gate are orthogonal axes.
 
-**Closure is not frozenness.** Terminal status retires the card from
-the live queue but does not freeze the directory. When new evidence
-surfaces later — a bug found weeks after close, an assumption
-invalidated by follow-up work, a successor card that reframes the
-original — file a new card AND amend the closed one with a forward
-pointer (one-line dated entry appended to `log.md`, optional `>
-Later evidence:` pointer at the top of the README body). The deck is
-the durable record of what was learned, not just what shipped; each
-closed card stays as the live entry-point to the full thread. See
-the `finish-card` skill "After closure" for the cross-reference format.
-
-`status`, the `waiting_on` overlay, and `human_gate` are three
-orthogonal axes. An exogenous wait on an agent-observable condition
-(upstream release, PR merge, dependency publication, scheduled
-re-check) sits as `waiting_on: external` (+ optional `waiting_until`)
-on a `status: open` card with `human_gate: none` — a future autonomous
-run verifies the condition cleared and `goc wait <title> --clear`s
-the overlay without human involvement. Raise `human_gate` to
-`decision`/`session` only when human judgement is the unblocker. See
-the `card-schema` skill for the full orthogonality contract.
-
-## The 9 action skills
+## The action skills
 
 One skill per job; compose, don't bundle.
 
@@ -277,26 +184,3 @@ One skill per job; compose, don't bundle.
 - the `retrospective` skill — backwards analysis of the last N closed
   cards: cluster by tag, surface recurring failure modes, propose
   generalization candidates.
-
-## Migration legacy
-
-Most pre-2026-05-01 entries (≈135 of 270) carry the placeholder
-`definition_of_done: |\n  - [x] (criteria not found in source README;
-manual review needed)`. The legacy `bugs/` and `tasks/` trees did not
-encode a closure contract per entry — closure was implicit ("the
-FIXED.md row appeared"). The migration could not reconstruct what each
-prior closure verified, so it inserted a checked placeholder for
-already-`done` entries (validation passes; forensic record is the
-closing commit's body) and an unchecked placeholder for still-`open`
-entries (forces the next the `finish-card` skill run to write a real DoD
-before `goc done <title>` will accept closure).
-
-The two skills `find-todo` and `work-todo` were the v1 names. Their
-responsibilities split:
-
-- v1 `/find-todo` → the `audit-deck` skill (discovery + filing).
-- v1 `/work-todo` → the `next-card` skill + the `advance-card` skill +
-  the `finish-card` skill (selection, status mutation, closure).
-
-Old commits referencing `/find-todo` or `/work-todo` continue to make
-sense — the workflows are conserved, just decomposed.

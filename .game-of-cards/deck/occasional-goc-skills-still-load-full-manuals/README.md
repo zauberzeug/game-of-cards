@@ -1,27 +1,27 @@
 ---
 title: occasional-goc-skills-still-load-full-manuals
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-07T04:32:43Z"
-closed_at: null
+closed_at: "2026-07-11T01:06:09Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [story, documentation]
 summary: |-
-  The progressive-disclosure split (happy-path SKILL.md core + on-demand
-  reference.md sibling) landed only for the five hot-path skills. deck
-  (15,984 B), refine-deck (15,124 B), kickoff (13,058 B), and audit-deck
-  (11,558 B) still ship their full manuals on every load. They fire far
-  less often — hence low contribution — but the same restructure applies,
-  and deck's description advertises session-start auto-invocation, so its
-  16 KB may load more often than the downstream usage report suggested.
+  RESOLVED: the progressive-disclosure split (happy-path SKILL.md core +
+  on-demand reference.md sibling) originally landed only for the five
+  hot-path skills; deck (15,984 B), refine-deck (15,410 B), kickoff
+  (13,058 B), and audit-deck (11,558 B) still shipped their full manuals
+  on every load. The same restructure is now applied to all four (cores:
+  9,910 / 9,810 / 10,397 / 9,631 B) and BODY_CAPS in
+  tests/test_skill_body_size.py guards them against re-fattening.
 definition_of_done: |
-  - [ ] MECHANICAL: deck, refine-deck, audit-deck, and kickoff SKILL.md restructured to happy-path core + `reference.md` sibling, same no-guidance-deleted rule as the hot-path pass (every moved section lands in the sibling with a routing pointer).
-  - [ ] TDD: the four skills are added to `tests/test_skill_body_size.py` BODY_CAPS with caps they meet after the restructure (red before, green after).
-  - [ ] EMPIRICAL: before/after byte counts recorded in log.md.
-  - [ ] PROCESS: sync + porter --check green; `uv run goc validate` and the regression suite pass.
+  - [x] MECHANICAL: deck, refine-deck, audit-deck, and kickoff SKILL.md restructured to happy-path core + `reference.md` sibling, same no-guidance-deleted rule as the hot-path pass (every moved section lands in the sibling with a routing pointer).
+  - [x] TDD: the four skills are added to `tests/test_skill_body_size.py` BODY_CAPS with caps they meet after the restructure (red before, green after).
+  - [x] EMPIRICAL: before/after byte counts recorded in log.md.
+  - [x] PROCESS: sync + porter --check green; `uv run goc validate` and the regression suite pass.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -54,11 +54,16 @@ low` — but `deck`'s own description says "AUTO-INVOKE … at session
 start as a reminder", so in repos where that trigger actually fires,
 its 16 KB is a per-session cost, not a rare one.
 
-## Fix
+## Fix (applied)
 
-Apply the identical split: happy-path core in SKILL.md, edge cases and
-methodology rationale in a sibling `reference.md` with a routing
-table; then extend the `BODY_CAPS` guard so the four bodies cannot
-re-fatten. The mechanism (install asset walk, plugin syncs, OpenClaw
-porter sibling copy) is already proven by the pattern card — this is a
-repeat application, no new machinery.
+The identical split is applied: each of the four skills now has a
+happy-path core SKILL.md and a sibling `reference.md` carrying the
+moved sections behind a routing table (no guidance deleted). The four
+skills are added to `BODY_CAPS` in `tests/test_skill_body_size.py` —
+`deck`/`refine-deck`/`audit-deck` at 10,000 B, `kickoff` at 11,000 B
+(its body is mostly verbatim user-facing dialog that cannot move to
+the sibling). Resulting core sizes: deck 15,984 → 9,910 B; refine-deck
+15,410 → 9,810 B; kickoff 13,058 → 10,397 B; audit-deck 11,558 →
+9,631 B. The install asset walk, plugin syncs, and OpenClaw porter
+sibling copy picked the new `reference.md` files up with no new
+machinery, as the pattern card predicted.

@@ -20,6 +20,16 @@ prompts, plugin install cadence, private-notes file) lives in a
 complementary per-host skill that runs after this one — for example,
 `claude-kickoff` on Claude Code.
 
+**Details live in `reference.md`** — a sibling file in this skill's
+directory. Read the named section only when the situation applies:
+
+| Situation | `reference.md` section |
+|---|---|
+| The user asks what install will write / wrote | What gets installed |
+| Stage 3 persona is Classical team | Team tip: external deck location |
+| The repo uses git worktrees | Worktrees |
+| Several humans + agents share one deck | Multi-team coordination opt-ins |
+
 ## Stage 0 — state detection sweep
 
 Read all of the on-disk signals at once. Each subsequent stage will skip
@@ -139,14 +149,8 @@ persona but always offering all three:
 
 Lead with the persona's recommended option but show all three. Record
 the answer (one of `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`) for
-Stage 4.
-
-If the persona is **Classical team**, add after the question:
-
-> **Team tip:** For teams that keep the deck outside the repo (e.g., a shared
-> network drive or separate Git repo), see the card
-> `support-external-game-of-cards-state-location` — it tracks the design work
-> for configurable deck paths.
+Stage 4. If the persona is **Classical team**, follow with the tip in
+`reference.md` § Team tip: external deck location.
 
 ---
 
@@ -164,16 +168,9 @@ omit it only when the user wants the default `AGENTS.md`).
 > **Note for this repo (game-of-cards source tree):** Translate bare `goc`
 > commands to `uv run goc` when working in the goc package source tree itself.
 
-`goc install --briefing-target <file>` writes project state and merges
-the briefing block into the chosen file (creating it if absent). When
-Claude is installed and the chosen file is `AGENTS.md` or
-`CLAUDE.local.md`, the install primitive also writes or refreshes
-`CLAUDE.md` as an `@<chosen file>` import so Claude Code can load the
-briefing. `--briefing-target CLAUDE.md` is the Claude-only path: the
-full briefing lives inline there and `AGENTS.md` may be omitted.
-Host-specific files like `.claude/skills/` are not written by this
-skill — host-specific complement skills handle those.
-
+The command writes project state and merges the briefing block into
+the chosen file (creating it if absent) — full inventory and the
+CLAUDE.md-import behaviour in `reference.md` § What gets installed.
 After `goc install` returns, verify `.game-of-cards/deck/` exists and
 the chosen file contains a `<!-- BEGIN GOC -->` block before
 continuing.
@@ -235,59 +232,3 @@ What should the first card be?
 
 The deck is now live. All other GoC skills work immediately — no further
 generic kickoff needed.
-
----
-
-## Reference: what gets installed
-
-`goc install --briefing-target <file>` writes:
-
-- `.game-of-cards/deck/` — the card deck (planning history; check this in).
-- `.game-of-cards/config.yaml` — closure checks and workflow config
-  (check this in).
-- `<!-- BEGIN GOC -->` block in the chosen briefing file (`AGENTS.md`,
-  `CLAUDE.md`, or `CLAUDE.local.md`) — discovery marker plus the
-  agent-neutral runtime briefing (CLAUDE.md additionally inlines
-  Claude-specific setup notes). Check the chosen file in unless it is
-  `CLAUDE.local.md`, which is gitignored by default.
-
-Host-specific runtime affordances are **optional** and not strictly
-required in source control:
-
-- Claude Code skills, hooks, and `goc` CLI — install via the GoC Claude
-  Code plugin (recommended) or `goc install --agents claude
-  --local-skills` to vendor them.
-- Codex skills — install via `goc install --agents codex`.
-- OpenClaw skills, tool, and hooks — install via the OpenClaw plugin
-  (ClawHub: `openclaw skills install game-of-cards`; npm:
-  `game-of-cards`). Bundles the goc engine; only `python3` (3.10+) is
-  required on the host. The OpenClaw plugin exposes `goc` as a
-  registered tool rather than a shell-PATH binary — the model invokes
-  it as it would any typed function.
-
-The `<!-- BEGIN GOC -->` block is the canonical repo-visible signal
-that GoC is in use. Agent plugins discover GoC through this marker
-without requiring skills or hooks to be checked in.
-
-## Reference: worktrees
-
-By default each git worktree sees its own checkout's deck. Set
-`workflow.worktree_deck: shared` in `.game-of-cards/config.yaml` (or
-export `GOC_WORKTREE_DECK=shared`) to make all linked worktrees share
-the deck in the primary working tree. Useful when one person juggles
-multiple branches on the same project and wants a single queue. When
-auto-commit is on, deck mutations from a worktree commit to the
-primary working tree's branch, not the worktree's branch.
-
-## Reference: multi-team coordination opt-ins
-
-Both default off; turn on for setups where several humans and agents
-work the same deck across branches:
-
-- `workflow.claim_push: true` — `goc status <title> active` pushes the
-  claim commit and retries once on non-fast-forward; aborts with the
-  racing worker's identity when a rebase conflict reveals a concurrent
-  claim.
-- `workflow.closure_on_integration: true` — `goc done` refuses to close
-  unless HEAD is reachable from `origin/main`, so `done` means visible
-  to every participant rather than locally DoD-complete.
