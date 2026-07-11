@@ -1,6 +1,6 @@
 ---
 title: kickoff-skill-descriptions-load-in-sessions-that-never-kick-off
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-07T04:31:05Z"
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: per-host measurement recorded in log.md — which kickoff-family descriptions each payload (claude-plugin, codex-plugin, openclaw-plugin, pipx/vendored install) actually injects into a consumer session.
   - [ ] PROCESS: verdict recorded — consolidate (host complements become reference files of the generic kickoff, mirrors/porter updated) or disprove (filtering already bounds the cost; card flips to disproved with the numbers).
   - [ ] MECHANICAL: if consolidating — install/upgrade paths, sync script, porter, and validate parity handle the removed skill dirs; full test suite and both --check guards green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Kickoff skill descriptions load in sessions that never kick off
