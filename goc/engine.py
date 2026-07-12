@@ -21,6 +21,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -4897,12 +4898,39 @@ def validate_plugin_hook_double_fire(
     )]
 
 
+DEFAULT_AUTOMATED_CHECK_TIMEOUT_SECONDS = 300
+MAX_AUTOMATED_CHECK_TIMEOUT_SECONDS = int(threading.TIMEOUT_MAX)
+
+
+def _automated_check_timeout_seconds(check: dict) -> int | None:
+    """Return a valid per-check timeout, or None for invalid config."""
+    value = check.get("timeout_seconds", DEFAULT_AUTOMATED_CHECK_TIMEOUT_SECONDS)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or value <= 0
+        or value > MAX_AUTOMATED_CHECK_TIMEOUT_SECONDS
+    ):
+        return None
+    return value
+
+
 def _run_automated_check(check: dict) -> tuple[bool, str]:
     cmd = check["cmd"]
+    timeout_seconds = _automated_check_timeout_seconds(check)
+    if timeout_seconds is None:
+        return False, "invalid timeout_seconds: expected a positive integer within subprocess timeout range"
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd=str(REPO_ROOT), check=False)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            cwd=str(REPO_ROOT),
+            check=False,
+        )
     except subprocess.TimeoutExpired:
-        return False, "TIMEOUT (>300s)"
+        return False, f"TIMEOUT (>{timeout_seconds}s)"
     except FileNotFoundError:
         return False, f"command not found: {cmd[0]}"
     if result.returncode == 0:

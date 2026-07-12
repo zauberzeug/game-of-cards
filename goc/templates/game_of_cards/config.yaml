@@ -4,6 +4,8 @@
 # results in `deck/<title>/log.md`. Keep project-specific closure checks here,
 # not under an agent-specific directory such as `.claude/`.
 
+# Automated checks accept an optional positive integer `timeout_seconds`
+# beside `cmd`; when omitted, `goc attest` preserves its 300-second default.
 layer_2_project_dod: []
 layer_3_goc_dod:
   - name: advanced-by-closed
