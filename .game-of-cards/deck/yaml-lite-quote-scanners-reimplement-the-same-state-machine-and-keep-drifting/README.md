@@ -41,9 +41,9 @@ diverge again.
 
 Three loops, three copies of the same state machine:
 
-- `_split_flow` (`yaml_lite.py:345`) — tracks `in_q`, `escaped`, `depth`.
-- `_split_key` (`yaml_lite.py:383`) — tracks `in_q`, `escaped`.
-- `_strip_comment` (`yaml_lite.py:406`) — tracks `in_q`, `depth`, and
+- `_split_flow` (`yaml_lite.py:445`) — tracks `in_q`, `escaped`, `depth`.
+- `_split_key` (`yaml_lite.py:505`) — tracks `in_q`, `escaped`.
+- `_strip_comment` (`yaml_lite.py:528`) — tracks `in_q`, `depth`, and
   (as of the most recent fix) `escaped`.
 
 Each was fixed independently as its own defect surfaced:

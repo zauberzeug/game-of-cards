@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded — does the policy extend to all terminal transitions, or stay scoped to `done`?
   - [ ] TDD: reproduce.py exits zero (the chosen behaviour fires consistently on the three terminal transitions per the decision)
   - [ ] MECHANICAL: the relevant call site(s) in `goc/engine.py` updated (extend → call `_enforce_closure_on_integration_or_exit` from the `_cmd_status` terminal branch; keep → rename / re-doc the helper so its scope is unambiguous)
-  - [ ] MECHANICAL: docstring at `goc/engine.py:3766` and kickoff doc at `goc/templates/skills/kickoff/SKILL.md:287` updated to match the chosen scope
+  - [ ] MECHANICAL: docstring at `goc/engine.py:3766` and kickoff doc at `goc/templates/skills/kickoff/reference.md:72-74` updated to match the chosen scope
   - [ ] TDD: regression test in `tests/` covering the chosen behaviour for `done`, `disproved`, and `superseded` flips under `closure_on_integration: true`
 ---
 
@@ -26,7 +26,7 @@ definition_of_done: |
 - `goc/engine.py:3603` — `_cmd_done_bundle` calls the same helper inside its bundle loop.
 - `goc/engine.py:4302-4303` — `_cmd_status` enters the terminal-status branch (`if new_status in TERMINAL_STATUSES`) and calls *only* `_enforce_no_inbound_superseded_by_or_exit(title, new_status)`. The integration check is not invoked here.
 - `goc/engine.py:3766-3772` — helper docstring framing.
-- `goc/templates/skills/kickoff/SKILL.md:287` — user-facing description of the workflow knob.
+- `goc/templates/skills/kickoff/reference.md:72-74` — user-facing description of the workflow knob.
 
 ## What's broken
 

@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-30T01:31:35Z"
 closed_at: "2026-06-30T01:37:17Z"
 human_gate: none
-advances: []
+advances:
+  - draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

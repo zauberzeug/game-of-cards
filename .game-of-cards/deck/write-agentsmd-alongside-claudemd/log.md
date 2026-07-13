@@ -24,3 +24,7 @@ The pull-card cron will skip this card (gate=session) until a human runs the val
 ## /mindset audit
 
 PASS — no axiom touched. Pure infra: markdown template authoring + idempotent file-merge logic. No bio-faithfulness or framework derivation.
+
+## 2026-07-13 — Deck hygiene pass
+
+Stale-open review (60d+ without log activity): 4/6 DoD items already checked and all three children are wired. Likely closable in a short human session — the two open items are the remaining scope. `human_gate: session`; no status change.

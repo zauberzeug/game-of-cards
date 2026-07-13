@@ -27,7 +27,7 @@ definition_of_done: |
 - `goc/engine.py:3281-3345` — `_cmd_done_bundle` (writes the block,
   flips status, never calls `_run_derived_check` /
   `_run_automated_check`).
-- `goc/templates/skills/finish-card/SKILL.md:228-242` — the
+- `goc/templates/skills/finish-card/reference.md:79-90` — the
   `--bundle` paragraph that documents the current behavior.
 
 ## What's broken
@@ -49,7 +49,7 @@ attestation) → `goc done` (flips status).
 > and flips each card to `done` with the same `closed_at`. **Use
 > this in place of running `goc attest` + `goc done` once per card
 > when the closures genuinely share an attestation.**
-> — `goc/templates/skills/finish-card/SKILL.md:234-242`
+> — `goc/templates/skills/finish-card/reference.md:82-90`
 
 The implementation does NOT run any of the configured checks. The
 attestation block is literally the following hard-coded f-string —

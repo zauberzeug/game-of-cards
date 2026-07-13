@@ -8,7 +8,12 @@ created: "2026-07-11T01:24:14Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - invalid-status-filter-silently-empties-queue
+  - invalid-tag-filter-silently-empties-queue
+  - invalid-since-date-silently-empties-done-query
+  - done-shortcut-overrides-status-filter
+  - since-filter-without-done-hides-open-queue
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
   - [ ] PROCESS: mechanism decision recorded (option A/B/C below, plus error-vs-warn for unknown edge-filter titles) and gate lowered to none

@@ -8,7 +8,9 @@ created: "2026-05-30T17:50:00Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - goc-decide-corrupts-decision-text-via-regex-replacement-template
+  - goc-decide-loses-deliberation-history-by-not-archiving-replaced-section
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: `tests/test_engine_decide.py` (or equivalent) asserts that, given a body containing both a resolved `## Decision` block and a pending `## Decision required` section, `goc decide` produces a body with exactly one `## Decision` heading (the new one).

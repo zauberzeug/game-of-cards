@@ -14,3 +14,7 @@
 `provide-openclaw-plugin-for-skills-and-hooks` pivoted later the same day from "shell out + `pipx install game-of-cards`" to "vendor the goc engine in the npm payload + `bin/goc` wrapper" (symmetric to the Claude plugin). Distribution channels (ClawHub + npm) and npm package name (`game-of-cards`) are unchanged by the pivot — only the artifact's internal shape and the consumer-side prerequisite changed.
 
 DoD updated: the consumer-side prerequisite now reads `python3` + `uv` (matching the Claude plugin) instead of `python3` + `pipx` + `pipx install game-of-cards`. No other DoD items affected.
+
+## 2026-07-13 — Deck hygiene pass
+
+Stale-open review (60d+ without log activity): lead still real — the openclaw-plugin payload exists in-tree and 7 prereq children are wired; publish itself has not happened. Awaiting a human session per `human_gate: session`; no status change.

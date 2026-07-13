@@ -9,6 +9,7 @@ closed_at: "2026-07-01T02:35:27Z"
 human_gate: none
 advances:
   - waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift
+  - draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |

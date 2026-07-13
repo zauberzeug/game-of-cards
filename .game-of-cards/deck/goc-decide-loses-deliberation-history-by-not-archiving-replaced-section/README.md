@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-23T05:06:53Z"
 closed_at: "2026-05-26T20:02:24Z"
 human_gate: none
-advances: []
+advances:
+  - goc-decide-leaves-prior-decision-block-when-the-body-already-has-one
 advanced_by: []
 tags: [bug]
 definition_of_done: |

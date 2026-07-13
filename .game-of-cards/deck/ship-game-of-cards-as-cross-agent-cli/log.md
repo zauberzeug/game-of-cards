@@ -10,3 +10,7 @@ card, PyPI/external-repo verification, and the phasor-agents dogfood migration.
 Those are release/session decisions rather than a single pullable code patch,
 so the parent epic is parked at `human_gate: session` until that coordinated
 release pass happens.
+
+## 2026-07-13 — Deck hygiene pass
+
+Stale-open review (60d+ without log activity): lead still real — 18 children advance this epic and several remain open. Card is `human_gate: session` by design; no status change. Staleness clock reset.

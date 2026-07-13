@@ -53,3 +53,7 @@ and the README verification section were rewritten accordingly. All
 other verified paths (drift detection, issue create/update/close, grace
 window, delisted entry) are live on main's committed workflow, so the
 closure stands.
+
+## 2026-07-13 — Deck hygiene pass
+
+Post-close amendment: backfilled the missing `summary:` frontmatter field (surfaced by `goc quality-pass`). No change to the closed verdict.

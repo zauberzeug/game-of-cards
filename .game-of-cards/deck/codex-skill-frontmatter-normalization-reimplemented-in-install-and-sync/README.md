@@ -9,7 +9,7 @@ closed_at: null
 human_gate: decision
 advances: []
 advanced_by: []
-tags: [meta-fix, infra, api-contract]
+tags: [infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: human picks the consolidation approach in `## Decision required` (single canonical text-producing helper in `goc/install.py` reused by both call sites / shared helper in a new module / leave duplicated with a parity test). Recorded inline + in log.md.
   - [ ] MECHANICAL: the chosen approach lands — after it, the `---`-split + name/description + resolver assembly exists in exactly one function, and `scripts/sync_plugin_assets.py` calls it rather than re-deriving it. `goc/install.py:_write_codex_skill` writes what that helper returns.

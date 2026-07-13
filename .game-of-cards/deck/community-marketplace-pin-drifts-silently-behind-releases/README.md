@@ -1,5 +1,6 @@
 ---
 title: community-marketplace-pin-drifts-silently-behind-releases
+summary: "The Anthropic community marketplace pins the game-of-cards plugin to an exact commit sha that only syncs via Anthropic's internal pipeline, so releases silently strand marketplace users on stale broken commits (issue #6). Fixed by a scheduled marketplace-pin-check workflow that compares the marketplace pin against the latest release commit, maintains exactly one auto-closing tracking issue on drift, and tolerates a grace window after fresh releases. No-release-repo robustness was re-scoped to marketplace-pin-check-crashes-on-repos-without-version-tags."
 status: done
 stage: null
 contribution: medium

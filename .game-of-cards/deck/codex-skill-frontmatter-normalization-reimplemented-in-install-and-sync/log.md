@@ -15,3 +15,7 @@ only the install site. Filed as decision-gated to match the repo's other
 `reimplements-and-keeps-drifting` cards; not fix-through-eligible because
 consolidation fans out across `install.py` (mirrored to four plugin payloads)
 plus the sync script.
+
+## 2026-07-13 — Deck hygiene pass
+
+Stripped the `meta-fix` tag: per the card-schema predicate, `meta-fix` applies iff the literal appears in title/summary/body or the card carries an edge to a meta-fix-tagged card — neither holds here (zero edges, no literal). The consolidation framing stands on its own; re-add the tag with a `meta-fix` literal in the summary if the family framing is wanted.

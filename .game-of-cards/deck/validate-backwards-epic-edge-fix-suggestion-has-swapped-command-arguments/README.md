@@ -8,7 +8,8 @@ created: "2026-05-30T06:20:58Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - no-guardrail-for-canonical-epic-edge-direction
 tags: [bug, api-contract, meta-fix, documentation]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — running the swapped suggestion verbatim leaves `card.advances: [child]` unchanged, and running the corrected suggestion removes it.

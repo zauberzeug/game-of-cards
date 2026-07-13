@@ -7,7 +7,10 @@ created: "2026-07-09T02:03:25Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - goc-triage-lists-unauthored-draft-scaffolds-as-parked-cards
+  - waiting-filter-surfaces-draft-scaffolds-as-active-impediments
+  - ready-leverage-line-names-draft-scaffolds-as-the-highest-gated-card
 tags: [bug, meta-fix, api-contract]
 summary: "card_is_draft gating is opt-in at every call site, and surfaces keep forgetting it: quality-pass audits (and with --llm --yes rewrites) unauthored scaffolds every listing hides, and decide lowers a draft's gate while printing a false 'any agent can now claim this card'. Fourth and fifth instances of the same family — fix the default, not the sites."
 definition_of_done: |
