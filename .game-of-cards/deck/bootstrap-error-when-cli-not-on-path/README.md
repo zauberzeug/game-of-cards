@@ -9,6 +9,7 @@ closed_at: 2026-05-04
 human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
+  - skill-preamble-shell-blocks-call-bare-goc-and-abort-skill-load-off-path
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
