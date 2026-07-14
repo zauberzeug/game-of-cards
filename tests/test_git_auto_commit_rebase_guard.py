@@ -49,11 +49,22 @@ class GitAutoCommitRebaseGuardTest(unittest.TestCase):
             deck = self._seed_repo(tmp)
 
             # Pause an interactive rebase at an inserted `break` step. This
-            # leaves .git/rebase-merge/ on disk but NOT REBASE_HEAD.
+            # leaves .git/rebase-merge/ on disk but NOT REBASE_HEAD. The
+            # sequence editor must be portable: GNU sed's `-i "1a break"` is
+            # invalid on BSD/macOS sed, so edit the todo list with Python.
+            editor = tmp / "insert_break.py"
+            editor.write_text(
+                "import pathlib, sys\n"
+                "todo = pathlib.Path(sys.argv[1])\n"
+                "lines = todo.read_text().splitlines(keepends=True)\n"
+                "lines.insert(1, 'break\\n')\n"
+                "todo.write_text(''.join(lines))\n"
+            )
             subprocess.run(
                 ["git", "rebase", "-i", "HEAD~2"],
                 cwd=tmp, capture_output=True, text=True,
-                env={**os.environ, "GIT_SEQUENCE_EDITOR": 'sed -i "1a break"'},
+                env={**os.environ,
+                     "GIT_SEQUENCE_EDITOR": f'"{sys.executable}" "{editor}"'},
             )
             git_dir = tmp / ".git"
             self.assertTrue(
