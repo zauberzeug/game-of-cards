@@ -35,6 +35,12 @@ definition_of_done: |
 
 # community-marketplace-pin-drifts-silently-behind-releases
 
+> Later evidence: the same pin-drift pattern recurred in the
+> Zauberzeug-owned `zauberzeug-claude` marketplace (not covered by the
+> pin-check workflow shipped here) — see
+> [`zauberzeug-claude-marketplace-pin-drifts-silently-behind-releases`](../zauberzeug-claude-marketplace-pin-drifts-silently-behind-releases/)
+> (2026-07-14).
+
 ## Why
 
 Issue [#6](https://github.com/zauberzeug/game-of-cards/issues/6): the

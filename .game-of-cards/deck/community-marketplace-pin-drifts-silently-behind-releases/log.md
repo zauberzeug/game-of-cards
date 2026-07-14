@@ -57,3 +57,14 @@ closure stands.
 ## 2026-07-13 — Deck hygiene pass
 
 Post-close amendment: backfilled the missing `summary:` frontmatter field (surfaced by `goc quality-pass`). No change to the closed verdict.
+
+## 2026-07-14 — Later evidence: same pattern in the zauberzeug-claude marketplace
+
+Post-close amendment. The v0.0.27 release surfaced a second instance of
+this card's pattern: `zauberzeug/zauberzeug-claude`'s `marketplace.json`
+pins game-of-cards to `ref: v0.0.25`, so Claude Code installs sourced
+from it skipped v0.0.26 and v0.0.27 entirely. The pin-check workflow
+shipped here only watches `anthropics/claude-plugins-community`, so the
+drift was silent again. New work is tracked in
+[`zauberzeug-claude-marketplace-pin-drifts-silently-behind-releases`](../zauberzeug-claude-marketplace-pin-drifts-silently-behind-releases/).
+No change to the closed verdict.
