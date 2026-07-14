@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/deck_session_start.py",
+            "command": "sh -c 'p=\"${PLUGIN_ROOT}/hooks/deck_session_start.py\"; if [ ! -f \"$p\" ]; then d=\"$(dirname \"${PLUGIN_ROOT}\")\"; p=\"$(ls -t \"$d\"/*/hooks/deck_session_start.py 2>/dev/null | head -n 1)\"; fi; exec python3 \"$p\"'",
             "statusMessage": "Checking GoC deck state"
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/deck_prompt_router.py",
+            "command": "sh -c 'p=\"${PLUGIN_ROOT}/hooks/deck_prompt_router.py\"; if [ ! -f \"$p\" ]; then d=\"$(dirname \"${PLUGIN_ROOT}\")\"; p=\"$(ls -t \"$d\"/*/hooks/deck_prompt_router.py 2>/dev/null | head -n 1)\"; fi; exec python3 \"$p\"'",
             "statusMessage": "Checking GoC prompt routing"
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/pattern_generalization_check.py",
+            "command": "sh -c 'p=\"${PLUGIN_ROOT}/hooks/pattern_generalization_check.py\"; if [ ! -f \"$p\" ]; then d=\"$(dirname \"${PLUGIN_ROOT}\")\"; p=\"$(ls -t \"$d\"/*/hooks/pattern_generalization_check.py 2>/dev/null | head -n 1)\"; fi; exec python3 \"$p\"'",
             "statusMessage": "Checking GoC generalization prompt"
           }
         ]
