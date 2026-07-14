@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Single-plugin marketplace for the Game of Cards Claude Code plugin. The plugin lives under ./claude-plugin and ships skills + hooks for the goc CLI methodology.",
-    "version": "0.0.26"
+    "version": "0.0.27"
   },
   "plugins": [
     {
