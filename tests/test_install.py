@@ -22,6 +22,8 @@ CLAUDE_SHIPPED_SKILLS = tuple(name for name in SKILL_NAMES if skill_for_agent(na
 
 class ClaudeHarnessInstallTest(unittest.TestCase):
     def run_goc(self, cwd: Path, *args: str, env: dict | None = None) -> subprocess.CompletedProcess[str]:
+        if args and args[0] == "new":
+            (cwd / ".game-of-cards" / "deck").mkdir(parents=True, exist_ok=True)
         base_env = os.environ.copy()
         pythonpath = base_env.get("PYTHONPATH")
         base_env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"

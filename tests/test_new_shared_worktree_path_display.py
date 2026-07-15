@@ -44,6 +44,7 @@ class NewSharedWorktreePathDisplayTest(unittest.TestCase):
         self._git(primary, "init", "-q")
         self._git(primary, "config", "user.email", "t@t")
         self._git(primary, "config", "user.name", "t")
+        (primary / ".game-of-cards" / "deck").mkdir(parents=True)
         # Scaffold the deck in the primary tree and commit so a worktree can branch.
         self.assertEqual(
             0,

@@ -20,6 +20,8 @@ class DecideRescopeReconciliationTest(unittest.TestCase):
     reminder (no false positive)."""
 
     def run_goc(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        if args and args[0] == "new":
+            (cwd / ".game-of-cards" / "deck").mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
         pythonpath = env.get("PYTHONPATH")
         env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"

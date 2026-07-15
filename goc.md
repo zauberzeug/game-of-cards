@@ -67,7 +67,7 @@ uv run goc install --agents codex
 Once `goc install` has scaffolded the substrate, the deck is empty. Two ways to seed it:
 
 - **Ask your coding agent.** Say "audit the deck" (or "find issues to file as cards"). This triggers the `audit-deck` skill, which audits the repo for previously-undocumented defects, doc drift, missing tests, or architectural smells, and files each finding as a card via `goc new`. Re-invoke until the queue is the size you want.
-- **By hand.** `goc new rename-the-export-button` scaffolds a single card with valid frontmatter and a placeholder Definition of Done that `goc done` will refuse to close until you fill it in.
+- **By hand.** `goc new rename-the-export-button` scaffolds a single card with valid frontmatter and a placeholder Definition of Done that `goc done` will refuse to close until you fill it in. You may run it from any nested directory: GoC walks upward to the nearest existing `.game-of-cards/` root. If none exists, it refuses and points back to `goc install` instead of creating a stray deck.
 
 ## Upgrade an install
 
@@ -281,7 +281,7 @@ Common verbs:
 |---|---|
 | `goc` | Show the open queue, sorted by leverage. |
 | `goc --board` | Show a kanban board by status. |
-| `goc new <title>` | Create a card under `deck/<title>/`. |
+| `goc new <title>` | Create a card under the nearest ancestor's `.game-of-cards/deck/<title>/`; requires a prior `goc install`. |
 | `goc status <title> <state>` | Move a card through `open`, `active`, `blocked`, `disproved`, or `superseded`. |
 | `goc decide <title> --decision X --because Y` | Record a human decision and lower the card gate. |
 | `goc done <title>` | Close a card after every Definition-of-Done checkbox is ticked. |

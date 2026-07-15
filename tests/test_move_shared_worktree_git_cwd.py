@@ -45,6 +45,7 @@ class MoveSharedWorktreeGitCwdTest(unittest.TestCase):
         self._git(primary, "init", "-q")
         self._git(primary, "config", "user.email", "t@t")
         self._git(primary, "config", "user.name", "t")
+        (primary / ".game-of-cards" / "deck").mkdir(parents=True)
         self.assertEqual(
             0,
             self.run_goc(primary, "new", "old-card-slug", "--gate", "none", "--tag", "story").returncode,

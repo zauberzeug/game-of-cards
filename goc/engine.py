@@ -76,22 +76,29 @@ def _resolve_deck_root(cwd: Path) -> Path:
     When running inside a git worktree AND worktree_deck=shared is enabled
     (GOC_WORKTREE_DECK=shared env var or workflow.worktree_deck: shared in
     the common root's config.yaml), returns the primary working tree root so
-    all worktrees share a single deck. Otherwise returns cwd unchanged.
+    all worktrees share a single deck. Otherwise, walk from cwd towards the
+    filesystem root and return the nearest ancestor that already contains a
+    `.game-of-cards/` directory. Falling back to cwd keeps read-only commands
+    useful before installation; mutating creation commands must reject that
+    fallback instead of silently scaffolding a second deck.
     """
     common_root = _detect_worktree_common_root(cwd)
-    if common_root is None:
-        return cwd
-    # Env var wins without requiring the config to exist yet.
-    if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
-        return common_root
-    config_path = common_root / ".game-of-cards" / "config.yaml"
-    if config_path.exists():
-        try:
-            cfg = yaml.safe_load(config_path.read_text()) or {}
-            if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
-                return common_root
-        except Exception:
-            pass
+    if common_root is not None:
+        # Env var wins without requiring the config to exist yet.
+        if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
+            return common_root
+        config_path = common_root / ".game-of-cards" / "config.yaml"
+        if config_path.exists():
+            try:
+                cfg = yaml.safe_load(config_path.read_text()) or {}
+                if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
+                    return common_root
+            except Exception:
+                pass
+
+    for candidate in (cwd, *cwd.parents):
+        if (candidate / ".game-of-cards").is_dir():
+            return candidate
     return cwd
 
 
@@ -5405,6 +5412,13 @@ def _validate_new_edge_flags(
 
 def _cmd_new(args):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
+    if not DECK_DIR.is_dir():
+        print(
+            f"ERROR: no Game of Cards deck found from {REPO_ROOT} upward. "
+            "Run `goc install` at the intended project root first.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     title = args.title
     schema = load_schema()
     contribution = args.contribution or (
