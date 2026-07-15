@@ -260,8 +260,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertIn("description: ", codex_skill)
             self.assertIn("# Pull a card", codex_skill)
             self.assertIn("## Codex GoC Command", codex_skill)
-            self.assertIn("!`goc", codex_skill)
-            self.assertIn("_goc-bootstrap.sh", codex_skill)
+            self.assertIn("!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]", codex_skill)
+            self.assertIn("; else goc --status active -v; fi", codex_skill)
             self.assertNotIn("CLAUDE_SKILL_DIR", codex_skill)
 
             self.assert_goc_ok(
@@ -1613,10 +1613,13 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             self.assertEqual("", result.stderr)
 
     def test_skill_command_injections_keep_claude_skills_direct_and_codex_skills_resolved(self) -> None:
-        # Claude skills shell out to `goc` directly so plugin-installed Claude
-        # skills don't trip Claude Code's bash-policy ban on executing scripts
-        # shipped from a plugin cache directory. Codex skills carry a resolver
-        # paragraph because Codex does not currently expose plugin bin/ on PATH.
+        # Claude skills must never execute scripts shipped from a plugin cache
+        # directory (Claude Code's bash policy bans that). The only bootstrap
+        # reference they may carry is the cwd-relative *vendored* copy
+        # (.claude/skills/_goc-bootstrap.sh), behind a `[ -f ]` guard with a
+        # bare-`goc` fallback for plugin-mode loads where plugin bin/ is on
+        # PATH. Codex skills carry a resolver paragraph because Codex does not
+        # currently expose plugin bin/ on PATH.
         from goc.install import skill_for_agent
 
         roots = [
@@ -1638,7 +1641,13 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
                 elif skill_name == "codex-kickoff":
                     self.assertIn("_goc-bootstrap.sh", text, msg=str(skill))
                 else:
-                    self.assertNotIn("_goc-bootstrap.sh", text, msg=str(skill))
+                    self.assertNotIn("plugins/cache", text, msg=str(skill))
+                    self.assertEqual(
+                        text.count("_goc-bootstrap.sh"),
+                        text.count(".claude/skills/_goc-bootstrap.sh"),
+                        msg=f"{skill}: bootstrap referenced outside the vendored "
+                        ".claude/skills/ path",
+                    )
 
     # ── Other install/upgrade tests ───────────────────────────────────────────
 

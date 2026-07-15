@@ -11,7 +11,7 @@ Invoke when the user says "what have we learned", "review recent work", "any pat
 
 Before running the body of this skill, the agent should see current deck state. Run these via the `goc` tool (top-level filters like `--status` / `--tag` / `--worker` map to the tool's `flags` parameter; the subcommand maps to `verb`). For bare-queue listings with no subcommand, shell out via the `exec` tool:
 
-- `goc --status done --json | head -100`
+- `goc --status done --json 2>&1 | head -100`
 
 # Retrospective
 

@@ -59,8 +59,7 @@ cycle, park that card for human review instead of guessing which edge
 is wrong. Fix unknown tags / missing required fields FIRST too.
 Hygiene runs on a valid deck. The precondition above is intentionally
 soft-gated so a failing validator surfaces its output *into* this
-skill rather than blocking the skill load — the recovery guidance
-in this body is exactly what the user came here for.
+skill rather than blocking the skill load.
 
 ## Step 2 — survey by category
 
@@ -85,7 +84,7 @@ candidates. Options:
 
 ### Stale-open cards (no log activity)
 
-`goc --status open --json | head -100`
+`goc --status open --json 2>&1 | head -100`
 
 Cards with `status: open` whose `log.md` has no entries in 60+
 days are at risk of being forgotten. For each: read the body,
@@ -101,10 +100,10 @@ decide if the lead is still real, and either:
 
 For each open card, check its body cites against current code:
 verify each cited file exists and the cited line is ≤ EOF. A defunct
-citation usually means the cited code was refactored. Recommendation:
-re-read the card; either update the citation in place (mechanical
-edit, no status change) or — if the refactor also fixed the defect —
-close via the `finish-card` skill with a note "fixed incidentally by
+citation usually means the cited code was refactored. Re-read the
+card; either update the citation in place (mechanical edit, no
+status change) or — if the refactor also fixed the defect — close
+via the `finish-card` skill with a note "fixed incidentally by
 <commit-hash>".
 
 ### Missing summaries

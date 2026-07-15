@@ -36,9 +36,9 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 ## Context
 
-!`goc --status active -v 2>&1 | head -20`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status active -v; else goc --status active -v; fi 2>&1 | head -20`
 
-!`goc --ready -v${GOC_WORKER:+ --worker "$GOC_WORKER"}`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --ready -v${GOC_WORKER:+ --worker "$GOC_WORKER"}; else goc --ready -v${GOC_WORKER:+ --worker "$GOC_WORKER"}; fi 2>&1 || true`
 
 # Pick the next card
 

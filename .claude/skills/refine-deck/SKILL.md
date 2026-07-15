@@ -52,7 +52,7 @@ situation actually applies:
 
 ## Step 1 — sanity floor
 
-!`goc validate 2>&1 || echo "[refine-deck] validate found rot; the skill body below will route you through fixing it"`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b validate; else goc validate; fi 2>&1 || echo "[refine-deck] validate found rot; the skill body below will route you through fixing it"`
 
 If validate fails with half-edge errors, run `goc repair-edges` to
 preview the missing reverse-edge writes, then `goc repair-edges
@@ -61,14 +61,13 @@ cycle, park that card for human review instead of guessing which edge
 is wrong. Fix unknown tags / missing required fields FIRST too.
 Hygiene runs on a valid deck. The precondition above is intentionally
 soft-gated so a failing validator surfaces its output *into* this
-skill rather than blocking the skill load — the recovery guidance
-in this body is exactly what the user came here for.
+skill rather than blocking the skill load.
 
 ## Step 2 — survey by category
 
 ### Stale unverified parks
 
-!`goc --tag unverified -v`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --tag unverified -v; else goc --tag unverified -v; fi 2>&1 || true`
 
 For each entry: check `created` against today's date. Cards parked
 > 90 days that nobody has reproduced or refuted are decay
@@ -87,7 +86,7 @@ candidates. Options:
 
 ### Stale-open cards (no log activity)
 
-!`goc --status open --json | head -100`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status open --json; else goc --status open --json; fi 2>&1 | head -100`
 
 Cards with `status: open` whose `log.md` has no entries in 60+
 days are at risk of being forgotten. For each: read the body,
@@ -103,10 +102,10 @@ decide if the lead is still real, and either:
 
 For each open card, check its body cites against current code:
 verify each cited file exists and the cited line is ≤ EOF. A defunct
-citation usually means the cited code was refactored. Recommendation:
-re-read the card; either update the citation in place (mechanical
-edit, no status change) or — if the refactor also fixed the defect —
-close via `Skill(finish-card)` with a note "fixed incidentally by
+citation usually means the cited code was refactored. Re-read the
+card; either update the citation in place (mechanical edit, no
+status change) or — if the refactor also fixed the defect — close
+via `Skill(finish-card)` with a note "fixed incidentally by
 <commit-hash>".
 
 ### Missing summaries
