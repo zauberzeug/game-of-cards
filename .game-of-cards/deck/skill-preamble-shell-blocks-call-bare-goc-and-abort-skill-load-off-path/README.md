@@ -1,7 +1,7 @@
 ---
 title: skill-preamble-shell-blocks-call-bare-goc-and-abort-skill-load-off-path
 summary: "Six shipped skill templates (audit-deck, pull-card, next-card, refine-deck, retrospective, standup) run bare `goc` in their `!`-preamble shell blocks. On any host where `goc` is not on PATH, an unguarded block exits 127 and Claude Code aborts the whole skill load — the skill body, including its own documented `goc: command not found` recovery guidance, never reaches the agent. The `_goc-bootstrap.sh` wrapper shipped by the closed bootstrap-error-when-cli-not-on-path card handles exactly this (missing CLI, plugin bin, dogfood uv), but no `!` block invokes it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-13T01:24:10Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: in this repo (no bare `goc` on PATH), `Skill(refine-deck)` loads instead of erroring `Shell command failed for pattern`; observed output recorded in log.md.
   - [ ] TDD: a regression test asserts no skill template contains an unguarded bare-`goc` `!` block (greps the template tree for the antipattern the chosen fix eliminates).
   - [ ] MECHANICAL: plugin mirrors regenerated (`pre-commit run --all-files` / `python scripts/sync_plugin_assets.py --check` clean); `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Skill preamble `!` blocks call bare `goc` and abort skill load when the CLI is off PATH
