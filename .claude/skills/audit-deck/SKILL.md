@@ -14,13 +14,13 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 
-!`goc`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b; else goc; fi 2>&1 || true`
 
-!`goc --done`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --done; else goc --done; fi 2>&1 || true`
 
-!`goc --status disproved`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status disproved; else goc --status disproved; fi 2>&1 || true`
 
-!`goc --tag unverified`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --tag unverified; else goc --tag unverified; fi 2>&1 || true`
 
 !`cat .game-of-cards/hooks/audit-deck.md 2>/dev/null || true`
 
@@ -89,8 +89,7 @@ gate is unclear, consult the project rubric first —
 Static analysis converges to "no new defect" within ~5 rounds.
 Behavioral defects — NaN/Inf, divergence, silent boundary-state
 corruption — require running the actual project. Run the probe AND
-doc-quality hunters concurrently; the probe is I/O-bound and the
-doc hunters have no probe dependency.
+doc-quality hunters concurrently.
 
 The consuming repo defines its probe recipe in
 `.game-of-cards/hooks/audit-deck.md` (already loaded above); generic

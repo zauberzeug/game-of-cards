@@ -50,7 +50,7 @@ from the queue.
 
 Check for already-claimed work first:
 
-!`goc --status active -v 2>&1 | head -20`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status active -v; else goc --status active -v; fi 2>&1 | head -20`
 
 Treat any listed active card as a soft lock. Do not claim the same card,
 or adjacent/conflicting work, unless the user explicitly asks to continue
@@ -62,7 +62,7 @@ Pick the highest-contribution **ready** card (`--ready` filters to
 that is still open shows up as "awaiting" but does NOT hide the card
 from the queue):
 
-!`goc --ready -v 2>&1 | head -22`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --ready -v; else goc --ready -v; fi 2>&1 | head -22`
 
 The last line of `goc --ready` is a **leverage comparison**:
 `Pulling <title> (value N). Highest gated card: <title> (value M, gate <kind>).`

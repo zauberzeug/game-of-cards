@@ -82,8 +82,7 @@ gate is unclear, consult the project rubric first —
 Static analysis converges to "no new defect" within ~5 rounds.
 Behavioral defects — NaN/Inf, divergence, silent boundary-state
 corruption — require running the actual project. Run the probe AND
-doc-quality hunters concurrently; the probe is I/O-bound and the
-doc hunters have no probe dependency.
+doc-quality hunters concurrently.
 
 The consuming repo defines its probe recipe in
 `.game-of-cards/hooks/audit-deck.md` (already loaded above); generic

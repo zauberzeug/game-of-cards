@@ -109,6 +109,19 @@ def transform_context_block(match: re.Match[str]) -> str:
     )
 
 
+# Claude-host `!` fences route goc through the vendored bootstrap wrapper with
+# a bare-goc fallback and an abort guard (`... fi 2>&1 || true`) so a missing
+# CLI can't abort the skill load. OpenClaw has no `.claude/skills/` and exposes
+# `goc` as a registered tool, so unwrap the routing back to the bare command
+# (the else-leg carries it verbatim) and drop the bare guard suffix; trailing
+# pipes / `|| echo` recoveries after `fi` are kept.
+BOOTSTRAP_ROUTED_RE = re.compile(
+    r"b=\.claude/skills/_goc-bootstrap\.sh; "
+    r"if \[ -f \$b \]; then sh \$b[^;]*; else (goc[^;]*); fi"
+    r"( 2>&1 \|\| true)?"
+)
+
+
 # Inline `!`backtick`` blocks scattered through the body (outside ## Context).
 # Claude Code pre-executes these and embeds the output; OpenClaw has no
 # equivalent. Convert to a plain backticked example so the skill body still
@@ -123,6 +136,9 @@ def render_skill(src: Path) -> str:
 
     # Drop the `## Preflight` block entirely.
     text = PREFLIGHT_RE.sub("", text, count=1)
+
+    # Unwrap Claude-host bootstrap routing back to the bare goc command.
+    text = BOOTSTRAP_ROUTED_RE.sub(r"\1", text)
 
     # Replace `## Context` embedded-execution with a host-neutral note.
     text = CONTEXT_BLOCK_RE.sub(transform_context_block, text)

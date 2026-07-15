@@ -14,7 +14,7 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 ## Context
 
-!`goc --status done --json | head -100`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status done --json; else goc --status done --json; fi 2>&1 | head -100`
 
 # Retrospective
 
