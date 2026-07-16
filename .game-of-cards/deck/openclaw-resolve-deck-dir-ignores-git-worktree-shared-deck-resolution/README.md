@@ -1,6 +1,6 @@
 ---
 title: openclaw-resolve-deck-dir-ignores-git-worktree-shared-deck-resolution
-summary: "The OpenClaw plugin's `resolveDeckDir` (index.ts) reimplements the engine's deck-root resolution but omits two whole behaviors: the git-worktree `worktree_deck: shared` redirect to the primary tree, and the canonical-wins dual-tree precedence. In a shared-deck worktree the session-start active-card reminder reads the worktree-local (empty) deck and stays silent, so an agent with live cards visible to `goc` is never reminded to resume them. A sixth hand-ported predicate drifting from the engine, beyond the five tracked by the parity meta-fix."
+summary: "The OpenClaw plugin's `resolveDeckDir` (index.ts) reimplements the engine's deck-root resolution but omits three whole behaviors: the git-worktree `worktree_deck: shared` redirect to the primary tree, the canonical-wins dual-tree precedence, and the bounded nearest-ancestor deck walk (added 3e17e3b3, boundary rule 30355095). In a shared-deck worktree the session-start active-card reminder reads the worktree-local (empty) deck and stays silent, so an agent with live cards visible to `goc` is never reminded to resume them. A sixth hand-ported predicate drifting from the engine, beyond the five tracked by the parity meta-fix."
 status: open
 stage: null
 contribution: medium
@@ -54,7 +54,7 @@ definition_of_done: |
 ## What's broken
 
 `resolveDeckDir` is a hand-reimplementation of the engine's deck-root
-resolution that drops two whole behaviors:
+resolution that drops three whole behaviors:
 
 1. **No worktree shared-deck redirect.** It resolves `.game-of-cards/deck`
    relative to the agent-supplied `projectDir` only. It never runs the
@@ -69,6 +69,15 @@ resolution that drops two whole behaviors:
    the selector rather than the engine's existence-precedence, and falls back
    to legacy `deck/` on **any** `readdir` error (ENOENT, ENOTDIR, EACCES), where
    the engine returns canonical whenever canonical exists.
+
+3. **No bounded nearest-ancestor deck walk.** `_resolve_deck_root` now also
+   walks from cwd toward the filesystem root and returns the nearest ancestor
+   holding `.game-of-cards/` — climbing plain workspace directories but
+   stopping before entering a *different* git working tree (commits
+   `3e17e3b3` and `30355095`, the latter closing
+   [deck-root-ancestor-walk-escapes-nested-worktree-into-primary-deck-without-opt-in](../deck-root-ancestor-walk-escapes-nested-worktree-into-primary-deck-without-opt-in/)).
+   `resolveDeckDir` never walks at all, so a subdir-of-repo or
+   workspace-level deck the engine resolves is invisible to the TS hooks.
 
 The `goc` *tool* in this same plugin is unaffected — it shells out to
 `python3 -m goc.cli`, which runs the real engine resolution. Only the
