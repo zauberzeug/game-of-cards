@@ -78,9 +78,15 @@ def _resolve_deck_root(cwd: Path) -> Path:
     the common root's config.yaml), returns the primary working tree root so
     all worktrees share a single deck. Otherwise, walk from cwd towards the
     filesystem root and return the nearest ancestor that already contains a
-    `.game-of-cards/` directory. Falling back to cwd keeps read-only commands
-    useful before installation; mutating creation commands must reject that
-    fallback instead of silently scaffolding a second deck.
+    `.game-of-cards/` directory. The walk may climb through plain directories
+    (a workspace holding several repos can own one deck above them), but it
+    stops before entering a *different* git working tree — an ancestor that
+    carries a `.git` entry beyond the current tree's own root. Sharing a deck
+    across working trees (e.g. a linked worktree nested inside the primary
+    tree) is opt-in via worktree_deck=shared, never implied by nesting.
+    Falling back to cwd keeps read-only commands useful before installation;
+    mutating creation commands must reject that fallback instead of silently
+    scaffolding a second deck.
     """
     common_root = _detect_worktree_common_root(cwd)
     if common_root is not None:
@@ -96,9 +102,19 @@ def _resolve_deck_root(cwd: Path) -> Path:
             except Exception:
                 pass
 
+    own_tree_root_passed = False
     for candidate in (cwd, *cwd.parents):
+        has_git = (candidate / ".git").exists()
+        if own_tree_root_passed and has_git:
+            # A `.git` entry above the current tree's own root marks a
+            # different working tree (enclosing repo, or the primary tree
+            # around a nested linked worktree). Inheriting its deck would
+            # share state across trees without the worktree_deck opt-in.
+            break
         if (candidate / ".game-of-cards").is_dir():
             return candidate
+        if has_git:
+            own_tree_root_passed = True
     return cwd
 
 

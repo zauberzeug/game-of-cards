@@ -1,20 +1,20 @@
 ---
 title: deck-root-ancestor-walk-escapes-nested-worktree-into-primary-deck-without-opt-in
-summary: "The deck-root fallback ancestor walk added by `fix: resolve new cards to existing deck root` runs unconditionally after the opt-in shared-worktree gate declines, so a linked worktree nested inside the primary tree (`git worktree add wt/feature`) silently resolves — and writes — to the primary tree's deck with no `GOC_WORKTREE_DECK`/config opt-in. The same walk also crosses into an enclosing unrelated repository. Fix: stop the walk at the current working tree's boundary (first ancestor carrying a `.git` entry)."
-status: active
+summary: "The deck-root fallback ancestor walk added by `fix: resolve new cards to existing deck root` runs unconditionally after the opt-in shared-worktree gate declines, so a linked worktree nested inside the primary tree (`git worktree add wt/feature`) silently resolves — and writes — to the primary tree's deck with no `GOC_WORKTREE_DECK`/config opt-in. The same walk also crosses into an enclosing unrelated repository. Fix: let the walk climb plain ancestor directories (the workspace-deck case its own test pins) but stop before entering a different git working tree."
+status: done
 stage: null
 contribution: medium
 created: "2026-07-16T01:02:01Z"
-closed_at: null
+closed_at: "2026-07-16T01:11:44Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (goc new from a deck-less nested worktree without shared-mode opt-in refuses instead of writing into the primary tree's deck)
-  - [ ] TDD: regression test covers the boundary rule — nested worktree stops at its own tree root; subdir-of-repo resolution (the behavior 3e17e3b3 added) still works; non-git ancestor walk still works
-  - [ ] MECHANICAL: `_resolve_deck_root`'s docstring states the walk stops at the first ancestor containing a `.git` entry
-  - [ ] EMPIRICAL: full regression suite passes (`uv run python -m unittest discover -s tests`), including tests/test_new_resolves_existing_deck_root.py
+  - [x] TDD: reproduce.py exits zero (goc new from a deck-less nested worktree without shared-mode opt-in refuses instead of writing into the primary tree's deck)
+  - [x] TDD: regression test covers the boundary rule — nested worktree refuses; repo nested in a deck-owning repo refuses; subdir-of-repo and plain-workspace resolution (the behavior 3e17e3b3 added) still work
+  - [x] MECHANICAL: `_resolve_deck_root`'s docstring states the walk stops before entering a different git working tree and that cross-tree sharing stays opt-in
+  - [x] EMPIRICAL: full regression suite passes (`uv run python -m unittest discover -s tests`), including tests/test_new_resolves_existing_deck_root.py
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -47,7 +47,14 @@ boundaries:
   including `goc new` — then silently operates on the **primary
   tree's deck**, even though shared-deck mode was never opted into.
 - A repository nested inside another repository that has a deck
-  inherits the *outer project's* deck the same way.
+  inherited the *outer project's* deck the same way.
+
+One nesting shape is deliberate, not broken: commit 3e17e3b3's own
+test `test_new_from_nested_repo_uses_ancestor_deck` pins that a
+deck-less nested repo inherits a deck from an enclosing **plain
+workspace** directory (a workspace holding several repos owns one
+deck above them). The boundary rule must preserve that while
+refusing foreign *working trees*.
 
 The contract this violates is pinned by the closed spike
 [spike-worktree-auto-resolves-deck-from-main-repo](../spike-worktree-auto-resolves-deck-from-main-repo/),
@@ -85,15 +92,19 @@ the user's own checkout shows nothing to commit while the primary
 tree accumulates unexplained dirty state (surprising under the
 parallel-agent commit-safety rules this project documents).
 
-## Fix
+## Fix (implemented)
 
-Bound the walk at the current working tree's boundary: at each
-candidate, check `.game-of-cards/` first (so a repo root that has
-both `.git` and a deck still resolves), then stop if the candidate
-contains a `.git` entry (`(candidate / ".git").exists()` — covers
-both the primary tree's `.git/` dir and a linked worktree's `.git`
-file). Non-git directory trees keep today's walk-to-root behavior;
-subdir-of-repo resolution (the case 3e17e3b3 fixed) is unaffected
-because the repo root carrying `.game-of-cards/` is checked before
-its `.git` stops the walk. Mirror trees regenerate via
-`scripts/sync_plugin_assets.py` on commit.
+`goc/engine.py` `_resolve_deck_root`: the walk tracks when it has
+passed the current tree's own root (the first candidate carrying a
+`.git` entry — dir for a primary tree, file for a linked worktree).
+At each candidate it checks `.game-of-cards/` first (so a repo root
+holding both `.git` and a deck still resolves), and breaks when a
+candidate *above* the own-tree root carries `.git` — that candidate
+is a different working tree, and inheriting its deck would share
+state across trees without the `worktree_deck=shared` opt-in.
+Plain-directory ancestors (the pinned workspace case) and non-git
+trees keep the walk-to-root behavior. Regression tests:
+`test_new_from_nested_worktree_refuses_without_shared_opt_in` and
+`test_new_from_repo_nested_in_deck_owning_repo_refuses` in
+`tests/test_new_resolves_existing_deck_root.py`. Mirror trees
+regenerated via `scripts/sync_plugin_assets.py`.
