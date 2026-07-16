@@ -1,18 +1,18 @@
 ---
 title: set-cadence-help-epilog-advertises-31d-that-the-guard-rejects
 summary: "The argparse epilog of scripts/set_cadence.py still advertises `<N>d (<=31)` although the day-interval guard was tightened to reject anything above 30 (a `*/31` day-of-month step matches only the 1st and fires monthly). A user following `--help` and running `--pull 31d` gets exit 2. One-token fix: `(<=31)` → `(<=30)`."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-16T01:02:08Z"
-closed_at: null
+closed_at: "2026-07-16T01:11:44Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (the epilog's advertised day cap is accepted by interval_to_cron)
-  - [ ] MECHANICAL: scripts/set_cadence.py epilog reads `<N>d (<=30)`
+  - [x] TDD: reproduce.py exits zero (the epilog's advertised day cap is accepted by interval_to_cron)
+  - [x] MECHANICAL: scripts/set_cadence.py epilog reads `<N>d (<=30)`
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -63,6 +63,7 @@ Reachability: `Skill(tune-cadence)` wraps this script; an agent or
 human reading `--help` to pick a valid spec gets exit 2 on the
 documented boundary value.
 
-## Fix
+## Fix (applied)
 
-`scripts/set_cadence.py:219`: change `(<=31)` to `(<=30)`.
+`scripts/set_cadence.py:219`: `(<=31)` → `(<=30)`. reproduce.py now
+prints `interval_to_cron('30d') -> '13 0 */30 * *'` and exits 0.

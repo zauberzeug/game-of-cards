@@ -216,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="set_cadence.py",
         description="Query or retune the autonomous GitHub Actions cadence (repo-local).",
-        epilog="Interval specs: <N>h (1,2,3,4,6,8,12), 24h, <N>d (<=31), or 1w. Commit & push to apply.",
+        epilog="Interval specs: <N>h (1,2,3,4,6,8,12), 24h, <N>d (<=30), or 1w. Commit & push to apply.",
     )
     parser.add_argument(
         "--show", action="store_true", help="print the current cadence and exit"
