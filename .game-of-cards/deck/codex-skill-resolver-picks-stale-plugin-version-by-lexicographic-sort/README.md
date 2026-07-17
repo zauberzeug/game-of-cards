@@ -1,21 +1,21 @@
 ---
 title: codex-skill-resolver-picks-stale-plugin-version-by-lexicographic-sort
 summary: "The Codex GoC command resolver appended to every Codex-normalized skill locates the bundled bootstrap with `find ... | sort | tail -n 1`, which sorts version path components lexicographically — `0.0.9` beats `0.0.27` and `0.0.100`. When an old plugin-cache version dir survives an upgrade (the documented real scenario), every Codex skill directs the agent to run the stale bundled engine. The hooks.json fallback already fixed this class with mtime (`ls -t | head -n 1`); the skill resolver was left behind."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-17T01:07:16Z"
-closed_at: null
+closed_at: "2026-07-17T01:16:49Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (resolver snippet picks the mtime-newest bootstrap, not the lexicographically-last version path)
-  - [ ] MECHANICAL: `CODEX_GOC_COMMAND_RESOLVER` in goc/install.py and the hand-written copy in goc/templates/skills/codex-kickoff/SKILL.md both use the mtime-based resolver
-  - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py` re-run so all `.codex/skills/` and `codex-plugin/skills/` mirrors carry the fixed snippet; `--check` passes
-  - [ ] TDD: `uv run python -m unittest discover -s tests` passes
-  - [ ] MECHANICAL: `uv run goc validate` passes
+  - [x] TDD: reproduce.py exits zero (resolver snippet picks the mtime-newest bootstrap, not the lexicographically-last version path)
+  - [x] MECHANICAL: `CODEX_GOC_COMMAND_RESOLVER` in goc/install.py and the hand-written copy in goc/templates/skills/codex-kickoff/SKILL.md both use the mtime-based resolver
+  - [x] MECHANICAL: `python scripts/sync_plugin_assets.py` re-run so all `.codex/skills/` and `codex-plugin/skills/` mirrors carry the fixed snippet; `--check` passes
+  - [x] TDD: `uv run python -m unittest discover -s tests` passes
+  - [x] MECHANICAL: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -57,12 +57,13 @@ The skill-body resolver was left on `sort | tail -n 1`.
 
 `reproduce.py` builds a fake cache with version dirs `0.0.9` (old mtime) and
 `0.0.27` (new mtime) and runs the verbatim resolver pipeline from
-`goc/install.py`:
+`goc/install.py`. Pre-fix it printed `DEFECT CONFIRMED: lexicographic sort
+selects the stale 0.0.9 over 0.0.27` (exit 1); with the applied fix:
 
 ```
-resolver snippet from goc/install.py picks: .../game-of-cards/0.0.9/skills/_goc-bootstrap.sh
+resolver snippet from goc/install.py picks: .../game-of-cards/0.0.27/skills/_goc-bootstrap.sh
 mtime-newest (expected): .../game-of-cards/0.0.27/skills/_goc-bootstrap.sh
-DEFECT CONFIRMED: lexicographic sort selects the stale 0.0.9 over 0.0.27
+OK: resolver selects the newest installed version
 ```
 
 ## Why it matters
@@ -75,16 +76,17 @@ single-digit component vs a longer one, e.g. `0.0.9` vs `0.0.10+`), every
 Codex GoC skill silently drives the deck with the *stale* bundled engine:
 old schema, old verbs, old guards.
 
-## Fix
+## Fix (applied)
 
-Mirror the hooks.json precedent — select by mtime instead of string order.
+Mirrors the hooks.json precedent — select by mtime instead of string order.
 In `CODEX_GOC_COMMAND_RESOLVER` (goc/install.py:1126) and the codex-kickoff
-template copy, replace `| sort | tail -n 1` with an mtime-newest pick:
+template copy, `| sort | tail -n 1` is replaced with an mtime-newest pick:
 
 ```bash
 GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111 -exec ls -t {} + 2>/dev/null | head -n 1)
 ```
 
 (`-exec ls -t {} +` is portable to BSD/macOS find, which lacks `-printf`.)
-Then re-run `python scripts/sync_plugin_assets.py` so the 30 mirrors pick up
-the corrected snippet.
+`python scripts/sync_plugin_assets.py` was re-run so all 30+ mirrors under
+`.codex/skills/`, `codex-plugin/skills/`, and the bundled `goc/install.py`
+copies carry the corrected snippet; `--check` passes.
