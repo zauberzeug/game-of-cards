@@ -132,8 +132,13 @@ def _cadence_comment(label: str, spec: str, offset: int) -> str:
     )
 
 
-def retune(repo_root: Path, key: str, spec: str) -> tuple[str, bool]:
-    """Rewrite one workflow's cron + cadence comment. Return ``(cron, changed)``."""
+def retune(repo_root: Path, key: str, spec: str, *, write: bool = True) -> tuple[str, bool]:
+    """Rewrite one workflow's cron + cadence comment. Return ``(cron, changed)``.
+
+    ``write=False`` runs every validation (spec, file existence, managed-line
+    guards) without touching the file — the dry-run pass ``main`` uses to make
+    a multi-workflow retune all-or-nothing.
+    """
     filename, offset, label = WORKFLOWS[key]
     path = _workflow_path(repo_root, key)
     if not path.exists():
@@ -173,7 +178,7 @@ def retune(repo_root: Path, key: str, spec: str) -> tuple[str, bool]:
         )
 
     changed = text3 != text
-    if changed:
+    if changed and write:
         path.write_text(text3)
     return cron, changed
 
@@ -243,13 +248,19 @@ def main(argv: list[str] | None = None) -> int:
         _print_cadence(current_cadence(repo_root))
         return 0
 
-    any_changed = False
+    # All-or-nothing: dry-run every requested retune (spec validation via
+    # interval_to_cron, file existence, managed-line guards) before the
+    # mutation loop, so a failure exit always means no workflow file changed.
     for key, spec in requested.items():
         try:
-            cron, changed = retune(repo_root, key, spec)
+            retune(repo_root, key, spec, write=False)
         except (ValueError, FileNotFoundError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+
+    any_changed = False
+    for key, spec in requested.items():
+        cron, changed = retune(repo_root, key, spec)
         print(f"  {WORKFLOWS[key][0]:<16} cron: {cron:<14} ({'set' if changed else 'unchanged'})")
         any_changed = any_changed or changed
 

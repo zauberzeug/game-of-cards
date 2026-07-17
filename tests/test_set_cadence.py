@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -174,6 +176,16 @@ class RetuneTest(unittest.TestCase):
             cadence = setc.current_cadence(repo)
             self.assertEqual(cadence["pull"]["cron"], "0 0 * * *, 13 9 * * 6,0")
 
+    def test_dry_run_validates_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            p = repo / ".github/workflows/pull-card.yml"
+            before = p.read_text()
+            cron, changed = setc.retune(repo, "pull", "3h", write=False)
+            self.assertEqual(cron, "13 */3 * * *")
+            self.assertTrue(changed)
+            self.assertEqual(p.read_text(), before)
+
     def test_missing_cadence_marker_errors(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             repo = _make_repo(Path(d))
@@ -186,6 +198,69 @@ class RetuneTest(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 setc.retune(repo, "pull", "1h")
+
+
+class MainAllOrNothingTest(unittest.TestCase):
+    """`main` must not mutate any workflow file when any requested retune
+    would fail — a nonzero exit means nothing changed on disk."""
+
+    def _run_main(self, repo: Path, argv: list[str]) -> tuple[int, str]:
+        original = setc._repo_root
+        setc._repo_root = lambda: repo
+        stderr = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+                rc = setc.main(argv)
+        finally:
+            setc._repo_root = original
+        return rc, stderr.getvalue()
+
+    def _snapshot(self, repo: Path) -> dict[str, str]:
+        wf = repo / ".github" / "workflows"
+        return {p.name: p.read_text() for p in wf.iterdir()}
+
+    def test_invalid_later_spec_leaves_all_files_untouched(self) -> None:
+        # `--pull 2h --audit 5h`: 5 does not divide 24, so the audit spec is
+        # invalid — pull-card.yml must NOT have been retuned when main exits 2.
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            before = self._snapshot(repo)
+            rc, stderr = self._run_main(repo, ["--pull", "2h", "--audit", "5h"])
+            self.assertEqual(rc, 2)
+            self.assertIn("5h", stderr)
+            self.assertEqual(self._snapshot(repo), before)
+
+    def test_guard_failure_in_later_workflow_leaves_all_files_untouched(self) -> None:
+        # A later workflow that fails retune's managed-line guards (two cron
+        # lines) must also abort before the earlier workflow is rewritten.
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            p = repo / ".github/workflows/audit-deck.yml"
+            p.write_text(
+                p.read_text().replace(
+                    "    - cron: '0 0 * * *'\n",
+                    "    - cron: '0 0 * * *'\n    - cron: '13 9 * * 6,0'\n",
+                )
+            )
+            before = self._snapshot(repo)
+            rc, stderr = self._run_main(repo, ["--pull", "2h", "--audit", "3h"])
+            self.assertEqual(rc, 2)
+            self.assertIn("found 2", stderr)
+            self.assertEqual(self._snapshot(repo), before)
+
+    def test_all_valid_specs_apply(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            rc, _ = self._run_main(repo, ["--pull", "2h", "--audit", "3h"])
+            self.assertEqual(rc, 0)
+            self.assertIn(
+                "- cron: '13 */2 * * *'",
+                (repo / ".github/workflows/pull-card.yml").read_text(),
+            )
+            self.assertIn(
+                "- cron: '15 */3 * * *'",
+                (repo / ".github/workflows/audit-deck.yml").read_text(),
+            )
 
 
 if __name__ == "__main__":
