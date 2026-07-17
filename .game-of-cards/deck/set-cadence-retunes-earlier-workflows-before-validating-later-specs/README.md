@@ -1,7 +1,7 @@
 ---
 title: set-cadence-retunes-earlier-workflows-before-validating-later-specs
 summary: "scripts/set_cadence.py validates each interval spec inside `retune`, per workflow, inside the mutation loop — so `--pull 2h --audit 5h` rewrites pull-card.yml before discovering that `5h` is invalid, then prints an error and exits 2 with the workflow file already mutated. An operator who trusts the nonzero exit unknowingly commits or discards a retuned deck-mutating autonomous workflow. Fix: validate every requested spec via `interval_to_cron` before the retune loop."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-17T01:07:16Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: all requested specs are validated via `interval_to_cron` before the first `retune` call in `main` (scripts/set_cadence.py)
   - [ ] TDD: `uv run python -m unittest discover -s tests` passes (add a regression test if the suite covers set_cadence)
   - [ ] MECHANICAL: `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # set_cadence applies earlier workflow retunes before validating later specs
