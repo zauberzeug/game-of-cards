@@ -24,6 +24,13 @@ near month-end are shorter than N days); and ``1w`` for exact weekly
 offsets are fixed (pull :13, audit :15, refine :45) so the three
 deck-mutating cloud agents never launch on the same minute on ``main``.
 
+An optional ``+P`` hour-phase suffix shifts a schedule by whole hours,
+for keeping two workflows on the *same* interval a full hour apart
+(minute offsets alone leave them in the same hour slot): ``3h+1`` fires
+at 01:xx, 04:xx, … instead of 00:xx, 03:xx, …. For ``Nh`` (N ≥ 2) the
+phase must be < N; for ``24h``/``Nd``/``1w`` it sets the hour-of-day
+(0–23, default 0); ``1h`` takes no phase.
+
 This tool is intentionally **repo-local**: it targets THIS repo's own
 autonomous workflow files, which ``goc install`` does not ship to
 consumers. It uses only the standard library so ``python3
@@ -57,7 +64,7 @@ WORKFLOWS: dict[str, tuple[str, int, str]] = {
 
 _CRON_RE = re.compile(r"^[ \t]*- cron: .*$", re.MULTILINE)
 _CADENCE_RE = re.compile(r"^[ \t]*# cadence: .*$", re.MULTILINE)
-_SPEC_RE = re.compile(r"^(\d+)\s*([hdw])$")
+_SPEC_RE = re.compile(r"^(\d+)\s*([hdw])(?:\s*\+\s*(\d+))?$")
 
 
 def interval_to_cron(spec: str, offset: int) -> str:
@@ -76,6 +83,11 @@ def interval_to_cron(spec: str, offset: int) -> str:
       cadence.
     - ``1w`` → exact weekly via the day-of-week field (every Monday); this
       one is drift-free. ``Nw`` (N≥2) has no clean cron and is rejected.
+    - An optional ``+P`` suffix sets a whole-hour phase, e.g. ``3h+1`` →
+      hours 1,4,…,22 (cron range-with-step ``1-23/N``) so two workflows on
+      the same interval can stay a full hour apart. For ``Nh`` (N ≥ 2) the
+      phase must be < N; for ``24h``/``Nd``/``1w`` it is the hour-of-day
+      (0–23). ``1h`` fires every hour and takes no phase.
 
     Anything else raises ``ValueError``.
     """
@@ -84,9 +96,14 @@ def interval_to_cron(spec: str, offset: int) -> str:
     m = _SPEC_RE.match(spec.strip().lower())
     if not m:
         raise ValueError(
-            f"unrecognized interval {spec!r}; use <N>h (1,2,3,4,6,8,12), 24h, <N>d, or 1w"
+            f"unrecognized interval {spec!r}; use <N>h (1,2,3,4,6,8,12), 24h, <N>d, "
+            "or 1w, each with an optional +P hour phase (e.g. 3h+1)"
         )
     n, unit = int(m.group(1)), m.group(2)
+    phase = int(m.group(3)) if m.group(3) is not None else 0
+    # For every spec except sub-daily Nh, the phase is simply the hour-of-day.
+    if not (unit == "h" and n != 24) and not 0 <= phase <= 23:
+        raise ValueError(f"{spec!r}: hour phase must be 0..23")
     if unit == "w":
         if n != 1:
             raise ValueError(
@@ -94,7 +111,7 @@ def interval_to_cron(spec: str, offset: int) -> str:
                 "day-of-week field); every-N-weeks has no clean cron — use 1w or <N>d"
             )
         # exact weekly: every Monday (matches this repo's historical weekly slot).
-        return f"{offset} 0 * * 1"
+        return f"{offset} {phase} * * 1"
     if unit == "d":
         if n < 1:
             raise ValueError(f"{spec!r}: day interval must be >= 1")
@@ -105,17 +122,26 @@ def interval_to_cron(spec: str, offset: int) -> str:
                 "N >= 31 matches only the 1st and fires monthly)"
             )
         if n == 1:
-            return f"{offset} 0 * * *"
+            return f"{offset} {phase} * * *"
         # day-of-month */N: roughly every N days, realigning each month.
-        return f"{offset} 0 */{n} * *"
+        return f"{offset} {phase} */{n} * *"
     # unit == "h"
     if n == 24:
-        return f"{offset} 0 * * *"
+        return f"{offset} {phase} * * *"
     if not 1 <= n <= 23 or 24 % n != 0:
         raise ValueError(
             f"{spec!r}: hour interval must divide 24 (1,2,3,4,6,8,12) or be 24h"
         )
-    hour_field = "*" if n == 1 else f"*/{n}"
+    if n == 1:
+        if phase:
+            raise ValueError(f"{spec!r}: 1h fires every hour — a phase has no effect")
+        return f"{offset} * * * *"
+    if not 0 <= phase < n:
+        raise ValueError(
+            f"{spec!r}: hour phase must be < the interval ({n}); "
+            f"phases 0..{n - 1} shift the {n}-hourly slots without changing the cadence"
+        )
+    hour_field = f"*/{n}" if phase == 0 else f"{phase}-23/{n}"
     return f"{offset} {hour_field} * * *"
 
 
@@ -221,7 +247,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="set_cadence.py",
         description="Query or retune the autonomous GitHub Actions cadence (repo-local).",
-        epilog="Interval specs: <N>h (1,2,3,4,6,8,12), 24h, <N>d (<=30), or 1w. Commit & push to apply.",
+        epilog=(
+            "Interval specs: <N>h (1,2,3,4,6,8,12), 24h, <N>d (<=30), or 1w; "
+            "optional +P hour phase (e.g. 3h+1). Commit & push to apply."
+        ),
     )
     parser.add_argument(
         "--show", action="store_true", help="print the current cadence and exit"

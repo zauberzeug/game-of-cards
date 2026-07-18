@@ -102,7 +102,39 @@ class IntervalToCronTest(unittest.TestCase):
             setc.interval_to_cron("2w", 0)
 
     def test_garbage_rejected(self) -> None:
-        for bad in ("", "h", "1m", "abc", "1.5h"):
+        for bad in ("", "h", "1m", "abc", "1.5h", "3h+", "+1", "3h+1+2"):
+            with self.assertRaises(ValueError):
+                setc.interval_to_cron(bad, 0)
+
+    def test_hour_phase_shifts_slot_start(self) -> None:
+        # +P on sub-daily Nh becomes a range-with-step hour field: same
+        # cadence as */N, launched P hours later.
+        self.assertEqual(setc.interval_to_cron("3h+1", 45), "45 1-23/3 * * *")
+        self.assertEqual(setc.interval_to_cron("3h+2", 45), "45 2-23/3 * * *")
+        self.assertEqual(setc.interval_to_cron("6h+5", 15), "15 5-23/6 * * *")
+
+    def test_hour_phase_zero_is_plain_step(self) -> None:
+        self.assertEqual(setc.interval_to_cron("3h+0", 15), "15 */3 * * *")
+
+    def test_hour_phase_sets_hour_of_day_for_daily_and_weekly(self) -> None:
+        self.assertEqual(setc.interval_to_cron("24h+6", 13), "13 6 * * *")
+        self.assertEqual(setc.interval_to_cron("1d+6", 13), "13 6 * * *")
+        self.assertEqual(setc.interval_to_cron("3d+6", 45), "45 6 */3 * *")
+        self.assertEqual(setc.interval_to_cron("1w+6", 45), "45 6 * * 1")
+
+    def test_hour_phase_must_be_below_interval(self) -> None:
+        # 3h+3 would be hours 3,6,…,21 — that drops the midnight slot, not
+        # a phase shift of the 3-hourly cadence.
+        for bad in ("3h+3", "3h+4", "12h+12"):
+            with self.assertRaises(ValueError):
+                setc.interval_to_cron(bad, 0)
+
+    def test_hour_phase_rejected_for_hourly(self) -> None:
+        with self.assertRaises(ValueError):
+            setc.interval_to_cron("1h+1", 0)
+
+    def test_hour_of_day_phase_over_23_rejected(self) -> None:
+        for bad in ("1d+24", "24h+24", "1w+24"):
             with self.assertRaises(ValueError):
                 setc.interval_to_cron(bad, 0)
 
@@ -137,6 +169,18 @@ class RetuneTest(unittest.TestCase):
             cadence = setc.current_cadence(repo)
             self.assertEqual(cadence["refine"]["cron"], "45 */3 * * *")
             self.assertIn("every 3h", cadence["refine"]["comment"])
+
+    def test_phased_spec_round_trips_through_retune(self) -> None:
+        # The spec string (phase included) is recorded verbatim in the
+        # managed comment so --show alone reproduces the retune.
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            cron, changed = setc.retune(repo, "refine", "3h+1")
+            self.assertEqual(cron, "45 1-23/3 * * *")
+            self.assertTrue(changed)
+            cadence = setc.current_cadence(repo)
+            self.assertEqual(cadence["refine"]["cron"], "45 1-23/3 * * *")
+            self.assertIn("every 3h+1", cadence["refine"]["comment"])
 
     def test_two_cron_lines_rejected_and_file_untouched(self) -> None:
         # A workflow with two schedule entries must be refused, not
@@ -228,6 +272,17 @@ class MainAllOrNothingTest(unittest.TestCase):
             rc, stderr = self._run_main(repo, ["--pull", "2h", "--audit", "5h"])
             self.assertEqual(rc, 2)
             self.assertIn("5h", stderr)
+            self.assertEqual(self._snapshot(repo), before)
+
+    def test_invalid_phase_leaves_all_files_untouched(self) -> None:
+        # An out-of-range phase must trip the same all-or-nothing dry-run
+        # as an invalid interval.
+        with tempfile.TemporaryDirectory() as d:
+            repo = _make_repo(Path(d))
+            before = self._snapshot(repo)
+            rc, stderr = self._run_main(repo, ["--pull", "1h", "--refine", "3h+3"])
+            self.assertEqual(rc, 2)
+            self.assertIn("3h+3", stderr)
             self.assertEqual(self._snapshot(repo), before)
 
     def test_guard_failure_in_later_workflow_leaves_all_files_untouched(self) -> None:

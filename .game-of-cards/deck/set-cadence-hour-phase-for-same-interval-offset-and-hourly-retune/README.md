@@ -1,21 +1,21 @@
 ---
 title: set-cadence-hour-phase-for-same-interval-offset-and-hourly-retune
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-18T13:15:17Z"
-closed_at: null
+closed_at: "2026-07-18T13:19:10Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra]
 definition_of_done: |
-  - [ ] `interval_to_cron` accepts an optional `+P` hour-phase suffix (`3h+1` → `45 1-23/3 * * *` at offset 45) with validation: phase < N for `Nh`, phase ≤ 23 for `24h`/`Nd`/`1w`, rejected for `1h`
-  - [ ] Invalid phases (`1h+1`, `3h+3`, `1d+24`) are rejected by the all-or-nothing dry-run before any workflow file is touched
-  - [ ] Tests cover phase parsing, cron generation, rejection cases, and round-trip through `retune`
-  - [ ] Cadence retuned on disk: pull-card `1h` (`13 * * * *`), audit-deck `3h` (`15 */3 * * *`), refine-deck `3h+1` (`45 1-23/3 * * *`) — refine launches ≥1 h after each audit slot
-  - [ ] Skill doc `.claude/skills/tune-cadence/SKILL.md` and the script docstring document the phase syntax
-  - [ ] Regression suite green; change committed and pushed to main so the schedule takes effect
+  - [x] TDD: `interval_to_cron` accepts an optional `+P` hour-phase suffix (`3h+1` → `45 1-23/3 * * *` at offset 45) with validation: phase < N for `Nh`, phase ≤ 23 for `24h`/`Nd`/`1w`, rejected for `1h`
+  - [x] TDD: Invalid phases (`1h+1`, `3h+3`, `1d+24`) are rejected by the all-or-nothing dry-run before any workflow file is touched
+  - [x] TDD: Tests cover phase parsing, cron generation, rejection cases, and round-trip through `retune` (32 tests in tests/test_set_cadence.py)
+  - [x] MECHANICAL: Cadence retuned on disk: pull-card `1h` (`13 * * * *`), audit-deck `3h` (`15 */3 * * *`), refine-deck `3h+1` (`45 1-23/3 * * *`) — refine launches ≥1 h after each audit slot
+  - [x] MECHANICAL: Skill doc `.claude/skills/tune-cadence/SKILL.md` and the script docstring document the phase syntax
+  - [x] EMPIRICAL: Regression suite green (742 tests OK); change committed and pushed to main so the schedule takes effect
 worker: {who: Rodja Trappe, where: main}
 ---
 

@@ -37,6 +37,12 @@ python3 scripts/set_cadence.py --pull 1h --audit 3h --refine 3h
   so it's "roughly every N days" — the gap across a month boundary is
   shorter. `1w` is exact (day-of-week, every Monday); there is no clean
   cron for every-N-days or every-N-weeks.
+- An optional `+P` hour-phase suffix shifts a schedule by whole hours —
+  use it to keep two workflows on the *same* interval a full hour apart
+  (the minute offsets below only separate them within an hour slot).
+  `3h+1` fires at 01:xx, 04:xx, … instead of 00:xx, 03:xx, …. For `Nh`
+  (N≥2) the phase must be < N; for `24h`/`Nd`/`1w` it sets the
+  hour-of-day (0–23); `1h` takes no phase.
 - Minute offsets are fixed (pull `:13`, audit `:15`, refine `:45`) so the
   three deck-mutating agents never launch on the same minute and race on
   `main`.
