@@ -1,6 +1,6 @@
 ---
 name: decide-card
-description: Record a decision (what + why) on a parked card and lower the human gate from decision or session to none. AUTO-INVOKE on "I decided X", "let's go with Y", "approved", or any resolution of a parked card — the human's one-action handoff so pull-card can resume.
+description: Record a decision (what + why) on a parked card and lower the human gate from decision or session to none. AUTO-INVOKE on "I decided X", "let's go with Y", "approved", or any resolution of a parked card — the human's one-action handoff so pull-card can resume. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["decide-card"].
 ---
 
 ## When to invoke
@@ -135,3 +135,7 @@ A decision recorded in violation of this contract can be rewound —
   ≠ status.
 - the `card-schema` skill — `human_gate` enum and the `## Decision
   required` body convention.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["decide-card", "<file>"]}`.

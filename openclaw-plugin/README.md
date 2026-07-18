@@ -20,13 +20,14 @@ is bundled inside the npm payload — the only host prerequisite is
 
 | Tool | Purpose |
 |---|---|
-| `goc` | Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. Wraps every goc CLI verb behind one typed function call: `verb`, `args[]`, optional `flags`, optional `cwd`. |
+| `goc` | Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. Wraps every goc CLI verb behind one typed function call: `verb`, `args[]`, optional `flags`, optional `cwd`. The tool-only verb `skill` serves the bundled skill bodies (`args: ["<name>"]` → SKILL.md, `args: ["<name>", "<file>"]` → sibling file, no args → list) so sandboxed sessions never have to read the catalog's host-side `location` paths. |
 
-**14 skills** at workspace tier — model reads them as injected system context:
+**16 skills** at workspace tier — model reads them as injected system context:
 
 | Skill | Purpose |
 |---|---|
 | `kickoff` | Onboarding dialog — introduces GoC, scaffolds `.game-of-cards/` |
+| `openclaw-kickoff` | OpenClaw-specific kickoff complement — host wiring after `kickoff` |
 | `deck` | Methodology front door |
 | `scan-deck` | Browse the board: triage view, filtered queues, decision Q&A |
 | `next-card` | Pick the highest-leverage open card to work on next |
@@ -40,6 +41,7 @@ is bundled inside the npm payload — the only host prerequisite is
 | `standup` | Active cards, blockers, closures since yesterday, decision gates |
 | `retrospective` | Cluster closed cards by tag, surface recurring failure modes |
 | `card-schema` | Field reference — enums, canonical tags, DoD format |
+| `upgrade` | Run goc upgrade + reconcile evolving `.game-of-cards/` files |
 
 **3 lifecycle hooks** — fire automatically:
 

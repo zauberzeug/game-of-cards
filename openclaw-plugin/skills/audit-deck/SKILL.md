@@ -1,6 +1,6 @@
 ---
 name: audit-deck
-description: Hunt for one previously-undocumented defect, doc drift, missing test, or inconsistency; file it via the `create-card` skill. AUTO-INVOKE on "find me a bug", "audit X", "check for inconsistencies", or /audit-deck. Inconsistencies are the primary lead.
+description: Hunt for one previously-undocumented defect, doc drift, missing test, or inconsistency; file it via the `create-card` skill. AUTO-INVOKE on "find me a bug", "audit X", "check for inconsistencies", or /audit-deck. Inconsistencies are the primary lead. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["audit-deck"].
 ---
 
 ## When to invoke
@@ -203,3 +203,7 @@ live in `deck/<title>/README.md`. Do not duplicate them in chat.
 - the `card-schema` skill — DoD format, decision-gate body contract,
   canonical tag predicates.
 - Project commit workflow — final checks, staging, and commit.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["audit-deck", "<file>"]}`.

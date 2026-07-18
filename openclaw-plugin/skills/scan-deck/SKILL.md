@@ -1,6 +1,6 @@
 ---
 name: scan-deck
-description: Browse the deck — supportive triage view, filtered queues, kanban board, JSON dump, decision Q&A. Read-only by default. AUTO-INVOKE on "what's open", "show me the deck", "kanban view", or "decisions to make" — and ALWAYS before the `create-card` skill to dedup against existing titles.
+description: Browse the deck — supportive triage view, filtered queues, kanban board, JSON dump, decision Q&A. Read-only by default. AUTO-INVOKE on "what's open", "show me the deck", "kanban view", or "decisions to make" — and ALWAYS before the `create-card` skill to dedup against existing titles. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["scan-deck"].
 ---
 
 ## When to invoke

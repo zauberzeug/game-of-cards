@@ -1,6 +1,6 @@
 ---
 name: next-card
-description: "Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status (pull-card claims). AUTO-INVOKE on \"what's next\", \"pick something\", \"what should I do\", or autonomous-loop work. Filters to `human_gate: none` for loop safety."
+description: "Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status (pull-card claims). AUTO-INVOKE on \"what's next\", \"pick something\", \"what should I do\", or autonomous-loop work. Filters to `human_gate: none` for loop safety." If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["next-card"].
 ---
 
 ## When to invoke

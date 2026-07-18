@@ -1,6 +1,6 @@
 ---
 name: finish-card
-description: Close a card with DoD enforcement and a log.md closure entry — goc done refuses to close with any unchecked box. AUTO-INVOKE on "done", "close this", "finish X", "ship it", or when work satisfies a card's DoD. For every other status change, use advance-card.
+description: Close a card with DoD enforcement and a log.md closure entry — goc done refuses to close with any unchecked box. AUTO-INVOKE on "done", "close this", "finish X", "ship it", or when work satisfies a card's DoD. For every other status change, use advance-card. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["finish-card"].
 ---
 
 ## When to invoke
@@ -205,3 +205,7 @@ verification numbers. Full conventions and commit-failure handling:
   the table above.
 - the `card-schema` skill — DoD format + free-form-prose escape.
 - the `advance-card` skill — divert for `→ disproved` or re-`open`.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["finish-card", "<file>"]}`.

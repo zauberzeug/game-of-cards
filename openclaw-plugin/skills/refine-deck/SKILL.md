@@ -1,6 +1,6 @@
 ---
 name: refine-deck
-description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct references, orphaned dependencies, and jargon titles. AUTO-INVOKE on "tidy up the deck", "hygiene pass", "clean up the queue", or /refine-deck. The board itself gets refactored each iteration.
+description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct references, orphaned dependencies, and jargon titles. AUTO-INVOKE on "tidy up the deck", "hygiene pass", "clean up the queue", or /refine-deck. The board itself gets refactored each iteration. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["refine-deck"].
 ---
 
 ## When to invoke
@@ -217,3 +217,7 @@ Scope, minimum-vs-maximum bound, and the noise escape valve:
   rot), file via create-card.
 - Project commit workflow — to land the hygiene edits as a
   `chore(deck): hygiene pass — <date>` commit.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["refine-deck", "<file>"]}`.

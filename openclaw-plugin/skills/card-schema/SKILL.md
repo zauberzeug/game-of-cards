@@ -1,6 +1,6 @@
 ---
 name: card-schema
-description: Card schema reference — fields, status/stage/contribution/human_gate enums, canonical tags, DoD detection, relationship invariants, title convention. AUTO-INVOKE when other deck skills need schema context, or when the user asks about field semantics, status lifecycle, DoD format, or card titling.
+description: Card schema reference — fields, status/stage/contribution/human_gate enums, canonical tags, DoD detection, relationship invariants, title convention. AUTO-INVOKE when other deck skills need schema context, or when the user asks about field semantics, status lifecycle, DoD format, or card titling. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["card-schema"].
 ---
 
 ## When to invoke
@@ -258,3 +258,7 @@ its predicate fires on the title, H1, or first ~2500 chars of body
 Project-specific predicates appended below:
 
 `cat .game-of-cards/canonical-tags.md 2>/dev/null || true`
+
+## Sibling files on this host
+
+This skill ships `reference.md`, `schema.yaml` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["card-schema", "<file>"]}`.

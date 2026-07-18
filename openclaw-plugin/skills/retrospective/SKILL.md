@@ -1,6 +1,6 @@
 ---
 name: retrospective
-description: Backwards analysis of the last N closed cards — recurring failure modes, generalization candidates, rough velocity feel. Read-only; never files cards. AUTO-INVOKE on "what have we learned", "retro", "any patterns lately", "what keeps going wrong".
+description: Backwards analysis of the last N closed cards — recurring failure modes, generalization candidates, rough velocity feel. Read-only; never files cards. AUTO-INVOKE on "what have we learned", "retro", "any patterns lately", "what keeps going wrong". If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["retrospective"].
 ---
 
 ## When to invoke

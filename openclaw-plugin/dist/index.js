@@ -2378,7 +2378,7 @@ var Type = type_exports3;
 
 // index.ts
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { access, readFile, readdir } from "node:fs/promises";
 var COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 var PLUGIN_ROOT = resolve(COMPILED_DIR, "..");
@@ -2396,16 +2396,18 @@ var GOC_VERBS = [
   "repair-edges",
   "move",
   "decide",
+  "publish",
   "triage",
   "show",
   "migrate",
   "migrate-list-style"
 ];
+var TOOL_ONLY_VERBS = ["skill"];
 var GocToolParams = Type.Object({
   verb: Type.Union(
-    GOC_VERBS.map((v) => Type.Literal(v)),
+    [...GOC_VERBS, ...TOOL_ONLY_VERBS].map((v) => Type.Literal(v)),
     {
-      description: "The goc subcommand to run. Most card lifecycle work uses `new`, `status`, `done`, `decide`, `advance`, `show`, or `triage`."
+      description: 'The goc subcommand to run. Most card lifecycle work uses `new`, `status`, `done`, `decide`, `advance`, `show`, or `triage`. `skill` reads a bundled GoC skill instead of running the engine: args `["<name>"]` returns its SKILL.md, args `["<name>", "<file>"]` a sibling file (e.g. reference.md), no args lists the bundled skills.'
     }
   ),
   args: Type.Array(Type.String(), {
@@ -2449,6 +2451,9 @@ function buildArgs(input) {
 var FRONTMATTER_RE = /^---\n([\s\S]*?\n)---\n/;
 var ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 var ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+var NULL_LITERALS = /* @__PURE__ */ new Set(["null", "Null", "NULL", "~"]);
+var BOOL_LITERALS = /* @__PURE__ */ new Set(["true", "True", "TRUE", "yes", "Yes", "YES", "false", "False", "FALSE", "no", "No", "NO"]);
+var INT_RE = /^-?\d+$/;
 function stripQuotes(s) {
   return s.replace(/^["']|["']$/g, "");
 }
@@ -2463,6 +2468,22 @@ function frontmatterTail(line) {
     }
   }
   return tail.trim();
+}
+function scalarOrEmpty(line) {
+  const raw = frontmatterTail(line);
+  const quoted = raw[0] === '"' || raw[0] === "'";
+  const value = quoted ? stripQuotes(raw) : raw;
+  if (value === "") return "";
+  if (!quoted && NULL_LITERALS.has(value)) return "";
+  return value;
+}
+function waitingOnScalar(line) {
+  const raw = frontmatterTail(line);
+  const quoted = raw[0] === '"' || raw[0] === "'";
+  const value = quoted ? stripQuotes(raw) : raw;
+  if (value === "") return "";
+  if (!quoted && (NULL_LITERALS.has(value) || BOOL_LITERALS.has(value) || INT_RE.test(value))) return "";
+  return value;
 }
 function parseWaitingUntil(value) {
   let t;
@@ -2525,9 +2546,9 @@ async function findActiveCards(deckDir) {
         const val = stripQuotes(frontmatterTail(line));
         if (val) humanGate = val;
       } else if (line.startsWith("waiting_on:")) {
-        waitingOn = stripQuotes(frontmatterTail(line));
+        waitingOn = waitingOnScalar(line);
       } else if (line.startsWith("waiting_until:")) {
-        waitingUntil = stripQuotes(frontmatterTail(line));
+        waitingUntil = scalarOrEmpty(line);
       }
     }
     if (status !== "active") continue;
@@ -2657,6 +2678,49 @@ async function pathExists(p) {
     return false;
   }
 }
+var SKILLS_DIR = resolve(PLUGIN_ROOT, "skills");
+function toolText(text, isError = false) {
+  return { content: [{ type: "text", text }], isError };
+}
+async function bundledSkillNames() {
+  const entries = await readdir(SKILLS_DIR, { withFileTypes: true });
+  return entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
+}
+async function serveGocSkill(args) {
+  const [name, file] = args;
+  if (!name) {
+    const names = await bundledSkillNames();
+    return toolText(
+      'Bundled GoC skills \u2014 read one with {verb: "skill", args: ["<name>"]}, a sibling file with {verb: "skill", args: ["<name>", "<file>"]}:\n' + names.map((n) => `- ${n}`).join("\n")
+    );
+  }
+  const skillDir = resolve(SKILLS_DIR, name);
+  if (!skillDir.startsWith(SKILLS_DIR + sep)) {
+    return toolText(`invalid skill name: ${JSON.stringify(name)}`, true);
+  }
+  if (!await pathExists(resolve(skillDir, "SKILL.md"))) {
+    const names = await bundledSkillNames();
+    return toolText(
+      `unknown skill ${JSON.stringify(name)}; bundled skills:
+` + names.map((n) => `- ${n}`).join("\n"),
+      true
+    );
+  }
+  const target = resolve(skillDir, file ?? "SKILL.md");
+  if (target !== skillDir && !target.startsWith(skillDir + sep)) {
+    return toolText(`invalid file path: ${JSON.stringify(file)}`, true);
+  }
+  try {
+    return toolText(await readFile(target, "utf-8"));
+  } catch {
+    const siblings = (await readdir(skillDir, { recursive: true })).map((entry) => String(entry)).sort();
+    return toolText(
+      `no file ${JSON.stringify(file ?? "SKILL.md")} in skill ${JSON.stringify(name)}; available:
+` + siblings.map((s) => `- ${s}`).join("\n"),
+      true
+    );
+  }
+}
 async function hasDeck(projectDir) {
   return await pathExists(resolve(projectDir, ".game-of-cards", "deck")) || await pathExists(resolve(projectDir, "deck"));
 }
@@ -2680,11 +2744,13 @@ async function bestFallbackProjectDir(sessionProjectDir) {
   }
   return void 0;
 }
-async function isOptedOut(projectDir) {
+var TRUE_SET = /* @__PURE__ */ new Set(["true", "True", "TRUE", "yes", "Yes", "YES"]);
+async function isEnabled(projectDir) {
   const configPath = resolve(projectDir, ".game-of-cards", "config.yaml");
   try {
     const text = await readFile(configPath, "utf8");
-    return /pattern_generalization_check\s*:\s*false/i.test(text);
+    const m = /pattern_generalization_check\s*:\s*(\S+)/.exec(text);
+    return !!m && TRUE_SET.has(m[1]);
   } catch {
     return false;
   }
@@ -2712,9 +2778,12 @@ var index_default = definePluginEntry({
     }
     api.registerTool({
       name: "goc",
-      description: "Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
+      description: 'Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate). Also serves the bundled GoC skill bodies: verb `skill` with args `["<name>"]` returns that skill\'s SKILL.md, args `["<name>", "<file>"]` a sibling file (e.g. reference.md), no args the skill list. Use it whenever a skill catalog `location` path is not readable from the session (sandboxed sessions cannot see the plugin install path) \u2014 do not guess path variants.',
       parameters: GocToolParams,
       async execute(_id, params) {
+        if (params.verb === "skill") {
+          return await serveGocSkill(params.args ?? []);
+        }
         const requestedCwd = params.cwd ?? sessionProjectDir ?? process.cwd();
         let cwd = requestedCwd;
         let cwdNotice = "";
@@ -2785,8 +2854,7 @@ ${stderrJoined}` : "")).trim() || `goc ${params.verb} returned exit ${result.exi
     });
     api.on("agent_end", async (ctx) => {
       const projectDir = ctx?.projectDir ?? process.cwd();
-      if (await isOptedOut(projectDir)) return;
-      if (ctx?.config?.pattern_generalization_check === false) return;
+      if (!await isEnabled(projectDir) && ctx?.config?.pattern_generalization_check !== true) return;
       const toolCalls = ctx?.toolCalls ?? ctx?.events?.toolCalls ?? [];
       const mutating = toolCalls.some((tc) => {
         if (CODE_MUTATING_TOOLS.has(tc?.name)) return true;

@@ -1,6 +1,6 @@
 ---
 name: advance-card
-description: Mutate a card's status (everything except done — that is finish-card's job), record relationship edges, or set the goc wait impediment overlay. AUTO-INVOKE on "I'll start on X", "mark this disproved", "supersede with Z", "make this depend on Y".
+description: Mutate a card's status (everything except done — that is finish-card's job), record relationship edges, or set the goc wait impediment overlay. AUTO-INVOKE on "I'll start on X", "mark this disproved", "supersede with Z", "make this depend on Y". If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["advance-card"].
 ---
 
 ## When to invoke
@@ -173,3 +173,7 @@ views with `goc --worker <X>` or the `GOC_WORKER` env var. Details:
   `human_gate` rules.
 - the `create-card` skill — when a supersession needs a new card to
   point at.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["advance-card", "<file>"]}`.

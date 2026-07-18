@@ -1,6 +1,6 @@
 ---
 name: standup
-description: Daily-style deck read — active and impeded cards, closures within the last 24h, cards parked on a human decision gate. Read-only, never mutates state. AUTO-INVOKE on "where do we stand", "what's stuck", "standup", "daily check", or "what happened since yesterday".
+description: Daily-style deck read — active and impeded cards, closures within the last 24h, cards parked on a human decision gate. Read-only, never mutates state. AUTO-INVOKE on "where do we stand", "what's stuck", "standup", "daily check", or "what happened since yesterday". If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["standup"].
 ---
 
 ## When to invoke

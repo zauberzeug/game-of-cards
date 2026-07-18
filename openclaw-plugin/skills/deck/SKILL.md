@@ -1,6 +1,6 @@
 ---
 name: deck
-description: Front door for the deck — the operating substrate for ALL persistent work. AUTO-INVOKE when the user references the deck/methodology/workflow, or at session start as a reminder that persistent work flows through the `create-card` skill → the `advance-card` skill → the `finish-card` skill.
+description: Front door for the deck — the operating substrate for ALL persistent work. AUTO-INVOKE when the user references the deck/methodology/workflow, or at session start as a reminder that persistent work flows through the `create-card` skill → the `advance-card` skill → the `finish-card` skill. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["deck"].
 ---
 
 ## When to invoke
@@ -184,3 +184,7 @@ One skill per job; compose, don't bundle.
 - the `retrospective` skill — backwards analysis of the last N closed
   cards: cluster by tag, surface recurring failure modes, propose
   generalization candidates.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["deck", "<file>"]}`.

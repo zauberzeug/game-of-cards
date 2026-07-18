@@ -1,6 +1,6 @@
 ---
 name: kickoff
-description: Kick off GoC in a fresh repo — introduce GoC, pick a persona, confirm the AGENTS.md merge, scaffold via goc install. AUTO-INVOKE on "kickoff", "use GoC here", "set up game of cards", or when any GoC skill runs in a repo with no deck directory.
+description: Kick off GoC in a fresh repo — introduce GoC, pick a persona, confirm the AGENTS.md merge, scaffold via goc install. AUTO-INVOKE on "kickoff", "use GoC here", "set up game of cards", or when any GoC skill runs in a repo with no deck directory. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["kickoff"].
 ---
 
 ## When to invoke
@@ -232,3 +232,7 @@ What should the first card be?
 
 The deck is now live. All other GoC skills work immediately — no further
 generic kickoff needed.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["kickoff", "<file>"]}`.

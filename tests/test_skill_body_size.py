@@ -40,6 +40,15 @@ BODY_CAPS = {
 }
 
 
+# Bytes of the marker-bounded briefing block template injected into every
+# consumer's AGENTS.md / CLAUDE.md. Consumers' bootstrap files have hard
+# char budgets (OpenClaw trims at bootstrapMaxChars, default 20k), so the
+# goc-owned block must stay a pointer surface: discovery signal, skill
+# list, one-line rules. Methodology prose belongs in the skills.
+BRIEFING_CAP = 2_500
+BRIEFING_TEMPLATE = ROOT / "goc" / "templates" / "AGENTS_GOC.md"
+
+
 class SkillBodySizeTest(unittest.TestCase):
     def test_hot_path_skill_bodies_fit_their_caps(self) -> None:
         over_cap: list[str] = []
@@ -57,6 +66,18 @@ class SkillBodySizeTest(unittest.TestCase):
                 (TEMPLATE_SKILLS / name / "SKILL.md").is_file(),
                 f"capped skill vanished: {name}",
             )
+
+
+class BriefingBlockSizeTest(unittest.TestCase):
+    def test_briefing_template_fits_its_cap(self) -> None:
+        size = BRIEFING_TEMPLATE.stat().st_size
+        self.assertLessEqual(
+            size,
+            BRIEFING_CAP,
+            f"{BRIEFING_TEMPLATE.relative_to(ROOT)}: {size} > {BRIEFING_CAP}; "
+            "the marker block is always-loaded in every consumer — move new "
+            "prose into a skill and leave a one-line pointer.",
+        )
 
 
 if __name__ == "__main__":

@@ -130,6 +130,34 @@ BOOTSTRAP_ROUTED_RE = re.compile(
 INLINE_BANG_BLOCK_RE = re.compile(r"^([ \t]*)!`([^`]+)`", re.MULTILINE)
 
 
+# OpenClaw's skill catalog advertises each skill with a host-side `location`
+# path that sandboxed sessions cannot read; the goc tool's `skill` verb is the
+# read path that always resolves. Surface it on the two spots an agent sees
+# before/without the body: the catalog description line, and (for the sibling
+# deep-dive files a body routes to) a trailer section in the body itself.
+# The hint stays free of `: ` sequences — frontmatter descriptions are plain
+# YAML scalars, and simple split-on-colon readers must not truncate them.
+DESCRIPTION_LINE_RE = re.compile(r"^(description:[^\n]*?)[ \t]*$", re.MULTILINE)
+FETCH_HINT = ' If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["{name}"].'
+
+
+def _sibling_trailer(skill_dir: Path) -> str:
+    """Body trailer teaching tool-served reads of this skill's sibling files."""
+    siblings = [
+        str(asset.relative_to(skill_dir)) for asset in _iter_skill_siblings(skill_dir)
+    ]
+    if not siblings:
+        return ""
+    listed = ", ".join(f"`{s}`" for s in siblings)
+    return (
+        "\n## Sibling files on this host\n\n"
+        f"This skill ships {listed} alongside its body. If a direct file read "
+        "fails (sandboxed sessions cannot see the plugin install path), fetch "
+        "the file through the goc tool: "
+        f'`{{verb: "skill", args: ["{skill_dir.name}", "<file>"]}}`.\n'
+    )
+
+
 def render_skill(src: Path) -> str:
     """Return the host-neutral port of a source skill (pure — no I/O)."""
     text = src.read_text(encoding="utf-8")
@@ -156,6 +184,13 @@ def render_skill(src: Path) -> str:
     # Trim leading whitespace immediately after frontmatter so we don't get
     # an unsightly blank line gap from the dropped Preflight section.
     text = re.sub(r"(^---\n.*?\n---\n)\n+", r"\1\n", text, count=1, flags=re.DOTALL)
+
+    # Tool-served read hints: catalog description clause + sibling trailer.
+    hint = FETCH_HINT.format(name=src.parent.name)
+    text = DESCRIPTION_LINE_RE.sub(lambda m: m.group(1) + hint, text, count=1)
+    trailer = _sibling_trailer(src.parent)
+    if trailer:
+        text = text.rstrip("\n") + "\n" + trailer
 
     return text
 

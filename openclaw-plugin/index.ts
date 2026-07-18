@@ -32,7 +32,7 @@
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { Type, type Static } from "@sinclair/typebox";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { access, readFile, readdir } from "node:fs/promises";
 
 const COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
@@ -63,12 +63,23 @@ const GOC_VERBS = [
   "migrate-list-style",
 ] as const;
 
+// Tool-side verbs handled entirely in execute() — never forwarded to the
+// Python engine, so they are deliberately NOT part of GOC_VERBS (which must
+// mirror the engine's argparse subparsers exactly). `skill` serves the
+// ported skill bodies bundled under <plugin-root>/skills/: the host's skill
+// catalog advertises `location` paths under the host home, which sandboxed
+// sessions cannot read, so agents fall back to guessing path variants. One
+// tool call replaces that failed-read loop.
+const TOOL_ONLY_VERBS = ["skill"] as const;
+
 const GocToolParams = Type.Object({
   verb: Type.Union(
-    GOC_VERBS.map((v) => Type.Literal(v)),
+    [...GOC_VERBS, ...TOOL_ONLY_VERBS].map((v) => Type.Literal(v)),
     {
       description:
-        "The goc subcommand to run. Most card lifecycle work uses `new`, `status`, `done`, `decide`, `advance`, `show`, or `triage`.",
+        "The goc subcommand to run. Most card lifecycle work uses `new`, `status`, `done`, `decide`, `advance`, `show`, or `triage`. " +
+        "`skill` reads a bundled GoC skill instead of running the engine: args `[\"<name>\"]` returns its SKILL.md, " +
+        "args `[\"<name>\", \"<file>\"]` a sibling file (e.g. reference.md), no args lists the bundled skills.",
     },
   ),
   args: Type.Array(Type.String(), {
@@ -466,6 +477,69 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
+// === Tool-served skill bodies (`skill` verb) ===
+// Serves the ported skills bundled at <plugin-root>/skills/ without touching
+// the Python engine, so the read works even when the shell session is
+// sandboxed away from the plugin install path.
+const SKILLS_DIR = resolve(PLUGIN_ROOT, "skills");
+
+interface ToolText {
+  content: [{ type: "text"; text: string }];
+  isError: boolean;
+}
+
+function toolText(text: string, isError = false): ToolText {
+  return { content: [{ type: "text", text }], isError };
+}
+
+async function bundledSkillNames(): Promise<string[]> {
+  const entries = await readdir(SKILLS_DIR, { withFileTypes: true });
+  return entries
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+}
+
+async function serveGocSkill(args: string[]): Promise<ToolText> {
+  const [name, file] = args;
+  if (!name) {
+    const names = await bundledSkillNames();
+    return toolText(
+      'Bundled GoC skills — read one with {verb: "skill", args: ["<name>"]}, ' +
+        'a sibling file with {verb: "skill", args: ["<name>", "<file>"]}:\n' +
+        names.map((n) => `- ${n}`).join("\n"),
+    );
+  }
+  const skillDir = resolve(SKILLS_DIR, name);
+  if (!skillDir.startsWith(SKILLS_DIR + sep)) {
+    return toolText(`invalid skill name: ${JSON.stringify(name)}`, true);
+  }
+  if (!(await pathExists(resolve(skillDir, "SKILL.md")))) {
+    const names = await bundledSkillNames();
+    return toolText(
+      `unknown skill ${JSON.stringify(name)}; bundled skills:\n` +
+        names.map((n) => `- ${n}`).join("\n"),
+      true,
+    );
+  }
+  const target = resolve(skillDir, file ?? "SKILL.md");
+  if (target !== skillDir && !target.startsWith(skillDir + sep)) {
+    return toolText(`invalid file path: ${JSON.stringify(file)}`, true);
+  }
+  try {
+    return toolText(await readFile(target, "utf-8"));
+  } catch {
+    const siblings = (await readdir(skillDir, { recursive: true }))
+      .map((entry) => String(entry))
+      .sort();
+    return toolText(
+      `no file ${JSON.stringify(file ?? "SKILL.md")} in skill ${JSON.stringify(name)}; available:\n` +
+        siblings.map((s) => `- ${s}`).join("\n"),
+      true,
+    );
+  }
+}
+
 async function hasDeck(projectDir: string): Promise<boolean> {
   return (
     (await pathExists(resolve(projectDir, ".game-of-cards", "deck"))) ||
@@ -573,9 +647,14 @@ export default definePluginEntry({
       description:
         "Game of Cards deck CLI. Files, advances, decides on, or closes cards in `.game-of-cards/deck/`. " +
         "The deck is a backlog-as-folder where each task is a directory with frontmatter, body, and Definition-of-Done checklist that gates closure. " +
-        "Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate).",
+        "Common verbs: `new` (file a card), `status` (claim or block), `done` (close, DoD-enforced), `decide` (record decision, lower gate), `show` (read full card), `triage` (list parked cards by gate). " +
+        "Also serves the bundled GoC skill bodies: verb `skill` with args `[\"<name>\"]` returns that skill's SKILL.md, args `[\"<name>\", \"<file>\"]` a sibling file (e.g. reference.md), no args the skill list. " +
+        "Use it whenever a skill catalog `location` path is not readable from the session (sandboxed sessions cannot see the plugin install path) — do not guess path variants.",
       parameters: GocToolParams,
       async execute(_id: any, params: GocToolInput) {
+        if (params.verb === "skill") {
+          return await serveGocSkill(params.args ?? []);
+        }
         const requestedCwd = params.cwd ?? sessionProjectDir ?? process.cwd();
         let cwd = requestedCwd;
         let cwdNotice = "";

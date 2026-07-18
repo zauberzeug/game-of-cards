@@ -1,6 +1,6 @@
 ---
 name: create-card
-description: File a new card with frontmatter and a DoD scaffold BEFORE implementation — the body is the briefing the next reader needs to act cold. AUTO-INVOKE on "let's do X", "implement Y", "fix Z", a described bug, a requested feature, or ANY new persistent work item.
+description: File a new card with frontmatter and a DoD scaffold BEFORE implementation — the body is the briefing the next reader needs to act cold. AUTO-INVOKE on "let's do X", "implement Y", "fix Z", a described bug, a requested feature, or ANY new persistent work item. If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["create-card"].
 ---
 
 ## When to invoke
@@ -207,3 +207,7 @@ are opaque to the engine. Bundle shape, use/skip criteria:
   body reveals a different gate than scaffolded.
 - Commit the filing per the consuming repo's normal checks and any
   GoC hook it defines.
+
+## Sibling files on this host
+
+This skill ships `reference.md` alongside its body. If a direct file read fails (sandboxed sessions cannot see the plugin install path), fetch the file through the goc tool: `{verb: "skill", args: ["create-card", "<file>"]}`.

@@ -1,6 +1,6 @@
 ---
 name: upgrade
-description: Run goc upgrade, then drive LLM reconciliation of evolving .game-of-cards/ files from the engine's divergence report, preserving user-owned content. AUTO-INVOKE on "upgrade goc", "run goc upgrade", "sync goc templates".
+description: Run goc upgrade, then drive LLM reconciliation of evolving .game-of-cards/ files from the engine's divergence report, preserving user-owned content. AUTO-INVOKE on "upgrade goc", "run goc upgrade", "sync goc templates". If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["upgrade"].
 ---
 
 ## When to invoke
