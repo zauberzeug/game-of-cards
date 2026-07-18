@@ -1,6 +1,6 @@
 ---
 title: openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-07-18T05:28:51Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: each shipped skill body audited for one-read self-sufficiency (no SKILL.md -> reference -> --help chains for the common path)
   - [ ] MECHANICAL: openclaw-plugin skill `location` values resolvable from inside a sandboxed session (or bodies served via the skill mechanism), so agents stop shell-guessing host paths
   - [ ] EMPIRICAL: on a consuming deployment, orientation reads targeting GoC skill files drop measurably (before/after trajectory counts)
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session
