@@ -5,7 +5,7 @@ stage: null
 contribution: high
 created: "2026-07-18T05:28:51Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [story, infra]
@@ -54,3 +54,10 @@ Three levers, combinable:
 Reproduced with a trajectory-JSONL analysis (tool-call category split; orientation reads =
 `ls`/`cat`/`sed`/`grep`/`head` on skill and workspace files). Before/after comparison for the
 EMPIRICAL item can reuse the same counting on any consuming deployment.
+
+## Decision
+
+*Resolved 2026-07-18T12:58:15Z:* Implement all three levers combined: slim AGENTS_GOC.md to a lean pointer block, audit skill cores for one-read self-sufficiency, and serve OpenClaw skill bodies via a tool-side skill verb
+
+*Reasoning:* Maintainer selected all three scope options; OpenClaw SDK verifiably offers no sandbox location rewriting, so tool-served bodies are the only plugin-side fix
+
