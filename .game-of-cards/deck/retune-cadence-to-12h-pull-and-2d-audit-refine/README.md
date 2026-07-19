@@ -1,17 +1,17 @@
 ---
 title: retune-cadence-to-12h-pull-and-2d-audit-refine
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-19T03:29:08Z"
-closed_at: null
+closed_at: "2026-07-19T03:29:46Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra]
 definition_of_done: |
-  - [ ] MECHANICAL: Cadence on disk: pull-card `12h` (`13 */12 * * *`), audit-deck `2d` (`15 0 */2 * *`), refine-deck `2d+1` (`45 1 */2 * *`)
-  - [ ] PROCESS: Committed and pushed to main so the schedule takes effect
+  - [x] MECHANICAL: Cadence on disk: pull-card `12h` (`13 */12 * * *`), audit-deck `2d` (`15 0 */2 * *`), refine-deck `2d+1` (`45 1 */2 * *`)
+  - [x] PROCESS: Committed and pushed to main so the schedule takes effect
 worker: {who: Rodja Trappe, where: main}
 ---
 
