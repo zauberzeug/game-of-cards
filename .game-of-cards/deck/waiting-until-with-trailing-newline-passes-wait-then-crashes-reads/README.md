@@ -1,20 +1,20 @@
 ---
 title: waiting-until-with-trailing-newline-passes-wait-then-crashes-reads
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-07-22T01:47:18Z"
-closed_at: null
+closed_at: "2026-07-22T01:56:58Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 summary: goc wait --until accepts a date with a trailing newline ("2026-08-01\n") because _ISO_DATE_RE's $ anchor matches before a final newline and _is_iso_date calendar-parses only the truncated 10-char prefix. The value round-trips to disk as a block scalar, and every full-value reader (_waiting_until_instant, reached from goc validate and goc --waiting) then crashes with an uncaught ValueError traceback.
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (wait rejects the trailing-newline date with exit 2, and validate/--waiting no longer traceback on a hand-written trailing-newline waiting_until)
-  - [ ] TDD: regression test covers _is_iso_date rejecting "2026-08-01\n" and "2026-05-20T12:00:00Z\n", and goc validate FAILing (not crashing) on a stored trailing-newline waiting_until
-  - [ ] MECHANICAL: _ISO_DATE_RE and _ISO_DATETIME_UTC_RE anchor with \Z (or equivalent) so the shape check cannot pass values the consumers cannot parse
-  - [ ] MECHANICAL: _is_iso_date parses the full string value, not the _date_part truncation, so predicate == parser as its own docstring claims
+  - [x] TDD: reproduce.py exits zero (wait rejects the trailing-newline date with exit 2, and validate/--waiting no longer traceback on a hand-written trailing-newline waiting_until)
+  - [x] TDD: regression test covers _is_iso_date rejecting "2026-08-01\n" and "2026-05-20T12:00:00Z\n", and goc validate FAILing (not crashing) on a stored trailing-newline waiting_until
+  - [x] MECHANICAL: _ISO_DATE_RE and _ISO_DATETIME_UTC_RE anchor with \Z (or equivalent) so the shape check cannot pass values the consumers cannot parse
+  - [x] MECHANICAL: _is_iso_date parses the full string value, not the _date_part truncation, so predicate == parser as its own docstring claims
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -111,19 +111,22 @@ through `goc new` / `goc move` / `validate` — filed separately as
 [trailing-newline-title-passes-guards-and-scaffolds-unaddressable-card-dir](../trailing-newline-title-passes-guards-and-scaffolds-unaddressable-card-dir/)
 (different validator, different blast radius).
 
-## Fix
+## Fix (landed)
 
-1. Anchor both regexes with `\Z`:
+1. Both regexes anchor with `\Z`:
    `_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\Z")` and
    `_ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")`
-   (engine.py:1051-1052).
-2. In `_is_iso_date`, parse the full value —
+   (goc/engine.py).
+2. `_is_iso_date` parses the full value —
    `date.fromisoformat(value)` instead of
-   `date.fromisoformat(_date_part(value))` (engine.py:1076) — so the
-   predicate matches the parser even if the shape check regresses.
+   `date.fromisoformat(_date_part(value))` — so the predicate matches
+   the parser even if the shape check regresses.
 
-With the fix, `goc wait --until` rejects the value at input time
-(exit 2), and for a legacy stored value `goc validate` reports a
-clean frontmatter FAIL (engine.py:1751 already checks
-`_is_iso_date(fm["waiting_until"])`) while `_waiting_until_instant`'s
-None backstop keeps `goc --waiting` alive instead of crashing.
+Verified post-fix: `goc wait --until $'2026-08-01\n'` rejects the
+value at input time (exit 2, `reproduce.py` prints `[OK] defect no
+longer fires`), a legacy stored value now FAILs `validate_card`'s
+existing `_is_iso_date(fm["waiting_until"])` check instead of
+certifying OK, and `_waiting_until_instant`'s None backstop keeps
+`goc --waiting` / `validate_waiting_overlay` alive instead of
+crashing. Regression coverage:
+`tests/test_iso_date_trailing_newline.py` (6 tests).

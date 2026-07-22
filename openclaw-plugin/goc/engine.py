@@ -1048,8 +1048,11 @@ def resolve_card_dir(title: str) -> Path:
 # Validate
 
 
-_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+# \Z, not $: the $ anchor matches before a trailing newline, which would
+# let a value like "2026-08-01\n" pass the shape check that every
+# full-value consumer (date.fromisoformat / strptime) then rejects.
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\Z")
+_ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 
 
 def _is_iso_date(value) -> bool:
@@ -1073,7 +1076,10 @@ def _is_iso_date(value) -> bool:
         if _ISO_DATETIME_UTC_RE.match(value):
             datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
         else:
-            date.fromisoformat(_date_part(value))
+            # The full value, not _date_part(value): truncating before the
+            # calendar parse would re-open the gap between this predicate
+            # and the consumers, which parse the whole string.
+            date.fromisoformat(value)
     except ValueError:
         return False
     return True
