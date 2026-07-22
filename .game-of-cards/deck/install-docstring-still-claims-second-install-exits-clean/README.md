@@ -1,19 +1,19 @@
 ---
 title: install-docstring-still-claims-second-install-exits-clean
 summary: "The `goc/install.py` module docstring promises second runs \"detect existing installs … and exit clean\", but the code refuses with `sys.exit(1)` and tests pin that refusal. The closed card `second-install-exits-nonzero` closed on the opposite contract (exit zero) and was silently reversed with no forward pointer — violating the closure-is-not-frozenness convention."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-19T04:08:07Z"
-closed_at: null
+closed_at: "2026-07-22T00:57:17Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |
-  - [ ] MECHANICAL: `goc/install.py` module docstring states the actual second-run contract (refuse with exit 1 + `goc upgrade` hint).
-  - [ ] MECHANICAL: closed card `second-install-exits-nonzero` amended with a forward pointer to this card (README note + `log.md` entry), per the closure-is-not-frozenness convention.
-  - [ ] MECHANICAL: grep confirms no other doc surface (templates, skills, READMEs) repeats the "exit clean"/exit-zero reinstall claim.
+  - [x] MECHANICAL: `goc/install.py` module docstring states the actual second-run contract (refuse with exit 1 + `goc upgrade` hint).
+  - [x] MECHANICAL: closed card `second-install-exits-nonzero` amended with a forward pointer to this card (README note + `log.md` entry), per the closure-is-not-frozenness convention.
+  - [x] MECHANICAL: grep confirms no other doc surface (templates, skills, READMEs) repeats the "exit clean"/exit-zero reinstall claim.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -55,18 +55,24 @@ and retry or abort — the exact confusion the original card was filed
 to fix, now reintroduced at the documentation layer. The fix is
 mechanical: docs follow code.
 
-## Fix
+## Fix (applied 2026-07-22)
 
-1. Reword `goc/install.py:11-12` to state the refusal contract:
-   second runs detect the existing install, print the `goc upgrade`
-   hint, and exit 1 (scripts should treat "already installed" as a
-   refusal, not a crash).
-2. Amend `second-install-exits-nonzero`: append a `log.md` entry and a
-   one-line README forward pointer noting the contract was later
-   reversed and pointing at this card.
-3. Sweep other doc surfaces for the same stale claim.
+1. Reworded the `goc/install.py` module docstring to state the refusal
+   contract: second runs detect the existing install via the
+   `.goc-version` sentinel, refuse with exit status 1 and a
+   `goc upgrade` hint, and scripts should treat "already installed" as
+   a refusal, not a crash. Plugin engine mirrors resynced via
+   `scripts/sync_plugin_assets.py`.
+2. Amended `second-install-exits-nonzero`: README carries a
+   contract-reversed forward pointer to this card, and its (previously
+   empty) `log.md` records when and why the exit-zero conclusion was
+   reversed.
+3. Swept the repo for other "exit clean"/exit-zero reinstall claims:
+   the only remaining occurrences are historical deck-card records
+   (`second-install-exits-nonzero`, `install-command-scaffolds-repo`),
+   which are journal history, not live documentation.
 
 No code change — `tests/test_install.py` pins the current behavior as
 intended. (If a maintainer instead wants the exit-zero contract
-restored, this card escalates to a `decision` gate — but the tests and
-the refusal block's comment indicate the reversal was deliberate.)
+restored, that is a new decision-gated card — the tests and the
+refusal block's comment indicate the reversal was deliberate.)
