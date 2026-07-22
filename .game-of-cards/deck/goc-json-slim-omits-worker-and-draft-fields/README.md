@@ -1,19 +1,19 @@
 ---
 title: goc-json-slim-omits-worker-and-draft-fields
 summary: "`goc --json --slim` omits `worker` and `draft`, both of which the full `--json` record emits. A machine consumer composing the documented `--worker <X>` / `GOC_WORKER` runner-queue filter with slim output gets records that lack the very field the filter matched on, and draft scaffolds are indistinguishable from pullable cards. Same defect shape as the fixed [goc-status-json-slim-omits-waiting-until](../goc-status-json-slim-omits-waiting-until/)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-22T01:20:24Z"
-closed_at: null
+closed_at: "2026-07-22T01:26:41Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — slim records for a claimed card and a draft scaffold carry `worker` and `draft` with the same values as the full record, and `SLIM_JSON_KEYS` lists both.
-  - [ ] TDD: a regression test in `tests/` asserts `render_json(..., slim=True)` emits `worker` and `draft` (claimed card round-trips its `{who, where}` mapping; unclaimed non-draft card emits `worker: null`, `draft: false`).
-  - [ ] MECHANICAL: `SLIM_JSON_KEYS` (`goc/engine.py:3071`) gains `draft` and `worker`; the slim record dict in `render_json` emits both. Plugin mirrors synced; `uv run goc validate` clean.
+  - [x] TDD: reproduce.py exits zero — slim records for a claimed card and a draft scaffold carry `worker` and `draft` with the same values as the full record, and `SLIM_JSON_KEYS` lists both.
+  - [x] TDD: a regression test in `tests/` asserts `render_json(..., slim=True)` emits `worker` and `draft` (claimed card round-trips its `{who, where}` mapping; unclaimed non-draft card emits `worker: null`, `draft: false`).
+  - [x] MECHANICAL: `SLIM_JSON_KEYS` (`goc/engine.py:3071`) gains `draft` and `worker`; the slim record dict in `render_json` emits both. Plugin mirrors synced; `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -74,13 +74,20 @@ counters) for token cost, not scheduling-relevant overlays.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/goc-json-slim-omits-worker-and-draft-fields/reproduce.py` (before fix):
+`uv run python .game-of-cards/deck/goc-json-slim-omits-worker-and-draft-fields/reproduce.py`
+printed this before the fix:
 
 ```
-full record fields (claimed-card): worker={'who': 'alice', 'where': 'feature/x'} draft=True
 slim record keys: ['closed_at', 'contribution', 'human_gate', 'status', 'tags', 'title', 'value', 'waiting_on', 'waiting_until']
 [FAIL] slim record omits `worker` (full record has {'who': 'alice', 'where': 'feature/x'})
 [FAIL] slim record omits `draft` (full record has True)
+```
+
+and exits zero after it:
+
+```
+slim record keys: ['closed_at', 'contribution', 'draft', 'human_gate', 'status', 'tags', 'title', 'value', 'waiting_on', 'waiting_until', 'worker']
+[OK] slim records expose worker and draft, matching the full record
 ```
 
 ## Why it matters
@@ -93,9 +100,12 @@ is any claimed card (`goc status <t> active` auto-populates `worker`) or
 any `goc new` scaffold (born `draft: true`) rendered through
 `goc --json --slim`.
 
-## Fix
+## Fix (applied)
 
-Add `draft` and `worker` to `SLIM_JSON_KEYS` and emit
-`"draft": card_is_draft(t)` and `"worker": t.worker` in the slim record
-dict, mirroring the full record (`goc/engine.py:3136-3137`). The `--slim`
-help text derives from the tuple and needs no separate edit.
+`SLIM_JSON_KEYS` gained `draft` and `worker`, and the slim record dict in
+`render_json` emits `"draft": card_is_draft(t)` and `"worker": t.worker`,
+mirroring the full record. The `--slim` help text derives from the tuple,
+so it picked up the new fields with no separate edit. Regression coverage
+lives in `tests/test_json_overlay.py` (claimed-card round-trip, draft
+scaffold, null/false defaults, and the `SLIM_JSON_KEYS` contract itself);
+plugin mirrors were re-synced via `scripts/sync_plugin_assets.py`.

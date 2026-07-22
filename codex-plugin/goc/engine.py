@@ -3078,6 +3078,8 @@ SLIM_JSON_KEYS = (
     "closed_at",
     "waiting_on",
     "waiting_until",
+    "draft",
+    "worker",
 )
 
 
@@ -3103,6 +3105,8 @@ def render_json(
                 "closed_at": str(t.closed_at) if t.closed_at else None,
                 "waiting_on": t.waiting_on,
                 "waiting_until": t.waiting_until,
+                "draft": card_is_draft(t),
+                "worker": t.worker,
             }
             for t in cards
         ]
