@@ -1,19 +1,19 @@
 ---
 title: skill-references-cite-nonexistent-goc-next-verb
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-22T13:18:58Z"
-closed_at: null
+closed_at: "2026-07-22T13:25:55Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation]
 summary: "Two source-of-truth skill reference files describe the draft-hiding contract as applying to \"`goc`, `goc next`\" — but no `next` subcommand exists (`goc next` exits 2 with `invalid choice`). The drift ships to all six consumer surfaces via the mirrors. Fix: cite the real surfaces (`goc`, `goc --ready`, `card_is_ready`) and re-sync/re-port."
 definition_of_done: |
-  - [ ] MECHANICAL: `goc/templates/skills/card-schema/reference.md` and `goc/templates/skills/create-card/reference.md` no longer mention `goc next`; the draft-hiding sentence cites surfaces that exist (`goc`, `goc --ready`, `card_is_ready`).
-  - [ ] MECHANICAL: mirrors regenerated — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both clean; no `goc next` remains under any template or mirror tree (grep, deck card bodies exempt as historical records).
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] MECHANICAL: `goc/templates/skills/card-schema/reference.md` and `goc/templates/skills/create-card/reference.md` no longer mention `goc next`; the draft-hiding sentence cites surfaces that exist (`goc`, `goc --ready`, `card_is_ready`).
+  - [x] MECHANICAL: mirrors regenerated — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both clean; no `goc next` remains under any template or mirror tree (grep, deck card bodies exempt as historical records).
+  - [x] PROCESS: `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -66,8 +66,10 @@ closed `next-card-impact-ladder-references-nonexistent-frontmatter-field`)
 concern the next-card skill's own content, not a phantom CLI verb
 cited from card-schema/create-card references.
 
-## Fix
+## Fix (applied)
 
-Replace `goc next` with `goc --ready` in the two template lines, then
-regenerate the mirrors (pre-commit sync) and re-run the OpenClaw
-porter.
+Replaced `goc next` with `goc --ready` in the two template lines,
+regenerated the mirrors via `scripts/sync_plugin_assets.py` (8 files)
+and re-ran `scripts/port_skills_to_openclaw.py`; both `--check` modes
+are clean and `grep -rn "goc next"` finds no hit outside historical
+deck card bodies. Regression suite: 752 tests, OK.

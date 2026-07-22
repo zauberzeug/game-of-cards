@@ -93,7 +93,7 @@ completion, it's a governing cluster → use a tag, not an edge.
 ## Draft contract
 
 `goc new` stamps `draft: true`, so the fresh card is hidden from the
-queue (`goc`, `goc next`) and protected from dedup/supersede
+queue (`goc`, `goc --ready`) and protected from dedup/supersede
 automation until it is authored. The flag clears automatically when
 you claim the card (`goc status <title> active`, the usual next step)
 or close it; release an authored-but-unclaimed card to the queue
