@@ -1,7 +1,7 @@
 ---
 title: install-docstring-still-claims-second-install-exits-clean
 summary: "The `goc/install.py` module docstring promises second runs \"detect existing installs … and exit clean\", but the code refuses with `sys.exit(1)` and tests pin that refusal. The closed card `second-install-exits-nonzero` closed on the opposite contract (exit zero) and was silently reversed with no forward pointer — violating the closure-is-not-frozenness convention."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-19T04:08:07Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/install.py` module docstring states the actual second-run contract (refuse with exit 1 + `goc upgrade` hint).
   - [ ] MECHANICAL: closed card `second-install-exits-nonzero` amended with a forward pointer to this card (README note + `log.md` entry), per the closure-is-not-frozenness convention.
   - [ ] MECHANICAL: grep confirms no other doc surface (templates, skills, READMEs) repeats the "exit clean"/exit-zero reinstall claim.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `install.py`'s docstring still claims a second install "exits clean" — the code refuses with exit 1
