@@ -1,7 +1,7 @@
 ---
 title: goc-json-slim-omits-worker-and-draft-fields
 summary: "`goc --json --slim` omits `worker` and `draft`, both of which the full `--json` record emits. A machine consumer composing the documented `--worker <X>` / `GOC_WORKER` runner-queue filter with slim output gets records that lack the very field the filter matched on, and draft scaffolds are indistinguishable from pullable cards. Same defect shape as the fixed [goc-status-json-slim-omits-waiting-until](../goc-status-json-slim-omits-waiting-until/)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-22T01:20:24Z"
@@ -10,11 +10,11 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — slim records for a claimed card and a draft scaffold carry `worker` and `draft` with the same values as the full record, and `SLIM_JSON_KEYS` lists both.
   - [ ] TDD: a regression test in `tests/` asserts `render_json(..., slim=True)` emits `worker` and `draft` (claimed card round-trips its `{who, where}` mapping; unclaimed non-draft card emits `worker: null`, `draft: false`).
   - [ ] MECHANICAL: `SLIM_JSON_KEYS` (`goc/engine.py:3071`) gains `draft` and `worker`; the slim record dict in `render_json` emits both. Plugin mirrors synced; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc --json --slim` omits `worker` and `draft` from slim records
