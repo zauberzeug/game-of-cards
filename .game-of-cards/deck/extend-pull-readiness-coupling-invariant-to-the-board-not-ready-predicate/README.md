@@ -45,6 +45,15 @@ by hand-adding the missing axis — but nothing prevents the *next* axis
 (or the next renderer that hand-rolls the same check) from drifting
 again.
 
+A **fourth copy** has since been confirmed drifted, outside the engine
+entirely: `.github/workflows/pull-card.yml` counts the autonomous queue
+with `--status open --human-gate none`, omitting the waiting-overlay
+axis, so it launches agent sessions `goc --ready` refuses to feed — see
+[pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty](../pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty/).
+That copy is shell, so no Python introspection guard can cover it; its
+fix is substitution (`goc --ready --json`), reinforcing the "expose the
+engine predicate, don't re-roll it" direction here.
+
 ## The pattern
 
 This is the same drift shape called out for the OpenClaw host in

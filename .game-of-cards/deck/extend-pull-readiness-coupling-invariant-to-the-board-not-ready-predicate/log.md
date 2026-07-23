@@ -12,3 +12,15 @@ test from this card's `## Decision required` is implemented, include the table
 renderer's advisory gate as a fourth covered site (the relevant axis there is
 `status ∈ TERMINAL_STATUSES`, the liveness clause, not the full pull-readiness
 cross-product).
+
+## 2026-07-23 — fourth copy confirmed (audit)
+
+An audit pass confirmed a fourth hand-rolled pull-readiness copy, in
+shell outside the engine: `.github/workflows/pull-card.yml` gates its
+agent-launch and self-retrigger steps on
+`goc --status open --human-gate none --json | jq length`, omitting the
+waiting-overlay axis. Filed as
+`pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty`
+(contribution: high — live false launches on this repo's own deck:
+workflow predicate counts 3, `--ready` counts 0). Body's "What's
+broken" rewritten in place to record the fourth copy.
