@@ -1,19 +1,19 @@
 ---
 title: hook-mirrors-and-openclaw-dist-lack-linguist-generated-marker
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-23T01:35:22Z"
-closed_at: null
+closed_at: "2026-07-23T01:46:33Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, documentation]
 definition_of_done: |
-  - [ ] MECHANICAL: `.gitattributes` marks the three hook mirrors (`claude-plugin/hooks/**`, `codex-plugin/hooks/**`, `.claude/hooks/**`) and the committed esbuild bundle (`openclaw-plugin/dist/**`) `linguist-generated=true`, with explicit `=false` carve-outs for the authored files inside synced dirs (the two `hooks.json` twins and the repo-local `.claude/skills/tune-cadence/`).
-  - [ ] TDD: `reproduce.py` prints `DEFECT ABSENT` (12 generated files unmarked + 1 authored file collapsed before the fix; 0/0 after), and a unittest under `tests/` derives the synced-tree list from `scripts/sync_plugin_assets.py`'s SYNC_PAIRS and fails if a future sync destination lands without a `.gitattributes` rule or an authored file gets collapsed.
-  - [ ] MECHANICAL: `AGENTS.md`'s mirror-tree list (the "marked `linguist-generated=true`" paragraph) is extended to match the new rule set.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] MECHANICAL: `.gitattributes` marks the three hook mirrors (`claude-plugin/hooks/**`, `codex-plugin/hooks/**`, `.claude/hooks/**`) and the committed esbuild bundle (`openclaw-plugin/dist/**`) `linguist-generated=true`, with explicit `=false` carve-outs for the authored files inside synced dirs (the two `hooks.json` twins and the repo-local `.claude/skills/tune-cadence/`).
+  - [x] TDD: `reproduce.py` prints `DEFECT ABSENT` (12 generated files unmarked + 1 authored file collapsed before the fix; 0/0 after), and a unittest under `tests/` (`tests/test_gitattributes_generated_markers.py`) derives the synced-tree list from `scripts/sync_plugin_assets.py`'s SYNC_PAIRS and fails if a future sync destination lands without a `.gitattributes` rule or an authored file gets collapsed.
+  - [x] MECHANICAL: `AGENTS.md`'s mirror-tree list (the "marked `linguist-generated=true`" paragraph) is extended to match the new rule set.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green (754 tests).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -95,24 +95,22 @@ reviewable source on every `npm run build` commit. Meanwhile the authored
 `tune-cadence` dev skill is collapsed by default, hiding real changes —
 the inverse failure of the same list rot.
 
-## Fix
+## Fix (applied)
 
-Append to `.gitattributes` (order matters — carve-outs after the globs):
+`.gitattributes` now marks the three hook mirrors and
+`openclaw-plugin/dist/**` `linguist-generated=true`, with `=false`
+carve-outs placed after the globs (last matching line wins) for the two
+`hooks.json` twins and `.claude/skills/tune-cadence/**`. The AGENTS.md
+mirror-tree sentence lists the full set including the carve-outs, and
+`tests/test_gitattributes_generated_markers.py` derives the expected-marked
+set from `SYNC_PAIRS` (plus the codex skill trees and `dist/`) so the next
+synced tree cannot land unmarked and no authored file can be collapsed.
 
-```
-claude-plugin/hooks/** linguist-generated=true
-claude-plugin/hooks/hooks.json linguist-generated=false
-codex-plugin/hooks/** linguist-generated=true
-codex-plugin/hooks/hooks.json linguist-generated=false
-.claude/hooks/** linguist-generated=true
-openclaw-plugin/dist/** linguist-generated=true
-.claude/skills/tune-cadence/** linguist-generated=false
-```
+After the fix, `reproduce.py` prints `OK` for all 11 trees and
+`DEFECT ABSENT: every auto-synced tree is marked, every authored file
+exempted`.
 
-Extend the AGENTS.md mirror-tree sentence accordingly, and add a unittest
-that derives the expected-marked set from `SYNC_PAIRS` so the next synced
-tree cannot land unmarked. `openclaw-plugin/skills/` stays deliberately
-unmarked: the porter's output is reviewed and committed by hand
-(AGENTS.md — "the porter applies non-trivial normalization worth
-eyeballing"), so collapsing it would hide exactly the review the process
-requires.
+`openclaw-plugin/skills/` stays deliberately unmarked: the porter's output
+is reviewed and committed by hand (AGENTS.md — "the porter applies
+non-trivial normalization worth eyeballing"), so collapsing it would hide
+exactly the review the process requires.

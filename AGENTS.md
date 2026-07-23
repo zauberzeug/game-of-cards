@@ -311,8 +311,13 @@ auto-synced: `claude-plugin/hooks/hooks.json`, `claude-plugin/bin/goc`,
 
 The mirror trees (`claude-plugin/goc/**`, `codex-plugin/goc/**`,
 `openclaw-plugin/goc/**`, `claude-plugin/skills/**`,
-`codex-plugin/skills/**`, `.claude/skills/**`, `.codex/skills/**`) are
-marked `linguist-generated=true` in `.gitattributes` so GitHub collapses
+`codex-plugin/skills/**`, `.claude/skills/**`, `.codex/skills/**`,
+`claude-plugin/hooks/**`, `codex-plugin/hooks/**`, `.claude/hooks/**`)
+and the committed esbuild output (`openclaw-plugin/dist/**`) are
+marked `linguist-generated=true` in `.gitattributes` — with `=false`
+carve-outs for the authored files living inside those trees (the two
+hand-maintained `hooks.json` files and the repo-local
+`.claude/skills/tune-cadence/` dev skill) — so GitHub collapses
 them in PR review by default — reviewers see each authored change once
 in its source-of-truth, not N times across the mirrors. When a commit's
 diff is mostly the mechanical mirror regeneration, prefix the subject
