@@ -1,5 +1,6 @@
 ---
 title: hook-mirrors-and-openclaw-dist-lack-linguist-generated-marker
+summary: ".gitattributes marked the seven skill/engine mirror trees linguist-generated but not the equally auto-synced hook mirrors (claude-plugin/hooks/, codex-plugin/hooks/, .claude/hooks/) or the committed esbuild bundle at openclaw-plugin/dist/, so one hook-template edit still rendered 4x in PR review — while the authored .claude/skills/tune-cadence/ dev skill was wrongly collapsed by the blanket skills rule. Fixed by adding the four generated trees plus explicit =false carve-outs for authored files, with tests/test_gitattributes_generated_markers.py deriving the synced-tree list from SYNC_PAIRS so future sync destinations cannot land unmarked."
 status: done
 stage: null
 contribution: low

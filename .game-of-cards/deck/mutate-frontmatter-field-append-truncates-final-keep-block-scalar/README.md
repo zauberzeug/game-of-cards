@@ -1,5 +1,6 @@
 ---
 title: mutate-frontmatter-field-append-truncates-final-keep-block-scalar
+summary: "When mutate_frontmatter_field appends an absent field and the card's last frontmatter field is a `|+` keep block scalar, the append branch splices the new `field: value` line between the scalar's content and its trailing blank run, so the keep scalar silently reads back one blank line short. `goc validate` passes before and after — fully silent data loss, reachable from `goc status <title> active` on any worker-less card of that shape. Mirror-image cosmetic defect: remove_frontmatter_field on the final field leaves the orphaned blank run behind."
 status: open
 stage: null
 contribution: medium

@@ -1,5 +1,6 @@
 ---
 title: npm-tarball-ships-vendored-engine-reporting-previous-release-version
+summary: "The publish-npm job checks out the pre-rewrite dispatch SHA and re-runs release_rewrite_versions.py — which deliberately skips the plugin mirrors — and never runs sync_plugin_assets.py, so every npm tarball's package.json reports the new version while the vendored engine at package/goc/__init__.py still carries the previous release's __version__ literal. Verified in the live 0.0.27 artifact, whose bundled engine reads 0.0.26. The fix lands in release.yml's publish-npm job (checkout the release tag or add a sync step) and needs a human commit."
 status: open
 stage: null
 contribution: high

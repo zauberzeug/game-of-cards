@@ -1,5 +1,6 @@
 ---
 title: retune-cadence-to-12h-pull-and-2d-audit-refine
+summary: "Pure knob turn via scripts/set_cadence.py: dialed the autonomous cadence back from hourly pull / 3-hourly audit-refine to pull-card every 12 hours and audit-deck/refine-deck every two days. Refine keeps a +1 hour phase so it still launches at least an hour after audit's slot."
 status: done
 stage: null
 contribution: low
