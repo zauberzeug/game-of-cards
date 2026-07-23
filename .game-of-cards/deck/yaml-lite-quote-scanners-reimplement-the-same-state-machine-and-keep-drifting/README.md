@@ -14,6 +14,7 @@ advanced_by:
   - yaml-lite-flow-collection-mis-splits-on-backslash-escaped-quote
   - strip-comment-closes-double-quoted-scalar-on-backslash-escaped-quote
   - yaml-lite-flow-collection-mis-splits-on-bare-quote-in-unquoted-element
+  - openclaw-porter-fetch-hint-lands-outside-quoted-description-breaking-frontmatter-yaml
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.
