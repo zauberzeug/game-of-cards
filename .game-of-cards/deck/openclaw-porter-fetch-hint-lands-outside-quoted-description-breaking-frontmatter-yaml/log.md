@@ -13,3 +13,13 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-07-23 — Closure' present
+
+## 2026-07-23T13:50:00Z — Post-close cross-reference
+
+This fix added two more hand-rolled YAML quote scanners
+(`_quoted_scalar_hazard()` in tests/test_skill_frontmatter_strict_yaml.py and
+`quoted_scalar_violation()` in this card's reproduce.py, plus the quote check
+in the porter's `_hint_into_description()`), further evidence for the open
+meta-card
+[yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting](../yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting/)
+— connected via an advances edge, no duplicate filed.
