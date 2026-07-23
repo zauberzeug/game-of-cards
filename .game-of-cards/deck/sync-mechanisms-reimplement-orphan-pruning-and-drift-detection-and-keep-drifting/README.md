@@ -12,6 +12,7 @@ advanced_by:
   - sync-plugin-assets-leaves-orphaned-empty-skill-dirs-and-check-passes
   - openclaw-skill-porter-never-prunes-orphaned-ported-skills
   - openclaw-skill-porter-leaves-empty-orphan-subdir-when-nested-sibling-removed
+  - openclaw-porter-orphan-check-misses-asset-only-skill-dirs
 tags: [meta-fix, infra, api-contract]
 summary: "scripts/sync_plugin_assets.py and scripts/port_skills_to_openclaw.py each reimplement, independently, the same two-part contract: prune dst-only orphans (files, empty dirs, whole dirs) and a drift `--check` that must flag any orphan the prune should have removed. Every new orphan class has had to be patched separately in each mechanism, and the drift checks have a recurring `rglob` blind spot (directories skipped). Four instance cards already document this; the recurring shape is the meta-fix. Decide whether to extract a shared orphan-prune/drift-detect helper or to bind the mechanisms with a shared test contract."
 definition_of_done: |
