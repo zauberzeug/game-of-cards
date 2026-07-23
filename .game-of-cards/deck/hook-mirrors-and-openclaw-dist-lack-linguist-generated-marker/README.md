@@ -1,6 +1,6 @@
 ---
 title: hook-mirrors-and-openclaw-dist-lack-linguist-generated-marker
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-23T01:35:22Z"
@@ -9,12 +9,12 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [infra, documentation]
-draft: true
 definition_of_done: |
   - [ ] MECHANICAL: `.gitattributes` marks the three hook mirrors (`claude-plugin/hooks/**`, `codex-plugin/hooks/**`, `.claude/hooks/**`) and the committed esbuild bundle (`openclaw-plugin/dist/**`) `linguist-generated=true`, with explicit `=false` carve-outs for the authored files inside synced dirs (the two `hooks.json` twins and the repo-local `.claude/skills/tune-cadence/`).
   - [ ] TDD: `reproduce.py` prints `DEFECT ABSENT` (12 generated files unmarked + 1 authored file collapsed before the fix; 0/0 after), and a unittest under `tests/` derives the synced-tree list from `scripts/sync_plugin_assets.py`'s SYNC_PAIRS and fails if a future sync destination lands without a `.gitattributes` rule or an authored file gets collapsed.
   - [ ] MECHANICAL: `AGENTS.md`'s mirror-tree list (the "marked `linguist-generated=true`" paragraph) is extended to match the new rule set.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Hook mirrors and the OpenClaw dist bundle lack the linguist-generated marker
