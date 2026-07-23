@@ -7,7 +7,8 @@ contribution: high
 created: "2026-07-23T01:11:06Z"
 closed_at: null
 human_gate: session
-advances: []
+advances:
+  - extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate
 advanced_by: []
 tags: [bug, infra, meta-fix]
 definition_of_done: |
