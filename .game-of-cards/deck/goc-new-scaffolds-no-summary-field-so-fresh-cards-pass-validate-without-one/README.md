@@ -1,7 +1,7 @@
 ---
 title: goc-new-scaffolds-no-summary-field-so-fresh-cards-pass-validate-without-one
 summary: "`goc new` scaffolds every schema field except `summary` and has no `--summary` flag, and `goc validate` enforces summary quality only when the key is present — so a card authored and published without one reaches the queues validate-clean, with a blank line in every triage view. Only `goc quality-pass` (run during refine passes) detects the gap; five cards filed 2026-07-17..23 landed summary-less and were backfilled by the 2026-07-23 refine pass. Fix: extend the blank-summary validate rule to fire on an absent key for non-draft cards, keeping draft scaffolds exempt."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-23T02:45:40Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: unittest confirms the existing present-but-blank rejection (`summary: ""` / whitespace-only) still fires — the absent-key rule extends it, not replaces it
   - [ ] MECHANICAL: whichever convenience path lands (`goc new --summary` flag, or none) is reflected in the create-card skill's Step 4 command block, and the choice is recorded in log.md
   - [ ] PROCESS: `uv run goc validate` green on the real deck and `uv run python -m unittest discover -s tests` green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc new scaffolds no summary field so fresh cards pass validate without one
