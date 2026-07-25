@@ -67,3 +67,13 @@ Change `--model opus` to `--model claude-fable-5` in the
 above. The other claude-code-action consumers (`claude.yml`,
 `claude-code-review.yml`, `release.yml` smoke jobs) intentionally
 keep the action default and are out of scope, as before.
+
+> Later evidence (2026-07-25): superseded by
+> [float-autonomous-workflows-back-to-opus-alias](../float-autonomous-workflows-back-to-opus-alias/).
+> The maintainer moved the autonomous fleet back to the Opus tier, so
+> all three `claude_args` overrides are now `--model opus` again. The
+> explicit-id spelling this card introduced was a consequence of Fable
+> being a different tier (no Opus-tracking alias could express it), not
+> a rejection of the alias policy from
+> [float-opus-alias-on-autonomous-github-workflows](../float-opus-alias-on-autonomous-github-workflows/);
+> with the fleet back on Opus, that policy governs again.

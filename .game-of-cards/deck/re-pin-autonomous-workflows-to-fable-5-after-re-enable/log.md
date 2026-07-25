@@ -13,3 +13,9 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-04 — Closure' present
+
+## 2026-07-25 — Superseded (forward pointer)
+
+- **What changed**: the three `claude_args` model overrides this card set to `--model claude-fable-5` are now `--model opus`, per [float-autonomous-workflows-back-to-opus-alias](../float-autonomous-workflows-back-to-opus-alias/).
+- **Why**: the maintainer moved the autonomous fleet back to the Opus tier. This card's explicit-id spelling was forced by Fable being a different tier — no Opus-tracking alias could name it — not by a rejection of the alias policy from float-opus-alias-on-autonomous-github-workflows. Back on Opus, the alias is expressible and its staleness rationale governs again.
+- **Still true**: the fleet keeps one consistent override across pull-card, audit-deck, and refine-deck; `claude.yml`, `claude-code-review.yml`, and the `release.yml` smoke jobs remain on the action default and out of scope.
