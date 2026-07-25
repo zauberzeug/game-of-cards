@@ -33,3 +33,28 @@ This is a new piece of evidence about the autonomous loop's reach: the bot
 cannot self-modify any file under `.github/workflows/`. Worth considering
 when scoping future cards. The README's `## Decision required` section
 captures the human's options.
+
+## 2026-07-25T04:43:25Z — Evidence: the bypass is not bot-specific
+
+While landing an unrelated CI change (`10bd545a`, autonomous-fleet model
+override + cadence retune) on the maintainer's clone, `.git/hooks/pre-commit`
+was found to be **absent**, so that interactive commit bypassed `goc-validate`
+and `sync-plugin-assets` exactly the way the bot's commits do. Both checks were
+run manually afterwards and passed (`sync_plugin_assets.py --check` reported
+byte-for-byte parity; `goc validate` showed no errors), so no drift shipped —
+but the gate did not fire on its own.
+
+This falsifies the premise stated in fix proposal (A), that installing the hook
+in the workflow "matches what a human contributor does": there is no enforced
+human baseline to match. `pre-commit install` is a per-clone side effect that
+nothing in the repo requires, so every clone that skipped it has the same silent
+bypass on every commit.
+
+(A) remains correct for the workflow leg. The README body now carries a
+"The gap is not bot-specific" section recording the wider surface; whoever takes
+the decision gate should consider whether the fix should also cover the local
+path (e.g. a `pre-commit install` step in the documented dev-env setup, or a CI
+check that the declared hooks pass over the pushed range regardless of who
+committed).
+
+No status change: this card stays `open` at `human_gate: decision`.

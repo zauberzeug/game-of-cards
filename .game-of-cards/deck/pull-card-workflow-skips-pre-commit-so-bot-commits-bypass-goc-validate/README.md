@@ -175,8 +175,39 @@ after `Prepare Python environment`:
   run: uv run pre-commit install
 ```
 
-This matches what a human contributor does. The bot's `git commit`
-then runs `goc-validate` + `sync-plugin-assets` automatically.
+The bot's `git commit` then runs `goc-validate` + `sync-plugin-assets`
+automatically.
+
+> This fix was originally justified as "matches what a human
+> contributor does". **That premise is false** — see
+> "The gap is not bot-specific" below. (A) is still the right fix for
+> the bot leg; it just does not restore parity with a guaranteed human
+> baseline, because no such baseline exists.
+
+## The gap is not bot-specific
+
+`pre-commit install` is a per-clone, per-machine side effect that
+nothing in the repo enforces, so **the bot is only the leg where the
+gap was noticed first** — not the only leg that has it. Observed on
+the maintainer's own working clone (2026-07-25):
+
+```
+$ test -f .git/hooks/pre-commit && echo installed || echo "no .git/hooks/pre-commit"
+no .git/hooks/pre-commit
+```
+
+Commit `10bd545a` (`ci(workflows): float autonomous fleet to --model
+opus…`) was authored interactively on this clone and landed without
+`goc-validate` or `sync-plugin-assets` firing. Both gates were run by
+hand afterwards and were clean, so nothing bad shipped — but that was
+discipline, not a gate.
+
+This widens the card: `.pre-commit-config.yaml` declares the gates,
+and `AGENTS.md` documents `pre-commit run --all-files` as a command,
+but no path *guarantees* the hooks are installed on any given clone.
+A contributor who never runs `pre-commit install` has the same silent
+bypass the bot has, on every commit they make. Fixing only the
+workflow leg leaves that open.
 
 **(B) Run pre-commit explicitly after the agent step.** Less
 invasive but post-hoc — the agent could have pushed if the step
