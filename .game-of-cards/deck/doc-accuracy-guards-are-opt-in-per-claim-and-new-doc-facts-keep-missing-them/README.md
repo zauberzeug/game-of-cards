@@ -32,11 +32,21 @@ claim someone happened to notice. Nothing looks for the *unguarded* claims.
 | `DocstringCitationAccuracyTest` | [sort-default-docstring-cites-wrong-engine-line-for-value-walk-dangling-edge-drop](../sort-default-docstring-cites-wrong-engine-line-for-value-walk-dangling-edge-drop/) | 2026-06-24 |
 | `CreateCardScaffoldClaimAccuracyTest` | [create-card-and-deck-skills-claim-goc-new-scaffolds-a-reproduce-py-stub](../create-card-and-deck-skills-claim-goc-new-scaffolds-a-reproduce-py-stub/) | 2026-06-25 |
 | `GocMdPluginReferenceAccuracyTest` | [cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships](../cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships/) | 2026-07-26 |
+| *(none yet — open)* | [ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/) | — |
 
-Six instances across three months, each its own file → claim → fix → guard cycle.
+Seven instances across three months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
+
+The seventh arrived the same day this card was filed, before any option below was
+adopted — and it carries a finding that changes Option A's scope. Its two stale
+claims ("All 11 skill templates" when there are 18; a shipped capability framed
+as pending behind a card title that never existed) live in a **`.github/workflows/`
+header comment**, a surface class absent from Option A's sweep list. Doc-shaped
+prose is not confined to `.md` files: workflow headers, `Makefile`s and module
+docstrings all restate tree state, and a sweep or lint scoped to the documentation
+set would have missed this one.
 
 ## What's structurally wrong
 

@@ -21,6 +21,22 @@ definition_of_done: |
 Two stale claims in the same eleven-line comment block, both about what CI
 covers — the first thing a reader checks when auditing the build.
 
+**Generalization:** this is instance seven of a catalogued shape — a prose claim
+restating a fact the tree already knows, with no guard, found only after it had
+already rotted. The architectural card is
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+(`human_gate: decision`). Both claims below land squarely in shapes that card
+enumerates: a **bare count in prose** ("All 11 skill templates") and a
+**forward-looking promise** with no expiry and no owner, naming a string that
+appears nowhere in the tree. No `advances` edge — that card closes on its own
+deliverable, so it is a governing cluster, not an aggregation epic.
+
+This instance also widens the root card's surface list: its Option A sweep names
+`AGENTS.md`, `goc.md`, `README.md`, `ABOUT.md`, `CONTRIBUTING.md`,
+`DECK_LOCATION.md`, `PERSONAS.md`, `site/`, the plugin READMEs and the skill
+bodies — **workflow-file comments are not on it**, and that is where these two
+claims live.
+
 ## Location
 
 `.github/workflows/ci.yml:1-11`
