@@ -12,6 +12,7 @@ advanced_by:
   - openclaw-session-start-frontmatter-reader-truncates-colon-bearing-values-via-typescript-split-limit
   - openclaw-session-start-hook-accepts-calendar-impossible-waiting-until
   - openclaw-session-start-hook-treats-explicit-yaml-null-waiting-fields-as-impediment
+  - a-wait-reason-starting-with-zero-makes-an-impeded-card-look-resumable
 tags: [meta-fix, infra]
 definition_of_done: |
   - [ ] (replace after the decision is recorded)

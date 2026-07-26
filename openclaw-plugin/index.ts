@@ -144,7 +144,13 @@ const NULL_LITERALS = new Set(["null", "Null", "NULL", "~"]);
 // value via `isinstance(v, str)`, so the `waiting_on` read resolves these to ""
 // too — see `cardWaitingOn`.
 const BOOL_LITERALS = new Set(["true", "True", "TRUE", "yes", "Yes", "YES", "false", "False", "FALSE", "no", "No", "NO"]);
-const INT_RE = /^-?\d+$/;
+// Canonical decimal integer, byte-for-byte the yaml-lite pattern: a leading-zero
+// run (`00`, `007`, `0123`) is NOT an integer under YAML 1.2, so the parser keeps
+// it as a `str` and `Card.waiting_on` keeps it as a live reason. Matching it here
+// would coerce a hand-edited `waiting_on: 007` to absent and announce an impeded
+// card as resumable. Pinned to `yaml_lite._INT_RE` by
+// `tests/test_waiting_on_int_mirror.py`.
+const INT_RE = /^-?(0|[1-9][0-9]*)$/;
 
 interface ActiveCard {
   name: string;

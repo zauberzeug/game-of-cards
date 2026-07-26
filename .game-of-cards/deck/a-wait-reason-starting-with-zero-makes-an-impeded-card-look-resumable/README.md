@@ -1,11 +1,11 @@
 ---
 title: a-wait-reason-starting-with-zero-makes-an-impeded-card-look-resumable
 summary: "Both SessionStart hook ports (the Python template shipped to Claude Code/Codex and the OpenClaw TypeScript port) mirror the engine's yaml-lite integer regex as `^-?\\d+$`, but yaml-lite narrowed it to `^-?(0|[1-9][0-9]*)$` on 2026-06-28 so leading-zero runs stay strings. The mirrors were never updated, so a card with `waiting_on: 007` is impeded by the engine yet announced to the agent as a resumable active card — the exact contract the hooks promise to uphold for hand-edited, pre-validate decks."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-26T10:21:56Z"
-closed_at: null
+closed_at: "2026-07-26T10:27:21Z"
 human_gate: none
 advances:
   - session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting
@@ -13,16 +13,16 @@ advances:
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every port's integer regex equals
+  - [x] TDD: `reproduce.py` exits zero — every port's integer regex equals
     `yaml_lite._INT_RE.pattern`, and the Python hook's `_is_impeded` agrees with
     `engine.waiting_impedes` on `007` / `00` / `0123`
-  - [ ] TDD: a regression test pins all three literals (Python hook template,
+  - [x] TDD: a regression test pins all three literals (Python hook template,
     `openclaw-plugin/index.ts`, the committed `dist/index.js` bundle) to
     `yaml_lite._INT_RE.pattern` read from the engine, so a future narrowing of
     the canonical regex fails the build instead of drifting silently
-  - [ ] MECHANICAL: `openclaw-plugin/dist/` rebuilt from the edited `index.ts`
+  - [x] MECHANICAL: `openclaw-plugin/dist/` rebuilt from the edited `index.ts`
     via `npm ci && npm run build`, so the shipped bundle carries the fix
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and
     `uv run goc validate` pass
 worker: {who: "claude[bot]", where: main}
 ---
@@ -32,14 +32,16 @@ worker: {who: "claude[bot]", where: main}
 ## Location
 
 Three copies of one constant, two of which claim in their own comments to
-mirror the third:
+mirror the third (line numbers as of filing; the symbols are stable):
 
-- `goc/_vendor/yaml_lite.py:40` — the canonical definition.
-- `goc/templates/hooks/deck_session_start.py:30` — the SessionStart hook
-  shipped to Claude Code and Codex (and mirrored byte-for-byte into
-  `.claude/hooks/`, `claude-plugin/hooks/`, `codex-plugin/hooks/`).
-- `openclaw-plugin/index.ts:147` — the TypeScript port, plus its committed
-  esbuild output at `openclaw-plugin/dist/index.js:2456`.
+- `goc/_vendor/yaml_lite.py:40` `_INT_RE` — the canonical definition.
+- `goc/templates/hooks/deck_session_start.py:30` `_INT_RE` — the SessionStart
+  hook shipped to Claude Code and Codex, mirrored byte-for-byte into
+  `.claude/hooks/`, `claude-plugin/hooks/`,
+  `claude-plugin/goc/templates/hooks/`, `codex-plugin/hooks/` and
+  `codex-plugin/goc/templates/hooks/`.
+- `openclaw-plugin/index.ts:147` `INT_RE` — the TypeScript port, plus its
+  committed esbuild output at `openclaw-plugin/dist/index.js:2456`.
 
 ## What's broken
 
@@ -88,36 +90,35 @@ The hooks' own docstring is what this contradicts:
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/a-wait-reason-starting-with-zero-makes-an-impeded-card-look-resumable/reproduce.py`
-(verbatim):
+Before the fix, `reproduce.py` exited 1 with three stale-literal `[FAIL]`s and
+three hook-vs-engine disagreements — `007`, `00` and `0123` each read
+`engine=True hook=False`. After the fix it exits 0:
 
 ```
 engine  yaml_lite._INT_RE = ^-?(0|[1-9][0-9]*)$
-python  hook _INT_RE      = ^-?\d+$
-openclaw index.ts INT_RE  = ^-?\d+$
+python  hook _INT_RE      = ^-?(0|[1-9][0-9]*)$
+openclaw index.ts INT_RE  = ^-?(0|[1-9][0-9]*)$
 
-[FAIL] goc/templates/hooks/deck_session_start.py: _INT_RE does not mirror yaml_lite._INT_RE
-[FAIL] openclaw-plugin/index.ts: INT_RE does not mirror yaml_lite._INT_RE
-[FAIL] openclaw-plugin/dist/index.js: shipped bundle carries a stale INT_RE (rebuild with `npm run build`)
 
 waiting_on   engine     python hook  verdict
 ------------ ---------- ------------ -------
-007          True       False        [FAIL] disagree
-00           True       False        [FAIL] disagree
-0123         True       False        [FAIL] disagree
+007          True       True         ok
+00           True       True         ok
+0123         True       True         ok
 0            False      False        ok
 -0           False      False        ok
 42           False      False        ok
 -7           False      False        ok
 external     True       True         ok
 
-[FAIL] 6 divergence(s) — a leading-zero wait reason is announced as resumable while the engine impedes the card
+[PASS] every port agrees with the engine
 ```
 
 A differential sweep of the full `waiting_on` × `waiting_until` matrix (26 × 7
 values, including every canonical reason, both null spellings, quoted and bare
 bool/int forms, elapsed/future/malformed dates) found the leading-zero cases to
-be the *only* remaining divergence between hook and engine.
+be the *only* divergence between hook and engine — nothing else in the matrix
+drifted.
 
 ## Why it matters
 
@@ -146,19 +147,25 @@ after
 two copies that cite it. The OpenClaw twin of the same duplication is
 [openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting](../openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting/).
 
-## Fix
+## Fix (landed)
 
-Make both mirrors match the canonical regex, and pin them with a test so the
-next narrowing cannot drift again:
+Both mirrors now match the canonical regex, pinned by a test so the next
+narrowing cannot drift again:
 
-1. `goc/templates/hooks/deck_session_start.py:30` —
-   `_INT_RE = re.compile(r"^-?(0|[1-9][0-9]*)$")`. The `sync-plugin-assets`
-   pre-commit hook propagates it to the three byte-for-byte mirrors.
-2. `openclaw-plugin/index.ts:147` — `const INT_RE = /^-?(0|[1-9][0-9]*)$/;`,
-   then `cd openclaw-plugin && npm ci && npm run build` so the committed
-   `dist/index.js` carries the fix.
-3. A regression test that reads `yaml_lite._INT_RE.pattern` and asserts all
-   three literals equal it, plus a hook-vs-engine differential on the
-   leading-zero cases. Deriving the expectation from the engine (rather than
-   hard-coding the pattern a fourth time) is what makes the guard survive the
-   next change to the canonical regex.
+1. `goc/templates/hooks/deck_session_start.py` —
+   `_INT_RE = re.compile(r"^-?(0|[1-9][0-9]*)$")`, with a comment naming the
+   leading-zero case and the pinning test. `scripts/sync_plugin_assets.py`
+   propagated it to the four byte-for-byte mirrors (`.claude/hooks/`,
+   `claude-plugin/hooks/`, `claude-plugin/goc/templates/hooks/`,
+   `codex-plugin/hooks/`, `codex-plugin/goc/templates/hooks/`). The OpenClaw
+   payload has no Python hook copy — it ships the TS port instead.
+2. `openclaw-plugin/index.ts` — `const INT_RE = /^-?(0|[1-9][0-9]*)$/;`, then
+   `npm ci && npm run build`, which changed exactly one line of the committed
+   `dist/index.js` (plus its sourcemap).
+3. `tests/test_waiting_on_int_mirror.py` — reads `yaml_lite._INT_RE.pattern`
+   and asserts all three literals equal it (including the shipped
+   `dist/index.js` bundle, which is what OpenClaw actually loads), plus a
+   hook-vs-engine differential over the leading-zero and control cases.
+   Deriving the expectation from the engine rather than hard-coding the
+   pattern a fourth time is what makes the guard survive the next change to
+   the canonical regex. Verified to fail on the pre-fix literals.

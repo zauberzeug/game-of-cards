@@ -27,7 +27,13 @@ _NULL_SET = frozenset(("null", "Null", "NULL", "~"))
 # `_card_waiting_on`.
 _TRUE_SET = frozenset(("true", "True", "TRUE", "yes", "Yes", "YES"))
 _FALSE_SET = frozenset(("false", "False", "FALSE", "no", "No", "NO"))
-_INT_RE = re.compile(r"^-?\d+$")
+# Canonical decimal integer, byte-for-byte the yaml-lite pattern: a leading-zero
+# run (`00`, `007`, `0123`) is NOT an integer under YAML 1.2, so the parser keeps
+# it as a `str` and `Card.waiting_on` keeps it as a live reason. Matching it here
+# would coerce a hand-edited `waiting_on: 007` to absent and announce an impeded
+# card as resumable. Pinned to `yaml_lite._INT_RE` by
+# `tests/test_waiting_on_int_mirror.py`.
+_INT_RE = re.compile(r"^-?(0|[1-9][0-9]*)$")
 
 
 def _comment_free_tail(line: str) -> str:
