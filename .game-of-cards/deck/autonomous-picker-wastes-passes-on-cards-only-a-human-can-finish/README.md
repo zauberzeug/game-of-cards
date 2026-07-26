@@ -10,10 +10,12 @@ advances: []
 advanced_by:
   - human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property
 tags: [bug, api-contract]
+summary: "Cards whose Definition of Done cannot be satisfied by an autonomous worker are still born at `human_gate: none`, because nothing inspects the DoD, so the picker offers them repeatedly and every pass is spent on a foregone conclusion. The escalation net that bounds this today lives in one downstream drain wrapper, so every other `goc` consumer has none. BLOCKED: the prerequisite `human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property` argues human-only-ness is per-DoD-item, not per-card, and must be decided first."
 definition_of_done: |
-  - [ ] PROCESS: pick a mechanism from "## Decision required" (or a fifth) and record the choice + rationale here and in log.md.
-  - [ ] MECHANICAL: implement the chosen mechanism so that a card whose DoD is *structurally human-only* no longer reaches an autonomous worker at `human_gate: none` unbounded — whether by detection at `goc new`, a `goc validate` warning, or a core-level auto-escalation after N releases. Touch `goc/engine.py` (and/or the `new`/`validate` paths) as the mechanism requires.
-  - [ ] TDD: a regression test encodes the chosen behaviour — e.g. `goc validate` flags a `human_gate: none` open card whose DoD carries a human-only `EMPIRICAL:` item, and/or the release-escalation trips to `session` after the configured budget. The test must NOT regress cards with genuinely autonomous DoD.
+  - [ ] PROCESS: the prerequisite `human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property` is decided FIRST — it disputes this card's premise and constrains every option here.
+  - [ ] PROCESS: pick a mechanism from "## Decision required" (or a fifth) and record the choice + rationale here and in log.md. Any card-level mechanism must be justified against the prerequisite's "key off which items are human-only, not whether any item is" constraint, or this card closes as superseded (option E).
+  - [ ] MECHANICAL: implement the chosen mechanism so that a card whose DoD cannot be satisfied by an autonomous worker no longer reaches one at `human_gate: none` unbounded — without freezing the agent-workable items of a mixed card. Touch `goc/engine.py` as the mechanism requires.
+  - [ ] TDD: a regression test encodes the chosen behaviour AND covers the mixed card (agent-workable items plus one human-only item), asserting the mechanism does not park work an agent could still do. The test must NOT regress cards with genuinely autonomous DoD.
   - [ ] MECHANICAL: docs updated — whichever of card-schema / create-card / next-card / pull-card / deck / AGENTS describes the ready-to-pull predicate, the `human_gate` lifecycle, or the DoD method-class tags reflects the new behaviour. Plugin mirrors synced; `uv run goc validate` clean.
 ---
 
@@ -122,37 +124,105 @@ touch the ready predicate) but the detection signal differs: child-gate
 inheritance there, DoD method-class here. Keep them distinct; cross-link
 resolutions.
 
+## Blocked on a prerequisite that disputes this card's premise
+
+> ⚠ **Decide
+> [`human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property`](../human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property/)
+> first.** It carries `advances:` this card, and its own DoD requires
+> reconciling with this one, "whose premise this card corrects."
+
+That card's objection, in short: this card treats "human-only" as a
+property of a *card*, but it is a property of each *DoD item*. The
+downstream example cited above as the canonical structurally-human-only
+card has **eight DoD items, exactly one of which is human-only**.
+Detecting and gating it earlier — what options A/B below propose —
+would have frozen the other seven sooner, which is a worse failure than
+the one this card describes.
+
+Its sharpest constraint on any mechanism shipped here:
+
+> *"A lint that reads 'any `EMPIRICAL:` item mentioning a device or
+> production ⇒ gate the card' would misfire on every mixed card in a
+> deck. Whichever mechanism ships must key off which items are
+> human-only, not whether any item is."*
+
+So the options below are **not yet decidable as written** — A and B are
+both card-level, and C's counter cannot tell a productive pass (boxes
+ticked, no close) from a stalled one. Whether this card retains any
+scope at all depends on which model that card picks: its option B
+(per-item gating) would derive the effective gate from the DoD
+automatically and could make A and B here unnecessary.
+
+## Findings that survive regardless of the model chosen
+
+Established while working this card on 2026-07-26; they constrain the
+options but do not resolve them.
+
+**Option A cannot hook `goc new`.** `goc new` stamps `draft: true` and
+writes a *placeholder* DoD (`SCAFFOLD_DOD_PLACEHOLDER`); the real DoD is
+authored afterwards into `README.md`. See `card_is_draft`
+(`goc/engine.py:2405`). A heuristic there would inspect the placeholder
+and find nothing. Any authoring-time detection must hook `_cmd_publish`
+(`goc/engine.py:5347`) — where the authored DoD first reaches the queue,
+and where the sibling `is_placeholder_scaffold` guard already lives.
+This is a pure fact about the code and holds under every model.
+
+**Counting `## ` headings in `log.md` is not a usable attempt metric.**
+There is partial precedent for the engine reading log.md as machine
+state (the `log-md-closure-entry` derived check, `goc/engine.py:5010`),
+but that is a *presence check for one well-known heading at one decision
+point*, not a tally over an open vocabulary. Heading formats are already
+heterogeneous — `goc decide` writes `## {ts}: decision recorded`,
+`goc done` writes `## {ts} — Closure`, `goc move` writes `## {ts}:
+renamed from …`, and humans write free-form entries. A count would
+measure how much has been *written about* a card rather than how often
+work on it *failed*, and would make prose load-bearing for a scheduler
+predicate.
+
+**If C keeps a counter, it must reset on progress.** The prerequisite
+card's own option C states the requirement directly: distinguish a pass
+that ticked a box or landed a commit from a no-op pass. A counter that
+increments on "released without closing" punishes productive partial
+work on exactly the mixed cards that are most common.
+
 ## Decision required
 
 How should the system stop offering a human-only card to unattended
-workers? Options (not mutually exclusive):
+workers? Options (not mutually exclusive) — **read the prerequisite
+section above first; A and B as stated are card-level and the
+prerequisite argues that shape misfires.**
 
-- **A — Detect at `goc new`.** When a card is filed with a DoD item whose
-  method class implies human-only execution (a heuristic over
+- **A — Detect at publish time.** When a card is *published* with a DoD
+  item whose method class implies human-only execution (a heuristic over
   `EMPIRICAL:` items mentioning live/production/device actions), warn and
-  suggest `--gate session`. Cheapest prevention, but heuristic and easy
-  to phrase around; a warning, not a guarantee.
+  suggest raising the gate. Cheapest prevention, and it fires while the
+  author still holds the context to act. But heuristic, easy to phrase
+  around, and card-level as written. (Originally proposed at `goc new`;
+  see the findings section for why that hook point is unimplementable.)
 - **B — `goc validate` lint.** A warning-class finding
   (`HUMAN_ONLY_DOD_UNGATED` or similar) for an open `human_gate: none`
   card carrying a human-only `EMPIRICAL:` item. Runs in CI and on every
-  refine pass, so it catches cards filed before the rule existed. Still
-  advisory; relies on the tag being present and honest.
+  refine pass, so it catches cards filed before the rule existed. Shares
+  one predicate with A at a second call site. Still advisory; still
+  card-level as written — would need to key off *which* items are
+  human-only to satisfy the prerequisite.
 - **C — Core release-count auto-escalation.** Promote the downstream
-  drain's release-attempt counter into `goc` itself: track auto-releases
-  per card, and after a configurable budget escalate `human_gate` to
-  `session` with a logged reason. Guarantees the loop self-terminates for
-  *every* consumer, not just those who hand-rolled a net — but it is a
-  reactive net, so it still spends the budget-many passes first. Best
-  paired with A or B.
+  drain's release-attempt counter into `goc` itself and escalate
+  `human_gate` after a budget. Guarantees the loop self-terminates for
+  *every* consumer, not just those who hand-rolled a net. Must reset on
+  progress (see findings) or it punishes productive passes. A
+  counter-free variant — a two-rung `waiting_on` → `human_gate` ladder
+  reusing the self-clearing `waiting_until` overlay — is drafted in
+  [`escalate-repeatedly-auto-released-cards-without-an-attempt-counter`](../escalate-repeatedly-auto-released-cards-without-an-attempt-counter/)
+  (currently held as a draft pending this decision).
 - **D — Do nothing in core; document the convention.** Rely on card
-  authors to set `human_gate: session` on verify-first cards, and on each
-  drain to build its own net (status quo). Rejected framing, listed for
+  authors to set the gate on verify-first cards, and on each drain to
+  build its own net (status quo). Rejected framing, listed for
   completeness: it is exactly the status quo that produced the wasted
   passes and pushed the fix into a downstream wrapper.
-
-Recommendation leans **B + C**: the validate lint prevents most cases at
-authoring/refine time across all consumers, and the core auto-escalation
-is the backstop for the ones that slip through (or were filed before the
-lint). A human should choose before implementation, since C relocates a
-behaviour currently owned by downstream wrappers into the engine's gate
-lifecycle.
+- **E — Fold into the prerequisite; close this card as superseded.**
+  If the prerequisite adopts per-item gating (its option B), the
+  effective card gate is derived from the DoD automatically and this
+  card's detection problem disappears. Worth considering rather than
+  implementing a card-level mechanism the deck already documents as
+  wrong.
