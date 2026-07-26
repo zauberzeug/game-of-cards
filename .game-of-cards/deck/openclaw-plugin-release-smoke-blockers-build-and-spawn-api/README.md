@@ -123,6 +123,14 @@ Item 4 is a separate fix: **swap to the sanctioned subprocess API.**
 
 3. `dist/` stays tracked in the repo (no `npm install` required to consume from a checkout — tester convenience). A future card can add a build-parity tripwire similar to `validate_plugin_mirror_parity` if dist/-vs-source drift becomes recurring.
 
+   > **Forward pointer (2026-07-26).** That future card is now filed:
+   > [`openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry`](../openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry/).
+   > A post-close audit confirmed the tripwire is still absent and measured the
+   > consequence: an `index.ts` edit with a stale `dist/` passes all 771 regression
+   > tests, both `--check` scripts, and `goc validate`. It also surfaced a fact this
+   > card did not weigh — the ClawHub publish leg has no build step while the npm
+   > leg rebuilds — so the exposure is not limited to "tester convenience".
+
 4. Run `npm install` + `npm run build` once locally; commit the resulting `dist/index.js` plus `package-lock.json`.
 
 ### Cluster B — sanctioned subprocess API

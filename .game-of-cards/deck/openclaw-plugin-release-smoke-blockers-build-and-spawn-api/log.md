@@ -213,3 +213,23 @@ When the tester confirms a subagent invocation works after applying `tools.alsoA
 ## 2026-05-09: decision recorded
 
 Close the card with item 5(d) delegated to follow-up openclaw-subagent-spawn-doesnt-project-plugin-tools. — All plugin-side defects (build pipeline, sanctioned spawn API, scanner-comment trip, runtime-dep bundle) are fixed; runtime inspect (--runtime --json) confirms the goc tool is registered. Subagent tool exposure failed even with the most-permissive operator config (tools.profile=full + subagents.tools.alsoAllow=[goc] + allowConversationAccess=true), so the residual is upstream of this card's plugin-side scope. Closing here keeps the smoke umbrella from staying open indefinitely on a non-plugin issue and gives the subagent-projection finding its own briefing.. Gate session → none.
+
+## 2026-07-26 — post-close audit: the deferred build-parity tripwire is now a card
+
+Cluster A item 3 deferred a `dist/`-vs-source tripwire to "a future card […] if
+dist/-vs-source drift becomes recurring." No such card had been filed. An
+audit-deck pass confirmed the gap is still open and quantified it: an
+`openclaw-plugin/index.ts` edit with an unrebuilt `dist/index.js` passes all 771
+regression tests, `scripts/sync_plugin_assets.py --check`,
+`scripts/port_skills_to_openclaw.py --check`, and `goc validate`.
+
+New fact this card did not weigh: the two publish legs are asymmetric —
+`publish-npm` runs `npm run build` before publishing, `publish-clawhub` hands the
+reusable workflow a repo ref plus `source_path: openclaw-plugin` with no build
+step. So drift may reach ClawHub consumers, not just checkout-based testers.
+
+Filed as
+[`openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry`](../openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry/)
+(open, `human_gate: decision` — the guard mechanism is a real choice, and the
+most rigorous option needs a `.github/workflows/` edit the autonomous bot cannot
+make). This card stays closed; no scope reopens here.
