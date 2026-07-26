@@ -89,3 +89,12 @@ exactly three lines, all `--model opus`
 `claude.yml`, `claude-code-review.yml`, and the `release.yml` smoke
 jobs keep the `claude-code-action` default and were left untouched, as
 in every prior model-pin card.
+
+## Related
+
+- [run-autonomous-agent-workflows-at-max-effort](../run-autonomous-agent-workflows-at-max-effort/)
+  — the *other* axis of the same standing capability decision. This
+  card sets **which model** the fleet runs; that one sets **how hard it
+  thinks** (`--effort max`). Change one and you should look at the
+  other: they land in the same `claude_args` block and compound in both
+  quality and token spend.

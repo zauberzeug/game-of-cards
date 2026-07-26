@@ -1,21 +1,21 @@
 ---
 title: run-autonomous-agent-workflows-at-max-effort
 summary: "The three autonomous-agent workflows (pull-card, audit-deck, refine-deck) pass no `--effort` in `claude_args`, so every unattended run uses the CLI default. Add `--effort max` to all three so the cloud agents reason at full depth on long-horizon card work. Second axis of the same standing capability decision as float-autonomous-workflows-back-to-opus-alias, which set the model."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-26T05:56:36Z"
-closed_at: null
+closed_at: "2026-07-26T05:57:58Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [infra]
 definition_of_done: |
-  - [ ] MECHANICAL: `.github/workflows/pull-card.yml` passes `--effort max` in `claude_args`
-  - [ ] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--effort max` in `claude_args`
-  - [ ] MECHANICAL: `.github/workflows/refine-deck.yml` passes `--effort max` in `claude_args`
-  - [ ] EMPIRICAL: `claude --help` confirms `--effort` accepts `max` on the CLI version the pinned `claude-code-action@v1` resolves to
-  - [ ] MECHANICAL: closed card float-autonomous-workflows-back-to-opus-alias cross-referenced, so the model and effort axes are discoverable from each other
+  - [x] MECHANICAL: `.github/workflows/pull-card.yml` passes `--effort max` in `claude_args`
+  - [x] MECHANICAL: `.github/workflows/audit-deck.yml` passes `--effort max` in `claude_args`
+  - [x] MECHANICAL: `.github/workflows/refine-deck.yml` passes `--effort max` in `claude_args`
+  - [x] EMPIRICAL: `claude --help` confirms `--effort` accepts `max` on the CLI version the pinned `claude-code-action@v1` resolves to
+  - [x] MECHANICAL: closed card float-autonomous-workflows-back-to-opus-alias cross-referenced, so the model and effort axes are discoverable from each other
 worker: {who: Rodja Trappe, where: main}
 ---
 
