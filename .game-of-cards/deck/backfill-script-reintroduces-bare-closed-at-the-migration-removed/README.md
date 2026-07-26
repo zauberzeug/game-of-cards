@@ -1,21 +1,22 @@
 ---
 title: backfill-script-reintroduces-bare-closed-at-the-migration-removed
 summary: "`scripts/backfill_terminal_closed_at.py:85` writes `closed_at` by handing the raw `%Y-%m-%dT%H:%M:%SZ` string to `mutate_frontmatter_field`, bypassing `_yaml_inline`, so it emits the bare `closed_at: 2026-…Z` form that `emit_frontmatter` re-emits quoted. It is the one surviving call site missed by the sweep in the closed card `closed-at-format-drifts-between-closure-verbs-and-frontmatter-emitter`, whose DoD claimed every colon-bearing `mutate_frontmatter_field` site was routed through `_yaml_inline` or documented as intentionally bare. Live reach is currently nil (no terminal non-done card carries a null `closed_at`), but any future run re-introduces the drift that card's migration removed."
-status: open
+status: done
 stage: null
 contribution: low
 created: "2026-07-26T22:00:52Z"
-closed_at: null
+closed_at: "2026-07-26T22:10:08Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits 1 before the fix (both probes FAIL) and 0 after — the script's emitted line becomes byte-identical to `emit_frontmatter`'s for the same value.
-  - [ ] TDD: a regression test asserts the *property* for every `mutate_frontmatter_field(..., "closed_at", X)` call site under `goc/` and `scripts/` — `X` must route through `_yaml_inline` — so a newly added writer fails closed instead of relying on a one-time manual sweep.
-  - [ ] MECHANICAL: `scripts/backfill_terminal_closed_at.py` routes the timestamp through `_yaml_inline` (import extended at line 33); the value it writes is unchanged.
-  - [ ] MECHANICAL: the parent card [closed-at-format-drifts-between-closure-verbs-and-frontmatter-emitter](../closed-at-format-drifts-between-closure-verbs-and-frontmatter-emitter/) gets a forward pointer to this card (post-close evidence amends the closed card; its ticked "any other call site" box was not true).
-  - [ ] PROCESS: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green; no deck-wide `closed_at` re-quote diff is produced by the fix.
+  - [x] TDD: `reproduce.py` exits 1 before the fix (both probes FAIL) and 0 after — the script's emitted line becomes byte-identical to `emit_frontmatter`'s for the same value.
+  - [x] TDD: a regression test asserts the *property* for every `mutate_frontmatter_field(..., "closed_at", X)` call site under `goc/` and `scripts/` — `X` must route through `_yaml_inline` — so a newly added writer fails closed instead of relying on a one-time manual sweep.
+  - [x] MECHANICAL: `scripts/backfill_terminal_closed_at.py` routes the timestamp through `_yaml_inline` (import extended at line 33); the value it writes is unchanged.
+  - [x] MECHANICAL: the parent card [closed-at-format-drifts-between-closure-verbs-and-frontmatter-emitter](../closed-at-format-drifts-between-closure-verbs-and-frontmatter-emitter/) gets a forward pointer to this card (post-close evidence amends the closed card; its ticked "any other call site" box was not true).
+  - [x] PROCESS: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green; no deck-wide `closed_at` re-quote diff is produced by the fix.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The backfill script re-introduces the bare `closed_at` form the migration removed
@@ -85,7 +86,13 @@ search to `goc/engine.py` ("search for `mutate_frontmatter_field(text,
 ## Empirical evidence
 
 `reproduce.py` derives both probes from the repo — it re-scans the real
-call sites rather than asserting against a hardcoded list:
+call sites, and Probe 2 evaluates the value expression it finds at the
+script's own call site, so neither probe can pass while the code is
+wrong or fail once it is right. `GOC_BACKFILL_SRC=<path>` points the
+scan at an alternate copy of the script, which keeps the pre-fix
+behaviour checkable after the fix lands.
+
+Before the fix (`GOC_BACKFILL_SRC` pointed at the pre-fix source), exit 1:
 
 ```
 == Probe 1: does every `closed_at` writer route through `_yaml_inline`? ==
@@ -95,10 +102,10 @@ site                                                  value expression          
 goc/engine.py:4296                                    _yaml_inline(now)                   yes
 goc/engine.py:4393                                    _yaml_inline(now)                   yes
 goc/engine.py:5336                                    _yaml_inline(_utc_now_iso())        yes
-scripts/backfill_terminal_closed_at.py:85             ts                                  NO
+/tmp/backfill_before.py:85                            ts                                  NO
 
 [FAIL] 1 closed_at writer(s) bypass the emitter quote contract:
-        scripts/backfill_terminal_closed_at.py:85 passes ts without _yaml_inline
+        /tmp/backfill_before.py:85 passes ts without _yaml_inline
 
 == Probe 2: does the written line survive a full-frontmatter rewrite? ==
 
@@ -115,9 +122,25 @@ scripts/backfill_terminal_closed_at.py:85             ts                        
 DEFECT REPRODUCED (2 failing check(s))
 ```
 
-Exit 1. The value itself round-trips correctly through the vendored
-parser in either form — this is a **format** defect, not a data-loss
-defect (contrast the sibling
+After the fix, exit 0:
+
+```
+scripts/backfill_terminal_closed_at.py:96             _yaml_inline(ts)                    yes
+
+[OK]   every closed_at writer routes through _yaml_inline
+
+  backfill script writes : closed_at: "2026-05-29T09:58:40Z"
+  engine closure writes  : closed_at: "2026-05-29T09:58:40Z"
+  emit_frontmatter emits : closed_at: "2026-05-29T09:58:40Z"
+
+[OK]   the script's line is byte-identical to the emitter's line
+
+DEFECT FIXED (0 failing check(s))
+```
+
+The value itself round-trips correctly through the vendored parser in
+either form — this is a **format** defect, not a data-loss defect
+(contrast the sibling
 [backfill-terminal-closed-at-stamps-latest-edit-date-as-closure-date](../backfill-terminal-closed-at-stamps-latest-edit-date-as-closure-date/),
 which is about the *value* the same script computes being wrong).
 
@@ -161,25 +184,41 @@ documented recovery path for hand-authored terminal cards, and leaving
 one unswept writer behind makes the parent card's ticked
 "any other call site" box false.
 
-## Fix
+## Fix (landed)
 
-Route the value through `_yaml_inline`, matching the three engine
-precedents — `scripts/backfill_terminal_closed_at.py:85`:
+The value now routes through `_yaml_inline`, matching the three engine
+precedents — `scripts/backfill_terminal_closed_at.py:96`:
 
 ```python
 text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(ts))
 ```
 
-with `_yaml_inline` added to the existing `from goc.engine import ...`
-line (`scripts/backfill_terminal_closed_at.py:33`).
+with `_yaml_inline` added to the `from goc.engine import ...` block. The
+written *value* is unchanged; only its on-disk quoting is.
 
-A regression test asserts the property rather than the literal, so a
-future writer added to either tree fails closed: for every
-`mutate_frontmatter_field(..., "closed_at", X)` call site in `goc/` and
-`scripts/`, `X` must route through `_yaml_inline`. That is the
-generalized form of the parent card's ticked-but-unenforced DoD box —
-the box was a one-time manual sweep with nothing keeping it true.
+`tests/test_closed_at_canonical_form.py` — the parent card's own
+regression suite — gains a `ClosedAtWriterContractTest` that asserts the
+**property** instead of enumerating verbs: every
+`mutate_frontmatter_field(..., "closed_at", X)` call site under `goc/`
+and `scripts/` must have `_yaml_inline` in `X`. A second test pins the
+scan to the two files that definitionally write `closed_at`, so the
+contract test cannot start passing vacuously if the matcher ever stops
+matching — which is precisely how the parent card's one-time manual
+sweep rotted.
+
+The test is deliberately scoped to `closed_at` rather than "any
+colon-bearing value": the general rule is not statically decidable
+(`mutate_frontmatter_field(text, "status", new_status)` is safe only
+because argparse `choices` bounds it; `"worker", worker_yaml` was
+already run through `_yaml_inline` a frame up), and widening it would
+require a per-callsite allowlist that drifts the same way the sweep did.
+`closed_at` is the one field whose value is always a colon-bearing
+timestamp, so for it the rule is exact.
 
 `goc/templates/`, `claude-plugin/`, `codex-plugin/`, and
 `openclaw-plugin/` need no change: `scripts/` is not mirrored into any
-plugin payload, and the engine sites are already correct.
+plugin payload, and the engine sites were already correct. The plugin
+`goc/` mirrors are excluded from the scan for the same reason —
+`tests/test_plugin_mirror_parity.py` already guarantees they are
+byte-identical to `goc/`, so scanning them would re-report each engine
+site under four names.

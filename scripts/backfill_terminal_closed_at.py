@@ -30,7 +30,12 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # Import without installing — the engine ships in goc/ at the repo root.
 sys.path.insert(0, str(ROOT))
-from goc.engine import DECK_DIR, load_all_cards, mutate_frontmatter_field  # noqa: E402
+from goc.engine import (  # noqa: E402
+    DECK_DIR,
+    _yaml_inline,
+    load_all_cards,
+    mutate_frontmatter_field,
+)
 
 TERMINAL_NON_DONE = frozenset({"disproved", "superseded"})
 
@@ -82,7 +87,13 @@ def main() -> int:
         fixed.append((card.title, ts))
         if args.apply:
             text = readme.read_text()
-            text = mutate_frontmatter_field(text, "closed_at", ts)
+            # `mutate_frontmatter_field` inserts the value verbatim, so a
+            # colon-bearing timestamp must be quoted by `_yaml_inline` first —
+            # otherwise this writes the bare form that `emit_frontmatter`
+            # re-quotes, and the next full-frontmatter rewrite (`goc decide`,
+            # `migrate-list-style`, `repair-edges`) shows a diff on a card
+            # nobody edited. Same contract as the engine's closure writers.
+            text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(ts))
             readme.write_text(text)
 
     label = "applied" if args.apply else "would write"

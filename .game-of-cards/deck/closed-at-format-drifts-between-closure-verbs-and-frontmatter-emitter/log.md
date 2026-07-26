@@ -25,3 +25,26 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-05-29 — Closure' present
+
+## 2026-07-26 — Post-closure amendment (sweep gap)
+
+- **Trigger**: an `audit-deck` pass enumerated every
+  `mutate_frontmatter_field(..., "closed_at", ...)` call site in the tree and
+  found one that bypasses `_yaml_inline` —
+  `scripts/backfill_terminal_closed_at.py:85`.
+- **What this means for this card**: the ticked MECHANICAL box asserting that
+  "any other call site ... for a colon-bearing value" was routed or documented
+  was false at closure. The sweep behind it only walked `goc/engine.py`.
+- **What is NOT affected**: the engine fix (three writers) and the 251-card
+  migration both held. Re-audited 2026-07-26: the deck carries 378 quoted full
+  timestamps, 125 bare date-only values (correct — no colon, so the emitter
+  leaves them bare), 173 nulls, and zero bare full timestamps outside a fenced
+  code sample in this card's own README.
+- **Follow-up**: filed and closed
+  `backfill-script-reintroduces-bare-closed-at-the-migration-removed`, which
+  routes the script's timestamp through `_yaml_inline` and replaces this card's
+  one-time manual sweep with a static property test over every `closed_at`
+  writer under `goc/` and `scripts/`.
+- **Body**: `## Post-closure correction (2026-07-26)` section added to
+  README.md; the stale claim is corrected in place rather than left standing
+  with a note below it.

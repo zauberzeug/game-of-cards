@@ -29,6 +29,7 @@ checkout.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -54,7 +55,14 @@ from goc.engine import (  # noqa: E402
     parse_frontmatter,
 )
 
-BACKFILL = ROOT / "scripts" / "backfill_terminal_closed_at.py"
+# `GOC_BACKFILL_SRC` points the probe at an alternate copy of the script, so the
+# pre-fix behaviour stays checkable after the fix lands:
+#   git show <pre-fix-rev>:scripts/backfill_terminal_closed_at.py > /tmp/before.py
+#   GOC_BACKFILL_SRC=/tmp/before.py uv run python .../reproduce.py   # exits 1
+BACKFILL = Path(
+    os.environ.get("GOC_BACKFILL_SRC")
+    or ROOT / "scripts" / "backfill_terminal_closed_at.py"
+)
 ENGINE = ROOT / "goc" / "engine.py"
 
 # Matches `mutate_frontmatter_field(<text>, "closed_at", <value>)` and captures
@@ -66,7 +74,16 @@ CALL_RE = re.compile(
     r"(?P<value>(?:[^()]|\((?:[^()]|\([^()]*\))*\))+?)\s*\)"
 )
 
+def _rel(path: Path) -> str:
+    """Repo-relative label, or the bare path when `GOC_BACKFILL_SRC` points out of tree."""
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 failures: list[str] = []
+backfill_value_expr: str | None = None
 
 # ── Probe 1: static sweep over every closed_at writer ──────────────────────
 print("== Probe 1: does every `closed_at` writer route through `_yaml_inline`? ==\n")
@@ -80,8 +97,10 @@ for path in (ENGINE, BACKFILL):
             continue
         value = m.group("value").strip()
         routed = "_yaml_inline" in value
-        site = f"{path.relative_to(ROOT)}:{lineno}"
+        site = f"{_rel(path)}:{lineno}"
         print(f"{site:52}  {value:34}  {'yes' if routed else 'NO'}")
+        if path == BACKFILL:
+            backfill_value_expr = value
         if not routed:
             failures.append(f"{site} passes {value} without _yaml_inline")
 
@@ -120,8 +139,19 @@ card = (
     "# synthetic-disproved-card\n"
 )
 
-# The script's write path, verbatim (backfill_terminal_closed_at.py:85).
-script_text = mutate_frontmatter_field(card, "closed_at", ts)
+# The script's write path — the value expression is taken from the script's own
+# source (captured in Probe 1) and evaluated against this probe's `ts`, so the
+# probe cannot pass while the real call site is still wrong, and cannot fail
+# once the real call site is fixed. A hand-copied expression here would decouple
+# the probe from the code it is meant to check.
+if backfill_value_expr is None:
+    raise RuntimeError(
+        f"no `mutate_frontmatter_field(..., \"closed_at\", ...)` call found in "
+        f"{_rel(BACKFILL)} — the probe's assumption about the "
+        f"script's write path no longer holds; re-read the script."
+    )
+script_value = eval(backfill_value_expr, {"_yaml_inline": _yaml_inline, "ts": ts})  # noqa: S307
+script_text = mutate_frontmatter_field(card, "closed_at", script_value)
 script_line = next(l for l in script_text.splitlines() if l.startswith("closed_at:"))
 
 # The engine's closure write path (engine.py:4296 / 4393 / 5336).

@@ -8,11 +8,19 @@ value in `_yaml_inline` so that the on-disk line is byte-identical to what
 Without that wrap, every `goc decide` / `goc migrate-list-style` /
 emitter-routed migration silently rewrites the `closed_at` line on every
 closed card it touches, inflating diffs and hiding real changes.
+
+`ClosedAtWriterContractTest` guards the same contract *statically* over every
+`closed_at` writer in the tree, not just the four verbs exercised above. The
+behavioural tests only cover the writers someone thought to enumerate, which is
+how `scripts/backfill_terminal_closed_at.py` kept writing the bare form for two
+months after the drift was declared fixed — see card
+`backfill-script-reintroduces-bare-closed-at-the-migration-removed`.
 """
 
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -121,6 +129,89 @@ class ClosedAtCanonicalFormTest(unittest.TestCase):
             self.assertEqual(0, result.returncode, msg=result.stderr)
             readme = old / "README.md"
             self.assertEqual(_closed_at_line(readme), _emitter_closed_at_line(readme))
+
+
+# Matches `mutate_frontmatter_field(<target>, "closed_at", <value>)`, capturing
+# the value expression. The value alternation tolerates one level of nested call
+# parens so `_yaml_inline(_utc_now_iso())` is captured whole.
+_CLOSED_AT_WRITE_RE = re.compile(
+    r'mutate_frontmatter_field\(\s*[^,]+,\s*"closed_at"\s*,\s*'
+    r"(?P<value>(?:[^()]|\((?:[^()]|\([^()]*\))*\))+?)\s*\)"
+)
+
+# Trees scanned for `closed_at` writers. The plugin payloads
+# (`claude-plugin/goc/`, `codex-plugin/goc/`, `openclaw-plugin/goc/`) are
+# deliberately excluded: they are byte-for-byte mirrors of `goc/`, enforced by
+# `tests/test_plugin_mirror_parity.py`, so scanning them would only re-report
+# the same call sites under four names.
+_WRITER_TREES = ("goc", "scripts")
+
+# Files that must each contribute at least one writer. Without this floor the
+# test would pass vacuously if `_CLOSED_AT_WRITE_RE` ever stopped matching —
+# the exact failure mode that lets a "we swept every call site" claim rot.
+_EXPECTED_WRITER_FILES = (
+    Path("goc") / "engine.py",
+    Path("scripts") / "backfill_terminal_closed_at.py",
+)
+
+
+class ClosedAtWriterContractTest(unittest.TestCase):
+    """Every `closed_at` writer in the tree must route its value through `_yaml_inline`.
+
+    Scoped to `closed_at` rather than "any colon-bearing value" because the
+    general form is not statically decidable: `mutate_frontmatter_field(text,
+    "status", new_status)` passes a variable whose colon-freeness follows from
+    an argparse `choices` enum, and `"worker", worker_yaml` passes a value that
+    was already run through `_yaml_inline` one frame up. Widening the rule would
+    need a per-callsite allowlist, which drifts the same way the manual sweep
+    did. `closed_at` is the field whose value is *always* a colon-bearing
+    timestamp, so for it the rule is exact.
+    """
+
+    def _writers(self) -> list[tuple[Path, int, str]]:
+        found: list[tuple[Path, int, str]] = []
+        for tree in _WRITER_TREES:
+            for path in sorted((ROOT / tree).rglob("*.py")):
+                for lineno, line in enumerate(path.read_text().splitlines(), 1):
+                    m = _CLOSED_AT_WRITE_RE.search(line)
+                    if m:
+                        rel = path.relative_to(ROOT)
+                        found.append((rel, lineno, m.group("value").strip()))
+        return found
+
+    def test_scan_finds_the_known_writer_files(self) -> None:
+        writers = self._writers()
+        seen = {rel for rel, _, _ in writers}
+        for expected in _EXPECTED_WRITER_FILES:
+            self.assertIn(
+                expected,
+                seen,
+                msg=(
+                    f"no `mutate_frontmatter_field(..., \"closed_at\", ...)` call found "
+                    f"in {expected}. Either the writer moved (update "
+                    f"_EXPECTED_WRITER_FILES) or _CLOSED_AT_WRITE_RE stopped matching "
+                    f"— in the latter case this whole test is passing vacuously."
+                ),
+            )
+
+    def test_every_closed_at_writer_routes_through_yaml_inline(self) -> None:
+        offenders = [
+            f"{rel}:{lineno} passes `{value}`"
+            for rel, lineno, value in self._writers()
+            if "_yaml_inline" not in value
+        ]
+        self.assertEqual(
+            [],
+            offenders,
+            msg=(
+                "closed_at must be wrapped in `_yaml_inline` before reaching "
+                "`mutate_frontmatter_field`, which inserts the value verbatim. "
+                "The bare form parses fine but differs from what "
+                "`emit_frontmatter` writes, so the next whole-frontmatter "
+                "rewrite re-quotes a card nobody edited:\n  "
+                + "\n  ".join(offenders)
+            ),
+        )
 
 
 if __name__ == "__main__":
