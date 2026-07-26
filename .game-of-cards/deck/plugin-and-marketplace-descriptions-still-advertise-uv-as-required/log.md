@@ -14,3 +14,18 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-05-31 — Closure' present
+
+## 2026-07-26 — Post-closure evidence: one surface was missed
+
+- **Found**: `claude-plugin/README.md:7` still advertised the `uv` tool
+  manager as the bundled CLI's runtime — a third surface carrying the
+  same false prerequisite this card swept out of `plugin.json` and
+  `marketplace.json`.
+- **Why the closure check missed it**: the recorded verification was
+  `grep -rn "requires uv" claude-plugin/ .claude-plugin/`. The surviving
+  claim reads "runs via the `uv` tool manager" and has no `requires uv`
+  substring. Lesson for prerequisite sweeps: grep the mechanism token,
+  not one phrasing of the claim.
+- **Follow-up**: [claude-code-plugin-readme-undercounts-its-skills-and-still-requires-uv](../claude-code-plugin-readme-undercounts-its-skills-and-still-requires-uv/)
+  fixed the README and added `tests/test_plugin_readme_skill_catalogue_parity.py`.
+- **This card's verdict is unchanged**: both surfaces it fixed remain correct.

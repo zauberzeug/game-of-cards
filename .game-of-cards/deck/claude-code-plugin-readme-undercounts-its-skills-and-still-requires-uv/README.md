@@ -1,22 +1,22 @@
 ---
 title: claude-code-plugin-readme-undercounts-its-skills-and-still-requires-uv
 summary: "`claude-plugin/README.md` is the payload README a consumer reads in Claude Code's plugin browser, and it misdescribes the payload it ships: it claims \"14 skills\" and lists 14 table rows while `claude-plugin/skills/` ships 16 (`claude-kickoff` and `upgrade` are missing), and its intro still says the bundled CLI \"runs via the `uv` tool manager\" — contradicted three lines later by its own Install section, by `claude-plugin/bin/goc`, and by AGENTS.md. The `uv` clause is the surface that plugin-and-marketplace-descriptions-still-advertise-uv-as-required missed when it swept the same false prerequisite out of plugin.json and marketplace.json."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-07-26T18:45:37Z"
-closed_at: null
+closed_at: "2026-07-26T18:52:23Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every README claim agrees with the shipped payload
-  - [ ] TDD: a regression test in `tests/` pins `claude-plugin/README.md`'s skill catalogue (bold count, table rows, prose restatement) to `claude-plugin/skills/`, so the next added skill fails CI instead of rotting the README
-  - [ ] MECHANICAL: the catalogue table gains `claude-kickoff` and `upgrade` rows, and both count claims read 16
-  - [ ] MECHANICAL: the intro's "`uv` tool manager" clause is replaced with the true runtime (`python3`), so the intro, Install, and Requirements sections agree
-  - [ ] PROCESS: [plugin-and-marketplace-descriptions-still-advertise-uv-as-required](../plugin-and-marketplace-descriptions-still-advertise-uv-as-required/) amended with a forward pointer to this card (post-closure evidence: its sweep missed a third surface)
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green
+  - [x] TDD: `reproduce.py` exits zero — every README claim agrees with the shipped payload
+  - [x] TDD: a regression test in `tests/` pins `claude-plugin/README.md`'s skill catalogue (bold count, table rows, prose restatement) to `claude-plugin/skills/`, so the next added skill fails CI instead of rotting the README
+  - [x] MECHANICAL: the catalogue table gains `claude-kickoff` and `upgrade` rows, and both count claims read 16
+  - [x] MECHANICAL: the intro's "`uv` tool manager" clause is replaced with the true runtime (`python3`), so the intro, Install, and Requirements sections agree
+  - [x] PROCESS: [plugin-and-marketplace-descriptions-still-advertise-uv-as-required](../plugin-and-marketplace-descriptions-still-advertise-uv-as-required/) amended with a forward pointer to this card (post-closure evidence: its sweep missed a third surface)
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -136,6 +136,25 @@ README:7: the `uv` tool manager that ships with most developer environments.
   - README's 'all 14 skills are immediately available' restates a count the payload contradicts (16)
   - README intro advertises the `uv` tool manager as the CLI's runtime, but claude-plugin/bin/goc execs `python3 -m goc.cli` (no uv)
 EXIT=1
+```
+
+After the fix the same script exits zero:
+
+```
+=== 1. skill catalogue ===
+shipped under claude-plugin/skills/ : 16
+rows in README catalogue table      : 16
+shipped but not catalogued          : []
+catalogued but not shipped          : []
+bold count claim                    : 16
+prose count restatement             : 16
+
+=== 2. host prerequisite ===
+bin/goc actually shells out via uv  : False
+README:  no `uv` tool manager claim  : OK
+
+[OK] every README claim agrees with the shipped payload.
+EXIT=0
 ```
 
 Sibling surfaces are clean, so this is a single-file defect, not a

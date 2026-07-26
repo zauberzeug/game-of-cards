@@ -48,10 +48,24 @@ def shipped_skills() -> set[str]:
     return {p.name for p in SKILLS_DIR.iterdir() if (p / "SKILL.md").is_file()}
 
 
+def catalogued_skills(text: str) -> set[str]:
+    """Slugs in the skill table that follows the `**N skills**` headline.
+
+    Scoped to that section, matching tests/test_plugin_readme_skill_catalogue_parity.py:
+    a payload README may carry other backtick-slug tables whose rows aren't skills.
+    """
+    match = _BOLD_COUNT.search(text)
+    if match is None:
+        return set()
+    section = text[match.end():]
+    end = section.find("\n## ")
+    return set(_TABLE_ROW.findall(section if end == -1 else section[:end]))
+
+
 def main() -> int:
     text = README.read_text()
     shipped = shipped_skills()
-    catalogued = set(_TABLE_ROW.findall(text))
+    catalogued = catalogued_skills(text)
 
     failures: list[str] = []
 

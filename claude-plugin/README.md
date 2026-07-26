@@ -3,16 +3,17 @@
 [Game of Cards](https://game-of-cards.com) (GoC) is an agile work-card
 methodology for AI-agent collaborators. This plugin delivers the full GoC
 skill and hook set to Claude Code in a single install step. No separate
-package installation is required — the GoC CLI is bundled and runs via
-the `uv` tool manager that ships with most developer environments.
+package installation is required — the GoC CLI is bundled and runs on
+the `python3` already on your PATH.
 
 ## What's included
 
-**14 skills** — invoked as `/skill-name` or `Skill(name)` inside Claude Code:
+**16 skills** — invoked as `/skill-name` or `Skill(name)` inside Claude Code:
 
 | Skill | Purpose |
 |---|---|
 | `kickoff` | Onboarding dialog — introduces GoC, scaffolds `.game-of-cards/` |
+| `claude-kickoff` | Claude Code specifics — `Bash(goc:*)` grant, plugin install cadence, CLAUDE.md merge |
 | `scan-deck` | Browse the board: triage view, filtered queues, decision Q&A |
 | `next-card` | Pick the highest-leverage open card to work on next |
 | `create-card` | File a new card with frontmatter and DoD scaffold |
@@ -26,6 +27,7 @@ the `uv` tool manager that ships with most developer environments.
 | `retrospective` | Cluster closed cards by tag, surface recurring failure modes |
 | `card-schema` | Field reference — enums, canonical tags, DoD format |
 | `deck` | Methodology front door and shared operating model |
+| `upgrade` | Re-sync templates and reconcile evolving `.game-of-cards/` files |
 
 **3 runtime hooks** — fire automatically, no configuration needed:
 
@@ -82,7 +84,7 @@ and type:
 
 Kickoff will introduce GoC, ask which working style fits your project
 (solo / team / OSS-eval / agent-runtime), and scaffold the
-`.game-of-cards/` project state directory. Once it completes, all 14
+`.game-of-cards/` project state directory. Once it completes, all 16
 skills are immediately available.
 
 For subsequent sessions the hooks fire automatically — you'll see an
