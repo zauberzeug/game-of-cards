@@ -1,7 +1,7 @@
 ---
 title: cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships
 summary: "The plugin sections of `goc.md` still describe the pre-0.0.6 payload: skills/hooks as symlinks into `goc/templates/`, 11 Claude skills, 13 OpenClaw skills with `kickoff` omitted, a mandatory \"install the goc CLI first\" prerequisite, and an unguarded `_goc-bootstrap.sh` injection awaiting a `${CLAUDE_SKILL_DIR}` rewrite. Every one of those contradicts AGENTS.md and the tree. The symlink claim is the costly one — it tells contributors that editing `claude-plugin/skills/` edits the template."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-07-26T07:34:46Z"
@@ -10,7 +10,6 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — all six claims agree with the tree.
   - [ ] TDD: `tests/test_guidance_accuracy.py` gains a plugin-reference accuracy
@@ -27,6 +26,7 @@ definition_of_done: |
     `--check` drift-guard model.
   - [ ] MECHANICAL: `uv run python -m unittest discover -s tests` passes and
     `uv run goc validate` is clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc.md`'s plugin sections describe a payload GoC no longer ships
