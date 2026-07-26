@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds six guard classes, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Sixth instance of the shape; the fix path needs a scope decision."
+summary: "tests/test_guidance_accuracy.py now holds seven guard classes, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Eighth instance of the shape; the fix path needs a scope decision."
 status: open
 stage: null
 contribution: medium
@@ -18,7 +18,7 @@ definition_of_done: |
 
 `tests/test_guidance_accuracy.py` is this repo's answer to doc drift: a test that
 pins a prose claim to the code or tree it describes. The mechanism works — but it
-is applied **one claim at a time, always after the fact**. Six guard classes now
+is applied **one claim at a time, always after the fact**. Seven guard classes now
 live in that file, and every one was written in response to an already-rotted
 claim someone happened to notice. Nothing looks for the *unguarded* claims.
 
@@ -33,8 +33,9 @@ claim someone happened to notice. Nothing looks for the *unguarded* claims.
 | `CreateCardScaffoldClaimAccuracyTest` | [create-card-and-deck-skills-claim-goc-new-scaffolds-a-reproduce-py-stub](../create-card-and-deck-skills-claim-goc-new-scaffolds-a-reproduce-py-stub/) | 2026-06-25 |
 | `GocMdPluginReferenceAccuracyTest` | [cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships](../cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships/) | 2026-07-26 |
 | *(none yet — open)* | [ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/) | — |
+| `CliFrameworkPointerAccuracyTest` | [openclaw-verb-mirror-comment-names-click-in-an-argparse-cli](../openclaw-verb-mirror-comment-names-click-in-an-argparse-cli/) | 2026-07-26 |
 
-Seven instances across three months, each its own file → claim → fix → guard cycle.
+Eight instances across three months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -47,6 +48,18 @@ header comment**, a surface class absent from Option A's sweep list. Doc-shaped
 prose is not confined to `.md` files: workflow headers, `Makefile`s and module
 docstrings all restate tree state, and a sweep or lint scoped to the documentation
 set would have missed this one.
+
+The eighth widens the surface class once more — a **TypeScript source comment**
+(`openclaw-plugin/index.ts`) — and adds the sharpest evidence yet that per-surface
+guarding is the wrong unit. Its stale claim was *the same false claim* the second
+instance already guarded: that goc's CLI is built with click. `AgentsArchitectureAccuracyTest`
+pinned that down in `AGENTS.md` on 2026-05-27 and in `goc/cli.py`; the identical
+assertion sat unguarded in the OpenClaw plugin entry for two more months. A guard
+keyed to *the claim* rather than *the file* would have caught it the day the first
+one was written. That is a datum for Option B: the cheap version of a shape-level
+lint may be "every fact a guard already pins, pin everywhere it is asserted" —
+grep the claim text across all tracked surfaces, not just the one where it was
+caught.
 
 ## What's structurally wrong
 

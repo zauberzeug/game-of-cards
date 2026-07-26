@@ -21,3 +21,31 @@ plugin READMEs, the skill bodies. Instance seven lives in a
 option is adopted, the surface definition needs to cover tree-restating prose
 wherever it lives — workflow headers, module docstrings, config comments — not
 only the `.md` set. No decision is recorded here; that remains the human's pick.
+
+## 2026-07-26T08:22:29Z — Eighth instance connected (pull-card round)
+
+A pull-card session closed
+[openclaw-verb-mirror-comment-names-click-in-an-argparse-cli](../openclaw-verb-mirror-comment-names-click-in-an-argparse-cli/)
+and connected it here rather than filing a duplicate root. Same cycle as the
+other seven: a claim that restated tree state, unguarded, caught only after it
+had rotted, fixed with a bespoke guard class
+(`CliFrameworkPointerAccuracyTest`) in `tests/test_guidance_accuracy.py`.
+
+Body amended in place (dashboard rule): instance table extended, counts moved
+seven → eight instances and six → seven guard classes, and a paragraph added on
+what the new instance changes.
+
+**The substantive addition is that per-surface guarding is the wrong unit.** The
+eighth instance's stale claim was not a new falsehood — it was *the same
+falsehood the second instance already guarded*: that goc's CLI is built with
+click. `AgentsArchitectureAccuracyTest` pinned that in `AGENTS.md` and
+`goc/cli.py` on 2026-05-27; the identical assertion sat unguarded in
+`openclaw-plugin/index.ts` for two more months, and the guard written today
+(like every predecessor) again covers exactly one file. This sharpens Option B:
+its cheap first cut may be "every fact a guard already pins, pin everywhere it
+is asserted" — grep the claim text across all tracked surfaces at guard-writing
+time, rather than inferring a general lint shape. It also extends the
+surface-class list instance seven started: after `.github/workflows/` headers,
+now TypeScript source comments.
+
+No decision is recorded here; that remains the human's pick.

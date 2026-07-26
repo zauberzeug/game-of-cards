@@ -20,6 +20,19 @@ worker: {who: "claude[bot]", where: main}
 
 # The OpenClaw verb-mirror comment names click in a CLI that uses argparse
 
+**FIXED** — see `## Fix (applied)`.
+
+**Generalization:** this was the eighth instance of one shape — a claim
+restating tree state with no guard, found only after it had already rotted. The
+architectural card is
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+(`human_gate: decision` — it needs a scope pick). This instance is the one that
+shows per-*surface* guarding is the wrong unit: its stale claim was the *same*
+falsehood the second instance already guarded (`AgentsArchitectureAccuracyTest`,
+2026-05-27, "goc's CLI is not click"), which had sat unguarded in a second file
+for two months. No `advances` edge: that card closes on its own deliverable, so
+it is a governing cluster, not an aggregation epic.
+
 ## Location
 
 `openclaw-plugin/index.ts:44-45`
