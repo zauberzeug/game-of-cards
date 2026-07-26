@@ -1,22 +1,22 @@
 ---
 title: retrospective-status-done-queries-hide-disproved-and-superseded-closures
 summary: "The retrospective skill gathers closure history with `goc --status done --json` at all three of its query sites, so `disproved` and `superseded` cards are structurally invisible to it — even though its own Step 3 instructs the agent to look for \"Cards closed with disproved or superseded\". On this deck that hides 13 of 495 closures and under-reports the 30-day velocity line as 67 instead of 69. The retro's most diagnostic population — the hypotheses that turned out wrong — never reaches the analysis."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-26T12:44:16Z"
-closed_at: null
+closed_at: "2026-07-26T12:57:15Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every terminal closure is reachable from the skill's closure queries
-  - [ ] TDD: a regression test asserts no closure-gathering site in `goc/templates/skills/retrospective/SKILL.md` scopes to `--status done`, and that the terminal-status set it filters on is read from `engine.TERMINAL_STATUSES` rather than hand-listed
-  - [ ] MECHANICAL: all three query sites in `retrospective/SKILL.md` (Context block, Step 1, Step 5) gather across every terminal status, and Step 3's disproved/superseded bullet is reachable from the population Step 1 produces
-  - [ ] MECHANICAL: `deck/SKILL.md`'s "Recently closed cards" verb row no longer advertises a `done`-only command under a closure-wide label (`deck/SKILL.md` has ~90 bytes of headroom under its 10,000-byte cap in `tests/test_skill_body_size.py` — keep the edit inside it)
-  - [ ] MECHANICAL: the five mirrors of `retrospective/SKILL.md` are back in sync — four via `python scripts/sync_plugin_assets.py`, the OpenClaw port via `python3 scripts/port_skills_to_openclaw.py`
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` green and `uv run goc validate` clean
+  - [x] TDD: `reproduce.py` extracts the `goc ... --json` queries the skill body prescribes, runs each against a probe deck holding one closure per terminal status, and exits zero only when all three are reachable — verified red on the pre-fix body (`1/3 closures · HIDES probe-disproved-card, probe-superseded-card`) and green after
+  - [x] TDD: `tests/test_retrospective_closure_scope.py` asserts (a) no closure query in `retrospective/SKILL.md` narrows `--status` below `all` unless it windows on `--closed-since`, (b) the `TERMINAL = {...}` literal the skill body filters on equals `engine.TERMINAL_STATUSES` so a fourth terminal status turns the test red, (c) `deck/SKILL.md`'s closed-cards verb row is not `done`-only — all three fail on the pre-fix content
+  - [x] MECHANICAL: all three query sites in `retrospective/SKILL.md` gather across every terminal status — Context block via `--closed-since 90d`, Steps 1 and 5 via `--status all` plus a terminal filter — and Step 1 now emits each card's `status`, so Step 3's disproved/superseded bullet is answerable from the population it receives
+  - [x] MECHANICAL: `deck/SKILL.md`'s "Recently closed cards" verb row points at `goc --closed-since 7d` instead of the `done`-only `--since` form (file at 9,917 B, inside the 10,000 B cap in `tests/test_skill_body_size.py`)
+  - [x] MECHANICAL: the five mirrors of `retrospective/SKILL.md` and `deck/SKILL.md` are back in sync — four via `scripts/sync_plugin_assets.py` (8 files), the OpenClaw port via `scripts/port_skills_to_openclaw.py`; both `--check` drift guards green
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` green (786 tests) and `uv run goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -90,31 +90,39 @@ alias, so a client-side filter against `TERMINAL_STATUSES` (or the
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/retrospective-status-done-queries-hide-disproved-and-superseded-closures/reproduce.py`:
+`reproduce.py` reads the `goc ... --json` invocations out of the skill
+body rather than hard-coding them, so it measures whatever the skill
+actually prescribes. Against the **pre-fix** body (`git show
+HEAD:goc/templates/skills/retrospective/SKILL.md`):
 
 ```
-engine TERMINAL_STATUSES        : disproved, done, superseded
-closures written to the deck    : 3
-    disproved   probe-disproved-card  closed_at=2026-07-26T12:44:48Z
-    done        probe-done-card  closed_at=2026-07-26T12:44:48Z
-    superseded  probe-superseded-card  closed_at=2026-07-26T12:44:48Z
+engine TERMINAL_STATUSES : disproved, done, superseded
+closure queries found in SKILL.md: 1
+  goc --status done --json         → 1/3 closures · HIDES probe-disproved-card, probe-superseded-card
 
-`goc --status done --json` yields: 1
+closures written to the probe deck: 3
+    disproved   probe-disproved-card
     done        probe-done-card
+    superseded  probe-superseded-card
 
-closures the retrospective cannot see: 2
-    probe-disproved-card
-    probe-superseded-card
+Step 3 of the skill asks: "Cards closed with `disproved` or `superseded` — what was wrong?"
 
-`--status done --json` occurrences in goc/templates/skills/retrospective/SKILL.md: 4
-   across 3 query sites: Context block; Step 1 — Gather recent closures; Step 5 — Velocity feel
-   (the Context block carries the bootstrap + bare-goc fallback pair)
-   contradicted instruction (SKILL.md Step 3): "Cards closed with `disproved` or `superseded` — what was wrong?"
-
-[FAIL] the skill's closure queries scope to `done`, so 2 of 3 closures are invisible to the retrospective that explicitly asks about them.
+   goc --status done --json: hides probe-disproved-card, probe-superseded-card
+[FAIL] 1 of 1 closure queries scope below the engine's terminal set, so the population Step 3 asks about never reaches the analysis.
 ```
 
-On this repo's own deck the same query gap hides 13 of 495 closures:
+Against the shipped body — `uv run python .game-of-cards/deck/retrospective-status-done-queries-hide-disproved-and-superseded-closures/reproduce.py`:
+
+```
+engine TERMINAL_STATUSES : disproved, done, superseded
+closure queries found in goc/templates/skills/retrospective/SKILL.md: 2
+  goc --closed-since 90d --json    → 3/3 closures · reaches every terminal status
+  goc --status all --json          → 3/3 closures · reaches every terminal status
+...
+[OK] every closure query in the skill body reaches all 3 terminal statuses.
+```
+
+On this repo's own deck the pre-fix query gap hid 13 of 495 closures:
 
 ```
 total terminal closures: 495
@@ -158,29 +166,47 @@ at a different site: that one is in the engine's closure-integration
 guard, this one is in a shipped skill body. Two instances, not yet a
 family — fixing this site does not need the architectural card.
 
-## Fix
+## Fix (shipped)
 
-1. `goc/templates/skills/retrospective/SKILL.md` — make all three
-   closure-gathering sites span every terminal status.
-   - Step 1 and Step 5 already post-process the JSON in Python, so the
-     minimal change is `--status done` → `--status all` plus an
-     explicit `status in {'done','disproved','superseded'}` filter
-     beside the existing `closed_at` filter. (`--status all` also
-     un-hides draft scaffolds — `goc/engine.py:2699` — but drafts carry
-     `closed_at: null`, so the closure filter already drops them.)
-   - The Context block has no post-processing, so switching it to
-     `--status all` would flood the preview with the open queue. Use
-     the engine-native closure query instead — `--closed-since`, which
-     auto-extends `--status` to `all` and filters on `closed_at`, the
-     same primitive `standup` uses.
-2. `goc/templates/skills/deck/SKILL.md:87` — the row labels a
-   `done`-only command "Recently closed cards". `--since` is welded to
-   `done` by the engine (`goc/engine.py:3762`), so point the row at
-   `--closed-since` rather than relabelling around the gap.
-3. Regression test — assert the retrospective skill body contains no
-   `--status done` closure query, and that the status set it filters on
-   is derived from `engine.TERMINAL_STATUSES` rather than hand-listed,
-   so a future status addition cannot silently re-open the gap.
-4. Re-sync the five mirrors (`scripts/sync_plugin_assets.py` for the
+1. `goc/templates/skills/retrospective/SKILL.md` — all three
+   closure-gathering sites now span every terminal status.
+   - **Steps 1 and 5** already post-processed the JSON in Python, so
+     they moved to `--status all` plus an explicit
+     `TERMINAL = {'done', 'disproved', 'superseded'}` filter beside the
+     existing `closed_at` filter. (`--status all` also un-hides draft
+     scaffolds — `goc/engine.py:2699` — but drafts carry
+     `closed_at: null`, so the closure filter drops them.) Step 1 also
+     emits each card's `status` so Step 3 can name the outcome.
+   - **The Context block** has no post-processing, so `--status all`
+     there would have flooded the preview with the open queue. It uses
+     the engine-native closure query instead — `--closed-since 90d`,
+     which auto-extends `--status` to `all` and filters on `closed_at`
+     (`goc/engine.py:3749-3757`), the same primitive `standup` uses.
+     90d comfortably spans the widest window Step 5 reports.
+   - A short paragraph above Step 1 states the invariant, so the next
+     editor knows why the query is not `--status done`.
+2. `goc/templates/skills/deck/SKILL.md` — the verb row now reads
+   `goc --closed-since 7d` / "Recently closed cards (any terminal
+   status)". `--since` is welded to `done` by the engine
+   (`goc/engine.py:3762`), so the row had to change command, not label.
+3. `tests/test_retrospective_closure_scope.py` — three guards: no
+   closure query narrows `--status` below `all` unless it windows on
+   `--closed-since`; the `TERMINAL = {...}` literal equals
+   `engine.TERMINAL_STATUSES` (so a fourth terminal status turns the
+   test red rather than silently dropping out); `deck/SKILL.md`'s
+   closed-cards row is not `done`-only.
+4. Five mirrors re-synced — `scripts/sync_plugin_assets.py` for the
    four claude/codex copies, `scripts/port_skills_to_openclaw.py` for
-   the OpenClaw port).
+   the OpenClaw port. Both `--check` drift guards green.
+
+## Not covered here
+
+The OpenClaw port of this skill carries an unrelated, pre-existing
+defect visible in the same diff: the porter rewrites `$ARGUMENTS` to
+the bare phrase `the user's argument`, and Step 1 interpolates it
+inside a single-quoted Python literal — `n = int('the user's
+argument'.strip() or '10')` — which is a syntax error. Filed
+separately as
+[openclaw-porter-arguments-substitution-breaks-single-quoted-python-literals](../openclaw-porter-arguments-substitution-breaks-single-quoted-python-literals/);
+it lives in `scripts/port_skills_to_openclaw.py`, not in this skill
+body.

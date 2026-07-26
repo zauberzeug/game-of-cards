@@ -1,9 +1,14 @@
-"""Prove the `retrospective` skill's closure queries hide non-`done` closures.
+"""Prove the `retrospective` skill's closure queries reach every terminal status.
 
-Builds a throwaway deck with one closure of each terminal status
-(`done`, `disproved`, `superseded`), then runs the exact query the
-skill's Context block / Step 1 / Step 5 use (`goc --status done --json`)
-against it and compares the population to the engine's own terminal set.
+Builds a throwaway deck holding one closure of each terminal status
+(`done`, `disproved`, `superseded`), then extracts the `goc ... --json`
+invocations the skill body actually prescribes, runs each one against
+that deck, and checks the returned population against the engine's own
+`TERMINAL_STATUSES`.
+
+The probe reads the queries out of `SKILL.md` rather than hard-coding
+them, so it stays honest whichever way the skill is fixed — and turns
+red again if a future edit narrows a closure query back to one status.
 
 Exits non-zero while the defect fires.
 """
@@ -12,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -34,8 +40,10 @@ from goc.engine import TERMINAL_STATUSES  # noqa: E402
 
 SKILL = ROOT / "goc" / "templates" / "skills" / "retrospective" / "SKILL.md"
 
-# The three sites in the skill body that gather closure history.
-QUERY_SITES = ("Context block", "Step 1 — Gather recent closures", "Step 5 — Velocity feel")
+# Every `goc <flags> --json` invocation on one line, stopping at the first
+# shell separator so a `; else goc ...` / `| python3` tail is not swallowed.
+# `\b` keeps `_goc-bootstrap.sh` from matching.
+QUERY_RE = re.compile(r"\bgoc ([^|;\n]*?--json)")
 
 
 def _goc(cwd: Path, *args: str) -> str:
@@ -62,81 +70,97 @@ def _author(card_dir: Path) -> None:
     readme.write_text(text)
 
 
+def _build_deck(repo: Path) -> dict[str, str]:
+    subprocess.run(["git", "init", "-q", "."], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "probe@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "probe"], cwd=repo, check=True)
+    (repo / ".game-of-cards" / "deck").mkdir(parents=True)
+    (repo / ".game-of-cards" / "config.yaml").write_text(
+        "auto_commit: false\nclaim_push: false\n"
+    )
+
+    plan = {
+        "probe-done-card": "done",
+        "probe-disproved-card": "disproved",
+        "probe-superseded-card": "superseded",
+    }
+    # `superseded` needs a live successor to point at.
+    for title in (*plan, "probe-successor-card"):
+        _goc(repo, "new", title, "--contribution", "medium", "--tag", "bug")
+        _author(repo / ".game-of-cards" / "deck" / title)
+
+    _goc(repo, "done", "probe-done-card")
+    _goc(repo, "status", "probe-disproved-card", "disproved")
+    _goc(
+        repo, "status", "probe-superseded-card", "superseded",
+        "--by", "probe-successor-card",
+    )
+    return plan
+
+
 def main() -> int:
+    body = SKILL.read_text()
+    queries = [m.group(1).split() for m in QUERY_RE.finditer(body)]
+    # The Context block emits the bootstrap and bare-`goc` branches of the
+    # same query; dedupe so each distinct query is reported once.
+    unique: list[list[str]] = []
+    for q in queries:
+        if q not in unique:
+            unique.append(q)
+
+    print("engine TERMINAL_STATUSES :", ", ".join(sorted(TERMINAL_STATUSES)))
+    print(f"closure queries found in {SKILL.relative_to(ROOT)}: {len(unique)}")
+    if not unique:
+        print()
+        print("[FAIL] no `goc ... --json` closure query found — the probe cannot "
+              "verify a skill body that no longer queries the deck.")
+        return 1
+
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
-        subprocess.run(["git", "init", "-q", "."], cwd=repo, check=True)
-        subprocess.run(["git", "config", "user.email", "probe@example.com"], cwd=repo, check=True)
-        subprocess.run(["git", "config", "user.name", "probe"], cwd=repo, check=True)
-        (repo / ".game-of-cards").mkdir()
-        (repo / ".game-of-cards" / "deck").mkdir()
-        (repo / ".game-of-cards" / "config.yaml").write_text(
-            "auto_commit: false\nclaim_push: false\n"
-        )
+        plan = _build_deck(repo)
 
-        plan = {
-            "probe-done-card": "done",
-            "probe-disproved-card": "disproved",
-            "probe-superseded-card": "superseded",
-        }
-        for title in plan:
-            _goc(repo, "new", title, "--contribution", "medium", "--tag", "bug")
-            _author(repo / ".game-of-cards" / "deck" / title)
-        # `superseded` needs a live successor to point at.
-        _goc(repo, "new", "probe-successor-card", "--contribution", "medium", "--tag", "bug")
-        _author(repo / ".game-of-cards" / "deck" / "probe-successor-card")
-
-        _goc(repo, "done", "probe-done-card")
-        _goc(repo, "status", "probe-disproved-card", "disproved")
-        _goc(
-            repo, "status", "probe-superseded-card", "superseded",
-            "--by", "probe-successor-card",
-        )
-
-        skill_query = json.loads(_goc(repo, "--status", "done", "--json"))
-        every_card = json.loads(_goc(repo, "--status", "all", "--json"))
-        truly_closed = [c for c in every_card if c["status"] in TERMINAL_STATUSES]
-
-        print("engine TERMINAL_STATUSES        :", ", ".join(sorted(TERMINAL_STATUSES)))
-        print("closures written to the deck    :", len(truly_closed))
-        for c in sorted(truly_closed, key=lambda c: c["title"]):
-            print(f"    {c['status']:<11} {c['title']}  closed_at={c['closed_at']}")
-        print()
-        print("`goc --status done --json` yields:", len(skill_query))
-        for c in sorted(skill_query, key=lambda c: c["title"]):
-            print(f"    {c['status']:<11} {c['title']}")
-
-        hidden = sorted(
-            c["title"] for c in truly_closed
-            if c["title"] not in {q["title"] for q in skill_query}
-        )
-        print()
-        print("closures the retrospective cannot see:", len(hidden))
-        for title in hidden:
-            print(f"    {title}")
-
-        body = SKILL.read_text()
-        n_sites = body.count("--status done --json")
-        print()
-        print(f"`--status done --json` occurrences in {SKILL.relative_to(ROOT)}: {n_sites}")
-        print(f"   across {len(QUERY_SITES)} query sites:", "; ".join(QUERY_SITES))
-        print("   (the Context block carries the bootstrap + bare-goc fallback pair)")
-        print(
-            "   contradicted instruction (SKILL.md Step 3): "
-            '"Cards closed with `disproved` or `superseded` — what was wrong?"'
-        )
-
-        if hidden or n_sites:
-            print()
-            print(
-                "[FAIL] the skill's closure queries scope to `done`, so "
-                f"{len(hidden)} of {len(truly_closed)} closures are invisible "
-                "to the retrospective that explicitly asks about them."
+        expected = {t for t, s in plan.items() if s in TERMINAL_STATUSES}
+        failures: list[str] = []
+        for argv in unique:
+            raw = _goc(repo, *argv)
+            try:
+                got = {c["title"] for c in json.loads(raw)}
+            except json.JSONDecodeError:
+                print(f"  goc {' '.join(argv)}  → non-JSON output")
+                failures.append(f"goc {' '.join(argv)}: non-JSON output")
+                continue
+            missing = sorted(expected - got)
+            verdict = "reaches every terminal status" if not missing else (
+                "HIDES " + ", ".join(missing)
             )
-            return 1
+            print(f"  goc {' '.join(argv):<28} → {len(got & expected)}/"
+                  f"{len(expected)} closures · {verdict}")
+            if missing:
+                failures.append(f"goc {' '.join(argv)}: hides {', '.join(missing)}")
+
+    print()
+    print("closures written to the probe deck:", len(expected))
+    for title, status in sorted(plan.items()):
+        print(f"    {status:<11} {title}")
+    print()
+    print("Step 3 of the skill asks: \"Cards closed with `disproved` or "
+          "`superseded` — what was wrong?\"")
+
+    if failures:
         print()
-        print("[OK] every terminal closure is reachable from the skill's queries.")
-        return 0
+        for f in failures:
+            print("  ", f)
+        print(
+            f"[FAIL] {len(failures)} of {len(unique)} closure queries scope "
+            "below the engine's terminal set, so the population Step 3 asks "
+            "about never reaches the analysis."
+        )
+        return 1
+    print()
+    print("[OK] every closure query in the skill body reaches all "
+          f"{len(TERMINAL_STATUSES)} terminal statuses.")
+    return 0
 
 
 if __name__ == "__main__":

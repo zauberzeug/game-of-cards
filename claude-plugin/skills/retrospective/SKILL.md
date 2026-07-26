@@ -14,7 +14,7 @@ If any `!` block below shows `goc: command not found`, `Permission for this acti
 
 ## Context
 
-!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status done --json; else goc --status done --json; fi 2>&1 | head -100`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --closed-since 90d --json; else goc --closed-since 90d --json; fi 2>&1 | head -100`
 
 # Retrospective
 
@@ -34,17 +34,25 @@ N = $ARGUMENTS (default 10 if not provided).
 
 ## Step 1 — Gather recent closures
 
+A closure is any card in a **terminal status** — `done`, `disproved`,
+*or* `superseded`. `--status done` would hide the last two, which are
+the very cards Step 3 asks about, so scope to `all` and narrow on the
+terminal set. (Draft scaffolds ride along under `--status all` but
+carry `closed_at: null`, so the closure filter drops them.)
+
 ```bash
-# Read the last N done cards sorted by closed_at
-goc --status done --json 2>/dev/null | \
+# Read the last N closed cards (every terminal status) sorted by closed_at
+goc --status all --json 2>/dev/null | \
   python3 -c "
 import json, sys
+TERMINAL = {'done', 'disproved', 'superseded'}
 cards = json.load(sys.stdin)
-closed = [c for c in cards if c.get('closed_at')]
+closed = [c for c in cards if c.get('closed_at') and c.get('status') in TERMINAL]
 closed.sort(key=lambda c: c.get('closed_at', ''), reverse=True)
 n = int('$ARGUMENTS'.strip() or '10')
 for c in closed[:n]:
     print(json.dumps({'title': c['title'], 'closed_at': c['closed_at'],
+                      'status': c.get('status'),
                       'tags': c.get('tags', []), 'contribution': c.get('contribution'),
                       'summary': (c.get('summary') or '')[:80]}))
 " 2>/dev/null || true
@@ -75,7 +83,8 @@ Tags with only 1 card get a single `[<tag>] 1 card` line, no detail.
 
 Read the closure entries in `log.md` for each card. Look for:
 
-- Cards closed with `disproved` or `superseded` — what was wrong?
+- Cards closed with `disproved` or `superseded` (the `status` field on
+  each Step 1 line) — what was wrong?
 - Cards whose `log.md` mentions rework, revert, or "fixed incidentally".
 - Cards that carried a `waiting_on` overlay (check `log.md` for the wait being set/cleared) before closing — a long-running wait often signals an under-explored dependency or coordination gap.
 - Cards whose DoD had many unchecked items at closure (if the log notes this).
@@ -116,14 +125,17 @@ worth pursuing.
 Count cards closed in the last 7 days, 14 days, and 30 days:
 
 ```bash
-goc --status done --json 2>/dev/null | \
+goc --status all --json 2>/dev/null | \
   python3 -c "
 import json, sys
 from datetime import date, timedelta
+TERMINAL = {'done', 'disproved', 'superseded'}
 cards = json.load(sys.stdin)
 today = date.today()
 counts = {7: 0, 14: 0, 30: 0}
 for c in cards:
+    if c.get('status') not in TERMINAL:
+        continue
     cd = c.get('closed_at', '')[:10]
     if not cd:
         continue
