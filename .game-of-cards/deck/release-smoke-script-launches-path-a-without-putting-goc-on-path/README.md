@@ -1,7 +1,7 @@
 ---
 title: release-smoke-script-launches-path-a-without-putting-goc-on-path
 summary: "`scripts/smoke_release.sh` Path A installs the `goc` CLI with `uv tool install` but never adds uv's tool-bin directory to `PATH` and never checks that `goc` resolves, while the prompt it then sends asserts \"goc is on PATH and Bash(goc:*) is allowed\". The CI job it mirrors adds `$HOME/.local/bin` to `PATH` explicitly. On any machine where uv's bin directory is not already on `PATH`, Path A burns a 30-turn LLM run and then fails with \"FAIL Path A: deck dir not created\", blaming the plugin payload for a harness gap."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-26T07:19:27Z"
@@ -11,13 +11,13 @@ advances:
   - local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job
 advanced_by: []
 tags: [bug, infra]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — Path A either extends `PATH` to uv's tool-bin directory or fails fast when `goc` does not resolve
   - [ ] TDD: a regression test asserts `scripts/smoke_release.sh` cannot launch Path A's agent run while asserting a `goc`-on-`PATH` premise it has not established
   - [ ] MECHANICAL: the fix reuses the script's existing prerequisite-guard idiom (the `command -v claude` block) so a missing `goc` reports an actionable error instead of a 30-turn agent run
   - [ ] PROCESS: cross-referenced from [local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job](../local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job/) as one confirmed instance of the mirror drift
   - [ ] PROCESS: `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # release smoke script launches Path A without putting goc on PATH
