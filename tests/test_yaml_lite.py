@@ -555,6 +555,63 @@ class BareQuoteFlowSplitTest(unittest.TestCase):
         )
 
 
+class BareQuoteFlowCommentTest(unittest.TestCase):
+    """_strip_comment must apply the same node-start gate inside a flow
+    collection that _split_flow carries. A bare apostrophe in an unquoted
+    element is content; treating it as a quote opener leaves quote-mode stuck
+    on to end-of-line, so the trailing ` # comment` is never stripped and the
+    now-unterminated flow value is rejected — dropping the whole card from
+    every deck view. Regression for
+    card-with-apostrophe-and-inline-comment-in-worker-vanishes-from-the-deck."""
+
+    def test_flow_mapping_with_bare_apostrophe_still_strips_comment(self):
+        self.assertEqual(
+            safe_load("worker: {who: o'connor, where: main} # temp owner\n")["worker"],
+            {"who": "o'connor", "where": "main"},
+        )
+
+    def test_flow_sequence_with_bare_apostrophe_still_strips_comment(self):
+        self.assertEqual(
+            safe_load("s: [a'b, c] # note\n")["s"],
+            ["a'b", "c"],
+        )
+
+    def test_card_frontmatter_with_apostrophe_worker_and_comment_parses(self):
+        # The reachability path: hand-authored frontmatter. Before the fix this
+        # raised FrontmatterError, load_card downgraded it to a WARNING, and the
+        # card silently vanished from the queue, board, triage and validate.
+        from goc import engine as e
+
+        text = (
+            "---\n"
+            "title: t\n"
+            "status: open\n"
+            "tags: [infra]\n"
+            "worker: {who: o'brien, where: main} # until Friday\n"
+            "---\n"
+            "\n# t\n"
+        )
+        self.assertEqual(
+            e.parse_frontmatter(text)[0]["worker"],
+            {"who": "o'brien", "where": "main"},
+        )
+
+    def test_hash_inside_quoted_flow_element_still_content(self):
+        # Guard: the node-start gate must not resurrect the truncation fixed by
+        # yaml-lite-truncates-flow-collection-with-hash-in-quoted-element.
+        self.assertEqual(safe_load('t: ["a # b", c]\n')["t"], ["a # b", "c"])
+        self.assertEqual(safe_load('t: ["a]b # x", c]\n')["t"], ["a]b # x", "c"])
+
+    def test_doubled_single_quote_escape_in_bare_scalar_still_content(self):
+        # Guard: the bare-quoted-scalar arm stays ungated, so a `''` escape may
+        # legally re-open quote mode and the `#` inside stays content.
+        self.assertEqual(safe_load("k: 'don''t # x'\n")["k"], "don't # x")
+
+    def test_bare_value_apostrophe_still_strips_comment(self):
+        # Guard: a non-flow, non-quoted value is unaffected by the gate.
+        self.assertEqual(safe_load("title: don't  # note\n")["title"], "don't")
+
+
 class DoubleQuotedUnrecognizedEscapeTest(unittest.TestCase):
     """_parse_double_quoted must fail loud on an escape it does not decode,
     not silently drop the backslash. Regression for

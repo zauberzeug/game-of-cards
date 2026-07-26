@@ -1,21 +1,21 @@
 ---
 title: card-with-apostrophe-and-inline-comment-in-worker-vanishes-from-the-deck
 summary: "yaml-lite's `_strip_comment` gates quote-mode entry on a node-start position only for bare quoted scalars, not for flow collections — so a bare apostrophe inside an unquoted flow element (`worker: {who: o'connor, ...}`) opens a quote run that never closes and suppresses trailing-comment detection. The unstripped ` # comment` then trips the flow-mapping trailing-content guard, so the whole card drops out of every deck view with a parse error that misleadingly blames a missing space."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-26T10:00:51Z"
-closed_at: null
+closed_at: "2026-07-26T10:07:57Z"
 human_gate: none
 advances:
   - yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting
 advanced_by: []
 tags: [bug, api-contract, infra, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `worker: {who: o'connor, where: main} # temp owner` parses to `{'who': "o'connor", 'where': 'main'}` and the card stays readable.
-  - [ ] TDD: regression — the five behaviours the earlier sibling fixes established still hold (bare-scalar comment stripping, a `#` inside a balanced double-quoted scalar, a `#` and a `]` inside a quoted flow element, and a doubled `''` escape inside a single-quoted scalar).
-  - [ ] MECHANICAL: `_strip_comment` enters quote-mode inside a flow collection only at a node-start position (start, after `,`/`:`/`[`/`{`), matching the gate `_split_flow` already carries; the node-start tuple is defined once instead of twice.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (vendored parser mirrored into the three plugin payloads).
+  - [x] TDD: `reproduce.py` exits zero — `worker: {who: o'connor, where: main} # temp owner` parses to `{'who': "o'connor", 'where': 'main'}` and the card stays readable.
+  - [x] TDD: regression — the five behaviours the earlier sibling fixes established still hold (bare-scalar comment stripping, a `#` inside a balanced double-quoted scalar, a `#` and a `]` inside a quoted flow element, and a doubled `''` escape inside a single-quoted scalar).
+  - [x] MECHANICAL: `_strip_comment` enters quote-mode inside a flow collection only at a node-start position (start, after `,`/`:`/`[`/`{`), matching the gate `_split_flow` already carries; the node-start tuple is defined once instead of twice.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (vendored parser mirrored into the three plugin payloads).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -23,7 +23,8 @@ worker: {who: "claude[bot]", where: main}
 
 ## Location
 
-`goc/_vendor/yaml_lite.py:559` — the quote-entry arm of `_strip_comment`.
+`goc/_vendor/yaml_lite.py:562` (pre-fix) — the quote-entry arm of
+`_strip_comment`. Fixed; now `yaml_lite.py:575`.
 
 ## What's broken
 
@@ -116,6 +117,23 @@ beta-card   open    low       1.0  decision  bug   0/1
 Note the control line: the *identical* `worker` value parses correctly
 without the comment. Only the combination fails.
 
+After the fix, the same script exits zero — the defect case now matches
+the control, and all six regression guards hold:
+
+```
+control  (no comment):  worker={'who': "o'connor", 'where': 'main'}
+defect   (+ comment):  worker={'who': "o'connor", 'where': 'main'}
+card     parse:        worker={'who': "o'connor", 'where': 'main'}
+regress  bare scalar comment      -> "don't" ok
+regress  quoted scalar keeps "#"  -> 'x " y # z' ok
+regress  flow seq + comment       -> ['bug', 'infra'] ok
+regress  flow "#" in quoted elem  -> ['a # b', 'c'] ok
+regress  flow ']' in quoted elem  -> ['a]b # x', 'c'] ok
+regress  doubled '' in quoted     -> "don't # x" ok
+
+failures: 0
+```
+
 ## Why it matters
 
 The reachability path is hand-authored frontmatter, which is a
@@ -146,14 +164,12 @@ arm away from the next silent round-trip-corruption bug."* This card
 fixes the live arm; the generalization still owns the refactor that
 would stop arm #8.
 
-## Fix
+## Fix (landed)
 
-In `_strip_comment` (`goc/_vendor/yaml_lite.py:528`), track `prev` — the
+`_strip_comment` (`goc/_vendor/yaml_lite.py:531`) now tracks `prev` — the
 last significant character seen outside quotes — the way `_split_flow`
-already does, and gate the *flow* quote-entry on it. Leave the `quoted`
-half ungated: a bare quoted scalar opens its quote at index 0, where
-`prev` is `""`, and re-opening after the closing quote is what keeps a
-doubled `''` escape working.
+already does, and gates the *flow* quote-entry on it
+(`yaml_lite.py:575`):
 
 ```python
         elif c in ('"', "'") and (quoted or (flow and prev in _FLOW_NODE_START)):
@@ -161,20 +177,29 @@ doubled `''` escape working.
             prev = c
 ```
 
-Hoist the node-start tuple to a module-level `_FLOW_NODE_START` so the
-two scanners read it from one place instead of each spelling it out.
-That is a shared *constant*, not the shared *stepping primitive* the
-generalization card is gated on — it does not preempt that decision.
+The `quoted` half stays ungated on purpose: a bare quoted scalar opens
+its quote at index 0 and may legally re-open right after a close, which
+is what keeps the doubled `''` escape in `'don''t # x'` working.
+
+The node-start tuple moved to a module-level `_FLOW_NODE_START`
+(`yaml_lite.py:452`) so the two scanners read it from one place instead
+of each spelling it out. That is a shared *constant*, not the shared
+*stepping primitive* the generalization card is gated on — it does not
+preempt that decision.
 
 Bracket depth already prevents a `#` inside a flow collection from
-being read as a comment, so the gate cannot resurrect the truncation
+being read as a comment, so the gate did not resurrect the truncation
 [yaml-lite-truncates-flow-collection-with-hash-in-quoted-element](../yaml-lite-truncates-flow-collection-with-hash-in-quoted-element/)
-fixed; `reproduce.py` pins that case, the `]`-inside-a-quoted-element
-case, and the doubled-`''` case as regressions.
+fixed; `reproduce.py` and `tests/test_yaml_lite.py`
+(`BareQuoteFlowCommentTest`) pin that case, the
+`]`-inside-a-quoted-element case, the doubled-`''` case, and the
+bare-value case as regressions. The parser is mirrored into
+`claude-plugin/goc/`, `codex-plugin/goc/` and `openclaw-plugin/goc/` by
+`scripts/sync_plugin_assets.py`.
 
 ### Out of scope
 
-`_split_key` (`yaml_lite.py:505`) has the same ungated quote entry, so a
+`_split_key` (`yaml_lite.py:508`) has the same ungated quote entry, so a
 mapping key containing an apostrophe (`don't: value`) is rejected as
 "not a valid 'key: value' mapping entry". It is not filed separately
 because it has no reachable path in `goc`: frontmatter keys are
