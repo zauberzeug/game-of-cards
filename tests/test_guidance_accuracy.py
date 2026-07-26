@@ -98,6 +98,29 @@ class AgentsArchitectureAccuracyTest(unittest.TestCase):
         )
 
 
+# Comments that tell an editor where to re-derive a mirrored CLI surface must
+# name the framework goc actually uses. The package dropped Click for argparse,
+# so a lingering `click` mention sends that editor grepping for a command group
+# the repo does not contain.
+_CLI_FRAMEWORK_POINTER_FILES = [
+    ROOT / "openclaw-plugin" / "index.ts",
+]
+
+
+class CliFrameworkPointerAccuracyTest(unittest.TestCase):
+    def test_mirror_comments_do_not_name_click(self) -> None:
+        for path in _CLI_FRAMEWORK_POINTER_FILES:
+            self.assertNotRegex(
+                path.read_text(encoding="utf-8"),
+                re.compile(r"click", re.IGNORECASE),
+                msg=(
+                    f"{path.relative_to(ROOT)} names Click as goc's CLI framework; "
+                    "the engine builds its subparsers with argparse in "
+                    "`_build_parser` (goc/engine.py)."
+                ),
+            )
+
+
 def _board_legend_row(path: Path) -> str:
     """Return the `goc --board` legend row from a deck SKILL.md table."""
     for line in path.read_text().splitlines():

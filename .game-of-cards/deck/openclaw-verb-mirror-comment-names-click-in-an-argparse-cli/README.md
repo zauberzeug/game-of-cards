@@ -1,19 +1,20 @@
 ---
 title: openclaw-verb-mirror-comment-names-click-in-an-argparse-cli
 summary: "`openclaw-plugin/index.ts:44` introduces the GOC_VERBS mirror contract with \"Mirrors the click subparser surface in goc/cli.py\" while the very next line says \"The argparse `commands` field is the source of truth.\" GoC has never used click. The contradiction sits on the comment whose only job is telling future editors where to re-sync the verb list from."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-07-26T08:09:35Z"
-closed_at: null
+closed_at: "2026-07-26T08:20:14Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: the comment at `openclaw-plugin/index.ts:44` names one framework, and it is argparse — a reader grepping the repo for the named framework finds the parser it points at.
-  - [ ] MECHANICAL: `openclaw-plugin/dist/index.js` + `index.js.map` are rebuilt (`cd openclaw-plugin && npm ci && npm run build`) and committed alongside the source edit, so the committed bundle still corresponds to its source.
-  - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` and `uv run python -m unittest discover -s tests` stay green.
+  - [x] MECHANICAL: the comment at `openclaw-plugin/index.ts:44` names one framework, and it is argparse — a reader grepping the repo for the named framework finds the parser it points at.
+  - [x] MECHANICAL: `openclaw-plugin/dist/index.js` + `index.js.map` are rebuilt (`cd openclaw-plugin && npm ci && npm run build`) and committed alongside the source edit, so the committed bundle still corresponds to its source.
+  - [x] PROCESS: `python scripts/sync_plugin_assets.py --check` and `uv run python -m unittest discover -s tests` stay green.
+  - [x] TDD (added at closure): a regression guard keeps the comment honest — `tests/test_guidance_accuracy.py::CliFrameworkPointerAccuracyTest` is red on the pre-fix `index.ts` and green after. The original DoD made the naming a one-time edit; the repo's existing doc-accuracy-guard family makes it enforceable for the same few lines.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -60,17 +61,39 @@ engine — see the closed
 [`openclaw-plugin-goc-tool-cannot-call-wait-or-repair-edges-verbs`](../openclaw-plugin-goc-tool-cannot-call-wait-or-repair-edges-verbs/)
 — so the instruction being followable is not cosmetic.
 
-## Fix
+## Fix (applied)
 
-Drop `click` from the first sentence: "Mirrors the argparse subparser surface
-in `goc/cli.py` — keep in sync when new verbs land. `engine._build_parser` is
-the source of truth."
+The comment names argparse only, and points at the parser it actually mirrors:
 
-**Not a one-line change in practice.** `openclaw-plugin/dist/index.js` is a
-committed build artifact and the file the OpenClaw runtime actually loads, so
-any `index.ts` edit obliges `npm ci && npm run build` and a commit of the
-regenerated bundle. Nothing in the repo enforces that today — see
-[`openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry`](../openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry/).
-Whoever claims this card needs Node and network available; a session without
-them should leave the card open rather than land a source edit with a stale
-`dist/`.
+```ts
+// Mirrors the argparse subparser surface that `_build_parser` registers in
+// goc/engine.py (goc/cli.py wires that parser up) — keep in sync if new verbs
+// land. That parser is the source of truth; the drift guard in
+// tests/test_plugin_mirror_parity.py fails the build on any mismatch.
+```
+
+Dropping `click` was only half of it: the second sentence's pointer was
+unresolvable too. There is no argparse `commands` field — the subparsers
+register under `dest="command"` (`goc/engine.py:3463`), and the list an editor
+must re-derive `GOC_VERBS` from is `_build_parser` (`goc/engine.py:3404`).
+Both halves now resolve to real code, and naming the existing drift guard
+(`tests/test_plugin_mirror_parity.py::OpenClawToolVerbSurfaceTest`) tells the
+editor the mirror contract is machine-enforced rather than honour-system.
+
+A guard for the comment itself was added alongside:
+`tests/test_guidance_accuracy.py::CliFrameworkPointerAccuracyTest` asserts
+`openclaw-plugin/index.ts` never names Click. It is red on the pre-fix file
+(`git show HEAD~1:openclaw-plugin/index.ts` matches `/click/i` at line 44) and
+green after.
+
+### Rebuild outcome
+
+`npm ci && npm run build` regenerated the bundle. `dist/index.js` came back
+**byte-identical** — esbuild strips comments, so a comment-only source edit
+never reaches the bundle — and only `dist/index.js.map` changed, because the
+sourcemap embeds the original TypeScript in `sourcesContent`. The committed
+bundle therefore still corresponds to its source. The general absence of a
+build-drift guard remains tracked by
+[`openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry`](../openclaw-plugin-compiled-dist-drifts-silently-from-its-typescript-entry/);
+this session confirmed the toolchain is reproducible — `npm ci` on a clean
+checkout rebuilt the committed `dist/` with no diff before any source edit.

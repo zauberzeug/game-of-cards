@@ -41,8 +41,10 @@ const COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = resolve(COMPILED_DIR, "..");
 const VENDORED_GOC_PATH = PLUGIN_ROOT;
 
-// Mirrors the click subparser surface in goc/cli.py — keep in sync if new
-// verbs land. The argparse `commands` field is the source of truth.
+// Mirrors the argparse subparser surface that `_build_parser` registers in
+// goc/engine.py (goc/cli.py wires that parser up) — keep in sync if new verbs
+// land. That parser is the source of truth; the drift guard in
+// tests/test_plugin_mirror_parity.py fails the build on any mismatch.
 const GOC_VERBS = [
   "validate",
   "quality-pass",
