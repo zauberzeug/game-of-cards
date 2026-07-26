@@ -1,7 +1,7 @@
 ---
 title: retrospective-status-done-queries-hide-disproved-and-superseded-closures
 summary: "The retrospective skill gathers closure history with `goc --status done --json` at all three of its query sites, so `disproved` and `superseded` cards are structurally invisible to it — even though its own Step 3 instructs the agent to look for \"Cards closed with disproved or superseded\". On this deck that hides 13 of 495 closures and under-reports the 30-day velocity line as 67 instead of 69. The retro's most diagnostic population — the hypotheses that turned out wrong — never reaches the analysis."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-26T12:44:16Z"
@@ -10,7 +10,6 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — every terminal closure is reachable from the skill's closure queries
   - [ ] TDD: a regression test asserts no closure-gathering site in `goc/templates/skills/retrospective/SKILL.md` scopes to `--status done`, and that the terminal-status set it filters on is read from `engine.TERMINAL_STATUSES` rather than hand-listed
@@ -18,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `deck/SKILL.md`'s "Recently closed cards" verb row no longer advertises a `done`-only command under a closure-wide label (`deck/SKILL.md` has ~90 bytes of headroom under its 10,000-byte cap in `tests/test_skill_body_size.py` — keep the edit inside it)
   - [ ] MECHANICAL: the five mirrors of `retrospective/SKILL.md` are back in sync — four via `python scripts/sync_plugin_assets.py`, the OpenClaw port via `python3 scripts/port_skills_to_openclaw.py`
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green and `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # retrospective-status-done-queries-hide-disproved-and-superseded-closures
