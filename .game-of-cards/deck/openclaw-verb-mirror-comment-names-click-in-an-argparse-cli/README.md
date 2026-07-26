@@ -1,7 +1,7 @@
 ---
 title: openclaw-verb-mirror-comment-names-click-in-an-argparse-cli
 summary: "`openclaw-plugin/index.ts:44` introduces the GOC_VERBS mirror contract with \"Mirrors the click subparser surface in goc/cli.py\" while the very next line says \"The argparse `commands` field is the source of truth.\" GoC has never used click. The contradiction sits on the comment whose only job is telling future editors where to re-sync the verb list from."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-26T08:09:35Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the comment at `openclaw-plugin/index.ts:44` names one framework, and it is argparse — a reader grepping the repo for the named framework finds the parser it points at.
   - [ ] MECHANICAL: `openclaw-plugin/dist/index.js` + `index.js.map` are rebuilt (`cd openclaw-plugin && npm ci && npm run build`) and committed alongside the source edit, so the committed bundle still corresponds to its source.
   - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` and `uv run python -m unittest discover -s tests` stay green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The OpenClaw verb-mirror comment names click in a CLI that uses argparse
