@@ -1,7 +1,7 @@
 ---
 title: stage-filter-rejects-hyphenated-stage-values-its-own-error-lists-as-valid
 summary: "`parse_stage_filter` (goc/engine.py:2738) tests `\"-\" in stage_flag` BEFORE exact-membership, so any stage enum value containing a hyphen is unconditionally parsed as a range and rejected — while the rejection message lists that very value among the valid choices. Latent on the shipped enum ([null, alpha, beta, stable], no hyphens); reachable the moment stage_values becomes project-configurable, which is the subject of the open support-custom-card-workflows-and-statuses story."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-26T19:13:51Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: range parsing still works — `--stage alpha-stable` returns the inclusive span, and an unknown `--stage nope-alpha` still exits 2
   - [ ] MECHANICAL: `parse_stage_filter` tests exact membership in `STAGE_ORDER` before the `"-" in stage_flag` range branch
   - [ ] PROCESS: `uv run goc validate` passes and the regression suite stays green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `--stage` rejects a hyphenated stage value while listing it as valid
