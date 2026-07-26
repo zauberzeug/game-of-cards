@@ -42,6 +42,15 @@ contradicted both `AGENTS.md` and the tree they describe.
 **FIXED** — all seven claims rewritten in `goc.md`; six derive-from-the-tree
 guards added to `tests/test_guidance_accuracy.py`. See `## Fix applied`.
 
+**Generalization:** this was the sixth instance of one shape — a doc claim
+restating tree state with no guard, found only after it had already rotted. The
+architectural card is
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+(`human_gate: decision` — it needs a scope pick between sweep-once, a
+shape-level lint, generating the volatile bullets, and a promise-expiry guard).
+No `advances` edge: that card closes on its own deliverable, so it is a
+governing cluster, not an aggregation epic.
+
 ## Location
 
 `goc.md` — `## Claude Code plugin` and `## OpenClaw plugin`.

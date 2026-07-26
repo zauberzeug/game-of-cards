@@ -41,3 +41,26 @@ the correction propagates on the next Pages build with no second edit.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-07-26 — Closure' present
+
+## 2026-07-26T07:49:00Z — Generalization filed (post-close)
+
+Stop-hook pattern check on the closing turn asked whether the change touched a
+pattern with broader applicability. It did. Deduped against the deck first: no
+root card existed for the shape, so one was filed rather than duplicated.
+
+- **Shape**: a prose doc restates a fact the tree already knows; no guard exists;
+  the claim is found only after it has already rotted. The fix each time is a
+  bespoke derive-from-tree guard in `tests/test_guidance_accuracy.py`.
+- **Instance count**: 6 (this card is the sixth) — past `Skill(audit-deck)`'s
+  four-instance threshold for filing the architectural meta-fix instead.
+- **Filed**: `doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them`
+  at `human_gate: decision`, with a `## Decision required` section offering four
+  scoped options. Not worked in this session — `Skill(pull-card)` excludes
+  meta-fix families from fix-through ("Four instances of one shape is a
+  deliberate decision — file it, don't inline it").
+- **Connected by cross-reference, not an edge**: the new card closes on its own
+  deliverable, making it a governing cluster rather than an aggregation epic, so
+  per `Skill(card-schema)` it takes a shared reference and no `advances` link.
+  Its body links all six instances; this card links forward to it.
+- **Not deduped into**: the "X reimplements Y and keeps drifting" family is code
+  duplicating code — a different axis from prose restating tree state.
