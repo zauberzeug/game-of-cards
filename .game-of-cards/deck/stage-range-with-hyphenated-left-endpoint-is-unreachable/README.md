@@ -1,7 +1,7 @@
 ---
 title: stage-range-with-hyphenated-left-endpoint-is-unreachable
 summary: "`parse_stage_filter` splits a `--stage a-b` range on the FIRST hyphen (`goc/engine.py:2745`), so a span whose left endpoint is itself a hyphenated stage value cannot be spelled: `pre-alpha-stable` reads as (`pre`, `alpha-stable`) and exits 2, while the mirror span `null-pre-alpha` works because the hyphenated value happens to land in the right half. Latent on the shipped hyphen-free enum; reachable via the same path as its already-fixed sibling — project-supplied `stage_values`."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-26T21:39:32Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: an argument with no valid split still exits 2 (`nope-alpha`, `alpha-nope`), and an argument with two or more valid splits exits 2 naming the ambiguity rather than silently picking one
   - [ ] MECHANICAL: the range branch resolves its split position against `STAGE_ORDER` instead of hardcoding `split("-", 1)`
   - [ ] PROCESS: `uv run goc validate` passes and the regression suite stays green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # A `--stage` range whose left endpoint is hyphenated cannot be spelled
