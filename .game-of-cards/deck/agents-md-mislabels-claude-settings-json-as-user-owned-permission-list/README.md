@@ -1,20 +1,21 @@
 ---
 title: agents-md-mislabels-claude-settings-json-as-user-owned-permission-list
 summary: "AGENTS.md's dogfood-sync section calls `.claude/settings.json` a \"project-specific permission allow-list\" that is \"meant to be customized per repo\", grouping it with the user-owned `.game-of-cards/` content stubs. goc never reads or writes a `permissions` key anywhere (zero matches in install.py/engine.py); the file is the Claude Code hook-registration manifest that `goc install`/`goc upgrade` merge GOC_CLAUDE_HOOKS entries into and that the plugin-mode cleanup strips them back out of. AGENTS.md's own skills_source table contradicts line 202 by stating plugin mode is the case where upgrade does NOT write GoC entries in that file."
-status: open
+status: done
 stage: null
 contribution: high
 created: "2026-07-26T19:06:59Z"
-closed_at: null
+closed_at: "2026-07-26T19:12:39Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — AGENTS.md no longer calls `.claude/settings.json` a "project-specific permission allow-list"
-  - [ ] TDD: a guard in `tests/test_guidance_accuracy.py` fails if any guidance surface describes `.claude/settings.json` as a permission allow-list, or claims goc writes a `permissions` key
-  - [ ] MECHANICAL: the AGENTS.md dogfood-sync paragraph names the file for what it is (the Claude Code hook-registration manifest `goc install`/`goc upgrade` merge `GOC_CLAUDE_HOOKS` entries into, and plugin-mode cleanup strips them from) and says why it is out of the byte-mirror sync (it is a *merge* target, not a mirrored file)
-  - [ ] PROCESS: `uv run goc validate` passes and the regression suite stays green
+  - [x] TDD: `reproduce.py` exits zero — AGENTS.md no longer calls `.claude/settings.json` a "project-specific permission allow-list"
+  - [x] TDD: a guard in `tests/test_guidance_accuracy.py` fails if any guidance surface describes `.claude/settings.json` as a permission allow-list, or claims goc writes a `permissions` key
+  - [x] MECHANICAL: the AGENTS.md dogfood-sync paragraph names the file for what it is (the Claude Code hook-registration manifest `goc install`/`goc upgrade` merge `GOC_CLAUDE_HOOKS` entries into, and plugin-mode cleanup strips them from) and says why it is out of the byte-mirror sync (it is a *merge* target, not a mirrored file)
+  - [x] PROCESS: `uv run goc validate` passes and the regression suite stays green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # AGENTS.md calls `.claude/settings.json` a per-repo permission allow-list; goc writes hook registrations into it
@@ -77,14 +78,10 @@ the six `.game-of-cards/` stubs it is grouped with.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/agents-md-mislabels-claude-settings-json-as-user-owned-permission-list/reproduce.py`:
+Before the fix, `reproduce.py` exited 1 on check 1 — AGENTS.md:202 carried
+the mislabel — while checks 2–4 established the ground truth it contradicted:
 
 ```
-=== 1. AGENTS.md claim ===
-AGENTS.md:202: `.claude/settings.json` (project-specific permission allow-list)
-  ...grouped with the user-owned `.game-of-cards/` content stubs as
-  "NOT in the auto-sync — they're meant to be customized per repo".
-
 === 2. `permissions` occurrences in the engine ===
 goc/install.py: 0
 goc/engine.py: 0
@@ -105,7 +102,13 @@ goc/install.py:830: for cmd in GOC_CLAUDE_HOOKS.values():
 events registered by goc: ['SessionStart', 'Stop', 'UserPromptSubmit']
 ```
 
-Exit 1.
+After the fix it exits 0: `PASS: AGENTS.md describes .claude/settings.json
+accurately`.
+
+The guard was checked against the pre-fix text rather than assumed to bite:
+with `AGENTS.md` reverted to `b8f146c3` in a scratch worktree,
+`ClaudeSettingsOwnershipAccuracyTest` reports 2 failures (the allow-list
+phrase, and the missing hook-registration-manifest paragraph) and 0 errors.
 
 ## Why it matters
 
@@ -137,16 +140,32 @@ and
 audit the merge *behavior*; this card fixes the doc that misdescribes who
 owns the file.
 
-## Fix
+## Fix (applied)
 
-Rewrite `AGENTS.md:201-207` so the two exclusions are described by their
-real reasons — the `.game-of-cards/` stubs because they are user-owned
-content, `.claude/settings.json` because it is a merge target whose GoC
-`hooks` entries come from `GOC_CLAUDE_HOOKS` and must be changed there.
-Drop "project-specific permission allow-list".
+`AGENTS.md` — the one paragraph now splits the two exclusions by their real
+reasons instead of lumping them together: the `.game-of-cards/` stubs are
+**user-owned** (nothing regenerates them), while `.claude/settings.json` is
+the Claude Code **hook-registration manifest**, excluded because it is a
+*merge* target rather than a mirrored file. It states the shared-ownership
+rule explicitly — `hooks` entries matching `GOC_CLAUDE_HOOKS` are goc-owned
+and are changed in `goc/install.py`, with `goc validate` enforcing the
+parity; any other key the repo adds is the repo's. The final sentence
+records that goc writes no `permissions` block and points at
+`Skill(claude-kickoff)` for the `Bash(goc:*)` grant, which is a human step.
 
-Then add a guard to `tests/test_guidance_accuracy.py` (alongside the
-existing `AgentsArchitectureAccuracyTest` / `GocMdPluginReferenceAccuracyTest`
-classes) asserting that no guidance surface calls the file a permission
-allow-list and that `goc/install.py` + `goc/engine.py` stay free of a
-`permissions` key — so the claim and the code cannot drift apart again.
+`tests/test_guidance_accuracy.py` — new `ClaudeSettingsOwnershipAccuracyTest`
+with three guards:
+
+1. `test_no_doc_calls_settings_json_a_permission_allow_list` — scans
+   `AGENTS.md`, `goc.md` and `CONTRIBUTING.md` (the surfaces that tell a
+   reader which files are hand-editable) for "permission allow-list" /
+   "allowlist" within 120 characters of `.claude/settings.json`, on
+   whitespace-collapsed text so the claim cannot hide behind a line wrap.
+2. `test_engine_writes_no_permissions_key` — asserts `goc/install.py` and
+   `goc/engine.py` stay free of `permissions`. This pins the premise the
+   first guard rests on: if goc ever *does* grow a permissions writer, this
+   fails and forces the docs to be revisited in the same change rather than
+   letting the old claim quietly become true again.
+3. `test_agents_md_names_the_hook_registration_constant` — the corrected
+   paragraph must name both `GOC_CLAUDE_HOOKS` and `goc/install.py`, so a
+   contributor is sent to the real edit site.

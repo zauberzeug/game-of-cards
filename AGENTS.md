@@ -198,10 +198,23 @@ automatically, the same way it already does for `claude-plugin/`,
 `.claude/skills/...` or `.codex/skills/...` is now CI-detectable (it gets
 overwritten by the next pre-commit pass).
 
-The `.game-of-cards/` content stubs (project-local deck README,
-config) and `.claude/settings.json` (project-specific permission
-allow-list) are NOT in the auto-sync — they're meant to be customized
-per repo. The `<!-- BEGIN GOC vX.Y.Z -->` marker in `AGENTS.md` and
+Two kinds of file sit outside that auto-sync, for two different
+reasons. The `.game-of-cards/` content stubs (project-local deck
+README, config) are **user-owned** — they're meant to be customized
+per repo, so nothing regenerates them. `.claude/settings.json` is the
+Claude Code **hook-registration manifest**, and it's excluded because
+it is a *merge* target rather than a mirrored file: `goc install` /
+`goc upgrade` reconcile the `GOC_CLAUDE_HOOKS` entries
+(`goc/install.py`) into whatever the repo already has, and the
+plugin-mode cleanup strips those same entries back out. So its
+ownership is shared — the `hooks` entries whose command matches
+`GOC_CLAUDE_HOOKS` are goc-owned (change them in `goc/install.py`, not
+in `.claude/settings.json`, and `goc validate` enforces the parity);
+any other key the repo adds is yours. goc writes no `permissions`
+block there — the `Bash(goc:*)` grant is a human step, documented in
+`Skill(claude-kickoff)`.
+
+The `<!-- BEGIN GOC vX.Y.Z -->` marker in `AGENTS.md` and
 the `.goc-version` sentinel are rewritten by the release workflow
 (see release section above), so they're also out of scope for the
 pre-commit sync.

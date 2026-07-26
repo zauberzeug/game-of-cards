@@ -415,5 +415,87 @@ class GocMdPluginReferenceAccuracyTest(unittest.TestCase):
         )
 
 
+class ClaudeSettingsOwnershipAccuracyTest(unittest.TestCase):
+    """`.claude/settings.json` is the Claude Code hook-registration manifest that
+    `goc install` / `goc upgrade` merge `GOC_CLAUDE_HOOKS` into (and that the
+    plugin-mode cleanup strips those entries back out of) — a shared-ownership
+    merge target, not a per-repo file goc leaves alone. AGENTS.md used to call it
+    a "project-specific permission allow-list", which is wrong twice over: goc
+    writes no `permissions` key anywhere, and the file is not hands-off. Both
+    guards derive the truth from the tree so the claim cannot rot again."""
+
+    # Every surface that tells a reader which files they may hand-edit.
+    _OWNERSHIP_DOCS = ("AGENTS.md", "goc.md", "CONTRIBUTING.md")
+
+    def test_no_doc_calls_settings_json_a_permission_allow_list(self) -> None:
+        offenders = []
+        for rel in self._OWNERSHIP_DOCS:
+            path = ROOT / rel
+            if not path.exists():
+                continue
+            # Collapse wrapping: the claim spanned three source lines.
+            flat = re.sub(r"\s+", " ", path.read_text())
+            for phrase in ("permission allow-list", "permission allowlist"):
+                if phrase in flat and ".claude/settings.json" in flat:
+                    window = flat[
+                        max(0, flat.index(phrase) - 120) : flat.index(phrase) + 60
+                    ]
+                    if ".claude/settings.json" in window:
+                        offenders.append(f"{rel}: ...{window}...")
+        self.assertFalse(
+            offenders,
+            msg=(
+                "`.claude/settings.json` holds hook registrations, not permissions. "
+                "goc has never written a `permissions` key; describe the file as the "
+                "hook-registration manifest whose GoC entries come from "
+                "GOC_CLAUDE_HOOKS in goc/install.py.\n" + "\n".join(offenders)
+            ),
+        )
+
+    def test_engine_writes_no_permissions_key(self) -> None:
+        """The premise the guard above rests on: if goc ever *does* start writing a
+        permissions block, this test fails and the docs must be revisited together
+        with it — rather than the doc claim silently becoming true again."""
+        for rel in ("goc/install.py", "goc/engine.py"):
+            with self.subTest(module=rel):
+                self.assertNotIn(
+                    "permissions",
+                    (ROOT / rel).read_text(),
+                    msg=(
+                        f"{rel} now references `permissions`. If goc writes a "
+                        f"permission allow-list, update the "
+                        f"`.claude/settings.json` ownership paragraph in AGENTS.md "
+                        f"and relax the guard above in the same change."
+                    ),
+                )
+
+    def test_agents_md_names_the_hook_registration_constant(self) -> None:
+        """The corrected paragraph must point at the real edit site, so a
+        contributor changes `GOC_CLAUDE_HOOKS` instead of the generated file."""
+        flat = re.sub(r"\s+", " ", (ROOT / "AGENTS.md").read_text())
+        anchor = ".claude/settings.json` is the"
+        self.assertIn(
+            anchor,
+            flat,
+            msg=(
+                "AGENTS.md no longer explains what `.claude/settings.json` is. The "
+                "dogfood-sync section must say it is the Claude Code "
+                "hook-registration manifest goc merges GOC_CLAUDE_HOOKS into."
+            ),
+        )
+        start = flat.index(anchor)
+        paragraph = flat[start : start + 900]
+        for expected in ("GOC_CLAUDE_HOOKS", "goc/install.py"):
+            self.assertIn(
+                expected,
+                paragraph,
+                msg=(
+                    f"AGENTS.md's `.claude/settings.json` ownership paragraph no "
+                    f"longer names {expected}; a reader cannot tell where the "
+                    f"hook registrations actually come from."
+                ),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
