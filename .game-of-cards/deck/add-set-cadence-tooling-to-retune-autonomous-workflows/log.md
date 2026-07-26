@@ -52,3 +52,29 @@ Follow-up: the "multi-day intervals rejected" behavior recorded above was
 reversed. `set_cadence.py` now maps `<N>d` (N≥2) to a day-of-month `*/N`
 cron step (roughly every N days, realigning at month boundaries). See
 `support-multi-day-intervals-and-slow-the-autonomous-cadence`.
+
+## 2026-07-26T05:59:56Z — Later evidence: the out-of-scope list grew a third member
+
+`--effort` was added to all three workflows' `claude_args` blocks by
+[run-autonomous-agent-workflows-at-max-effort](../run-autonomous-agent-workflows-at-max-effort/)
+(commit `ef509b45`), joining `--model`, `--permission-mode`, and
+`--max-turns` as hand-synced settings. This card single-sourced the cron line
+(managed `# cadence:` comment, `--show`, multi-schedule guard) and explicitly
+deferred the rest; that deferral is now where four un-guarded settings live.
+
+Two facts worth recording for whoever revisits it:
+
+- A naive "all three files must match" guard would be wrong. `--permission-mode`,
+  `--model`, and `--effort` are fleet-wide and must agree; `--max-turns`
+  deliberately differs (120 pull-card, 200 audit-deck/refine-deck). A guard has
+  to distinguish the two classes.
+- No drift has occurred. Model values were checked across every commit touching
+  these files since 2026-05-09 and have never diverged — `refine-deck.yml` was
+  absent before `870bce3b` and was created already matching the fleet.
+
+Deliberately **not** filed as its own card: the exposure is small, no instance
+has been observed, and the floating `opus` alias reduced the edit frequency
+that would trigger it. Captured here so the decision is discoverable instead of
+being re-litigated on the next `claude_args` change.
+
+No status change: this card stays `done`.

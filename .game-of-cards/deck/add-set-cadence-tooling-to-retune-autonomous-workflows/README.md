@@ -90,6 +90,31 @@ cadence" is a *rewriter*, not runtime config:
 
 - `MAX_ITERATIONS` / the self-trigger drain logic — unchanged.
 - Model selection (`--model opus`) and `--max-turns` — unchanged.
+  > Later evidence (2026-07-26): this deferral is where the
+  > `claude_args` block's un-single-sourced settings accumulate. It has
+  > since grown a third member — `--effort` — added across all three
+  > workflows by
+  > [run-autonomous-agent-workflows-at-max-effort](../run-autonomous-agent-workflows-at-max-effort/),
+  > alongside the model axis most recently changed by
+  > [float-autonomous-workflows-back-to-opus-alias](../float-autonomous-workflows-back-to-opus-alias/).
+  > The cron line got a managed comment, a `--show` query, and a
+  > refuse-on-multi-schedule guard; the four `claude_args` settings got
+  > none of that and are hand-synced across three files on every change.
+  >
+  > A naive "all three must match" parity check would be **wrong**:
+  > `--permission-mode`, `--model`, and `--effort` are meant to be
+  > identical, but `--max-turns` deliberately differs (120 on
+  > `pull-card`, 200 on `audit-deck` / `refine-deck`). Any future guard
+  > has to encode which lines are fleet-wide and which are per-workflow
+  > — which is probably why it was deferred, and is worth stating rather
+  > than rediscovering.
+  >
+  > No drift has actually occurred: model values have stayed consistent
+  > across all six edits since 2026-05-09 (`refine-deck.yml` simply did
+  > not exist before `870bce3b`, and was born matching). Recorded as a
+  > known unguarded invariant, not an open defect — deliberately not
+  > filed as a card, since the exposure is small and the floating `opus`
+  > alias reduced the edit frequency that would trigger it.
 - A *general* goc feature to manage any consumer's autonomous cadence —
   this tooling is repo-local by design; generalizing it is a separate
   card if ever wanted.
