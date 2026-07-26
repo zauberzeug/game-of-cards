@@ -1,7 +1,7 @@
 ---
 title: card-with-apostrophe-and-inline-comment-in-worker-vanishes-from-the-deck
 summary: "yaml-lite's `_strip_comment` gates quote-mode entry on a node-start position only for bare quoted scalars, not for flow collections — so a bare apostrophe inside an unquoted flow element (`worker: {who: o'connor, ...}`) opens a quote run that never closes and suppresses trailing-comment detection. The unstripped ` # comment` then trips the flow-mapping trailing-content guard, so the whole card drops out of every deck view with a parse error that misleadingly blames a missing space."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-26T10:00:51Z"
@@ -11,12 +11,12 @@ advances:
   - yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting
 advanced_by: []
 tags: [bug, api-contract, infra, meta-fix]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — `worker: {who: o'connor, where: main} # temp owner` parses to `{'who': "o'connor", 'where': 'main'}` and the card stays readable.
   - [ ] TDD: regression — the five behaviours the earlier sibling fixes established still hold (bare-scalar comment stripping, a `#` inside a balanced double-quoted scalar, a `#` and a `]` inside a quoted flow element, and a doubled `''` escape inside a single-quoted scalar).
   - [ ] MECHANICAL: `_strip_comment` enters quote-mode inside a flow collection only at a node-start position (start, after `,`/`:`/`[`/`{`), matching the gate `_split_flow` already carries; the node-start tuple is defined once instead of twice.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` green (vendored parser mirrored into the three plugin payloads).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # card-with-apostrophe-and-inline-comment-in-worker-vanishes-from-the-deck
