@@ -1,30 +1,31 @@
 ---
 title: cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships
-summary: "The plugin sections of `goc.md` still describe the pre-0.0.6 payload: skills/hooks as symlinks into `goc/templates/`, 11 Claude skills, 13 OpenClaw skills with `kickoff` omitted, a mandatory \"install the goc CLI first\" prerequisite, and an unguarded `_goc-bootstrap.sh` injection awaiting a `${CLAUDE_SKILL_DIR}` rewrite. Every one of those contradicts AGENTS.md and the tree. The symlink claim is the costly one — it tells contributors that editing `claude-plugin/skills/` edits the template."
-status: active
+summary: "FIXED. The plugin sections of `goc.md` described the pre-0.0.6 payload on seven counts: skills/hooks as symlinks into `goc/templates/`, 11 Claude skills, 13 OpenClaw skills with `kickoff` omitted, two hooks instead of three, a mandatory \"install the goc CLI first\" prerequisite, and an unguarded `_goc-bootstrap.sh` injection awaiting a `${CLAUDE_SKILL_DIR}` rewrite. The symlink claim was the costly one — it told contributors that editing `claude-plugin/skills/` edits the template. All seven rewritten; six derive-from-the-tree guards added to `tests/test_guidance_accuracy.py`."
+status: done
 stage: null
 contribution: high
 created: "2026-07-26T07:34:46Z"
-closed_at: null
+closed_at: "2026-07-26T07:44:39Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — all six claims agree with the tree.
-  - [ ] TDD: `tests/test_guidance_accuracy.py` gains a plugin-reference accuracy
+  - [x] TDD: `reproduce.py` exits zero — all seven claims agree with the tree.
+  - [x] TDD: `tests/test_guidance_accuracy.py` gains a plugin-reference accuracy
     class that DERIVES both skill counts from the live directories (so the
     numbers cannot rot again) and fails on the symlink claim, the
     prior-CLI-install prerequisite, and the `${CLAUDE_SKILL_DIR}` promise.
-  - [ ] MECHANICAL: `goc.md`'s symlink sentence replaced with the real-file
+    Verified non-vacuous: all six guards fail against the pre-fix `goc.md`.
+  - [x] MECHANICAL: `goc.md`'s symlink sentence replaced with the real-file
     byte-mirror contract plus the "edit the template, not the mirror" rule.
-  - [ ] MECHANICAL: Claude `### Prerequisites` rewritten to Python 3.10+ only,
+  - [x] MECHANICAL: Claude `### Prerequisites` rewritten to Python 3.10+ only,
     and the resolved `### Known limitation: dynamic skill content` section
     removed.
-  - [ ] MECHANICAL: both skill counts corrected; the "kickoff is deferred" and
+  - [x] MECHANICAL: both skill counts corrected; the "kickoff is deferred" and
     "then independently maintained" parentheticals replaced with the re-port +
     `--check` drift-guard model.
-  - [ ] MECHANICAL: `uv run python -m unittest discover -s tests` passes and
+  - [x] MECHANICAL: `uv run python -m unittest discover -s tests` passes and
     `uv run goc validate` is clean.
 worker: {who: "claude[bot]", where: main}
 ---
@@ -35,15 +36,20 @@ The command-level reference (`goc.md`) documents the Claude Code, Codex and
 OpenClaw plugin payloads. Its Claude section was written when the payload was
 symlinks into `goc/templates/` and shelled to a separately-installed `goc`
 binary; its OpenClaw section was written before the port grew past 13 skills.
-Neither was revisited when those facts changed. Six distinct claims now
-contradict both `AGENTS.md` and the tree they describe.
+Neither was revisited when those facts changed. **Seven** distinct claims
+contradicted both `AGENTS.md` and the tree they describe.
+
+**FIXED** — all seven claims rewritten in `goc.md`; six derive-from-the-tree
+guards added to `tests/test_guidance_accuracy.py`. See `## Fix applied`.
 
 ## Location
 
-`goc.md` — `## Claude Code plugin` (lines 83–164) and `## OpenClaw plugin`
-(lines 209–238).
+`goc.md` — `## Claude Code plugin` and `## OpenClaw plugin`.
 
-## What's broken
+## What was broken
+
+Every `goc.md:NNN` citation below is a **pre-fix** line number (the file as of
+`aa3905c5`); the rewrite shifted them.
 
 **1. Payload assets are called symlinks (`goc.md:93`).**
 
@@ -139,6 +145,16 @@ plugin's skills to `.claude/skills/_goc-bootstrap.sh`") is not even performable 
 sourced from `goc/templates/bootstrap/`, not `goc/templates/skills/`
 (`AGENTS.md:251`).
 
+**7. The provides list names two hooks; the payload registers three
+(`goc.md:90–91`, pre-fix).**
+
+Surfaced while editing the section. `claude-plugin/hooks/hooks.json` registers
+`SessionStart`, `UserPromptSubmit` **and** `Stop` (→
+`hooks/pattern_generalization_check.py`), but the "What the plugin provides"
+list stopped at the first two — so the pattern-generalization self-assessment,
+one of the three behaviours a consumer actually gets, was undocumented on this
+surface.
+
 ## Empirical evidence
 
 `uv run python .game-of-cards/deck/cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships/reproduce.py`:
@@ -160,7 +176,30 @@ sourced from `goc/templates/bootstrap/`, not `goc/templates/skills/`
 6 stale claim(s) in goc.md: [...]
 ```
 
-Exit code 1.
+Exit code 1. (Claim 7 was added to `reproduce.py` after the rewrite, so it does
+not appear in the pre-fix run above; the regression guard below covers it and
+fails on the pre-fix text — see `## Fix applied`.)
+
+**After the fix**, the same command prints `[ok]` for all seven and exits 0:
+
+```
+[ok] claim 1 — plugin payload assets are symlinks
+       goc.md asserts symlinks: False; actual symlinks under claude-plugin/{skills,hooks}: 0 []
+[ok] claim 2 — Claude plugin skill count
+       goc.md claims 16; claude-plugin/skills/ has 16
+[ok] claim 3 — OpenClaw plugin skill count
+       goc.md claims 16; openclaw-plugin/skills/ has 16
+[ok] claim 4 — OpenClaw port defers the kickoff skill
+       goc.md says kickoff is deferred: False; openclaw-plugin/skills/kickoff exists: True
+[ok] claim 5 — Claude plugin requires a separate goc CLI install
+       goc.md demands a prior CLI install: False; bin/goc runs the bundled engine: True; claude-plugin/goc/engine.py vendored: True
+[ok] claim 6 — bootstrap injection is unguarded, awaiting a CLAUDE_SKILL_DIR fix
+       goc.md promises a CLAUDE_SKILL_DIR rewrite: False; CLAUDE_SKILL_DIR used in any shipped skill: False; bootstrap fences: 15, unguarded: 0
+[ok] claim 7 — Claude plugin provides list names every registered hook
+       hooks.json registers ['SessionStart', 'Stop', 'UserPromptSubmit']; not named in the provides list: []
+
+goc.md plugin sections agree with the shipped payload.
+```
 
 ## Why it matters
 
@@ -190,29 +229,58 @@ This is not the missing-guard family tracked by
 — `goc.md` is a single authored doc surface with no mirror, so it is a
 straight in-place correction, not a single-sourcing problem.
 
-## Fix
+## Fix applied
 
-Rewrite the six claims in `goc.md` to the state `AGENTS.md` already documents:
+Every claim rewritten in `goc.md` to the state `AGENTS.md` already documents:
 
-1. `goc.md:93` — replace the symlink sentence with the real-file/byte-mirror
-   contract and the "edit the template, not the mirror" instruction, citing the
+1. **Symlink sentence → real-file/byte-mirror contract**, with the reason
+   (marketplace install extracts only the `./claude-plugin` subtree) and a bolded
+   **"Edit the template, never the mirror."** paragraph naming the
    `sync-plugin-assets` pre-commit hook and the CI `--check` tripwire.
-2. `goc.md:89` — 11 → 16.
-3. `goc.md:215` — 13 → 16; drop the "`kickoff` skill is deferred" parenthetical;
-   replace "then independently maintained" with the re-port + `--check` drift-guard
-   model.
-4. `goc.md:95–103` — replace the Claude `### Prerequisites` body with the
-   bundled-engine reality (Python 3.10+ only), matching the wording the OpenClaw
-   section already uses at `goc.md:220–222`.
-5. `goc.md:156–164` — delete the `### Known limitation: dynamic skill content`
-   section; the limitation is resolved. Fold the one durable fact (fences degrade
-   to bare `goc`, which the plugin's `bin/` supplies) into the prerequisites text.
+2. **Claude skill count 11 → 16.**
+3. **OpenClaw skill count 13 → 16**; the "`kickoff` skill is deferred"
+   parenthetical replaced with the real exclusion (`claude-kickoff` and
+   `codex-kickoff`, verified by set-differencing the template and port dirs), and
+   "then independently maintained" replaced with the deterministic re-port +
+   `--check` drift-guard model.
+4. **Claude `### Prerequisites` rewritten** to "Python 3.10+ on PATH — nothing
+   else", explaining `bin/goc`, the `PYTHONPATH` hand-off, and Claude Code's
+   `bin/` PATH-prepend. It also records why no minimum-version check is needed
+   (engine and skills ship in one payload) and that a separate install is
+   optional-but-required-for-`--local-skills`.
+5. **`### Known limitation: dynamic skill content` deleted** — resolved. The one
+   durable fact moved into Prerequisites: fences route through the bootstrap
+   wrapper when present and fall back to bare `goc` (the plugin's `bin/goc`)
+   otherwise, so live queue views *do* render in plugin mode. Cites
+   `tests/test_skill_preamble_blocks.py` for the exit-zero contract.
+6. **`Stop` hook and the bundled engine added to the provides list** (claim 7).
 
-Then add a `GocMdPluginReferenceAccuracyTest` to `tests/test_guidance_accuracy.py`
-— the existing home for doc-claim tripwires — asserting: no shipped doc calls the
-payload assets symlinks while zero symlinks exist; both skill counts in `goc.md`
-equal the live directory counts (derived from the tree, like
-`test_all_engine_verbs_listed_in_architecture_section` derives verbs from the
-parser, so the numbers cannot rot again); the Claude prerequisites section does
-not demand a prior CLI install while `bin/goc` bundles the engine; and `goc.md`
-does not promise a `${CLAUDE_SKILL_DIR}` rewrite that no shipped skill uses.
+Regression guard: `GocMdPluginReferenceAccuracyTest` in
+`tests/test_guidance_accuracy.py` — the existing home for doc-claim tripwires.
+Six tests, each **deriving** truth from the tree rather than restating it, so the
+numbers cannot rot again (the same technique
+`test_all_engine_verbs_listed_in_architecture_section` uses to derive verbs from
+the argparse parser):
+
+| Test | Derives from |
+|---|---|
+| `test_no_doc_calls_payload_assets_symlinks` | live `is_symlink()` walk of `claude-plugin/{skills,hooks}` |
+| `test_claude_skill_count_matches_payload` | `claude-plugin/skills/` dir count |
+| `test_openclaw_skill_count_matches_payload` | `openclaw-plugin/skills/` dir count + `kickoff/` presence |
+| `test_claude_prerequisites_do_not_demand_a_separate_cli_install` | `bin/goc` contents + vendored `goc/engine.py` |
+| `test_no_doc_promises_an_unimplemented_skill_dir_bootstrap_rewrite` | `CLAUDE_SKILL_DIR` usage across shipped `SKILL.md` files |
+| `test_claude_provides_list_names_every_registered_hook` | `claude-plugin/hooks/hooks.json` event keys |
+
+Verified non-vacuous: pointing the module's `GOC_MD` at the pre-fix `goc.md`
+(`git show aa3905c5:goc.md`) fails all six; against the fixed file all six pass.
+
+`uv run python -m unittest discover -s tests` → 771 tests, OK.
+`uv run goc validate` → exit 0. `scripts/sync_plugin_assets.py --check` and
+`scripts/port_skills_to_openclaw.py --check` → both clean (no template or mirror
+was touched; `goc.md` is a root doc with no mirror).
+
+Checked for the same claims on sibling doc surfaces (`README.md`, `ABOUT.md`,
+`CONTRIBUTING.md`, `PERSONAS.md`, `DECK_LOCATION.md`, `site/`, and the three
+plugin `README.md`s): none repeat them, so no sibling card is warranted. The
+website serves `goc.md` itself at `/goc/`, so the fix propagates on the next
+Pages build.

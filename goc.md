@@ -86,21 +86,29 @@ The `claude-plugin/` directory at the root of the `game-of-cards` repository is 
 
 ### What the plugin provides
 
-- **11 GoC skills** (same as `goc install --agents claude`) — auto-discoverable by Claude Code when the plugin is loaded.
+- **16 GoC skills** (same as `goc install --agents claude`) — auto-discoverable by Claude Code when the plugin is loaded.
 - **SessionStart hook** — prints an active-card reminder at session start.
 - **UserPromptSubmit hook** — detects work-initiating prompts and injects a deck-first reminder.
+- **Stop hook** — prompts a pattern-generalization self-assessment after code-mutating turns.
+- **A bundled goc engine** under `claude-plugin/goc/`, plus `bin/goc` — see [Prerequisites](#prerequisites).
 
-Skills and hook scripts are **symlinks** into `goc/templates/`, so the plugin and the repo-local harness always share the same source. No third copy exists.
+Skills and hook scripts are **real files**, byte-for-byte copies of their source-of-truth under `goc/templates/`. They cannot be symlinks: Claude Code's marketplace install extracts only the `source: ./claude-plugin` subtree, and a symlink pointing outside it silently disappears on consumer install.
+
+**Edit the template, never the mirror.** `goc/templates/skills/` and `goc/templates/hooks/` are the source of truth; the `sync-plugin-assets` pre-commit hook regenerates `claude-plugin/` from them and stages the result, and CI runs `python scripts/sync_plugin_assets.py --check` to fail the build on drift. An edit made directly to `claude-plugin/` is overwritten by the next commit.
 
 ### Prerequisites
 
-The plugin shells to the `goc` CLI; install it first:
+**Python 3.10+ on PATH — nothing else.** The plugin bundles the engine under `claude-plugin/goc/` and ships `bin/goc`, a wrapper that runs it via `python3 -m goc.cli` with `PYTHONPATH` set to the plugin root. Claude Code auto-prepends the plugin's `bin/` to the Bash tool's PATH while the plugin is enabled, so skill bodies call plain `goc <verb>` and get the bundled engine. No `uv`, no `pipx install game-of-cards`, no venv, no first-call latency.
 
-```bash
-uv tool install game-of-cards   # or: pipx install game-of-cards
+Because engine and skills ship in the same payload, they cannot skew — the plugin needs no minimum-version check. Installing `game-of-cards` separately is still supported if you want a global `goc` binary outside Claude Code (see [Install the command](#install-the-command)); it is not a prerequisite for the plugin, and vendoring skills into source control with `--local-skills` requires it (the bundled engine refuses that flag).
+
+Skill bodies pull live deck context through inline `` !`…` `` shell fences. Each one is written to work under both layouts — it routes through the vendored `.claude/skills/_goc-bootstrap.sh` wrapper when a repo-local harness supplied it, and falls back to bare `goc` otherwise, which in plugin mode is the `bin/goc` wrapper above:
+
+```
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --ready -v; else goc --ready -v; fi 2>&1 | head -22`
 ```
 
-The plugin does not carry a minimum version check itself, but features added in later releases require matching `goc` builds.
+So the live queue views render in plugin mode with no repo-local harness present. `tests/test_skill_preamble_blocks.py` pins the contract: every fence exits zero even when `goc` is missing entirely, because a fence that exits non-zero aborts the whole skill load.
 
 ### Install from the marketplace (consumers)
 
@@ -153,16 +161,6 @@ When a consuming repo was previously set up with `goc install --agents claude`, 
 
 To clean up a previous repo-local harness installation, remove `.claude/skills/`, `.claude/hooks/`, and the GoC hook entries from `.claude/settings.json`, then rely on the plugin entirely.
 
-### Known limitation: dynamic skill content
-
-Skills use `!`.claude/skills/_goc-bootstrap.sh`` inline shell injections for dynamic context (queue listings, card details). When used via the plugin without a repo-local harness, that path does not exist and the injection produces an error message instead of card data. Claude handles this gracefully by working from its static instructions, but the live queue view in skills is absent.
-
-For full dynamic feature support, either:
-- Keep the repo-local harness installed alongside the plugin, or
-- Copy `_goc-bootstrap.sh` from the plugin's skills to `.claude/skills/_goc-bootstrap.sh`.
-
-A future release will fix the bootstrap path to use `${CLAUDE_SKILL_DIR}` so the plugin is fully self-contained.
-
 ## Codex plugin
 
 The `codex-plugin/` directory at the root of the `game-of-cards` repository is a Codex plugin. It is exposed through the repo marketplace file at `.agents/plugins/marketplace.json`.
@@ -212,7 +210,7 @@ The `openclaw-plugin/` directory at the root of the `game-of-cards` repository i
 
 ### What the plugin provides
 
-- **13 GoC skills** as workspace-tier `SKILL.md` directories that OpenClaw auto-discovers, ported from `goc/templates/skills/` once via `scripts/port_skills_to_openclaw.py` and then independently maintained (the `kickoff` skill is deferred to host-specific kickoff complements).
+- **16 GoC skills** as workspace-tier `SKILL.md` directories that OpenClaw auto-discovers, ported from `goc/templates/skills/` by `scripts/port_skills_to_openclaw.py` (the Claude- and Codex-specific kickoff complements are the two templates left out). The port applies invocation-neutral rewrites, so unlike the Claude and Codex mirrors it is reviewed and committed by hand rather than auto-staged — but it is deterministic: `scripts/port_skills_to_openclaw.py --check` re-ports into memory and fails on any difference, and `tests/test_plugin_mirror_parity.py` runs that same check in CI. Re-run the porter after editing a source skill.
 - **`goc` as a registered OpenClaw tool** — not a shell binary on PATH. OpenClaw has no auto-PATH-prepend mechanism for plugin `bin/` directories (verified via spike), so the plugin's TypeScript entry point calls `api.registerTool('goc', ...)` with a typed parameter schema; the handler shells out to `python3 -m goc.cli` with `PYTHONPATH` pointing at the bundled engine inside the plugin payload.
 - **Three lifecycle hooks** registered via `api.on()`: `session_start` (active-card reminder), `before_prompt_build` (deck-first prompt injection), `agent_end` (pattern-generalization self-assessment). These are TypeScript ports of the Claude `SessionStart` / `UserPromptSubmit` / `Stop` Python hook scripts.
 - **A vendored goc engine inside the npm payload** — the same byte-for-byte mirror of `goc/` used by `claude-plugin/`, enforced by the `sync-plugin-assets` pre-commit hook.

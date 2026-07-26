@@ -251,5 +251,146 @@ class CreateCardScaffoldClaimAccuracyTest(unittest.TestCase):
         )
 
 
+GOC_MD = ROOT / "goc.md"
+
+
+def _skill_dir_count(rel: str) -> int:
+    return sum(1 for p in (ROOT / rel).iterdir() if p.is_dir())
+
+
+class GocMdPluginReferenceAccuracyTest(unittest.TestCase):
+    """`goc.md` is the plugin reference linked from README.md, ABOUT.md,
+    CONTRIBUTING.md and the website. Its Claude section was authored against the
+    pre-0.0.6 payload — symlinks into `goc/templates/`, a separately-installed
+    `goc` binary — and its OpenClaw section against a 13-skill port. Each guard
+    below derives the truth from the tree rather than restating a number, so a
+    payload change turns the build red instead of rotting the doc again."""
+
+    def _claude_section(self, start: str, end: str) -> str:
+        text = GOC_MD.read_text()
+        return text[text.index(start) : text.index(end)]
+
+    def test_no_doc_calls_payload_assets_symlinks(self) -> None:
+        """The marketplace install extracts only the `./claude-plugin` subtree, so
+        an outside-pointing symlink vanishes on consumer install. The payload has
+        been real files since `1df38953`; no doc may say otherwise."""
+        symlinks = sorted(
+            str(p.relative_to(ROOT))
+            for base in ("claude-plugin/skills", "claude-plugin/hooks")
+            for p in (ROOT / base).rglob("*")
+            if p.is_symlink()
+        )
+        self.assertEqual(
+            symlinks,
+            [],
+            msg=(
+                "plugin payload contains symlink(s); marketplace install extracts "
+                "only the ./claude-plugin subtree, so these disappear on consumer "
+                "install. Re-run scripts/sync_plugin_assets.py."
+            ),
+        )
+        self.assertNotRegex(
+            GOC_MD.read_text(),
+            re.compile(r"\*\*symlinks\*\*\s+into\s+`goc/templates/`"),
+            msg=(
+                "goc.md calls the plugin payload assets symlinks into "
+                "goc/templates/, but the tree holds real byte-for-byte copies. "
+                "The claim misdirects contributors into editing the mirror, whose "
+                "edits the next sync-plugin-assets run silently overwrites."
+            ),
+        )
+
+    def test_claude_skill_count_matches_payload(self) -> None:
+        m = re.search(
+            r"\*\*(\d+) GoC skills\*\* \(same as `goc install --agents claude`\)",
+            GOC_MD.read_text(),
+        )
+        self.assertIsNotNone(m, msg="goc.md lost its Claude plugin skill-count bullet.")
+        self.assertEqual(
+            int(m.group(1)),
+            _skill_dir_count("claude-plugin/skills"),
+            msg="goc.md's Claude skill count disagrees with claude-plugin/skills/.",
+        )
+
+    def test_openclaw_skill_count_matches_payload(self) -> None:
+        text = GOC_MD.read_text()
+        m = re.search(r"\*\*(\d+) GoC skills\*\* as workspace-tier", text)
+        self.assertIsNotNone(m, msg="goc.md lost its OpenClaw plugin skill-count bullet.")
+        self.assertEqual(
+            int(m.group(1)),
+            _skill_dir_count("openclaw-plugin/skills"),
+            msg="goc.md's OpenClaw skill count disagrees with openclaw-plugin/skills/.",
+        )
+        # `b30853e6` ported `kickoff` to OpenClaw; the section used to say it was
+        # deferred to host-specific complements.
+        if (ROOT / "openclaw-plugin" / "skills" / "kickoff").is_dir():
+            self.assertNotIn(
+                "`kickoff` skill is deferred",
+                text,
+                msg=(
+                    "goc.md says the OpenClaw port defers the kickoff skill, but "
+                    "openclaw-plugin/skills/kickoff/ ships."
+                ),
+            )
+
+    def test_claude_prerequisites_do_not_demand_a_separate_cli_install(self) -> None:
+        """`claude-plugin/bin/goc` runs the vendored engine, so Python 3.10+ is the
+        only host prerequisite (AGENTS.md § "Plugin runs goc from a vendored
+        engine")."""
+        wrapper = (ROOT / "claude-plugin" / "bin" / "goc").read_text()
+        self.assertIn("-m goc.cli", wrapper, msg="claude-plugin/bin/goc no longer runs the bundled engine.")
+        self.assertTrue(
+            (ROOT / "claude-plugin" / "goc" / "engine.py").exists(),
+            msg="claude-plugin/goc/engine.py missing; the payload no longer vendors the engine.",
+        )
+        prereq = self._claude_section("### Prerequisites", "### Install from the marketplace")
+        self.assertNotRegex(
+            prereq,
+            re.compile(r"shells to the `goc` CLI|install it first", re.IGNORECASE),
+            msg=(
+                "goc.md's Claude Prerequisites section demands a prior `goc` CLI "
+                "install, but the plugin bundles the engine and bin/goc runs it. "
+                "Python 3.10+ is the only host prerequisite."
+            ),
+        )
+
+    def test_no_doc_promises_an_unimplemented_skill_dir_bootstrap_rewrite(self) -> None:
+        """The bootstrap-path fix shipped as a `[ -f ]` guard with a bare-`goc`
+        fallback, not the `${CLAUDE_SKILL_DIR}` rewrite goc.md promised. Guard
+        against re-promising a fix no shipped skill uses."""
+        used = any(
+            "CLAUDE_SKILL_DIR" in p.read_text()
+            for p in (ROOT / "goc" / "templates" / "skills").rglob("SKILL.md")
+        )
+        if not used:
+            self.assertNotIn(
+                "CLAUDE_SKILL_DIR",
+                GOC_MD.read_text(),
+                msg=(
+                    "goc.md promises a ${CLAUDE_SKILL_DIR} bootstrap rewrite that "
+                    "no shipped skill uses; the fix taken was a `[ -f ]` guard with "
+                    "a bare-`goc` fallback (tests/test_skill_preamble_blocks.py)."
+                ),
+            )
+
+    def test_claude_provides_list_names_every_registered_hook(self) -> None:
+        """Every event in claude-plugin/hooks/hooks.json must appear in goc.md's
+        "What the plugin provides" list — the Stop hook was missing from it."""
+        import json
+
+        registered = sorted(
+            json.loads((ROOT / "claude-plugin" / "hooks" / "hooks.json").read_text())["hooks"]
+        )
+        provides = self._claude_section("### What the plugin provides", "### Prerequisites")
+        missing = [event for event in registered if f"**{event} hook**" not in provides]
+        self.assertFalse(
+            missing,
+            msg=(
+                f"goc.md's Claude 'What the plugin provides' list omits hook "
+                f"event(s) {missing} that claude-plugin/hooks/hooks.json registers."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

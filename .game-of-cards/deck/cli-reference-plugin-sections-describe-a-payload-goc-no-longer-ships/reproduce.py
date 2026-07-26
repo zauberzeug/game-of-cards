@@ -130,6 +130,22 @@ check(
     f"bootstrap fences: {len(fences)}, unguarded: {len(unguarded)}",
 )
 
+# ---------------------------------------------------------------- claim 7
+# goc.md's Claude "### What the plugin provides" list must name every hook event
+# claude-plugin/hooks/hooks.json registers. It listed only SessionStart and
+# UserPromptSubmit; the payload has registered Stop since the
+# pattern-generalization hook shipped.
+import json
+
+registered = sorted(json.loads((ROOT / "claude-plugin" / "hooks" / "hooks.json").read_text())["hooks"])
+provides = GOC_MD[GOC_MD.index("### What the plugin provides") : GOC_MD.index("### Prerequisites")]
+undocumented = [event for event in registered if f"**{event} hook**" not in provides]
+check(
+    "claim 7 — Claude plugin provides list names every registered hook",
+    not undocumented,
+    f"hooks.json registers {registered}; not named in the provides list: {undocumented}",
+)
+
 print()
 if failures:
     print(f"{len(failures)} stale claim(s) in goc.md: {failures}")
