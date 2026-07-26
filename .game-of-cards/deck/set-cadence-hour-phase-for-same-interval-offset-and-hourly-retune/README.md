@@ -1,5 +1,6 @@
 ---
 title: set-cadence-hour-phase-for-same-interval-offset-and-hourly-retune
+summary: "Extended scripts/set_cadence.py's interval grammar with an optional +P hour-phase suffix (3h+1 → `45 1-23/3 * * *`) so two workflows sharing an interval can be offset by whole hours, validated all-or-nothing before any workflow file is touched. Applied the requested retune: pull-card hourly, audit-deck every 3 hours, refine-deck 3h+1 so it launches at least an hour after each audit slot."
 status: done
 stage: null
 contribution: medium

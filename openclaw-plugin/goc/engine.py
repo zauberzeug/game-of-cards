@@ -1048,8 +1048,11 @@ def resolve_card_dir(title: str) -> Path:
 # Validate
 
 
-_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+# \Z, not $: the $ anchor matches before a trailing newline, which would
+# let a value like "2026-08-01\n" pass the shape check that every
+# full-value consumer (date.fromisoformat / strptime) then rejects.
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\Z")
+_ISO_DATETIME_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 
 
 def _is_iso_date(value) -> bool:
@@ -1073,7 +1076,10 @@ def _is_iso_date(value) -> bool:
         if _ISO_DATETIME_UTC_RE.match(value):
             datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
         else:
-            date.fromisoformat(_date_part(value))
+            # The full value, not _date_part(value): truncating before the
+            # calendar parse would re-open the gap between this predicate
+            # and the consumers, which parse the whole string.
+            date.fromisoformat(value)
     except ValueError:
         return False
     return True
@@ -1722,6 +1728,12 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             errors.append(f"{t.title}: summary: must be a string")
         elif not summary_value.strip():
             errors.append(f"{t.title}: summary: must not be empty or whitespace-only")
+    elif not t.draft:
+        # Absent key is the same defect as present-but-blank, one door over:
+        # triage views render a blank row either way. Draft scaffolds are
+        # unauthored by definition — flagging them would make every fresh
+        # `goc new` red before authoring starts.
+        errors.append(f"{t.title}: summary: missing — required on published cards")
 
     worker = fm.get("worker")
     if worker is not None:
@@ -3078,6 +3090,8 @@ SLIM_JSON_KEYS = (
     "closed_at",
     "waiting_on",
     "waiting_until",
+    "draft",
+    "worker",
 )
 
 
@@ -3103,6 +3117,8 @@ def render_json(
                 "closed_at": str(t.closed_at) if t.closed_at else None,
                 "waiting_on": t.waiting_on,
                 "waiting_until": t.waiting_until,
+                "draft": card_is_draft(t),
+                "worker": t.worker,
             }
             for t in cards
         ]
@@ -3517,6 +3533,9 @@ def _build_parser() -> argparse.ArgumentParser:
                        default=argparse.SUPPRESS,
                        help="Contribution level (overrides global --contribution; default: medium).")
     p_new.add_argument("--gate", choices=schema.human_gate_values, default=schema.human_gate_default)
+    p_new.add_argument("--summary", default=None,
+                       help="Triage summary (≤ 3 sentences, what + why). Optional at scaffold "
+                            "time, but validate requires it once the card leaves draft.")
     # --tag, --worker share `dest` with global filters; SUPPRESS lets the
     # parent value flow through when the subparser flag isn't passed.
     p_new.add_argument("--tag", dest="tags", action="append", default=argparse.SUPPRESS,
@@ -5441,6 +5460,10 @@ def _cmd_new(args):
         "medium" if "medium" in schema.contribution_values else schema.contribution_values[0]
     )
     gate = args.gate
+    summary = args.summary
+    if summary is not None and not summary.strip():
+        print("ERROR: --summary must not be empty or whitespace-only", file=sys.stderr)
+        sys.exit(2)
     tags = args.tags
     worker = args.worker
     allow_jargon = args.allow_jargon
@@ -5481,6 +5504,10 @@ def _cmd_new(args):
     now = _utc_now_iso()
     fm = {
         "title": title,
+        # summary sits right after title, matching hand-authored cards; the
+        # key is omitted (not null) when unset so the draft exemption in
+        # validate's missing-summary rule keys on true absence.
+        **({"summary": summary} if summary is not None else {}),
         "status": "open",
         "stage": None,
         "contribution": contribution,

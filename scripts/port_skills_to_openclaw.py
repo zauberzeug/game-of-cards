@@ -135,10 +135,26 @@ INLINE_BANG_BLOCK_RE = re.compile(r"^([ \t]*)!`([^`]+)`", re.MULTILINE)
 # read path that always resolves. Surface it on the two spots an agent sees
 # before/without the body: the catalog description line, and (for the sibling
 # deep-dive files a body routes to) a trailer section in the body itself.
-# The hint stays free of `: ` sequences — frontmatter descriptions are plain
-# YAML scalars, and simple split-on-colon readers must not truncate them.
+# The hint stays free of `: ` sequences — plain-scalar frontmatter
+# descriptions must survive simple split-on-colon readers. Descriptions that
+# are QUOTED scalars (quoted precisely because they contain `: ` — see
+# `skill-frontmatter-descriptions-break-yaml-loading`) get the hint inserted
+# *inside* the closing quote, with the hint's own quote characters escaped
+# per YAML rules; appending after the closing quote is invalid YAML and the
+# host skips loading the skill.
 DESCRIPTION_LINE_RE = re.compile(r"^(description:[^\n]*?)[ \t]*$", re.MULTILINE)
 FETCH_HINT = ' If the catalog location path is unreadable, fetch the body via the goc tool verb "skill", args ["{name}"].'
+
+
+def _hint_into_description(line: str, hint: str) -> str:
+    """Append the fetch hint to a description line, staying valid YAML."""
+    value = line[len("description:") :].strip()
+    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+        escaped = hint.replace("\\", "\\\\").replace('"', '\\"')
+        return line[: line.rfind('"')] + escaped + '"'
+    if len(value) >= 2 and value[0] == "'" and value[-1] == "'":
+        return line[: line.rfind("'")] + hint.replace("'", "''") + "'"
+    return line + hint
 
 
 def _sibling_trailer(skill_dir: Path) -> str:
@@ -187,7 +203,9 @@ def render_skill(src: Path) -> str:
 
     # Tool-served read hints: catalog description clause + sibling trailer.
     hint = FETCH_HINT.format(name=src.parent.name)
-    text = DESCRIPTION_LINE_RE.sub(lambda m: m.group(1) + hint, text, count=1)
+    text = DESCRIPTION_LINE_RE.sub(
+        lambda m: _hint_into_description(m.group(1), hint), text, count=1
+    )
     trailer = _sibling_trailer(src.parent)
     if trailer:
         text = text.rstrip("\n") + "\n" + trailer

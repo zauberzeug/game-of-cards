@@ -10,6 +10,7 @@ human_gate: decision
 advances: []
 advanced_by:
   - board-omits-pull-blocking-marker-for-human-gate-parked-cards
+  - pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
   - [ ] TDD: a regression test asserts the board's not-pullable marker agrees with `card_is_ready` across the `status × human_gate × waiting_on` cross-product (modulo the board's deliberate advisory `dependency_blocked` superset), so a future axis added to `card_is_ready` that is not mirrored into the board fails the build — the same guarantee `tests/test_scheduler_workable_predicate_coupling.py` gives the scheduler predicate.
@@ -44,6 +45,15 @@ rendered as freely pullable. That was a real shipped bug, fixed in
 by hand-adding the missing axis — but nothing prevents the *next* axis
 (or the next renderer that hand-rolls the same check) from drifting
 again.
+
+A **fourth copy** has since been confirmed drifted, outside the engine
+entirely: `.github/workflows/pull-card.yml` counts the autonomous queue
+with `--status open --human-gate none`, omitting the waiting-overlay
+axis, so it launches agent sessions `goc --ready` refuses to feed — see
+[pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty](../pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty/).
+That copy is shell, so no Python introspection guard can cover it; its
+fix is substitution (`goc --ready --json`), reinforcing the "expose the
+engine predicate, don't re-roll it" direction here.
 
 ## The pattern
 

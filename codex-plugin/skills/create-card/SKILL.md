@@ -28,7 +28,7 @@ edit deck files directly just because `goc` is not on `PATH`.
 
 ## When to invoke
 
-Invoke when the user says "let's do X", "implement Y", "fix Z", "add support for", "I want to", "we need to", describes a bug, requests a feature, or initiates ANY persistent work item. Title must be user-facing, descriptive, PO-readable (not engineer's jargon). reproduce.py is authored by hand in Step 6 for bug-class cards, not scaffolded by the tool.
+Invoke when the user says "let's do X", "implement Y", "fix Z", describes a bug, requests a feature, or initiates ANY persistent work item. Title must be user-facing, descriptive, PO-readable (not engineer's jargon). reproduce.py (Step 6) is hand-authored for bug-class cards, not scaffolded.
 
 ## Preflight
 
@@ -73,7 +73,7 @@ the observable problem. `--allow-jargon` only for migration tools.
 Read the slug aloud — avoid word stutter, colloquial back-half
 clauses, and family-shape mismatch (`reference.md` § Title quality).
 
-Verify the title is free by running `goc show <your-title>` yourself:
+Verify the title is free: run `goc show <your-title>` yourself —
 `ERROR: ... not found` means safe.
 
 ## Step 2 — dedup against open / done / disproved queues
@@ -121,6 +121,7 @@ citation). Reserve human gates for questions the rubric cannot answer
 
 ```bash
 goc new <title> \
+  --summary "<what + why>" \
   --contribution <high|medium|low> \
   --gate <none|decision|session> \
   --tag bug \
@@ -160,7 +161,8 @@ knowledge, rewritten in place as understanding evolves. Do NOT append
 
 - **Title (H1)** — one-line description.
 - **Summary** — frontmatter `summary:` (≤ 3 sentences, what + why)
-  so triage views can scan without opening.
+  so triage views can scan without opening; `goc validate` requires
+  it once the card leaves draft.
 - **Location** — `file:line` (bug-class) or doc/section (doc-class).
 - **What's broken** — prose with **quoted code AND quoted
   contradicted doc/comment**; the reader must see the conflict.
@@ -232,5 +234,4 @@ are opaque to the engine. Bundle shape, use/skip criteria:
 - `Skill(card-schema)` — field semantics, enums, canonical tags.
 - `Skill(scan-deck)` — dedup queries; `Skill(advance-card)` — if the
   body reveals a different gate than scaffolded.
-- Commit the filing per the consuming repo's normal checks and any
-  GoC hook it defines.
+- Commit the filing per the consuming repo's checks and GoC hooks.

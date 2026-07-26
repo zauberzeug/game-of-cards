@@ -19,6 +19,14 @@ definition_of_done: |
 
 # second-install-exits-nonzero
 
+> **Contract reversed after closure (2026-07-22):** the exit-zero
+> reinstall contract this card closed on was later deliberately
+> reverted — `goc install` now refuses a second run with exit 1 and a
+> `goc upgrade` hint, and `tests/test_install.py` pins that refusal.
+> See
+> [install-docstring-still-claims-second-install-exits-clean](../install-docstring-still-claims-second-install-exits-clean/)
+> and this card's `log.md`.
+
 ## Location
 
 - `goc/install.py:8`

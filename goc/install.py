@@ -8,8 +8,10 @@ Codex-readable skills, without Claude-only hooks. The exception is the OpenClaw
 plugin context (this engine running from `openclaw-plugin/`): OpenClaw ships
 skills via its plugin runtime and has no harness surface, so the no-flag default
 there is no harness at all — shared scaffold + AGENTS.md only, never CLAUDE.md.
-Idempotent — second runs detect existing installs via `.game-of-cards/deck/.goc-version`
-(or legacy `deck/.goc-version`) and exit clean.
+Second runs detect existing installs via `.game-of-cards/deck/.goc-version`
+(or legacy `deck/.goc-version`) and refuse with exit status 1, printing a
+`goc upgrade` hint — scripts should treat "already installed" as a refusal,
+not a crash. Re-syncing templates is `goc upgrade`'s job.
 
 Reads templates via `importlib.resources` so it works from a wheel install.
 """

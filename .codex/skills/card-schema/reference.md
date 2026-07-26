@@ -65,7 +65,7 @@ via `goc publish <title>` — which refuses on a pure placeholder
 **What the flag suppresses** — so unauthored work cannot be acted on
 by automation (the dedup/supersede race that motivated it):
 
-- Hidden from the default queue (`goc`, `goc next`, `card_is_ready`)
+- Hidden from the default queue (`goc`, `goc --ready`, `card_is_ready`)
   and the scheduler; surfaced only under `goc --status all`, marked
   `✎` on the board.
 - `goc status <title> {superseded,disproved}` refuses on a draft — a

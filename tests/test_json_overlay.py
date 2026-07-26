@@ -78,6 +78,29 @@ class JsonOverlayTest(unittest.TestCase):
         self.assertIsNone(record["waiting_on"])
         self.assertIsNone(record["waiting_until"])
 
+    def test_slim_json_exposes_worker_and_draft(self) -> None:
+        record = self._record(
+            'worker: {who: "alice", where: feature/x}\n', slim=True
+        )
+        self.assertEqual({"who": "alice", "where": "feature/x"}, record["worker"])
+        self.assertFalse(record["draft"])
+
+    def test_slim_json_marks_draft_scaffold(self) -> None:
+        record = self._record("draft: true\n", slim=True)
+        self.assertTrue(record["draft"])
+
+    def test_slim_json_emits_null_worker_and_false_draft_when_absent(self) -> None:
+        record = self._record("", slim=True)
+        self.assertIn("worker", record)
+        self.assertIn("draft", record)
+        self.assertIsNone(record["worker"])
+        self.assertFalse(record["draft"])
+
+    def test_slim_json_keys_contract_lists_worker_and_draft(self) -> None:
+        engine = _load_engine()
+        self.assertIn("worker", engine.SLIM_JSON_KEYS)
+        self.assertIn("draft", engine.SLIM_JSON_KEYS)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,3 +11,14 @@ claude-plugin/skills/** linguist-generated=true
 codex-plugin/skills/** linguist-generated=true
 .claude/skills/** linguist-generated=true
 .codex/skills/** linguist-generated=true
+claude-plugin/hooks/** linguist-generated=true
+codex-plugin/hooks/** linguist-generated=true
+.claude/hooks/** linguist-generated=true
+# esbuild output (`npm run build`), committed so the plugin installs
+# without a build step — generated, like the mirrors above.
+openclaw-plugin/dist/** linguist-generated=true
+# Authored files inside synced/marked trees — carve-outs must follow the
+# globs (last matching line wins) so real authored diffs stay reviewable.
+claude-plugin/hooks/hooks.json linguist-generated=false
+codex-plugin/hooks/hooks.json linguist-generated=false
+.claude/skills/tune-cadence/** linguist-generated=false

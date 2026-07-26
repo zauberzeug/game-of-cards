@@ -229,6 +229,7 @@ class CreateCardScaffoldClaimAccuracyTest(unittest.TestCase):
                 title = "scaffold-contract-probe-card"
                 args = argparse.Namespace(
                     title=title,
+                    summary=None,
                     contribution="low",
                     gate="none",
                     tags=["bug"],
