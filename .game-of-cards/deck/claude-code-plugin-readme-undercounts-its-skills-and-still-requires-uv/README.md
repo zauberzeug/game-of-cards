@@ -1,7 +1,7 @@
 ---
 title: claude-code-plugin-readme-undercounts-its-skills-and-still-requires-uv
 summary: "`claude-plugin/README.md` is the payload README a consumer reads in Claude Code's plugin browser, and it misdescribes the payload it ships: it claims \"14 skills\" and lists 14 table rows while `claude-plugin/skills/` ships 16 (`claude-kickoff` and `upgrade` are missing), and its intro still says the bundled CLI \"runs via the `uv` tool manager\" — contradicted three lines later by its own Install section, by `claude-plugin/bin/goc`, and by AGENTS.md. The `uv` clause is the surface that plugin-and-marketplace-descriptions-still-advertise-uv-as-required missed when it swept the same false prerequisite out of plugin.json and marketplace.json."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-07-26T18:45:37Z"
@@ -10,7 +10,6 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — every README claim agrees with the shipped payload
   - [ ] TDD: a regression test in `tests/` pins `claude-plugin/README.md`'s skill catalogue (bold count, table rows, prose restatement) to `claude-plugin/skills/`, so the next added skill fails CI instead of rotting the README
@@ -18,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the intro's "`uv` tool manager" clause is replaced with the true runtime (`python3`), so the intro, Install, and Requirements sections agree
   - [ ] PROCESS: [plugin-and-marketplace-descriptions-still-advertise-uv-as-required](../plugin-and-marketplace-descriptions-still-advertise-uv-as-required/) amended with a forward pointer to this card (post-closure evidence: its sweep missed a third surface)
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Claude Code plugin README undercounts its skills and still requires `uv`
