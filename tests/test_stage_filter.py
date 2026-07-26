@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import io
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
+from contextlib import redirect_stderr
 from pathlib import Path
 
 
@@ -46,6 +49,27 @@ class StageFilterTest(unittest.TestCase):
             "---\n\n"
             f"# {title}\n"
         )
+
+    def test_hyphenated_enum_value_is_addressable(self) -> None:
+        from goc import engine
+
+        enum = ["null", "pre-alpha", "alpha", "beta", "stable"]
+        with unittest.mock.patch.object(engine, "STAGE_ORDER", enum):
+            self.assertEqual(["pre-alpha"], engine.parse_stage_filter("pre-alpha"))
+
+    def test_range_and_rejection_survive_exact_match_first(self) -> None:
+        from goc import engine
+
+        enum = ["null", "pre-alpha", "alpha", "beta", "stable"]
+        with unittest.mock.patch.object(engine, "STAGE_ORDER", enum):
+            self.assertEqual(
+                ["alpha", "beta", "stable"], engine.parse_stage_filter("alpha-stable")
+            )
+            err = io.StringIO()
+            with self.assertRaises(SystemExit) as caught, redirect_stderr(err):
+                engine.parse_stage_filter("nope-alpha")
+            self.assertEqual(2, caught.exception.code)
+            self.assertIn("--stage", err.getvalue())
 
     def test_invalid_stage_range_rejects_unknown_stages_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

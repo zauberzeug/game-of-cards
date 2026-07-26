@@ -2734,6 +2734,11 @@ def filter_cards(
 def parse_stage_filter(stage_flag: str | None) -> list[str] | None:
     if not stage_flag:
         return None
+    # Exact enum membership wins over the `a-b` range syntax: a hyphenated stage
+    # value (`pre-alpha`) must stay addressable, and a literal enum member beats
+    # a syntactic reading of the same string.
+    if stage_flag in STAGE_ORDER:
+        return [stage_flag]
     valid = ", ".join(STAGE_ORDER)
     if "-" in stage_flag:
         a, b = stage_flag.split("-", 1)
@@ -2742,10 +2747,8 @@ def parse_stage_filter(stage_flag: str | None) -> list[str] | None:
             sys.exit(2)
         ai, bi = STAGE_ORDER.index(a), STAGE_ORDER.index(b)
         return STAGE_ORDER[min(ai, bi) : max(ai, bi) + 1]
-    if stage_flag not in STAGE_ORDER:
-        print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
-        sys.exit(2)
-    return [stage_flag]
+    print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
+    sys.exit(2)
 
 
 def parse_since_filter(value: str | None) -> str | None:
