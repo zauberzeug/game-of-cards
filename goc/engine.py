@@ -2740,11 +2740,25 @@ def parse_stage_filter(stage_flag: str | None) -> list[str] | None:
     if stage_flag in STAGE_ORDER:
         return [stage_flag]
     valid = ", ".join(STAGE_ORDER)
-    if "-" in stage_flag:
-        a, b = stage_flag.split("-", 1)
-        if a not in STAGE_ORDER or b not in STAGE_ORDER:
-            print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
-            sys.exit(2)
+    # A hyphenated stage value can also be a range *endpoint*, so the split
+    # position is resolved against the enum rather than fixed at the first
+    # hyphen — otherwise `pre-alpha-stable` reads as ("pre", "alpha-stable") and
+    # the span starting at `pre-alpha` cannot be spelled at all. An argument that
+    # splits two ways is reported, never silently read as one of them.
+    spans = [
+        (stage_flag[:i], stage_flag[i + 1 :])
+        for i, ch in enumerate(stage_flag)
+        if ch == "-" and stage_flag[:i] in STAGE_ORDER and stage_flag[i + 1 :] in STAGE_ORDER
+    ]
+    if len(spans) > 1:
+        readings = " and ".join(f"{a!r}..{b!r}" for a, b in spans)
+        print(
+            f"goc: error: --stage: {stage_flag!r} is an ambiguous range — it reads as {readings}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if spans:
+        a, b = spans[0]
         ai, bi = STAGE_ORDER.index(a), STAGE_ORDER.index(b)
         return STAGE_ORDER[min(ai, bi) : max(ai, bi) + 1]
     print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)

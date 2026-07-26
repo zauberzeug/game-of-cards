@@ -30,3 +30,15 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-07-26 — Closure' present
+
+## 2026-07-26T21:47Z — Follow-up resolved in the same session
+
+The closure entry above estimated that the residual endpoint gap would need a
+separate run to settle an ambiguity policy. Writing the follow-up card's Fix
+section settled it from existing deck precedent (report an ambiguous reading,
+never guess), so the fix turned out to be mechanically determined and was landed
+here as fix-through:
+`stage-range-with-hyphenated-left-endpoint-is-unreachable` is closed, with its
+own commit. `--stage` now addresses hyphenated stage values both as whole values
+(this card) and as range endpoints (that one). No change to this card's verdict
+or its own diff.

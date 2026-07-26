@@ -71,6 +71,40 @@ class StageFilterTest(unittest.TestCase):
             self.assertEqual(2, caught.exception.code)
             self.assertIn("--stage", err.getvalue())
 
+    def test_range_over_hyphenated_left_endpoint_is_spellable(self) -> None:
+        from goc import engine
+
+        enum = ["null", "pre-alpha", "alpha", "beta", "stable"]
+        with unittest.mock.patch.object(engine, "STAGE_ORDER", enum):
+            self.assertEqual(
+                ["pre-alpha", "alpha", "beta", "stable"],
+                engine.parse_stage_filter("pre-alpha-stable"),
+            )
+            self.assertEqual(
+                ["null", "pre-alpha"], engine.parse_stage_filter("null-pre-alpha")
+            )
+            for spec in ("nope-alpha", "alpha-nope"):
+                err = io.StringIO()
+                with self.assertRaises(SystemExit) as caught, redirect_stderr(err):
+                    engine.parse_stage_filter(spec)
+                self.assertEqual(2, caught.exception.code, msg=spec)
+                self.assertIn("expected one of", err.getvalue())
+
+    def test_ambiguous_range_is_reported_not_guessed(self) -> None:
+        from goc import engine
+
+        # `alpha-beta-stable` reads as both `alpha`..`beta-stable` and
+        # `alpha-beta`..`stable` over this enum.
+        enum = ["null", "alpha", "beta", "alpha-beta", "beta-stable", "stable"]
+        err = io.StringIO()
+        with unittest.mock.patch.object(engine, "STAGE_ORDER", enum):
+            with self.assertRaises(SystemExit) as caught, redirect_stderr(err):
+                engine.parse_stage_filter("alpha-beta-stable")
+        self.assertEqual(2, caught.exception.code)
+        self.assertIn("ambiguous range", err.getvalue())
+        self.assertIn("'alpha'..'beta-stable'", err.getvalue())
+        self.assertIn("'alpha-beta'..'stable'", err.getvalue())
+
     def test_invalid_stage_range_rejects_unknown_stages_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

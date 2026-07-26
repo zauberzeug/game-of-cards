@@ -64,9 +64,15 @@ CASES = {
     "alpha-nope": "EXIT2",
 }
 
-print(f"=== with a hyphenated enum value: {ENUM} ===")
-failures: list[str] = []
-for spec, want in CASES.items():
+# An enum where one argument has TWO valid splits: `alpha-beta-stable` reads as
+# both `alpha`..`beta-stable` and `alpha-beta`..`stable`. Resolving the split
+# against the enum makes such an argument detectable — a first-hyphen split
+# cannot see the second reading, so it silently returns one of the two spans.
+AMBIGUOUS_ENUM = ["null", "alpha", "beta", "alpha-beta", "beta-stable", "stable"]
+AMBIGUOUS_SPEC = "alpha-beta-stable"
+
+
+def probe(spec: str, want: object) -> str | None:
     err = io.StringIO()
     try:
         with redirect_stderr(err):
@@ -77,9 +83,19 @@ for spec, want in CASES.items():
     else:
         ok = got == want
     print(f"--stage {spec!r:20} -> {got!r:42} want {want!r}   {'ok' if ok else 'FAIL'}")
-    if not ok:
-        failures.append(f"--stage {spec!r} gave {got!r}, want {want!r}")
+    return None if ok else f"--stage {spec!r} gave {got!r}, want {want!r}"
 
+
+print(f"=== with a hyphenated enum value: {ENUM} ===")
+failures: list[str] = []
+for spec, want in CASES.items():
+    failures.append(probe(spec, want))
+
+engine.STAGE_ORDER = AMBIGUOUS_ENUM
+print(f"\n=== with an enum that makes one argument ambiguous: {AMBIGUOUS_ENUM} ===")
+failures.append(probe(AMBIGUOUS_SPEC, "EXIT2"))
+
+failures = [f for f in failures if f]
 print("\n=== verdict ===")
 if failures:
     for f in failures:
