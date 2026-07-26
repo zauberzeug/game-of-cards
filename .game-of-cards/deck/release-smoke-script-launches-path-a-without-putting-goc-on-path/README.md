@@ -1,22 +1,22 @@
 ---
 title: release-smoke-script-launches-path-a-without-putting-goc-on-path
 summary: "`scripts/smoke_release.sh` Path A installs the `goc` CLI with `uv tool install` but never adds uv's tool-bin directory to `PATH` and never checks that `goc` resolves, while the prompt it then sends asserts \"goc is on PATH and Bash(goc:*) is allowed\". The CI job it mirrors adds `$HOME/.local/bin` to `PATH` explicitly. On any machine where uv's bin directory is not already on `PATH`, Path A burns a 30-turn LLM run and then fails with \"FAIL Path A: deck dir not created\", blaming the plugin payload for a harness gap."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-26T07:19:27Z"
-closed_at: null
+closed_at: "2026-07-26T07:28:09Z"
 human_gate: none
 advances:
   - local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — Path A either extends `PATH` to uv's tool-bin directory or fails fast when `goc` does not resolve
-  - [ ] TDD: a regression test asserts `scripts/smoke_release.sh` cannot launch Path A's agent run while asserting a `goc`-on-`PATH` premise it has not established
-  - [ ] MECHANICAL: the fix reuses the script's existing prerequisite-guard idiom (the `command -v claude` block) so a missing `goc` reports an actionable error instead of a 30-turn agent run
-  - [ ] PROCESS: cross-referenced from [local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job](../local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job/) as one confirmed instance of the mirror drift
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: `reproduce.py` exits zero — Path A either extends `PATH` to uv's tool-bin directory or fails fast when `goc` does not resolve
+  - [x] TDD: a regression test asserts `scripts/smoke_release.sh` cannot launch Path A's agent run while asserting a `goc`-on-`PATH` premise it has not established
+  - [x] MECHANICAL: the fix reuses the script's existing prerequisite-guard idiom (the `command -v claude` block) so a missing `goc` reports an actionable error instead of a 30-turn agent run
+  - [x] PROCESS: cross-referenced from [local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job](../local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job/) as one confirmed instance of the mirror drift
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -80,7 +80,8 @@ establishes nor verifies.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/release-smoke-script-launches-path-a-without-putting-goc-on-path/reproduce.py`:
+`uv run python .game-of-cards/deck/release-smoke-script-launches-path-a-without-putting-goc-on-path/reproduce.py`
+against the script **before** the fix (exit 1):
 
 ```
 [1] The CI smoke job puts the freshly-installed goc on PATH:
@@ -105,6 +106,33 @@ resolvability; on a machine without uv's bin dir on PATH it burns a 30-turn
 agent run and reports 'FAIL Path A: deck dir not created' -- blaming the plugin
 payload for a harness gap.
 ```
+
+**After** the fix, the same script exits 0 with steps 1–4 unchanged and:
+
+```
+[5] smoke_release.sh, structurally:
+    extends PATH for uv's tool-bin dir?  True
+    guards that `goc` resolves?          True
+    guards that `claude` resolves?       True   <- the idiom it already uses
+    Path A prompt asserts goc on PATH?   True
+
+[OK] Path A closes the gap: it extends PATH to uv's tool-bin dir and/or fails
+fast when `goc` does not resolve.
+```
+
+`tests/test_smoke_release_path_a_goc_on_path.py` executes the shipped
+guard in isolation under the script's own `set -euo pipefail` with a
+`PATH` containing only an empty directory — so neither `uv` nor `goc`
+resolves — and asserts it exits 1 with `goc not on PATH` on stderr
+without reaching the agent launch. All three structural assertions fail
+against the pre-fix script; the suite is 765 tests green with the fix.
+
+That test also caught a defect in the first version of the fix: the
+error message interpolated `${goc_bin_dir:-uv's tool-bin directory}`,
+whose apostrophe opens a quote inside `${var:-word}` even within double
+quotes, so `bash -n` rejected the whole file with `unexpected EOF while
+looking for matching '`. Hence the `bash -n` assertion is part of the
+regression contract, not incidental.
 
 ## Why it matters
 
@@ -136,24 +164,39 @@ dev-machine tool posture. This one does not — the script already has an
 established idiom for prerequisite guards, and the CI job already shows
 the `PATH` step.
 
-## Fix
+## Fix (landed)
 
-In `run_path_a` (`scripts/smoke_release.sh:36-60`), make the installed
-`goc` reachable and fail fast if it is not, mirroring both
+In `run_path_a`, immediately after the `uv tool install` step, make the
+installed `goc` reachable and fail fast if it is not — mirroring both
 `release.yml:503` and the script's existing `command -v claude` guard:
 
 ```bash
-uv tool install --force "$REPO_ROOT" >/dev/null
-PATH="$(uv tool dir --bin):$PATH"
-export PATH
+local goc_bin_dir
+goc_bin_dir="$(uv tool dir --bin 2>/dev/null || true)"
+if [ -n "$goc_bin_dir" ]; then
+    export PATH="$goc_bin_dir:$PATH"
+fi
 if ! command -v goc >/dev/null 2>&1; then
     echo "error: goc not on PATH after 'uv tool install $REPO_ROOT'." >&2
-    echo "       Add $(uv tool dir --bin) to PATH (e.g. 'uv tool update-shell')." >&2
+    echo "       Add ${goc_bin_dir:-the uv tool-bin directory} to PATH (e.g. 'uv tool update-shell')." >&2
     exit 1
 fi
 ```
 
-Deriving the directory from `uv tool dir --bin` rather than hardcoding
-`$HOME/.local/bin` keeps the guard correct under a custom
-`UV_TOOL_BIN_DIR`. The guard is what makes the fix testable: the failure
-becomes a named prerequisite error before any agent turn is spent.
+Three details are load-bearing:
+
+- The directory comes from `uv tool dir --bin` rather than a hardcoded
+  `$HOME/.local/bin`, so a custom `UV_TOOL_BIN_DIR` still works.
+- The `if [ -n ... ]` is an explicit conditional, not an
+  `[ -n ... ] && export ...` chain. The chain does survive `set -e` (the
+  `&&`-list exemption applies) but leaves `$?` at 1, which would turn
+  into a spurious non-zero return if anything were ever appended after
+  it.
+- The guard aborts rather than warns. A warning would still spend the
+  30-turn agent run, which is the cost this card exists to avoid.
+
+`goc` remains reachable to the agent through the prompt's own claim
+because Path A's allowlist already grants `Bash(goc:*)`; the remaining
+Path A / Path B allowlist divergence from CI is out of scope here and
+sits on
+[local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job](../local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job/).

@@ -42,6 +42,26 @@ run_path_a() {
     echo "  pre-installing goc CLI from $REPO_ROOT..."
     uv tool install --force "$REPO_ROOT" >/dev/null
 
+    # `uv tool install` drops the console script into uv's tool-bin dir but
+    # does not put that dir on PATH — that is the developer's shell config,
+    # and uv only warns when it is missing. The CI job we mirror handles it
+    # explicitly (`echo "$HOME/.local/bin" >> $GITHUB_PATH`), so do the same
+    # here; ask uv for the directory rather than hardcoding ~/.local/bin so a
+    # custom UV_TOOL_BIN_DIR still works. Then fail fast, the same way this
+    # script already guards `claude` — the prompt below tells the agent that
+    # goc is on PATH, and a 30-turn agent run must not be spent proving that
+    # premise false and reporting it as a plugin-payload failure.
+    local goc_bin_dir
+    goc_bin_dir="$(uv tool dir --bin 2>/dev/null || true)"
+    if [ -n "$goc_bin_dir" ]; then
+        export PATH="$goc_bin_dir:$PATH"
+    fi
+    if ! command -v goc >/dev/null 2>&1; then
+        echo "error: goc not on PATH after 'uv tool install $REPO_ROOT'." >&2
+        echo "       Add ${goc_bin_dir:-the uv tool-bin directory} to PATH (e.g. 'uv tool update-shell')." >&2
+        exit 1
+    fi
+
     ( cd "$workdir" && claude -p "
 CI smoke test, Path A. Test directory: $workdir (fresh empty git repo).
 
