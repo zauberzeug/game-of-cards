@@ -188,3 +188,15 @@ noun — is genuinely closed and its seven sites are genuinely fixed. This card
 covers the two classes its scan could not express, and repairs the guard it
 installed. The closed card carries a forward pointer to here, per "closure is
 not frozenness".
+
+## Generalization filed at closure
+
+The root shape behind both cards — a prohibition guard that asserts an empty
+offender list without ever proving the list can be non-empty, so a scanner
+that stops matching keeps the build green — is tracked separately in
+[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/).
+This card is the instance that measured the cost; that one carries the
+repo-wide instance list (four fail-open guards) and the scope decision. The
+sensitivity tests added here (`GuardCatchesBothMissedClassesTest`) are one of
+its two in-tree precedents, so no work is duplicated between them — hence a
+cross-reference rather than an `advances` edge.

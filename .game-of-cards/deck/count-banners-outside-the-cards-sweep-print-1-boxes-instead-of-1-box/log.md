@@ -48,3 +48,20 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-27 — Closure' present
+
+## 2026-07-27T01:58:00Z — Generalization filed post-closure
+
+The Stop-hook pattern check asked whether this fix touched a broader shape. It
+did: the guard repaired here was fail-open — `assertEqual([], offenders)`
+passes identically whether the tree is clean or the scanner has died. Deck
+dedup found no root card for it (the nearest,
+`doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them`,
+covers the *absence* of a guard, not a guard that silently stopped working),
+so `static-source-guards-never-prove-they-can-catch-an-offender` was filed at
+`human_gate: decision` with a mutation-testing reproduce script: killing each
+prohibition scanner's regex leaves four guards green and turns this card's new
+sensitivity tests red. Not fixed through — the fix fans out across four
+scanners in two files and the per-site-versus-shared-harness choice is a real
+pick, so it fails the fix-through bar on both counts. Connected by
+cross-reference in both bodies, not an `advances` edge: neither card delivers
+the other's value.
