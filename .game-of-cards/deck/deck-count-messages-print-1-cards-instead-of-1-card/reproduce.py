@@ -93,7 +93,9 @@ if not live_hits:
 
 # ── 2. static: every count-interpolated card noun in the engine ─────────────
 
-SAFE_TERNARY = re.compile(r'noun\s*=\s*"card"\s*if\b')
+# The plural-aware ternary, whether written inline or factored into the
+# `_cards_noun` helper the fix introduced (same wording, one definition).
+SAFE_TERNARY = re.compile(r'noun\s*=\s*"card"\s*if\b|_cards_noun\(')
 COUNT_NOUN = re.compile(r"\{len\([^)}]*\)\}\s+(cards?\(s\)|cards?\b)")
 
 src = (ROOT / "goc" / "engine.py").read_text(encoding="utf-8").splitlines()

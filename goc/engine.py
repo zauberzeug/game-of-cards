@@ -1197,6 +1197,17 @@ def _format_elapsed(delta: timedelta) -> str:
     return f"{total // 86400}d"
 
 
+def _cards_noun(count: int) -> str:
+    """Pluralize the card noun for a count banner: 1 → "card", else "cards".
+
+    Every `{count} <noun>` banner the engine prints routes through here, so a
+    one-result view reads "1 card" rather than "1 cards" and every surface
+    agrees on the wording. The `card(s)` form used by the `migrate` paths is
+    the other accepted convention; do not introduce a third.
+    """
+    return "card" if count == 1 else "cards"
+
+
 LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")
 ADVANCE_REL_FIELDS = frozenset({"advances", "advanced_by"})
 SUPERSEDE_REL_FIELDS = frozenset({"supersedes", "superseded_by"})
@@ -3387,7 +3398,7 @@ def render_active_notice(
     shown = ", ".join(t.title for t in active[:3])
     if len(active) > 3:
         shown += f", +{len(active) - 3} more"
-    noun = "card" if len(active) == 1 else "cards"
+    noun = _cards_noun(len(active))
     return (
         f"ACTIVE: {len(active)} claimed {noun} outside this open queue: {shown}. "
         "Check `goc --status active` or `goc --board` before claiming new work."
@@ -4185,10 +4196,10 @@ def _cmd_quality_pass(args):
         if not summary:
             missing_summary.append(c.title)
 
-    print(f"\nQuality pass over {len(cards)} cards (status={status_flag}):\n")
+    print(f"\nQuality pass over {len(cards)} {_cards_noun(len(cards))} (status={status_flag}):\n")
 
     if title_hits:
-        print(f"Title antipatterns ({len(title_hits)} cards):")
+        print(f"Title antipatterns ({len(title_hits)} {_cards_noun(len(title_hits))}):")
         for title, reasons in title_hits:
             print(f"  - {title}")
             for r in reasons:
@@ -4198,7 +4209,7 @@ def _cmd_quality_pass(args):
         print("Title antipatterns: clean.\n")
 
     if missing_summary:
-        print(f"Missing summary ({len(missing_summary)} cards):")
+        print(f"Missing summary ({len(missing_summary)} {_cards_noun(len(missing_summary))}):")
         for title in missing_summary[:20]:
             print(f"  - {title}")
         if len(missing_summary) > 20:
@@ -4211,7 +4222,7 @@ def _cmd_quality_pass(args):
         return
 
     sample = cards if limit is None else cards[:limit]
-    print(f"Layer-2 (Sonnet pass): auditing {len(sample)} cards via `claude --model sonnet -p`…")
+    print(f"Layer-2 (Sonnet pass): auditing {len(sample)} {_cards_noun(len(sample))} via `claude --model sonnet -p`…")
     prompt = _build_quality_prompt(sample)
     try:
         verdicts = _run_sonnet_quality_pass(prompt)
@@ -4238,7 +4249,7 @@ def _cmd_quality_pass(args):
                 applied_count["summary"] += int(applied["summary"])
                 applied_count["dod"] += applied["dod"]
 
-    print(f"\nSonnet pass: {len(verdicts)} cards audited, {rewrite_count} with proposed rewrites.")
+    print(f"\nSonnet pass: {len(verdicts)} {_cards_noun(len(verdicts))} audited, {rewrite_count} with proposed rewrites.")
     if not dry_run:
         print(
             f"Applied: {applied_count['title']} titles, {applied_count['summary']} summaries, {applied_count['dod']} DoD items."
@@ -4394,7 +4405,7 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
         text = remove_frontmatter_field(text, "draft")
         (card_dir / "README.md").write_text(text)
         print(f"{title}: {prior} → done")
-    print(f"\nBundled close: {len(plan)} cards.")
+    print(f"\nBundled close: {len(plan)} {_cards_noun(len(plan))}.")
     print("Next: commit the closures together.")
 
 
@@ -6184,7 +6195,7 @@ def _cmd_triage(args):
     for entry in payload:
         by_gate.setdefault(entry["gate"], []).append(entry)
 
-    lines = [f"## Waiting on you (gate ≠ none) — {len(payload)} cards", ""]
+    lines = [f"## Waiting on you (gate ≠ none) — {len(payload)} {_cards_noun(len(payload))}", ""]
     for gate in sorted(by_gate.keys()):
         items = by_gate.get(gate, [])
         if not items:
