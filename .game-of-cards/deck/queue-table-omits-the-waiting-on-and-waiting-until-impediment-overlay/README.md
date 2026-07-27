@@ -1,7 +1,7 @@
 ---
 title: queue-table-omits-the-waiting-on-and-waiting-until-impediment-overlay
 summary: "The queue table never prints a card's impediment overlay. `render_table` (engine.py:3021-3117) emits no `waiting_on` / `waiting_until` at any verbosity, so an impeded card renders byte-identically to a pullable one at `goc`, `goc -v`, and `goc -vv` — and `goc --waiting`, the view whose only job is surfacing impeded work, cannot say what any listed card waits on or until when. Two closed siblings already added the overlay to the board (⏳) and to `--json`; the human table is the last renderer that hides it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-27T02:08:48Z"
@@ -10,13 +10,13 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — `goc -v`, `goc -vv`, `goc -v --waiting`, and `goc -vv --waiting` all name the impeding card's `waiting_on` reason and `waiting_until` date
   - [ ] TDD: a regression test under `tests/` pins the detail line's three shapes (reason + until, reason only, bare `waiting_until` deferral) and asserts no line is emitted for a non-impeded card
   - [ ] TDD: a regression test asserts the line's liveness gate matches the `--waiting` filter — no overlay line on a terminal-status card carrying a stale overlay, and none on a draft scaffold
   - [ ] MECHANICAL: the detail line sorts above the `awaiting:` advisory in `render_table`, so the hard impediment reads before the advisory dependency hint
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The queue table omits the impediment overlay at every verbosity
