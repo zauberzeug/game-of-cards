@@ -74,6 +74,18 @@ deliberately argparse-independent (`goc/cli.py:45`). The closed card
 established that parity contract for engine verbs but never adjudicated the
 two cli.py-routed verbs.
 
+A third instance of the same shape was filed on 2026-07-27:
+[openclaw-plugin-cannot-show-the-deck-queue-through-tool-or-exec](../openclaw-plugin-cannot-show-the-deck-queue-through-tool-or-exec/)
+— the *no-subcommand* invocation (`goc`, `--board`, `--ready`, `--json`),
+which no amount of subparser pinning can reach because it is not a verb at
+all. Same root: the `verb` union is the only vocabulary the tool has, so
+anything the engine exposes outside `_build_parser`'s subparsers is
+unreachable. Worth deciding these two together — a tool-side escape hatch
+(the pattern `TOOL_ONLY_VERBS`/`skill` already established) would answer
+both, whereas a kickoff-text-only fix answers only this card. If a fourth
+instance lands, the family should become one architectural card about how
+the OpenClaw tool models the CLI surface.
+
 ## Why it matters
 
 Reachability: fresh OpenClaw host → plugin install → user says "set up game
