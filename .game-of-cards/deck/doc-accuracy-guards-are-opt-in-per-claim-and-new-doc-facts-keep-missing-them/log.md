@@ -72,3 +72,35 @@ The one open endpoint,
 now shows as a live dependency (⏳ is advisory, not a pull block). No claim in
 the body changed and no decision was recorded — the scope question in
 `## Decision required` is still the human's pick.
+
+## 2026-07-27T04:47:12Z — Ninth instance connected: prose restating prose
+
+Wired [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/)
+in as `advanced_by` and recorded it in the instance table. Connected rather than
+filed as a new root: same root cause (opt-in-per-claim guarding, nothing sweeps
+for unguarded restatements), so per `Skill(create-card)` Step 2 it is supporting
+evidence on this card, not a second umbrella.
+
+What it adds beyond a tally:
+
+- **A third axis.** The body previously drew the line at *prose restating tree
+  state*, explicitly excluding the code-duplicates-code family. This instance is
+  prose restating *prose* — `Skill(refine-deck)` re-specifying a rule
+  `Skill(card-schema)` owns. Same root cause, but Option A's derive-from-tree
+  technique cannot reach it: there is no tree to derive from, only two paragraphs
+  whose meanings must agree.
+- **Rot introduced by the repair.** The restatement went stale on 2026-07-08,
+  when the `meta-fix` predicate card widened the rule at its source and left the
+  copy untouched. Nineteen days unguarded. The eighth instance showed a guarded
+  claim with an unguarded copy elsewhere; this one shows the fix itself
+  manufacturing the divergence — a strictly stronger argument for Option B's
+  claim-keyed guarding.
+- **The operative copy was the stale one.** refine-deck is the skill that
+  *executes* the tag rule on every hygiene pass, so the wrong copy outranked the
+  right one in practice: an agent following it would have stripped `story` from
+  67 of 102 cards.
+
+No guard was added, and the table row says so. The repair was structural — stop
+restating, point at the owner — which is the only general answer available for
+this axis. Recording it as an empty guard cell rather than a silent omission so
+the eventual scope decision sees that "add a guard" was not on the menu here.

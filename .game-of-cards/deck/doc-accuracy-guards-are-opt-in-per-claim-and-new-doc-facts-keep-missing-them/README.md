@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds seven guard classes, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Eighth instance of the shape; the fix path needs a scope decision."
+summary: "tests/test_guidance_accuracy.py now holds seven guard classes, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Ninth instance of the shape; the fix path needs a scope decision. The ninth adds a third axis — prose restating *prose* (one skill body re-specifying a rule another skill owns), where a derive-from-tree guard is structurally impossible — so the decision must say whether that surface class is in scope."
 status: open
 stage: null
 contribution: medium
@@ -43,8 +43,9 @@ claim someone happened to notice. Nothing looks for the *unguarded* claims.
 | `GocMdPluginReferenceAccuracyTest` | [cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships](../cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships/) | 2026-07-26 |
 | *(none yet — open)* | [ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/) | — |
 | `CliFrameworkPointerAccuracyTest` | [openclaw-verb-mirror-comment-names-click-in-an-argparse-cli](../openclaw-verb-mirror-comment-names-click-in-an-argparse-cli/) | 2026-07-26 |
+| *(none — not guardable by the technique; see below)* | [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/) | 2026-07-27 |
 
-Eight instances across three months, each its own file → claim → fix → guard cycle.
+Nine instances across three months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -69,6 +70,37 @@ one was written. That is a datum for Option B: the cheap version of a shape-leve
 lint may be "every fact a guard already pins, pin everywhere it is asserted" —
 grep the claim text across all tracked surfaces, not just the one where it was
 caught.
+
+The ninth is the first where the restated fact is **not tree state at all**, and
+it is the one that bounds Option A. `Skill(refine-deck)` § "Tags without firing
+predicates" restated the tag-application rule owned by `Skill(card-schema)`
+("every applied tag must fire on title / H1 / first ~2500 chars of body"). On
+2026-07-08 [meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag](../meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag/)
+widened that rule at its source — the window became a *default* a row may
+override — and the restatement was never touched. It sat wrong for nineteen days
+until an audit pass caught it, and because refine-deck is the skill that
+*executes* the rule on every hygiene sweep, the stale copy was the operative one:
+an agent following it would have stripped `story` from 67 cards regardless of
+what card-schema said.
+
+Two things follow for the scope decision.
+
+First, this instance is the strongest case yet for Option B, and it is stronger
+than the eighth: there, one assertion was guarded and a copy elsewhere rotted;
+here, **the act of fixing the first assertion is what created the stale second
+one**. A claim-keyed guard is the only shape that catches that class, because the
+rot is introduced by the repair.
+
+Second, Option A cannot reach it. The good guards work by *deriving* the expected
+value from the tree — count the directories, read the parser. Prose restating
+prose has no tree to derive from; checking it means comparing the *meaning* of two
+paragraphs, and no lint does that. So the fix for this surface class is
+structural rather than test-shaped: **don't restate a rule another document owns —
+point at it.** The repair took that route (refine-deck now says "a tag must
+satisfy its own row's predicate" and defers, instead of re-specifying the
+surface), and no guard was added, which is why its row in the table above is
+empty. Any option adopted here should say explicitly whether prose-restating-prose
+is in scope, because "add a guard" is not an available answer for it.
 
 ## What's structurally wrong
 
@@ -127,7 +159,11 @@ together, or at least in a consistent direction.
 Adjacent but distinct: the "X reimplements Y and keeps drifting" family
 (e.g. [yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting](../yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting/))
 is *code* duplicating *code*. This card is *prose* restating *tree state* — a
-different axis, and one no existing card covers.
+different axis, and one no existing card covers. The ninth instance adds a third
+axis to this card's scope: *prose* restating *prose*, where the owning document
+is itself guidance rather than code. Same root cause (no guard binds the copy to
+its source), but the only two answers that work on it are "point instead of
+restate" and a claim-keyed grep — not a derive-from-tree test.
 [derive-openclaw-manifest-skills-array-from-ported-skill-dirs](../derive-openclaw-manifest-skills-array-from-ported-skill-dirs/)
 is the single-surface version of the same instinct (a manifest hardcoding a list
 the tree knows); it should probably fold into whatever this card decides.
