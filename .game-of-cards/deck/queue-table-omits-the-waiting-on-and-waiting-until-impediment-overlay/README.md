@@ -1,21 +1,21 @@
 ---
 title: queue-table-omits-the-waiting-on-and-waiting-until-impediment-overlay
 summary: "The queue table never prints a card's impediment overlay. `render_table` (engine.py:3021-3117) emits no `waiting_on` / `waiting_until` at any verbosity, so an impeded card renders byte-identically to a pullable one at `goc`, `goc -v`, and `goc -vv` — and `goc --waiting`, the view whose only job is surfacing impeded work, cannot say what any listed card waits on or until when. Two closed siblings already added the overlay to the board (⏳) and to `--json`; the human table is the last renderer that hides it."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-27T02:08:48Z"
-closed_at: null
+closed_at: "2026-07-27T02:18:23Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `goc -v`, `goc -vv`, `goc -v --waiting`, and `goc -vv --waiting` all name the impeding card's `waiting_on` reason and `waiting_until` date
-  - [ ] TDD: a regression test under `tests/` pins the detail line's three shapes (reason + until, reason only, bare `waiting_until` deferral) and asserts no line is emitted for a non-impeded card
-  - [ ] TDD: a regression test asserts the line's liveness gate matches the `--waiting` filter — no overlay line on a terminal-status card carrying a stale overlay, and none on a draft scaffold
-  - [ ] MECHANICAL: the detail line sorts above the `awaiting:` advisory in `render_table`, so the hard impediment reads before the advisory dependency hint
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean
+  - [x] TDD: `reproduce.py` exits zero — `goc -v`, `goc -vv`, `goc -v --waiting`, and `goc -vv --waiting` all name the impeding card's `waiting_on` reason and `waiting_until` date
+  - [x] TDD: a regression test under `tests/` pins the detail line's three shapes (reason + until, reason only, bare `waiting_until` deferral) and asserts no line is emitted for a non-impeded card
+  - [x] TDD: a regression test asserts the line's liveness gate matches the `--waiting` filter — no overlay line on a terminal-status card carrying a stale overlay, and none on a draft scaffold
+  - [x] MECHANICAL: the detail line sorts above the `awaiting:` advisory in `render_table`, so the hard impediment reads before the advisory dependency hint
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -125,6 +125,19 @@ DEFECT: the impediment overlay is invisible in 4 detail-line view(s): goc -v, go
 exit=1
 ```
 
+After the fix the same reproducer exits 0, and this repo's own deck reads:
+
+```
+$ uv run goc -v --waiting
+blocked-status-conflates-dependency-external-wait-and-deferral  open  ...  none  ...
+    summary: EPIC. `status: blocked` conflates distinct situations. …
+    waiting_on: deferred
+    awaiting: remove-blocked-from-status-enum-and-migrate-existing-cards (you may start)
+```
+
+The two axes now read in the right order on the same card: the hard
+`waiting_on: deferred` above the advisory `awaiting: … (you may start)`.
+
 ## Why it matters
 
 This repo's own deck reproduces the failure live. Its three
@@ -147,15 +160,16 @@ what makes
 [pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty](../pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty/)
 burn whole agent sessions on an empty queue.
 
-## Fix
+## Fix (applied)
 
-In `render_table`'s `verbose >= 1` block (`engine.py:3084-3106`), emit an
-overlay detail line before the `awaiting:` advisory — hard signal above
-advisory — gated by the same liveness predicate the `--waiting` filter
-and `card_cell` use (`status not in TERMINAL_STATUSES`, not a draft,
-`waiting_impedes`), so a stale overlay on a closed card stays silent the
-way [board-paints-impediment-marker-on-terminal-cards-with-stale-overlay](../board-paints-impediment-marker-on-terminal-cards-with-stale-overlay/)
-established for the board.
+`render_table`'s `verbose >= 1` block emits an overlay detail line above
+the `awaiting:` advisory — hard signal above advisory:
+
+```python
+overlay = format_waiting_overlay(t)
+if overlay:
+    out_lines.append(f"    {overlay}")
+```
 
 Three shapes, echoing the stored fields (the idiom `goc wait` and
 `validate_waiting_overlay` already print):
@@ -166,11 +180,38 @@ Three shapes, echoing the stored fields (the idiom `goc wait` and
     waiting_until: 2026-12-01
 ```
 
-The date renders through `_format_waiting_until_for_message`
-(`engine.py:1165`) so a datetime overlay is not silently flattened to a
-bare date — the failure
+A parseable date renders through `_format_waiting_until_for_message`
+(`engine.py:1165`) so a datetime overlay is not flattened to a bare
+date — the failure
 [waiting-overdue-warning-renders-datetime-as-date-and-floors-elapsed-to-days](../waiting-overdue-warning-renders-datetime-as-date-and-floors-elapsed-to-days/)
-fixed for the validator.
+fixed for the validator. An *unparseable* one (which `waiting_impedes`
+still treats as impeding) is echoed verbatim and labelled
+`… — malformed` rather than run through `_date_part`'s 10-character
+slice, which would present `2026-05-20xx` as the clean date
+`2026-05-20` — the truncation
+[waiting-impedes-truncates-malformed-waiting-until-to-a-valid-prefix-date](../waiting-impedes-truncates-malformed-waiting-until-to-a-valid-prefix-date/)
+removed from the read guard.
+
+### The liveness gate is shared, not re-inlined
+
+The gate this line needs — `status not in TERMINAL_STATUSES`, not a
+draft, `waiting_impedes` — is the live variant that
+[waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift](../waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/)
+documents as re-inlined at ~5 sites in three phrasings, and predicts:
+"the next read surface that consults `waiting_impedes` will face the
+same choice and can drift the same way." Rather than become that sixth
+copy, this card adds `live_impeded(card)` next to `waiting_impedes` and
+routes **both** the new table line and the `--waiting` filter — which
+had the identical expression inlined verbatim — through it. Net copy
+count goes down, not up.
+
+That is a partial landing of the meta-fix's live variant. Still open
+there: the board's `card_cell` (whose `live` / `is_draft` locals also
+feed the `✎` marker, so it is not a drop-in), `card_is_workable_for_scheduler`,
+and the stricter open-only variant used by `card_is_ready` and the
+leverage line. The helper-shape decision that card is gated on is
+untouched — `live_impeded` can be renamed into whatever
+`active_impediment(card, *, queue_only=…)` shape gets picked.
 
 ### Scope boundary
 

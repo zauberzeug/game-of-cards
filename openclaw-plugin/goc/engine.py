@@ -2546,6 +2546,68 @@ def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bo
     # Future instant hides; elapsed instant resurfaces the card.
     return until_dt > now
 
+
+def live_impeded(card: Card, *, today: "date | datetime | None" = None) -> bool:
+    """True iff the card is *actively* impeded — the "show ⏳" variant.
+
+    `waiting_impedes` reads the overlay alone and deliberately ignores the
+    card's own state, so a closed card keeps returning True (closing never
+    clears `waiting_on` / `waiting_until`) and so does an unauthored draft
+    scaffold. Neither is an actionable wait, so every surface that paints
+    an impediment has to add the same two exclusions. Hand-inlining that
+    gate has already drifted twice at one call site — once dropping the
+    terminal half, once the draft half — so read surfaces route through
+    here instead of restating it. See
+    `deck/waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/`
+    for the wider consolidation (this helper covers the live variant; the
+    stricter open-only variant used by `card_is_ready` is still inlined).
+    """
+    return (
+        card.status not in TERMINAL_STATUSES
+        and not card_is_draft(card)
+        and waiting_impedes(card, today=today)
+    )
+
+
+def format_waiting_overlay(card: Card) -> str:
+    """Render a live impediment overlay as an operator-facing detail line.
+
+    Echoes the stored fields, matching what `goc wait` and
+    `validate_waiting_overlay` already print, in the three shapes the
+    overlay can take:
+
+        waiting_on: external (until 2026-12-01)
+        waiting_on: external
+        waiting_until: 2026-12-01
+
+    Returns `""` when the card carries no live overlay, so callers can
+    treat an empty string as "nothing to show". A parseable date goes
+    through `_format_waiting_until_for_message` so a datetime overlay is
+    not flattened to a bare date. An unparseable one — which
+    `waiting_impedes` still treats as impeding — is echoed verbatim and
+    labelled, never run through `_date_part`'s 10-character slice: that
+    would present `2026-05-20xx` as the clean date `2026-05-20`, the
+    truncation
+    `deck/waiting-impedes-truncates-malformed-waiting-until-to-a-valid-prefix-date/`
+    removed from the read guard.
+    """
+    if not live_impeded(card):
+        return ""
+    reason = card.waiting_on
+    until = card.waiting_until
+    if until is None:
+        until_str = ""
+    elif _waiting_until_instant(until) is None:
+        until_str = f"{until} — malformed"
+    else:
+        until_str = _format_waiting_until_for_message(until)
+    if reason and until_str:
+        return f"waiting_on: {reason} (until {until_str})"
+    if reason:
+        return f"waiting_on: {reason}"
+    return f"waiting_until: {until_str}"
+
+
 # GRPW sort: per-card contribution composes through the `advances` graph
 # into a `value` score with Bellman discount γ per hop. See
 # deck/goc-rename-blocks-to-advances-and-design-value-sort/ for the
@@ -3088,6 +3150,16 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
+            # The impediment overlay is the HARD "cannot pull" axis, so it
+            # reads above the advisory `awaiting:` line below — which says
+            # "(you may start)" and would otherwise be the only
+            # waiting-shaped text on an impeded card. Same live gate as the
+            # `--waiting` filter and the board's ⏳, via `live_impeded`, so
+            # the three human surfaces cannot disagree about what counts as
+            # actively impeded.
+            overlay = format_waiting_overlay(t)
+            if overlay:
+                out_lines.append(f"    {overlay}")
             # Liveness-gated dependency advisory (see `dependency_advisory`):
             # the human-facing `queue_only=True` slice gates out terminal
             # *and* active cards, so "you may start" surfaces only on open
@@ -3828,16 +3900,11 @@ def _cmd_default(args):
         # `waiting_until`), but that overlay is stale by definition and is
         # not an actionable wait. A draft scaffold (`card_is_draft`) is not
         # yet real work either — it is hidden from the queue and marked `✎`
-        # (not `⏳`) on the board. Mirror the board renderer's full `live`
-        # gate (`engine.py` `card_cell`: terminal-status AND draft) so the
-        # impeded view and the board cannot disagree about what counts as
-        # impeded.
-        filtered = [
-            t for t in filtered
-            if t.status not in TERMINAL_STATUSES
-            and not card_is_draft(t)
-            and waiting_impedes(t)
-        ]
+        # (not `⏳`) on the board. `live_impeded` owns that rule so this
+        # filter, the board's ⏳, and the table's overlay detail line cannot
+        # disagree about what counts as impeded — the gate hand-inlined here
+        # had already drifted twice.
+        filtered = [t for t in filtered if live_impeded(t)]
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
