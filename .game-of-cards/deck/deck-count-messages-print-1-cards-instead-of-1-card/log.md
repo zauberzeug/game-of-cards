@@ -37,3 +37,25 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-07-27 — Closure' present
+
+## 2026-07-27T01:34:00Z — Post-close amendment
+
+- **Forward pointer**: filed
+  `count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box`
+  minutes after closure. The Stop-hook generalization prompt triggered a
+  re-scan with a looser regex, which found nine hardcoded-plural count
+  interpolations this card's fix set never contained.
+- **Why this card's scan missed them**: the fix set was defined by
+  `\{len\([^)}]*\)\}\s+cards?\b` — the noun had to be the bare word `cards`
+  immediately after the interpolation. That excludes every non-card noun
+  (`boxes`, `titles`, `summaries`, `items`, `lines`) and also
+  `{len(cluster)} blocked cards` at `goc/engine.py:2240`, where the adjective
+  `blocked` sits between count and noun. So one *card* banner was left unfixed
+  by a card-noun sweep.
+- **The guard inherits the hole**: `tests/test_count_message_pluralization.py`
+  uses the same immediately-adjacent pattern, so it reports the convention as
+  enforced while nine interpolations sit outside its reach. Repairing the guard
+  is a DoD item on the successor.
+- **Not a retraction**: this card's stated scope (the bare-`cards` noun, seven
+  sites) is complete and correct; the README's completeness claim was narrowed
+  in place to say so explicitly rather than left to imply full coverage.

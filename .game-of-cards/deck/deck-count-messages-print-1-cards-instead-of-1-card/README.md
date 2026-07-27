@@ -142,6 +142,16 @@ static source guard in `tests/test_engine_module_singletons.py`); and a one-card
 scratch deck renders `Quality pass over 1 card` and
 `## Waiting on you (gate ≠ none) — 1 card` end-to-end.
 
+**The guard has a known hole — see
+[count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box](../count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box/),
+filed immediately after this card closed.** Both this card's scan and the guard
+match the noun `cards` only when it sits *directly* after the interpolation, so
+they miss `{len(cluster)} blocked cards` at `goc/engine.py:2240` — a card banner
+this sweep therefore never fixed — plus every non-card noun (`boxes`, `titles`,
+`summaries`, `items`, `lines`), nine interpolations in all. This card's own
+scope, the bare-`cards` noun, is genuinely complete; the successor covers what
+the scan could not express and repairs the guard.
+
 The guard was verified to fail, not merely pass: reverting `Bundled close:` to
 the hardcoded plural made the test fail and name that exact site, and the
 revert was then undone.
