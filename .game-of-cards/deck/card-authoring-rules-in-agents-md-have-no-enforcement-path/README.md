@@ -1,7 +1,7 @@
 ---
 title: card-authoring-rules-in-agents-md-have-no-enforcement-path
 summary: "AGENTS.md § 'Card authoring rules' states four rules for cards filed in this repo; three of them (English only, no verbatim discussion quotes, no internal event/project/person names) have no enforcement anywhere — not in `goc new`, not in `goc move`, not in `goc validate`, not in `goc quality-pass`. Today's hygiene pass found a live English-only violation that had been in the deck nine days and passed every guard clean, because all eight `TITLE_ANTIPATTERNS` (goc/engine.py:5493-5502) are jargon and character-class regexes that a well-formed ASCII slug in another language satisfies. The other two rules were audited clean today, so this is a gap to close before it bites, not a recurring family."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-27T02:58:31Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: the new check proves its own sensitivity — a test feeds it a known offender and asserts it is caught, not only that the current deck is clean (per `static-source-guards-never-prove-they-can-catch-an-offender`).
   - [ ] TDD: no false positive on the 679 titles currently in the deck.
   - [ ] MECHANICAL: `uv run goc validate` passes and `python scripts/sync_plugin_assets.py --check` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # AGENTS.md's card-authoring rules have no enforcement path
