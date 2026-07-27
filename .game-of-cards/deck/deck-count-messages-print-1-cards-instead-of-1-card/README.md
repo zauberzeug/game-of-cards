@@ -1,7 +1,7 @@
 ---
 title: deck-count-messages-print-1-cards-instead-of-1-card
 summary: "Six user-facing count messages in goc/engine.py hardcode the plural noun, so a one-card result reads 'Quality pass over 1 cards' and 'Waiting on you (gate != none) - 1 cards'. The same file already carries two working conventions for this — the plural-aware ternary in render_active_notice and the 'card(s)' form used by migrate and migrate-list-style — so the defect is an inconsistency inside one module, not a missing capability."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-27T01:15:46Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — no `{len(...)} cards` interpolation with a hardcoded plural noun remains in `goc/engine.py`, and a one-card scratch deck prints no `1 cards` line.
   - [ ] MECHANICAL: all seven sites listed below use one of the two conventions the module already ships (`card(s)`, or the `noun = "card" if … else "cards"` form from `render_active_notice`) — pick one and apply it uniformly rather than mixing a third.
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Count messages print "1 cards" instead of "1 card"
