@@ -1,7 +1,7 @@
 ---
 title: story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it
 summary: "The card-schema tag table defines `story` as 'part of an epic-grouping (carries the epic-grouping tag)', but 67 of the 102 `story`-tagged cards in this deck (66%) have no edge to any `epic`-tagged card, and the predicate's tag branch is unreachable here because `.game-of-cards/canonical-tags.md` is an empty stub — the deck uses only the nine goc-shipped tags, none of which is an epic-grouping tag. A mechanical refine-deck sweep applying the documented predicate would strip `story` from two thirds of the cards carrying it, so the predicate needs the same widen-or-retag scope decision that `meta-fix` already got."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-27T02:49:48Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the chosen predicate wording lands in `goc/templates/skills/card-schema/SKILL.md` (source of truth; mirrors regenerate via the sync hook), and the parenthetical "(carries the epic-grouping tag)" is either made accurate or dropped.
   - [ ] MECHANICAL: if the resolution keeps the tag branch, `.game-of-cards/canonical-tags.md` documents at least one epic-grouping tag with its predicate — a branch nothing can satisfy is not a branch.
   - [ ] MECHANICAL: `uv run goc validate` passes and `python scripts/sync_plugin_assets.py --check` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The `story` tag predicate fails on two thirds of the cards carrying it
