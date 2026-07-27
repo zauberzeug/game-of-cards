@@ -139,3 +139,35 @@ then the tree was restored).
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-27 — Closure' present
+
+## 2026-07-27T05:07:59Z — Post-closure: pinned the doc claims this fix introduced
+
+The Stop-hook pattern check caught something the closure missed. This card's
+body correctly argued it is *adjacent to* and not an instance of
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+— an authoring convention has no tree state to derive from. That reasoning
+holds for the *finding*. It does not hold for the *fix*: the AGENTS.md edit
+added five prose restatements of tree state (the guard script's path, the
+`card-language` pre-commit hook id, the test module's path, the scanned-field
+set, and a runnable command recipe), every one of them unpinned. That is
+precisely the shape the root card catalogues — a claim added without a guard,
+found stale later by a human.
+
+So rather than becoming the tenth instance, the claims are now pinned:
+`CardLanguageGuardAccuracyTest` in `tests/test_guidance_accuracy.py`, four
+tests deriving each claim from the tree. Deleting the script, unregistering the
+hook, or widening `SCANNED_FIELDS` to bodies now fails CI instead of quietly
+making AGENTS.md wrong.
+
+No card filed and no `advances` edge added, deliberately. The root card's
+instance table lists claims that *had already rotted* and were caught by a
+human; this one never rotted, and adding it would blur what that table
+measures. The connection is recorded here so it stays discoverable.
+
+Sensitivity checked rather than assumed, per
+`static-source-guards-never-prove-they-can-catch-an-offender`: each pin was run
+against a deliberately broken premise. The first attempt did NOT fail when the
+hook was renamed to `card-language-DISABLED` — `assertIn("id: card-language")`
+matches that substring — so the check became a line-anchored regex. Re-verified:
+renaming the hook fails, deleting the hook block fails, widening the guard to
+bodies fails, dropping the script name from AGENTS.md fails. 833 tests green.

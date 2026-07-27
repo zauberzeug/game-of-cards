@@ -8,6 +8,7 @@ implementation and misleads autonomous agents into believing a commit has landed
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import re
 import sys
 import unittest
@@ -495,6 +496,128 @@ class ClaudeSettingsOwnershipAccuracyTest(unittest.TestCase):
                     f"hook registrations actually come from."
                 ),
             )
+
+
+class CardLanguageGuardAccuracyTest(unittest.TestCase):
+    """AGENTS.md § "Card authoring rules" now tells the reader that the
+    English-only rule is guarded, names the script, the pre-commit hook id and
+    the test module that enforce it, and states which fields are scanned. Those
+    are five prose restatements of tree state, which is exactly the family
+    `doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them`
+    catalogues: a claim added without a pin, found stale later by a human. Each
+    assertion below derives the truth from the tree instead, so deleting the
+    hook, renaming the script or changing the scanned-field set fails here
+    rather than turning AGENTS.md into a lie."""
+
+    _GUARD_SCRIPT = "scripts/check_card_language.py"
+    _GUARD_TEST = "tests/test_card_authoring_rules.py"
+    _HOOK_ID = "card-language"
+
+    def _english_only_bullet(self) -> str:
+        flat = re.sub(r"\s+", " ", (ROOT / "AGENTS.md").read_text())
+        anchor = "**English only.**"
+        self.assertIn(
+            anchor,
+            flat,
+            msg="AGENTS.md no longer states the English-only card-authoring rule.",
+        )
+        start = flat.index(anchor)
+        return flat[start : start + 900]
+
+    def test_named_enforcement_files_exist(self) -> None:
+        bullet = self._english_only_bullet()
+        for rel in (self._GUARD_SCRIPT, self._GUARD_TEST):
+            with self.subTest(path=rel):
+                self.assertIn(
+                    rel,
+                    bullet,
+                    msg=(
+                        f"AGENTS.md's English-only bullet no longer names {rel}; a "
+                        f"reader cannot tell what enforces the rule."
+                    ),
+                )
+                self.assertTrue(
+                    (ROOT / rel).exists(),
+                    msg=(
+                        f"AGENTS.md says the English-only rule is guarded by {rel}, "
+                        f"but that file does not exist. Either restore it or drop "
+                        f"the claim — the rule is unenforced without it."
+                    ),
+                )
+
+    def test_named_precommit_hook_is_registered(self) -> None:
+        bullet = self._english_only_bullet()
+        self.assertIn(
+            f"`{self._HOOK_ID}` pre-commit hook",
+            bullet,
+            msg="AGENTS.md no longer names the pre-commit hook that runs the guard.",
+        )
+        config = (ROOT / ".pre-commit-config.yaml").read_text()
+        # Anchor the whole line: a plain substring check would accept a renamed or
+        # disabled hook (`id: card-language-DISABLED` contains `id: card-language`).
+        self.assertRegex(
+            config,
+            re.compile(rf"^\s*-\s*id:\s*{re.escape(self._HOOK_ID)}\s*$", re.MULTILINE),
+            msg=(
+                f"AGENTS.md claims a `{self._HOOK_ID}` pre-commit hook enforces the "
+                f"English-only rule, but .pre-commit-config.yaml registers no such "
+                f"hook. Filing-time enforcement is gone; fix the wiring or the claim."
+            ),
+        )
+        self.assertIn(
+            "check_card_language.py",
+            config,
+            msg=(
+                f"the `{self._HOOK_ID}` pre-commit hook no longer invokes "
+                f"check_card_language.py."
+            ),
+        )
+
+    def test_claimed_scanned_fields_match_the_guard(self) -> None:
+        """The bullet lists the fields the guard covers. Derive that list from the
+        guard itself so widening or narrowing its scope cannot silently diverge
+        from what AGENTS.md promises."""
+        spec = importlib.util.spec_from_file_location(
+            "_goc_card_language_guard_doccheck", ROOT / self._GUARD_SCRIPT
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        bullet = self._english_only_bullet()
+        for field in module.SCANNED_FIELDS:
+            with self.subTest(field=field):
+                self.assertIn(
+                    f"`{field}`",
+                    bullet,
+                    msg=(
+                        f"{self._GUARD_SCRIPT} scans `{field}`, but AGENTS.md's "
+                        f"English-only bullet does not list it. A reader would "
+                        f"under-estimate the guard's reach."
+                    ),
+                )
+        # The inverse: the bullet must not advertise coverage the guard lacks.
+        # Bodies are the field the guard deliberately skips, and the bullet says so.
+        self.assertNotIn(
+            "body",
+            module.SCANNED_FIELDS,
+            msg=(
+                "the guard now scans card bodies. AGENTS.md's English-only bullet "
+                "says it does not — update the bullet in the same change."
+            ),
+        )
+
+    def test_common_commands_block_lists_a_runnable_guard_invocation(self) -> None:
+        """AGENTS.md § "Common commands" advertises the guard as a command a
+        contributor can run. Pin the referenced path so the recipe cannot rot."""
+        commands = (ROOT / "AGENTS.md").read_text()
+        self.assertIn(
+            f"python {self._GUARD_SCRIPT}",
+            commands,
+            msg=(
+                "AGENTS.md's Common commands block no longer offers a way to run "
+                "the card-language guard by hand."
+            ),
+        )
 
 
 if __name__ == "__main__":
