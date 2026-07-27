@@ -1,7 +1,7 @@
 ---
 title: count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box
 summary: "Nine count interpolations across seven sites in goc/engine.py hardcode a plural noun, so `goc done` on a card with one open box prints 'ERROR: <title>: 1 unchecked DoD boxes'. The closed cards sweep could not reach them: its scan required the bare word `cards` immediately after the interpolation, which misses every non-card noun (boxes, titles, summaries, items, lines) and also misses `{len(cluster)} blocked cards` — and the CI guard it installed inherits the same blind spot."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-27T01:30:21Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: the CI guard in `tests/test_count_message_pluralization.py` is widened to catch BOTH classes the `cards` sweep missed — a non-card noun, and an adjective between the count and the noun (`{len(cluster)} blocked cards`) — and is proven by falsification: reintroduce one site of each class and confirm the test fails and names it.
   - [ ] MECHANICAL: all nine interpolations route through one shared pluralization definition. `_cards_noun()` is card-specific; decide whether to generalize it (and update its eight existing call sites) or add one general helper beside it, then apply that choice uniformly — do not leave two overlapping helpers.
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green; the closed sibling card's forward pointer is accurate.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Count banners outside the cards sweep print "1 boxes" instead of "1 box"
