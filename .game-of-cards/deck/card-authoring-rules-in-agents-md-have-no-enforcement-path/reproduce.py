@@ -1,21 +1,36 @@
 #!/usr/bin/env python3
-"""Reproduce: the title guards pass a card title that plainly breaks
-AGENTS.md's English-only card-authoring rule.
+"""Reproduce: a card title that plainly breaks AGENTS.md's English-only rule.
 
 The title used here is the real one this repo carried from 2026-07-18 until a
 refine-deck pass renamed it by hand on 2026-07-27. It is a well-formed slug —
 lower-kebab, ASCII, no jargon tokens — so every guard in the filing path
-accepts it.
+accepted it for nine days.
+
+This script probes two predicates, because the fix deliberately changed only
+one of them:
+
+  * `engine._check_title_antipatterns` — the goc-shipped filing-path guard. It
+    still accepts the title, and that is the intended end state: English-only
+    is *this repo's* authoring convention, not goc semantics, and a team
+    running goc on a German codebase is entitled to a German deck.
+  * `scripts/check_card_language.py` — the repo-local guard added by this card.
+    It flags the title, and the regression suite
+    (`tests/test_card_authoring_rules.py`) runs it over the whole deck in CI on
+    every push.
+
+Each probe carries a control that the predicate is known to catch, so a dead
+scanner cannot masquerade as a passing one.
 
 Run from the repo root:
 
     uv run python .game-of-cards/deck/card-authoring-rules-in-agents-md-have-no-enforcement-path/reproduce.py
 
-Exits 1 while the guards accept it, 0 once some guard rejects or flags it.
+Exits 1 while no guard rejects the title, 0 once one does.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -29,7 +44,8 @@ def _repo_root() -> Path:
     raise RuntimeError("repo root (pyproject.toml) not found")
 
 
-sys.path.insert(0, str(_repo_root()))
+ROOT = _repo_root()
+sys.path.insert(0, str(ROOT))
 
 from goc import engine  # noqa: E402
 
@@ -37,41 +53,59 @@ from goc import engine  # noqa: E402
 # multiple reads per session."
 OFFENDER = "openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session"
 
-# A control that the guard *does* catch, proving the scanner is alive — without
-# this, an empty offender list would be indistinguishable from a dead check.
-CONTROL = "r88-runSimulation-fails"
+# Controls the two predicates are each known to catch, proving the scanner is
+# alive — without them, an empty offender list would be indistinguishable from
+# a dead check.
+JARGON_CONTROL = "r88-runSimulation-fails"
+LANGUAGE_CONTROL = "konfiguration-wird-nicht-geladen"
+
+
+def _load_language_guard():
+    spec = importlib.util.spec_from_file_location(
+        "_goc_card_language_guard", ROOT / "scripts" / "check_card_language.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def main() -> int:
-    hits = engine._check_title_antipatterns(OFFENDER)
-    control_hits = engine._check_title_antipatterns(CONTROL)
+    guard = _load_language_guard()
 
-    print(f"antipattern rules defined:   {len(engine.TITLE_ANTIPATTERNS)}")
-    print(f"control title {CONTROL!r}")
-    print(f"  -> {len(control_hits)} hit(s): {control_hits}")
-    print(f"offending title {OFFENDER!r}")
-    print(f"  -> {len(hits)} hit(s): {hits}")
+    engine_hits = engine._check_title_antipatterns(OFFENDER)
+    engine_control = engine._check_title_antipatterns(JARGON_CONTROL)
+    language_hits = guard.flag_text(OFFENDER)
+    language_control = guard.flag_text(LANGUAGE_CONTROL)
 
-    if not control_hits:
+    print("goc-shipped filing-path guard (engine._check_title_antipatterns)")
+    print(f"  rules defined:                 {len(engine.TITLE_ANTIPATTERNS)}")
+    print(f"  control {JARGON_CONTROL!r} -> {len(engine_control)} hit(s)")
+    print(f"  offender -> {len(engine_hits)} hit(s): {engine_hits}")
+    print("repo-local English-only guard (scripts/check_card_language.py)")
+    print(f"  marker words:                  {len(guard.MARKER_WORDS)}")
+    print(f"  control {LANGUAGE_CONTROL!r} -> {len(language_control)} hit(s)")
+    print(f"  offender -> {len(language_hits)} hit(s): {language_hits}")
+
+    if not engine_control or not language_control:
         print(
-            "\nINCONCLUSIVE — the control title was not flagged either, so the "
-            "scanner itself is broken and this run proves nothing about the "
-            "English-only gap. Fix the control first."
+            "\nINCONCLUSIVE — a control title was not flagged, so that scanner is "
+            "broken and this run proves nothing about the English-only gap. Fix "
+            "the control first."
         )
         return 1
 
-    if hits:
+    if language_hits:
         print(
-            "\nOK — a guard now flags the non-English title; the English-only "
-            "rule has an enforcement path."
+            "\nOK — the repo-local guard flags the non-English title, and "
+            "`tests/test_card_authoring_rules.py` runs it over every card in CI. "
+            "The engine predicate still accepts it by design: goc does not ship "
+            "an English-only policy to consumers."
         )
         return 0
 
     print(
-        "\nFAIL — the guard is alive (it flags the control) and still accepts a "
-        "title that breaks AGENTS.md's English-only rule. `goc new`, `goc move` "
-        "and `goc quality-pass` all route through this same predicate, so none "
-        "of them can catch it."
+        "\nFAIL — both scanners are alive (each flags its control) and neither "
+        "rejects a title that breaks AGENTS.md's English-only rule."
     )
     return 1
 
