@@ -9,7 +9,7 @@ closed_at: null
 human_gate: decision
 advances: []
 advanced_by: []
-tags: [bug, api-contract, infra, unverified]
+tags: [bug, api-contract, infra]
 definition_of_done: |
   - [ ] PROCESS: human picks one of the fix options listed in `## Decision required` (line-anchored split / proper frontmatter parser / refuse-on-detection); recorded inline.
   - [ ] TDD: `reproduce.py` exits zero — a SKILL.md whose `description` contains `---` ports to Codex with the description preserved verbatim and the body intact.
@@ -20,14 +20,19 @@ definition_of_done: |
 
 # `_write_codex_skill` truncates frontmatter when `description` contains `---`
 
-UNVERIFIED only in the sense that no currently-shipped GoC skill has
-`---` inside a frontmatter value, so the bug has zero CURRENT impact on
-the GoC dogfood install. It is reachable as soon as any skill author
+VERIFIED, LATENT. `reproduce.py` in this directory exercises the defect
+end-to-end and exits 1 against the current tree: a `description:` value
+containing `---` ports to Codex as `description: "\"Use"`, the remainder
+of the value leaks into the rendered body, and a third `---` delimiter is
+left dangling. The defect is demonstrated, not hypothesized.
+
+What is *latent* is the trigger, not the bug: no currently-shipped GoC
+skill has `---` inside a frontmatter value, so impact on the GoC dogfood
+install is zero today. It becomes reachable the moment any skill author
 (GoC contributors, or — once `goc install` is documented as supporting
 project-local skill customization — downstream users) writes a
-`description:` that contains the substring `---`. The bug is exercised
-by `reproduce.py` in this directory; promote the card to verified once
-a downstream skill carries the trigger pattern.
+`description:` containing that substring. Low reachability is carried by
+`contribution: low`; it is not what the `unverified` tag means.
 
 ## Location
 

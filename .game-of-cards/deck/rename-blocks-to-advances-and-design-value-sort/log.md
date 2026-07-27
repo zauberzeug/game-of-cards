@@ -94,3 +94,13 @@ empirically dormant.
 ## 2026-05-31T08:49:16Z: decision recorded
 
 Value-computation design shipped with the rename; clear the stale session gate — Card was closed done on 2026-05-03 after shipping the advances rename + GRPW value sort, but the session gate that fronted the value-computation design step was never lowered at close (predates the close-time gate guard). Gate session → none. (Post-closure gate repair on a done card — the card stays closed; this clears the dangling gate so `goc validate` passes.)
+
+## 2026-07-27 — Deck hygiene: broken cross-card link de-linked
+
+`Skill(refine-deck)`'s defunct-reference sweep flagged the body's markdown link
+to `pong-soft-bound-tgc-test` as pointing at a card directory that does not
+exist in this deck. It never did: this card is
+from the repo's first day (2026-05-03) and the example is a card from the
+downstream research deck the value-sort design was drawn from. The prose was
+correct; only the link target was, so the reference was demoted to a code span
+with its origin named inline. No claim changed.

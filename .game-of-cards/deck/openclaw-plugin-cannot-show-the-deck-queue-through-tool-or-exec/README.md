@@ -114,7 +114,7 @@ only working shell form is `PYTHONPATH=<plugin-root> python3 -m goc.cli
 --ready`, and the plugin root is exactly the host-side path a sandboxed
 session cannot resolve — the failed-read-and-guess loop that the tool-only
 `skill` verb was added to eliminate
-([openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session](../openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session/)).
+([openclaw-plugin-skills-force-repeated-reads-every-session](../openclaw-plugin-skills-force-repeated-reads-every-session/)).
 
 ## Empirical evidence
 

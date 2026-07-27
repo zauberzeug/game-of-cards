@@ -101,3 +101,14 @@ decisive — literal present → wire the family; absent → strip.
 Empirical verification: all 45 open `meta-fix`-tagged cards pass the
 widened predicate (37 of them fail the old strict window test); zero
 false positives. Details in `log.md`.
+
+## Post-closure: the shape recurred on the `story` row
+
+A refine-deck pass on 2026-07-27 measured the same failure mode in the same
+table on a different row: the `story` predicate fails on 67 of 102 cards
+carrying it. Tracked in
+[story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/),
+which cites this card's widen-rather-than-re-tag resolution as its precedent.
+Nothing here is invalidated — the `meta-fix` row is still correct and still
+verified; the new card is evidence that one row at a time may be the wrong
+unit of repair for this table.

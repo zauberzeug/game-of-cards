@@ -7,7 +7,8 @@ contribution: low
 created: "2026-07-26T08:09:35Z"
 closed_at: null
 human_gate: session
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |

@@ -14,3 +14,16 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 8/8 ticked
 - [x] log-md-closure-entry — '## 2026-05-18 — Closure' present
+
+## 2026-07-27 — Deck hygiene: defunct sibling-card reference corrected
+
+`Skill(refine-deck)`'s defunct-reference sweep found the body pointing twice
+at `goc-repair-edges-fixes-half-edge-validator-errors` — a slug that has never
+existed in the deck (`git log --all --diff-filter=A` on that path returns
+nothing). The sibling card actually filed alongside this one in commit
+`ea154625 deck: file two cards for half-edge prevention and repair` is
+`half-edge-repair-requires-manual-multi-file-edits`, whose summary is the
+`goc repair-edges` cleanup tool this body describes. The link and the
+Cross-references bullet were rewritten in place to the real slug. No claim in
+this card changed; the citation was wrong at filing time, not rotted by a
+later rename.

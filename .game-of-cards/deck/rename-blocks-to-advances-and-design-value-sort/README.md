@@ -56,7 +56,8 @@ under-encodes value flow (most working cards have empty `blocks`
 because nothing strictly depends on them, even when load-bearing
 for downstream goals).
 
-Concrete example: [`pong-soft-bound-tgc-test`](../pong-soft-bound-tgc-test/)
+Concrete example: `pong-soft-bound-tgc-test` (a card in the downstream
+research deck this design was drawn from, not one in this repo)
 does not strictly block anything — it's an *option* for pong recovery.
 So `blocks: []` was the natural filing. But the card genuinely
 advances `epic-pong-late-hr-recovery` → `epic-cartpole-demo` →

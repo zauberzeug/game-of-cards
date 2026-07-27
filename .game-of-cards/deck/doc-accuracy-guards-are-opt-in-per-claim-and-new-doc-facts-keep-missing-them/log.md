@@ -49,3 +49,26 @@ surface-class list instance seven started: after `.github/workflows/` headers,
 now TypeScript source comments.
 
 No decision is recorded here; that remains the human's pick.
+
+## 2026-07-27 — Deck hygiene: instance roster wired as edges
+
+`Skill(refine-deck)`'s orphaned-dependency sub-check 2 surfaced this card as a
+`meta-fix` umbrella carrying zero relationship edges while its body declares an
+eight-card instance roster. The `meta-fix` predicate fires (literal in title,
+summary and body), so the disposition is "wire the family", not "strip the
+tag".
+
+All eight roster entries are now `advanced_by` edges on this card (symmetric
+`advances` written on each instance by `goc advance`), matching the wired shape
+of the sibling umbrella
+[unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes](../unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes/),
+which carries six closed instances plus one open one on the same field. Seven
+of the eight here are closed; the roster is deck-as-record evidence that the
+shape recurs, and closed endpoints are first-class per the deck's
+scheduler-vs-record rule.
+
+The one open endpoint,
+[ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/),
+now shows as a live dependency (⏳ is advisory, not a pull block). No claim in
+the body changed and no decision was recorded — the scope question in
+`## Decision required` is still the human's pick.

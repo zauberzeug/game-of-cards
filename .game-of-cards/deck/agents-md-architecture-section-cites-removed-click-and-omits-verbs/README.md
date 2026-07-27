@@ -7,7 +7,8 @@ contribution: high
 created: "2026-05-27T12:11:31Z"
 closed_at: "2026-05-27T13:18:02Z"
 human_gate: none
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [documentation, api-contract]
 definition_of_done: |

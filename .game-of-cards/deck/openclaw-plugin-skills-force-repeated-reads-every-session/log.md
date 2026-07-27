@@ -37,3 +37,21 @@ plugin-side fix.
 
 Card stays active: EMPIRICAL before/after trajectory count requires the next release to
 reach the consuming deployment (waiting_on: external).
+
+## 2026-07-27T02:47:42Z: renamed from openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session
+
+Rationale: `Skill(refine-deck)`'s title-quality pass found this was the deck's
+only non-English card title, against `AGENTS.md` § Card authoring rules
+("English only. All card titles, summaries, body, and DoD items are written in
+English, even when the conversation that motivated the card was in another
+language"), and against `Skill(card-schema)` § Title antipatterns ("Titles ARE
+the kanban label — a non-engineer reading `goc --board` must understand each
+card without opening it"). `goc quality-pass` does not catch it: its predicates
+are jargon-shaped regexes (`r\d+`, `path-\d+`, camelCase, underscores), none of
+which fire on a well-formed slug in the wrong language.
+
+The new slug is a literal translation of the old one, so no claim changed.
+`goc move` rewrote all four cross-reference sites (this card's `title:` and H1,
+plus two references in sibling cards) and the directory atomically. Status,
+worker, gate and the `waiting_on: external` overlay are untouched — the card is
+still parked pending the downstream trajectory measurement.

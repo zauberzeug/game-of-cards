@@ -8,7 +8,15 @@ created: "2026-07-26T07:47:11Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - generated-agents-guidance-overstates-done-commit
+  - agents-md-architecture-section-cites-removed-click-and-omits-verbs
+  - deck-skill-board-legend-misstates-pullability-of-dependency-flagged-cards
+  - sort-default-docstring-cites-wrong-engine-line-for-value-walk-dangling-edge-drop
+  - create-card-and-deck-skills-claim-goc-new-scaffolds-a-reproduce-py-stub
+  - cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships
+  - ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card
+  - openclaw-verb-mirror-comment-names-click-in-an-argparse-cli
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)

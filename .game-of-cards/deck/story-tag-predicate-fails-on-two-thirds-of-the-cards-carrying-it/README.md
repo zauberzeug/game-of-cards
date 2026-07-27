@@ -165,3 +165,29 @@ The next reader may raise the gate if they disagree.
 Whichever is picked, the parenthetical "(carries the epic-grouping tag)" must
 stop being the only stated satisfier of a predicate no card in this repo can
 satisfy.
+
+### Input for option 3: the groupings the deck already has, unnamed
+
+The same refine-deck pass ran Step 3 (new canonical tag candidates) and found
+no cluster that an existing tag fails to *cover* — every one of these is
+legitimately `infra` — but several that no tag **groups**. Title-substring
+counts over all 679 cards:
+
+| candidate grouping | cards | open/active |
+|---|---|---|
+| `plugin` | 58 | 14 |
+| `hook` | 52 | 7 |
+| `openclaw` | 40 | 14 |
+| `release` | 25 | 6 |
+| `codex` | 17 | 6 |
+| `yaml-lite` | 16 | 1 |
+
+Substring counts overlap (`openclaw` cards are mostly `plugin` cards too) and
+are a lower bound on the real clusters, so treat the table as a starting point
+for the scope call, not a proposed tag list. What it establishes is that
+option 3 is not hypothetical: there are coherent multi-dozen-card bodies of
+work here, they are exactly what a reader browsing closed work wants to group
+by, and the reason none is tagged is that registering one has never been on
+anyone's path. Step 3 deliberately filed no separate tag-proposal card — the
+proposal is the same decision as this card's option 3, and splitting it would
+have produced two cards with one root cause.
