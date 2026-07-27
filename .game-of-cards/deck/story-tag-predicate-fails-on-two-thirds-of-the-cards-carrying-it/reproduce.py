@@ -1,25 +1,45 @@
 #!/usr/bin/env python3
-"""Reproduce: the `story` tag predicate does not fire on most cards carrying it.
+"""Reproduce / verify: the `story` tag predicate agrees with the deck.
 
-`Skill(card-schema)` § Canonical tags defines the tag as:
+ORIGINAL FINDING (2026-07-27, exit 1). `Skill(card-schema)` § Canonical tags
+defined the tag as:
 
     | `story` | part of an epic-grouping (carries the epic-grouping tag) |
 
-and states the general rule "A tag is load-bearing iff its predicate fires on
-the title, H1, or first ~2500 chars of body ... when in doubt, drop it."
+Scored against that row, 67 of 102 `story`-tagged cards satisfied neither the
+tag branch (unsatisfiable here — `.game-of-cards/canonical-tags.md` is an empty
+stub, so no epic-grouping tag exists) nor the edge branch (an `advances` /
+`advanced_by` edge to an `epic`-tagged card). A mechanical hygiene sweep would
+have stripped two thirds of the tag.
 
-The predicate has two branches, both checked here:
+RESOLUTION (widened, matching the `meta-fix` precedent). The row now reads:
 
-  A. the card carries an epic-grouping *tag* shared with an epic, and
-  B. the card is linked into an epic-grouping by an `advances` /
-     `advanced_by` edge to an `epic`-tagged card.
+    | `story` | delivers new or changed capability (feature, affordance, doc or
+      process addition) rather than fixing something already broken — mutually
+      exclusive with `bug`. Epic membership is orthogonal and NOT a condition:
+      record it with an `advances` edge to the `epic` card, or an epic-grouping
+      tag. |
+
+so this script scores the widened row instead. What that row makes
+mechanically decidable is the **partition invariant**: `story` marks capability
+delivery, `bug` marks a fix to something already broken, and no card is both.
+Both rows assert it — `bug` reads "not `epic` and not `story`" — so checking it
+verifies the pair against the deck. That assertion gates the exit code.
+
+Epic membership is reported but deliberately NOT gated: under the widened row
+it is an orthogonal property recorded by edges, not a condition of the tag.
+Gating on it would re-create the original defect. The remaining clause ("what
+the card delivers") is a judgment about card content with no closed-form test;
+`Skill(refine-deck)` § "Tags without firing predicates" now says so explicitly,
+so a sweeping agent does not read "not mechanically checkable" as "does not
+fire".
 
 Run from the repo root:
 
     uv run python .game-of-cards/deck/story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/reproduce.py
 
-Exits 1 while any `story`-tagged card satisfies neither branch, 0 once the
-predicate and the deck agree.
+Exits 1 while any card carries both `story` and `bug`, 0 once the predicate and
+the deck agree.
 """
 
 from __future__ import annotations
@@ -81,46 +101,46 @@ def main() -> int:
     epics = [c for c in cards if "epic" in (c.tags or [])]
     stories = [c for c in cards if "story" in (c.tags or [])]
 
-    # Branch A: is there any epic-grouping tag at all? An epic-grouping tag is a
-    # non-shipped tag carried by an epic, which stories can then also carry.
+    # An epic-grouping tag is a non-shipped tag carried by an epic, which
+    # stories of that epic can then also carry.
     grouping_tags: set[str] = set()
     for ep in epics:
         grouping_tags |= set(ep.tags or []) - SHIPPED_TAGS
 
-    orphans = []
+    # --- gated: the partition invariant both rows assert ---------------------
+    both = [c for c in stories if "bug" in (c.tags or [])]
+
+    # --- ungated: how epic membership happens to be recorded -----------------
+    grouped = []
     for c in stories:
         by_tag = bool((set(c.tags or []) - SHIPPED_TAGS) & grouping_tags)
         by_edge = any("epic" in tags_of(x) for x in edges_of(c))
-        if not (by_tag or by_edge):
-            orphans.append(c)
+        if by_tag or by_edge:
+            grouped.append(c)
 
     print(f"epic-tagged cards:            {len(epics)}")
     print(f"epic-grouping tags available: {sorted(grouping_tags) or '(none)'}")
     print(f"story-tagged cards:           {len(stories)}")
-    print(f"  predicate fires:            {len(stories) - len(orphans)}")
-    print(f"  predicate does NOT fire:    {len(orphans)}")
+    print(f"  also tagged `bug`:          {len(both)}   <- gated: must be 0")
+    print(
+        f"  wired into an epic:         {len(grouped)}"
+        "   <- reported only; orthogonal under the widened row"
+    )
 
-    if not orphans:
-        print("\nOK — every `story`-tagged card satisfies the documented predicate.")
+    if not both:
+        print(
+            "\nOK — no card carries both `story` and `bug`; the widened predicate "
+            "and the deck agree."
+        )
         return 0
 
-    pct = 100 * len(orphans) / len(stories)
     print(
-        f"\nFAIL — {len(orphans)}/{len(stories)} ({pct:.0f}%) `story`-tagged cards "
-        "satisfy neither branch of the predicate."
+        f"\nFAIL — {len(both)}/{len(stories)} `story`-tagged cards also carry `bug`. "
+        "The two rows are mutually exclusive; pick the one that matches what the "
+        "card delivers."
     )
-    print("\nNon-terminal offenders (the ones a hygiene sweep would strip):")
-    for c in sorted(orphans, key=lambda c: c.title):
-        if c.status in ("open", "active"):
-            blockers = [
-                x for x in (c.frontmatter.get("advanced_by") or []) if isinstance(x, str)
-            ]
-            note = (
-                f"  <- {len(blockers)} cards block its closure; the `epic` predicate fires"
-                if len(blockers) > 1
-                else ""
-            )
-            print(f"  {c.status:7s} {c.title}{note}")
+    for c in sorted(both, key=lambda c: c.title):
+        print(f"  {c.status:10s} {c.title}")
     return 1
 
 

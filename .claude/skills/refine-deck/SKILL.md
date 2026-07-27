@@ -124,10 +124,10 @@ change.
 
 ### Tags without firing predicates
 
-Per `Skill(card-schema)`'s tag application criteria, every applied
-tag must fire on title / H1 / first ~2500 chars of body. Survey
-random 5–10 cards per round; for any tag whose predicate doesn't
-fire, strip it (mechanical frontmatter edit).
+Per `Skill(card-schema)`, a tag must satisfy **its own row's**
+predicate, not a fixed text window; judgment rows aren't
+text-matchable (`reference.md` § Tag sweeps). Survey 5–10 random
+cards per round; strip only where a row plainly fails.
 
 ### Orphaned dependencies
 

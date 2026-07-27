@@ -270,7 +270,7 @@ its predicate fires on the title, H1, or first ~2500 chars of body
 |---|---|
 | `bug` | not `epic` and not `story` (default for findings) |
 | `epic` | multiple cards block its closure OR carry its epic-grouping tag |
-| `story` | part of an epic-grouping (carries the epic-grouping tag) |
+| `story` | delivers new/changed capability, not a fix; disjoint from `bug` |
 | `unverified` | no working `reproduce.py` AND tagged at filing |
 | `documentation` | doc-quality failure (`doc`/`stale`/`drift`/`mismatch`/`cite`/`claim`/`readme-` in title, or body cites docstrings / `.md says`) |
 | `test` | title starts `test-` or contains `tolerance`/`vacuous`/`regression`, or body cites pytest / `tests/` |

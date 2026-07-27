@@ -112,3 +112,15 @@ which cites this card's widen-rather-than-re-tag resolution as its precedent.
 Nothing here is invalidated — the `meta-fix` row is still correct and still
 verified; the new card is evidence that one row at a time may be the wrong
 unit of repair for this table.
+
+**Outcome (2026-07-27): resolved the same way, and the "wrong unit of repair"
+worry was borne out.** The `story` row was widened to match practice rather
+than the deck re-tagged, following this card's precedent. But fixing the row
+alone would not have held: `Skill(refine-deck)` § "Tags without firing
+predicates" *restated* the strict title/H1/~2500-char window inline and told
+the operator to strip on it, so a sweep would have ignored whatever the row
+said. That section had never been reconciled with the "unless its row widens
+the surface" escape hatch **this** card added — so the `meta-fix` fix was, in
+that one respect, also incomplete for two and a half weeks. It now scores each
+tag against its own row. The unit of repair for a predicate is the row plus
+every place the sweep restates the rule.

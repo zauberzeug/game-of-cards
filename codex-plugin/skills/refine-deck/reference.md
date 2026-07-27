@@ -104,6 +104,36 @@ instance `advanced_by` meta-fix), and apply via `goc advance X
 --by Y`. The advance command is symmetric-by-construction so the
 validator stays happy.
 
+## Tag sweeps
+
+The Step 2 sweep strips tags, so a predicate that *under*-fires is
+destructive in a way an over-firing one is not. Two rules keep the
+mechanical path safe.
+
+**Score each tag against its own row, never against a house rule.**
+The title / H1 / first ~2500 chars of body in `Skill(card-schema)`'s
+tag criteria is the *default* surface; individual rows widen or
+replace it. `meta-fix`, for instance, fires on a literal anywhere in
+the title, `summary:` field, or full body with no cutoff, or on an
+edge to another `meta-fix` card. Applying the default window to that
+row scores correctly-wired families as mistagged.
+
+**Inability to evaluate a row is not evidence the row fails.** Some
+rows turn on a judgment about what the card delivers or touches —
+`story` (new or changed capability rather than a fix),
+`api-contract` (cites a public surface callers depend on), `infra`
+(touches pre-commit, packaging, CI) — and have no closed-form text
+predicate at all. There is nothing to grep. Leave these unless the
+card plainly contradicts the row: a `story`-tagged card that is
+transparently a defect finding, say, or one carrying `bug` as well
+(the two rows are disjoint, so that pair is always a real finding).
+
+Both rules exist because both failure modes have been measured on
+this table. Stripping on an unevaluated judgment row is the larger
+one — a sweep that mistakes "I cannot check this" for "this does not
+hold" removes curated grouping from the record axis, and nothing
+downstream flags the loss.
+
 ## Quality-pass `--llm` flag
 
 The optional `--llm` flag on `goc quality-pass` is a hook for a
