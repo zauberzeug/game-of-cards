@@ -77,6 +77,18 @@ class TriageDecisionPreviewOverflowTest(unittest.TestCase):
             self.assertIn(f"… +{hidden} more lines", out)
             self.assertIn("goc show long-decision-card", out)
 
+    def test_single_hidden_line_reads_singular(self) -> None:
+        """One line over the cap is "1 more line", not "1 more lines"."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.write_parked_card(cwd, "just-over-cap-card", DECISION_LINES[:7])
+
+            result = self.run_goc(cwd, "--no-color", "triage")
+            self.assertEqual(0, result.returncode, msg=result.stderr)
+
+            self.assertIn("… +1 more line ", result.stdout)
+            self.assertNotIn("1 more lines", result.stdout)
+
     def test_short_decision_preview_has_no_overflow_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

@@ -1197,15 +1197,20 @@ def _format_elapsed(delta: timedelta) -> str:
     return f"{total // 86400}d"
 
 
-def _cards_noun(count: int) -> str:
-    """Pluralize the card noun for a count banner: 1 → "card", else "cards".
+def _plural(count: int, singular: str, plural: str | None = None) -> str:
+    """Pluralize a count banner's noun: 1 → `singular`, otherwise `plural`.
 
     Every `{count} <noun>` banner the engine prints routes through here, so a
-    one-result view reads "1 card" rather than "1 cards" and every surface
-    agrees on the wording. The `card(s)` form used by the `migrate` paths is
-    the other accepted convention; do not introduce a third.
+    one-result view reads "1 card" / "1 unchecked DoD box" rather than
+    "1 cards" / "1 unchecked DoD boxes" and every surface agrees on the
+    wording. `plural` defaults to `singular + "s"`; pass it explicitly for
+    nouns that take anything else ("box" → "boxes", "summary" →
+    "summaries"). The `card(s)` form used by the `migrate` paths is the other
+    accepted convention; do not introduce a third.
     """
-    return "card" if count == 1 else "cards"
+    if count == 1:
+        return singular
+    return plural if plural is not None else f"{singular}s"
 
 
 LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")
@@ -1720,7 +1725,10 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         if closed_at is None:
             errors.append(f"{t.title}: closed_at: must be set when status={status_value}")
         if status_value == "done" and t.dod_open > 0:
-            errors.append(f"{t.title}: definition_of_done: status=done with {t.dod_open} unchecked boxes")
+            errors.append(
+                f"{t.title}: definition_of_done: status=done with "
+                f"{t.dod_open} unchecked {_plural(t.dod_open, 'box', 'boxes')}"
+            )
         gate_value = fm.get("human_gate")
         if gate_value not in (None, "none"):
             errors.append(
@@ -2237,7 +2245,8 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
             warnings.append(BlockerWarning(
                 "CASCADE_CHAIN_ROOT",
                 root.title,
-                f"{len(cluster)} blocked cards rooted here (gate={root.human_gate})",
+                f"{len(cluster)} blocked {_plural(len(cluster), 'card')} "
+                f"rooted here (gate={root.human_gate})",
             ))
 
     return warnings
@@ -3398,7 +3407,7 @@ def render_active_notice(
     shown = ", ".join(t.title for t in active[:3])
     if len(active) > 3:
         shown += f", +{len(active) - 3} more"
-    noun = _cards_noun(len(active))
+    noun = _plural(len(active), "card")
     return (
         f"ACTIVE: {len(active)} claimed {noun} outside this open queue: {shown}. "
         "Check `goc --status active` or `goc --board` before claiming new work."
@@ -4196,10 +4205,10 @@ def _cmd_quality_pass(args):
         if not summary:
             missing_summary.append(c.title)
 
-    print(f"\nQuality pass over {len(cards)} {_cards_noun(len(cards))} (status={status_flag}):\n")
+    print(f"\nQuality pass over {len(cards)} {_plural(len(cards), 'card')} (status={status_flag}):\n")
 
     if title_hits:
-        print(f"Title antipatterns ({len(title_hits)} {_cards_noun(len(title_hits))}):")
+        print(f"Title antipatterns ({len(title_hits)} {_plural(len(title_hits), 'card')}):")
         for title, reasons in title_hits:
             print(f"  - {title}")
             for r in reasons:
@@ -4209,7 +4218,7 @@ def _cmd_quality_pass(args):
         print("Title antipatterns: clean.\n")
 
     if missing_summary:
-        print(f"Missing summary ({len(missing_summary)} {_cards_noun(len(missing_summary))}):")
+        print(f"Missing summary ({len(missing_summary)} {_plural(len(missing_summary), 'card')}):")
         for title in missing_summary[:20]:
             print(f"  - {title}")
         if len(missing_summary) > 20:
@@ -4222,7 +4231,7 @@ def _cmd_quality_pass(args):
         return
 
     sample = cards if limit is None else cards[:limit]
-    print(f"Layer-2 (Sonnet pass): auditing {len(sample)} {_cards_noun(len(sample))} via `claude --model sonnet -p`…")
+    print(f"Layer-2 (Sonnet pass): auditing {len(sample)} {_plural(len(sample), 'card')} via `claude --model sonnet -p`…")
     prompt = _build_quality_prompt(sample)
     try:
         verdicts = _run_sonnet_quality_pass(prompt)
@@ -4249,10 +4258,12 @@ def _cmd_quality_pass(args):
                 applied_count["summary"] += int(applied["summary"])
                 applied_count["dod"] += applied["dod"]
 
-    print(f"\nSonnet pass: {len(verdicts)} {_cards_noun(len(verdicts))} audited, {rewrite_count} with proposed rewrites.")
+    print(f"\nSonnet pass: {len(verdicts)} {_plural(len(verdicts), 'card')} audited, {rewrite_count} with proposed rewrites.")
     if not dry_run:
         print(
-            f"Applied: {applied_count['title']} titles, {applied_count['summary']} summaries, {applied_count['dod']} DoD items."
+            f"Applied: {applied_count['title']} {_plural(applied_count['title'], 'title')}, "
+            f"{applied_count['summary']} {_plural(applied_count['summary'], 'summary', 'summaries')}, "
+            f"{applied_count['dod']} DoD {_plural(applied_count['dod'], 'item')}."
         )
 
 
@@ -4290,7 +4301,11 @@ def _cmd_done(args):
         print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
         sys.exit(2)
     if t.dod_open > 0:
-        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
+        print(
+            f"ERROR: {title}: {t.dod_open} unchecked DoD "
+            f"{_plural(t.dod_open, 'box', 'boxes')}; will not mark done",
+            file=sys.stderr,
+        )
         sys.exit(2)
     if t.human_gate != "none":
         print(
@@ -4372,7 +4387,8 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             sys.exit(2)
         if t.dod_open > 0:
             print(
-                f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; refusing bundled close",
+                f"ERROR: {title}: {t.dod_open} unchecked DoD "
+                f"{_plural(t.dod_open, 'box', 'boxes')}; refusing bundled close",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -4405,7 +4421,7 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
         text = remove_frontmatter_field(text, "draft")
         (card_dir / "README.md").write_text(text)
         print(f"{title}: {prior} → done")
-    print(f"\nBundled close: {len(plan)} {_cards_noun(len(plan))}.")
+    print(f"\nBundled close: {len(plan)} {_plural(len(plan), 'card')}.")
     print("Next: commit the closures together.")
 
 
@@ -5033,7 +5049,7 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
         if card.dod_freeform:
             return True, "freeform DoD"
         if card.dod_open > 0:
-            return False, f"{card.dod_open} unchecked boxes"
+            return False, f"{card.dod_open} unchecked {_plural(card.dod_open, 'box', 'boxes')}"
         return True, f"{card.dod_done}/{card.dod_done} ticked"
     if name == "log-md-closure-entry":
         log_path = DECK_DIR / card.title / "log.md"
@@ -6195,7 +6211,7 @@ def _cmd_triage(args):
     for entry in payload:
         by_gate.setdefault(entry["gate"], []).append(entry)
 
-    lines = [f"## Waiting on you (gate ≠ none) — {len(payload)} {_cards_noun(len(payload))}", ""]
+    lines = [f"## Waiting on you (gate ≠ none) — {len(payload)} {_plural(len(payload), 'card')}", ""]
     for gate in sorted(by_gate.keys()):
         items = by_gate.get(gate, [])
         if not items:
@@ -6210,8 +6226,9 @@ def _cmd_triage(args):
                 for ln in preview_lines[:6]:
                     lines.append(f"  > {ln}" if ln else "  >")
                 if len(preview_lines) > 6:
+                    hidden = len(preview_lines) - 6
                     lines.append(
-                        f"  > … +{len(preview_lines) - 6} more lines "
+                        f"  > … +{hidden} more {_plural(hidden, 'line')} "
                         f"(see `goc show {entry['title']}`)"
                     )
             elif entry["summary"]:
