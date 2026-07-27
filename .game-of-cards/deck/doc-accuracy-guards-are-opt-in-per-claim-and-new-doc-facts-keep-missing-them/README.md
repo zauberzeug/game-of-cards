@@ -17,6 +17,7 @@ advanced_by:
   - cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships
   - ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card
   - openclaw-verb-mirror-comment-names-click-in-an-argparse-cli
+  - story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
