@@ -55,3 +55,13 @@ The new slug is a literal translation of the old one, so no claim changed.
 plus two references in sibling cards) and the directory atomically. Status,
 worker, gate and the `waiting_on: external` overlay are untouched — the card is
 still parked pending the downstream trajectory measurement.
+
+Generalization filed: the rename was only possible because a reader happened to
+look at the title — `goc quality-pass` reported "Title antipatterns: clean" for
+the nine days the German slug was in the deck. The root shape (AGENTS.md's
+card-authoring rules have no enforcement path anywhere in the toolchain) is
+tracked in
+[card-authoring-rules-in-agents-md-have-no-enforcement-path](../card-authoring-rules-in-agents-md-have-no-enforcement-path/),
+which uses this card's old title as its reproduce case. Cross-reference rather
+than an `advances` edge: this card's value is the per-session read cost, not the
+guard, and neither card delivers the other's deliverable.
