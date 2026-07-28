@@ -135,8 +135,34 @@ the dogfood deck via a one-shot rewrite; afterwards the closure verbs
 and the emitter agree on canonical form and `migrate-list-style`
 reports zero rewrites on closed_at-only edits.
 
+## Post-closure correction (2026-07-26)
+
+The MECHANICAL DoD box below claims "**any other call site** of
+`mutate_frontmatter_field` for a colon-bearing value either route the
+value through `_yaml_inline` first or document the intentional bare
+form". That was **not true at closure**: the sweep searched
+`goc/engine.py` only (see the Location section's
+"search for `mutate_frontmatter_field(text, "closed_at"` for all sites"),
+and `scripts/backfill_terminal_closed_at.py:85` — a `closed_at` writer
+outside the engine — kept passing its raw `%Y-%m-%dT%H:%M:%SZ` string.
+
+The engine fix and the 251-card migration this card landed are intact
+and were never at risk; the deck still carries zero bare full timestamps.
+The gap was a second writer that would have re-introduced them on its
+next run.
+
+Fixed and closed by
+[backfill-script-reintroduces-bare-closed-at-the-migration-removed](../backfill-script-reintroduces-bare-closed-at-the-migration-removed/),
+which also converts this card's one-time manual sweep into an enforced
+property: `tests/test_closed_at_canonical_form.py` now scans every
+`closed_at` writer under `goc/` and `scripts/` and fails closed on one
+that skips `_yaml_inline`.
+
 ## Cross-references
 
+- [`backfill-script-reintroduces-bare-closed-at-the-migration-removed`](../backfill-script-reintroduces-bare-closed-at-the-migration-removed/)
+  — closed, the call site this card's sweep missed; see
+  "Post-closure correction" above.
 - [`mutate-frontmatter-field-corrupts-backslashes-via-regex-replacement-template`](../mutate-frontmatter-field-corrupts-backslashes-via-regex-replacement-template/)
   — closed, sibling defect on the same `mutate_frontmatter_field`
   surface (value-substitution treats the replacement as a regex

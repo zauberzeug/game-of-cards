@@ -1197,6 +1197,22 @@ def _format_elapsed(delta: timedelta) -> str:
     return f"{total // 86400}d"
 
 
+def _plural(count: int, singular: str, plural: str | None = None) -> str:
+    """Pluralize a count banner's noun: 1 → `singular`, otherwise `plural`.
+
+    Every `{count} <noun>` banner the engine prints routes through here, so a
+    one-result view reads "1 card" / "1 unchecked DoD box" rather than
+    "1 cards" / "1 unchecked DoD boxes" and every surface agrees on the
+    wording. `plural` defaults to `singular + "s"`; pass it explicitly for
+    nouns that take anything else ("box" → "boxes", "summary" →
+    "summaries"). The `card(s)` form used by the `migrate` paths is the other
+    accepted convention; do not introduce a third.
+    """
+    if count == 1:
+        return singular
+    return plural if plural is not None else f"{singular}s"
+
+
 LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")
 ADVANCE_REL_FIELDS = frozenset({"advances", "advanced_by"})
 SUPERSEDE_REL_FIELDS = frozenset({"supersedes", "superseded_by"})
@@ -1709,7 +1725,10 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         if closed_at is None:
             errors.append(f"{t.title}: closed_at: must be set when status={status_value}")
         if status_value == "done" and t.dod_open > 0:
-            errors.append(f"{t.title}: definition_of_done: status=done with {t.dod_open} unchecked boxes")
+            errors.append(
+                f"{t.title}: definition_of_done: status=done with "
+                f"{t.dod_open} unchecked {_plural(t.dod_open, 'box', 'boxes')}"
+            )
         gate_value = fm.get("human_gate")
         if gate_value not in (None, "none"):
             errors.append(
@@ -2226,7 +2245,8 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
             warnings.append(BlockerWarning(
                 "CASCADE_CHAIN_ROOT",
                 root.title,
-                f"{len(cluster)} blocked cards rooted here (gate={root.human_gate})",
+                f"{len(cluster)} blocked {_plural(len(cluster), 'card')} "
+                f"rooted here (gate={root.human_gate})",
             ))
 
     return warnings
@@ -2526,6 +2546,68 @@ def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bo
     # Future instant hides; elapsed instant resurfaces the card.
     return until_dt > now
 
+
+def live_impeded(card: Card, *, today: "date | datetime | None" = None) -> bool:
+    """True iff the card is *actively* impeded — the "show ⏳" variant.
+
+    `waiting_impedes` reads the overlay alone and deliberately ignores the
+    card's own state, so a closed card keeps returning True (closing never
+    clears `waiting_on` / `waiting_until`) and so does an unauthored draft
+    scaffold. Neither is an actionable wait, so every surface that paints
+    an impediment has to add the same two exclusions. Hand-inlining that
+    gate has already drifted twice at one call site — once dropping the
+    terminal half, once the draft half — so read surfaces route through
+    here instead of restating it. See
+    `deck/waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/`
+    for the wider consolidation (this helper covers the live variant; the
+    stricter open-only variant used by `card_is_ready` is still inlined).
+    """
+    return (
+        card.status not in TERMINAL_STATUSES
+        and not card_is_draft(card)
+        and waiting_impedes(card, today=today)
+    )
+
+
+def format_waiting_overlay(card: Card) -> str:
+    """Render a live impediment overlay as an operator-facing detail line.
+
+    Echoes the stored fields, matching what `goc wait` and
+    `validate_waiting_overlay` already print, in the three shapes the
+    overlay can take:
+
+        waiting_on: external (until 2026-12-01)
+        waiting_on: external
+        waiting_until: 2026-12-01
+
+    Returns `""` when the card carries no live overlay, so callers can
+    treat an empty string as "nothing to show". A parseable date goes
+    through `_format_waiting_until_for_message` so a datetime overlay is
+    not flattened to a bare date. An unparseable one — which
+    `waiting_impedes` still treats as impeding — is echoed verbatim and
+    labelled, never run through `_date_part`'s 10-character slice: that
+    would present `2026-05-20xx` as the clean date `2026-05-20`, the
+    truncation
+    `deck/waiting-impedes-truncates-malformed-waiting-until-to-a-valid-prefix-date/`
+    removed from the read guard.
+    """
+    if not live_impeded(card):
+        return ""
+    reason = card.waiting_on
+    until = card.waiting_until
+    if until is None:
+        until_str = ""
+    elif _waiting_until_instant(until) is None:
+        until_str = f"{until} — malformed"
+    else:
+        until_str = _format_waiting_until_for_message(until)
+    if reason and until_str:
+        return f"waiting_on: {reason} (until {until_str})"
+    if reason:
+        return f"waiting_on: {reason}"
+    return f"waiting_until: {until_str}"
+
+
 # GRPW sort: per-card contribution composes through the `advances` graph
 # into a `value` score with Bellman discount γ per hop. See
 # deck/goc-rename-blocks-to-advances-and-design-value-sort/ for the
@@ -2734,18 +2816,35 @@ def filter_cards(
 def parse_stage_filter(stage_flag: str | None) -> list[str] | None:
     if not stage_flag:
         return None
+    # Exact enum membership wins over the `a-b` range syntax: a hyphenated stage
+    # value (`pre-alpha`) must stay addressable, and a literal enum member beats
+    # a syntactic reading of the same string.
+    if stage_flag in STAGE_ORDER:
+        return [stage_flag]
     valid = ", ".join(STAGE_ORDER)
-    if "-" in stage_flag:
-        a, b = stage_flag.split("-", 1)
-        if a not in STAGE_ORDER or b not in STAGE_ORDER:
-            print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
-            sys.exit(2)
+    # A hyphenated stage value can also be a range *endpoint*, so the split
+    # position is resolved against the enum rather than fixed at the first
+    # hyphen — otherwise `pre-alpha-stable` reads as ("pre", "alpha-stable") and
+    # the span starting at `pre-alpha` cannot be spelled at all. An argument that
+    # splits two ways is reported, never silently read as one of them.
+    spans = [
+        (stage_flag[:i], stage_flag[i + 1 :])
+        for i, ch in enumerate(stage_flag)
+        if ch == "-" and stage_flag[:i] in STAGE_ORDER and stage_flag[i + 1 :] in STAGE_ORDER
+    ]
+    if len(spans) > 1:
+        readings = " and ".join(f"{a!r}..{b!r}" for a, b in spans)
+        print(
+            f"goc: error: --stage: {stage_flag!r} is an ambiguous range — it reads as {readings}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if spans:
+        a, b = spans[0]
         ai, bi = STAGE_ORDER.index(a), STAGE_ORDER.index(b)
         return STAGE_ORDER[min(ai, bi) : max(ai, bi) + 1]
-    if stage_flag not in STAGE_ORDER:
-        print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
-        sys.exit(2)
-    return [stage_flag]
+    print(f"goc: error: --stage: expected one of {valid}, or a range like alpha-stable", file=sys.stderr)
+    sys.exit(2)
 
 
 def parse_since_filter(value: str | None) -> str | None:
@@ -3051,6 +3150,16 @@ def render_table(
                 out_lines.append(f"    why: {why}")
             if t.summary:
                 out_lines.append(f"    summary: {t.summary}")
+            # The impediment overlay is the HARD "cannot pull" axis, so it
+            # reads above the advisory `awaiting:` line below — which says
+            # "(you may start)" and would otherwise be the only
+            # waiting-shaped text on an impeded card. Same live gate as the
+            # `--waiting` filter and the board's ⏳, via `live_impeded`, so
+            # the three human surfaces cannot disagree about what counts as
+            # actively impeded.
+            overlay = format_waiting_overlay(t)
+            if overlay:
+                out_lines.append(f"    {overlay}")
             # Liveness-gated dependency advisory (see `dependency_advisory`):
             # the human-facing `queue_only=True` slice gates out terminal
             # *and* active cards, so "you may start" surfaces only on open
@@ -3370,7 +3479,7 @@ def render_active_notice(
     shown = ", ".join(t.title for t in active[:3])
     if len(active) > 3:
         shown += f", +{len(active) - 3} more"
-    noun = "card" if len(active) == 1 else "cards"
+    noun = _plural(len(active), "card")
     return (
         f"ACTIVE: {len(active)} claimed {noun} outside this open queue: {shown}. "
         "Check `goc --status active` or `goc --board` before claiming new work."
@@ -3791,16 +3900,11 @@ def _cmd_default(args):
         # `waiting_until`), but that overlay is stale by definition and is
         # not an actionable wait. A draft scaffold (`card_is_draft`) is not
         # yet real work either — it is hidden from the queue and marked `✎`
-        # (not `⏳`) on the board. Mirror the board renderer's full `live`
-        # gate (`engine.py` `card_cell`: terminal-status AND draft) so the
-        # impeded view and the board cannot disagree about what counts as
-        # impeded.
-        filtered = [
-            t for t in filtered
-            if t.status not in TERMINAL_STATUSES
-            and not card_is_draft(t)
-            and waiting_impedes(t)
-        ]
+        # (not `⏳`) on the board. `live_impeded` owns that rule so this
+        # filter, the board's ⏳, and the table's overlay detail line cannot
+        # disagree about what counts as impeded — the gate hand-inlined here
+        # had already drifted twice.
+        filtered = [t for t in filtered if live_impeded(t)]
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
@@ -4168,10 +4272,10 @@ def _cmd_quality_pass(args):
         if not summary:
             missing_summary.append(c.title)
 
-    print(f"\nQuality pass over {len(cards)} cards (status={status_flag}):\n")
+    print(f"\nQuality pass over {len(cards)} {_plural(len(cards), 'card')} (status={status_flag}):\n")
 
     if title_hits:
-        print(f"Title antipatterns ({len(title_hits)} cards):")
+        print(f"Title antipatterns ({len(title_hits)} {_plural(len(title_hits), 'card')}):")
         for title, reasons in title_hits:
             print(f"  - {title}")
             for r in reasons:
@@ -4181,7 +4285,7 @@ def _cmd_quality_pass(args):
         print("Title antipatterns: clean.\n")
 
     if missing_summary:
-        print(f"Missing summary ({len(missing_summary)} cards):")
+        print(f"Missing summary ({len(missing_summary)} {_plural(len(missing_summary), 'card')}):")
         for title in missing_summary[:20]:
             print(f"  - {title}")
         if len(missing_summary) > 20:
@@ -4194,7 +4298,7 @@ def _cmd_quality_pass(args):
         return
 
     sample = cards if limit is None else cards[:limit]
-    print(f"Layer-2 (Sonnet pass): auditing {len(sample)} cards via `claude --model sonnet -p`…")
+    print(f"Layer-2 (Sonnet pass): auditing {len(sample)} {_plural(len(sample), 'card')} via `claude --model sonnet -p`…")
     prompt = _build_quality_prompt(sample)
     try:
         verdicts = _run_sonnet_quality_pass(prompt)
@@ -4221,10 +4325,12 @@ def _cmd_quality_pass(args):
                 applied_count["summary"] += int(applied["summary"])
                 applied_count["dod"] += applied["dod"]
 
-    print(f"\nSonnet pass: {len(verdicts)} cards audited, {rewrite_count} with proposed rewrites.")
+    print(f"\nSonnet pass: {len(verdicts)} {_plural(len(verdicts), 'card')} audited, {rewrite_count} with proposed rewrites.")
     if not dry_run:
         print(
-            f"Applied: {applied_count['title']} titles, {applied_count['summary']} summaries, {applied_count['dod']} DoD items."
+            f"Applied: {applied_count['title']} {_plural(applied_count['title'], 'title')}, "
+            f"{applied_count['summary']} {_plural(applied_count['summary'], 'summary', 'summaries')}, "
+            f"{applied_count['dod']} DoD {_plural(applied_count['dod'], 'item')}."
         )
 
 
@@ -4262,7 +4368,11 @@ def _cmd_done(args):
         print(f"ERROR: {title}: free-form DoD; use --force to bypass enforcement", file=sys.stderr)
         sys.exit(2)
     if t.dod_open > 0:
-        print(f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; will not mark done", file=sys.stderr)
+        print(
+            f"ERROR: {title}: {t.dod_open} unchecked DoD "
+            f"{_plural(t.dod_open, 'box', 'boxes')}; will not mark done",
+            file=sys.stderr,
+        )
         sys.exit(2)
     if t.human_gate != "none":
         print(
@@ -4344,7 +4454,8 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             sys.exit(2)
         if t.dod_open > 0:
             print(
-                f"ERROR: {title}: {t.dod_open} unchecked DoD boxes; refusing bundled close",
+                f"ERROR: {title}: {t.dod_open} unchecked DoD "
+                f"{_plural(t.dod_open, 'box', 'boxes')}; refusing bundled close",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -4377,7 +4488,7 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
         text = remove_frontmatter_field(text, "draft")
         (card_dir / "README.md").write_text(text)
         print(f"{title}: {prior} → done")
-    print(f"\nBundled close: {len(plan)} cards.")
+    print(f"\nBundled close: {len(plan)} {_plural(len(plan), 'card')}.")
     print("Next: commit the closures together.")
 
 
@@ -5005,7 +5116,7 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
         if card.dod_freeform:
             return True, "freeform DoD"
         if card.dod_open > 0:
-            return False, f"{card.dod_open} unchecked boxes"
+            return False, f"{card.dod_open} unchecked {_plural(card.dod_open, 'box', 'boxes')}"
         return True, f"{card.dod_done}/{card.dod_done} ticked"
     if name == "log-md-closure-entry":
         log_path = DECK_DIR / card.title / "log.md"
@@ -6167,7 +6278,7 @@ def _cmd_triage(args):
     for entry in payload:
         by_gate.setdefault(entry["gate"], []).append(entry)
 
-    lines = [f"## Waiting on you (gate ≠ none) — {len(payload)} cards", ""]
+    lines = [f"## Waiting on you (gate ≠ none) — {len(payload)} {_plural(len(payload), 'card')}", ""]
     for gate in sorted(by_gate.keys()):
         items = by_gate.get(gate, [])
         if not items:
@@ -6182,8 +6293,9 @@ def _cmd_triage(args):
                 for ln in preview_lines[:6]:
                     lines.append(f"  > {ln}" if ln else "  >")
                 if len(preview_lines) > 6:
+                    hidden = len(preview_lines) - 6
                     lines.append(
-                        f"  > … +{len(preview_lines) - 6} more lines "
+                        f"  > … +{hidden} more {_plural(hidden, 'line')} "
                         f"(see `goc show {entry['title']}`)"
                     )
             elif entry["summary"]:

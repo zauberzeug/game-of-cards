@@ -20,6 +20,7 @@ advanced_by:
   - session-start-hook-treats-coerced-bool-or-int-waiting-on-as-impediment
   - session-start-hook-over-coerces-quoted-waiting-scalars-to-absent
   - session-start-hook-comment-stripper-truncates-quoted-scalar-with-internal-hash
+  - a-wait-reason-starting-with-zero-makes-an-impeded-card-look-resumable
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] (replace after the decision is recorded)

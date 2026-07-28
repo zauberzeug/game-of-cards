@@ -6,7 +6,8 @@ contribution: low
 created: "2026-06-24T13:57:19Z"
 closed_at: "2026-06-24T14:01:40Z"
 human_gate: none
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [documentation, meta-fix, bug]
 summary: "`sort_default`'s docstring (`goc/engine.py:2599`) explains why a genuinely dangling `advances` edge contributes 0 to the near-term-flow tiebreak and cross-references the analogous prune in the value walk, but cites the wrong `engine.py` line for that dangling-edge drop — a doc-drift fix with no behavior change."

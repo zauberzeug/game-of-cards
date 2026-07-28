@@ -83,7 +83,10 @@ class DoneBundleTest(unittest.TestCase):
             result = self.run_goc(cwd, "done", "--bundle", "good-card", "bad-card")
             self.assertEqual(2, result.returncode)
             self.assertIn("bad-card", result.stderr)
-            self.assertIn("unchecked DoD boxes", result.stderr)
+            # The fixture holds exactly one open box, so the refusal must read
+            # "1 unchecked DoD box" — the banner pluralizes via _plural().
+            self.assertIn("1 unchecked DoD box; refusing bundled close", result.stderr)
+            self.assertNotIn("1 unchecked DoD boxes", result.stderr)
 
             readme_good = (cwd / "deck" / "good-card" / "README.md").read_text()
             self.assertIn("status: active", readme_good)

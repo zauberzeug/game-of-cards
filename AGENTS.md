@@ -27,8 +27,9 @@ uv run goc --help                  # exercise the CLI from source
 uv run goc validate                # check every card's frontmatter
 uv run python -m unittest discover -s tests  # run the regression suite
 uv build                           # produce wheel + sdist in dist/
-pre-commit run --all-files         # sync plugin assets + goc validate
+pre-commit run --all-files         # sync plugin assets + goc validate + card language
 python scripts/sync_plugin_assets.py --check  # verify claude-plugin/ is in sync
+uv run python scripts/check_card_language.py  # cards obey the English-only rule
 ```
 
 `tests/` is a stdlib `unittest`-based regression suite (run it locally
@@ -198,10 +199,23 @@ automatically, the same way it already does for `claude-plugin/`,
 `.claude/skills/...` or `.codex/skills/...` is now CI-detectable (it gets
 overwritten by the next pre-commit pass).
 
-The `.game-of-cards/` content stubs (project-local deck README,
-config) and `.claude/settings.json` (project-specific permission
-allow-list) are NOT in the auto-sync — they're meant to be customized
-per repo. The `<!-- BEGIN GOC vX.Y.Z -->` marker in `AGENTS.md` and
+Two kinds of file sit outside that auto-sync, for two different
+reasons. The `.game-of-cards/` content stubs (project-local deck
+README, config) are **user-owned** — they're meant to be customized
+per repo, so nothing regenerates them. `.claude/settings.json` is the
+Claude Code **hook-registration manifest**, and it's excluded because
+it is a *merge* target rather than a mirrored file: `goc install` /
+`goc upgrade` reconcile the `GOC_CLAUDE_HOOKS` entries
+(`goc/install.py`) into whatever the repo already has, and the
+plugin-mode cleanup strips those same entries back out. So its
+ownership is shared — the `hooks` entries whose command matches
+`GOC_CLAUDE_HOOKS` are goc-owned (change them in `goc/install.py`, not
+in `.claude/settings.json`, and `goc validate` enforces the parity);
+any other key the repo adds is yours. goc writes no `permissions`
+block there — the `Bash(goc:*)` grant is a human step, documented in
+`Skill(claude-kickoff)`.
+
+The `<!-- BEGIN GOC vX.Y.Z -->` marker in `AGENTS.md` and
 the `.goc-version` sentinel are rewritten by the release workflow
 (see release section above), so they're also out of scope for the
 pre-commit sync.
@@ -435,6 +449,14 @@ When filing GoC cards in this repo:
   are written in English, even when the conversation that motivated
   the card was in another language. Cards are read cold by future
   agents and contributors who may not share the original language.
+  Guarded by `scripts/check_card_language.py`, which runs as the
+  `card-language` pre-commit hook and from
+  `tests/test_card_authoring_rules.py` in CI. It scans `title`,
+  `summary` and `definition_of_done` — not bodies, which legitimately
+  quote non-English identifiers and error strings — and it is
+  precision-first: a slug built entirely from cognates can still slip
+  through. The rule is this repo's convention, not goc semantics, so
+  the guard is deliberately repo-local and ships to no consumer.
 - **No direct quotes from discussions.** Do not paste verbatim
   quotes from meetings, transcripts, chat, or coding-coffee
   retrospectives into card bodies. Synthesize the technical content
@@ -447,6 +469,13 @@ When filing GoC cards in this repo:
   bodies. State the technical motivation directly. If a card needs
   context that only an internal source provides, summarize the
   technical fact, not its origin.
+  This rule and the quoting rule above are **unguarded** — no check
+  enforces them, so they hold only as far as the author's care does.
+  Both were audited clean on 2026-07-27. Mechanizing them needs a
+  decision nobody has made yet (a denylist of internal names has to be
+  maintained somewhere, and permitted code/doc quoting is hard to tell
+  from forbidden discussion quoting), which is why the English-only
+  guard stops where it does.
 - **YAML format for list fields:** All four bidirectional-edge list
   fields — `advances`, `advanced_by`, `supersedes`, and
   `superseded_by` — use block-style (one `- item` per line) when

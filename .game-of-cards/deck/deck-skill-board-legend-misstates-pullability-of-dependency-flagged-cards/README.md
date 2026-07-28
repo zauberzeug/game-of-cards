@@ -1,13 +1,14 @@
 ---
 title: deck-skill-board-legend-misstates-pullability-of-dependency-flagged-cards
-summary: The `deck` skill's `goc --board` legend tells agents a `⏳` means "not ready to pull" and "No ⏳ ⇒ pullable", but the engine paints `⏳` on three axes — only two of which hide a card from the pull queue. A dependency-flagged card carries `⏳` yet is fully pullable, and the legend omits the `human_gate` axis entirely, so an agent reading the legend skips cards the scheduler would hand it next and misjudges which parked cards are pullable.
+summary: "The `deck` skill's `goc --board` legend tells agents a `⏳` means \"not ready to pull\" and \"No ⏳ ⇒ pullable\", but the engine paints `⏳` on three axes — only two of which hide a card from the pull queue. A dependency-flagged card carries `⏳` yet is fully pullable, and the legend omits the `human_gate` axis entirely, so an agent reading the legend skips cards the scheduler would hand it next and misjudges which parked cards are pullable."
 status: done
 stage: null
 contribution: high
 created: "2026-06-18T04:47:07Z"
 closed_at: "2026-06-18T04:50:26Z"
 human_gate: none
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [documentation]
 definition_of_done: |

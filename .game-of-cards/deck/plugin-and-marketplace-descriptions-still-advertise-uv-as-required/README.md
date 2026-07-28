@@ -95,3 +95,25 @@ descriptions with the current prerequisite. Suggested wording
 
 Single-line string edits in two files. No structural change; the
 version field, name, and the rest of each file stay untouched.
+
+## Post-closure evidence (2026-07-26)
+
+The sweep was **two of three surfaces**, not complete.
+`claude-plugin/README.md:7` still described the bundled CLI as running
+"via the `uv` tool manager" — the same false prerequisite, on the
+payload README a consumer reads in Claude Code's plugin browser. The
+"What's broken" section above treats that README as already-corrected
+by commit `8d64a3f`; in fact `8d64a3f` rewrote its Install and
+Requirements sections while leaving the intro sentence untouched (the
+stale line sits in that commit's own diff context).
+
+The closure verification could not have caught it: the recorded check
+was `grep -rn "requires uv" claude-plugin/ .claude-plugin/`, and the
+surviving claim is phrased "runs via the `uv` tool manager" — no
+"requires uv" substring. A prerequisite sweep needs to grep the
+*mechanism* (`uv`), not one phrasing of it.
+
+Fixed, with a CI guard, on
+[claude-code-plugin-readme-undercounts-its-skills-and-still-requires-uv](../claude-code-plugin-readme-undercounts-its-skills-and-still-requires-uv/).
+This card's own conclusion stands — `plugin.json` and
+`marketplace.json` were correctly fixed and have not regressed.

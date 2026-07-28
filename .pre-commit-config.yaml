@@ -13,3 +13,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^(\.game-of-cards/deck/|goc/|claude-plugin/).*$
+      # AGENTS.md § "Card authoring rules" requires English cards. goc's own
+      # auto-commit shells out to `git commit` without --no-verify, so this
+      # hook fires on `goc new --commit` too — the filing path, not just CI.
+      - id: card-language
+        name: cards are written in English
+        entry: uv run python scripts/check_card_language.py --check
+        language: system
+        pass_filenames: false
+        files: ^\.game-of-cards/deck/.*$

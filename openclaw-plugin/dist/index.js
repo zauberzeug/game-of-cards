@@ -2453,7 +2453,7 @@ var ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 var ISO_DATETIME_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 var NULL_LITERALS = /* @__PURE__ */ new Set(["null", "Null", "NULL", "~"]);
 var BOOL_LITERALS = /* @__PURE__ */ new Set(["true", "True", "TRUE", "yes", "Yes", "YES", "false", "False", "FALSE", "no", "No", "NO"]);
-var INT_RE = /^-?\d+$/;
+var INT_RE = /^-?(0|[1-9][0-9]*)$/;
 function stripQuotes(s) {
   return s.replace(/^["']|["']$/g, "");
 }

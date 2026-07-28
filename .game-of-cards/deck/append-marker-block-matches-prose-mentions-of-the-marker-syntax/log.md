@@ -2,7 +2,7 @@
 ## 2026-07-18 — Fresh real-world instance (agent session, dogfood repo)
 
 While regenerating the dogfood AGENTS.md marker block for
-`openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session`, an agent hand-rolled the
+`openclaw-plugin-skills-force-repeated-reads-every-session`, an agent hand-rolled the
 same unanchored replacement shape (`str.index("<!-- END GOC -->")`) and hit exactly this
 failure: the prose mention of the marker syntax (now at AGENTS.md ~line 400) matched
 first and 105 lines were duplicated. `test_version_surfaces` +

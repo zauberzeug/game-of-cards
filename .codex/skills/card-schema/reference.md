@@ -283,6 +283,39 @@ predominantly *lower* than its own. It names both candidate fixes
 wrong. The contribution-gradient heuristic keeps legitimate hubs
 clean.
 
+## The `bug` / `story` / `epic` rows
+
+These three rows answer two different questions, and conflating them
+is the classic misread.
+
+**`bug` vs `story` — what the card delivers.** `story` marks new or
+changed capability (a feature, an affordance, a doc or process
+addition); `bug` marks a fix to something already broken. They are
+disjoint by construction: each row's predicate excludes the other, so
+a card carrying both is mistagged and one of the two must go. Cards
+carrying neither are fine — the pair is not a required partition of
+the deck, and `bug`'s "(default for findings)" is a default, not an
+obligation.
+
+**`epic` — whether the card coordinates others.** Orthogonal to the
+first question: an epic that is itself a capability delivery
+legitimately carries `epic` *and* `story`.
+
+**Epic membership is not what makes a card a `story`.** Membership is
+recorded by an `advances` edge from the child to the epic (§
+Coordinating cards), or by a shared epic-grouping tag where the repo
+has registered one. Neither is a condition of the `story` tag, and a
+card is not mistagged for lacking both. Reading grouping as the
+*definition* of `story` inverts this: it scores every unwired
+capability card as mistagged and invites a hygiene sweep to strip the
+tag wholesale.
+
+**Sweeping caution.** `story` turns on a judgment about what the card
+delivers, so it has no closed-form text predicate. `Skill(refine-deck)`
+§ "Tags without firing predicates" covers what that means for a
+mechanical sweep: inability to evaluate a row is not evidence the row
+fails.
+
 ## Adding new tags
 
 Project-specific tags (domain vocabulary, sub-project names,

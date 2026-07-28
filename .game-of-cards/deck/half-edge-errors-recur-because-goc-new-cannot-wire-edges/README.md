@@ -105,12 +105,13 @@ as the preferred path; the two-step recipe survives as a fallback
 for adding edges to an existing card.
 
 See sibling card
-[goc-repair-edges-fixes-half-edge-validator-errors](../goc-repair-edges-fixes-half-edge-validator-errors/)
-for the cleanup tool that handles the residual cloud-agent leak.
+[half-edge-repair-requires-manual-multi-file-edits](../half-edge-repair-requires-manual-multi-file-edits/)
+for the cleanup tool (`goc repair-edges`) that handles the residual
+cloud-agent leak.
 
 ## Cross-references
 
-- Sibling card: `goc-repair-edges-fixes-half-edge-validator-errors`
+- Sibling card: `half-edge-repair-requires-manual-multi-file-edits`
 - Validator: `goc/engine.py:913` (`validate_bidirectional_edges`)
 - Symmetric writer this work reuses: `goc/engine.py:2768`
   (`_mutate_pair`)

@@ -442,21 +442,25 @@ def _parse_flow_mapping(text: str) -> dict:
     return result
 
 
+# Positions at which a quote character legitimately *opens* a quoted scalar
+# inside flow content: the start of the content, or just after a `,`
+# separator, a `:` key indicator, or an opening `[`/`{` (whitespace between is
+# skipped). Anywhere else a quote is ordinary content — the apostrophe in
+# `who: o'connor`, the `'` in `5 o'clock`, an `O'Brien`. Defined once and read
+# by both flow-aware scanners (`_split_flow`, `_strip_comment`) so the two
+# cannot drift on which positions count.
+_FLOW_NODE_START = ("", ",", ":", "[", "{")
+
+
 def _split_flow(text: str) -> list[str]:
     """Split comma-separated flow content, respecting nesting and quotes.
 
-    A quote char opens a quoted scalar ONLY at a position where a flow node
-    can begin: the start of the content, just after a `,` separator, just
-    after a `:` key indicator, or just after an opening `[`/`{` (whitespace
-    between is skipped). A quote that appears anywhere else is ordinary
-    content — the apostrophe in `who: o'connor`, the `'` in `5 o'clock`, an
-    `O'Brien`. Without this structural-position gate a bare apostrophe was
-    mistaken for a quote opener, so quote-mode never closed and the
-    following top-level comma was swallowed, dropping every later
-    field/element. This mirrors the element-start gate `_strip_comment`
-    already carries (it works on a single value, so a simple `text[:1]`
-    check suffices there; `_split_flow` also sees `key:` prefixes and
-    nesting, so it tracks the previous significant char instead).
+    A quote char opens a quoted scalar ONLY at a `_FLOW_NODE_START` position.
+    Without this structural-position gate a bare apostrophe was mistaken for a
+    quote opener, so quote-mode never closed and the following top-level comma
+    was swallowed, dropping every later field/element. `_strip_comment` gates
+    its flow arm on the same tuple; it also handles bare (non-flow) values, so
+    it keeps an extra `text[:1]` check for the quoted-scalar case.
     """
     parts: list[str] = []
     depth = 0
@@ -464,7 +468,6 @@ def _split_flow(text: str) -> list[str]:
     buf: list[str] = []
     escaped = False
     prev = ""  # last significant (non-space) char processed outside quotes
-    _node_start = ("", ",", ":", "[", "{")
     for c in text:
         if escaped:
             buf.append(c)
@@ -476,7 +479,7 @@ def _split_flow(text: str) -> list[str]:
             elif c == in_q:
                 in_q = None
                 prev = c
-        elif c in ('"', "'") and prev in _node_start:
+        elif c in ('"', "'") and prev in _FLOW_NODE_START:
             in_q = c
             buf.append(c)
         elif c in ("[", "{"):
@@ -538,11 +541,21 @@ def _strip_comment(text: str) -> str:
     # elements, so a `#` inside a quoted element is content, not a comment;
     # bracket depth gates comment detection so only a `#` outside both quotes
     # and brackets terminates the value.
+    #
+    # Inside a flow collection the quote must ALSO sit at a `_FLOW_NODE_START`
+    # position — the same gate `_split_flow` carries. A bare apostrophe in an
+    # *unquoted* element (`{who: o'connor, where: main}`) is content; reading
+    # it as an opener leaves quote-mode stuck on to end-of-line, so a trailing
+    # ` # comment` is never stripped and the now-unterminated flow value is
+    # rejected outright. The bare-quoted-scalar arm stays ungated on purpose:
+    # its quote opens at index 0 and may legally re-open right after a close,
+    # which is how the doubled `''` escape in `'don''t # x'` survives.
     flow = text[:1] in ("[", "{")
     quoted = text[:1] in ('"', "'")
     in_q: str | None = None
     escaped = False
     depth = 0
+    prev = ""  # last significant (non-space) char processed outside quotes
     for i, c in enumerate(text):
         if escaped:
             escaped = False
@@ -551,13 +564,19 @@ def _strip_comment(text: str) -> str:
                 escaped = True  # double-quoted YAML escapes the next char
             elif c == in_q:
                 in_q = None
+                prev = c
         elif flow and c in ("[", "{"):
             depth += 1
+            prev = c
         elif flow and c in ("]", "}"):
             if depth > 0:
                 depth -= 1
-        elif (quoted or flow) and c in ('"', "'"):
+            prev = c
+        elif c in ('"', "'") and (quoted or (flow and prev in _FLOW_NODE_START)):
             in_q = c
+            prev = c
         elif c == "#" and depth == 0 and i > 0 and text[i - 1] in (" ", "\t"):
             return text[:i].rstrip()
+        elif not c.isspace():
+            prev = c
     return text

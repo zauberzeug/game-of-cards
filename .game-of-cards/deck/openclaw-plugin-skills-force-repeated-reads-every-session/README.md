@@ -1,5 +1,5 @@
 ---
-title: openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session
+title: openclaw-plugin-skills-force-repeated-reads-every-session
 status: active
 stage: null
 contribution: high
@@ -20,7 +20,7 @@ worker: {who: Rodja Trappe, where: main}
 waiting_on: external
 ---
 
-# openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session
+# openclaw-plugin-skills-force-repeated-reads-every-session
 
 Agents wake up fresh each session, so every per-session read of a GoC skill body is a recurring
 cost. Trajectory analysis on a production OpenClaw deployment (2026-07-17, 156 turns) showed the

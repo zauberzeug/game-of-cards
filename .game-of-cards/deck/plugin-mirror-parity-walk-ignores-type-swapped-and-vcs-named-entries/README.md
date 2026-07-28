@@ -53,6 +53,32 @@ while plain content drift correctly returned
 Not independently re-run in a committed reproduce.py yet — hence
 `unverified`.
 
+### Fourth shape: a *valid* outside-pointing symlink (verified 2026-07-26)
+
+An audit round confirmed a fourth shape that the `common_funny` /
+`funny_files` fix above would **not** catch. A mirror entry that is a
+*working* symlink to a file outside the payload, whose target content matches
+the source, is reported as `same_files`:
+
+```
+mirror/engine.py -> ../outside/engine.py   (valid link, identical content)
+
+left_only  : []      right_only : []      diff_files : []
+common_funny: []     funny_files: []      same_files : ['engine.py']
+=> parity walk reports drift: False
+```
+
+`filecmp` follows the link and compares the target's bytes, so nothing lands
+in the "funny" buckets — they only collect stat failures and type mismatches.
+This matters more than the broken-symlink case: AGENTS.md singles this shape
+out as the one that breaks consumers silently — "those assets must be **real
+files** (not symlinks pointing outside the subtree, which silently disappear
+on consumer install)" — because Claude Code's marketplace install extracts
+only the `./claude-plugin` subtree, so the link target is simply absent on the
+consumer's disk while every local check stays green. Whatever fix this card
+takes should therefore assert entry *type* (`Path.is_symlink()` / `os.lstat`)
+across the mirror trees, not just read the extra `dircmp` buckets.
+
 ## Why it matters
 
 The validator's whole contract (established by the closed card

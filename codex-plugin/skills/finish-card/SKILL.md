@@ -179,7 +179,7 @@ blocks: fix the failing check and re-run. No waivers.
 goc done <title>
 ```
 
-Refuses (exit 2, `ERROR: <title>: <n> unchecked DoD boxes`) while any
+Refuses (exit 2, `ERROR: <title>: <n> unchecked DoD box(es)`) while any
 box is unchecked. On success sets `status: done` + `closed_at` and
 prints `<title>: open → done`.
 

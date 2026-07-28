@@ -10,7 +10,7 @@ human_gate: none
 advances:
   - add-plugin-update-instructions-to-marketplace-readme
 advanced_by: []
-tags: [story, bug, documentation]
+tags: [bug, documentation]
 definition_of_done: |
   - [x] README.md `Plugin install` section documents the refresh sequence: `/plugin marketplace update zauberzeug/game-of-cards` (or remove + re-add) BEFORE `/plugin install` for any version after the first
   - [x] llms.txt mirrors the same guidance in its "Lean alternative for Claude Code" section so LLM agents that direct users through plugin install also direct them through plugin update

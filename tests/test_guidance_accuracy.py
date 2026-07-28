@@ -8,6 +8,7 @@ implementation and misleads autonomous agents into believing a commit has landed
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import re
 import sys
 import unittest
@@ -96,6 +97,29 @@ class AgentsArchitectureAccuracyTest(unittest.TestCase):
                 f"{missing}; the goc/engine.py bullet claims an exhaustive list."
             ),
         )
+
+
+# Comments that tell an editor where to re-derive a mirrored CLI surface must
+# name the framework goc actually uses. The package dropped Click for argparse,
+# so a lingering `click` mention sends that editor grepping for a command group
+# the repo does not contain.
+_CLI_FRAMEWORK_POINTER_FILES = [
+    ROOT / "openclaw-plugin" / "index.ts",
+]
+
+
+class CliFrameworkPointerAccuracyTest(unittest.TestCase):
+    def test_mirror_comments_do_not_name_click(self) -> None:
+        for path in _CLI_FRAMEWORK_POINTER_FILES:
+            self.assertNotRegex(
+                path.read_text(encoding="utf-8"),
+                re.compile(r"click", re.IGNORECASE),
+                msg=(
+                    f"{path.relative_to(ROOT)} names Click as goc's CLI framework; "
+                    "the engine builds its subparsers with argparse in "
+                    "`_build_parser` (goc/engine.py)."
+                ),
+            )
 
 
 def _board_legend_row(path: Path) -> str:
@@ -248,6 +272,351 @@ class CreateCardScaffoldClaimAccuracyTest(unittest.TestCase):
             written,
             ["README.md", "log.md"],
             msg="goc new's file set changed; revisit the skill descriptions that document it.",
+        )
+
+
+GOC_MD = ROOT / "goc.md"
+
+
+def _skill_dir_count(rel: str) -> int:
+    return sum(1 for p in (ROOT / rel).iterdir() if p.is_dir())
+
+
+class GocMdPluginReferenceAccuracyTest(unittest.TestCase):
+    """`goc.md` is the plugin reference linked from README.md, ABOUT.md,
+    CONTRIBUTING.md and the website. Its Claude section was authored against the
+    pre-0.0.6 payload — symlinks into `goc/templates/`, a separately-installed
+    `goc` binary — and its OpenClaw section against a 13-skill port. Each guard
+    below derives the truth from the tree rather than restating a number, so a
+    payload change turns the build red instead of rotting the doc again."""
+
+    def _claude_section(self, start: str, end: str) -> str:
+        text = GOC_MD.read_text()
+        return text[text.index(start) : text.index(end)]
+
+    def test_no_doc_calls_payload_assets_symlinks(self) -> None:
+        """The marketplace install extracts only the `./claude-plugin` subtree, so
+        an outside-pointing symlink vanishes on consumer install. The payload has
+        been real files since `1df38953`; no doc may say otherwise."""
+        symlinks = sorted(
+            str(p.relative_to(ROOT))
+            for base in ("claude-plugin/skills", "claude-plugin/hooks")
+            for p in (ROOT / base).rglob("*")
+            if p.is_symlink()
+        )
+        self.assertEqual(
+            symlinks,
+            [],
+            msg=(
+                "plugin payload contains symlink(s); marketplace install extracts "
+                "only the ./claude-plugin subtree, so these disappear on consumer "
+                "install. Re-run scripts/sync_plugin_assets.py."
+            ),
+        )
+        self.assertNotRegex(
+            GOC_MD.read_text(),
+            re.compile(r"\*\*symlinks\*\*\s+into\s+`goc/templates/`"),
+            msg=(
+                "goc.md calls the plugin payload assets symlinks into "
+                "goc/templates/, but the tree holds real byte-for-byte copies. "
+                "The claim misdirects contributors into editing the mirror, whose "
+                "edits the next sync-plugin-assets run silently overwrites."
+            ),
+        )
+
+    def test_claude_skill_count_matches_payload(self) -> None:
+        m = re.search(
+            r"\*\*(\d+) GoC skills\*\* \(same as `goc install --agents claude`\)",
+            GOC_MD.read_text(),
+        )
+        self.assertIsNotNone(m, msg="goc.md lost its Claude plugin skill-count bullet.")
+        self.assertEqual(
+            int(m.group(1)),
+            _skill_dir_count("claude-plugin/skills"),
+            msg="goc.md's Claude skill count disagrees with claude-plugin/skills/.",
+        )
+
+    def test_openclaw_skill_count_matches_payload(self) -> None:
+        text = GOC_MD.read_text()
+        m = re.search(r"\*\*(\d+) GoC skills\*\* as workspace-tier", text)
+        self.assertIsNotNone(m, msg="goc.md lost its OpenClaw plugin skill-count bullet.")
+        self.assertEqual(
+            int(m.group(1)),
+            _skill_dir_count("openclaw-plugin/skills"),
+            msg="goc.md's OpenClaw skill count disagrees with openclaw-plugin/skills/.",
+        )
+        # `b30853e6` ported `kickoff` to OpenClaw; the section used to say it was
+        # deferred to host-specific complements.
+        if (ROOT / "openclaw-plugin" / "skills" / "kickoff").is_dir():
+            self.assertNotIn(
+                "`kickoff` skill is deferred",
+                text,
+                msg=(
+                    "goc.md says the OpenClaw port defers the kickoff skill, but "
+                    "openclaw-plugin/skills/kickoff/ ships."
+                ),
+            )
+
+    def test_claude_prerequisites_do_not_demand_a_separate_cli_install(self) -> None:
+        """`claude-plugin/bin/goc` runs the vendored engine, so Python 3.10+ is the
+        only host prerequisite (AGENTS.md § "Plugin runs goc from a vendored
+        engine")."""
+        wrapper = (ROOT / "claude-plugin" / "bin" / "goc").read_text()
+        self.assertIn("-m goc.cli", wrapper, msg="claude-plugin/bin/goc no longer runs the bundled engine.")
+        self.assertTrue(
+            (ROOT / "claude-plugin" / "goc" / "engine.py").exists(),
+            msg="claude-plugin/goc/engine.py missing; the payload no longer vendors the engine.",
+        )
+        prereq = self._claude_section("### Prerequisites", "### Install from the marketplace")
+        self.assertNotRegex(
+            prereq,
+            re.compile(r"shells to the `goc` CLI|install it first", re.IGNORECASE),
+            msg=(
+                "goc.md's Claude Prerequisites section demands a prior `goc` CLI "
+                "install, but the plugin bundles the engine and bin/goc runs it. "
+                "Python 3.10+ is the only host prerequisite."
+            ),
+        )
+
+    def test_no_doc_promises_an_unimplemented_skill_dir_bootstrap_rewrite(self) -> None:
+        """The bootstrap-path fix shipped as a `[ -f ]` guard with a bare-`goc`
+        fallback, not the `${CLAUDE_SKILL_DIR}` rewrite goc.md promised. Guard
+        against re-promising a fix no shipped skill uses."""
+        used = any(
+            "CLAUDE_SKILL_DIR" in p.read_text()
+            for p in (ROOT / "goc" / "templates" / "skills").rglob("SKILL.md")
+        )
+        if not used:
+            self.assertNotIn(
+                "CLAUDE_SKILL_DIR",
+                GOC_MD.read_text(),
+                msg=(
+                    "goc.md promises a ${CLAUDE_SKILL_DIR} bootstrap rewrite that "
+                    "no shipped skill uses; the fix taken was a `[ -f ]` guard with "
+                    "a bare-`goc` fallback (tests/test_skill_preamble_blocks.py)."
+                ),
+            )
+
+    def test_claude_provides_list_names_every_registered_hook(self) -> None:
+        """Every event in claude-plugin/hooks/hooks.json must appear in goc.md's
+        "What the plugin provides" list — the Stop hook was missing from it."""
+        import json
+
+        registered = sorted(
+            json.loads((ROOT / "claude-plugin" / "hooks" / "hooks.json").read_text())["hooks"]
+        )
+        provides = self._claude_section("### What the plugin provides", "### Prerequisites")
+        missing = [event for event in registered if f"**{event} hook**" not in provides]
+        self.assertFalse(
+            missing,
+            msg=(
+                f"goc.md's Claude 'What the plugin provides' list omits hook "
+                f"event(s) {missing} that claude-plugin/hooks/hooks.json registers."
+            ),
+        )
+
+
+class ClaudeSettingsOwnershipAccuracyTest(unittest.TestCase):
+    """`.claude/settings.json` is the Claude Code hook-registration manifest that
+    `goc install` / `goc upgrade` merge `GOC_CLAUDE_HOOKS` into (and that the
+    plugin-mode cleanup strips those entries back out of) — a shared-ownership
+    merge target, not a per-repo file goc leaves alone. AGENTS.md used to call it
+    a "project-specific permission allow-list", which is wrong twice over: goc
+    writes no `permissions` key anywhere, and the file is not hands-off. Both
+    guards derive the truth from the tree so the claim cannot rot again."""
+
+    # Every surface that tells a reader which files they may hand-edit.
+    _OWNERSHIP_DOCS = ("AGENTS.md", "goc.md", "CONTRIBUTING.md")
+
+    def test_no_doc_calls_settings_json_a_permission_allow_list(self) -> None:
+        offenders = []
+        for rel in self._OWNERSHIP_DOCS:
+            path = ROOT / rel
+            if not path.exists():
+                continue
+            # Collapse wrapping: the claim spanned three source lines.
+            flat = re.sub(r"\s+", " ", path.read_text())
+            for phrase in ("permission allow-list", "permission allowlist"):
+                if phrase in flat and ".claude/settings.json" in flat:
+                    window = flat[
+                        max(0, flat.index(phrase) - 120) : flat.index(phrase) + 60
+                    ]
+                    if ".claude/settings.json" in window:
+                        offenders.append(f"{rel}: ...{window}...")
+        self.assertFalse(
+            offenders,
+            msg=(
+                "`.claude/settings.json` holds hook registrations, not permissions. "
+                "goc has never written a `permissions` key; describe the file as the "
+                "hook-registration manifest whose GoC entries come from "
+                "GOC_CLAUDE_HOOKS in goc/install.py.\n" + "\n".join(offenders)
+            ),
+        )
+
+    def test_engine_writes_no_permissions_key(self) -> None:
+        """The premise the guard above rests on: if goc ever *does* start writing a
+        permissions block, this test fails and the docs must be revisited together
+        with it — rather than the doc claim silently becoming true again."""
+        for rel in ("goc/install.py", "goc/engine.py"):
+            with self.subTest(module=rel):
+                self.assertNotIn(
+                    "permissions",
+                    (ROOT / rel).read_text(),
+                    msg=(
+                        f"{rel} now references `permissions`. If goc writes a "
+                        f"permission allow-list, update the "
+                        f"`.claude/settings.json` ownership paragraph in AGENTS.md "
+                        f"and relax the guard above in the same change."
+                    ),
+                )
+
+    def test_agents_md_names_the_hook_registration_constant(self) -> None:
+        """The corrected paragraph must point at the real edit site, so a
+        contributor changes `GOC_CLAUDE_HOOKS` instead of the generated file."""
+        flat = re.sub(r"\s+", " ", (ROOT / "AGENTS.md").read_text())
+        anchor = ".claude/settings.json` is the"
+        self.assertIn(
+            anchor,
+            flat,
+            msg=(
+                "AGENTS.md no longer explains what `.claude/settings.json` is. The "
+                "dogfood-sync section must say it is the Claude Code "
+                "hook-registration manifest goc merges GOC_CLAUDE_HOOKS into."
+            ),
+        )
+        start = flat.index(anchor)
+        paragraph = flat[start : start + 900]
+        for expected in ("GOC_CLAUDE_HOOKS", "goc/install.py"):
+            self.assertIn(
+                expected,
+                paragraph,
+                msg=(
+                    f"AGENTS.md's `.claude/settings.json` ownership paragraph no "
+                    f"longer names {expected}; a reader cannot tell where the "
+                    f"hook registrations actually come from."
+                ),
+            )
+
+
+class CardLanguageGuardAccuracyTest(unittest.TestCase):
+    """AGENTS.md § "Card authoring rules" now tells the reader that the
+    English-only rule is guarded, names the script, the pre-commit hook id and
+    the test module that enforce it, and states which fields are scanned. Those
+    are five prose restatements of tree state, which is exactly the family
+    `doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them`
+    catalogues: a claim added without a pin, found stale later by a human. Each
+    assertion below derives the truth from the tree instead, so deleting the
+    hook, renaming the script or changing the scanned-field set fails here
+    rather than turning AGENTS.md into a lie."""
+
+    _GUARD_SCRIPT = "scripts/check_card_language.py"
+    _GUARD_TEST = "tests/test_card_authoring_rules.py"
+    _HOOK_ID = "card-language"
+
+    def _english_only_bullet(self) -> str:
+        flat = re.sub(r"\s+", " ", (ROOT / "AGENTS.md").read_text())
+        anchor = "**English only.**"
+        self.assertIn(
+            anchor,
+            flat,
+            msg="AGENTS.md no longer states the English-only card-authoring rule.",
+        )
+        start = flat.index(anchor)
+        return flat[start : start + 900]
+
+    def test_named_enforcement_files_exist(self) -> None:
+        bullet = self._english_only_bullet()
+        for rel in (self._GUARD_SCRIPT, self._GUARD_TEST):
+            with self.subTest(path=rel):
+                self.assertIn(
+                    rel,
+                    bullet,
+                    msg=(
+                        f"AGENTS.md's English-only bullet no longer names {rel}; a "
+                        f"reader cannot tell what enforces the rule."
+                    ),
+                )
+                self.assertTrue(
+                    (ROOT / rel).exists(),
+                    msg=(
+                        f"AGENTS.md says the English-only rule is guarded by {rel}, "
+                        f"but that file does not exist. Either restore it or drop "
+                        f"the claim — the rule is unenforced without it."
+                    ),
+                )
+
+    def test_named_precommit_hook_is_registered(self) -> None:
+        bullet = self._english_only_bullet()
+        self.assertIn(
+            f"`{self._HOOK_ID}` pre-commit hook",
+            bullet,
+            msg="AGENTS.md no longer names the pre-commit hook that runs the guard.",
+        )
+        config = (ROOT / ".pre-commit-config.yaml").read_text()
+        # Anchor the whole line: a plain substring check would accept a renamed or
+        # disabled hook (`id: card-language-DISABLED` contains `id: card-language`).
+        self.assertRegex(
+            config,
+            re.compile(rf"^\s*-\s*id:\s*{re.escape(self._HOOK_ID)}\s*$", re.MULTILINE),
+            msg=(
+                f"AGENTS.md claims a `{self._HOOK_ID}` pre-commit hook enforces the "
+                f"English-only rule, but .pre-commit-config.yaml registers no such "
+                f"hook. Filing-time enforcement is gone; fix the wiring or the claim."
+            ),
+        )
+        self.assertIn(
+            "check_card_language.py",
+            config,
+            msg=(
+                f"the `{self._HOOK_ID}` pre-commit hook no longer invokes "
+                f"check_card_language.py."
+            ),
+        )
+
+    def test_claimed_scanned_fields_match_the_guard(self) -> None:
+        """The bullet lists the fields the guard covers. Derive that list from the
+        guard itself so widening or narrowing its scope cannot silently diverge
+        from what AGENTS.md promises."""
+        spec = importlib.util.spec_from_file_location(
+            "_goc_card_language_guard_doccheck", ROOT / self._GUARD_SCRIPT
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        bullet = self._english_only_bullet()
+        for field in module.SCANNED_FIELDS:
+            with self.subTest(field=field):
+                self.assertIn(
+                    f"`{field}`",
+                    bullet,
+                    msg=(
+                        f"{self._GUARD_SCRIPT} scans `{field}`, but AGENTS.md's "
+                        f"English-only bullet does not list it. A reader would "
+                        f"under-estimate the guard's reach."
+                    ),
+                )
+        # The inverse: the bullet must not advertise coverage the guard lacks.
+        # Bodies are the field the guard deliberately skips, and the bullet says so.
+        self.assertNotIn(
+            "body",
+            module.SCANNED_FIELDS,
+            msg=(
+                "the guard now scans card bodies. AGENTS.md's English-only bullet "
+                "says it does not — update the bullet in the same change."
+            ),
+        )
+
+    def test_common_commands_block_lists_a_runnable_guard_invocation(self) -> None:
+        """AGENTS.md § "Common commands" advertises the guard as a command a
+        contributor can run. Pin the referenced path so the recipe cannot rot."""
+        commands = (ROOT / "AGENTS.md").read_text()
+        self.assertIn(
+            f"python {self._GUARD_SCRIPT}",
+            commands,
+            msg=(
+                "AGENTS.md's Common commands block no longer offers a way to run "
+                "the card-language guard by hand."
+            ),
         )
 
 

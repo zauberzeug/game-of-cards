@@ -241,3 +241,13 @@ Backwards (should warn + fail): epic `E` with `advances: [C]`; child
 `C` with `advanced_by: [E]`, DoD 100%. `goc attest C` →
 `advanced-by-closed` FAIL. `goc validate` → backwards-epic-edge hint
 naming `E` and `C`.
+
+## Post-closure: the unused OR branch was measured
+
+This card observed that the epic-grouping *tag* branch of the card-schema
+predicates is never surfaced, so authors reach for an edge even where a tag is
+the honest tool. A refine-deck pass on 2026-07-27 measured the consequence on
+the `story` row, where that branch is not one of two options but the only one
+written down — and found it unsatisfiable in this repo, because
+`.game-of-cards/canonical-tags.md` registers no tags at all. Tracked in
+[story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/).

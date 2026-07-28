@@ -1,5 +1,6 @@
 ---
 title: autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish
+summary: "A card whose Definition of Done is structurally completable only by a human is still born at `human_gate: none`, because nothing inspects the DoD at creation and `card_is_ready` gates only on status, gate, and the impediment overlay. The autonomous picker therefore pulls it, a fresh agent reads a DoD it cannot satisfy without a human and exits without closing, the harness re-triggers, and the same card is offered again — one wasted pull per cycle until a human raises the gate. Scope is the genuinely all-human-only card; whatever mechanism is chosen must not misfire on mixed cards, which are tracked separately."
 status: open
 stage: null
 contribution: medium
