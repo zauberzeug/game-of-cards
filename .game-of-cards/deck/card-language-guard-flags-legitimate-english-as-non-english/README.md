@@ -1,22 +1,22 @@
 ---
 title: card-language-guard-flags-legitimate-english-as-non-english
 summary: "The repo-local English-only card guard falsely rejects legitimate English: its hand-enumerated SUFFIX_EXCEPTIONS set covers five `-ung` words but misses nine more from the same open-ended prefix+participle family (sprung, strung, overhung, unslung, ...), and the French marker list contains `des`, which is the English acronym DES. The docstring claims the exception set is exhaustive; it was only ever measured against the tokens the live deck happened to contain, so any future English card using one of these words fails pre-commit and CI."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-29T05:43:27Z"
-closed_at: null
+closed_at: "2026-07-29T05:55:22Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, documentation]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — no English case flagged, no German case missed
-  - [ ] TDD: every one of the 26 English `-ung` words in the probe reads clean, and the 15 German `-ung` nouns still fail the guard
-  - [ ] TDD: `des` no longer flags, and the French recall case still fails the guard without it
-  - [ ] TDD: the English `-ung` rule is derived from a closed stem set plus prefixes, asserted on a prefixed form absent from any hand-written list
-  - [ ] MECHANICAL: the `SUFFIX_EXCEPTIONS` exhaustiveness claim and the docstring homograph list are corrected to match the derived rule
-  - [ ] TDD: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
+  - [x] TDD: reproduce.py exits zero — no English case flagged, no German case missed
+  - [x] TDD: every one of the 26 English `-ung` words in the probe reads clean, and the 15 German `-ung` nouns still fail the guard
+  - [x] TDD: `des` no longer flags, and the French recall case still fails the guard without it
+  - [x] TDD: the English `-ung` rule is derived from a closed stem set plus prefixes, asserted on a prefixed form absent from any hand-written list
+  - [x] MECHANICAL: the `SUFFIX_EXCEPTIONS` exhaustiveness claim and the docstring homograph list are corrected to match the derived rule
+  - [x] TDD: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -27,6 +27,10 @@ independent sites, so a legitimate card can be blocked at pre-commit and turn
 CI red with a language violation it does not have.
 
 ## Location
+
+Line numbers and symbols as they stood at filing time — `SUFFIX_EXCEPTIONS` and
+the `des` entry no longer exist post-fix. See "Fix (landed)" for what replaced
+them.
 
 - `scripts/check_card_language.py:129` — `SUFFIX_EXCEPTIONS`
 - `scripts/check_card_language.py:124` — `MARKER_SUFFIXES` / `MIN_SUFFIX_TOKEN_LEN`
@@ -166,14 +170,17 @@ Precision is the whole design premise. The docstring trades recall away for it
 so a false positive is not a tuning nit — it is a failure of the one property
 the guard was built to have.
 
-## Fix
+## Fix (landed)
 
 Repo-local only: `scripts/check_card_language.py` ships to no consumer, has no
-plugin mirror, and is not a template.
+plugin mirror, and is not a template. Both drift guards confirm it —
+`sync_plugin_assets.py --check` and `port_skills_to_openclaw.py --check` are
+green with no mirror regeneration.
 
-1. **Derive the English `-ung` rule instead of enumerating it.** Replace the
-   flat `SUFFIX_EXCEPTIONS` frozenset with a closed stem set plus a prefix
-   list, and a predicate that accepts `stem` or `prefix + stem`:
+1. **Derived the English `-ung` rule instead of enumerating it.** The flat
+   `SUFFIX_EXCEPTIONS` frozenset is gone, replaced by a closed stem set, a
+   prefix list, and `_is_english_ung_word`, which accepts `stem` or
+   `prefix + stem`:
 
    ```python
    ENGLISH_UNG_STEMS = frozenset({
@@ -190,14 +197,35 @@ plugin mirror, and is not a template.
    `gelung` is not a stem, so it still fires (verified for all 15 nouns in
    `reproduce.py`).
 
-2. **Drop `des` from the French `MARKER_WORDS` block** and add it to the
+2. **Dropped `des` from the French `MARKER_WORDS` block**, and added it to the
    docstring's homograph exclusion list, which exists so "the next reader does
    not helpfully add them back."
 
-3. **Correct the exhaustiveness claim** in the `SUFFIX_EXCEPTIONS` comment and
-   the module docstring: the rule is derived from a closed stem set, not a
-   hand-checked word list, and the measurement that backs it is the probe's
-   English/German pair rather than a sweep of the current deck.
+3. **Corrected the exhaustiveness claim** in the layer-2 comment and the module
+   docstring. Both now say eight endings have no English collision and the
+   ninth, `-ung`, is exempted by derivation — rather than asserting a
+   hand-checked word list is complete.
+
+### Verification
+
+`reproduce.py` exits 0 (was 1: `guard accepts every English case: False`).
+`tests/test_card_authoring_rules.py` grows a fifth class,
+`EnglishOnlyUngCollisionTest`, plus four entries in `PRECISION_CASES` — 850
+tests total, green. Replayed against `HEAD:scripts/check_card_language.py`, four
+of the five new assertions fail (9/26 family words flagged, `des` present, no
+`ENGLISH_UNG_PREFIXES`, 4/4 phrases flagged); `test_german_ung_nouns_are_still_caught`
+passes on both sides, which is the point — it is the invariant, not the fix.
+
+`test_exemption_composes_beyond_the_source_literals` is the assertion that
+pins *derivation* rather than a longer list: it composes every prefix with every
+stem, keeps the forms that appear nowhere in the guard's source text, and
+requires each to be exempt. No enumeration can satisfy it. Three of the German
+recall nouns (`Regelung`, `Rechnung`, `Reinigung`) begin with the `re-` prefix,
+so they hold the exact-stem requirement in place against a `startswith`
+regression.
+
+The guard itself reports `English-only: clean (685 cards scanned)`, and
+`uv run goc validate` is clean across the deck.
 
 Two further homographs were considered and **deliberately kept**, so the next
 reader does not have to re-derive the call: `nada` (a dictionary English noun,
@@ -206,7 +234,10 @@ CFD acronym LES, far weaker than DES as a technical token and load-bearing for
 the Spanish/French recall cases). Both are recorded here rather than removed;
 revisit only with a real false positive.
 
-Not in scope: the guard's umlaut blind spot — `_TOKEN_RE` is `[a-z]+`, so
-`über` tokenizes as `ber` and the transliterated markers (`ueber`, `pruefen`,
-`koennen`) never match natively-spelled German. That is a *recall* gap, which
-the docstring already disclaims, and it needs its own card.
+Not in scope, and filed separately as
+[card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/):
+the guard's umlaut blind spot. `_TOKEN_RE` is `[a-z]+`, so an umlaut separates
+tokens rather than matching, and the eight digraph-spelled German markers can
+never fire on natively-spelled input. That is the *recall* side of the same
+predicate — the opposite failure direction from this card — so it gets its own
+reproduce and its own fix rather than riding along here.

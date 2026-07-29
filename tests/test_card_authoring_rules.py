@@ -61,6 +61,14 @@ RECALL_CASES = [
 # guard's value depends on it staying quiet here.
 PRECISION_CASES = [
     "auth-cookie-expires-too-soon",
+    # The two false positives from
+    # `card-language-guard-flags-legitimate-english-as-non-english`: `sprung`
+    # and `strung` are the bare stems of four forms the old flat exception set
+    # did exempt, and `des` lowercases the cipher acronym DES.
+    "retry-loop-has-sprung-a-leak",
+    "requests-are-strung-together-without-a-budget",
+    "des-cipher-fallback-is-still-enabled",
+    "triple-des-key-rotation-is-skipped",
     "schema-validation-fails-on-empty-tags",
     "todo-list-renderer-drops-completed-items",
     "per-user-rate-limit-is-off-by-one",
@@ -77,6 +85,27 @@ PRECISION_CASES = [
     "unstrung-retry-loop-never-terminates",
     "release-notes-generator-skips-the-first-entry",
     "kitchen-sink-fixture-masks-a-real-failure",
+]
+
+# The English side of the `-ung` collision, spelled out: the participle stems and
+# the prefixed forms built from them. The guard must read every one as English.
+ENGLISH_UNG_FAMILY = [
+    "hung", "rung", "sung", "dung", "lung", "clung", "flung", "slung",
+    "stung", "swung", "wrung", "young", "sprung", "strung",
+    "unhung", "unsung", "unslung", "unstrung", "unsprung",
+    "restrung", "resprung", "overhung", "overstrung", "outflung", "upswung",
+    "highstrung",
+]
+
+# German `-ung` nouns: the recall the suffix layer exists for. Exempting the
+# English side must not cost any of these, which rules out "raise the length
+# floor" and "drop the suffix layer" as fixes. Three of them (`Regelung`,
+# `Rechnung`, `Reinigung`) start with the `re-` prefix, so they exercise the
+# exact-stem requirement rather than a plain `startswith` test.
+GERMAN_UNG_NOUNS = [
+    "berechtigung", "aenderung", "pruefung", "loesung", "ordnung", "warnung",
+    "rechnung", "regelung", "reinigung", "unterbrechung", "untersuchung",
+    "umstellung", "buchung", "sammlung", "meinung",
 ]
 
 
@@ -149,6 +178,73 @@ class EnglishOnlyGuardSensitivityTest(unittest.TestCase):
             )
             fields = {field for _card, field, _reason in guard.scan_deck(deck)}
             self.assertEqual(fields, {"definition_of_done"})
+
+
+class EnglishOnlyUngCollisionTest(unittest.TestCase):
+    """The one marker suffix with an English collision, from both sides.
+
+    Regression guard for
+    `card-language-guard-flags-legitimate-english-as-non-english`: the exemption
+    started life as a flat five-word set that missed nine members of the same
+    family, so these tests pin the family and the German recall it must not cost.
+    """
+
+    def test_the_whole_english_ung_family_reads_clean(self) -> None:
+        flagged = {w: guard.flag_text(w) for w in ENGLISH_UNG_FAMILY if guard.flag_text(w)}
+        self.assertEqual(
+            flagged,
+            {},
+            "these are English words; flagging one blocks a legitimate card at "
+            f"pre-commit and turns CI red. Offenders: {flagged}",
+        )
+
+    def test_german_ung_nouns_are_still_caught(self) -> None:
+        missed = [n for n in GERMAN_UNG_NOUNS if not guard.flag_text(n)]
+        self.assertEqual(
+            missed,
+            [],
+            "exempting the English side must not cost German recall; "
+            f"the suffix layer stopped catching {missed}",
+        )
+
+    def test_exemption_composes_beyond_the_source_literals(self) -> None:
+        """Derived, not enumerated — the property the original set lacked.
+
+        Composes every prefix with every stem and keeps only the forms that
+        appear nowhere in the guard's own source text. A hand-written exception
+        list cannot exempt a token it does not contain, so this is the assertion
+        that fails if anybody replaces the rule with another enumeration.
+        """
+        source = (ROOT / "scripts" / "check_card_language.py").read_text(encoding="utf-8")
+        composed = [
+            prefix + stem
+            for prefix in guard.ENGLISH_UNG_PREFIXES
+            for stem in guard.ENGLISH_UNG_STEMS
+            if prefix + stem not in source
+        ]
+        self.assertTrue(
+            composed, "expected some prefix+stem forms to be absent from the source text"
+        )
+        for token in composed:
+            with self.subTest(token=token):
+                self.assertEqual(
+                    guard.flag_text(token),
+                    [],
+                    f"{token!r} is prefix+stem and must be exempt by derivation",
+                )
+
+    def test_des_is_not_a_marker_word(self) -> None:
+        """`DES`/`3DES` is an English acronym, the category layer 1 excludes."""
+        self.assertNotIn("des", guard.MARKER_WORDS)
+        self.assertEqual(guard.flag_text("des"), [])
+
+    def test_french_recall_survives_without_des(self) -> None:
+        """Dropping `des` cost no recall: the French case flags on other words."""
+        reasons = guard.flag_text("le-cache-ne-se-vide-pas-apres-une-erreur")
+        self.assertTrue(reasons, "the French recall case must still be flagged")
+        self.assertFalse(
+            [r for r in reasons if "'des'" in r], f"no reason may cite 'des': {reasons}"
+        )
 
 
 class EnglishOnlyGuardPrecisionTest(unittest.TestCase):

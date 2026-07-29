@@ -38,11 +38,16 @@ Detection is **precision-first**, in two layers:
    homographs are deliberately absent: German `die`/`war`/`hat`/`tag`/`fast`,
    Spanish `con`/`sin`/`todo`, Italian `per`/`non`/`come`, French `pour`/`sans`
    and Portuguese `com` all read as ordinary English in a card and are NOT
-   markers.
-2. `MARKER_SUFFIXES` — German derivational endings with no English collision.
-   Slug titles drop articles, so a purely content-word slug like the historical
-   offender carries no function words at all; the suffix layer is what catches
-   the nouns and verbs a function-word list alone would miss.
+   markers. French/German `des` was removed for the same reason: it lowercases
+   the cipher acronym DES (and 3DES), which is exactly the "English acronym"
+   category this layer is supposed to keep out.
+2. `MARKER_SUFFIXES` — German derivational endings, eight of which have no
+   English collision at any length. Slug titles drop articles, so a purely
+   content-word slug like the historical offender carries no function words at
+   all; the suffix layer is what catches the nouns and verbs a function-word
+   list alone would miss. The ninth ending, `-ung`, does collide, and its
+   English side is exempted by *derivation* rather than by enumeration — see
+   `ENGLISH_UNG_STEMS`.
 
 The price of precision is recall: a non-English title built entirely from
 cognates ("konfiguration-migration-problem") can still slip through. This guard
@@ -91,7 +96,7 @@ MARKER_WORDS_BY_LANGUAGE = {
         kleine schnell langsam richtig falsch moeglich notwendig wichtig
     """,
     "French": """
-        les des une dans avec mais tout tous toute toutes cette ces sont etre
+        les une dans avec mais tout tous toute toutes cette ces sont etre
         avoir faire peut doit quand parce ainsi aussi alors chaque aucun leur
         notre votre celui comme toujours jamais rien quelque plusieurs erreur
         fichier nouveau ancien
@@ -118,16 +123,44 @@ MARKER_WORDS = {
     for word in block.split()
 }
 
-# German derivational endings with no English collision. Measured against every
-# distinct token in the deck's scanned fields: zero matches. The length floor
-# keeps short English words ("sung", "rung", "flung") out of reach of `-ung`.
+# German derivational endings. Eight of the nine have no English collision at
+# any length; `-ung` does, and `_is_english_ung_word` handles that side. The
+# length floor keeps the shortest English `-ung` words ("sung", "rung", "flung")
+# out of reach without needing the stem check at all.
 MARKER_SUFFIXES = ("ungen", "ierung", "ung", "keit", "heit", "schaft", "lich", "isch", "ieren")
 MIN_SUFFIX_TOKEN_LEN = 6
 
-# The English words long enough to clear the length floor and still end in a
-# marker suffix. All of them are `-ung`; the other eight endings have no English
-# collision at any length.
-SUFFIX_EXCEPTIONS = frozenset({"unsung", "unsprung", "unstrung", "restrung", "highstrung"})
+# The English side of the `-ung` collision. These are a *family*, not a list: a
+# strong-verb participle stem, optionally carrying a prefix. The predecessor
+# guard enumerated members instead of deriving the rule, and so exempted
+# `unsprung`, `unstrung`, `restrung` and `highstrung` while still flagging
+# `sprung` and `strung` — the bare stems those four are built from — plus
+# `unhung`, `unslung`, `resprung`, `overhung`, `overstrung`, `outflung` and
+# `upswung`. Deriving converges where enumerating cannot: English has no
+# productive `-ung` suffix, so the stem set is closed in a way a word list is
+# not, and no future prefix combination can become a new false positive.
+ENGLISH_UNG_STEMS = frozenset({
+    "hung", "rung", "sung", "dung", "lung", "clung", "flung", "slung",
+    "stung", "strung", "sprung", "swung", "wrung", "young",
+})
+ENGLISH_UNG_PREFIXES = ("un", "re", "over", "out", "up", "down", "high")
+
+
+def _is_english_ung_word(token: str) -> bool:
+    """True iff `token` is an English `-ung` word rather than a German noun.
+
+    The remainder after an optional prefix must be an *exact* member of
+    `ENGLISH_UNG_STEMS`, which is what preserves German recall: `Regelung`
+    splits to `re` + `gelung` and `Rechnung` to `re` + `chnung`, neither of
+    which is a stem, so both still fire. Only `-ung` needs this — the other
+    eight `MARKER_SUFFIXES` have no English member to exempt.
+    """
+    if token in ENGLISH_UNG_STEMS:
+        return True
+    return any(
+        token.startswith(prefix) and token[len(prefix) :] in ENGLISH_UNG_STEMS
+        for prefix in ENGLISH_UNG_PREFIXES
+    )
 
 _TOKEN_RE = re.compile(r"[a-z]+")
 
@@ -142,7 +175,7 @@ def flag_text(text: str) -> list[str]:
         if language:
             reasons.add(f"{language} marker word {token!r}")
             continue
-        if len(token) < MIN_SUFFIX_TOKEN_LEN or token in SUFFIX_EXCEPTIONS:
+        if len(token) < MIN_SUFFIX_TOKEN_LEN or _is_english_ung_word(token):
             continue
         for suffix in MARKER_SUFFIXES:
             if token.endswith(suffix):
