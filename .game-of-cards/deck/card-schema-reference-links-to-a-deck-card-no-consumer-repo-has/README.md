@@ -1,7 +1,7 @@
 ---
 title: card-schema-reference-links-to-a-deck-card-no-consumer-repo-has
 summary: "The shipped card-schema skill reference links the value-chain rule's provenance to a card in goc's OWN deck via a relative path. Nothing resolves it in a consuming repo: a fresh goc install writes a link to a card the consumer's deck has never contained, and in the source-of-truth template itself the path is one level short and resolves into a nonexistent goc/.game-of-cards. It survives review because the five mirrors sit three levels below this repo's root, so the link happens to resolve there."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-29T06:28:25Z"
@@ -11,13 +11,13 @@ advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation, infra]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — no shipped skill tree links into a `.game-of-cards/deck/` path, in the source-of-truth template or any mirror
   - [ ] TDD: `tests/test_skill_template_deck_links.py` sweeps all six shipped skill trees and fails on any deck link, and proves it can catch the historical offending line rather than only reporting a clean tree
   - [ ] MECHANICAL: `goc/templates/skills/card-schema/reference.md` cites the decision as a bare backticked title, matching the same file's citation of `rename-blocks-to-advances-and-design-value-sort`
   - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both exit zero with the mirrors regenerated
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The shipped card-schema reference links to a card only goc's own deck has
