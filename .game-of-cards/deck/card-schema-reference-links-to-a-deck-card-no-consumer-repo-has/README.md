@@ -1,22 +1,22 @@
 ---
 title: card-schema-reference-links-to-a-deck-card-no-consumer-repo-has
 summary: "The shipped card-schema skill reference links the value-chain rule's provenance to a card in goc's OWN deck via a relative path. Nothing resolves it in a consuming repo: a fresh goc install writes a link to a card the consumer's deck has never contained, and in the source-of-truth template itself the path is one level short and resolves into a nonexistent goc/.game-of-cards. It survives review because the five mirrors sit three levels below this repo's root, so the link happens to resolve there."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-29T06:28:25Z"
-closed_at: null
+closed_at: "2026-07-29T06:33:48Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — no shipped skill tree links into a `.game-of-cards/deck/` path, in the source-of-truth template or any mirror
-  - [ ] TDD: `tests/test_skill_template_deck_links.py` sweeps all six shipped skill trees and fails on any deck link, and proves it can catch the historical offending line rather than only reporting a clean tree
-  - [ ] MECHANICAL: `goc/templates/skills/card-schema/reference.md` cites the decision as a bare backticked title, matching the same file's citation of `rename-blocks-to-advances-and-design-value-sort`
-  - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both exit zero with the mirrors regenerated
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+  - [x] TDD: `reproduce.py` exits zero — no shipped skill tree links into a `.game-of-cards/deck/` path, in the source-of-truth template or any mirror
+  - [x] TDD: `tests/test_skill_template_deck_links.py` sweeps all six shipped skill trees and fails on any deck link, and proves it can catch the historical offending line rather than only reporting a clean tree
+  - [x] MECHANICAL: `goc/templates/skills/card-schema/reference.md` cites the decision as a bare backticked title, matching the same file's citation of `rename-blocks-to-advances-and-design-value-sort`
+  - [x] MECHANICAL: `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both exit zero with the mirrors regenerated
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -114,6 +114,21 @@ Step 2 is the consumer case end to end: a scratch `git init` repo, a real
 resolved against the deck that install just scaffolded — which holds
 `.goc-version` and `log.md` and nothing else.
 
+After the fix, the same script reports:
+
+```
+3. Deck links across every shipped skill tree:
+   none — the shipped skill bodies link to no deck path.
+
+PASS: no shipped skill body links into a deck path.
+```
+
+`tests/test_skill_template_deck_links.py` was checked against a
+reintroduced offender before closure: with the original line restored in
+the template, `test_no_shipped_skill_body_links_into_a_deck` fails and
+names `goc/templates/skills/card-schema/reference.md:219`; with the fix
+in place all five tests pass. The guard is sensitive, not merely quiet.
+
 ## Why it matters
 
 `card-schema/reference.md` § "Value-chain rule" is the passage an agent
@@ -138,10 +153,11 @@ where prose needs judgement. Filed as an instance of
 the deck-link axis is a tree-derived doc fact that nothing sweeps, so the
 guard this card adds is a piece of that root's value.
 
-## Fix
+## Fix (landed)
 
-Drop the link, keep the citation, matching `reference.md:226` eight lines
-below — `goc/templates/skills/card-schema/reference.md:218-220`:
+The link is gone; the citation stays, in the form `reference.md:226`
+already used eight lines below —
+`goc/templates/skills/card-schema/reference.md:218-220`:
 
 ```markdown
 Decided in
@@ -149,15 +165,28 @@ Decided in
 (Option E, 2026-05-26).
 ```
 
-Then regenerate the mirrors (`python scripts/sync_plugin_assets.py`) and
-re-port OpenClaw (`python3 scripts/port_skills_to_openclaw.py`), whose
-`--check` modes gate the result.
+`scripts/sync_plugin_assets.py` regenerated the four auto-synced mirrors
+and `scripts/port_skills_to_openclaw.py` re-ported the OpenClaw copy;
+both `--check` modes exit zero.
 
 The guard is the durable half. `tests/test_skill_template_deck_links.py`
-sweeps every shipped skill tree for a markdown link whose target routes
-through `.game-of-cards/deck/` and fails on any hit — a rule that holds
-for any consuming repo, since none of them can have goc's cards. Per
-[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/),
-the suite also feeds the historical offending line to the predicate and
-asserts it fires, so a guard that silently stopped matching fails rather
-than passing on a clean tree.
+sweeps all six shipped skill trees for a markdown link whose target routes
+through `.game-of-cards/deck/` and fails on any hit — a rule that holds in
+any consuming repo, since none of them can have goc's cards, so there is
+no false-positive surface to trade against. The predicate is anchored on
+markdown link syntax, not the bare path, because several skills
+legitimately print `.game-of-cards/deck/` in preflight probes and command
+examples; naming the directory is fine, promising a file is not. URL
+targets are out of scope for the same reason — they resolve for every
+reader or none, independent of the install.
+
+Per `static-source-guards-never-prove-they-can-catch-an-offender`, the
+suite also feeds the historical offending line to the predicate and
+asserts it fires, and pins that each swept tree really holds skill bodies,
+so a guard that silently stopped matching fails rather than passing on a
+clean tree.
+
+Note that the four prose sites that name a deck path *without* linking it
+(`kickoff`, `codex-kickoff`, `openclaw-kickoff`, `retrospective`) are
+deliberately untouched: they instruct a reader to run a command against
+their own deck, which is correct in every repo.

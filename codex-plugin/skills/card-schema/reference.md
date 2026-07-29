@@ -216,7 +216,7 @@ with `goc unadvance <closing-title> --by <upstream-title>` — never
 in the deck.
 
 Decided in
-[`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`](../../../.game-of-cards/deck/advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose/)
+`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`
 (Option E, 2026-05-26).
 
 ### Closure vs readiness — the asymmetry

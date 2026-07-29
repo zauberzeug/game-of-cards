@@ -52,12 +52,15 @@ SHIPPED_SKILL_TREES = (
 )
 
 # A markdown link whose target routes through a `.game-of-cards/deck/` path.
+# Same predicate as `tests/test_skill_template_deck_links.py`, which is where it
+# is enforced from CI; a URL is not a filesystem promise and stays out of scope.
 DECK_LINK_RE = re.compile(r"\]\(([^)\s]*\.game-of-cards/deck/[^)\s]*)\)")
+_URL_SCHEME_RE = re.compile(r"\A[a-z][a-z0-9+.-]*:", re.IGNORECASE)
 
 
 def deck_links(text: str) -> list[str]:
     """Return every markdown link target in `text` that points into a deck."""
-    return DECK_LINK_RE.findall(text)
+    return [t for t in DECK_LINK_RE.findall(text) if not _URL_SCHEME_RE.match(t)]
 
 
 def sweep(root: Path) -> list[tuple[Path, int, str]]:
