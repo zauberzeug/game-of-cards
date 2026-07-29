@@ -68,14 +68,26 @@ NATIVE_TITLES = [
 ]
 
 
+def guard_tokens(text: str) -> list[str]:
+    """The tokens `flag_text` iterates — the shattered fragments, or the folded word.
+
+    `getattr` rather than a direct read so this script still runs against the
+    pre-fix guard, which has no fold step: absent it the column shows the
+    shattering that is the defect, present it shows the repair.
+    """
+    fold = getattr(guard, "_UMLAUT_FOLD", {})
+    return guard._TOKEN_RE.findall(text.lower().translate(fold))
+
+
 def main() -> int:
     print(f"tokenizer = {guard._TOKEN_RE.pattern!r}, "
-          f"MIN_SUFFIX_TOKEN_LEN = {guard.MIN_SUFFIX_TOKEN_LEN}\n")
+          f"MIN_SUFFIX_TOKEN_LEN = {guard.MIN_SUFFIX_TOKEN_LEN}, "
+          f"folds umlauts = {hasattr(guard, '_UMLAUT_FOLD')}\n")
 
-    print(f"{'marker entry':12} {'native':10} {'tokens from native':24} flagged?")
+    print(f"{'marker entry':12} {'native':10} {'tokens the guard sees':24} flagged?")
     dead = []
     for translit, native in MARKER_PAIRS:
-        tokens = guard._TOKEN_RE.findall(native.lower())
+        tokens = guard_tokens(native)
         hit = bool(guard.flag_text(native))
         if not hit:
             dead.append(translit)

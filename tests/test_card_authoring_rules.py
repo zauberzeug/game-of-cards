@@ -50,6 +50,10 @@ RECALL_CASES = [
     ("German with function words", "konfiguration-wird-nicht-geladen"),
     ("German, suffix layer alone", "berechtigung-check-schlaegt-fehl"),
     ("German -keit noun", "sichtbarkeit-toggle-is-ignored"),
+    # Every content word carries an umlaut and none is a function word, so this
+    # title is reachable only through the fold plus the suffix layer — no ASCII
+    # neighbour can carry it (`card-language-guard-misses-german-spelled-with-umlauts`).
+    ("German, native umlaut spelling", "prüfung-schlägt-fehl"),
     ("French", "le-cache-ne-se-vide-pas-apres-une-erreur"),
     ("Spanish", "el-validador-no-detecta-los-campos-vacios"),
     ("Italian", "gli-errori-non-sono-registrati-nel-log"),
@@ -106,6 +110,30 @@ GERMAN_UNG_NOUNS = [
     "berechtigung", "aenderung", "pruefung", "loesung", "ordnung", "warnung",
     "rechnung", "regelung", "reinigung", "unterbrechung", "untersuchung",
     "umstellung", "buchung", "sammlung", "meinung",
+]
+
+# Every marker entry that spells its umlaut as an ASCII digraph, paired with the
+# spelling a German keyboard produces. The digraph form is what the marker list
+# is written in, so the native form is only reachable through `_UMLAUT_FOLD`.
+NATIVE_SPELLING_PAIRS = [
+    ("ueber", "über"),
+    ("koennen", "können"),
+    ("muessen", "müssen"),
+    ("duerfen", "dürfen"),
+    ("aendern", "ändern"),
+    ("loeschen", "löschen"),
+    ("pruefen", "prüfen"),
+    ("moeglich", "möglich"),
+]
+
+# The same German text twice: ASCII transliteration, then real spelling. The
+# verdicts must match — the transliterated digraph is a workaround for systems
+# that cannot take umlauts, and which of the two an author typed says nothing
+# about whether the card is in English.
+GERMAN_PHRASE_PAIRS = [
+    ("pruefung schlaegt fehl", "prüfung schlägt fehl"),
+    ("loeschen der eintraege", "löschen der einträge"),
+    ("ueber die groesse", "über die größe"),
 ]
 
 
@@ -245,6 +273,106 @@ class EnglishOnlyUngCollisionTest(unittest.TestCase):
         self.assertFalse(
             [r for r in reasons if "'des'" in r], f"no reason may cite 'des': {reasons}"
         )
+
+
+class EnglishOnlyNativeSpellingTest(unittest.TestCase):
+    """German spelled the way German is spelled — with umlauts, not digraphs.
+
+    Regression guard for `card-language-guard-misses-german-spelled-with-umlauts`:
+    `_TOKEN_RE` is `[a-z]+`, so an umlaut acted as a token *separator* and
+    shattered the word around it (`prüfen` → `pr` + `fen`). Every marker entry
+    carrying a digraph was unreachable from the input the guard actually sees,
+    and the fragments landed below `MIN_SUFFIX_TOKEN_LEN` so the suffix layer
+    went quiet too. `_UMLAUT_FOLD` normalizes to the digraphs the marker list is
+    already written in, which is why no entry needs a second spelling.
+    """
+
+    def test_every_digraph_pair_names_a_real_marker_entry(self) -> None:
+        """Guard the pairs: a renamed or dropped entry must not read as a pass."""
+        missing = [t for t, _native in NATIVE_SPELLING_PAIRS if t not in guard.MARKER_WORDS]
+        self.assertEqual(
+            missing,
+            [],
+            f"these are supposed to be marker entries; the pairs below assert "
+            f"nothing if they are not: {missing}",
+        )
+
+    def test_digraph_entries_fire_on_their_native_spelling(self) -> None:
+        for translit, native in NATIVE_SPELLING_PAIRS:
+            with self.subTest(entry=translit):
+                reasons = guard.flag_text(native)
+                self.assertTrue(reasons, f"{native!r} is German and must be flagged")
+                self.assertEqual(
+                    reasons,
+                    guard.flag_text(translit),
+                    f"{native!r} and {translit!r} are the same word in two spellings",
+                )
+
+    def test_phrase_pairs_get_the_same_verdict_either_way(self) -> None:
+        """The defect's cleanest statement: one German phrase, two verdicts."""
+        for translit, native in GERMAN_PHRASE_PAIRS:
+            with self.subTest(phrase=translit):
+                expected = guard.flag_text(translit)
+                self.assertTrue(expected, f"{translit!r} is German and must be flagged")
+                self.assertEqual(
+                    guard.flag_text(native),
+                    expected,
+                    f"{native!r} is {translit!r} with real umlauts and must read the same",
+                )
+
+    def test_suffix_layer_fires_on_a_native_ung_noun_alone(self) -> None:
+        """Folding repairs the suffix layer, which widening `_TOKEN_RE` would not.
+
+        Unfolded, the noun split into a two-character stub and a four-character
+        tail — both under `MIN_SUFFIX_TOKEN_LEN`, so `-ung` was never tested. The
+        marker layer cannot cover for it here: a slug carries no function words.
+        """
+        reasons = guard.flag_text("prüfung")
+        self.assertTrue(
+            any("ending on token" in r for r in reasons),
+            f"the suffix layer must fire on the folded token, not just the "
+            f"marker layer on a neighbour: {reasons}",
+        )
+
+    def test_native_title_is_flagged_on_the_umlaut_word_itself(self) -> None:
+        """Recall must not rest on which ASCII words happen to co-occur.
+
+        Both titles were already flagged before the fix — one via `berechtigung`,
+        the other via `nicht`, each umlaut-free by luck. Asserting only "flagged"
+        would therefore have passed on the broken guard, so each assertion names
+        the umlaut-carrying token it must be caught on.
+        """
+        for title, token in (
+            ("prüfung-der-berechtigung-schlägt-fehl", "pruefung"),
+            ("löschen-entfernt-die-einträge-nicht", "loeschen"),
+        ):
+            with self.subTest(title=title):
+                reasons = guard.flag_text(title)
+                self.assertTrue(
+                    [r for r in reasons if repr(token) in r],
+                    f"{title!r} must be flagged on {token!r}, not only on a "
+                    f"co-occurring ASCII word: {reasons}",
+                )
+
+    def test_uppercase_umlauts_need_no_entries_of_their_own(self) -> None:
+        """`_UMLAUT_FOLD` runs after `.lower()`, so `Ä`/`Ö`/`Ü` fold for free."""
+        for text in ("ÄNDERN", "Über", "Prüfung"):
+            with self.subTest(text=text):
+                self.assertTrue(guard.flag_text(text), f"{text!r} must be flagged")
+
+    def test_folding_cannot_change_any_ascii_token(self) -> None:
+        """Why folding is precision-safe by construction, not by luck.
+
+        Folding introduces `ae`/`oe`/`ue`/`ss` digraphs into tokens that lacked
+        them, so the precision question is real — but its answer is structural:
+        English carries no `ä ö ü ß`, so no English token can change shape. The
+        sampled proof that nothing regressed is `PRECISION_CASES` and
+        `ENGLISH_UNG_FAMILY` in `EnglishOnly*Test` above; this is the property
+        those samples are drawn from.
+        """
+        for text in PRECISION_CASES + ENGLISH_UNG_FAMILY:
+            with self.subTest(text=text):
+                self.assertEqual(text.translate(guard._UMLAUT_FOLD), text)
 
 
 class EnglishOnlyGuardPrecisionTest(unittest.TestCase):

@@ -1,23 +1,23 @@
 ---
 title: card-language-guard-misses-german-spelled-with-umlauts
 summary: "The English-only card guard tokenizes with `[a-z]+`, so a native umlaut acts as a token separator and shatters the word around it into fragments that match nothing. Eight of the German marker entries encode their umlaut as an ASCII digraph, which makes them unreachable from natively-spelled input, and the suffix layer degrades the same way: the same German phrase is caught in transliteration and missed with its real spelling."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-29T05:52:17Z"
-closed_at: null
+closed_at: "2026-07-29T06:12:58Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — every native spelling in the marker and phrase pairs is flagged
-  - [ ] TDD: each of the eight transliterated German marker entries fires on its natively-spelled form
-  - [ ] TDD: the three phrase pairs give the same verdict transliterated and natively spelled
-  - [ ] TDD: `Prüfung` alone is flagged by the suffix layer (the token survives folding at >= MIN_SUFFIX_TOKEN_LEN)
-  - [ ] TDD: no precision regression — every entry in `PRECISION_CASES` and the whole `ENGLISH_UNG_FAMILY` still read clean
-  - [ ] MECHANICAL: the docstring's recall disclaimer is narrowed to what it actually covers (cognate-only text), since native spelling is no longer the gap
-  - [ ] TDD: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
+  - [x] TDD: reproduce.py exits zero — every native spelling in the marker and phrase pairs is flagged
+  - [x] TDD: each of the eight transliterated German marker entries fires on its natively-spelled form
+  - [x] TDD: the three phrase pairs give the same verdict transliterated and natively spelled
+  - [x] TDD: a natively-spelled German -ung noun alone is flagged by the suffix layer (folding lifts the token back over MIN_SUFFIX_TOKEN_LEN)
+  - [x] TDD: no precision regression — every entry in `PRECISION_CASES` and the whole `ENGLISH_UNG_FAMILY` still read clean
+  - [x] MECHANICAL: the docstring's recall disclaimer is narrowed to what it actually covers (cognate-only text), since native spelling is no longer the gap
+  - [x] TDD: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -116,7 +116,13 @@ text* is caught in transliteration and missed with its real spelling.
 (This card's `summary` deliberately paraphrases instead of quoting the eight
 entries. Summaries are in scope for the guard, so naming them there fails
 `--check` on this very card — the reason the docstring puts card bodies out of
-scope. Do not "fix" the summary by pasting the tokens back in.)
+scope. Do not "fix" the summary by pasting the tokens back in. The same
+constraint reached `definition_of_done`, which is also scanned: one DoD item
+illustrated the suffix-layer case with a natively-spelled German `-ung` noun,
+which was invisible while the defect was live and became a real finding on this
+card the moment folding worked. It now states the shape instead of spelling a
+token — see "Fix (landed)" step 4. Both the diagnosis above and the phrase pairs
+below are body text, which stays out of scope by design.)
 
 Read the last block carefully — it is why this is a recall gap and not a total
 blind spot. Both native titles *are* flagged, but neither is flagged on the word
@@ -174,9 +180,16 @@ digraphs in tokens that did not have them, so the DoD requires the full
 no `ä/ö/ü/ß`, so no English token can change under folding — but that is an
 argument for the assertion, not a substitute for it.
 
-## Fix
+## Fix (landed)
 
-1. In `flag_text`, fold before tokenizing:
+Repo-local only: `scripts/check_card_language.py` ships to no consumer, has no
+plugin mirror, and is not a template. Both drift guards agree —
+`sync_plugin_assets.py --check` and `port_skills_to_openclaw.py --check` green
+with no mirror regeneration.
+
+1. **Fold before tokenizing**, as decided — one added table, one added method
+   call in `flag_text`, and `_TOKEN_RE` plus all 115 German marker entries left
+   exactly as they were:
 
    ```python
    _UMLAUT_FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
@@ -184,24 +197,49 @@ argument for the assertion, not a substitute for it.
        for token in _TOKEN_RE.findall(text.lower().translate(_UMLAUT_FOLD)):
    ```
 
-   Fold after `.lower()` so `Ä` is covered by the lowercase mapping rather than
-   needing its own entry.
+   Folding after `.lower()` covers `Ä`/`Ö`/`Ü` through the lowercase mapping
+   instead of doubling the table.
 
-2. Extend `tests/test_card_authoring_rules.py`: a native-spelling recall case
-   per affected marker entry, the three phrase pairs asserted equal, and
-   `Prüfung` on the suffix layer alone. `PRECISION_CASES` and
-   `ENGLISH_UNG_FAMILY` are the no-regression side.
+2. **`tests/test_card_authoring_rules.py` grows `EnglishOnlyNativeSpellingTest`**
+   (seven methods) plus one `RECALL_CASES` entry. Per the decision's own
+   argument, the new data is a *pairing* — `NATIVE_SPELLING_PAIRS` and
+   `GERMAN_PHRASE_PAIRS` assert the two spellings return the identical reason
+   list, so neither spelling can be fixed at the other's expense — and one
+   method checks the eight transliterated forms really are marker entries, so a
+   renamed entry cannot make the pairs vacuous.
 
-3. Narrow the module docstring's recall disclaimer. It currently reads "a
-   non-English title built entirely from cognates … can still slip through",
-   which does not cover native spelling; once folding lands, cognates really are
-   the remaining gap and the sentence becomes true as written.
+3. **The docstring's recall disclaimer now names both gaps it actually has.**
+   Cognate-only text was the only one it listed; the accented spellings of the
+   other four languages are the second, and folding does not reach them (no
+   digraph convention to fold *into* — that needs Unicode NFD plus
+   combining-mark strip, a different mechanism). Deliberately left unfixed:
+   German is this repo's only real incident. File separately if a non-German
+   card ever slips through.
 
-Out of scope: the other four languages carry accented characters too (`é`, `à`,
-`ñ`, `ç`, `ì`), and their marker entries are spelled unaccented (`despues`,
-`porque`, `perche`). Folding does not reach those — there is no digraph
-convention to fold *into*, so the entries would have to be matched
-accent-insensitively (Unicode NFD plus combining-mark strip), which is a
-different mechanism. File separately if a non-German card ever slips through;
-German is this repo's actual exposure and the only language with a real
-incident.
+4. **One DoD item on this card was reworded**, for the reason the "Empirical
+   evidence" parenthetical gives: it illustrated the suffix-layer case with a
+   natively-spelled German `-ung` noun, and `definition_of_done` is a scanned
+   field, so the working fix immediately flagged this card. Intent unchanged; the
+   token now lives in the test file, which the guard does not read.
+
+### Verification
+
+`reproduce.py` exits 0, was 1 — 8/8 marker entries unreachable from native
+spelling and 3/3 phrase pairs caught only in transliteration, now 0/8 and 0/3.
+Its token column reads through the fold via `getattr`, so the script still shows
+the shattering when replayed against the pre-fix guard. Full suite 857 tests
+green (was 850); guard reports `English-only: clean (686 cards scanned)`;
+`uv run goc validate` clean with no new warnings.
+
+Replayed against `HEAD:scripts/check_card_language.py`, **all seven** new methods
+fail. That number is load-bearing for one of them: pre-fix, both native titles in
+the evidence above *were* flagged — one via `berechtigung`, one via `nicht`, each
+umlaut-free by accident — so `assertTrue(flag_text(title))` would have passed on
+the broken guard. `test_native_title_is_flagged_on_the_umlaut_word_itself` names
+the token the finding must cite instead, which is what makes it discriminate.
+
+Precision was the risk the decision flagged, and it holds two ways: the sampled
+proof is `PRECISION_CASES` and `ENGLISH_UNG_FAMILY` unchanged and green, and
+`test_folding_cannot_change_any_ascii_token` states the property they are drawn
+from — English carries no `ä ö ü ß`, so the fold is the identity on every ASCII
+token and cannot move a token into or out of a marker class.

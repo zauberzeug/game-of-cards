@@ -49,10 +49,26 @@ Detection is **precision-first**, in two layers:
    English side is exempted by *derivation* rather than by enumeration — see
    `ENGLISH_UNG_STEMS`.
 
-The price of precision is recall: a non-English title built entirely from
-cognates ("konfiguration-migration-problem") can still slip through. This guard
-raises the floor from "nothing checks" to "the realistic cases fail CI"; it is
-not a language classifier and does not claim to be.
+Both layers read tokens through `_UMLAUT_FOLD`, which rewrites `ä ö ü ß` as the
+ASCII digraphs the German marker block is spelled in, so German written with
+umlauts and German written in transliteration get the same verdict.
+
+The price of precision is recall, and two gaps are known:
+
+- A non-English title built entirely from cognates
+  ("konfiguration-migration-problem") carries no marker word and no marker
+  suffix, so nothing fires. Detecting it needs a language classifier; this is
+  not one and does not claim to be.
+- The other four languages carry accented characters too (`é à ñ ç ì`) and their
+  marker entries are spelled unaccented (`despues`, `porque`, `perche`), so
+  `apres` does not match `après`. Folding does not reach them: there is no
+  digraph convention to fold *into*, and matching accent-insensitively is a
+  different mechanism (NFD plus combining-mark strip). German is this repo's
+  actual exposure and the only language with a real incident, so the accented
+  spellings of the other four stay out of scope until one slips through.
+
+What this guard does is raise the floor from "nothing checks" to "the realistic
+cases fail CI".
 
 Usage:
     python scripts/check_card_language.py           # report findings
@@ -164,13 +180,26 @@ def _is_english_ung_word(token: str) -> bool:
 
 _TOKEN_RE = re.compile(r"[a-z]+")
 
+# German as a German keyboard writes it. `_TOKEN_RE` is `[a-z]+`, so without
+# this an umlaut is not merely unmatched — it *separates* tokens and shatters the
+# word around it (`prüfen` -> `pr` + `fen`), which matches no marker entry and
+# drops the pieces below `MIN_SUFFIX_TOKEN_LEN` so the suffix layer goes quiet
+# too. Folding to the ASCII digraphs the German marker block is already written
+# in makes one entry cover both spellings; the alternative — widening `_TOKEN_RE`
+# and giving every umlaut entry a second spelling — re-enumerates an open family,
+# and the entry somebody forgets to double is a silent miss. Applied after
+# `.lower()`, so `Ä`/`Ö`/`Ü` need no entries of their own. Precision is safe by
+# construction: English carries none of these characters, so folding cannot
+# change the shape of an English token.
+_UMLAUT_FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+
 
 def flag_text(text: str) -> list[str]:
     """Return sorted reasons why `text` looks non-English; empty if it reads clean."""
     if not text:
         return []
     reasons: set[str] = set()
-    for token in _TOKEN_RE.findall(text.lower()):
+    for token in _TOKEN_RE.findall(text.lower().translate(_UMLAUT_FOLD)):
         language = MARKER_WORDS.get(token)
         if language:
             reasons.add(f"{language} marker word {token!r}")
