@@ -155,6 +155,16 @@ frontmatter it parsed. It said nothing. It now says it.
   [`waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift`](../waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/).
   Not re-filed and not folded in here, because changing the closure
   gate changes what `goc done` refuses.
+- **Not the other by-title verbs.** This fix is per-site: `goc status
+  <title> active` (the claim path) and `goc show <title>` still do not
+  render prereq liveness, so the advisory remains opt-in per call site
+  — the same shape as draft gating, query-flag validation and
+  doc-accuracy guards. Connected to the family root
+  [`draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it`](../draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it/)
+  § "Sibling property: the dependency advisory has the same shape"
+  rather than filed as a fourth umbrella; its mechanism decision
+  (invert the default / validate-time lint / per-site fixes) is the
+  same decision this property needs.
 
 ## Artifacts
 

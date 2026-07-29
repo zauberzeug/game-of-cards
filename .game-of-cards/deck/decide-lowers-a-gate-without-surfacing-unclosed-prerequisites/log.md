@@ -89,3 +89,27 @@ an unchanged exit code so a later pass cannot quietly harden it.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-29 — Closure' present
+
+## 2026-07-29T05:38:00Z — post-close generalization connect
+
+The Stop-hook pattern check flagged the fix as having broader applicability, and
+it does: the dependency advisory is opt-in per call site, and this closure fixed
+one site. Verified the remaining ones on a two-card temp deck — `goc status
+<title> active` prints only `child: open → active`, and `goc show <title>`
+prints the raw `advanced_by` list with no prereq status.
+
+Deduped rather than filed. The deck already carries a three-member family with
+this exact shape and naming (`draft-gating-is-opt-in-per-surface-…`,
+`query-flag-validation-is-opt-in-per-flag-…`,
+`doc-accuracy-guards-are-opt-in-per-claim-…`), all open at `human_gate:
+decision`, already cross-referencing each other. A fourth umbrella would be the
+redundant-umbrella anti-pattern — three undecided umbrellas is the signal that
+the missing act is a decision, not another card.
+
+Instead the instance is CONNECTED: `draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it`
+gains a "Sibling property: the dependency advisory has the same shape" section
+carrying the evidence above, and this card's scope boundary gains the reciprocal
+pointer. That card's three mechanism options (invert the default / validate-time
+lint / per-site fixes) are verbatim the options this property needs, so whoever
+decides it decides both. No `advances` edge: the connection is a shared decision,
+not value flow into a closed card.

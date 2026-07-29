@@ -93,6 +93,40 @@ meant to eliminate. The reachability path is the normal filing flow:
 every card created by `goc new` passes through the draft state, and
 `--gate decision` drafts persist until a human acts.
 
+## Sibling property: the dependency advisory has the same shape
+
+Recorded 2026-07-29 while closing
+[`decide-lowers-a-gate-without-surfacing-unclosed-prerequisites`](../decide-lowers-a-gate-without-surfacing-unclosed-prerequisites/).
+Not a scope expansion of this card and not re-filed as a fourth
+umbrella — context for whoever picks a mechanism below, because the
+three options apply verbatim to a second card property.
+
+The dependency advisory (`dependency_advisory` /
+`dependency_blockers`) is opt-in per call site exactly like
+`card_is_draft`. Three renderers consult it; the by-title verbs did
+not, and were fixed one at a time:
+
+- `goc decide` printed nothing about `advanced_by` — just fixed by
+  hand, per-site, in `_cmd_decide`.
+- `goc status <title> active` — the claim path `Skill(advance-card)`
+  prescribes — still prints nothing. Verified 2026-07-29 on a
+  two-card temp deck: claiming a card whose `advanced_by` prereq is
+  `open` outputs only `child: open → active`.
+- `goc show <title>`, the one command every mutating skill mandates
+  first, prints the raw `advanced_by` list without any prereq status,
+  so a reader learns the edge exists but not that it is live.
+
+So the deck now carries four properties with one shape — draft
+gating (this card), query-flag validation
+([`query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it`](../query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it/)),
+doc-accuracy guards
+([`doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them`](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)),
+and the dependency advisory — and three undecided umbrella cards. That
+the family keeps growing one umbrella per property is itself the
+signal: option 1 or 2 below, if picked, should be picked as the answer
+for *card properties consulted per call site*, not for drafts alone.
+Option 3 (per-site fixes) is what has been happening by default.
+
 ## Decision required
 
 Which mechanism ends the family?
