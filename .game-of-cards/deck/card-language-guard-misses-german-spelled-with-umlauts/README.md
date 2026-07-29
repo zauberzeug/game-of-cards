@@ -28,10 +28,11 @@ typed in ASCII transliteration, which is not how German is written.
 
 ## Location
 
-- `scripts/check_card_language.py:158` — `_TOKEN_RE = re.compile(r"[a-z]+")`
-- `scripts/check_card_language.py:161` — `flag_text`, which tokenizes with it
-- `scripts/check_card_language.py:82` — the German `MARKER_WORDS_BY_LANGUAGE`
-  block, whose entries are spelled `ueber` / `koennen` / `pruefen` / …
+- `scripts/check_card_language.py:165` — `_TOKEN_RE = re.compile(r"[a-z]+")`
+- `scripts/check_card_language.py:173` — the `for token in _TOKEN_RE.findall(text.lower())`
+  loop in `flag_text` (defined at `:168`)
+- `scripts/check_card_language.py:85` — the German `MARKER_WORDS_BY_LANGUAGE`
+  block, whose entries spell the umlaut as an ASCII digraph
 
 ## What's broken
 
