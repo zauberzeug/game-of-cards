@@ -134,10 +134,12 @@ false presence.
 
 ## Sibling property: sensitivity is necessary but not sufficient
 
-Connected from the closed instance
-[card-language-guard-flags-legitimate-english-as-non-english](../card-language-guard-flags-legitimate-english-as-non-english/),
-which is the counter-example that bounds this card's remedy — and the reason the
-decision below should be read as two-sided rather than extended by a second
+Connected from two closed instances of the same guard,
+[card-language-guard-flags-legitimate-english-as-non-english](../card-language-guard-flags-legitimate-english-as-non-english/)
+and
+[card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/).
+The first is the counter-example that bounds this card's remedy — and the reason
+the decision below should be read as two-sided rather than extended by a second
 umbrella card.
 
 `scripts/check_card_language.py` is the one guard in this repo that already
@@ -181,7 +183,20 @@ stays quiet on the near-miss. Under Option A the same correction is per-guard
 discipline rather than structure, which is precisely the recurrence argument
 already made against A.
 
-The closed instance also shows what a clean sample must be worth. Its
+**A second correction, to the offender element this time.** Registering a sample
+is not enough if the generated assertion is `assertTrue(scanner(sample))`. The
+second closed instance,
+[card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/),
+is the demonstration: the same guard could not see German spelled with umlauts,
+yet both natively-spelled titles in that card's evidence table were already
+flagged — one on `berechtigung`, one on `nicht`, each umlaut-free by accident. A
+registered offender plus a boolean verdict would have passed against the broken
+guard. So the generated case has to assert *which* finding the scanner reports,
+and a paired-input guard has to assert the two inputs return the identical
+finding — a sample carries no sensitivity of its own, only the assertion over it
+does.
+
+The first instance also shows what a clean sample must be worth. Its
 predecessor validated the exception set by sweeping the deck's 4,363 live tokens
 for matches and finding none — a real measurement that was nonetheless against
 the wrong population, because it can only surface false positives the current
