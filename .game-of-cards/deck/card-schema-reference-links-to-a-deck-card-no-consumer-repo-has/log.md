@@ -70,3 +70,29 @@ pass.
 Closing evidence: `reproduce.py` exits zero, 862 tests pass (five new),
 `sync_plugin_assets.py --check` and `port_skills_to_openclaw.py --check` both
 exit zero, `goc validate` is clean across 687 cards.
+
+## 2026-07-29 — Connected to the static-source-guards family root after closure
+
+The Stop-hook generalization check fired on this closure. Dedup found the root
+already filed — `static-source-guards-never-prove-they-can-catch-an-offender` —
+so this is a connection, not a new umbrella.
+
+What it contributes is a third registration element, and it comes from the
+compliance side rather than from a defect: writing a guard that satisfies the
+root's requirement surfaced a failure mode the root's Option B design cannot
+reach. Both corrections already recorded there are about the *sample* (a clean
+near-miss beside the offender; asserting which finding, not a boolean). Neither
+covers a scanner that is sensitive, specific, and pointed at nothing.
+`tests/test_skill_template_deck_links.py` sweeps six hardcoded tree paths; rename
+one and it drops out of coverage while `assertEqual([], hits)` stays green. A
+generated sensitivity case runs over a synthetic sample, non-empty by
+construction, so it cannot see the production corpus go empty.
+
+Hence the corpus floor, `test_the_trees_are_actually_being_swept`. The element is
+not new to the repo — `tests/test_card_authoring_rules.py:399` has carried it
+since the card-language guard landed — but it had to be rediscovered here rather
+than inherited, which is itself an argument against the root's Option A.
+
+Recorded in the root's "Sibling property" section as the third connected
+instance. No `advances` edge: a shared decision, not value flow into a card that
+is already closed — same call as the two prior connections.

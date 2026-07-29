@@ -134,13 +134,17 @@ false presence.
 
 ## Sibling property: sensitivity is necessary but not sufficient
 
-Connected from two closed instances of the same guard,
+Connected from three closed instances. Two are the same guard,
 [card-language-guard-flags-legitimate-english-as-non-english](../card-language-guard-flags-legitimate-english-as-non-english/)
 and
-[card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/).
-The first is the counter-example that bounds this card's remedy — and the reason
-the decision below should be read as two-sided rather than extended by a second
-umbrella card.
+[card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/);
+the third,
+[card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/),
+is a *new* prohibition guard written to comply with this card, and it surfaces a
+third registration element from the compliance side rather than from a defect.
+The first instance is the counter-example that bounds this card's remedy — and
+the reason the decision below should be read as two-sided rather than extended
+by a second umbrella card.
 
 `scripts/check_card_language.py` is the one guard in this repo that already
 **complies** with this card. Its suite says so outright:
@@ -195,6 +199,38 @@ guard. So the generated case has to assert *which* finding the scanner reports,
 and a paired-input guard has to assert the two inputs return the identical
 finding — a sample carries no sensitivity of its own, only the assertion over it
 does.
+
+**A third correction, to the corpus rather than the sample.** Both corrections
+above are about the *sample*. Neither reaches the failure mode where the scanner
+is sensitive, the assertion is specific, and the guard is pointed at nothing.
+`tests/test_skill_template_deck_links.py`, added when
+[card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/)
+closed, sweeps six hardcoded tree paths (`goc/templates/skills`, the two dogfood
+mirrors, the three plugin payloads). Rename or move any one and that tree drops
+silently out of coverage while `assertEqual([], hits)` still passes — the
+identical false-presence this card is about, arriving through scope instead of
+through a dead regex. It is not hypothetical for this repo: `deck/` already
+became `.game-of-cards/deck/`, and the mirror trees were added one at a time.
+
+Option B cannot catch it. A generated sensitivity case runs the scanner over a
+*synthetic* sample, which is non-empty by construction, so it stays green while
+the production corpus goes empty. The registration needs a fourth element — a
+corpus floor asserting the tree the scanner walks in production still exists and
+still holds a plausible number of files. The precedent is in-tree and predates
+this card: `tests/test_card_authoring_rules.py:399`
+(`test_live_deck_is_actually_being_scanned`, "a clean result must come from real
+cards, not an empty glob") is exactly this element, and the new guard's
+`test_the_trees_are_actually_being_swept` is its generalization to a multi-tree
+scanner.
+
+So the registration Option B should generate from is
+`(scanner, known-offender-sample, known-clean-sample, corpus-floor)` — fires,
+stays quiet, and is actually looking at something. The third instance is worth
+noting for a second reason: it is the first connected here that was **not** a
+defect report. The element surfaced while writing a compliant guard, which is
+evidence that per-guard discipline under Option A does not converge — the author
+has to rediscover each element, and this one was rediscovered rather than
+inherited.
 
 The first instance also shows what a clean sample must be worth. Its
 predecessor validated the exception set by sweeping the deck's 4,363 live tokens

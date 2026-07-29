@@ -180,7 +180,9 @@ examples; naming the directory is fine, promising a file is not. URL
 targets are out of scope for the same reason — they resolve for every
 reader or none, independent of the install.
 
-Per `static-source-guards-never-prove-they-can-catch-an-offender`, the
+Per
+[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/),
+the
 suite also feeds the historical offending line to the predicate and
 asserts it fires, and pins that each swept tree really holds skill bodies,
 so a guard that silently stopped matching fails rather than passing on a
