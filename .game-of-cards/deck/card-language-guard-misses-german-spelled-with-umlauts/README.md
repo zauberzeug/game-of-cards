@@ -1,7 +1,7 @@
 ---
 title: card-language-guard-misses-german-spelled-with-umlauts
 summary: "The English-only card guard tokenizes with `[a-z]+`, so a native umlaut acts as a token separator and shatters the word around it into fragments that match nothing. Eight of the German marker entries encode their umlaut as an ASCII digraph, which makes them unreachable from natively-spelled input, and the suffix layer degrades the same way: the same German phrase is caught in transliteration and missed with its real spelling."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-29T05:52:17Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] TDD: no precision regression — every entry in `PRECISION_CASES` and the whole `ENGLISH_UNG_FAMILY` still read clean
   - [ ] MECHANICAL: the docstring's recall disclaimer is narrowed to what it actually covers (cognate-only text), since native spelling is no longer the gap
   - [ ] TDD: full suite green (`uv run python -m unittest discover -s tests`) and `uv run goc validate` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # card-language-guard-misses-german-spelled-with-umlauts
