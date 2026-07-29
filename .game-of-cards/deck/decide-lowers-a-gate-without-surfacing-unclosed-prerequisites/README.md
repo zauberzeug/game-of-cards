@@ -1,7 +1,7 @@
 ---
 title: decide-lowers-a-gate-without-surfacing-unclosed-prerequisites
 summary: "The queue renders a dependency-readiness advisory for a card with unclosed `advanced_by` prerequisites, but `goc decide` prints nothing — so a gate can be lowered, and the card handed to an autonomous worker, while a prerequisite that reframes it is still open. Deciding is the more consequential act of the two, because it is what makes the card pullable."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-26T13:21:33Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the advisory is NON-BLOCKING. `goc decide` still succeeds and still lowers the gate; exit code is unchanged. Roughly 80% of `advanced_by` edges are loose value-flow, so refusing would break the common case.
   - [ ] TDD: a regression test asserts the advisory does NOT fire when every `advanced_by` prerequisite is terminal, and that a card with no prerequisites is unaffected.
   - [ ] MECHANICAL: `Skill(decide-card)` step 1 tells the reader to check unclosed prerequisites before recording, and says why. Plugin mirrors synced; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc decide` lowers a gate without surfacing unclosed prerequisites
