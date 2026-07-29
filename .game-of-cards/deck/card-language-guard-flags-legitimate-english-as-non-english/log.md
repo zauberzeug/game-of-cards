@@ -60,3 +60,34 @@ mechanism, and one pull is one card.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-07-29 — Closure' present
+
+## 2026-07-29T06:02:00Z — Pattern check: connected to a family root
+
+The Stop-hook pattern check flagged this closure as touching a pattern with
+broader applicability. It does, and the root card already exists:
+`static-source-guards-never-prove-they-can-catch-an-offender`. Deduped and
+connected rather than filed.
+
+The connection is not "another instance of a guard with a blind spot" — it is
+the counter-example that bounds that card's remedy. `check_card_language.py` is
+the one guard in the repo that already satisfies it; the suite docstring names
+the card by title and `RECALL_CASES` is the required demonstration. The defect
+closed here shipped anyway, because sensitivity testing and false positives are
+invisible to each other: a sensitivity case proves the scanner still fires, and
+a false positive is the scanner firing. Every recall case passed for the whole
+life of the defect.
+
+That root card is open at `human_gate: decision` with two options; its Option B
+registers `(scanner, known-offender-sample)` pairs, which is one-sided by
+construction. The evidence landed there as a "Sibling property" section arguing
+the pair needs a third element — a known-clean near-miss the corpus does not
+already contain — with the reciprocal pointer added to this card's scope
+boundary. No `advances` edge: the connection is a shared decision, not value
+flow into a closed card, matching the precedent set by
+`decide-lowers-a-gate-without-surfacing-unclosed-prerequisites`.
+
+Not filed as a fifth umbrella. The deck already carries four undecided ones of
+this shape (that root plus `doc-accuracy-guards-are-opt-in-per-claim-…`,
+`draft-gating-is-opt-in-per-surface-…`, `query-flag-validation-is-opt-in-per-flag-…`),
+and the mechanism question is identical, so one decision settles both. The
+missing act is a decision, not another card.

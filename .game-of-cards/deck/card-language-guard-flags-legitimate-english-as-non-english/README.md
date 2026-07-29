@@ -234,6 +234,18 @@ CFD acronym LES, far weaker than DES as a technical token and load-bearing for
 the Spanish/French recall cases). Both are recorded here rather than removed;
 revisit only with a real false positive.
 
+Connected, not re-filed: this closure is an instance of
+[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/)
+§ "Sibling property: sensitivity is necessary but not sufficient" — and the
+counter-example that bounds it. `tests/test_card_authoring_rules.py` already
+complies with that root card (its docstring names it, and `RECALL_CASES` is the
+demonstration), yet every recall case passed throughout this defect's life. A
+sensitivity case proves the scanner still fires; a false positive *is* the
+scanner firing, so the two directions are invisible to each other's test. That
+root's pending mechanism decision is the same decision this property needs — its
+Option B registration pair wants a third element, a known-clean near-miss — so
+the evidence went there rather than into a fifth undecided umbrella card.
+
 Not in scope, and filed separately as
 [card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/):
 the guard's umlaut blind spot. `_TOKEN_RE` is `[a-z]+`, so an umlaut separates
