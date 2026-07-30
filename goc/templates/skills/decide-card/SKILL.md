@@ -63,6 +63,17 @@ actually applies:
    order verbatim — do not reorder or rephrase (`reference.md`
    § Mirroring labeled options).
 
+   **Then check `advanced_by` for unclosed prerequisites, and read any
+   you find before recording.** An `advances` edge does not record
+   whether it is strict, so the only way to learn that a prerequisite
+   *reframes* this card is to open it. Lowering the gate is what makes
+   the card autonomously pullable, so a decision taken over an unread
+   prerequisite is one an unattended worker may act on before any human
+   sees the card again. `goc decide` prints the same advisory
+   (non-blocking — it names the prerequisites and lowers the gate
+   anyway), but it prints it as the decision lands, which is too late
+   to inform it.
+
 2. **Run the CLI.**
 
    ```bash

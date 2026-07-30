@@ -132,6 +132,114 @@ guard at all. This card covers claims that *have* a guard which may no longer
 work. The two are complementary, not duplicates: one is absence, the other is
 false presence.
 
+## Sibling property: sensitivity is necessary but not sufficient
+
+Connected from three closed instances. Two are the same guard,
+[card-language-guard-flags-legitimate-english-as-non-english](../card-language-guard-flags-legitimate-english-as-non-english/)
+and
+[card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/);
+the third,
+[card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/),
+is a *new* prohibition guard written to comply with this card, and it surfaces a
+third registration element from the compliance side rather than from a defect.
+The first instance is the counter-example that bounds this card's remedy — and
+the reason the decision below should be read as two-sided rather than extended
+by a second umbrella card.
+
+`scripts/check_card_language.py` is the one guard in this repo that already
+**complies** with this card. Its suite says so outright:
+
+> It also carries the requirement inherited from the card
+> `static-source-guards-never-prove-they-can-catch-an-offender`: a static guard
+> must demonstrate it can catch an offender, not merely report a clean tree.
+> `test_flags_the_historical_offender` and the `RECALL_CASES` table are that
+> demonstration; a guard that silently stopped matching would fail them rather
+> than passing quietly on a deck that happens to be clean.
+>
+> — `tests/test_card_authoring_rules.py`, module docstring
+
+It shipped a defect anyway, in the direction sensitivity testing cannot see. Its
+`SUFFIX_EXCEPTIONS` set flagged 9 of 26 English `-ung` words — including
+`sprung` and `strung`, the bare stems of four forms it *did* exempt — and its
+French marker list contained `des`, which lowercases the DES cipher. A card
+titled `requests-are-strung-together-without-a-budget` would have had its commit
+rejected as German.
+
+Every `RECALL_CASES` entry passed throughout. They could not have failed: a
+sensitivity case proves the scanner still *fires*, and a false positive is the
+scanner firing. The two failure directions are not merely different, they are
+invisible to each other's test.
+
+**Why this belongs here rather than in a fifth umbrella.** The mechanism
+question is identical — per-guard opt-in versus a structural registration — so
+one decision settles both, and the deck already carries four undecided umbrellas
+of this exact shape (this card plus `doc-accuracy-guards-are-opt-in-per-claim-…`,
+`draft-gating-is-opt-in-per-surface-…`, `query-flag-validation-is-opt-in-per-flag-…`).
+A fifth would be the redundant-umbrella anti-pattern; what is missing is a
+decision, not another card.
+
+**What it changes about the options below.** Option B's registration pair
+`(scanner, known-offender-sample)` is one-sided by construction: a guard can
+satisfy it completely and still reject legitimate input. The pair wants a third
+element — `(scanner, known-offender-sample, known-clean-sample)` — so the
+generated cases assert both that the scanner fires on the offender and that it
+stays quiet on the near-miss. Under Option A the same correction is per-guard
+discipline rather than structure, which is precisely the recurrence argument
+already made against A.
+
+**A second correction, to the offender element this time.** Registering a sample
+is not enough if the generated assertion is `assertTrue(scanner(sample))`. The
+second closed instance,
+[card-language-guard-misses-german-spelled-with-umlauts](../card-language-guard-misses-german-spelled-with-umlauts/),
+is the demonstration: the same guard could not see German spelled with umlauts,
+yet both natively-spelled titles in that card's evidence table were already
+flagged — one on `berechtigung`, one on `nicht`, each umlaut-free by accident. A
+registered offender plus a boolean verdict would have passed against the broken
+guard. So the generated case has to assert *which* finding the scanner reports,
+and a paired-input guard has to assert the two inputs return the identical
+finding — a sample carries no sensitivity of its own, only the assertion over it
+does.
+
+**A third correction, to the corpus rather than the sample.** Both corrections
+above are about the *sample*. Neither reaches the failure mode where the scanner
+is sensitive, the assertion is specific, and the guard is pointed at nothing.
+`tests/test_skill_template_deck_links.py`, added when
+[card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/)
+closed, sweeps six hardcoded tree paths (`goc/templates/skills`, the two dogfood
+mirrors, the three plugin payloads). Rename or move any one and that tree drops
+silently out of coverage while `assertEqual([], hits)` still passes — the
+identical false-presence this card is about, arriving through scope instead of
+through a dead regex. It is not hypothetical for this repo: `deck/` already
+became `.game-of-cards/deck/`, and the mirror trees were added one at a time.
+
+Option B cannot catch it. A generated sensitivity case runs the scanner over a
+*synthetic* sample, which is non-empty by construction, so it stays green while
+the production corpus goes empty. The registration needs a fourth element — a
+corpus floor asserting the tree the scanner walks in production still exists and
+still holds a plausible number of files. The precedent is in-tree and predates
+this card: `tests/test_card_authoring_rules.py:399`
+(`test_live_deck_is_actually_being_scanned`, "a clean result must come from real
+cards, not an empty glob") is exactly this element, and the new guard's
+`test_the_trees_are_actually_being_swept` is its generalization to a multi-tree
+scanner.
+
+So the registration Option B should generate from is
+`(scanner, known-offender-sample, known-clean-sample, corpus-floor)` — fires,
+stays quiet, and is actually looking at something. The third instance is worth
+noting for a second reason: it is the first connected here that was **not** a
+defect report. The element surfaced while writing a compliant guard, which is
+evidence that per-guard discipline under Option A does not converge — the author
+has to rediscover each element, and this one was rediscovered rather than
+inherited.
+
+The first instance also shows what a clean sample must be worth. Its
+predecessor validated the exception set by sweeping the deck's 4,363 live tokens
+for matches and finding none — a real measurement that was nonetheless against
+the wrong population, because it can only surface false positives the current
+corpus already triggers. A registered clean sample has to be a *near-miss the
+corpus does not contain* (there `sprung`, `strung`, `des`), not a sample of
+present data, or it reproduces the same blind spot with more ceremony.
+
 ## Decision required
 
 The technique is settled — a test that runs the scanner over synthetic source

@@ -6151,6 +6151,52 @@ def _rescope_reconciliation_notice(t: Card, persisted_body: str) -> str:
     return "\n".join(lines)
 
 
+def _unclosed_prerequisite_notice(t: Card, by_title: dict[str, Card]) -> str | None:
+    """Build the `goc decide` advisory naming each unclosed `advanced_by`
+    prerequisite, or None when there is nothing to surface.
+
+    Lowering a gate is the act that makes a card autonomously pullable — the
+    success line says so outright ("any agent can now claim this card"). The
+    queue and board carry a dependency advisory for the *work* moment
+    (`awaiting: X`); this is the same advisory for the *decide* moment, which
+    is the more consequential of the two because an unattended worker may act
+    on the decision before any human sees the card again.
+
+    Advisory, never blocking: an `advances` edge is ~80% loose value flow and
+    ~20% strict prerequisite, and the field carries no strictness marker (see
+    `advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`),
+    so the only way to know which kind a given edge is, is to open the
+    prerequisite and read it. Refusing would break the loose majority; naming
+    the prerequisite is what prompts the read.
+
+    The liveness rule is *derived*, not reimplemented: it calls the same
+    `dependency_advisory` helper the renderers consume, in the default
+    terminal-gated form. Terminal-gated is the right slice here — on a
+    terminal card `goc decide` is the record-axis gate repair, where
+    prerequisites are moot — while the renderers' stricter `queue_only`
+    slice would wrongly mute the advisory on an `active` card, which is
+    exactly a card whose decision someone is about to act on.
+    """
+    blockers, _ = dependency_advisory(t, by_title)
+    if not blockers:
+        return None
+    noun = _plural(len(blockers), "prerequisite")
+    lines = [
+        f"WARNING: {t.title}: {len(blockers)} unclosed {noun} — "
+        f"read {'it' if len(blockers) == 1 else 'them'} before relying on this decision:"
+    ]
+    for prereq in blockers:
+        upstream = by_title.get(prereq)
+        state = upstream.status if upstream is not None else "card not found"
+        lines.append(f"  - {prereq} ({state})")
+    lines.append(
+        "  An `advances` edge does not record whether it is strict, so whether "
+        "a prerequisite reframes this card is knowable only by reading it. "
+        "Advisory only: the gate lowers either way."
+    )
+    return "\n".join(lines)
+
+
 def _cmd_decide(args):
     """Record a decision in the body + log; lower the human gate to `none`.
 
@@ -6181,6 +6227,12 @@ def _cmd_decide(args):
         sys.exit(2)
     is_terminal = t.status in TERMINAL_STATUSES
     prior_gate = t.human_gate
+    # Resolved from the pre-mutation card: the gate flip does not touch
+    # `advanced_by`, but the notice belongs to the card as the deciding
+    # human saw it.
+    prereq_notice = _unclosed_prerequisite_notice(
+        t, {c.title: c for c in load_all_cards()}
+    )
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
     fm, body = parse_frontmatter(text)
@@ -6213,6 +6265,8 @@ def _cmd_decide(args):
     entries.append(f"## {now}: decision recorded\n\n{recorded_note}\n")
     sep = "\n\n" if existing.strip() else ""
     log_path.write_text(existing.rstrip("\n") + sep + "\n\n".join(entries))
+    if prereq_notice:
+        print(prereq_notice, file=sys.stderr)
     print(f"{title}: decision recorded; gate {prior_gate} → none")
     if is_terminal:
         print(
