@@ -51,3 +51,22 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-05-26 — Closure' present
+
+## 2026-07-30 — Later evidence: the shared-tag prescription is unreachable by traversal
+
+This card's governing-cluster shape — a decision card groups its cluster with a shared
+tag and no `advances` edge, because no edge direction models the relationship without
+deadlocking or contradicting the decision's independence — is unchanged and still
+correct.
+
+New evidence about a consequence it did not name. A tag is invisible to every edge walk
+in the tool, so following this guidance correctly makes the cluster unreachable from any
+card inside it. Observed in a consuming repository: a governing card retracted its seven
+grouping edges so `goc done` would accept it, regrouped by tag as prescribed, and became
+unfindable. The tag accumulated 22 cards; a later umbrella card on the same subject cited
+none of them and re-derived results already measured and closed. `goc validate` was clean
+throughout, because referential integrity proves the edges that exist resolve and cannot
+see a grouping that has no edges.
+
+Filed as [[a-shared-tag-groups-a-cluster-that-no-edge-walk-can-reach]], which states the
+problem and sketches five options without deciding. No action is owed by this card.
