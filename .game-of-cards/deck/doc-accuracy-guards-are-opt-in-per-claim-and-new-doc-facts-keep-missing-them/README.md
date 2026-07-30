@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds seven guard classes, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Ninth instance of the shape; the fix path needs a scope decision. The ninth adds a third axis — prose restating *prose* (one skill body re-specifying a rule another skill owns), where a derive-from-tree guard is structurally impossible — so the decision must say whether that surface class is in scope."
+summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus one more in its own file, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Eleventh instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, and the eleventh added machine-readable manifests, where it is not just possible but cheap."
 status: open
 stage: null
 contribution: medium
@@ -19,6 +19,7 @@ advanced_by:
   - openclaw-verb-mirror-comment-names-click-in-an-argparse-cli
   - story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it
   - card-schema-reference-links-to-a-deck-card-no-consumer-repo-has
+  - openclaw-plugin-manifest-config-options-do-not-behave-as-documented
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
@@ -28,9 +29,10 @@ definition_of_done: |
 
 `tests/test_guidance_accuracy.py` is this repo's answer to doc drift: a test that
 pins a prose claim to the code or tree it describes. The mechanism works — but it
-is applied **one claim at a time, always after the fact**. Seven guard classes now
-live in that file, and every one was written in response to an already-rotted
-claim someone happened to notice. Nothing looks for the *unguarded* claims.
+is applied **one claim at a time, always after the fact**. Nine guard classes now
+live in that file (a tenth guard got its own file), and every one was written in
+response to an already-rotted claim someone happened to notice. Nothing looks for
+the *unguarded* claims.
 
 ## The instance list
 
@@ -45,8 +47,10 @@ claim someone happened to notice. Nothing looks for the *unguarded* claims.
 | *(none yet — open)* | [ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/) | — |
 | `CliFrameworkPointerAccuracyTest` | [openclaw-verb-mirror-comment-names-click-in-an-argparse-cli](../openclaw-verb-mirror-comment-names-click-in-an-argparse-cli/) | 2026-07-26 |
 | *(none — not guardable by the technique; see below)* | [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/) | 2026-07-27 |
+| `test_no_shipped_skill_body_links_into_a_deck` (own file, `tests/test_skill_template_deck_links.py`) | [card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/) | 2026-07-29 |
+| *(none yet — open)* | [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/) | — |
 
-Nine instances across three months, each its own file → claim → fix → guard cycle.
+Eleven instances across three months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -102,6 +106,26 @@ satisfy its own row's predicate" and defers, instead of re-specifying the
 surface), and no guard was added, which is why its row in the table above is
 empty. Any option adopted here should say explicitly whether prose-restating-prose
 is in scope, because "add a guard" is not an available answer for it.
+
+The eleventh widens the surface class a fourth time, to a **machine-readable
+manifest**. [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/)
+found both keys in `openclaw-plugin/openclaw.plugin.json`'s `configSchema`
+misdescribing the code: `deck_path` declares a settable override that no consumer
+reads, and `pattern_generalization_check` declares `"default": true` against a
+runtime gate, a source comment, and a README that all say off-by-default. This is
+the same rot as a stale prose claim, but the surface is a JSON declaration rather
+than a sentence — so a sweep scoped to prose (`.md`, comments, docstrings, workflow
+headers) misses it entirely, and the scope decision should name manifests
+explicitly.
+
+It is also the cheapest instance yet for Option A, and that is the useful datum:
+both claims are derivable. "Every key in a `configSchema` is referenced by at
+least one consumer" and "every declared `default` equals the runtime gate's
+default" are both tree-derived predicates of exactly the self-maintaining kind
+described below — no restated constant, nothing to go stale. Where the ninth
+instance bounded Option A from above (prose restating prose is unreachable), this
+one shows the technique reaching *further* than the surfaces catalogued so far:
+declarations in structured config are guardable, and nobody has looked there.
 
 ## What's structurally wrong
 

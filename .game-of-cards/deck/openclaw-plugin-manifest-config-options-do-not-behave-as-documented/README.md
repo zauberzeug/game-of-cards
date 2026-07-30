@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-07-30T05:24:16Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, api-contract, infra, documentation]
 definition_of_done: |
@@ -175,7 +176,19 @@ entries mislead:
 
 The root cause is the same for both: `openclaw.plugin.json` is
 explicitly **not** auto-synced (AGENTS.md § "OpenClaw plugin payload"),
-and no guard connects its `configSchema` to the code. This is the same
+and no guard connects its `configSchema` to the code. That makes this
+card the eleventh instance of
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+— the family root for "a declaration restates tree state, nothing checks
+it, a human finds the rot" — and this card `advances` it. What this
+instance contributes to that card's pending scope decision is a **new
+surface class**: the previous ten were all prose (markdown, source
+comments, docstrings, a workflow header), while these two claims live in
+a machine-readable manifest, which a prose-scoped sweep would not reach.
+Both are also cheaply derivable, so unlike the ninth instance this one
+argues the guard technique *extends* rather than bottoms out.
+
+Separately, this is the same
 hand-maintained-enumeration shape already tracked for the manifest's
 `skills` array by
 [derive-openclaw-manifest-skills-array-from-ported-skill-dirs](../derive-openclaw-manifest-skills-array-from-ported-skill-dirs/)
@@ -186,8 +199,12 @@ registration.
 
 Sibling sweep: neither `claude-plugin/.claude-plugin/plugin.json` nor
 `codex-plugin/.codex-plugin/plugin.json` declares a `configSchema`, so
-the defect is confined to the OpenClaw payload. No third instance, so
-no architectural meta-fix is warranted yet.
+*this* defect is confined to the OpenClaw payload — there is no third
+plugin manifest to check, and no separate meta-fix is needed for the
+config-contract shape. The generalization this card belongs to is the
+doc-accuracy family root named above, which is already filed and already
+awaiting its scope decision; this card feeds that decision rather than
+duplicating it.
 
 ## Decision required
 

@@ -104,3 +104,32 @@ No guard was added, and the table row says so. The repair was structural — sto
 restating, point at the owner — which is the only general answer available for
 this axis. Recording it as an empty guard cell rather than a silent omission so
 the eventual scope decision sees that "add a guard" was not on the menu here.
+
+## 2026-07-30 — Eleventh instance wired; table was a row behind its own edge list
+
+An audit pass filed
+[openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/)
+and connected it here (`advances` edge, the convention the other ten instances
+use). Both of its findings are this family's shape — a declaration that
+misdescribes the code, unguarded — but on a surface none of the previous ten
+touched: a **machine-readable manifest** (`openclaw-plugin/openclaw.plugin.json`'s
+`configSchema`), not prose.
+
+Two things recorded in the dashboard above:
+
+- **It widens the surface class a fourth time, and in the opposite direction from
+  the ninth.** The ninth bounded Option A from above: prose restating prose has no
+  tree to derive from, so no lint can reach it. This one shows the technique
+  reaching *further* than the catalogued surfaces — "every `configSchema` key is
+  referenced by a consumer" and "every declared `default` matches the runtime
+  gate" are both cheap tree-derived predicates. The scope decision should name
+  structured-config declarations explicitly; a sweep scoped to `.md` files,
+  comments, docstrings and workflow headers misses them entirely.
+- **The instance table had drifted from `advanced_by`.** The tenth instance
+  ([card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/),
+  closed 2026-07-29) had its edge but no table row and no prose. Added, along with
+  the guard it shipped (`test_no_shipped_skill_body_links_into_a_deck`, in its own
+  file rather than `test_guidance_accuracy.py`). The stale counts elsewhere in the
+  body ("Seven guard classes", "Nine instances") were rewritten in place to match.
+  Worth noting against this card's own thesis: the instance list is itself a
+  hand-maintained restatement of `advanced_by`, and it rotted within a day.
