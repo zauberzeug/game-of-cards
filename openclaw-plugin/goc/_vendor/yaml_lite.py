@@ -19,6 +19,9 @@ Unsupported (raises ParseError):
   - Multi-document streams
   - Folded scalars (>)
   - Tabs as indentation
+  - A key repeated in the same mapping, block or flow (last-wins would drop the
+    earlier value silently, and the engine's line-anchored mutator targets the
+    FIRST copy while this parser keeps the LAST)
 """
 
 from __future__ import annotations
@@ -146,6 +149,21 @@ class _Parser:
                     f"'key: value' mapping entry (a ':' key separator must be "
                     f"followed by a space); breaking here would silently drop "
                     f"it and every following key"
+                )
+            if key in result:
+                # A repeated key would silently overwrite the earlier value,
+                # and the three readers of a card's frontmatter then disagree
+                # about which copy is authoritative: this parser keeps the LAST,
+                # `engine.mutate_frontmatter_field` (line-anchored, `count=1`)
+                # rewrites the FIRST, and a human reading README.md top-down
+                # sees the FIRST. So `goc status <title> active` reports and
+                # commits a claim that no goc surface can see. One key is
+                # dropped rather than a whole tail, but it is dropped just as
+                # silently — fail loud for the same reason as the over-indent
+                # and missing-space guards above.
+                raise ParseError(
+                    f"line {self._pos + 1}: duplicate mapping key {key!r}; the "
+                    f"earlier value would be silently discarded"
                 )
             self._pos += 1
             result[key] = self._resolve_value(rest, indent)
@@ -438,6 +456,14 @@ def _parse_flow_mapping(text: str) -> dict:
             # Strip quotes from keys (YAML keys are sometimes double-quoted).
             if len(k) >= 2 and k[0] == k[-1] and k[0] in ('"', "'"):
                 k = k[1:-1]
+            if k in result:
+                # Same silent-overwrite refusal as the block-mapping arm; the
+                # inline form carries `worker: {who: a, where: b}`, so a
+                # repeated `who` would drop an authored value with no notice.
+                raise ParseError(
+                    f"duplicate key {k!r} in flow mapping {text!r}; the earlier "
+                    f"value would be silently discarded"
+                )
             result[k] = _parse_scalar(val.strip())
     return result
 

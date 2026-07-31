@@ -299,6 +299,62 @@ class ColonNoSpaceMappingRejectionTest(unittest.TestCase):
         )
 
 
+class DuplicateMappingKeyRejectionTest(unittest.TestCase):
+    """A key repeated in the same mapping used to overwrite the earlier value
+    silently, and the three readers of a card's frontmatter then disagreed about
+    which copy was authoritative: this parser kept the LAST,
+    `engine.mutate_frontmatter_field` (line-anchored, `count=1`) rewrote the
+    FIRST, and a human reading README.md top-down saw the FIRST — so
+    `goc status <title> active` reported and committed a claim no goc surface
+    could see. Same fail-loud posture as the over-indent / tab / colon-no-space
+    guards: no key may be dropped without saying so."""
+
+    def test_duplicate_block_mapping_key_raises_not_shadow(self):
+        # The headline defect: the first `status: open` was silently discarded
+        # and the document parsed to {'title': 'foo', 'status': 'done', ...}.
+        with self.assertRaises(ParseError):
+            safe_load("title: foo\nstatus: open\ntags: [bug]\nstatus: done\n")
+
+    def test_duplicate_block_mapping_key_message_names_key_and_line(self):
+        with self.assertRaises(ParseError) as ctx:
+            safe_load("a: 1\nb: 2\na: 3\n")
+        message = str(ctx.exception)
+        self.assertIn("'a'", message)
+        self.assertIn("line 3", message)
+
+    def test_duplicate_flow_mapping_key_raises_not_shadow(self):
+        # `worker: {who: …, where: …}` travels through the flow arm, so a
+        # repeated `who` would drop an authored value with no notice.
+        with self.assertRaises(ParseError):
+            safe_load("worker: {who: alice, where: main, who: bob}\n")
+
+    def test_duplicate_key_in_nested_mapping_raises(self):
+        with self.assertRaises(ParseError):
+            safe_load("outer:\n  a: 1\n  a: 2\n")
+
+    def test_duplicate_key_across_nesting_levels_still_parses(self):
+        # The guard is per-mapping, not per-document: the same key name at two
+        # different nesting levels is legitimate YAML and must be unaffected.
+        self.assertEqual(
+            safe_load("name: outer\nchild:\n  name: inner\n"),
+            {"name": "outer", "child": {"name": "inner"}},
+        )
+
+    def test_same_key_in_sibling_block_sequence_items_still_parses(self):
+        # Each sequence item is its own mapping, so `who` repeating across
+        # items is not a duplicate.
+        self.assertEqual(
+            safe_load("people:\n  - who: alice\n  - who: bob\n"),
+            {"people": [{"who": "alice"}, {"who": "bob"}]},
+        )
+
+    def test_single_occurrence_document_unaffected(self):
+        self.assertEqual(
+            safe_load("title: foo\nstatus: open\ntags: [bug]\n"),
+            {"title": "foo", "status": "open", "tags": ["bug"]},
+        )
+
+
 class FlowCollectionTrailingContentRejectionTest(unittest.TestCase):
     """An inline flow collection followed by non-comment trailing content on
     the same line (e.g. `[bug, api]# recategorize`, where the `#` has no
@@ -924,6 +980,58 @@ class NonLFLineBreakRefusalTest(unittest.TestCase):
         self.assertEqual(e.parse_frontmatter(out)[0]["definition_of_done"], dod)
 
 
+_TOP_LEVEL_KEY_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):(?: |$)")
+
+
+def _duplicate_top_level_keys(frontmatter_text: str) -> list[str]:
+    """Return the top-level keys appearing more than once, sorted.
+
+    Indented lines and sequence items are skipped: they belong to a nested
+    mapping, where repeating a key name is legitimate YAML.
+    """
+    seen: dict[str, int] = {}
+    for line in frontmatter_text.splitlines():
+        if not line or line[0] in " \t-":
+            continue
+        m = _TOP_LEVEL_KEY_RE.match(line)
+        if m:
+            seen[m.group(1)] = seen.get(m.group(1), 0) + 1
+    return sorted(k for k, n in seen.items() if n > 1)
+
+
+class DuplicateTopLevelKeyScanTest(unittest.TestCase):
+    """The deck scan below is only as good as its ability to see an offender, so
+    prove it on planted input before trusting its verdict on the real deck."""
+
+    def test_scan_catches_a_planted_duplicate(self):
+        planted = (
+            "title: card\n"
+            'summary: "first"\n'
+            "status: open\n"
+            "tags: [bug]\n"
+            'summary: "second"\n'
+        )
+        self.assertEqual(_duplicate_top_level_keys(planted), ["summary"])
+
+    def test_scan_reports_every_duplicated_key(self):
+        planted = "a: 1\nb: 2\na: 3\nb: 4\nc: 5\n"
+        self.assertEqual(_duplicate_top_level_keys(planted), ["a", "b"])
+
+    def test_scan_ignores_nested_and_sequence_repeats(self):
+        clean = (
+            "title: card\n"
+            "advanced_by:\n"
+            "  - one\n"
+            "  - two\n"
+            "worker:\n"
+            "  who: alice\n"
+            "definition_of_done: |\n"
+            "  - [ ] title: not a key\n"
+            "  - [ ] title: still not a key\n"
+        )
+        self.assertEqual(_duplicate_top_level_keys(clean), [])
+
+
 class DeckRoundTripTest(unittest.TestCase):
     """Parse every README.md in the real deck and verify key fields are present."""
 
@@ -951,6 +1059,38 @@ class DeckRoundTripTest(unittest.TestCase):
             self.assertIn("status", data, msg=f"{readme}: missing status")
             count += 1
         self.assertGreater(count, 0, "no card frontmatter found")
+
+    def test_no_card_carries_a_duplicate_frontmatter_key(self):
+        """Two agents backfilling the same required field at different anchors
+        merge without conflict — that is how
+        `autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish`
+        acquired two `summary:` keys. `test_all_cards_parse` above now raises on
+        such a card, but only on the first one it reaches and with a line number
+        instead of a card name. This scan reports every offender by card and key
+        so the repair is obvious. Regression for
+        yaml-lite-duplicate-mapping-key-shadows-the-first-so-status-flips-stop-landing."""
+        deck = self._deck_dir()
+        offenders = []
+        scanned = 0
+        for readme in sorted(deck.rglob("README.md")):
+            m = self.FRONTMATTER_RE.match(readme.read_text())
+            if not m:
+                continue
+            scanned += 1
+            dups = _duplicate_top_level_keys(m.group(1))
+            if dups:
+                offenders.append(f"{readme.parent.name}: {', '.join(dups)}")
+        self.assertGreater(scanned, 0, "no card frontmatter found")
+        self.assertEqual(
+            offenders,
+            [],
+            msg=(
+                "card(s) carry a repeated top-level frontmatter key — the parser "
+                "keeps the LAST copy while `mutate_frontmatter_field` rewrites "
+                "the FIRST, so status flips report success and land nothing:\n  "
+                + "\n  ".join(offenders)
+            ),
+        )
 
 
 class NonMappingFrontmatterTest(unittest.TestCase):

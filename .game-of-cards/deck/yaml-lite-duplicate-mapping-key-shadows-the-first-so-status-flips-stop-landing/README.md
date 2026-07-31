@@ -1,23 +1,23 @@
 ---
 title: yaml-lite-duplicate-mapping-key-shadows-the-first-so-status-flips-stop-landing
 summary: "The vendored yaml_lite parser silently keeps the LAST of two same-named keys (block mapping and flow mapping alike), while `mutate_frontmatter_field` rewrites the FIRST and a human reading README.md top-down sees the FIRST. A card that acquires a duplicate key therefore passes `goc validate` clean while `goc status <title> active` prints `open -> active`, auto-commits, and leaves the card `open` to every goc surface — the parallel-agent claim lock never engages. The same function raises ParseError for tab indent, over-indent and missing-space-after-colon precisely so a key is never silently dropped; duplicate-key is the one silent key-drop left."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-07-31T05:36:47Z"
-closed_at: null
+closed_at: "2026-07-31T05:45:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — a repeated key raises `ParseError` in both the block mapping and the flow mapping arm
-  - [ ] TDD: a regression test asserts `safe_load` raises on a duplicate block-mapping key AND on a duplicate flow-mapping key, and that a single-occurrence document is unaffected
-  - [ ] TDD: a regression test asserts the whole deck is duplicate-key free, so a merge that reintroduces the shape fails the suite rather than passing `goc validate`
-  - [ ] MECHANICAL: `_parse_block_mapping` and `_parse_flow_mapping` reject a repeated key, with the message naming the key and the line/pair so the fix site is obvious
-  - [ ] MECHANICAL: the module docstring's `Unsupported (raises ParseError)` list names duplicate keys
-  - [ ] MECHANICAL: the live instance `autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish` is repaired (its stale first `summary:` removed) so `uv run goc validate` stays green
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green and `python scripts/sync_plugin_assets.py --check` reports the three engine mirrors in sync
+  - [x] TDD: `reproduce.py` exits zero — a repeated key raises `ParseError` in both the block mapping and the flow mapping arm
+  - [x] TDD: a regression test asserts `safe_load` raises on a duplicate block-mapping key AND on a duplicate flow-mapping key, and that a single-occurrence document is unaffected
+  - [x] TDD: a regression test asserts the whole deck is duplicate-key free, so a merge that reintroduces the shape fails the suite rather than passing `goc validate`
+  - [x] MECHANICAL: `_parse_block_mapping` and `_parse_flow_mapping` reject a repeated key, with the message naming the key and the line/pair so the fix site is obvious
+  - [x] MECHANICAL: the module docstring's `Unsupported (raises ParseError)` list names duplicate keys
+  - [x] MECHANICAL: the live instance `autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish` is repaired (its stale first `summary:` removed) so `uv run goc validate` stays green
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` is green and `python scripts/sync_plugin_assets.py --check` reports the three engine mirrors in sync
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -86,6 +86,8 @@ contract covers the case.
 
 ## Empirical evidence
 
+### Before the fix
+
 `uv run python .game-of-cards/deck/yaml-lite-duplicate-mapping-key-shadows-the-first-so-status-flips-stop-landing/reproduce.py`:
 
 ```
@@ -128,6 +130,26 @@ Next: implement the card; tick DoD items as you go; then goc done dup-status.
 The verb announced the transition, auto-committed it, and the card is still
 `open` on every surface. `goc done` fails the same way: it sets `closed_at` and
 rewrites the first `status:`, and the card stays open.
+
+### After the fix
+
+Same `reproduce.py`, exit 0:
+
+```
+OK: safe_load('title: foo\nstatus: open\ntags: [bug]\nstatus: done') raised ParseError
+OK: safe_load('worker: {who: alice, where: main, who: bob}') raised ParseError
+OK (control): over-indented line raises ParseError
+
+reader-split demonstration unreachable (parse refused): YAML parse error inside frontmatter: line 6: duplicate mapping key 'status'; the earlier value would be silently discarded
+
+All checks passed: a repeated mapping key fails loud.
+```
+
+`goc validate` on a scratch deck holding the same card now exits 1 with
+`ERROR: dup-status: YAML parse error inside frontmatter: line 12: duplicate
+mapping key 'status'; the earlier value would be silently discarded`, so the
+corruption turns the deck red instead of passing as `OK`. The repo's own deck is
+duplicate-key free (0 of 691 cards) after the repair below.
 
 ## Why it matters
 
@@ -187,28 +209,39 @@ of one root cause — there is no shared code path to consolidate. Adjacent but
 different: [validate-ignores-unknown-frontmatter-keys-so-typos-pass-silently](../validate-ignores-unknown-frontmatter-keys-so-typos-pass-silently/)
 covers keys outside the schema, not keys that appear twice.
 
-## Fix
+## Fix (landed)
 
-Reject a repeated key in both mapping arms of `goc/_vendor/yaml_lite.py`,
+A repeated key is rejected in both mapping arms of `goc/_vendor/yaml_lite.py`,
 matching the two fail-loud guards already in `_parse_block_mapping`:
 
-- `_parse_block_mapping` (around line 150): before assigning, refuse when `key`
-  is already in `result`, naming the key and the 1-based line number the way the
-  over-indent and missing-space guards do.
-- `_parse_flow_mapping` (around line 441): same check, naming the key and the
-  flow text.
+- `_parse_block_mapping` — refuses before assigning when `key` is already in
+  `result`, naming the key and the 1-based line number the way the over-indent
+  and missing-space guards do.
+- `_parse_flow_mapping` — same check, naming the key and the flow text.
 
-`parse_frontmatter` already converts `ValueError` into `FrontmatterError`, so
-the diagnostics route through the existing paths with no engine change:
-`goc validate` reports the card authoritatively, `load_card_or_exit` exits 2
-with the file path, and `load_all_cards` warns per card. `mutate_frontmatter_field`
-needs no change — a card it could target ambiguously no longer parses.
+The module docstring's `Unsupported (raises ParseError)` list now names the case,
+so the contract is stated rather than implied.
 
-Then repair the live instance: delete the stale first `summary:` from
-`autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish`. The
-surviving copy is the later authored one, it is what every goc surface already
-reports, and it matches the rewound scope in that card's body — so the repair
-changes no rendered output and lowers the risk of the fix turning the deck red.
+No engine change was needed: `parse_frontmatter` already converts `ValueError`
+into `FrontmatterError`, so the diagnostics route through the existing paths —
+`goc validate` reports the card and exits 1, `load_card_or_exit` exits 2 with the
+file path, `load_all_cards` warns per card. `mutate_frontmatter_field` is
+untouched, because a card it could target ambiguously no longer parses at all.
+
+The live instance was repaired in the same commit: the stale first `summary:` was
+deleted from `autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish`.
+The surviving copy is the later authored one (from the rewind commit
+`d0e138c3`), it is what every goc surface already reported, and it matches the
+rewound scope in that card's body — so the repair changed no rendered output.
+
+Regression cover in `tests/test_yaml_lite.py`:
+`DuplicateMappingKeyRejectionTest` (both arms reject; nested mappings, sibling
+sequence items and single-occurrence documents still parse),
+`DuplicateTopLevelKeyScanTest` (proves the deck scan catches a planted
+offender before it is trusted on the real deck), and
+`DeckRoundTripTest.test_no_card_carries_a_duplicate_frontmatter_key` (names every
+offending card and key, so a merge that reintroduces the shape gets a readable
+diagnostic instead of a bare line number).
 
 The three plugin engine mirrors (`claude-plugin/goc/`, `codex-plugin/goc/`,
 `openclaw-plugin/goc/`) are regenerated by the `sync-plugin-assets` pre-commit
