@@ -208,6 +208,87 @@ class EnglishOnlyGuardSensitivityTest(unittest.TestCase):
             self.assertEqual(fields, {"definition_of_done"})
 
 
+class EnglishOnlyUnparseableCardTest(unittest.TestCase):
+    """One card the YAML parser refuses must not take the whole scan down.
+
+    Regression guard for
+    `card-language-guard-aborts-the-whole-deck-scan-on-one-unparseable-card`:
+    `scan_card` called `parse_frontmatter` bare, so a hand-edit slip raised
+    `FrontmatterError` out of `scan_deck`'s comprehension — losing the bad
+    card's slug check *and* every other card's verdict, and replacing the
+    language diagnostic with a traceback. The malformation belongs to
+    `goc validate`; this guard warns and keeps scanning.
+    """
+
+    # A German slug both marker layers catch, so the slug fallback is provably
+    # able to flag these cards once the parse is netted.
+    OFFENDER = "kartei-pruefung-fehlt"
+    CONTROL = "cache-wird-nicht-geleert"
+
+    # Three ordinary hand-edit slips, each hitting a different parser refusal.
+    MALFORMED = {
+        "unterminated": f"---\ntitle: {OFFENDER}\n",
+        "missing space after colon": f"---\ntitle: {OFFENDER}\nstatus:open\n---\nbody\n",
+        "duplicate key": (
+            f"---\ntitle: {OFFENDER}\nstatus: open\nstatus: active\n---\nbody\n"
+        ),
+    }
+
+    def _deck_with(self, tmp: str, slug: str, text: str) -> Path:
+        """A two-card deck: one clean flaggable control card, one malformed card."""
+        deck = Path(tmp)
+        control = deck / self.CONTROL
+        control.mkdir()
+        control.joinpath("README.md").write_text(
+            f"---\ntitle: {self.CONTROL}\n"
+            'summary: "Der Cache wird nicht geleert."\n---\n\n# body\n',
+            encoding="utf-8",
+        )
+        bad = deck / slug
+        bad.mkdir()
+        bad.joinpath("README.md").write_text(text, encoding="utf-8")
+        return deck
+
+    def test_scan_survives_and_still_checks_the_slug(self) -> None:
+        import tempfile
+
+        self.assertTrue(
+            guard.flag_text(self.OFFENDER),
+            "precondition: the planted slug must itself be flaggable, or this "
+            "test cannot tell a working fallback from a silent skip",
+        )
+        for label, text in self.MALFORMED.items():
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as tmp:
+                slug = f"{self.OFFENDER}-{label.replace(' ', '-')}"
+                deck = self._deck_with(tmp, slug, text)
+                findings = guard.scan_deck(deck)
+                flagged = {card for card, _field, _reason in findings}
+                self.assertIn(
+                    slug,
+                    flagged,
+                    f"{label}: the malformed card must still be checked on its slug",
+                )
+                self.assertIn(
+                    self.CONTROL,
+                    flagged,
+                    f"{label}: a sibling card's findings must survive the bad card",
+                )
+
+    def test_malformed_card_does_not_by_itself_fail_the_language_check(self) -> None:
+        """Exit code stays language-only — `goc validate` owns the malformation."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            deck = Path(tmp)
+            card = deck / "retry-budget-is-never-reset"
+            card.mkdir()
+            card.joinpath("README.md").write_text(
+                "---\ntitle: retry-budget-is-never-reset\nstatus:open\n---\nbody\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(guard.scan_deck(deck), [])
+
+
 class EnglishOnlyUngCollisionTest(unittest.TestCase):
     """The one marker suffix with an English collision, from both sides.
 

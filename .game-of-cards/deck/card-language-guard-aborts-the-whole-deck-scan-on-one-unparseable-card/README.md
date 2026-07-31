@@ -1,37 +1,40 @@
 ---
 title: card-language-guard-aborts-the-whole-deck-scan-on-one-unparseable-card
 summary: "`scripts/check_card_language.scan_card` calls `parse_frontmatter` with no `FrontmatterError` net, so one card with an unterminated `---`, a missing space after a colon, or a duplicate mapping key aborts the entire English-only scan with a traceback — losing every other card's findings. The comment directly above the fallback line already promises the opposite: that such a card is still checked on its slug."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-07-31T05:54:49Z"
-closed_at: null
+closed_at: "2026-07-31T06:02:09Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — for all three malformation shapes (unterminated `---`, `status:open` missing space, duplicate mapping key) `scan_deck` returns instead of raising, still reports the clean control card's findings, and still flags the malformed card on its directory slug.
-  - [ ] TDD: a regression test in `tests/test_card_authoring_rules.py` plants a card with unparseable frontmatter and a flaggable German slug in a temp deck and asserts `scan_deck` reports it (not raises), and that a sibling clean card's findings survive.
-  - [ ] MECHANICAL: `scan_card` in `scripts/check_card_language.py` wraps `parse_frontmatter` in a `try/except FrontmatterError` that falls back to `{}` and emits `WARNING: <card>: <exc>` on stderr, mirroring `engine.load_all_cards` (`goc/engine.py:973-979`); the comment above `setdefault` becomes true rather than aspirational.
-  - [ ] PROCESS: sibling sweep recorded in `log.md` — confirm no other repo-local deck-walking script calls `parse_frontmatter` without a net (`scripts/*.py`), and note the result either way.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green and `uv run python scripts/check_card_language.py --check` still reports the real deck clean.
+  - [x] TDD: `reproduce.py` exits zero — for all three malformation shapes (unterminated `---`, `status:open` missing space, duplicate mapping key) `scan_deck` returns instead of raising, still reports the clean control card's findings, and still flags the malformed card on its directory slug.
+  - [x] TDD: a regression test in `tests/test_card_authoring_rules.py` plants a card with unparseable frontmatter and a flaggable German slug in a temp deck and asserts `scan_deck` reports it (not raises), and that a sibling clean card's findings survive.
+  - [x] MECHANICAL: `scan_card` in `scripts/check_card_language.py` wraps `parse_frontmatter` in a `try/except FrontmatterError` that falls back to `{}` and emits `WARNING: <card>: <exc>` on stderr, mirroring `engine.load_all_cards` (`goc/engine.py:973-979`); the comment above `setdefault` becomes true rather than aspirational.
+  - [x] PROCESS: sibling sweep recorded in `log.md` — confirm no other repo-local deck-walking script calls `parse_frontmatter` without a net (`scripts/*.py`), and note the result either way.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` stays green and `uv run python scripts/check_card_language.py --check` still reports the real deck clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # The English-only guard aborts the whole deck scan on one unparseable card
 
+**FIXED** — `scan_card` now nets `FrontmatterError`, warns on stderr, and
+checks the card on its directory slug. See `## Fix (landed)`.
+
 ## Location
 
-`scripts/check_card_language.py:216-228` — `scan_card`, called once per card
-from `scan_deck` (line 231-237).
+`scripts/check_card_language.py` — `scan_card`, called once per card from
+`scan_deck`.
 
-## What's broken
+## What was broken
 
-`scan_card` calls `parse_frontmatter` bare:
+`scan_card` called `parse_frontmatter` bare:
 
 ```python
-# scripts/check_card_language.py:216-221
+# scripts/check_card_language.py:216-221, before the fix
 def scan_card(readme: Path) -> list[tuple[str, str]]:
     """Return `(field, reason)` pairs for one card README."""
     frontmatter, _body = parse_frontmatter(readme.read_text(encoding="utf-8"))
@@ -41,7 +44,7 @@ def scan_card(readme: Path) -> list[tuple[str, str]]:
 ```
 
 The comment is the contract: *"a card whose frontmatter the parser cannot read
-is still checked on its slug."* The code does not implement it. `setdefault`
+is still checked on its slug."* The code did not implement it. `setdefault`
 only rescues the one benign outcome — `parse_frontmatter` returning
 `({}, text)` because there is no opening `---` at line 1 at all. The engine
 documents a second outcome for exactly the case the comment names:
@@ -53,11 +56,11 @@ documents a second outcome for exactly the case the comment names:
       - Both delimiters present, YAML valid → returns (data, body)
 ```
 
-So when the frontmatter genuinely *cannot be read*, `scan_card` raises. And
-because `scan_deck` is a single comprehension, the raise escapes the whole walk:
+So when the frontmatter genuinely *cannot be read*, `scan_card` raised. And
+because `scan_deck` is a single comprehension, the raise escaped the whole walk:
 
 ```python
-# scripts/check_card_language.py:231-237
+# scripts/check_card_language.py, unchanged by the fix
 def scan_deck(deck_dir: Path = DECK_DIR) -> list[tuple[str, str, str]]:
     """Return `(card, field, reason)` triples for every non-English finding."""
     return [
@@ -67,7 +70,7 @@ def scan_deck(deck_dir: Path = DECK_DIR) -> list[tuple[str, str, str]]:
     ]
 ```
 
-One bad card therefore costs three things: the guard's verdict on that card
+One bad card therefore cost three things: the guard's verdict on that card
 (whose slug is usually flaggable — that is the whole point of the fallback),
 the guard's verdict on **every other card in the deck**, and the clean error
 message. Every sibling deck-walker already takes the opposite posture —
@@ -81,7 +84,7 @@ repo-local script was never in range.
 ## Empirical evidence
 
 `uv run python .game-of-cards/deck/card-language-guard-aborts-the-whole-deck-scan-on-one-unparseable-card/reproduce.py`
-(tracebacks elided; they interleave on stderr):
+**before** the fix (tracebacks elided; they interleave on stderr):
 
 ```
 control card alone -> 4 finding(s)
@@ -99,10 +102,28 @@ control card alone -> 4 finding(s)
 ```
 
 `flag_text` on each malformed card's slug returns two findings, so the
-fallback the comment promises would have caught all three German titles. The
-guard dies instead. The control card (`cache-wird-nicht-geleert`, four
-findings on its own) contributes zero findings in every failing run — its
-verdict is collateral damage.
+fallback the comment promised would have caught all three German titles. The
+guard died instead. The control card (`cache-wird-nicht-geleert`, four
+findings on its own) contributed zero findings in every failing run — its
+verdict was collateral damage.
+
+The same reproducer **after** the fix (three warnings on stderr, exit 0):
+
+```
+WARNING: kartei-pruefung-fehlt-unterminated: frontmatter unterminated: opening '---' at line 1 has no matching closing '---' delimiter
+WARNING: kartei-pruefung-fehlt-missing-space: YAML parse error inside frontmatter: line 2: 'status:open' is not a valid 'key: value' mapping entry (a ':' key separator must be followed by a space); breaking here would silently drop it and every following key
+WARNING: kartei-pruefung-fehlt-duplicate-key: YAML parse error inside frontmatter: line 3: duplicate mapping key 'status'; the earlier value would be silently discarded
+control card alone -> 4 finding(s)
+
+[unterminated] scan_deck -> 6 finding(s) over ['cache-wird-nicht-geleert', 'kartei-pruefung-fehlt-unterminated']
+[missing-space] scan_deck -> 6 finding(s) over ['cache-wird-nicht-geleert', 'kartei-pruefung-fehlt-missing-space']
+[duplicate-key] scan_deck -> 6 finding(s) over ['cache-wird-nicht-geleert', 'kartei-pruefung-fehlt-duplicate-key']
+
+0 failing case(s) of 3
+```
+
+Six findings per case = the control card's four plus the malformed card's two,
+recovered from its slug.
 
 ## Why it matters
 
@@ -122,12 +143,12 @@ The consequences are all in the guard's two invocation paths:
 
 - The `card-language` pre-commit hook (`.pre-commit-config.yaml`) — which
   `goc new --commit` also triggers, because goc's auto-commit shells out to
-  `git commit` without `--no-verify` — dies with a Python traceback naming
+  `git commit` without `--no-verify` — died with a Python traceback naming
   `FrontmatterError` instead of the language rule it exists to enforce. The
-  author is told nothing about English-only and nothing about which of the
+  author was told nothing about English-only and nothing about which of the
   other 690+ cards might also be non-English.
-- `tests/test_card_authoring_rules.py:391` calls `guard.scan_deck()` against
-  the real deck, so the same card turns that suite into an ERROR (a raised
+- `tests/test_card_authoring_rules.py` calls `guard.scan_deck()` against the
+  real deck, so the same card turned that suite into an ERROR (a raised
   exception) rather than a FAIL with a readable message.
 
 Neither path loses data, and `goc validate` still reports the malformation
@@ -137,27 +158,32 @@ language guard should *not* re-report it: the malformation already has an
 owner. The guard's job is language, and it should keep doing that job on the
 slug and on every other card.
 
-## Fix
+## Fix (landed)
 
-In `scripts/check_card_language.py`, net the parse in `scan_card` — the same
+`scan_card` in `scripts/check_card_language.py` now nets the parse — the same
 shape `engine.load_all_cards` uses at `goc/engine.py:973-979`:
 
 ```python
-from goc.engine import FrontmatterError, parse_frontmatter
-
-def scan_card(readme: Path) -> list[tuple[str, str]]:
-    """Return `(field, reason)` pairs for one card README."""
     try:
         frontmatter, _body = parse_frontmatter(readme.read_text(encoding="utf-8"))
     except FrontmatterError as exc:
-        # Unreadable frontmatter is `goc validate`'s finding, not this guard's:
-        # warn, keep the slug check, and let the rest of the deck be scanned.
         print(f"WARNING: {readme.parent.name}: {exc}", file=sys.stderr)
         frontmatter = {}
+    # The directory name is the title of record; fall back to it so a card whose
+    # frontmatter the parser cannot read is still checked on its slug.
     frontmatter.setdefault("title", readme.parent.name)
-    ...
 ```
 
 Exit code stays language-only: a warning does not turn `--check` red, so a
 malformed card fails the build through `goc validate` (which owns that
-diagnostic) and not twice through the language hook.
+diagnostic) and not twice through the language hook. The module docstring's
+"What it checks, and what it deliberately does not" section now states the
+division of labour, so a future reader does not have to re-derive it.
+
+Regression cover: `EnglishOnlyUnparseableCardTest` in
+`tests/test_card_authoring_rules.py` plants each malformation shape next to a
+clean flaggable control card and asserts both are reported. Verified sensitive
+— all three subtests raise `FrontmatterError` against the pre-fix script, so
+the guard cannot silently stop guarding (the property
+[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/)
+asks of every guard in this suite).
