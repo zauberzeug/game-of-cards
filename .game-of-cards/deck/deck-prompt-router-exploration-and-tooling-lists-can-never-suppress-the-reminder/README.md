@@ -175,6 +175,45 @@ both plugin payloads, so it evaluates on every prompt in every session of
 every consuming repo that installs GoC. The dead branch executes constantly;
 it simply never decides anything.
 
+## Sibling shape: populated structure with no reachable consumer
+
+Recorded 2026-07-31 at filing time. Not a scope expansion of this card and
+not an umbrella — context for whoever answers the question below, because
+the same shape already has one open card.
+
+[agent-manifest-guidance-block-is-built-but-silently-ignored](../agent-manifest-guidance-block-is-built-but-silently-ignored/)
+is the other instance: the Claude agent manifest declares a `guidance`
+block, `_load_agent_shim` faithfully builds `GuidanceBlock` tuples onto
+`AgentShim.guidance`, and nothing reads that attribute — the briefing flow
+uses hardcoded `AGENTS_GUIDANCE` / `CLAUDE_GUIDANCE` constants instead. Its
+"why it matters" is this card's argument verbatim: a contributor edits the
+dead surface expecting effect, ships a no-op, and debugs it.
+
+Both are the same shape, and neither is the classic dead code a linter
+finds. The structure is *populated on every run*, so coverage tools see it
+executing; what is missing is a consumer that can act on the value. That is
+why both survived — the code is live, only the effect is absent.
+
+**Sweep, bounded and reported.** Scanned every module-level constant in
+`goc/` and `scripts/` (93 names, `_vendor/` excluded as third-party) for
+definitions with no reader anywhere in `goc/`, `scripts/`, or `tests/`. One
+hit: `SUPERSEDE_REL_FIELDS` (`goc/engine.py:1218`), whose three neighbours
+`LIST_REL_FIELDS`, `ADVANCE_REL_FIELDS` and `INVERSE_REL` all have readers —
+`HalfEdge.is_advance` (`goc/engine.py:1255`) consults `ADVANCE_REL_FIELDS`,
+while the supersession branch is written out longhand as
+`edge.field == "superseded_by"` (`goc/engine.py:5739`) rather than through
+the constant sitting right beside it. That is the degenerate case of this
+shape — an unused name, not a misleading contract — so it is noted here
+rather than filed. The sweep did NOT cover unread dataclass *fields* or dict
+keys, which is the shape both real instances actually take; doing that
+properly needs call-graph analysis, not grep.
+
+**No umbrella filed.** Two instances, both open, both with a concrete fix
+path already written. A third substantive instance — a populated structure
+whose absent consumer misleads an author into a no-op change — is the signal
+to file the root, per the deck-hygiene rule that filing must not outpace
+deciding.
+
 ## Decision required
 
 Is the router meant to be work-only, or is suppression meant to be

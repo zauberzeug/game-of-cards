@@ -183,3 +183,19 @@ Checked against the open / done / disproved queues for
   (done) — addresses the hooks manifest, not the guidance manifest.
 
 No prior card identifies the manifest's `guidance` field as dead data.
+
+**Family instance 2 (found 2026-07-31, this card still open):**
+[deck-prompt-router-exploration-and-tooling-lists-can-never-suppress-the-reminder](../deck-prompt-router-exploration-and-tooling-lists-can-never-suppress-the-reminder/)
+— the same shape in `goc/templates/hooks/deck_prompt_router.py`: the hook
+populates `has_exploration` / `has_tooling` from 13 regexes on every prompt,
+but its two branches partition on `has_work`, so no consumer can act on
+either value. Same failure mode as this card's "why it matters" — an author
+edits the dead surface (there, by adding vocabulary to `EXPLORATION`; here,
+by adding a `guidance` block to a new manifest), ships a no-op, and debugs
+it. Neither is linter-visible: both structures execute on every run, and
+only the effect is missing.
+
+That card carries the shared sweep (93 module-level constants in `goc/` and
+`scripts/`, one degenerate hit) and the reasoning for filing no umbrella at
+two instances. Whichever of these two is fixed first should link the other
+from its `log.md`.
