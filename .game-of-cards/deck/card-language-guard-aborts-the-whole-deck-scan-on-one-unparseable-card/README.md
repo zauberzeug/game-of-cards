@@ -1,7 +1,7 @@
 ---
 title: card-language-guard-aborts-the-whole-deck-scan-on-one-unparseable-card
 summary: "`scripts/check_card_language.scan_card` calls `parse_frontmatter` with no `FrontmatterError` net, so one card with an unterminated `---`, a missing space after a colon, or a duplicate mapping key aborts the entire English-only scan with a traceback — losing every other card's findings. The comment directly above the fallback line already promises the opposite: that such a card is still checked on its slug."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-07-31T05:54:49Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `scan_card` in `scripts/check_card_language.py` wraps `parse_frontmatter` in a `try/except FrontmatterError` that falls back to `{}` and emits `WARNING: <card>: <exc>` on stderr, mirroring `engine.load_all_cards` (`goc/engine.py:973-979`); the comment above `setdefault` becomes true rather than aspirational.
   - [ ] PROCESS: sibling sweep recorded in `log.md` — confirm no other repo-local deck-walking script calls `parse_frontmatter` without a net (`scripts/*.py`), and note the result either way.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green and `uv run python scripts/check_card_language.py --check` still reports the real deck clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The English-only guard aborts the whole deck scan on one unparseable card
