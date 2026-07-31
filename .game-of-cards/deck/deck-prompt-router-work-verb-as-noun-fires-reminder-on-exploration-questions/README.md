@@ -8,7 +8,8 @@ created: "2026-06-25T13:44:07Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - deck-prompt-router-exploration-and-tooling-lists-can-never-suppress-the-reminder
 tags: [bug, infra]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — none of the five pure-exploration prompts (`how does the update logic work?`, `what does the move command do?`, `explain the rename function`, `what is the build pipeline?`, `how does add work in this codebase?`) print the GoC reminder.

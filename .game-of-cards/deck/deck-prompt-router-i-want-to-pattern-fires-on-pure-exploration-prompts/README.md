@@ -8,7 +8,8 @@ created: "2026-05-30T02:11:36Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - deck-prompt-router-exploration-and-tooling-lists-can-never-suppress-the-reminder
 tags: [bug, infra]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — none of the four pure-exploration prompts (`I want to understand …`, `I want to know …`, `I want to learn about …`, `we need to investigate …`) print the GoC reminder.
