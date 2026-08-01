@@ -1,7 +1,7 @@
 ---
 title: five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs
 summary: "goc install scaffolds six user-owned content stubs under .game-of-cards/, and every one carries a header stating it is \"injected into goc-shipped skill bodies via `!`cat ...`` at documented insertion points\" — but only canonical-tags.md has an injection point in any shipped skill. The deck README catalogue compounds the drift: it marks four stubs \"(reserved for project use)\", contradicting their own headers, and claims tooling-conventions.md is inlined into the audit-deck skill Phase 2 brief when audit-deck only names the file in prose. A consumer who authors a model-tier mandate or a glossary into those files gets nothing delivered to the agent."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-01T05:56:33Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the dogfood copies under `.game-of-cards/` are updated to match the corrected templates (user-owned, not auto-synced).
   - [ ] TDD: a regression test derives the verdict from the tree — for every shipped `goc/templates/game_of_cards/*.md` stub, the header's injection claim and the README row's "Inlined into" cell must both agree with whether a shipped skill `!cat`-injects it. Fails before the fix, passes after.
   - [ ] TDD: `uv run goc validate` is clean and `uv run python -m unittest discover -s tests` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Five of the six content stubs promise an inlining no shipped skill performs
