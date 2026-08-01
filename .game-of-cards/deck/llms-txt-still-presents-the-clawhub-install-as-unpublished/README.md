@@ -1,21 +1,21 @@
 ---
 title: llms-txt-still-presents-the-clawhub-install-as-unpublished
 summary: "`site/llms.txt` — the file LLMs ingest to learn how to recommend GoC — still gates the OpenClaw install behind a publish that landed ten releases ago, telling readers the ClawHub channel only works \"Once the plugin is published\" and that until then they should build from source. ClawHub serves `game-of-cards` at the current release (latestVersion 0.0.27), and README.md, ABOUT.md, goc.md and site/index.html all present `openclaw skills install game-of-cards` as live — llms.txt is the single surface still saying otherwise. An LLM reading it steers OpenClaw users into a from-source build instead of the one-line registry install."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-08-01T05:34:31Z"
-closed_at: null
+closed_at: "2026-08-01T05:40:52Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `site/llms.txt` no longer carries a pending-publish caveat, and its four sibling surfaces still agree the ClawHub install is live
-  - [ ] TDD: a regression test asserts `site/llms.txt` presents every install channel it lists as available, so the next stale-caveat regression fails CI instead of shipping
-  - [ ] MECHANICAL: the `## Install (OpenClaw)` section reads as a live registry install, and the reference to the internal card slug `publish-openclaw-plugin` is gone from the public document
-  - [ ] MECHANICAL: `add-openclaw-install-section-to-llms-txt` (closed) carries a forward pointer to this card
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: `reproduce.py` exits zero — `site/llms.txt` no longer carries a pending-publish caveat, and its four sibling surfaces still agree the ClawHub install is live
+  - [x] TDD: a regression test asserts `site/llms.txt` presents every install channel it lists as available, so the next stale-caveat regression fails CI instead of shipping
+  - [x] MECHANICAL: the `## Install (OpenClaw)` section reads as a live registry install, and the reference to the internal card slug `publish-openclaw-plugin` is gone from the public document
+  - [x] MECHANICAL: `add-openclaw-install-section-to-llms-txt` (closed) carries a forward pointer to this card
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
