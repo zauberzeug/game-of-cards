@@ -21,6 +21,7 @@ advanced_by:
   - card-schema-reference-links-to-a-deck-card-no-consumer-repo-has
   - openclaw-plugin-manifest-config-options-do-not-behave-as-documented
   - llms-txt-still-presents-the-clawhub-install-as-unpublished
+  - five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
