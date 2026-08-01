@@ -103,12 +103,16 @@ def main() -> int:
     for name in catalogue_liars:
         print(f"          {name} -> {rows.get(name)!r}")
 
-    # The prose pointer audit-deck uses instead of an injection.
+    # How audit-deck actually reaches the stub the catalogue assigns to it.
     audit = (SKILLS_DIR / "audit-deck" / "SKILL.md").read_text(encoding="utf-8")
     for i, line in enumerate(audit.splitlines(), 1):
-        if "tooling-conventions.md" in line:
-            print()
-            print(f"audit-deck/SKILL.md:{i}: {line.strip()}")
+        if "tooling-conventions.md" not in line:
+            continue
+        print()
+        print(f"audit-deck/SKILL.md:{i}: {line.strip()}")
+        if _INJECTION.search(line):
+            print("          ^ the `!`cat`` injection the catalogue documents")
+        else:
             print("          ^ a prose pointer, not the `!`cat`` injection the "
                   "catalogue documents")
 

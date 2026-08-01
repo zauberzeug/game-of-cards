@@ -18,6 +18,14 @@ injection points. The skill loads them via:
 If the file is absent or empty, the skill falls through to its
 generic flow.
 
+A row marked **(reserved for project use)** has *no* injection point
+yet: the stub is scaffolded and preserved across upgrades, but no
+shipped skill reads it, so content authored there does not reach an
+agent on its own. The stub's own header says the same thing. This
+table is the authority — a regression test
+(`tests/test_readme_content_stub_catalogue_parity.py` in the goc
+repo) holds both it and the stub headers to the shipped skill tree.
+
 | Stub | Inlined into | What goes here |
 |---|---|---|
 | `canonical-tags.md` | `card-schema` skill (end of predicate table) AND parsed by `goc validate` to extend the canonical-tag enum | Project-specific tag predicates + a fenced YAML block listing the new tags (see existing file's header) |

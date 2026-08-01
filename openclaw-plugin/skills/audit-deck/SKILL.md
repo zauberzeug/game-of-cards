@@ -123,8 +123,9 @@ Brief each agent with:
    **tags**, and a **falsifiable prediction** about what
    `deck/<title>/reproduce.py` would print.
 
-For model-tier guidance (e.g. mandating `model: "opus"`), see
-`.game-of-cards/tooling-conventions.md`.
+Project tooling rules and model-tier mandates from the consuming repo:
+
+`cat .game-of-cards/tooling-conventions.md 2>/dev/null || true`
 
 If a hunter returns three `contribution: low` candidates and no
 `high`, send it back with explicit pointers to under-audited

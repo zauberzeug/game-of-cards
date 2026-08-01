@@ -1,7 +1,6 @@
 <!-- .game-of-cards/domain-vocabulary.md
-     Project-local content stub injected into goc-shipped skill bodies via
-     `!\`cat .game-of-cards/domain-vocabulary.md\`` at documented insertion points.
+     Reserved for project use. No goc-shipped skill inlines this file today,
+     so content authored here does not reach an agent on its own.
 
-     Author the content the skills should see. If this file is empty, the
-     skills proceed with their generic flow. See the goc README for the
-     hook-point catalogue. -->
+     See `.game-of-cards/README.md` § "Content stubs" for the stubs that do
+     have an injection point. -->

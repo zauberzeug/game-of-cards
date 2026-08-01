@@ -1,23 +1,23 @@
 ---
 title: five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs
 summary: "goc install scaffolds six user-owned content stubs under .game-of-cards/, and every one carries a header stating it is \"injected into goc-shipped skill bodies via `!`cat ...`` at documented insertion points\" — but only canonical-tags.md has an injection point in any shipped skill. The deck README catalogue compounds the drift: it marks four stubs \"(reserved for project use)\", contradicting their own headers, and claims tooling-conventions.md is inlined into the audit-deck skill Phase 2 brief when audit-deck only names the file in prose. A consumer who authors a model-tier mandate or a glossary into those files gets nothing delivered to the agent."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-01T05:56:33Z"
-closed_at: null
+closed_at: "2026-08-01T06:06:24Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every stub whose header claims injection has one, and every catalogue row naming a skill is backed by a real `!`cat`` line.
-  - [ ] MECHANICAL: `goc/templates/skills/audit-deck/SKILL.md` Phase 2 injects `.game-of-cards/tooling-conventions.md` at the point the catalogue documents, replacing the prose pointer.
-  - [ ] MECHANICAL: the four reserved stubs (`domain-vocabulary.md`, `domain-examples.md`, `file-path-map.md`, `documentation-conventions.md`) carry a header that states they are reserved and names no injection point; `canonical-tags.md` and `tooling-conventions.md` keep the injected-stub header.
-  - [ ] MECHANICAL: the dogfood copies under `.game-of-cards/` are updated to match the corrected templates (user-owned, not auto-synced).
-  - [ ] TDD: a regression test derives the verdict from the tree — for every shipped `goc/templates/game_of_cards/*.md` stub, the header's injection claim and the README row's "Inlined into" cell must both agree with whether a shipped skill `!cat`-injects it. Fails before the fix, passes after.
-  - [ ] TDD: `uv run goc validate` is clean and `uv run python -m unittest discover -s tests` is green.
+  - [x] TDD: `reproduce.py` exits zero — every stub whose header claims injection has one, and every catalogue row naming a skill is backed by a real `!`cat`` line.
+  - [x] MECHANICAL: `goc/templates/skills/audit-deck/SKILL.md` Phase 2 injects `.game-of-cards/tooling-conventions.md` at the point the catalogue documents, replacing the prose pointer.
+  - [x] MECHANICAL: the four reserved stubs (`domain-vocabulary.md`, `domain-examples.md`, `file-path-map.md`, `documentation-conventions.md`) carry a header that states they are reserved and names no injection point; `canonical-tags.md` and `tooling-conventions.md` keep the injected-stub header.
+  - [x] MECHANICAL: the dogfood copies under `.game-of-cards/` are updated to match the corrected templates (user-owned, not auto-synced).
+  - [x] TDD: a regression test derives the verdict from the tree — for every shipped `goc/templates/game_of_cards/*.md` stub, the header's injection claim and the README row's "Inlined into" cell must both agree with whether a shipped skill `!cat`-injects it. Fails before the fix, passes after.
+  - [x] TDD: `uv run goc validate` is clean and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -141,6 +141,10 @@ all five skill copies in this repo (`goc/templates/skills`,
 `.claude/skills`, `.codex/skills`, `claude-plugin/skills`,
 `codex-plugin/skills`).
 
+Post-fix, the same script exits zero: eight injections, both `[FAIL]`
+counts at 0, and the `audit-deck` line now reads
+`!`cat .game-of-cards/tooling-conventions.md 2>/dev/null || true``.
+
 ## Why it matters
 
 The stubs are the documented extension surface for making
@@ -169,20 +173,18 @@ the content-stub table, and nothing checks that a catalogued injection
 point exists in the skill it names. Both gaps are why this rotted
 silently.
 
-## Fix
+## Fix — landed 2026-08-01
 
-Each half is settled by the same tie-break: the per-stub catalogue row
+Each half was settled by the same tie-break: the per-stub catalogue row
 is the specific statement of intent, the stub header is boilerplate
 copied across all six.
 
 1. **`tooling-conventions.md` — the code drifted.** The catalogue names
-   the injection point, so add it at
-   `goc/templates/skills/audit-deck/SKILL.md:133-134`, replacing the
-   prose pointer:
+   the injection point, so it now exists, replacing the prose pointer
+   at `goc/templates/skills/audit-deck/SKILL.md:133-135`:
 
    ```
-   Project tooling rules and model-tier guidance (e.g. mandating
-   `model: "opus"`), as authored by the consuming repo:
+   Project tooling rules and model-tier mandates from the consuming repo:
 
    !`cat .game-of-cards/tooling-conventions.md 2>/dev/null || true`
    ```
@@ -190,28 +192,48 @@ copied across all six.
    This matches how `canonical-tags.md` and the six hooks already
    behave, including the empty-stub case: an unauthored stub inlines
    its own header comment, exactly as `hooks/audit-deck.md` does today.
+   `tests/test_skill_body_size.py` caps this skill at 10,000 bytes, so
+   the lead-in prose is one line and the `model: "opus"` example stays
+   where the catalogue already carries it (final size 9,975).
 
-2. **The four reserved stubs — the header drifted.** Give them a header
-   that says what the catalogue says, and names no injection point:
+2. **The four reserved stubs — the header drifted.** They now carry a
+   header that says what the catalogue says and names no injection
+   point:
 
    ```
    <!-- .game-of-cards/domain-vocabulary.md
         Reserved for project use. No goc-shipped skill inlines this file
         today, so content authored here does not reach an agent on its own.
-        See `.game-of-cards/README.md` § "Content stubs" for the stubs that
-        do have an injection point. -->
+
+        See `.game-of-cards/README.md` § "Content stubs" for the stubs that do
+        have an injection point. -->
    ```
 
    These are user-owned files: changing the template changes what a
    fresh `goc install` scaffolds, while `goc upgrade` preserves any
-   existing copy, so no authored content is at risk.
+   existing copy, so no authored content was at risk. The four dogfood
+   copies were verified byte-identical to the pre-fix template (i.e.
+   unauthored) before being refreshed.
 
-3. **Guard it from the tree.** Add
+3. **The catalogue preamble.** "Markdown files inlined verbatim into
+   skill bodies at documented injection points" was a blanket claim its
+   own four `(reserved for project use)` rows contradicted. The section
+   now states what a reserved row means and points at the guard.
+
+4. **Guarded from the tree.**
    `tests/test_readme_content_stub_catalogue_parity.py` (sibling to the
-   hook-table guard) asserting, for every
+   hook-table guard) asserts, for every
    `goc/templates/game_of_cards/*.md` stub, that the header's injection
    claim and the README row's "Inlined into" cell both agree with
-   whether any shipped skill `!cat`-injects it — in both the template
-   and the dogfood copy. That is the derive-from-tree shape the
-   doc-accuracy root card asks for, and it closes the direction the
-   hook-table guard leaves open.
+   whether any shipped skill `!cat`-injects it — in the template and in
+   the dogfood copy, in both directions (over- and under-claiming). It
+   reports 4 failures against the pre-fix tree and passes against the
+   post-fix tree. That is the derive-from-tree shape the doc-accuracy
+   root card asks for, and it closes the direction the hook-table guard
+   leaves open.
+
+Mirrors regenerated by `scripts/sync_plugin_assets.py` (`.claude/`,
+`.codex/`, `claude-plugin/`, `codex-plugin/`, `openclaw-plugin/goc/`)
+and `scripts/port_skills_to_openclaw.py`
+(`openclaw-plugin/skills/audit-deck/`); both `--check` modes are clean.
+Full suite: 882 tests, green.
