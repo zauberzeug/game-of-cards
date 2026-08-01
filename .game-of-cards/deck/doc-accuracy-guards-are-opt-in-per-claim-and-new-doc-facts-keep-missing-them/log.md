@@ -133,3 +133,25 @@ Two things recorded in the dashboard above:
   body ("Seven guard classes", "Nine instances") were rewritten in place to match.
   Worth noting against this card's own thesis: the instance list is itself a
   hand-maintained restatement of `advanced_by`, and it rotted within a day.
+
+## 2026-08-01 — twelfth instance connected: public website, external ground truth
+
+- **Instance**: `llms-txt-still-presents-the-clawhub-install-as-unpublished`
+  (closed 2026-08-01). `advances` edge wired; table row and prose added; the
+  summary's "Eleventh"/"nine guard classes, plus one more in its own file" and
+  the body's "Nine guard classes now live in that file (a tenth guard got its
+  own file)" / "Eleven instances" rewritten in place to match.
+- **Why it is not a duplicate**: the finding is a *forward-looking promise* —
+  the exact claim shape this card's taxonomy already enumerates — so it belongs
+  under this root rather than as a new meta-fix. Surfaced by a `pull-card`
+  session on an empty ready queue; the Stop-hook pattern check routed it here
+  via dedup rather than a fresh umbrella.
+- **What it adds**: a fifth surface class (the public website, `site/llms.txt`)
+  and the first claim whose ground truth is *outside the tree* — "is this
+  package published on ClawHub?" is answerable only by an external registry, so
+  no derive-from-tree guard can pin it. The repair's workaround generalizes and
+  is written up in the body: guard the agreement among N in-repo restatements
+  instead of the fact itself, which is fully tree-derived and would have failed
+  the day the surfaces diverged.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question (which surfaces count), not an answer to it.

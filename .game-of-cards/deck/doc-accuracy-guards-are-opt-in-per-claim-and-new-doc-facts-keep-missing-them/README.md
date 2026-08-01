@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus one more in its own file, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Eleventh instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, and the eleventh added machine-readable manifests, where it is not just possible but cheap."
+summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Twelfth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree."
 status: open
 stage: null
 contribution: medium
@@ -20,6 +20,7 @@ advanced_by:
   - story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it
   - card-schema-reference-links-to-a-deck-card-no-consumer-repo-has
   - openclaw-plugin-manifest-config-options-do-not-behave-as-documented
+  - llms-txt-still-presents-the-clawhub-install-as-unpublished
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
@@ -30,7 +31,7 @@ definition_of_done: |
 `tests/test_guidance_accuracy.py` is this repo's answer to doc drift: a test that
 pins a prose claim to the code or tree it describes. The mechanism works — but it
 is applied **one claim at a time, always after the fact**. Nine guard classes now
-live in that file (a tenth guard got its own file), and every one was written in
+live in that file (two further guards got their own files), and every one was written in
 response to an already-rotted claim someone happened to notice. Nothing looks for
 the *unguarded* claims.
 
@@ -49,8 +50,9 @@ the *unguarded* claims.
 | *(none — not guardable by the technique; see below)* | [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/) | 2026-07-27 |
 | `test_no_shipped_skill_body_links_into_a_deck` (own file, `tests/test_skill_template_deck_links.py`) | [card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/) | 2026-07-29 |
 | *(none yet — open)* | [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/) | — |
+| `LlmsTxtInstallChannelTest` (own file, `tests/test_llms_txt_install_channels.py`) | [llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/) | 2026-08-01 |
 
-Eleven instances across three months, each its own file → claim → fix → guard cycle.
+Twelve instances across three months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -126,6 +128,36 @@ described below — no restated constant, nothing to go stale. Where the ninth
 instance bounded Option A from above (prose restating prose is unreachable), this
 one shows the technique reaching *further* than the surfaces catalogued so far:
 declarations in structured config are guardable, and nobody has looked there.
+
+The twelfth widens the surface class a fifth time, to the **public website**, and
+is the first instance whose ground truth lives outside this tree.
+[llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/)
+found `site/llms.txt` — the file LLMs ingest to learn how to recommend GoC — still
+saying the OpenClaw install works "Once the plugin is published" and pointing
+readers at a from-source build "Until publish lands", ten releases after ClawHub
+began serving the package. It is the second confirmed member of the
+**forward-looking promise** shape this card's taxonomy already names, and the
+first where the promise had an externally observable fulfilment date it outlived
+by eleven weeks.
+
+Two datums for the scope decision.
+
+First, it bounds Option A from a direction the ninth did not. Prose restating
+prose is unreachable because there is no tree to derive from; here there *is* a
+fact, but it is not in the tree — "is this package published?" is answerable only
+by an external registry, so a derive-from-tree guard structurally cannot pin it,
+and a guard that could would make CI depend on a third-party API.
+
+Second, the repair shows the way around that, and it generalizes: guard the
+**agreement among restatements** instead of the fact. Four in-repo surfaces
+(`README.md`, `ABOUT.md`, `goc.md`, `site/index.html`) already asserted the
+install was live; `tests/test_llms_txt_install_channels.py` pins llms.txt against
+them, which is fully tree-derived and would have failed the day they diverged.
+Where Option B says "pin every fact a guard already pins, everywhere it is
+asserted", this adds: **when a fact has no in-tree source at all, the fact that N
+surfaces restate it is itself the derivable invariant.** That reaches a class
+neither option currently covers, and it costs one consistency test per claim
+family rather than one guard per claim.
 
 ## What's structurally wrong
 
