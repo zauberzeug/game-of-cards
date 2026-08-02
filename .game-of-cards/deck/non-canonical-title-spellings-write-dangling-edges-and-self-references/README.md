@@ -1,7 +1,7 @@
 ---
 title: non-canonical-title-spellings-write-dangling-edges-and-self-references
 summary: "resolve_card_dir accepts non-canonical spellings of an in-deck title (trailing slash, ./ prefix) even though its docstring declares titles are bare card-directory names. Every caller then uses the raw argument string as the card's identity, so goc advance / unadvance / status --by write the unnormalized spelling into frontmatter edge fields and goc done --bundle takes it as a distinct member. Result: dangling references, half-edges, a self-edge that bypasses the title == advancer guard, and a doubled bundle attestation — all reported as success (exit 0) and auto-committed."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-02T05:32:42Z"
@@ -10,13 +10,13 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — every non-canonical spelling of an in-deck title is refused with exit 2 before any read or write
   - [ ] TDD: regression test covers `resolve_card_dir` directly (`alpha/`, `./alpha`, `alpha//` rejected; `alpha` accepted) and at least one write door end-to-end (`goc advance a --by a/` refuses instead of writing a self-edge)
   - [ ] MECHANICAL: `resolve_card_dir` enforces the contract its own docstring states — a title argument is the bare card-directory name, not any path spelling that happens to resolve into the deck
   - [ ] PROCESS: forward pointer added to the closed [path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck](../path-shaped-title-arguments-let-verbs-read-and-mutate-files-outside-the-deck/), whose guard this completes
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # non-canonical-title-spellings-write-dangling-edges-and-self-references
