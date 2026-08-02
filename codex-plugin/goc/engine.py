@@ -1029,9 +1029,22 @@ def resolve_card_dir(title: str) -> Path:
     verb that resolves a title argument must come through here. `new`/`move`
     additionally enforce the richer slug/antipattern rules on the titles
     they create.
+
+    Staying inside the deck is necessary but not sufficient: the accepted
+    set must also be *canonical*, because callers keep using the raw
+    argument string as the card's identity long after this returns. They
+    write it into frontmatter edge fields (`_mutate_pair`) and compare it
+    to sibling arguments (`_cmd_advance`'s self-edge guard,
+    `_cmd_done_bundle`'s duplicate-member guard). `Path` folds a trailing
+    slash and a `./` prefix away — `Path("a/").parts == Path("./a").parts
+    == ("a",)` — so those spellings resolve to the same card while reading
+    as a *different* identity downstream, which is how one card acquires a
+    self-edge or joins a bundle twice. Requiring `title == Path(title).name`
+    keeps the typed identity and the stored identity the same string.
     """
     if (
         len(Path(title).parts) != 1
+        or title != Path(title).name
         or title == ".."
         or (DECK_DIR / title).resolve().parent != DECK_DIR.resolve()
     ):

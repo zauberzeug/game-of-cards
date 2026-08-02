@@ -23,6 +23,13 @@ worker: {who: "claude[bot]", where: main}
 > Resolved: `resolve_card_dir` (goc/engine.py, next to `load_card_or_exit`)
 > now guards every title-argument resolution; path-shaped titles exit 2
 > before any read or write.
+>
+> Forward pointer: this card fixed *escape*, not *canonicality* — spellings
+> that resolve back into the deck (`a/`, `./a`) still passed, and callers
+> that keep the raw argument as the card's identity turned them into
+> dangling edges and self-references. Completed by
+> [non-canonical-title-spellings-write-dangling-edges-and-self-references](../non-canonical-title-spellings-write-dangling-edges-and-self-references/),
+> which adds the `title == Path(title).name` clause to the same guard.
 
 ## Location
 
