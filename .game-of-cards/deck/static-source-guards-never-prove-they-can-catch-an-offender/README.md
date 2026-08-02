@@ -27,12 +27,34 @@ Four prohibition scanners across two test files:
 | `tests/test_guidance_accuracy.py:216` | `_STALE_STUB` | the stale `reproduce.py stub` phrasing |
 | `tests/test_skill_frontmatter_strict_yaml.py:21` | `NESTED_MAPPING_COLON` | a nested mapping in skill frontmatter |
 
-Two guards in the same suite are the counter-examples that show the fix shape
-already exists in-tree: `tests/test_plugin_mirror_parity.py` carries five
-`*_is_detected` tests that feed synthetic drift to its checker, and
-`tests/test_count_message_pluralization.py` gained four such cases when
+Three in-tree counter-examples show the fix shape needs no invention:
+`tests/test_plugin_mirror_parity.py` carries five `*_is_detected` tests that
+feed synthetic drift to its checker; `tests/test_count_message_pluralization.py`
+gained four such cases when
 [count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box](../count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box/)
-closed.
+closed; and the `reproduce.py` of
+[schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen](../schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen/)
+(closed 2026-08-02) runs two known-caught controls alongside its two drift
+cases.
+
+That third one is worth more than its count, because its controls caught a
+live false negative rather than a hypothetical one. The probe's first draft
+reported **all four** cases as "caught" — which would have disproved the card
+it was written for. The guard under test builds its failure message with
+`relative_to(ROOT)` eagerly, on passing calls too, so redirecting the schema
+paths to a temp dir without also rebinding `ROOT` made every test error out on
+message construction instead of running. Only the controls distinguished
+"nothing drifted" from "nothing ran" — the same two-passing-states problem this
+card describes, hit in the harness rather than in the scanner. Note that the
+mechanism is the one this card's own `reproduce.py` already uses (copy the
+guard, rebind `ROOT` to an absolute path), so the hazard travels with the fix
+technique: whatever scope gets picked below should treat the baseline/control
+line as part of the deliverable, not as optional rigour.
+
+Neither the schema-parity guard nor its predecessor belongs in the offender
+table above — `assertEqual(engine, skill)` is fail-closed, so a dead read
+raises rather than passing empty. The citation is about the technique, not
+membership in the family.
 
 ## What's broken
 
