@@ -9,7 +9,25 @@ and canonical tags the runtime actually enforces.
 Plugin-mirror parity (`engine.validate_plugin_mirror_parity`) already
 guards the four downstream mirrors against the template; this test
 closes the remaining gap between the template and the engine's
-authoritative copy. Drift in either file fails the test.
+authoritative copy.
+
+`test_no_unguarded_top_level_key` is the contract: it compares the two
+parsed mappings wholesale, so drift in either file fails the test no
+matter which key carries it — including a key added in some future
+schema version, on the day it lands, with no edit here. The per-key
+tests below it are diagnostics, kept because "canonical_tags drift"
+localises the problem where a whole-mapping mismatch only says the two
+files disagree.
+
+That split is deliberate. The per-key tests were the whole guard until
+`schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen`: six
+names plus the derived `*_values` family, which covered every key the
+schema happened to have and nothing else. Two queued cards
+(`schema-yaml-omits-closed-at-conditional-requirement-for-terminal-status`,
+`support-custom-frontmatter-fields-with-enum-and-required-when-rules`)
+each add a new top-level key as normal implementation, and either would
+have drifted past a green suite. Enumerating cannot converge on an open
+key set; comparing the mappings can.
 """
 
 from __future__ import annotations
@@ -39,6 +57,20 @@ class SkillSchemaParityTest(unittest.TestCase):
             self.skill.get(key),
             f"{key} drift between {ENGINE_SCHEMA.relative_to(ROOT)} "
             f"and {SKILL_SCHEMA.relative_to(ROOT)}",
+        )
+
+    def test_no_unguarded_top_level_key(self) -> None:
+        """The contract: the two schemas agree on every key, named or not.
+
+        Every other test in this class is a narrower diagnostic under this
+        one. Keep this assertion whole-mapping — narrowing it to a key-set
+        comparison would re-open the hole for a key whose *value* drifts.
+        """
+        self.assertEqual(
+            self.engine,
+            self.skill,
+            f"schema drift between {ENGINE_SCHEMA.relative_to(ROOT)} and "
+            f"{SKILL_SCHEMA.relative_to(ROOT)}",
         )
 
     def test_schema_version(self) -> None:
