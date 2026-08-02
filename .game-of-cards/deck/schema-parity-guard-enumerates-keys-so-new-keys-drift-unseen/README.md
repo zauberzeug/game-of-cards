@@ -1,7 +1,7 @@
 ---
 title: schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen
 summary: "The schema-parity guard compares an enumerated key list, not the whole schema. tests/test_skill_schema_yaml_parity.py asserts six named keys plus every '*_values' key, so any other top-level key can differ between goc/schema.yaml and the card-schema skill's bundled copy in either direction with the suite green — while the guard's own docstring claims 'Drift in either file fails the test'. Two open cards would add exactly such a key."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-02T05:50:06Z"
@@ -10,12 +10,12 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, test, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — a new top-level key present in only one of the two schema files turns `SkillSchemaParityTest` red, in both directions, while both controls still fire.
   - [ ] TDD: `tests/test_skill_schema_yaml_parity.py` gains a derived assertion comparing the two parsed mappings wholesale, so coverage needs no edit when a future schema version adds a key.
   - [ ] MECHANICAL: the guard's module docstring no longer claims more than the code delivers — it states that the named tests are diagnostics and the mapping equality is the contract.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green, `uv run goc validate` clean, `python scripts/sync_plugin_assets.py --check` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The schema-parity guard enumerates keys, so a new schema key drifts unseen
