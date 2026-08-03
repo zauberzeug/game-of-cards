@@ -207,8 +207,11 @@ body and its `reference.md` are in scope here for the same reason.
   — the second occurrence, on a different row, resolved the same way; also
   where the sweep was changed to defer to each row's own predicate.
 - [static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/)
-  — one of the four failing cards, and the general statement of why the
-  predecessor's non-reproducible closing check is its own defect class.
+  — one of the four failing cards, and the root statement of the defect class
+  the predecessor's tautological closing check belongs to. That card's
+  § "A fourth surface" records this instance and what it adds to its open
+  scope decision: both of its options attach to scanners in `tests/`, and a
+  card's one-shot closure sweep is neither.
 - [a-shared-tag-groups-a-cluster-that-no-edge-walk-can-reach](../a-shared-tag-groups-a-cluster-that-no-edge-walk-can-reach/)
   — another of the four; documents what a tag grouping costs when it is the
   only grouping, which is what the strip would leave behind.

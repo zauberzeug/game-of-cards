@@ -48,3 +48,34 @@ not optional rigour to be trimmed when the fix is applied at scale — it is the
 only thing that distinguishes "nothing drifted" from "nothing ran".
 
 No status or gate change; the decision stays open.
+
+## 2026-08-03T03:20:00Z — Fourth surface: a closure verification that could not fail
+
+A refine-deck pass refuted the closing figure of
+`meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag` and routed
+the shape here. Body gains § "A fourth surface: closure verifications, which
+no option below reaches".
+
+The mechanism is this card's thesis in a place neither option covers. That
+card's `EMPIRICAL:` DoD box was discharged by a sweep over "per-card README
+read" — the whole file, frontmatter included — testing whether the literal
+`meta-fix` appears in the title, `summary:` or body. Every `meta-fix`-tagged
+card carries that literal in its own `tags:` line, so the check held for all
+45 cards by construction. Replayed at the same commit against the engine's
+`card.body`, 5 of the 45 fail.
+
+Two things worth carrying into the scope decision. First, the diagnostic was
+already in the recorded output: the reported pass count was exactly the
+population size, which is the signature of an assertion with nothing to
+distinguish. Second, this surface is not in `tests/` and never will be — a
+card's verification script runs once, is quoted into a closure note, and is
+never executed again — yet its output becomes the record other cards reason
+from. Here it was cited as settled for 26 days.
+
+So the offender table's boundary is a scope question, not just a scale one.
+Option A and Option B both attach to committed scanners; neither reaches a
+one-shot closure sweep. Recorded as evidence, not as a fifth umbrella — the
+mechanism question is still the same one this card already asks.
+
+No status or gate change; no edge, per the same reasoning as the
+schema-parity connection. The decision stays open.

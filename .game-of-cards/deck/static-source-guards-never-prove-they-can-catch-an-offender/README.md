@@ -262,6 +262,48 @@ corpus already triggers. A registered clean sample has to be a *near-miss the
 corpus does not contain* (there `sprung`, `strung`, `des`), not a sample of
 present data, or it reproduces the same blind spot with more ceremony.
 
+## A fourth surface: closure verifications, which no option below reaches
+
+Connected 2026-08-03 from
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/).
+This card's thesis landed outside `tests/` entirely, on the one-shot script a
+card runs to satisfy an `EMPIRICAL:` DoD box.
+
+[meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag](../meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag/)
+closed on "all 45 open `meta-fix`-tagged cards pass the widened predicate;
+zero false positives", from a sweep its log describes as a "per-card README
+read". A README read is the whole file, frontmatter included, and every
+`meta-fix`-tagged card carries the literal `meta-fix` in its own `tags:`
+line — so the literal clause fired on 45 of 45 by construction. Re-running
+the row at that same commit against the body alone fails 5 of the 45. The
+tell was in the recorded result and nobody read it as one: **the pass count
+equalled the population size**, which is what a check that cannot fail
+reports.
+
+This is not the fail-open shape in the table above — nothing died, and the
+assertion was a positive one. It is the *sample* correction from two sections
+up, arriving through the corpus: the surface being searched contained the
+marker unconditionally, so `assertTrue(scanner(sample))` held for every
+sample. Same two indistinguishable passing states, same green.
+
+**What it changes about the options.** Both are scoped to prohibition
+scanners living in `tests/`. Option A adds a sensitivity case beside each
+scanner; Option B registers scanners with a harness and meta-tests that every
+scanner has a sample. A verification script written inside a card directory to
+discharge a DoD box is neither — it is authored once, run once, quoted into a
+closure note, and never executed again. It is the *highest*-leverage
+unguarded surface in the repo, because its output becomes the record: the
+closure figure above was cited as settled fact for 26 days by cards reasoning
+downstream of it. Whatever scope is picked has to say whether a one-shot
+closure sweep is in it. If it is, the cheapest form of the corpus floor
+already exists — a closure check whose pass count equals its population size
+should have to say so out loud.
+
+No `advances` edge, for the reason given in the schema-parity note above:
+that card is an evidence connection on an open decision, and so is this one.
+The successor card carries the fix for the predicate itself; this section
+carries only what it teaches about scope.
+
 ## Decision required
 
 The technique is settled — a test that runs the scanner over synthetic source
