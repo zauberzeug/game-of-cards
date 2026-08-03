@@ -1,6 +1,6 @@
 ---
 title: meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card
-summary: "The `meta-fix` row fires on a literal `meta-fix` in the title, `summary:` or body, or on an edge to another `meta-fix`-tagged card — but this repo names its umbrellas by shape (`…-and-keeps-drifting`, `…-keep-spawning-…-fixes`, `…-is-opt-in-per-…`) and wires their families later, so a freshly filed umbrella satisfies neither clause and scores as mistagged. Measured 2026-08-03: 4 of 54 live tagged cards fail the row, two of them filed after the 2026-07-08 widening; replaying the same sweep at the closure commit with the engine's own parser shows 5 of 47 failing there too, so the closing card's \"zero false positives\" verification did not hold even when it was written. `Skill(refine-deck)`'s documented action on a plainly-failing evaluable row is to strip the tag, so every hygiene pass is aimed at exactly the curated umbrella grouping the tag exists to provide."
+summary: "The `meta-fix` row fires on a literal `meta-fix` in the title, `summary:` or body, or on an edge to another `meta-fix`-tagged card — but this repo names its umbrellas by shape (`…-and-keeps-drifting`, `…-keep-spawning-…-fixes`, `…-is-opt-in-per-…`) and wires their families later, so a freshly filed umbrella satisfies neither clause and scores as mistagged. Measured 2026-08-03: 4 of 54 live tagged cards fail the row, two of them filed after the 2026-07-08 widening; replaying the same sweep at the closure commit with the engine's own parser fails 5 of the same 45 open cards that closure certified clean, so the \"zero false positives\" verification did not hold even when it was written. `Skill(refine-deck)`'s documented action on a plainly-failing evaluable row is to strip the tag, so every hygiene pass is aimed at exactly the curated umbrella grouping the tag exists to provide."
 status: open
 stage: null
 contribution: low
@@ -107,18 +107,37 @@ prescribed disposition for a zero-edge card with no literal is likewise
 *strip*. Two independent sub-checks converge on the same wrong answer for
 the same cards.
 
-**The closing verification did not hold even at closure.** The predecessor
-card closed on "all 45 open tagged cards pass with zero false positives".
-Replaying this script's predicate against the deck at the closure commit
-(`e6b85018`, 2026-07-08) through the engine's parser gives 5 failures out of
-47 live tagged cards — and three of the five
+**The closing verification was tautological.** The predecessor card closed on
+"all 45 open tagged cards pass with zero false positives". Replaying the row
+against the deck at that card's own closure commit (`e6b85018`, 2026-07-08)
+through the engine's parser finds the same population — 45 open tagged
+cards — and fails 5 of them. Three of the five
 (`openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting`,
 `extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate`,
 `codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync`)
 are the very cards that card's evidence section named as the umbrellas the
-widening was meant to rescue. They pass today, having gained the literal in
-later body edits. So the widening did not fail; the check that certified it
-was not reproducible, which is why the regression went 26 days unnoticed.
+widening was meant to rescue.
+
+The reason the original sweep saw zero is recoverable from its own log entry,
+which reports the clause breakdown as "**45/45** via body-wide literal":
+
+> ran the widened predicate over all 45 open `meta-fix`-tagged cards (script
+> over `goc --tag meta-fix --status open --json` + per-card README read)
+
+A **README read** is the whole file, frontmatter included — and every
+`meta-fix`-tagged card contains the literal `meta-fix` in its own `tags:`
+line. The literal clause therefore fired on 45 of 45 by construction. The
+check could not have failed for any card in the population it selected, which
+is why its result is exactly the population size, and why the regression went
+26 days unnoticed. Searching `card.body`, which the engine hands over with
+the frontmatter already split off, is the whole difference between that run
+and this one.
+
+This is the defect class stated by
+[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/)
+— a check with two passing states that cannot tell them apart — landing on
+the verification of a tag row, and that card is itself one of the four the
+row now fails.
 
 ## Why it matters
 

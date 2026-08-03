@@ -22,6 +22,7 @@ advanced_by:
   - openclaw-plugin-manifest-config-options-do-not-behave-as-documented
   - llms-txt-still-presents-the-clawhub-install-as-unpublished
   - five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs
+  - meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
