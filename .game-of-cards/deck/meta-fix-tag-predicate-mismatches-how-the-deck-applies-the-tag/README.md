@@ -98,9 +98,21 @@ genuine-vs-mistagged judgment through the same predicate: for a
 zero-edge card the edge clause can't fire, so the literal test is
 decisive — literal present → wire the family; absent → strip.
 
-Empirical verification: all 45 open `meta-fix`-tagged cards pass the
-widened predicate (37 of them fail the old strict window test); zero
-false positives. Details in `log.md`.
+Empirical verification, **as corrected on 2026-08-03**: the widening
+itself was sound — 37 of the 45 open tagged cards fail the old strict
+window test and pass the widened row — but the "zero false positives"
+figure recorded at closure was produced by a tautological check and is
+withdrawn. The sweep searched each card's README *file*; every
+`meta-fix`-tagged card carries the literal in its own frontmatter
+`tags:` line, so the literal clause fired on 45 of 45 by construction
+and no card in the selected population could have failed. Re-running
+the row at this card's own closure commit (`e6b85018`) against
+`card.body` — the engine's parse, with frontmatter split off — fails
+**5 of those same 45**, three of them the umbrella-shaped drift cards
+the Evidence section above names as the cards the widening was meant
+to rescue. Those three pass today. Tracked in
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/).
+Original (withdrawn) closure figures in `log.md`.
 
 ## Post-closure: the shape recurred on the `story` row
 
@@ -124,3 +136,27 @@ the surface" escape hatch **this** card added — so the `meta-fix` fix was, in
 that one respect, also incomplete for two and a half weeks. It now scores each
 tag against its own row. The unit of repair for a predicate is the row plus
 every place the sweep restates the rule.
+
+## Post-closure: the shape recurred on this row, by a mechanism widening cannot reach
+
+A refine-deck pass on 2026-08-03 measured this row again: 4 of 54 live tagged
+cards fail it, two of them filed *after* the widening. Tracked in
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/).
+
+The new mechanism is not the one this card fixed. Widening enlarged the
+*surface* the literal is searched in; the recurrence is that an umbrella has
+no literal to find and no wired family yet, so neither clause of the row can
+fire at filing time. This repo names umbrellas by shape
+(`…-and-keeps-drifting`, `…-keep-spawning-…-fixes`, `…-is-opt-in-per-…`),
+and none of those conventions contains the word. A third widening of the
+same kind would not change that.
+
+That pass also re-ran the row at this card's closure commit, which is where
+the corrected verification figure above comes from. The two findings compound:
+the row under-fires on a shape it exists to name, and the check that was
+supposed to notice searched the whole README file — so the frontmatter
+`tags:` line satisfied the literal clause for every tagged card and the
+result was the population size rather than a measurement. The
+"wrong unit of repair" worry recorded above now has a third data point, and
+the successor card carries an option this card did not consider — leaving the
+predicate alone and making the sweep's action on a failing row non-destructive.

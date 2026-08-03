@@ -72,3 +72,30 @@ re-ported (`scripts/port_skills_to_openclaw.py` + `--check` green),
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-07-08 — Closure' present
+
+## 2026-08-03T03:05:00Z — Closure verification withdrawn; third occurrence filed
+
+A refine-deck hygiene pass re-measured this row and found 4 of 54 live
+`meta-fix`-tagged cards failing it, two of them filed after the widening.
+Filed as
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/).
+
+While establishing whether that was a regression or a pre-existing gap, the
+pass replayed the row at this card's own closure commit (`e6b85018`) and
+found 5 failures in the same 45-card population this card certified clean.
+The README's "Empirical verification" paragraph has been rewritten in place
+to withdraw the figure; the original numbers stay here.
+
+**Root cause of the bad certification.** The spot-check recorded above ran a
+"per-card README read" and reports the clause breakdown as *45/45 via
+body-wide literal*. A README read is the whole file, frontmatter included,
+and every `meta-fix`-tagged card carries the literal in its own `tags:`
+line — so the literal clause fired on every card by construction. The result
+equals the population size because it could not have been anything else. The
+row names the title, the `summary:` field and the body; the engine's
+`card.body` already has the frontmatter split off, and searching that instead
+is the entire difference between that run and the 2026-08-03 one.
+
+No status change — this card's resolution (widen rather than re-tag) still
+stands and the three named umbrellas pass the row today. What is withdrawn is
+the claim that the widening was verified.
