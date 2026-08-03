@@ -1,7 +1,7 @@
 ---
 title: meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card
 summary: "The `meta-fix` row fires on a literal `meta-fix` in the title, `summary:` or body, or on an edge to another `meta-fix`-tagged card — but this repo names its umbrellas by shape (`…-and-keeps-drifting`, `…-keep-spawning-…-fixes`, `…-is-opt-in-per-…`) and wires their families later, so a freshly filed umbrella satisfies neither clause and scores as mistagged. Measured 2026-08-03: 4 of 54 live tagged cards fail the row, two of them filed after the 2026-07-08 widening; replaying the same sweep at the closure commit with the engine's own parser fails 5 of the same 45 open cards that closure certified clean, so the \"zero false positives\" verification did not hold even when it was written. `Skill(refine-deck)`'s documented action on a plainly-failing evaluable row is to strip the tag, so every hygiene pass is aimed at exactly the curated umbrella grouping the tag exists to provide."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-08-03T02:48:05Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the chosen wording lands in `goc/templates/skills/card-schema/SKILL.md` (source of truth; mirrors regenerate via the sync hook), and `Skill(refine-deck)` § "Tags without firing predicates" plus `reference.md` § "Tag sweeps" stay consistent with it — the `story` card's closure showed fixing the row alone does not hold, because the sweep restates the contract inline.
   - [ ] TDD: a regression test scores the live tagged population against the row and fails when a card carrying a tag cannot satisfy it, so the next drift is caught by CI instead of by the next refine pass.
   - [ ] MECHANICAL: `uv run goc validate` passes and `python scripts/sync_plugin_assets.py --check` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The `meta-fix` predicate cannot fire on a newly filed umbrella card
