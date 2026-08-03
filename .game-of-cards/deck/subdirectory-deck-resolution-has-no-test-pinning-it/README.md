@@ -10,6 +10,7 @@ advances: []
 advanced_by: []
 tags: [infra]
 draft: true
+summary: "`_resolve_deck_root` (`goc/engine.py:73`) resolves the deck by walking from cwd to the nearest ancestor carrying `.game-of-cards/`, under a precise docstring contract — climb plain directories, stop before a different git working tree, refuse the cwd fallback for mutating creation commands — shipped in 3e17e3b3 (2026-07-15). No test in `tests/` references the function or chdirs below a fixture deck root, so the behavior every aggregate reader depends on is pinned by nothing. The pre-fix failure was not hypothetical: a consumer repo's refine pass read an empty-because-unresolved deck as a drained one, because every reader exits 0 with zero cards."
 definition_of_done: |
   - [ ] TDD: a test chdirs into a subdirectory of a fixture deck repo and pins, together, that `validate`, `quality-pass`, `--status all --json`, `--ready --json` and `show` all address the real deck (red against the pre-3e17e3b3 behavior, green at HEAD)
   - [ ] TDD: the same suite pins the write half — `goc new` from a subdirectory files into the real deck and does not scaffold a nested `.game-of-cards/` under cwd
