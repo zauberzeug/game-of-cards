@@ -290,3 +290,22 @@ by, and the reason none is tagged is that registering one has never been on
 anyone's path. Step 3 deliberately filed no separate tag-proposal card — the
 proposal is the same decision as this card's option 3, and splitting it would
 have produced two cards with one root cause.
+
+## Post-closure: this row is now classified, and the sweep no longer strips
+
+On 2026-08-03 the `meta-fix` row failed a third time, by a mechanism no
+widening reaches, and the repair moved up a level — see
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/).
+Every row in the canonical-tags table now declares a `check` class, and
+`story` is `judgment`: its "delivers new or changed capability" satisfier is
+exactly the kind this card widened the row *to*, and the classification makes
+that explicit rather than leaving it as prose a sweep could mis-score.
+
+Two claims in the resolution above are narrowed by that. The sweep deferring
+to each row's own predicate is still the contract, but it no longer *acts* on
+the result — a non-firing row is reported, never stripped, so the
+mass-stripping scenario this card measured is now impossible rather than
+merely unlikely. And the widening precedent this card cites from the
+`meta-fix` row is retired: widening is no longer the standard answer to a row
+that under-fires, because it was the answer twice and the shape recurred both
+times.

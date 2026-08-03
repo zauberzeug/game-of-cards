@@ -25,6 +25,15 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # occasional skills that got the same progressive-disclosure split later.
 # kickoff's cap is higher because its body is mostly verbatim dialog text
 # delivered to the user, which cannot move to the reference sibling.
+#
+# card-schema and refine-deck were raised on 2026-08-03 by the card
+# `meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card`: the
+# canonical-tags table gained a per-row `check` column plus the two-line rule
+# saying what `judgment` implies for a sweep, and both had been sitting within
+# 5 bytes of their cap. The rationale (three measured failures of the old
+# single-predicate rule) went to the reference siblings as this guard
+# prescribes; what stayed is the contract itself, which a reader of the table
+# cannot act on from a pointer.
 BODY_CAPS = {
     "create-card": 10_000,
     "finish-card": 10_000,
@@ -32,9 +41,9 @@ BODY_CAPS = {
     "decide-card": 10_000,
     "next-card": 10_000,
     "pull-card": 10_000,
-    "card-schema": 12_000,
+    "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 10_000,
+    "refine-deck": 10_300,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

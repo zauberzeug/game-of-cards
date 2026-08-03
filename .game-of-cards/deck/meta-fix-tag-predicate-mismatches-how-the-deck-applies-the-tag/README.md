@@ -160,3 +160,21 @@ result was the population size rather than a measurement. The
 "wrong unit of repair" worry recorded above now has a third data point, and
 the successor card carries an option this card did not consider — leaving the
 predicate alone and making the sweep's action on a failing row non-destructive.
+
+**Outcome (2026-08-03): the row was not widened a third time.** The successor
+took the option this card did not consider, plus a bounded form of a second
+one. The canonical-tags table now declares a `check` class per row — `state`
+(the satisfier is readable out of frontmatter, edges, or card files) or
+`judgment` (the satisfier is what the card means, and the row's patterns are
+recognition aids rather than a membership test) — and `meta-fix` is
+`judgment`, so nothing scores it and an umbrella satisfies it by being one.
+The sweep's action on *any* non-firing row is now report, never strip, which
+bounds the shape on rows nobody has measured yet.
+
+So this card's widen-rather-than-re-tag resolution is superseded as a
+mechanism, not as a diagnosis: the surface was genuinely too narrow, and
+enlarging it was the right call for the 37 cards it rescued. What the third
+occurrence established is that a row whose satisfier is a *judgment* cannot be
+repaired by enlarging a text surface at all, however wide. Three rows of this
+table are scored in CI as of the successor's closure
+(`tests/test_canonical_tag_rows.py`); `meta-fix` is not one of them, by design.

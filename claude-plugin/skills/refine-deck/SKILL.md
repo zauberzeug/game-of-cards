@@ -27,8 +27,9 @@ Surface rot and act on it before commit. Two action paths depending
 on the finding's nature:
 
 - **Hygiene findings** (mechanical: stale `unverified` parks, defunct
-  file:line cites, missing summaries, predicate-failing tags,
-  orphaned-edge mechanical wires) — apply the edit directly.
+  file:line cites, missing summaries, orphaned-edge mechanical wires)
+  — apply the edit directly; a non-firing tag row is the one
+  exception, reported and never edited.
 - **Structural findings** (epic-shaped clusters, missing
   canonical-reference families, contribution-recall proposals,
   meta-decision umbrellas, newly-emergent tag candidates surfaced
@@ -124,10 +125,11 @@ change.
 
 ### Tags without firing predicates
 
-Per `Skill(card-schema)`, a tag must satisfy **its own row's**
-predicate, not a fixed text window; judgment rows aren't
-text-matchable (`reference.md` § Tag sweeps). Survey 5–10 random
-cards per round; strip only where a row plainly fails.
+Per `Skill(card-schema)`, a tag must satisfy **its own row**, not a
+fixed text window; the row's `check` column says whether that is
+scorable or a judgment (`reference.md` § Tag sweeps). Survey 5–10
+random cards per round. **Report, never strip** — a non-firing row
+costs a line of output, not curated grouping.
 
 ### Orphaned dependencies
 
@@ -140,7 +142,8 @@ zero edges; open cards with legacy `**Depends on:** / **Next:** /
 spawned_from: X`). Run the four sub-checks in `reference.md`
 § Orphaned-dependency sub-check scripts, judge each surfaced card's
 edge direction, and wire it via `goc advance X --by Y`
-(symmetric-by-construction, so the validator stays happy).
+(symmetric-by-construction, so the validator stays happy). A card
+whose family members are code sites has nothing to wire — leave it.
 
 ### Card metadata quality pass
 

@@ -345,3 +345,14 @@ number of prohibition guards.
 
 Deferred to the decision above. Do not start with the four patches: if B is
 picked, those patches are thrown away.
+
+**An Option-A-shaped scanner landed voluntarily (2026-08-03).** The successor
+to the tautology described above shipped `tests/test_canonical_tag_rows.py`,
+which scores the live deck against every `state` tag row and carries an
+`OFFENDERS` table — one violating card per row, asserted rejected — beside the
+clean-tree assertion. That is Option A's shape applied to a new scanner at
+birth rather than retrofitted, and it cost roughly fifteen lines, which is a
+data point for the per-scanner cost estimate the options need. It does **not**
+narrow the scope question this section raises: the guard lives in `tests/`, so
+it is inside both options already. The one-shot closure sweep — the surface
+that produced the tautology — remains unreached by anything in the repo.

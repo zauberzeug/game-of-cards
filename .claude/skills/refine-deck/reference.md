@@ -53,15 +53,19 @@ for ep in epics:
 #    advanced_by — family roster declared in body but not wired).
 #    Count BOTH edge fields: a correctly-wired umbrella carries
 #    advanced_by=[siblings] with advances=[], so testing advances
-#    alone false-positives every wired family. A surfaced card is
-#    either (a) a genuine meta-fix whose family wasn't wired, or
-#    (b) a mistagged instance that should not carry the meta-fix
-#    tag — judge by the card-schema tag predicate (Skill(card-schema)
-#    "Tag application criteria"): literal `meta-fix` anywhere in the
-#    title, `summary:` field, or full body means (a) genuine, wire
-#    the family; no literal anywhere means (b) mistagged, strip.
-#    (Zero-edge cards can't satisfy the predicate's edge clause,
-#    so the literal test is decisive here.)
+#    alone false-positives every wired family. `meta-fix` is a
+#    `judgment` row, so a surfaced card is a prompt to read it, not
+#    a verdict. Three dispositions, and only the first edits YAML:
+#      (a) an umbrella whose family members are CARDS that were
+#          never wired — wire them (goc advance X --by Y);
+#      (b) an umbrella whose family members are CODE SITES, not
+#          cards — nothing to wire; the roster lives in the body
+#          and the card is correctly tagged. Leave it;
+#      (c) a card that plainly is not about a family or its root
+#          cause — report it for a human to retag deliberately.
+#    Absence of a literal `meta-fix` is not evidence of (c): repos
+#    name umbrellas by shape, so most umbrellas never contain the
+#    string. Do not strip on this sub-check.
 goc --tag meta-fix --status open --json | \
   python3 -c "
 import json, sys
@@ -106,33 +110,43 @@ validator stays happy.
 
 ## Tag sweeps
 
-The Step 2 sweep strips tags, so a predicate that *under*-fires is
-destructive in a way an over-firing one is not. Two rules keep the
-mechanical path safe.
+A predicate that *under*-fires is dangerous in a way an over-firing
+one is not, because the curated grouping it removes is unrecoverable
+and unflagged. Three rules keep the sweep safe.
+
+**The action on a non-firing row is `report`, never `strip`.** Print
+the card, the row, and what could not be confirmed; leave the
+frontmatter alone. This is the rule that bounds the other two: get
+them wrong and a pass emits a wrong line of output instead of deleting
+curated data. Strip a tag only as a deliberate per-card judgment,
+recorded as such — never as the mechanical consequence of a predicate
+that did not fire.
 
 **Score each tag against its own row, never against a house rule.**
 The title / H1 / first ~2500 chars of body in `Skill(card-schema)`'s
 tag criteria is the *default* surface; individual rows widen or
-replace it. `meta-fix`, for instance, fires on a literal anywhere in
-the title, `summary:` field, or full body with no cutoff, or on an
-edge to another `meta-fix` card. Applying the default window to that
-row scores correctly-wired families as mistagged.
+replace it, so applying the default window to a row that widened it
+scores correct cards as mistagged.
 
-**Inability to evaluate a row is not evidence the row fails.** Some
-rows turn on a judgment about what the card delivers or touches —
-`story` (new or changed capability rather than a fix),
-`api-contract` (cites a public surface callers depend on), `infra`
-(touches pre-commit, packaging, CI) — and have no closed-form text
-predicate at all. There is nothing to grep. Leave these unless the
-card plainly contradicts the row: a `story`-tagged card that is
-transparently a defect finding, say, or one carrying `bug` as well
-(the two rows are disjoint, so that pair is always a real finding).
+**A `judgment` row is not evaluable, and non-firing is not failure.**
+The `check` column splits the table. `state` rows (`bug`, `epic`,
+`unverified`) are satisfied out of frontmatter, edges, and files, so
+they can be scored outright. `judgment` rows (`story`,
+`documentation`, `test`, `api-contract`, `infra`, `meta-fix`) turn on
+what the card means; the patterns printed in those rows are
+recognition aids, and there is nothing to grep that decides
+membership. Leave a judgment row unless the card plainly *contradicts*
+it — a `story`-tagged card that is transparently a defect finding,
+say, or one carrying `bug` as well (those two rows are disjoint, so
+that pair is always a real finding).
 
-Both rules exist because both failure modes have been measured on
-this table. Stripping on an unevaluated judgment row is the larger
-one — a sweep that mistakes "I cannot check this" for "this does not
-hold" removes curated grouping from the record axis, and nothing
-downstream flags the loss.
+`meta-fix` is the cautionary example rather than the evaluable one.
+Twice it was written as a literal-plus-edge test and twice a sweep
+measured most of the tagged population as mistagged; the cards it
+failed were the umbrellas the tag exists to group, because an umbrella
+acquires a literal or a wired roster incidentally and often late. See
+`Skill(card-schema)`'s `reference.md` § "Why rows split into `state`
+and `judgment`" for the three measurements.
 
 ## Quality-pass `--llm` flag
 
@@ -149,7 +163,7 @@ batched LLM pass is a nice-to-have, not load-bearing.
 heuristic-driven-eta: tags=[unverified] created 2026-01-15 (107d) → Skill(advance-card) → disproved (3 rounds without reproduction)
 auth-cookie-expires-too-soon: body cites auth/cookie.ts:84 (file ends at L72) → updated citation to auth/cookie.ts:67
 schultz-eligibility-trace-doc-drift: missing summary → wrote ≤3-sentence summary into frontmatter
-operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → stripped tag
+operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → reported (tag kept; disposition is a reader's call)
 research-front-emerging-clusters: 6 cards coalescing around <topic>, no canonical tag → Skill(create-card) <new-tag-pr-card>
 ```
 
@@ -158,9 +172,11 @@ research-front-emerging-clusters: 6 cards coalescing around <topic>, no canonica
 The park-or-disprove rule applies to **structural** candidates only —
 the kind project-local pattern-discovery passes produce. Hygiene
 findings (stale parks, defunct cites, missing summaries,
-predicate-failing tags, orphaned-edge sub-checks) keep their
-mechanical-apply path — they're applied directly in Step 2 and need
-no Step 4.5 audit.
+orphaned-edge sub-checks) keep their mechanical-apply path — they're
+applied directly in Step 2 and need no Step 4.5 audit. A
+predicate-failing tag is the exception in the other direction: it is
+reported in Step 2 output and edits nothing, so it needs no
+disposition either.
 
 The rule applies even when the round produces confirmed hygiene
 edits. The "zero applied → ≥1 disposition" rule is the
