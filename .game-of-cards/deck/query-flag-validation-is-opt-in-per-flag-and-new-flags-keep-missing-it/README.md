@@ -158,6 +158,37 @@ tabulated above make invalid ones *impossible*. Whichever mechanism the
 decision picks should say which of the two each flag gets, since at
 least one flag can only have the second.
 
+### The output half is opt-in per flag too — the same shape, one level down
+
+[empty-result-line-reports-a-drained-ready-queue-that-still-has-cards](../empty-result-line-reports-a-drained-ready-queue-that-still-has-cards/)
+(done, 2026-08-04) found the output half reproducing this card's own
+thesis inside itself. `render_empty_query_line` names the filters in
+effect from a **hand-maintained list parallel to `filter_cards`'
+parameter list**, so a flag is described in a zero-match message only if
+someone remembered to add a branch for it — precisely "opt-in per flag,
+and new flags keep missing it". It had already drifted on arrival:
+`--ready` was written as *replacing* the status clause though
+`filter_cards` applies both, so `goc --ready --status done` omitted the
+one filter that emptied the result.
+
+Two consequences for the decision below:
+
+1. **A contract table that registers only input rules leaves this
+   drifting.** If option A is picked, the per-flag contract should be the
+   single source for both halves — validator *and* how the flag names
+   itself in a zero-match message — otherwise the next flag gets a
+   validator and still goes unnamed on empty output. Under B or C the
+   output enumeration stays hand-maintained with no fail-closed property
+   at all.
+2. **The output half can be wrong, not merely absent.** Every earlier
+   instance in this family fails by staying silent — invalid input
+   resolves to an empty result at exit 0. This one *asserted something
+   false*: it reported the ready predicate had matched nothing while the
+   same deck's plain `goc --ready` listed cards. A message derived from a
+   filter set is a load-bearing claim about deck state, so "legible" is
+   not a soft nice-to-have tier below "impossible" — an unguarded output
+   half has its own failure mode, and it is worse than silence.
+
 ## Decision required
 
 Which mechanism replaces per-flag opt-in validation, and what severity
