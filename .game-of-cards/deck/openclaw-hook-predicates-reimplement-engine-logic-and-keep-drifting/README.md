@@ -13,6 +13,7 @@ advanced_by:
   - openclaw-session-start-hook-accepts-calendar-impossible-waiting-until
   - openclaw-session-start-hook-treats-explicit-yaml-null-waiting-fields-as-impediment
   - a-wait-reason-starting-with-zero-makes-an-impeded-card-look-resumable
+  - openclaw-pattern-check-never-fires-on-plain-file-edits
 tags: [meta-fix, infra]
 definition_of_done: |
   - [ ] (replace after the decision is recorded)
@@ -53,6 +54,32 @@ own one-off card rather than caught by a guard:
    resolution, so a hand-edited `waiting_on: null` / `~` survived as the
    truthy string `"null"` and impeded a resumable card. Fixed by mirroring
    the Python hook's `_scalar_or_none` as a `scalarOrEmpty` helper.
+5. **Still live (found 2026-08-04, not yet fixed)** — `frontmatterTail`'s
+   inline-comment stripper is not quote-aware, while its Python counterpart
+   `_comment_free_tail` is. The Python reader tracks quote state and only ends
+   the value at a `#` *outside* a quoted scalar; the TS port truncates at the
+   first whitespace-preceded `#` anywhere. Its own comment claims the mirror
+   ("mirroring `_frontmatter_tail` in the Python hook") and states the bare-
+   scalar rule, but never implements the quoted-scalar exception. Verified by
+   running both readers on the same lines:
+
+   ```
+   line                                          python _comment_free_tail              TS frontmatterTail
+   waiting_until: "2026-07-01 # after the conf"  '"2026-07-01 # after the conf"'        '"2026-07-01'
+   waiting_on: "external # vendor reply"         '"external # vendor reply"'            '"external'
+   human_gate: "none # revisit"                  '"none # revisit"'                     '"none'
+   status: "active # claimed"                    '"active # claimed"'                    '"active'
+   ```
+
+   Two of the four flip a decision, in opposite directions:
+   `human_gate: "none # revisit"` → Python reads gate `none # revisit` and
+   reports the card **parked**; the TS port reads `none` and reports it
+   **resumable**. A past-dated `waiting_until` carrying a comment → Python
+   hits the unparseable backstop and impedes (`_is_impeded` returns True);
+   the TS port parses the truncated date, finds it elapsed, and announces the
+   card resumable. This is instance #5 of the shape and the first found while
+   the guard was already filed — evidence that the enumerated-cell matrix
+   below does not catch new predicates, only new cells of old ones.
 
 The only existing guard is the hand-written `isImpeded` matrix in
 `tests/test_openclaw_session_start_hook.py`: it extracts the TS functions and
