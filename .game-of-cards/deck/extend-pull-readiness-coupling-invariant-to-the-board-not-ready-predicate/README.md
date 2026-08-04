@@ -55,6 +55,44 @@ That copy is shell, so no Python introspection guard can cover it; its
 fix is substitution (`goc --ready --json`), reinforcing the "expose the
 engine predicate, don't re-roll it" direction here.
 
+A **fifth copy** was confirmed drifted on 2026-08-04, and it is the first
+one that is not executable code at all: `render_empty_query_line`
+(engine.py) restates the readiness predicate as an English sentence —
+
+```python
+parts.append("ready: status open, gate none, no active impediment")
+```
+
+— naming three of `card_is_ready`'s four conjuncts and omitting the
+`card_is_draft` exclusion. Demonstrated on a one-card scratch deck whose
+only card is `status: open`, `human_gate: none`, no impediment,
+`draft: true`:
+
+```
+$ goc --ready
+No cards match (ready: status open, gate none, no active impediment).
+
+$ goc --status all
+TITLE            STATUS  CONTR.  VALUE  GATE  TAGS  DOD
+draft-gate-none  open    medium    3.0  none        0/1
+```
+
+Every condition the sentence names holds for that card, and the card is
+still excluded — so a reader auditing the message against the deck finds
+it self-contradictory. Surfaced while fixing
+[empty-result-line-reports-a-drained-ready-queue-that-still-has-cards](../empty-result-line-reports-a-drained-ready-queue-that-still-has-cards/),
+a different defect in the same sentence (which filters get *named*,
+rather than how the predicate is *spelled*); recorded here rather than
+filed separately because it is this card's pattern, not a new one.
+
+**This copy constrains the decision below.** Option (b) extends an
+introspection test over *code* predicates, and no such test can reach a
+prose string — the sentence would keep drifting undetected. Option (a)
+can cover it, but only if the extracted helper also yields the
+human-readable axis labels (e.g. `_pull_rejection_axes` returning axis
+names the message renders), rather than just a boolean or an opaque set.
+That is a requirement on (a)'s shape, not merely a point in its favour.
+
 ## The pattern
 
 This is the same drift shape called out for the OpenClaw host in
