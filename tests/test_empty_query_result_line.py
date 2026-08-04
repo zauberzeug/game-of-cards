@@ -62,6 +62,14 @@ class _Args:
             setattr(self, k, v)
 
 
+def _render(**kw) -> str:
+    """Run `_cmd_default` against the active `engine.DECK_DIR` and capture stdout."""
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        engine._cmd_default(_Args(**kw))
+    return buf.getvalue()
+
+
 class EmptyQueryResultLineTest(unittest.TestCase):
     """The table path states an empty result, and names what it filtered on."""
 
@@ -85,12 +93,7 @@ class EmptyQueryResultLineTest(unittest.TestCase):
         engine.DECK_DIR = self._prev
         self._tmp.cleanup()
 
-    @staticmethod
-    def _run(**kw) -> str:
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            engine._cmd_default(_Args(**kw))
-        return buf.getvalue()
+    _run = staticmethod(_render)
 
     def test_drained_ready_queue_says_so(self) -> None:
         out = self._run(ready=True)
@@ -152,6 +155,72 @@ class EmptyQueryResultLineTest(unittest.TestCase):
         `_cmd_default` must keep getting "" for an empty list.
         """
         self.assertEqual(engine.render_table([], verbose=0, no_color=True), "")
+
+
+class ReadyPlusExplicitStatusTest(unittest.TestCase):
+    """`--ready` ADDS a conjunct — it must not hide an explicit `--status`.
+
+    Regression guard for
+    `empty-result-line-reports-a-drained-ready-queue-that-still-has-cards`.
+    `filter_cards` applies `--ready` and the status filter independently, and
+    `card_is_ready` requires `status == open`, so pairing `--ready` with any
+    other status is unsatisfiable. `render_empty_query_line` used to treat
+    `--ready` as *replacing* the status clause, so the one filter that emptied
+    the result was the one filter the message omitted.
+
+    The deck here holds a genuinely pullable card, which is what makes the old
+    output a *false* statement rather than an incomplete one: it asserted the
+    ready predicate matched nothing while that predicate matched `pullable`.
+    The sibling class above cannot catch this — its every card is gate-parked,
+    so a claim of "drained" is true there whatever the message omits.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        deck = Path(self._tmp.name) / ".game-of-cards" / "deck"
+        deck.mkdir(parents=True)
+        card = deck / "pullable"
+        card.mkdir()
+        (card / "README.md").write_text(
+            CARD.format(title="pullable", status="open", gate="none")
+        )
+        self._prev = engine.DECK_DIR
+        engine.DECK_DIR = deck
+        self.addCleanup(self._restore)
+
+    def _restore(self) -> None:
+        engine.DECK_DIR = self._prev
+        self._tmp.cleanup()
+
+    _run = staticmethod(_render)
+
+    def test_the_ready_queue_is_not_actually_drained(self) -> None:
+        """Discriminator: without this the rest of the class proves nothing."""
+        out = self._run(ready=True)
+        self.assertIn("pullable", out)
+        self.assertNotIn("No cards match", out)
+
+    def test_contradictory_status_filter_is_named(self) -> None:
+        out = self._run(ready=True, status_flag="done")
+        self.assertIn("ready: status open, gate none, no active impediment", out)
+        self.assertIn("status: done", out)
+
+    def test_done_shortcut_is_named(self) -> None:
+        """`--done` reaches the same resolved status by a different flag."""
+        out = self._run(ready=True, done_flag=True)
+        self.assertIn("status: done", out)
+
+    def test_plain_ready_gains_no_redundant_status_clause(self) -> None:
+        """The auto-resolved default must stay unnamed.
+
+        With no explicit `--status`, `status` is the `"open"` default that the
+        ready sentence already covers, so repeating it would be noise. Drained
+        here via `--gate session`, which no card in this deck satisfies.
+        """
+        out = self._run(ready=True, human_gate="session")
+        self.assertIn("No cards match", out)
+        self.assertIn("gate: session", out)
+        self.assertNotIn("status: open", out)
 
 
 if __name__ == "__main__":

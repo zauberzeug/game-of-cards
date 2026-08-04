@@ -3517,8 +3517,28 @@ def render_empty_query_line(args, status: str) -> str:
     a typo against and echoing the filter back is the only available signal.
     """
     parts: list[str] = []
+    # `--ready` ADDS a conjunct, it does not replace the status one:
+    # `filter_cards` applies both, so a contradictory pair like
+    # `--ready --status done` empties the result for a reason the ready
+    # sentence alone would misattribute to a drained queue — and
+    # `card_is_ready` requires `status == open`, so that pair can never match.
+    # Naming only the ready clause there is a false statement, not just an
+    # incomplete one: the same deck's plain `goc --ready` may well list cards.
+    #
+    # Mirrors `_cmd_default`'s own `status_filter_explicit`, recomputed here
+    # so the signature stays `(args, status)` like every other filter this
+    # function reads straight off `args`. The explicitness test is what keeps
+    # plain `goc --ready` unchanged: `status` is then the auto-resolved "open"
+    # default that the ready sentence already covers, so naming it again would
+    # be redundant noise rather than information.
+    status_explicit = bool(
+        getattr(args, "done_flag", False)
+        or getattr(args, "status_flag", None) is not None
+    )
     if getattr(args, "ready", False):
         parts.append("ready: status open, gate none, no active impediment")
+        if status_explicit:
+            parts.append(f"status: {status}")
     else:
         parts.append(f"status: {status}")
     if getattr(args, "waiting", False):
