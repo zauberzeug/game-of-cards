@@ -14,6 +14,7 @@ advanced_by:
   - invalid-since-date-silently-empties-done-query
   - done-shortcut-overrides-status-filter
   - since-filter-without-done-hides-open-queue
+  - empty-queue-view-prints-nothing-instead-of-saying-no-cards-match
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
   - [ ] PROCESS: mechanism decision recorded (option A/B/C below, plus error-vs-warn for unknown edge-filter titles) and gate lowered to none
@@ -135,6 +136,26 @@ verb — the exact commands scripted consumers (CI dashboards, the
 autonomous-loop skills, `goc --json` pipelines) already run. The
 `--json --board` case corrupts a machine-read surface; the others
 return "nothing matched" for queries that could never match anything.
+
+### One flag can never have an input-side contract
+
+`--worker` is a constraint on whatever mechanism the decision below
+picks: `worker` values are deliberately unregistered (AGENTS.md §
+"Card authoring rules" — "The value is unregistered — use a person
+slug, a machine name, or a capability tag"), so there is no set to
+validate a typo against. `goc --worker rodya` is legal input that
+matches nothing, and no input-side guard can distinguish it from
+`goc --worker rodja` on a deck where that worker holds no cards.
+
+The output half of the contract covers it instead:
+[empty-queue-view-prints-nothing-instead-of-saying-no-cards-match](../empty-queue-view-prints-nothing-instead-of-saying-no-cards-match/)
+(done, 2026-08-04) made a zero-match table query state the filters it
+matched on, so an unmatched `--worker` now echoes its value rather than
+printing nothing. That is evidence for this card's framing, not a
+substitute for it — it makes empty results *legible*, while the guards
+tabulated above make invalid ones *impossible*. Whichever mechanism the
+decision picks should say which of the two each flag gets, since at
+least one flag can only have the second.
 
 ## Decision required
 

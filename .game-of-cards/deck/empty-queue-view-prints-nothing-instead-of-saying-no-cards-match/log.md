@@ -92,3 +92,24 @@ compose, since the advisory appends after this line when it lands.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-08-04 — Closure' present
+
+## 2026-08-04: connected to the query-flag-contract root
+
+Post-close generalization check. The pattern — a read surface deciding
+on its own how to present shared card-set state — is already
+catalogued property-by-property in this deck
+([draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it](../draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it/),
+[renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift](../renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift/),
+closed), and no general umbrella exists because the fix differs per
+property. Filing another umbrella would have been the redundant-root
+anti-pattern, so this card was CONNECTED instead of duplicated.
+
+Edge added: `advances:
+query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it`.
+That root's `## Decision required` asks which mechanism replaces
+per-flag opt-in validation; this closure supplies a constraint on the
+answer — `--worker` values are unregistered by design, so that flag can
+never have an input-side contract and the output-side statement is the
+only signal available for it. Recorded as a new
+"### One flag can never have an input-side contract" subsection on the
+root, which is where a decision-maker will read it.

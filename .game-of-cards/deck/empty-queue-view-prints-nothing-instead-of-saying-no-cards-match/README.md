@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-08-04T05:33:46Z"
 closed_at: "2026-08-04T05:40:51Z"
 human_gate: none
-advances: []
+advances:
+  - query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
@@ -77,9 +78,14 @@ proposes one declared contract per query flag. `--worker` cannot join
 that scheme: AGENTS.md defines the field as deliberately unregistered
 ("The value is unregistered — use a person slug, a machine name, or a
 capability tag"), so there is no enum to validate against. For
-`--worker`, an empty-result message is the *only* available signal —
-which is why this card is the output-side complement of that family,
-not a fourth instance of it.
+`--worker`, an empty-result message is the *only* available signal.
+
+So this card is the output-side complement of that family rather than
+a fourth instance of it, and it is wired as `advances:
+query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it`
+— closing it narrows what the root still has to decide: the central
+per-flag contract needs an output half, because at least one flag can
+never be served by an input-side check.
 
 ## Empirical evidence
 
