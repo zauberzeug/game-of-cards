@@ -80,11 +80,15 @@ def main() -> int:
                 silent.append(label)
 
         print()
-        table_blanks = [outputs[l] for l, _ in probes if l.startswith("table")]
-        identical = len(set(table_blanks)) == 1
+        table_out = [outputs[label] for label, _ in probes if label.startswith("table")]
+        identical = len(set(table_out)) == 1
         print(f"  the three table probes are byte-identical: {identical}")
-        print("    a drained queue, a zero-match status filter and a typo'd --worker")
-        print("    are indistinguishable to the reader and to Skill(pull-card).")
+        if identical:
+            print("    a drained queue, a zero-match status filter and a typo'd --worker")
+            print("    are indistinguishable to the reader and to Skill(pull-card).")
+        else:
+            print("    each names the filters it matched on, so a drained queue, a")
+            print("    zero-match status filter and a typo'd --worker read differently.")
 
         print(f"\n{len(silent)} table view(s) reported an empty result with no output.")
         if silent:
@@ -93,6 +97,12 @@ def main() -> int:
             print(
                 "\nFAIL: the table path stays silent while `triage` prints a sentence, "
                 "`--json` prints [] and `--board` prints its header."
+            )
+            return 1
+        if identical:
+            print(
+                "\nFAIL: the table path speaks, but all three states render the same "
+                "text — the typo'd --worker is still indistinguishable from a drained queue."
             )
             return 1
         print("\nOK: the table path announces an empty result like its siblings.")

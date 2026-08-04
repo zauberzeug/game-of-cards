@@ -3499,6 +3499,52 @@ def render_active_notice(
     )
 
 
+def render_empty_query_line(args, status: str) -> str:
+    """State that a queue query matched nothing, naming the filters in effect.
+
+    `render_table` returns "" for an empty card list, so without this the
+    table path is the one read surface that cannot express "the query ran and
+    matched nothing" — `goc triage` prints a sentence, `--json` prints `[]`
+    and `--board` prints its column header, but a zero-match table query
+    printed nothing at all and exited 0. Three different states then rendered
+    byte-identically: a genuinely drained queue, a filter no card satisfies,
+    and a mistyped `--worker` value.
+
+    That last one is why the message enumerates the predicate rather than
+    just saying "no cards". `--status` and `--tag` reject unknown values at
+    parse time, but `worker` is deliberately unregistered (any person slug,
+    machine name or capability tag is legal), so there is no enum to validate
+    a typo against and echoing the filter back is the only available signal.
+    """
+    parts: list[str] = []
+    if getattr(args, "ready", False):
+        parts.append("ready: status open, gate none, no active impediment")
+    else:
+        parts.append(f"status: {status}")
+    if getattr(args, "waiting", False):
+        parts.append("waiting: active impediment overlay")
+    for label, value in (
+        ("stage", getattr(args, "stage_flag", None)),
+        ("contribution", getattr(args, "contribution", None)),
+        ("gate", getattr(args, "human_gate", None)),
+        ("since", getattr(args, "since", None)),
+        ("closed-since", getattr(args, "closed_since", None)),
+        ("advances", getattr(args, "advances", None)),
+        ("advanced-by", getattr(args, "advanced_by", None)),
+    ):
+        if value:
+            parts.append(f"{label}: {value}")
+    tags = getattr(args, "tags", None)
+    if tags:
+        parts.append(f"tag: {', '.join(tags)}")
+    # Quoted: an unregistered free-form value is the one filter a reader
+    # cannot check against a schema, so show exactly what was matched on.
+    worker = getattr(args, "worker", None)
+    if worker:
+        parts.append(f"worker: {worker!r}")
+    return f"No cards match ({'; '.join(parts)})."
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # argparse app
 
@@ -3934,7 +3980,17 @@ def _cmd_default(args):
             slim=getattr(args, "slim", False),
         ))
     else:
-        out = render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
+        # An empty result gets an explicit statement rather than the empty
+        # string `render_table` returns, so "matched nothing" stops reading
+        # like "did not run" — `render_empty_query_line` carries the why.
+        # Scoped to this arm on purpose: `--json` already says `[]` and
+        # `--board` already prints its header, and a prose line in either
+        # would break their machine-readable / grid shape.
+        out = (
+            render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
+            if filtered
+            else render_empty_query_line(args, status)
+        )
         # Scope the active-card banner to --worker, mirroring the board path
         # above: the banner is a per-queue "before you claim work" hint, so a
         # worker-scoped queue must see only that worker's claimed cards.
@@ -3948,9 +4004,11 @@ def _cmd_default(args):
             render_leverage_line(filtered, cards, values=full_values)
             if args.ready else ""
         )
+        # `out` is now always non-empty (a table, or the empty-result line),
+        # so the queue view always prints something; the banner and the
+        # leverage line stay optional.
         lines = [part for part in (active_notice, out, leverage) if part]
-        if lines:
-            print("\n".join(lines))
+        print("\n".join(lines))
 
 
 def _cmd_validate(args):
