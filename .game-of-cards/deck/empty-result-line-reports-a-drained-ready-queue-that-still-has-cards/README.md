@@ -1,7 +1,7 @@
 ---
 title: empty-result-line-reports-a-drained-ready-queue-that-still-has-cards
 summary: "`render_empty_query_line` treats `--ready` as replacing the status conjunct instead of adding to it, so `goc --ready --status done` prints \"No cards match (ready: status open, gate none, no active impediment).\" — asserting the ready predicate matched nothing while plain `goc --ready` on the same deck lists a card. The `--status` / `--done` filter that actually emptied the result is never named, contradicting the function's own docstring promise to name the filters in effect."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-04T05:52:37Z"
@@ -24,6 +24,7 @@ definition_of_done: |
         stay byte-identical
   - [ ] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
         test red, recorded in `log.md`
+worker: {who: "claude[bot]", where: main}
 ---
 
 # empty-result-line-reports-a-drained-ready-queue-that-still-has-cards
