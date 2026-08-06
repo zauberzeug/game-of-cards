@@ -1,20 +1,20 @@
 ---
 title: agents-md-claims-the-card-schema-is-inlined-into-the-skill-body
 summary: "AGENTS.md's `## Code architecture` bullet says `goc/schema.yaml` is \"inlined into the `card-schema` skill body at install time\", but `goc install` copies skill assets verbatim (`_iter_skill_assets`) and the schema reaches consumers as a separate sibling file — the skill body itself says it \"ships as the sibling `schema.yaml`\", and AGENTS.md contradicts itself 216 lines later by calling the same file a \"verbatim copy\". The wording hides a real obligation: `goc/templates/skills/card-schema/schema.yaml` is a second checked-in copy that no script auto-syncs, so the natural single-file schema edit turns CI red via `tests/test_skill_schema_yaml_parity.py` with no pointer from the briefing. The stale framing has already been copied into an open card's body."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-08-06T05:30:53Z"
-closed_at: null
+closed_at: "2026-08-06T05:41:11Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — no guidance surface claims the schema is inlined into the skill body.
-  - [ ] TDD: a regression assertion in `tests/test_guidance_accuracy.py` pins the `goc/schema.yaml` bullet of AGENTS.md's `## Code architecture` section: it must not claim inlining, and it must name `goc/templates/skills/card-schema/schema.yaml` as the second copy.
-  - [ ] MECHANICAL: `AGENTS.md:161` rewritten to describe the real mechanism — the schema ships as a verbatim sibling asset — and to name the hand-maintained `goc/schema.yaml` → template duplication plus the test that guards it.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+  - [x] TDD: `reproduce.py` exits zero — no guidance surface claims the schema is inlined into the skill body.
+  - [x] TDD: a regression assertion in `tests/test_guidance_accuracy.py` pins the `goc/schema.yaml` bullet of AGENTS.md's `## Code architecture` section: it must not claim inlining, and it must name `goc/templates/skills/card-schema/schema.yaml` as the second copy.
+  - [x] MECHANICAL: `AGENTS.md:161` rewritten to describe the real mechanism — the schema ships as a verbatim sibling asset — and to name the hand-maintained `goc/schema.yaml` → template duplication plus the test that guards it.
+  - [x] PROCESS: `uv run goc validate` passes, and `uv run python -m unittest discover -s tests` reports exactly one failure — `test_canonical_tag_rows`, red on `main` before this card and tracked by `regression-suite-red-on-main-over-the-unverified-tag-row`. `tests/test_guidance_accuracy.py` passes in full.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -89,6 +89,16 @@ outlier:
 FAIL: AGENTS.md still claims the schema is inlined into the skill body
 ```
 
+After the fix, the same script exits zero — `[1]` is empty and `[5]` gains
+the corrected bullet's own line:
+
+```
+[1] AGENTS.md lines asserting 'inlined into the `card-schema`': []
+[5] AGENTS.md lines calling the same file a sibling verbatim copy: [163, 383]
+
+PASS: AGENTS.md describes the sibling-copy mechanism accurately.
+```
+
 Line `[3]` is the direct disproof: not one of the schema's six top-level
 keys (`schema_version`, `required_fields`, `optional_fields`,
 `title_pattern`, `status_values`, `canonical_tags`) appears anywhere in
@@ -132,28 +142,48 @@ the correction (the pattern *is* a published contract surface either way),
 but a false mechanism spreading into decision rationale is the cost this
 card is about.
 
-## Fix
+## Fix (landed)
 
-Rewrite the bullet at `AGENTS.md:161` so it describes the copy mechanism
-and names the second file, e.g.:
+`AGENTS.md` now states the mechanism that exists:
 
 ```markdown
-- **`goc/schema.yaml`** — single source of truth for card frontmatter
-  (loaded by `engine.load_schema()`). The `card-schema` skill ships a
-  byte-identical copy at `goc/templates/skills/card-schema/schema.yaml`,
-  which `goc install` and the plugin mirrors copy verbatim as a sibling
-  file. Nothing auto-syncs the two: edit both, or
-  `tests/test_skill_schema_yaml_parity.py` turns the build red.
+- **`goc/schema.yaml`** — single source of truth for card frontmatter,
+  loaded at runtime by `engine.load_schema()`. The `card-schema` skill
+  ships a byte-identical second copy at
+  `goc/templates/skills/card-schema/schema.yaml`, which `goc install`
+  and the plugin mirrors copy verbatim as a **sibling file** beside
+  `SKILL.md`, which references it rather than embedding it. No script
+  syncs those two: a schema change is a deliberate two-file edit, and
+  `tests/test_skill_schema_yaml_parity.py` fails the build when only
+  one moves.
 ```
 
-Then pin it. `tests/test_guidance_accuracy.py` already owns this exact
-job for the two neighbouring bullets — `test_cli_bullet_does_not_mention_click`
-guards the `goc/cli.py` bullet and `test_all_engine_verbs_listed_in_architecture_section`
-guards the `goc/engine.py` bullet, both via the `_agents_architecture_section()`
-helper. Add the schema bullet to that class rather than filing a new
-guard-shaped card: the generalization
+Pinned by three assertions added to `AgentsArchitectureAccuracyTest` in
+`tests/test_guidance_accuracy.py`, the class that already guards the two
+neighbouring bullets (`test_cli_bullet_does_not_mention_click`,
+`test_all_engine_verbs_listed_in_architecture_section`) via the existing
+`_agents_architecture_section()` helper. No new guard-shaped card was
+filed: the generalization
 ([generated-agents-guidance-overstates-done-commit](../generated-agents-guidance-overstates-done-commit/))
 already landed, and this is an instance it should have covered.
+
+The three assertions split deliberately:
+
+- `test_skill_body_really_carries_no_inlined_schema` is the behavioural
+  half — it reads the schema's top-level keys out of `goc/schema.yaml`
+  and asserts none appear in `SKILL.md`. The two doc assertions are only
+  correct while that holds, so deriving it means the day someone
+  implements real inlining this test fails *first* and points the editor
+  at the bullet, instead of the doc guard pinning a claim that has
+  quietly become false again.
+- `test_schema_bullet_does_not_claim_inlining` bans the word outright
+  rather than matching only its affirmative form. That forces the bullet
+  to state the mechanism that exists ("ships as a sibling file") instead
+  of denying the one that does not — a denial keeps the wrong mental
+  model in the reader's head, and a negation-aware regex would be the
+  brittle half of this guard.
+- `test_schema_bullet_names_the_second_checked_in_copy` is the one that
+  carries the actionable content: the path an editor has to also touch.
 
 Deliberately **out of scope**: whether the `goc/schema.yaml` → template
 duplication should be auto-synced by `scripts/sync_plugin_assets.py`

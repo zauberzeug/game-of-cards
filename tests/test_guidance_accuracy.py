@@ -56,6 +56,31 @@ def _agents_architecture_section() -> str:
     return text[start:end]
 
 
+def _agents_schema_bullet() -> str:
+    """Return the `goc/schema.yaml` bullet of AGENTS.md's architecture section.
+
+    The bullet list ends at the first blank line, so slicing to the next
+    `\\n\\n` yields the bullet alone — the prose paragraph that follows the
+    list never leaks in.
+    """
+    section = _agents_architecture_section()
+    start = section.index("**`goc/schema.yaml`**")
+    end = section.index("\n\n", start)
+    return section[start:end]
+
+
+# Top-level keys of goc/schema.yaml. Read from the file so a future key is
+# covered on the day it lands, rather than enumerated here and left to rot —
+# the failure mode `schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen`
+# already caught once in the sibling parity guard.
+SKILL_TEMPLATES = ROOT / "goc" / "templates" / "skills"
+_SCHEMA_TOP_LEVEL_KEYS = tuple(
+    line.split(":", 1)[0]
+    for line in (ROOT / "goc" / "schema.yaml").read_text().splitlines()
+    if line[:1].isalpha() and ":" in line
+)
+
+
 def _engine_subcommands() -> set[str]:
     """Every subcommand the engine's argparse parser registers."""
     from goc.engine import _build_parser
@@ -95,6 +120,56 @@ class AgentsArchitectureAccuracyTest(unittest.TestCase):
             msg=(
                 "AGENTS.md `## Code architecture` section omits engine verb(s) "
                 f"{missing}; the goc/engine.py bullet claims an exhaustive list."
+            ),
+        )
+
+    def test_skill_body_really_carries_no_inlined_schema(self) -> None:
+        """The behavioural half: assert what the doc bullet is allowed to say.
+
+        The two doc assertions below only hold while the schema genuinely
+        ships as a sibling asset. Deriving that from the file — rather than
+        restating it — means the day someone implements real inlining, this
+        test fails first and points the editor at the bullet, instead of the
+        doc guard silently pinning a claim that has become false again.
+        """
+        body = (SKILL_TEMPLATES / "card-schema" / "SKILL.md").read_text()
+        inlined = [key for key in _SCHEMA_TOP_LEVEL_KEYS if key in body]
+        self.assertEqual(
+            inlined,
+            [],
+            msg=(
+                "card-schema/SKILL.md now contains schema key(s) "
+                f"{inlined} — the schema may really be inlined into the skill "
+                "body. Re-derive the AGENTS.md `goc/schema.yaml` bullet and the "
+                "two doc assertions below it."
+            ),
+        )
+
+    def test_schema_bullet_does_not_claim_inlining(self) -> None:
+        self.assertNotRegex(
+            _agents_schema_bullet(),
+            re.compile(r"inlin", re.IGNORECASE),
+            msg=(
+                "AGENTS.md goc/schema.yaml bullet claims the schema is inlined "
+                "into the card-schema skill body. `goc install` copies skill "
+                "assets verbatim (`_iter_skill_assets`); the schema lands as a "
+                "sibling file next to SKILL.md. The word is banned outright "
+                "rather than matched in its affirmative form only: state the "
+                "mechanism that exists ('ships as a sibling file'), not a "
+                "denial of the one that does not."
+            ),
+        )
+
+    def test_schema_bullet_names_the_second_checked_in_copy(self) -> None:
+        self.assertIn(
+            "goc/templates/skills/card-schema/schema.yaml",
+            _agents_schema_bullet(),
+            msg=(
+                "AGENTS.md goc/schema.yaml bullet does not name the second "
+                "checked-in copy. No script syncs it from goc/schema.yaml, so "
+                "an agent that edits only the engine schema turns "
+                "tests/test_skill_schema_yaml_parity.py red with no pointer to "
+                "the file that also has to move."
             ),
         )
 

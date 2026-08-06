@@ -157,9 +157,15 @@ The Python package is intentionally small:
   `migrate`, `migrate-list-style`).
 - **`goc/install.py`** — `install` and `upgrade` commands. Reads
   templates via `importlib.resources` so it works from a wheel.
-- **`goc/schema.yaml`** — single source of truth for card frontmatter
-  (loaded by `engine.load_schema()`; inlined into the `card-schema`
-  skill body at install time).
+- **`goc/schema.yaml`** — single source of truth for card frontmatter,
+  loaded at runtime by `engine.load_schema()`. The `card-schema` skill
+  ships a byte-identical second copy at
+  `goc/templates/skills/card-schema/schema.yaml`, which `goc install`
+  and the plugin mirrors copy verbatim as a **sibling file** beside
+  `SKILL.md`, which references it rather than embedding it. No script
+  syncs those two: a schema change is a deliberate two-file edit, and
+  `tests/test_skill_schema_yaml_parity.py` fails the build when only
+  one moves.
 
 `engine.py` resolves `DECK_DIR` to the canonical `.game-of-cards/deck/`
 path, with legacy `deck/` fallback and dual-tree conflict detection.
