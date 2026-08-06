@@ -1,7 +1,7 @@
 ---
 title: agents-md-claims-the-card-schema-is-inlined-into-the-skill-body
 summary: "AGENTS.md's `## Code architecture` bullet says `goc/schema.yaml` is \"inlined into the `card-schema` skill body at install time\", but `goc install` copies skill assets verbatim (`_iter_skill_assets`) and the schema reaches consumers as a separate sibling file — the skill body itself says it \"ships as the sibling `schema.yaml`\", and AGENTS.md contradicts itself 216 lines later by calling the same file a \"verbatim copy\". The wording hides a real obligation: `goc/templates/skills/card-schema/schema.yaml` is a second checked-in copy that no script auto-syncs, so the natural single-file schema edit turns CI red via `tests/test_skill_schema_yaml_parity.py` with no pointer from the briefing. The stale framing has already been copied into an open card's body."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-06T05:30:53Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression assertion in `tests/test_guidance_accuracy.py` pins the `goc/schema.yaml` bullet of AGENTS.md's `## Code architecture` section: it must not claim inlining, and it must name `goc/templates/skills/card-schema/schema.yaml` as the second copy.
   - [ ] MECHANICAL: `AGENTS.md:161` rewritten to describe the real mechanism — the schema ships as a verbatim sibling asset — and to name the hand-maintained `goc/schema.yaml` → template duplication plus the test that guards it.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The agent briefing says the card schema is inlined; it is copied as a sibling file
