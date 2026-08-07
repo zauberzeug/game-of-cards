@@ -1,20 +1,20 @@
 ---
 title: goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break
 summary: "Every input guard in `_cmd_new` (engine.py:5678-5704) runs before `card_dir.mkdir`, but `--summary` and `--worker` are only checked for blankness — a value carrying a line break the inline emitter refuses (any non-LF break for summary; any break at all for worker) gets past them and blows up at the README write on line 5728, after the directory exists. The result is an uncaught `FrontmatterError` traceback instead of the CLI's clean `ERROR:` + exit 2, plus an empty card directory that leaves `goc validate` red until a human finds and deletes it."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-07T05:07:14Z"
-closed_at: null
+closed_at: "2026-08-07T05:13:24Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — all three doors (summary+CR, worker+CR, worker+LF) exit 2 with a clean `ERROR:` line, no traceback, and no directory left behind.
-  - [ ] TDD: a regression test under `tests/` covers the refusal for both `--summary` and `--worker`, and asserts the deck directory is absent afterwards (not merely that the command failed).
-  - [ ] MECHANICAL: the line-break check derives its dangerous-character set from the existing `_contains_line_break` helper rather than a fresh hand-copied list, so it cannot drift from the parser (same constraint the emitter card this one follows already imposed).
-  - [ ] PROCESS: `uv run goc validate` clean, and `uv run python -m unittest discover -s tests` shows no failure other than the pre-existing one tracked by [regression-suite-red-on-main-over-the-unverified-tag-row](../regression-suite-red-on-main-over-the-unverified-tag-row/).
+  - [x] TDD: `reproduce.py` exits zero — all three doors (summary+CR, worker+CR, worker+LF) exit 2 with a clean `ERROR:` line, no traceback, and no directory left behind.
+  - [x] TDD: a regression test under `tests/` covers the refusal for both `--summary` and `--worker`, and asserts the deck directory is absent afterwards (not merely that the command failed).
+  - [x] MECHANICAL: the line-break check derives its dangerous-character set from the existing `_contains_line_break` helper rather than a fresh hand-copied list, so it cannot drift from the parser (same constraint the emitter card this one follows already imposed).
+  - [x] PROCESS: `uv run goc validate` clean, and `uv run python -m unittest discover -s tests` shows no failure other than the pre-existing one tracked by [regression-suite-red-on-main-over-the-unverified-tag-row](../regression-suite-red-on-main-over-the-unverified-tag-row/).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -160,23 +160,32 @@ is the inverse shape: a value that is wrongly *accepted*. This card is the only
 one of the three where a correct refusal leaves the deck broken, and the only
 one reached through the value flags rather than the title.
 
-## Fix
+## Fix (applied)
 
-Move the check to where every sibling guard already lives — before
-`card_dir.mkdir(parents=True)` at engine.py:5705. Extend the existing
-`--summary` blankness guard (engine.py:5665-5668) and add the matching
-`--worker` guard, both rejecting with the CLI's clean `ERROR:` + `sys.exit(2)`
-and naming the flag at fault.
+Both checks now sit beside the other pre-mkdir input guards in `_cmd_new`, so
+the refusal happens before any filesystem write:
 
-The dangerous-character set must come from the existing `_contains_line_break`
-helper (engine.py:225), not a fresh literal list — that single-source
-constraint is what the predecessor emitter card's third DoD item bought, and
-re-copying the set here would spend it. Note the asymmetry when writing the
-predicate: `summary` legitimately supports LF (block scalar), so it must reject
-only non-LF breaks (`_contains_line_break(value.replace("\n", ""))`, the same
-expression `emit_frontmatter` uses at engine.py:423), while `worker` has no
-block path and must reject any break.
+- The `--summary` guard (engine.py:5665) grew a second arm rejecting a value
+  that carries a non-LF break, using the same expression `emit_frontmatter`
+  uses for its block-routing decision —
+  `_contains_line_break(summary.replace("\n", ""))`. Reusing that one
+  expression is what keeps the CLI and the emitter from ever disagreeing about
+  which values are emittable, and it spends none of the single-source
+  constraint the predecessor emitter card bought.
+- A new `--worker` guard rejects **any** break, LF included, because
+  `_emit_worker` has no block-scalar path — every worker scalar goes through
+  `_yaml_inline`.
 
-Validating before `mkdir` is preferred over a try/except-and-unlink unwind:
-it matches the ordering the rest of `_cmd_new` already establishes and leaves
-no window in which a partially-created card exists at all.
+Both print the CLI's `ERROR:` line naming the flag at fault and `sys.exit(2)`.
+
+Validating before `mkdir` was chosen over a try/except-and-unlink unwind: it
+matches the ordering the rest of `_cmd_new` already establishes and leaves no
+window in which a partially-created card exists at all.
+
+`tests/test_new_unemittable_value_flags.py` pins both halves of the contract —
+the clean `ERROR:` + exit 2, and that no card directory survives the refusal
+(the assertion a plain "did it fail?" test would miss). It sweeps all nine
+non-LF break characters per field, keeps the CRLF-paste door as its own named
+case, and holds the two accepted shapes — a multi-line LF summary still emits
+as a `|-` block scalar, a single-line worker still scaffolds — so the guard
+cannot widen into rejecting input `goc new` is supposed to take.

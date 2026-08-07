@@ -5663,11 +5663,38 @@ def _cmd_new(args):
     )
     gate = args.gate
     summary = args.summary
-    if summary is not None and not summary.strip():
-        print("ERROR: --summary must not be empty or whitespace-only", file=sys.stderr)
-        sys.exit(2)
+    if summary is not None:
+        if not summary.strip():
+            print("ERROR: --summary must not be empty or whitespace-only", file=sys.stderr)
+            sys.exit(2)
+        # emit_frontmatter routes a pure-LF summary into a literal block scalar
+        # that round-trips faithfully; any OTHER break character falls through
+        # to _yaml_inline, which refuses it. That refusal is correct, but it
+        # fires at the README write — 60 lines below card_dir.mkdir() — so it
+        # would surface as a traceback and strand an empty card directory that
+        # turns `goc validate` red. Reject here instead, beside the other
+        # pre-mkdir guards, keeping the CLI's `ERROR:` + exit 2 contract. Same
+        # expression emit_frontmatter uses for its block-routing decision, so
+        # the two cannot disagree about which values are emittable.
+        if _contains_line_break(summary.replace("\n", "")):
+            print(
+                "ERROR: --summary contains a line-break character the frontmatter "
+                "parser splits on (CR/VT/FF/FS/GS/RS/NEL/U+2028/U+2029); only "
+                "newline (LF) is supported",
+                file=sys.stderr,
+            )
+            sys.exit(2)
     tags = args.tags
     worker = args.worker
+    # `worker` has no block-scalar form — _emit_worker sends every scalar
+    # through _yaml_inline — so ANY line break is unemittable, LF included.
+    if worker and _contains_line_break(worker):
+        print(
+            "ERROR: --worker must not contain a line break; the worker field "
+            "has no multi-line form",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     allow_jargon = args.allow_jargon
     commit = args.commit
     no_commit = args.no_commit
