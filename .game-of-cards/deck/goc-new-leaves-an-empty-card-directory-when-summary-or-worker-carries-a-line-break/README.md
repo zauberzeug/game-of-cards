@@ -151,6 +151,16 @@ consuming repos, so the orphan directory turns every subsequent commit red —
 not just the card the user was filing. Recovery requires knowing to
 `rm -rf .game-of-cards/deck/<title>/`, which nothing in the output suggests.
 
+**It is the sixth site of a catalogued shape.**
+[mutating-verbs-leave-card-modified-on-conflicting-commit-flags](../mutating-verbs-leave-card-modified-on-conflicting-commit-flags/)
+(closed 2026-05-30) established the invariant this card restores — *validate
+every input before any disk write* — across `status`, `wait`, `advance`,
+`unadvance` and `decide`. Its sibling sweep did reach `_cmd_new`, but asked only
+whether the `--commit` / `--no-commit` ordering was right (it was:
+`_validate_commit_flags` runs at engine.py:5674). The verb's other two
+user-supplied inputs were never brought under the same rule, which is the gap
+this card closes. Nothing mechanical enforces the ordering on a seventh site.
+
 **It is distinct from the two known `goc new` input defects**, and worse than
 both. [goc-new-crashes-with-oserror-traceback-on-overlong-title](../goc-new-crashes-with-oserror-traceback-on-overlong-title/)
 is the same contract violation but explicitly disclaims data corruption — its

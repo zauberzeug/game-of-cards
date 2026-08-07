@@ -14,3 +14,21 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-05-30 — Closure' present
+
+## 2026-08-07 — Post-close evidence: the invariant reached a sixth site
+
+An audit pass found `_cmd_new` violating this card's validate-before-any-disk-write
+invariant through `--summary` / `--worker`, whose emittability is only decided
+inside `emit_frontmatter` at the README write — 23 lines after
+`card_dir.mkdir(parents=True)`. This card's sibling sweep did visit `_cmd_new`,
+but scoped to the `--commit` / `--no-commit` pair, which was already ordered
+correctly; the invariant itself was never re-checked against the verb's other
+inputs. This card stays closed — its five-verb roster is still green. Filed and
+fixed as
+`goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break`
+and cross-referenced from the README's "Post-close follow-up" section.
+
+No new umbrella card filed: two filings (this one's five-verb batch plus the
+sixth site) is under the four-instance bar for an architectural meta-fix, and
+the deck already carries several undecided "X is opt-in per Y" umbrellas. If a
+seventh site appears, that is the signal to file one.
