@@ -1,20 +1,20 @@
 ---
 title: blank-worker-overrides-write-cards-that-goc-validate-rejects
 summary: "The worker write path applies no non-empty or emittability guard, so `goc new --worker` and `goc status <title> active --worker-who/--worker-where` accept a whitespace-only value, exit 0 with a success line, and write frontmatter that `goc validate` immediately rejects — the engine emitting state its own validator refuses, which turns this repo's validate-gated CI red. The same two flags also reach `_yaml_inline` unguarded, so a line-break value raises a raw FrontmatterError traceback instead of the CLI's ERROR + exit 2 contract."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-07T05:22:28Z"
-closed_at: null
+closed_at: "2026-08-07T05:32:07Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits 1 — all four doors are closed (three refuse with `ERROR:` + exit 2 and write nothing; the line-break door no longer leaks a traceback).
-  - [ ] TDD: A regression test asserts `goc new --worker`, `goc status <t> active --worker-who`, and `--worker-where` each exit 2 with an `ERROR:` line on an empty, whitespace-only, or line-break value, and that the target card's `worker` field is unchanged on disk.
-  - [ ] TDD: The same test holds the accepted shapes — an ordinary `who`, a `{who, where}` pair, and an omitted flag — so the guard cannot widen into a false refusal.
-  - [ ] MECHANICAL: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green (modulo the pre-existing `test_canonical_tag_rows` red tracked by [regression-suite-red-on-main-over-the-unverified-tag-row](../regression-suite-red-on-main-over-the-unverified-tag-row/)).
+  - [x] TDD: `reproduce.py` exits 1 — all four doors are closed (three refuse with `ERROR:` + exit 2 and write nothing; the line-break door no longer leaks a traceback).
+  - [x] TDD: A regression test asserts `goc new --worker`, `goc status <t> active --worker-who`, and `--worker-where` each exit 2 with an `ERROR:` line on an empty, whitespace-only, or line-break value, and that the target card's `worker` field is unchanged on disk.
+  - [x] TDD: The same test holds the accepted shapes — an ordinary `who`, a `{who, where}` pair, and an omitted flag — so the guard cannot widen into a false refusal.
+  - [x] MECHANICAL: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green (modulo the pre-existing `test_canonical_tag_rows` red tracked by [regression-suite-red-on-main-over-the-unverified-tag-row](../regression-suite-red-on-main-over-the-unverified-tag-row/)).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -31,6 +31,10 @@ state its own validator rejects. The same two `goc status` flags reach
 traceback instead of the CLI's `ERROR:` + exit 2 contract.
 
 ## Location
+
+Line numbers below are as-of the defect (commit `4a42e44c`); the fix inserted a
+helper at `engine.py:4703` and shifted everything under it by ~34 lines. Current
+positions are in "Fix (applied)".
 
 - `goc/engine.py:5688-5697` — `_cmd_new`'s only `--worker` guard (line breaks; no
   whitespace check).
@@ -135,6 +139,31 @@ DEFECT REPRODUCED: all four doors bypass the worker write-path guards.
 Door B is the load-bearing one: the verb prints `open → active`, the claim
 lands, and the deck is left validate-red by the mutation that reported success.
 
+After the fix, the same probe reports every door closed (it inverts, exiting 1):
+
+```
+=== Door A: goc new --worker '   ' ===
+  exit               : 2
+  frontmatter written: '<no README written>'
+  goc validate says  : []
+
+=== Door B: goc status <t> active --worker-who '   ' ===
+  exit               : 2
+  stdout             : []
+  frontmatter written: '<no worker field>'
+  goc validate says  : []
+
+=== Door C: goc status <t> active --worker-where '   ' ===
+  exit               : 2
+  frontmatter written: '<no worker field>'
+  goc validate says  : []
+
+=== Door D: goc status <t> active --worker-who $'a\rb' ===
+  exit               : 2
+  traceback leaked   : False
+  last stderr line   : 'ERROR: --worker-who must not contain a line break; the worker field has no multi-line form'
+```
+
 ## Why it matters
 
 **Reachability.** `worker` is the one frontmatter field whose value is routinely
@@ -168,22 +197,29 @@ the wording and the exit code. Distinct also from
 (re-emit inventing `who: ""` from an already-malformed card). Both are about
 values the flags never touched; this card is about the flags themselves.
 
-## Fix
+## Fix (applied)
 
-Validate the worker inputs at the CLI boundary, before any mkdir or write,
-matching the `--summary` guard's `ERROR:` + exit 2 shape. One helper covering
-both the whitespace and line-break rejections, called from `_cmd_new` for
-`--worker` and from `_cmd_status` for `--worker-who` / `--worker-where`:
+`_reject_invalid_worker_flag(flag, value)` (`goc/engine.py:4703-4735`) validates
+a worker-flag value at the CLI boundary, matching the `--summary` guard's
+`ERROR:` + exit 2 shape. It sits beside `_validate_commit_flags`, the other
+pre-write entry guard, and borrows both predicates from the components that
+enforce them so the boundary check cannot drift from what actually round-trips:
 
-- **whitespace/empty** — reject when `not value.strip()`, mirroring
-  `validate_card`'s predicate at `engine.py:1773` and `1781` so the writer and
-  the validator cannot disagree about what is a legal worker.
-- **line break** — reject when `_contains_line_break(value)`, reusing the
-  expression `_cmd_new` already applies to `--worker` at `engine.py:5691`.
-  `worker` has no block-scalar form (`_emit_worker` sends every scalar through
-  `_yaml_inline`), so LF is unemittable here too — no `.replace("\n", "")`
-  carve-out, unlike `--summary`.
+- **whitespace/empty** — refuses when `not value.strip()`, the same predicate
+  `validate_card` applies at `engine.py:1773`/`1781`, so the writer and the
+  validator cannot disagree about what is a legal worker.
+- **line break** — refuses when `_contains_line_break(value)`, the expression
+  `_cmd_new` already applied to `--worker`. `worker` has no block-scalar form
+  (`_emit_worker` sends every scalar through `_yaml_inline`), so LF is
+  unemittable here too — no `.replace("\n", "")` carve-out, unlike `--summary`.
 
-Both checks belong beside the existing pre-mkdir guards in `_cmd_new`, and at the
-top of `_cmd_status` beside the `--by` argument checks — before
-`README.md` is read, so a rejected claim leaves the card untouched.
+Call sites:
+
+- `_cmd_new` (`engine.py:5729-5736`) — replaces the line-break-only guard.
+  Guarded by `if worker:` because `new --worker` shares its argparse dest with
+  the global `--worker` queue filter (default `$GOC_WORKER`), where `""` is the
+  "no worker supplied" sentinel the write below already treats as absent.
+- `_cmd_status` (`engine.py:5479-5484`) — both flags checked at verb entry,
+  above every disk read. They default to `None` when omitted, so any string
+  there — `""` included — is explicit user input. A refusal now leaves the card
+  byte-identical: no status flip, no worker stamp, no cleared draft flag.

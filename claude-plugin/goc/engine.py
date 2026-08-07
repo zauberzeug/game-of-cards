@@ -4700,6 +4700,41 @@ def _validate_commit_flags(commit: bool, no_commit: bool) -> None:
         sys.exit(2)
 
 
+def _reject_invalid_worker_flag(flag: str, value: str | None) -> None:
+    """Exit 2 on a worker-flag value the frontmatter contract cannot hold.
+
+    Two independent constraints, both enforced by code that runs far downstream
+    of the CLI:
+
+    * `validate_card` refuses an empty or whitespace-only `worker` (and the same
+      for its `who` / `where` sub-keys), so a blank value writes a card the
+      engine's own validator then rejects — the writing verb having already
+      printed a success line and exited 0.
+    * `worker` has no block-scalar form — `_emit_worker` routes every scalar
+      through `_yaml_inline` — so ANY line break is unemittable, LF included,
+      and reaching the emitter raises a bare `FrontmatterError` traceback
+      instead of the CLI's `ERROR:` + exit 2 contract.
+
+    Callers invoke this at verb entry, before any card is read or created, so a
+    refusal leaves the deck byte-identical. `None` means the flag was omitted.
+    Both predicates are borrowed from the components that enforce them —
+    `str.strip()` from `validate_card`, `_contains_line_break` from the emitter
+    — so the boundary guard cannot drift from what actually round-trips.
+    """
+    if value is None:
+        return
+    if not value.strip():
+        print(f"ERROR: {flag} must not be empty or whitespace-only", file=sys.stderr)
+        sys.exit(2)
+    if _contains_line_break(value):
+        print(
+            f"ERROR: {flag} must not contain a line break; the worker field "
+            f"has no multi-line form",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
 def _commit_override(commit: bool, no_commit: bool) -> bool | None:
     if commit and no_commit:
         print("ERROR: pass only one of --commit / --no-commit", file=sys.stderr)
@@ -5441,6 +5476,12 @@ def _cmd_status(args):
     _validate_commit_flags(commit, no_commit)
     worker_who = args.worker_who
     worker_where = args.worker_where
+    # Both flags default to None when omitted, so any string here — "" included
+    # — is explicit user input destined for the card's frontmatter. Validate at
+    # entry, beside _validate_commit_flags and above every disk read, so a
+    # refusal cannot leave a claimed-but-invalid card behind.
+    _reject_invalid_worker_flag("--worker-who", worker_who)
+    _reject_invalid_worker_flag("--worker-where", worker_where)
     successor = args.superseded_by
     if successor is not None and new_status != "superseded":
         print(
@@ -5686,15 +5727,13 @@ def _cmd_new(args):
             sys.exit(2)
     tags = args.tags
     worker = args.worker
-    # `worker` has no block-scalar form — _emit_worker sends every scalar
-    # through _yaml_inline — so ANY line break is unemittable, LF included.
-    if worker and _contains_line_break(worker):
-        print(
-            "ERROR: --worker must not contain a line break; the worker field "
-            "has no multi-line form",
-            file=sys.stderr,
-        )
-        sys.exit(2)
+    # `new --worker` shares its argparse dest with the global `--worker` queue
+    # filter, whose default is `$GOC_WORKER` — so an empty value here is the
+    # "no worker supplied" sentinel that the `if worker:` write below already
+    # treats as absent, not authored input, and stays a no-op. Anything
+    # non-empty IS authored into the card and must satisfy the contract.
+    if worker:
+        _reject_invalid_worker_flag("--worker", worker)
     allow_jargon = args.allow_jargon
     commit = args.commit
     no_commit = args.no_commit
