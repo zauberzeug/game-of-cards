@@ -32,3 +32,30 @@ No new umbrella card filed: two filings (this one's five-verb batch plus the
 sixth site) is under the four-instance bar for an architectural meta-fix, and
 the deck already carries several undecided "X is opt-in per Y" umbrellas. If a
 seventh site appears, that is the signal to file one.
+
+## 2026-08-07 — The seventh site appeared; umbrella filed
+
+The entry above recorded "if a seventh site appears, that is the signal to file
+one". It appeared on the next commit. `_cmd_status`'s `--worker-who` /
+`--worker-where` reached a validator only inside `_yaml_inline` at emit time,
+and had no emptiness check at all — filed and fixed as
+`blank-worker-overrides-write-cards-that-goc-validate-rejects`.
+
+Two things that entry did not anticipate:
+
+1. **The sixth-site fix repeated the exact error this card diagnosed.** It was
+   scoped to *the failing check* (line breaks) rather than *the invariant*, so
+   it added a line-break guard to `_cmd_new --worker` without adding the
+   whitespace guard sitting eleven lines above it on `--summary`. The lesson
+   recurred against the commit that recorded it.
+2. **The seventh site is not actually an ordering violation.** Pre-fix
+   `_cmd_status` raised before `write_text`, so nothing was half-written — this
+   card's invariant held. What failed was a *different* invariant: the writer
+   had no check to run, so it wrote a card `validate_card` rejects. Ordering is
+   about *when* validation runs; that is about *whether the writer's accept-set
+   matches the validator's at all*.
+
+The umbrella filed is therefore scoped to (2), not to this card's ordering rule:
+`goc-verbs-emit-frontmatter-their-own-validator-rejects` (four instances,
+`human_gate: decision`). This card stays closed and its five-verb roster stays
+green; the ordering invariant it established is unchanged and still holds.

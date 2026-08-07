@@ -13,3 +13,21 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-08-07 — Closure' present
+
+## 2026-08-07 — Post-close: generalized into an umbrella
+
+A pattern-generalization check after closure asked whether this fix touched a
+shape with broader applicability. It does. Deduping against the deck first (per
+the check's own instruction) surfaced no existing umbrella for it, but did
+surface a root card whose log had pre-recorded the trigger:
+`mutating-verbs-leave-card-modified-on-conflicting-commit-flags` noted that a
+seventh site of its ordering invariant should become an umbrella. This card is
+that site — though on inspection it violates a *different*, broader invariant
+than that root's (see its log entry of the same date).
+
+Filed `goc-verbs-emit-frontmatter-their-own-validator-rejects` — an aggregation
+epic for the four independently-filed cards where a first-party verb exits 0
+after writing frontmatter `goc validate` rejects. This card is wired as one of
+its four children (`advances`). No change to this card's fix, which stands: the
+epic exists to stop the fifth instance from being found the same way as the
+first four.
