@@ -12,7 +12,7 @@ advanced_by:
   - waiting-filter-surfaces-draft-scaffolds-as-active-impediments
   - ready-leverage-line-names-draft-scaffolds-as-the-highest-gated-card
 tags: [bug, meta-fix, api-contract]
-summary: "card_is_draft gating is opt-in at every call site, and surfaces keep forgetting it: quality-pass audits (and with --llm --yes rewrites) unauthored scaffolds every listing hides, and decide lowers a draft's gate while printing a false 'any agent can now claim this card'. Fourth and fifth instances of the same family — fix the default, not the sites."
+summary: "card_is_draft gating is opt-in at every call site, and surfaces keep forgetting it: quality-pass audits (and with --llm --yes rewrites) unauthored scaffolds every listing hides, decide lowers a draft's gate while printing a false 'any agent can now claim this card', and validate warns that the DoD placeholder goc new just wrote lacks a method tag. Instances four through six of the same family — fix the default, not the sites."
 definition_of_done: |
   - [ ] PROCESS: decision recorded — inverted default vs validate-time lint vs per-site fixes (see Decision required)
   - [ ] TDD: reproduce.py exits non-zero — quality-pass no longer reports draft scaffolds, and decide on a draft either refuses or stops claiming the card is claimable
@@ -67,7 +67,23 @@ Three surfaces already forgot and were fixed one at a time —
    next-card until someone separately runs `goc publish`. The decision
    silently unparks nothing.
 
-Five instances of one root cause is a missing default, not five bugs.
+A later audit pass (2026-08-07) found instance six, which is the
+sharpest of the set because the offending text is goc's own:
+
+3. **`goc validate` warns about the placeholder it just wrote.**
+   `validate_dod_method_tags` (`engine.py:2268-2294`) exempts terminal
+   cards but not drafts, and `goc new`'s generated DoD stub —
+   `SCAFFOLD_DOD_PLACEHOLDER = "- [ ] (replace with real criteria)"`
+   (`engine.py:2424`) — carries no method tag. So every freshly
+   scaffolded card immediately produces
+   `WARN UNTAGGED_DOD_ITEM <title>: 1 DoD item(s) lack a method tag …
+   [- [ ] (replace with real criteria)]`. The validator's own docstring
+   says the warning "only nudges new authorship"; a draft is by
+   definition not yet authored, so the nudge fires before there is
+   anything to nudge. Reproduced on a two-command scratch deck:
+   `goc new fresh-scaffold-card --summary "…"` then `goc validate`.
+
+Six instances of one root cause is a missing default, not six bugs.
 Per-site patching demonstrably does not converge — each new surface
 reintroduces the leak.
 
