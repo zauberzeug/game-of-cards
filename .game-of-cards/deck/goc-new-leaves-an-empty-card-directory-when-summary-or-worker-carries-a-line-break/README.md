@@ -1,7 +1,7 @@
 ---
 title: goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break
 summary: "Every input guard in `_cmd_new` (engine.py:5678-5704) runs before `card_dir.mkdir`, but `--summary` and `--worker` are only checked for blankness — a value carrying a line break the inline emitter refuses (any non-LF break for summary; any break at all for worker) gets past them and blows up at the README write on line 5728, after the directory exists. The result is an uncaught `FrontmatterError` traceback instead of the CLI's clean `ERROR:` + exit 2, plus an empty card directory that leaves `goc validate` red until a human finds and deletes it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-07T05:07:14Z"
@@ -10,12 +10,12 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — all three doors (summary+CR, worker+CR, worker+LF) exit 2 with a clean `ERROR:` line, no traceback, and no directory left behind.
   - [ ] TDD: a regression test under `tests/` covers the refusal for both `--summary` and `--worker`, and asserts the deck directory is absent afterwards (not merely that the command failed).
   - [ ] MECHANICAL: the line-break check derives its dangerous-character set from the existing `_contains_line_break` helper rather than a fresh hand-copied list, so it cannot drift from the parser (same constraint the emitter card this one follows already imposed).
   - [ ] PROCESS: `uv run goc validate` clean, and `uv run python -m unittest discover -s tests` shows no failure other than the pre-existing one tracked by [regression-suite-red-on-main-over-the-unverified-tag-row](../regression-suite-red-on-main-over-the-unverified-tag-row/).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc new leaves an empty card directory when --summary or --worker carries a line break
