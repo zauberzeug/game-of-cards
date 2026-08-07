@@ -1,21 +1,21 @@
 ---
 title: goc-validate-reports-a-clean-pass-when-it-validated-no-cards
 summary: "`goc validate` prints nothing and exits 0 when the deck resolves to zero cards — including when no deck directory exists at all. The frontmatter-drift gate that CI and the install-written pre-commit hook depend on therefore reports a clean pass without saying it checked nothing, so a mis-resolved deck (wrong cwd, unscaffolded checkout, nested worktree) reads byte-identically to a green run."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-07T05:51:31Z"
-closed_at: null
+closed_at: "2026-08-07T05:59:09Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — a card-less deck and a missing deck each print an outcome line instead of nothing.
-  - [ ] TDD: regression test pins all three states apart — cards present (per-card `OK` lines), deck present but empty, deck absent — and asserts the notice names the resolved deck path.
-  - [ ] TDD: the notice survives `--quiet`; the per-card `OK` lines still do not. Exit codes are unchanged in every case (0 when clean, 1 on errors).
-  - [ ] MECHANICAL: `goc/engine.py:_cmd_validate` states its outcome on the zero-card path; plugin mirrors re-synced byte-for-byte (`scripts/sync_plugin_assets.py --check` clean).
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` green and `uv run goc validate` clean on this repo's own deck.
+  - [x] TDD: `reproduce.py` exits zero — a card-less deck and a missing deck each print an outcome line instead of nothing.
+  - [x] TDD: regression test pins all three states apart — cards present (per-card `OK` lines), deck present but empty, deck absent — and asserts the notice names the resolved deck path.
+  - [x] TDD: the notice survives `--quiet`; the per-card `OK` lines still do not. Exit codes are unchanged in every case (0 when clean, 1 on errors).
+  - [x] MECHANICAL: `goc/engine.py:_cmd_validate` states its outcome on the zero-card path; plugin mirrors re-synced byte-for-byte (`scripts/sync_plugin_assets.py --check` clean).
+  - [x] PROCESS: `uv run goc validate` clean on this repo's own deck, and the suite carries no new failure — 928 → 935 tests with the same single pre-existing red, `test_canonical_tag_rows.test_live_cards_satisfy_every_state_row`, owned by `regression-suite-red-on-main-over-the-unverified-tag-row` (open, gate `decision`, untouched by this card).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -83,27 +83,17 @@ stopped at the gate.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/goc-validate-reports-a-clean-pass-when-it-validated-no-cards/reproduce.py`:
+`uv run python .game-of-cards/deck/goc-validate-reports-a-clean-pass-when-it-validated-no-cards/reproduce.py`,
+**at filing** (2 findings, exit 1):
 
 ```
-goc validate — output on decks that contain no cards
-
---- A. repo's own deck (708 cards)
-    cwd        : /home/runner/work/game-of-cards/game-of-cards
-    exit code  : 0
-    stdout     : 45757 bytes
-    stderr     : 7919 bytes
-    first line : OK  a-shared-tag-groups-a-cluster-that-no-edge-walk-can-reach
-
 --- B. scaffolded but empty deck
-    cwd        : /tmp/tmpm9uoqhc7/scaffolded-empty
     exit code  : 0
     stdout     : 0 bytes
     stderr     : 0 bytes
     first line : (none)
 
 --- C. no deck directory at all
-    cwd        : /tmp/tmpm9uoqhc7/no-deck-at-all
     exit code  : 0
     stdout     : 0 bytes
     stderr     : 0 bytes
@@ -114,6 +104,23 @@ FINDING: C printed 0 bytes — a MISSING deck is silent too;
          `goc validate` reports success for a deck it never found.
 
 2 finding(s).
+```
+
+The same script **after the fix** (0 findings, exit 0) — exit codes unchanged,
+the resolved path now named:
+
+```
+--- B. scaffolded but empty deck
+    exit code  : 0
+    stderr     : 123 bytes
+    first line : No cards found in /tmp/…/scaffolded-empty/.game-of-cards/deck — validated 0 cards (structural checks still ran).
+
+--- C. no deck directory at all
+    exit code  : 0
+    stderr     : 121 bytes
+    first line : No cards found in /tmp/…/no-deck-at-all/.game-of-cards/deck — validated 0 cards (structural checks still ran).
+
+0 finding(s).
 ```
 
 ## Why it matters
@@ -151,10 +158,10 @@ checkout where `.game-of-cards/deck/` has not been scaffolded yet, and a
 linked worktree whose deck lives in the primary tree. In all three the
 operator sees a green `goc validate` and concludes the deck is clean.
 
-## Fix
+## Fix (landed)
 
-Give `_cmd_validate` an outcome statement on the zero-card path, immediately
-before the `if errors: sys.exit(1)` at `engine.py:4092`:
+`_cmd_validate` states its outcome on the zero-card path, immediately before
+the `if errors: sys.exit(1)` that used to be the function's last statement:
 
 ```python
     if not cards:

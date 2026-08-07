@@ -4089,6 +4089,28 @@ def _cmd_validate(args):
     for e in validate_superseded_by_targets(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
+    if not cards:
+        # Every other signal this command emits is per-card, so a run that
+        # walked zero cards writes nothing at all and exits 0 — identical to a
+        # clean pass. That silence is a false green wherever the deck resolved
+        # somewhere unintended: `goc install` writes a `pass_filenames: false`
+        # pre-commit hook, so the hook (and the CI step) inherits whatever
+        # DECK_DIR the cwd produced and never learns which deck it checked.
+        # Naming the resolved path is the actionable half — it separates "the
+        # deck is empty" from "I am standing in the wrong tree".
+        #
+        # stderr, and unconditional of --quiet: warnings already go to stderr,
+        # and --quiet's contract is suppressing the per-card OK lines on
+        # stdout. Under --quiet silence IS the success rendering, which is
+        # exactly where the false green is most dangerous. Exit code stays 0 —
+        # a freshly scaffolded repo legitimately has an empty deck, and
+        # Skill(kickoff) walks new users straight from `goc install` into
+        # `goc validate`.
+        print(
+            f"No cards found in {DECK_DIR} — validated 0 cards "
+            f"(structural checks still ran).",
+            file=sys.stderr,
+        )
     if errors:
         sys.exit(1)
 
