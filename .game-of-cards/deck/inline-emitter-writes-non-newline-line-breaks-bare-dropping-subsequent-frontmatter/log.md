@@ -13,3 +13,14 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-06-22 — Closure' present
+
+## 2026-08-07 — Post-close evidence: unhardened call site
+
+An audit pass found the emitter refusal added here fires *after*
+`_cmd_new`'s `card_dir.mkdir(parents=True)` (engine.py:5705), because
+`--summary` and `--worker` are not checked before the directory is created.
+The correct refusal therefore leaves an empty card directory behind and exits
+with a raw traceback instead of the CLI's `ERROR:` + exit 2. This card stays
+closed — the emitter boundary is right; the gap is at the call site. Filed as
+`goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break`
+and cross-referenced from the README's "Post-close follow-up" section.
