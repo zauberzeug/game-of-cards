@@ -7,7 +7,8 @@ contribution: low
 created: "2026-05-27T08:02:35Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - goc-verbs-emit-frontmatter-their-own-validator-rejects
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
