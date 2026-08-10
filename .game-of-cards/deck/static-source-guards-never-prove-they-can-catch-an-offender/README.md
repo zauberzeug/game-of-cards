@@ -304,6 +304,49 @@ that card is an evidence connection on an open decision, and so is this one.
 The successor card carries the fix for the predicate itself; this section
 carries only what it teaches about scope.
 
+## A fifth surface: checks specified in prose, which have no callable to register
+
+Connected 2026-08-10 from
+[refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file](../refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file/).
+That card's check is not code anywhere. It is a sentence in a shipped skill —
+`goc/templates/skills/refine-deck/SKILL.md:105`, "verify each cited file exists
+and the cited line is ≤ EOF" — that an agent re-derives and executes on every
+hygiene pass, then reports as a category with no findings.
+
+It is fail-open in the table's exact sense: the output is an empty offender
+list, and nothing distinguishes "no citation rotted" from "this test cannot
+express citation rot". What it adds to the four is that they *could* stop
+guarding, whereas this one never guarded. `≤ EOF` is a bounds test for a
+displacement problem, so it can only fire when a file shrinks past a cite;
+source files grow. Measured recall over the deck's own citations, replayed at
+each card's creating commit: **0 of 482** moved citations reported, while the
+check called all 706 clean. It has been shipping that answer for the life of
+the deck.
+
+**What it changes about the options.** Both are scoped to prohibition scanners
+living in `tests/`, and both attach to a Python callable — Option A puts a
+sensitivity case beside it, Option B registers it with a harness and meta-tests
+that every scanner has a sample. A check that exists only as prose has no
+callable to register and no file a meta-test can enumerate; it is re-derived
+from the same sentence by a different agent each run, so its reach is whatever
+that agent inferred, and it leaves no artifact behind to audit. This is the
+weakest-bound surface of the five: the closure-sweep case above is at least a
+script that once existed, while this one is reconstituted from scratch every
+time. If the scope includes it, the floor cannot be registration — it has to be
+that a specified check ships with a known-offending example the agent is told to
+run it against first, so a specification that cannot fire is caught at the point
+of being followed rather than after a deck has rotted underneath it.
+
+The corpus point from the section above recurs in a sharper form. The offender
+sample was never missing here: 482 stale citations were sitting in the deck the
+whole time, and every pass walked past them and reported the category clean. A
+check whose population contains hundreds of known offenders and which returns
+none should have to say so out loud.
+
+No `advances` edge, for the same reason given in the two notes above: that card
+is an evidence connection on an open decision. It carries its own fix for the
+citation check; this section carries only what it teaches about scope.
+
 ## Decision required
 
 The technique is settled — a test that runs the scanner over synthetic source

@@ -79,3 +79,23 @@ mechanism question is still the same one this card already asks.
 
 No status or gate change; no edge, per the same reasoning as the
 schema-parity connection. The decision stays open.
+
+## 2026-08-10 — Fifth surface connected
+
+The 2026-08-10 deck hygiene pass surfaced a fail-open check outside `tests/`
+and outside card-directory scripts: `refine-deck`'s defunct-citation category,
+specified in prose as "the cited line is ≤ EOF" at
+`goc/templates/skills/refine-deck/SKILL.md:105`.
+
+Measured recall over this deck: 0 of 482 moved citations reported, while the
+check called all 706 citations clean. Unlike the four scanners in the table,
+this one has no dead-scanner story — the predicate never had non-zero recall on
+the rot it names, because a bounds test can only fire when a file shrinks past
+the cite and source files grow.
+
+Recorded as "## A fifth surface" in the README because it constrains the scope
+question rather than the technique: both options attach to a Python callable,
+and a prose-specified check has none to register. Cross-reference only, no
+`advances` edge — consistent with the schema-parity and closure-verification
+connections already on this card. The instance carries its own fix in
+`refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file`.

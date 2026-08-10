@@ -121,6 +121,22 @@ The rot class is already attested pointwise:
 (closed) fixed one wrong engine line cite in a docstring. That was found by reading,
 not by this check — consistent with a predicate whose recall on displacement is zero.
 
+## Root cause it belongs to
+
+This is an instance of
+[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/),
+which names the shape: a fail-open check reports an empty offender list, and
+nothing distinguishes "nothing is wrong" from "this check cannot see what is
+wrong". That card's four instances are prohibition scanners in `tests/`; this one
+is a sentence in a shipped skill, recorded there as a fifth surface because
+neither of its options reaches a check that exists only as prose. The difference
+worth carrying: those scanners could stop guarding, while this one never guarded —
+measured recall 0 of 482 for the life of the deck.
+
+Per that card's own convention for evidence connections on an open decision, the
+link is a cross-reference and not an `advances` edge. The fix below is this card's
+to carry regardless of how the scope question there is decided.
+
 ## Fix
 
 Replace the bounds test with an anchor test, and ship the repair recipe alongside it.
