@@ -9,7 +9,8 @@ closed_at: null
 human_gate: decision
 advances:
   - goc-repair-edges-apply-leaves-edge-repairs-uncommitted
-advanced_by: []
+advanced_by:
+  - card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: `deck/<title>/reproduce.py` exits zero — after `goc move OLD NEW` on a fixture where another card cross-references `OLD`, HEAD advances and `git status --short` is clean.
@@ -105,10 +106,15 @@ tooling (`--allow-jargon`). In every path the operator's mental model
 is the same as for `goc advance` and `goc status` — "the verb
 finishes a unit of work and commits it." The asymmetry means:
 
-- A parallel agent's next auto-committing verb (e.g. `goc advance` on
-  an unrelated card) may silently bundle the move's rewrites into its
-  commit, attributing the rename to the wrong card and breaking the
-  one-card-per-commit invariant the rest of the engine maintains.
+- A parallel agent's next auto-committing verb publishes the renamed
+  card while **leaving the old one in HEAD**, so the shared deck gains
+  a duplicate of the card that was renamed away. Every commit the
+  engine makes is pathspec-scoped, and `_git_auto_commit` builds its
+  pathspec from paths that still exist on disk, so the deletion `git
+  mv` staged can never enter any commit — it is stranded, not bundled.
+  Measured and split out into
+  [card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck](../card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck/),
+  which also shows the Option A sketch below does not close it.
 - The human reviewing the eventual commit sees a rename without the
   reverse-edge rewrites or the `renamed from` log entry, *or* sees
   both bundled into an unrelated change. Either side of that split
@@ -144,6 +150,14 @@ include (`dst`, plus any deck directory containing a cross-reference
 hit returned by `_move_rewrite_tracked_files`). Message
 `deck: rename OLD → NEW`. Same shape as `advance` / `unadvance` /
 `status` — the operator's mental model holds.
+
+**Option A as sketched is not sufficient on its own.** It commits the
+destination but never the source-side deletion, so the ghost-duplicate
+defect survives it — verified by part 3 of
+[card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck](../card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck/)'s
+`reproduce.py`, which runs this exact call. Pairing Option A with that
+card's chosen removal-handling option is what actually finishes the
+rename.
 
 **Option B — stage-only with explicit follow-up.** Document `move`
 as an intentional stage-only verb (rationale: cross-reference
@@ -187,3 +201,10 @@ if auto_commit_enabled(commit_policy):
 `_move_collect_rewrite_dirs` is a new helper that returns the
 deduplicated set of card directories where rewrites landed (so
 `_git_auto_commit`'s pathspec covers every modified card).
+
+That pathspec still cannot cover `src`: `_git_auto_commit` filters
+its paths on `.exists()` (`engine.py:4677-4682`) and the source
+directory is gone by then. This sketch therefore needs the
+removal-handling change decided on
+[card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck](../card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck/)
+before it produces a complete rename commit.
