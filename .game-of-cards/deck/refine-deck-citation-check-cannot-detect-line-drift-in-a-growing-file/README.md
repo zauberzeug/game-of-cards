@@ -1,0 +1,149 @@
+---
+title: refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file
+summary: "The refine-deck skill specifies its defunct-citation check as `the cited file exists and the cited line is <= EOF`, a predicate that can only fire when a file SHRINKS past the cite. Source files grow, so a citation whose target moved thousands of lines away still passes. Replaying every citation this deck's open cards carried at filing time: 482 of 528 now point at unrelated code and the shipped check flags 0 of them. Every consuming repo running the hygiene pass gets a clean citation report on a fully rotted deck."
+status: open
+stage: null
+contribution: high
+created: "2026-08-10T02:38:28Z"
+closed_at: null
+human_gate: none
+advances: []
+advanced_by: []
+tags: [bug, documentation]
+definition_of_done: |
+  - [ ] TDD: `reproduce.py` exits zero — every citation whose line content changed
+        since filing is reported by whatever check the skill specifies.
+  - [ ] MECHANICAL: the `### Defunct file:line citations` section of
+        `goc/templates/skills/refine-deck/SKILL.md` no longer specifies `<= EOF` as
+        the test. It specifies an anchor-based check that compares what is AT the
+        cited line against what the card says is there, and states plainly that an
+        in-range line number is not evidence the citation is current.
+  - [ ] MECHANICAL: the section gives the repair recipe, not just the detection —
+        resolve each cite against the cited file at the card's creating commit,
+        relocate that line's text in HEAD, and rewrite the number only when the
+        match is unique and non-trivial. Bare-basename cites (`engine.py:N` for
+        `goc/engine.py:N`) resolve too.
+  - [ ] MECHANICAL: all five mirrors regenerate from the template and
+        `python scripts/sync_plugin_assets.py --check` plus
+        `python3 scripts/port_skills_to_openclaw.py --check` are clean.
+  - [ ] PROCESS: the residue is stated rather than hidden — the recipe cannot map a
+        cite whose line text was deleted or is ambiguous, so the section says those
+        are reported for a human read instead of silently skipped.
+---
+
+# The defunct-citation check cannot detect line drift in a file that grows
+
+## Location
+
+- `goc/templates/skills/refine-deck/SKILL.md:105` — the specification.
+- The same sentence ships in all five mirrors: `.claude/skills/refine-deck/SKILL.md`,
+  `.codex/skills/refine-deck/SKILL.md`, `claude-plugin/skills/refine-deck/SKILL.md`,
+  `codex-plugin/skills/refine-deck/SKILL.md`,
+  `openclaw-plugin/skills/refine-deck/SKILL.md`.
+
+## What's broken
+
+The skill defines the check as:
+
+> For each open card, check its body cites against current code:
+> verify each cited file exists and the cited line is ≤ EOF. A defunct
+> citation usually means the cited code was refactored.
+
+The second clause is the defect. `line <= EOF` is a *bounds* test, but citation rot
+is a *displacement* problem, and the two only coincide when a file shrinks past the
+cited line. Files grow. `goc/engine.py` was 4501 lines at the commit that filed the
+oldest card in this sample and is 6730 lines today; `goc/install.py` is 1837. Every
+citation that was valid when written is therefore still ≤ EOF, no matter how far the
+code it named has moved. The predicate's true positives are confined to the rare
+case of a file that shrank, and its silence is indistinguishable from a clean deck.
+
+The skill's own prose shows it means to catch displacement — it says a defunct
+citation "usually means the cited code was refactored", and prescribes updating the
+number in place. A refactor that moves code *down* is the common case and the one
+the specified test cannot see.
+
+## Empirical evidence
+
+`reproduce.py` replays each open card's citations as they stood in the README blob
+at that card's creating commit, so the measurement is independent of any later
+repair, and compares two verdicts per cite: what the shipped `<= EOF` test reports
+today, and whether the cited line still holds the text it held at filing.
+
+```
+open cards examined            : 182
+citations replayed at filing   : 528
+
+  still correct                : 46
+  FLAGGED by the `<= EOF` check: 0
+  MOVED but reported clean     : 482   <-- the blind region
+
+  examples:
+    active-state-conflates-being-worked-on-with-parked-at-human-gate
+      cite goc/engine.py:2443 -> goc/engine.py has 6730 lines, so EOF check says CLEAN
+      at filing: 'def render_leverage_line('
+      today    : 'The single "not yet real" predicate consulted by the terminal-tran'
+    advance-cycle-detectors-walk-different-edge-fields
+      cite goc/engine.py:1349 -> goc/engine.py has 6730 lines, so EOF check says CLEAN
+      at filing: 'for a in card.frontmatter.get("advances") or []:'
+      today    : ''
+    agent-manifest-guidance-block-is-built-but-silently-ignored
+      cite goc/install.py:111 -> goc/install.py has 1837 lines, so EOF check says CLEAN
+      at filing: 'AGENTS_GUIDANCE = GuidanceBlock("AGENTS.md", "AGENTS_GOC.md", "# A'
+      today    : ''
+
+FAIL: the shipped check reported a clean deck while 482 citations pointed at unrelated code.
+```
+
+The recall figure is 0/482. Two of the three examples now land on a blank line, and
+the first lands in the middle of an unrelated paragraph of prose.
+
+A second, independent measurement over the working deck agreed before repair: of 181
+citations that name a backticked identifier within 120 characters, 142 sat more than
+40 lines from any occurrence of the symbol they named, while the `<= EOF` check
+reported all 706 citations in the deck clean.
+
+## Why it matters
+
+The hygiene pass exists so a card stays readable cold, and a `file:line` cite is the
+part a reader trusts most — it is precise, so it looks checked. A number that points
+into the wrong function is worse than no number: it sends the next reader to code
+that does not exhibit the defect, which reads as evidence the card is stale or wrong.
+With 160 of 179 open cards parked at `human_gate: decision`, most cards here will be
+read cold by someone who was not present when they were filed.
+
+This is not local to this repo. The sentence ships in the packaged skill, so every
+consuming repo's hygiene pass carries the same silent pass. The larger and
+longer-lived the deck, the more citations it holds and the further its files have
+moved — the check degrades exactly where it is most needed.
+
+The rot class is already attested pointwise:
+[sort-default-docstring-cites-wrong-engine-line-for-value-walk-dangling-edge-drop](../sort-default-docstring-cites-wrong-engine-line-for-value-walk-dangling-edge-drop/)
+(closed) fixed one wrong engine line cite in a docstring. That was found by reading,
+not by this check — consistent with a predicate whose recall on displacement is zero.
+
+## Fix
+
+Replace the bounds test with an anchor test, and ship the repair recipe alongside it.
+The recipe is not hypothetical: the 2026-08-10 hygiene pass ran it over this deck and
+repaired 388 citations across 113 of 179 open cards, leaving `uv run goc validate`
+clean. The mechanism, per citation:
+
+1. Resolve the cited path, accepting the bare-basename shorthand cards use in prose
+   (`engine.py:N` means `goc/engine.py:N`), preferring a non-mirror match.
+2. Find the card's creating commit
+   (`git log --diff-filter=A -- <card>/README.md`, last entry).
+3. Read the cited file at that commit and take the cited line's text.
+4. Locate that exact text in HEAD. Rewrite the number **only** when the match is
+   unique and the line is non-trivial (skip bare braces, blanks, and anything under
+   ~12 characters, which match everywhere).
+
+The uniqueness-and-substance guard is what makes it safe to apply unattended: on this
+deck it declined 279 citations (135 trivial, 112 ambiguous, 32 whose text no longer
+exists) rather than guess. Those are the residue the DoD asks the skill to report
+instead of dropping — a cite whose line text was deleted outright often means the
+defect itself was refactored away, which is the case the current section already
+handles correctly ("close via `Skill(finish-card)` with a note fixed incidentally
+by <commit-hash>").
+
+Line-range cites (`file.py:120-140`) map both endpoints independently and are
+rewritten only when both resolve.
