@@ -44,3 +44,31 @@ Two notes worth carrying forward:
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-08-10 — Closure' present
+
+## 2026-08-10T05:58:00Z — Follow-up: widened the source guard past engine.py
+
+Post-close tightening of this card's own guard, prompted by the
+pattern-generalization check. Swept the shipped package and `scripts/` for the
+same shape first: `goc/install.py`, `goc/cli.py` and all three hook templates
+contain **zero** subprocess calls, and the only other hit repo-wide is
+`scripts/sync_plugin_assets.py:579` — a `git add`, silent on success, in a
+build script that has no output contract to violate. So there is no second
+instance and no umbrella to file.
+
+What there *was* is a scope gap: the guard was named for an invariant about
+the CLI's output contract but only read `goc/engine.py`. It now walks every
+`goc/**/*.py` and matches `Popen`/`call`/`check_call` as well as `run`, since
+all four inherit stdout identically. `engine.py` is merely the only module
+that spawns children today; a future `install.py` shelling out to git would
+break the same contract, and hook templates are in scope because the host
+reads their stdout as the hook's result.
+
+- **Verification**: green on the real tree; planting
+  `subprocess.run(["git", "status"], check=True)` into a copy of
+  `goc/install.py` makes it flag `install.py:1840` — a site the previous
+  engine.py-only scope could not see. That demonstration is the point of
+  `static-source-guards-never-prove-they-can-catch-an-offender`: the guard is
+  shown catching an offender, not merely passing.
+- **Tests**: 938 passed / 1 failed (the pre-existing `test_canonical_tag_rows`
+  red); test renamed `test_engine_git_subprocesses_all_capture_output` →
+  `test_no_goc_module_leaves_a_child_on_gocs_stdout` to match its new scope.

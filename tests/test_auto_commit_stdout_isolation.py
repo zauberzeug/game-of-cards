@@ -145,36 +145,53 @@ class AutoCommitStdoutIsolationTest(unittest.TestCase):
             readme = repo / ".game-of-cards" / "deck" / "alpha" / "README.md"
             self.assertIn("status: active", readme.read_text())
 
-    def test_engine_git_subprocesses_all_capture_output(self):
-        """No `subprocess.run` in engine.py may leave a child on goc's stdout.
+    def test_no_goc_module_leaves_a_child_on_gocs_stdout(self):
+        """No subprocess in the shipped package may inherit goc's stdout.
 
-        The source-level half of the same contract: the two calls this card
-        fixed were the only uncaptured ones, and a new one added later would
-        reintroduce the exact interleaving without failing the behavioral
-        tests above (which only cover `_git_auto_commit`'s three entry shapes).
+        The source-level half of the same contract. The behavioral tests above
+        only reach `_git_auto_commit`'s three entry shapes, so a new uncaptured
+        call — in that function or anywhere else — would reintroduce the exact
+        interleaving without turning anything red.
+
+        Scoped to the whole package, not just `engine.py`, because the
+        invariant is about the CLI's output contract rather than about one
+        file: `engine.py` happens to be the only module that spawns children
+        today, and a future `install.py` shelling out to git would break the
+        same contract in the same way. Hook templates are included — they run
+        as agent lifecycle hooks whose stdout the host reads as the hook's
+        result.
         """
-        text = (ROOT / "goc" / "engine.py").read_text()
-        # Each `subprocess.run(` call, sliced to its matching close paren.
+        modules = sorted(
+            p for p in (ROOT / "goc").rglob("*.py")
+            if "__pycache__" not in p.parts
+        )
+        self.assertTrue(modules, "no goc modules found — scope resolution broke")
+
+        # Any spawning API, not just `run`: `Popen`/`call`/`check_call` inherit
+        # stdout exactly the same way.
+        spawn = re.compile(r"subprocess\.(run|call|check_call|Popen)\(")
         offenders: list[str] = []
-        for match in re.finditer(r"subprocess\.run\(", text):
-            i = match.end() - 1
-            depth = 0
-            for j in range(i, len(text)):
-                if text[j] == "(":
-                    depth += 1
-                elif text[j] == ")":
-                    depth -= 1
-                    if depth == 0:
-                        break
-            call = text[match.start(): j + 1]
-            if "capture_output=True" in call or "stdout=" in call:
-                continue
-            line_no = text.count("\n", 0, match.start()) + 1
-            offenders.append(f"engine.py:{line_no}: {' '.join(call.split())[:90]}")
+        for path in modules:
+            text = path.read_text()
+            for match in spawn.finditer(text):
+                depth = 0
+                for j in range(match.end() - 1, len(text)):
+                    if text[j] == "(":
+                        depth += 1
+                    elif text[j] == ")":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                call = text[match.start(): j + 1]
+                if "capture_output=True" in call or "stdout=" in call:
+                    continue
+                line_no = text.count("\n", 0, match.start()) + 1
+                rel = path.relative_to(ROOT)
+                offenders.append(f"{rel}:{line_no}: {' '.join(call.split())[:90]}")
         self.assertEqual(
             offenders, [],
             msg=(
-                "subprocess.run without capture_output=True inherits goc's stdout; "
+                "a subprocess without capture_output=/stdout= inherits goc's stdout; "
                 "under a pipe the child's output lands ahead of goc's own buffered "
                 "lines:\n  " + "\n  ".join(offenders)
             ),
