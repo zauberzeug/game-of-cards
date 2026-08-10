@@ -1,20 +1,21 @@
 ---
 title: deck-auto-commit-prints-raw-git-output-before-the-verbs-own-report
-summary: "goc's deck auto-commit runs `git add` and `git commit` without `capture_output=True` — the only two subprocess calls in engine.py that do not — so git's own porcelain lands on goc's stdout. When stdout is a pipe (agent tool capture, CI logs, `| head`) Python's block buffering makes git's lines arrive BEFORE the verb's own report, scrambling the output of every auto-committing verb, `goc status <title> active` included. The closed sibling `move-fallback-leaks-git-fatal` already fixed this exact shape at the `git mv` call site."
-status: active
+summary: "goc's deck auto-commit ran `git add` and `git commit` without `capture_output=True` — the only subprocess calls in engine.py that did not — so git's own porcelain landed on goc's stdout. When stdout is a pipe (agent tool capture, CI logs, `| head`) Python's block buffering makes git's lines arrive BEFORE the verb's own report, scrambling the output of every auto-committing verb, `goc status <title> active` included. The closed sibling `move-fallback-leaks-git-fatal` had already fixed this exact shape at the `git mv` call site."
+status: done
 stage: null
 contribution: medium
 created: "2026-08-10T05:35:14Z"
-closed_at: null
+closed_at: "2026-08-10T05:45:21Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] TDD: `uv run python .game-of-cards/deck/deck-auto-commit-prints-raw-git-output-before-the-verbs-own-report/reproduce.py` exits zero — no git porcelain on goc's stdout and the verb report arrives in code order for `status`, `wait` and `advance`
-  - [ ] TDD: regression test under `tests/` pins that an auto-committing verb's piped stdout contains only goc's own lines, and that a FAILING `git commit` still surfaces git's diagnostic (captured output is reported, not swallowed)
-  - [ ] MECHANICAL: `git add` and `git commit` in `_git_auto_commit` pass `capture_output=True` like every other `subprocess.run` in `goc/engine.py`
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` no worse than main; `uv run goc validate` passes
+  - [x] TDD: `uv run python .game-of-cards/deck/deck-auto-commit-prints-raw-git-output-before-the-verbs-own-report/reproduce.py` exits zero — no git porcelain on goc's stdout and the verb report arrives in code order for `status`, `wait` and `advance`
+  - [x] TDD: regression test under `tests/` pins that an auto-committing verb's piped stdout contains only goc's own lines, and that a FAILING `git commit` still surfaces git's diagnostic (captured output is reported, not swallowed)
+  - [x] TDD: source-level guard fails on ANY `subprocess.run` in `goc/engine.py` that omits `capture_output=`/`stdout=` — the behavioral tests only reach `_git_auto_commit`, so a future uncaptured call would reintroduce the interleaving unseen
+  - [x] MECHANICAL: `git add` and `git commit` in `_git_auto_commit` pass `capture_output=True` like every other `subprocess.run` in `goc/engine.py`
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` no worse than main; `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -30,12 +31,17 @@ worker: {who: "claude[bot]", where: main}
         subprocess.run(["git", "commit", "-m", message, "--", *paths], check=True, cwd=git_cwd)
 ```
 
-These are the **only two** `subprocess.run` calls in `goc/engine.py` that omit
-`capture_output=True`. Every other one passes it — including `git mv`
-(`goc/engine.py:6271`), `git push`, `git rebase`, `git fetch`, `git show`,
-`git ls-files`, `git config`, `git rev-parse`, `git check-ignore`,
-`git merge-base`, and the `git diff --cached` check three lines above the
-commit itself.
+`_git_auto_commit` holds the **only** `subprocess.run` calls in
+`goc/engine.py` that omit `capture_output=True` — these two plus the
+`git diff --cached --quiet` check between them. Every call outside this
+function passes it: `git mv` (`goc/engine.py:6271`), `git push`,
+`git rebase`, `git fetch`, `git show`, `git ls-files`, `git config`,
+`git rev-parse`, `git check-ignore`, `git merge-base`.
+
+The `--quiet` diff check never actually leaked (the flag suppresses its
+output), so the observable defect is the `add`/`commit` pair; it is listed
+because the invariant worth restoring is "no child of goc writes to goc's
+stdout", not "the two noisy ones were silenced".
 
 ## What's broken
 
@@ -70,7 +76,8 @@ The auto-commit path was never brought into line.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/deck-auto-commit-prints-raw-git-output-before-the-verbs-own-report/reproduce.py`:
+`uv run python .game-of-cards/deck/deck-auto-commit-prints-raw-git-output-before-the-verbs-own-report/reproduce.py`, run against the engine as it stood
+at the filing commit (before the fix below):
 
 ```text
 --- goc status alpha active  (stdout through a pipe) ---
@@ -105,6 +112,18 @@ The same command with stdout on a pty prints the verb report first and the
 git summary after it — the ordering half of the defect is pipe-only, the
 noise half fires everywhere.
 
+After the fix, the same three verbs emit only goc's own lines and the script
+exits zero:
+
+```text
+--- goc status alpha active  (stdout through a pipe) ---
+  [0] alpha: open → active
+  [1] Next: implement the card; tick DoD items as you go; then goc done alpha.
+  [2]   committed
+...
+defect fixed: no git porcelain on goc stdout; verb report in code order
+```
+
 ## Why it matters
 
 Auto-commit is on by default (`workflow.auto_commit: true` is the shipped
@@ -126,15 +145,28 @@ terminal, and it is the same reason
 was worth closing: goc owns its stdout, and anything else writing there is a
 contract break.
 
-## Fix
+## Fix (applied)
 
-Pass `capture_output=True` to both calls in `_git_auto_commit`
-(`goc/engine.py:4685`, `goc/engine.py:4693`), matching every other
-`subprocess.run` in the module.
+All three `subprocess.run` calls in `_git_auto_commit` now pass
+`capture_output=True, text=True`, matching every other `subprocess.run` in the
+module: `git add`, `git commit`, and the `git diff --cached --quiet` check
+between them. The diff check was silent anyway — it is captured so the
+invariant is "no child of goc writes to goc's stdout", not "the two noisy ones
+were silenced", which is what a source-level guard can actually enforce.
 
-Capturing must not swallow diagnostics: both calls are `check=True`, so a
-failure raises `CalledProcessError` into the handler at `goc/engine.py:4695`.
-Extend that handler's message to include the captured `stderr`/`stdout` so a
-failing pre-commit hook or a rejected commit still reports why — today that
-text reaches the terminal only because it is uncaptured, and dropping it would
-trade one defect for a worse one.
+Capturing does not swallow diagnostics. Both mutating calls are `check=True`,
+so a failure raises `CalledProcessError` into the handler below them, which now
+replays the captured `stderr` and `stdout` as indented lines under the existing
+`  (auto-commit failed: …)` message. git routes pre-commit hook output to
+stderr, so a refusing hook still reports why — verified by
+`tests/test_auto_commit_stdout_isolation.py::test_failing_commit_still_reports_gits_diagnostic`,
+which installs a hook that writes a marker to each stream and asserts both
+reach goc's stderr. Without the replay loop that test fails, so the fix cannot
+regress into a silent no-op.
+
+The third test in that file is a source-level guard: it parses every
+`subprocess.run(` call in `goc/engine.py` and fails on any that omits
+`capture_output=`/`stdout=`. The behavioral tests only reach `_git_auto_commit`,
+so a new uncaptured call elsewhere would reintroduce the interleaving without
+turning anything red. That guard is what caught the `git diff --cached` call
+this card's own body originally described as already captured.

@@ -4682,18 +4682,48 @@ def _git_auto_commit(card_dirs: list[Path], message: str, *, exclude_draft: bool
         ]
         if not paths:
             return False
-        subprocess.run(["git", "add", "--", *paths], check=True, cwd=git_cwd)
+        # capture_output on both: an uncaptured child inherits goc's stdout and
+        # writes to it immediately, while CPython block-buffers goc's own prints
+        # whenever stdout is a pipe — so `git commit`'s porcelain summary landed
+        # AHEAD of the verb line that announced the mutation everywhere output
+        # is captured (agent tool calls, CI logs, `goc … | head`). goc already
+        # reports the commit itself with its own `  committed` line; the summary
+        # was redundant as well as misordered. Same fix the `git mv` call site
+        # took in `move-fallback-leaks-git-fatal`, which is why every other
+        # subprocess.run in this module already captures.
+        subprocess.run(
+            ["git", "add", "--", *paths],
+            check=True, cwd=git_cwd, capture_output=True, text=True,
+        )
         diff_check = subprocess.run(
+            # `--quiet` already suppresses the diff, so this one never leaked
+            # in practice; captured anyway so "no child writes to goc's stdout"
+            # holds for every call in the module rather than for the two that
+            # happened to be noisy.
             ["git", "diff", "--cached", "--quiet", "--", *paths],
             cwd=git_cwd,
             check=False,
+            capture_output=True,
+            text=True,
         )
         if diff_check.returncode == 0:
             return False
-        subprocess.run(["git", "commit", "-m", message, "--", *paths], check=True, cwd=git_cwd)
+        subprocess.run(
+            ["git", "commit", "-m", message, "--", *paths],
+            check=True, cwd=git_cwd, capture_output=True, text=True,
+        )
         return True
     except subprocess.CalledProcessError as e:
+        # Capturing must not silence the failure path. git's own diagnostic
+        # (a rejected commit on stderr, a refusing pre-commit hook usually on
+        # stdout) used to reach the terminal only by virtue of being
+        # uncaptured; it now lives on the exception, so replay it here rather
+        # than trading a leak for a silent failure.
         print(f"  (auto-commit failed: {e})", file=sys.stderr)
+        for stream in (e.stderr, e.stdout):
+            if isinstance(stream, str) and stream.strip():
+                for line in stream.rstrip().splitlines():
+                    print(f"    {line}", file=sys.stderr)
         return False
     except FileNotFoundError:
         return False
