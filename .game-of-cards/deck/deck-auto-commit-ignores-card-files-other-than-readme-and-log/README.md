@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-07-30T05:27:21Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
@@ -166,3 +167,37 @@ Whichever is chosen, apply the *same* answer to
 `goc-migrate-silently-destroys-card-files-other-than-readme-and-log`; a
 shared helper naming the card-directory file set is the durable fix, and
 it is what stops instance three.
+
+### The same pathspec is narrow a second way: it cannot express a removal
+
+The comprehension this card is about filters on existence
+(`goc/engine.py:4677-4682`):
+
+```python
+if (p := d / fname).exists()
+```
+
+so a file that was *deleted* on disk can never enter the pathspec — and
+the commit that follows is pathspec-scoped, which means no goc verb can
+ever commit a deck-file removal. `goc move` reaches it: `git mv` stages
+the source-side deletion, nothing commits it, and the next
+auto-committing verb publishes the renamed card while leaving the old
+one in HEAD, so every clone gets two copies. Measured in
+[card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck](../card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck/),
+wired as `advances` — this card is its prerequisite, because both
+narrownesses are decided by the one question above.
+
+This constrains the options, and the deciding property is **directory
+pathspec vs file pathspec**, not any particular `git add` flag.
+Measured on git 2.54: `git add -- <dir>` followed by `git commit --
+<dir>` stages and commits a deletion inside that directory (no `-A`
+required — that has been git's behaviour since 2.0), whereas a
+pathspec listing only the files that still exist commits the survivors
+and leaves the removed path in HEAD.
+
+So **A and C fix both narrownesses for free**, because both pass the
+card directory. **Option B does not** — an extension allowlist is still
+a list of file paths that must exist, so picking B leaves the
+ghost-duplicate defect open and needs an explicit removal clause bolted
+on. That is a third strike against B, which was already the weakest
+option.

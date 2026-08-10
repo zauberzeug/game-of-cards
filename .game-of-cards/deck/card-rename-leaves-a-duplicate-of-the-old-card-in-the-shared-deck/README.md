@@ -9,7 +9,8 @@ closed_at: null
 human_gate: decision
 advances:
   - goc-move-leaves-cross-reference-rewrites-uncommitted
-advanced_by: []
+advanced_by:
+  - deck-auto-commit-ignores-card-files-other-than-readme-and-log
 tags: [bug, api-contract]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — after `goc move OLD NEW` plus any auto-committing verb, `git ls-tree -r HEAD` names the new card directory and NOT the old one, a fresh clone holds exactly one card directory, and the Option-A-shaped `_git_auto_commit` call no longer strands the deletion.
@@ -185,16 +186,21 @@ unable to represent a removal:
 Three credible answers.
 
 **Option 1 — teach `_git_auto_commit` to carry removals.** Replace the
-`.exists()`-filtered pathspec (`engine.py:4677-4682`) with directory
-pathspecs (`git add -A -- <card_dir>`) so staged and unstaged deletions
-inside a card directory are committed alongside its writes. Smallest
-change, and it fixes the shape for any future removal-shaped mutation,
-not just `move`. Cost: the pathspec widens from two named files to a
-whole directory, which interacts with
-[deck-auto-commit-ignores-card-files-other-than-readme-and-log](../deck-auto-commit-ignores-card-files-other-than-readme-and-log/)
-— that card *wants* the widening, so the two should be decided
-together, but a `--all` on a directory also sweeps sibling files an
-operator may not have meant to commit yet.
+`.exists()`-filtered file pathspec (`engine.py:4677-4682`) with
+*directory* pathspecs, so deletions inside a card directory are
+committed alongside its writes. Measured on git 2.54: `git add --
+<dir>` + `git commit -- <dir>` carries a deletion inside `<dir>`, while
+a pathspec naming only the surviving files leaves the removed path in
+HEAD — the switch from file paths to the directory is the whole fix, no
+`git add -A` needed. Smallest change, and it covers any future
+removal-shaped mutation rather than just `move`. Cost: the pathspec
+widens from two named files to a whole directory, which also sweeps in
+sibling files an operator may not have meant to commit yet — precisely
+the trade-off already being decided on
+[deck-auto-commit-ignores-card-files-other-than-readme-and-log](../deck-auto-commit-ignores-card-files-other-than-readme-and-log/),
+this card's `advanced_by` prerequisite. Its Options A and C are
+directory pathspecs and fix this card for free; its Option B (extension
+allowlist) does not.
 
 **Option 2 — give `move` its own commit that names both endpoints.**
 Leave `_git_auto_commit` alone and have `_cmd_move` commit the rename
@@ -228,9 +234,10 @@ paths: list[str] = [
     if d.exists() or _has_tracked_content(d)
 ]
 ...
-subprocess.run(["git", "add", "-A", "--", *paths], check=True, cwd=git_cwd)
+subprocess.run(["git", "add", "--", *paths], check=True, cwd=git_cwd)
 ```
 
 with `_cmd_move` then passing `[src, dst, *rewrite_dirs]` so the
 source directory's removal is inside the pathspec. `src` no longer
-exists on disk, which is precisely why the existence filter has to go.
+exists on disk, which is precisely why the existence filter has to be
+replaced by a tracked-content test rather than simply dropped.
