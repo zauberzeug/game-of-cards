@@ -47,9 +47,9 @@ what the run exercises, not a formatting variance:
 | Aspect | CI `smoke` job | `scripts/smoke_release.sh` |
 |---|---|---|
 | Path A `PATH` setup | extends `PATH` with the uv tool-bin dir (`release.yml:503`) | absent (`smoke_release.sh:43`) |
-| Path A `--allowedTools` | `Read,Write,Edit,Bash,Skill(kickoff),Skill(audit-deck)` (`release.yml:540`) | `Read,Write,Edit,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(goc:*),Bash(git:*),Bash(which:*),Skill(kickoff),Skill(audit-deck)` (`smoke_release.sh:54`) |
-| Path B `--allowedTools` | `Read,Write,Bash(cat:*),Bash(ls:*),Skill(kickoff),Skill(audit-deck)` (`release.yml:588`) | `Read,Write,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(which:*),Skill(kickoff),Skill(audit-deck)` (`smoke_release.sh:82`) |
-| Path B pass condition | agent must confirm the response contains the literal substrings `Bash(goc:*)` **and** `permissions.allow`, and must write the marker with the Write tool, not Bash (`release.yml:577-580`) | "surface verbatim remediation text telling the user to add 'Bash(goc:*)' to permissions.allow" — no two-substring confirmation, no tool restriction on the write (`smoke_release.sh:74-78`) |
+| Path A `--allowedTools` | `Read,Write,Edit,Bash,Skill(kickoff),Skill(audit-deck)` (`release.yml:540`) | `Read,Write,Edit,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(goc:*),Bash(git:*),Bash(which:*),Skill(kickoff),Skill(audit-deck)` (`smoke_release.sh:74`) |
+| Path B `--allowedTools` | `Read,Write,Bash(cat:*),Bash(ls:*),Skill(kickoff),Skill(audit-deck)` (`release.yml:588`) | `Read,Write,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(which:*),Skill(kickoff),Skill(audit-deck)` (`smoke_release.sh:102`) |
+| Path B pass condition | agent must confirm the response contains the literal substrings `Bash(goc:*)` **and** `permissions.allow`, and must write the marker with the Write tool, not Bash (`release.yml:577-580`) | "surface verbatim remediation text telling the user to add 'Bash(goc:*)' to permissions.allow" — no two-substring confirmation, no tool restriction on the write (`smoke_release.sh:94-98`) |
 
 The Path A allowlist difference has a concrete consequence. CI grants
 bare `Bash`, so every command kickoff runs is permitted. The local

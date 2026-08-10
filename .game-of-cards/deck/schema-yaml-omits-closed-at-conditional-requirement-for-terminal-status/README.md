@@ -24,7 +24,7 @@ definition_of_done: |
 
 - Schema declaration: [`goc/schema.yaml:9-20`](../../../goc/schema.yaml) — `closed_at` is listed flat under `optional_fields:`.
 - Validator rule (code): [`goc/engine.py:1205-1215`](../../../goc/engine.py) — conditional-required rule for terminal statuses.
-- Mirrored copy: [`goc/templates/skills/card-schema/schema.yaml:9-20`](../../../goc/templates/skills/card-schema/schema.yaml) — same drift in the inlined skill copy.
+- Mirrored copy: [`goc/templates/skills/card-schema/schema.yaml:9-24`](../../../goc/templates/skills/card-schema/schema.yaml) — same drift in the inlined skill copy.
 
 ## What's broken
 
@@ -46,9 +46,9 @@ optional_fields:
   ...
 ```
 
-The validator iterates `required_fields` at `engine.py:1163-1165` and
+The validator iterates `required_fields` at `engine.py:1667-1669` and
 flags any field missing from frontmatter. `optional_fields` is loaded
-into the `Schema` dataclass (`engine.py:387-409`) but **never
+into the `Schema` dataclass (`engine.py:605-627`) but **never
 consulted** at validation time — it is purely documentary.
 
 Then `engine.py:1205-1215` applies an additional, hard-coded constraint
@@ -69,7 +69,7 @@ elif closed_at is not None:
 ```
 
 `TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})`
-(`engine.py:1695`).
+(`engine.py:2349`).
 
 So `closed_at` is in fact:
 

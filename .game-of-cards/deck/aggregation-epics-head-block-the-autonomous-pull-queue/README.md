@@ -28,12 +28,12 @@ its children close. Its closure is therefore gated on its open
 `advanced_by` children.
 
 But the GRPW value sort composes a card's value *up* the `advances`
-chain (`compute_values`, `engine.py:1670`):
+chain (`compute_values`, `engine.py:2643`):
 `value(c) = rank(c) + γ·max(value(d) for d in advances(c))`. An epic's
 `advances` edge points at its parent, so the epic's value is its own
 rank PLUS a discounted share of the chain above it — placing it *above*
 its own children in the ranking. The autonomous picker (`card_is_ready`,
-`engine.py:1599`) then offers it, because the ready predicate is only:
+`engine.py:2457`) then offers it, because the ready predicate is only:
 
 ```python
 if card.status != "open":      return False

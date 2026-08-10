@@ -60,7 +60,7 @@ fails typebox validation. Every fallback is worse:
 
 - `exec` of bare `goc install` → ENOENT on a plugin-only host.
 - A pipx-installed `goc install` runs *outside* the plugin payload, so
-  `_is_openclaw_plugin_context()` (`goc/install.py:487-498`, keyed on
+  `_is_openclaw_plugin_context()` (`goc/install.py:489-500`, keyed on
   `_PACKAGE_DIR.parent.name == "openclaw-plugin"`) is False and install
   defaults to the **Claude** harness — writing the `CLAUDE.md` import that
   `openclaw-kickoff` explicitly promises never appears ("No `CLAUDE.md`

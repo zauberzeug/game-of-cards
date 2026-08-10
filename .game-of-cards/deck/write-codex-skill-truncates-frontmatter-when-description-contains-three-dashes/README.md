@@ -159,7 +159,7 @@ FAIL — `_write_codex_skill` corrupted the skill:
 
 The reachability path is `goc install --agents codex` (or any install
 that resolves `skill_for_agent(..., "codex")`), specifically
-`_sync_skill_tree` (`goc/install.py:881`) which routes
+`_sync_skill_tree` (`goc/install.py:1202`) which routes
 `SKILL.md` files through `_write_codex_skill` when
 `codex_frontmatter=True`. Every Codex consumer's `.codex/skills/<name>/`
 tree is rebuilt from the GoC templates on every `goc install` /

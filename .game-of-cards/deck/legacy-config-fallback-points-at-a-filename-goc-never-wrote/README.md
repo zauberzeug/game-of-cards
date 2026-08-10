@@ -22,8 +22,8 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:150` — `LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"`
-- `goc/engine.py:4720` — consumption: `for path in (GAME_OF_CARDS_CONFIG_FILE, LEGACY_DECK_CONFIG_FILE):`
-- `goc/install.py:1071` — the upgrade migration's contrasting (correct)
+- `goc/engine.py:4998` — consumption: `for path in (GAME_OF_CARDS_CONFIG_FILE, LEGACY_DECK_CONFIG_FILE):`
+- `goc/install.py:1073` — the upgrade migration's contrasting (correct)
   name: `legacy_config = target / ".claude" / "deck-config.yaml"`
 - `goc/templates/game_of_cards/README.md:24` — "Legacy
   `.claude/deck-config.yaml` is migrated here on upgrade."
@@ -37,7 +37,7 @@ the fallback constant that same commit introduced points at
 `.claude/config.yaml` — a filename no GoC version ever wrote. Two
 source locations disagree about what "legacy config" means: the
 engine's fallback (`goc/engine.py:150`) and the upgrade migration
-(`goc/install.py:1071`). The migration is right; the fallback has been
+(`goc/install.py:1073`). The migration is right; the fallback has been
 dead code since the day it landed.
 
 Consequences for a legacy repo that hasn't run `goc upgrade`:

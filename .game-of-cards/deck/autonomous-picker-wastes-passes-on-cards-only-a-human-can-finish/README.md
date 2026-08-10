@@ -161,9 +161,9 @@ options but do not resolve them.
 **Option A cannot hook `goc new`.** `goc new` stamps `draft: true` and
 writes a *placeholder* DoD (`SCAFFOLD_DOD_PLACEHOLDER`); the real DoD is
 authored afterwards into `README.md`. See `card_is_draft`
-(`goc/engine.py:2405`). A heuristic there would inspect the placeholder
+(`goc/engine.py:2450`). A heuristic there would inspect the placeholder
 and find nothing. Any authoring-time detection must hook `_cmd_publish`
-(`goc/engine.py:5347`) — where the authored DoD first reaches the queue,
+(`goc/engine.py:5631`) — where the authored DoD first reaches the queue,
 and where the sibling `is_placeholder_scaffold` guard already lives.
 This is a pure fact about the code and holds under every model.
 

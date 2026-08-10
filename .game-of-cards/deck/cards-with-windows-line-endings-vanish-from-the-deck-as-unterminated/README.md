@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in this README (normalize-on-read vs reject-cleanly) with rationale in log.md.
   - [ ] TDD: reproduce.py exits zero (CRLF card parses or is rejected per the decision, with no misleading "unterminated" diagnostic).
   - [ ] TDD: a regression test asserts the chosen behavior for a CRLF-authored README (parses to the same (data, body) as the LF twin, OR fails with a CRLF-naming diagnostic).
-  - [ ] MECHANICAL: the opener guard at engine.py:151 and FRONTMATTER_RE at engine.py:130 no longer contradict each other; `goc validate` clean; plugin-asset sync `--check` green.
+  - [ ] MECHANICAL: the opener guard at engine.py:181 and FRONTMATTER_RE at engine.py:130 no longer contradict each other; `goc validate` clean; plugin-asset sync `--check` green.
 ---
 
 # Cards with Windows line endings vanish from the deck as unterminated frontmatter
@@ -22,7 +22,7 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:130` — `FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)$", re.DOTALL)`
-- `goc/engine.py:151` — opener guard `if not (text.startswith("---\n") or text.startswith("---\r\n")):`
+- `goc/engine.py:181` — opener guard `if not (text.startswith("---\n") or text.startswith("---\r\n")):`
 - `goc/engine.py:609-613` — `load_all_cards` catches `FrontmatterError`, warns to stderr, and `continue`s (drops the card).
 
 ## What's broken

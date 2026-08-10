@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- Failing test: `tests/test_canonical_tag_rows.py:188`
+- Failing test: `tests/test_canonical_tag_rows.py:189`
   (`test_live_cards_satisfy_every_state_row`).
 - Scorer: `tests/test_canonical_tag_rows.py:106-113` (`_score_unverified`).
 - Offending card:

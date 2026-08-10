@@ -35,11 +35,11 @@ output, exit 0.
 
 ## Location
 
-- `goc/engine.py:2675` — `filter_cards` `--advances` / `--advanced-by`
+- `goc/engine.py:2806` — `filter_cards` `--advances` / `--advanced-by`
   membership tests (no existence check on the queried title)
-- `goc/engine.py:3763` — `_cmd_default` presentation dispatch
+- `goc/engine.py:3989` — `_cmd_default` presentation dispatch
   (`if args.board: ... elif args.as_json: ...`)
-- `goc/engine.py:3699` — status auto-extend for `--waiting` /
+- `goc/engine.py:3930` — status auto-extend for `--waiting` /
   `--closed-since` fires only when `--status` is unset; nothing checks
   the explicit-status or `--waiting`+`--closed-since` compositions
 
@@ -48,7 +48,7 @@ output, exit 0.
 Three unguarded instances, confirmed on this deck (2026-07-11):
 
 **1. `--advances` / `--advanced-by` accept a nonexistent card title.**
-`filter_cards` (`goc/engine.py:2675`) tests membership only:
+`filter_cards` (`goc/engine.py:2806`) tests membership only:
 
 ```python
 if advances:
@@ -63,24 +63,24 @@ if advances:
 The queried title is never checked against `by_title` (already threaded
 into `filter_cards` for the `ready` branch). A typo'd or since-renamed
 title yields "no results", indistinguishable from "no edges". Contrast
-`validate_tag_filters` (`goc/engine.py:2801`), which exits 2 with a
+`validate_tag_filters` (`goc/engine.py:2949`), which exits 2 with a
 remedy for an unknown tag — and `compute_values`, which stderr-WARNs on
 dangling `advances` edges in card frontmatter while the CLI filter for
 the same edge field stays silent.
 
 **2. `--board` silently overrides `--json`.** The presentation dispatch
-(`goc/engine.py:3763`) is `if args.board: ... elif args.as_json: ...`,
+(`goc/engine.py:3989`) is `if args.board: ... elif args.as_json: ...`,
 so `goc --json --board` prints the ASCII kanban grid with exit 0 — a
 machine consumer expecting JSON gets unparseable output. The repo's own
 precedent for a flag conflict is a hard error
 (`goc: error: pass only one of --done / --status`, exit 2, at
-`goc/engine.py:3693`). Same-site symptom: `--slim` is read only inside
+`goc/engine.py:3924`). Same-site symptom: `--slim` is read only inside
 the `elif args.as_json` branch, so `goc --slim` without `--json` is a
 silent no-op (its help text does say "With --json:", so that one is at
 least documented).
 
 **3. `--closed-since` composes into can-never-match queries.** The
-status auto-extend (`goc/engine.py:3699`) fires only when
+status auto-extend (`goc/engine.py:3930`) fires only when
 `args.status_flag is None`. With an explicit non-terminal status,
 `goc --status open --closed-since 7d` requires `closed_at` set on an
 open card — a state `goc validate` itself flags as incoherent — and

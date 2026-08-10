@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: the `## Decision required` question below is answered and recorded via `Skill(decide-card)`, lowering the gate to `none`.
   - [ ] TDD: `reproduce.py` exits zero — a deck whose only remaining open cards are gate-parked still emits an advisory naming the highest gated card.
   - [ ] TDD: a regression test pins the drained-queue advisory against a fixture deck (two gate-parked cards, zero pullable) and asserts the highest gated card is named. The existing one-pullable-card behaviour is asserted unchanged in the same test so the two shapes cannot drift.
-  - [ ] MECHANICAL: `render_leverage_line` (`goc/engine.py:3425`) implements the chosen shape; `Skill(pull-card)`'s "the line is omitted when no gated cards exist or the queue is empty" sentence and its "Queue empty" stop-branch are updated to match, and the change is mirrored to the `.claude`/`claude-plugin`/`codex-plugin`/`openclaw-plugin` skill copies by the normal sync + porter run.
+  - [ ] MECHANICAL: `render_leverage_line` (`goc/engine.py:3438`) implements the chosen shape; `Skill(pull-card)`'s "the line is omitted when no gated cards exist or the queue is empty" sentence and its "Queue empty" stop-branch are updated to match, and the change is mirrored to the `.claude`/`claude-plugin`/`codex-plugin`/`openclaw-plugin` skill copies by the normal sync + porter run.
   - [ ] EMPIRICAL: `uv run goc --ready` on this repo's deck (0 pullable / 171 parked as of 2026-07-31) prints the advisory naming `ship-game-of-cards-as-cross-agent-cli` or whichever card then tops the gated pool; the output is recorded in `log.md`.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 ---

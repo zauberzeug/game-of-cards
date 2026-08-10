@@ -1,6 +1,6 @@
 ---
 title: pattern-generalization-mutation-detector-skips-pre-subcommand-git-global-options
-summary: "After the substring -> shlex.split rewrite, the mutation detector at goc/templates/hooks/pattern_generalization_check.py:58-62 assumes tokens[1] is the subcommand. Pre-subcommand git global options (-c key=val, -C <path>, --no-pager, --git-dir=<path>, -P) push the real subcommand to tokens[2+], so 'git -c gpg.sign=false commit -m foo', 'git --no-pager commit ...', and 'git -C /tmp commit ...' silently bypass the broad-mutation detector and the pattern-generalization Stop hook never fires. Fourth instance in the same matcher-derivation family — directly contradicts the 'tokenized parser closes the meta-fix loop' claim recorded on closed sibling skips-long-form-git-add-flags."
+summary: "After the substring -> shlex.split rewrite, the mutation detector at goc/templates/hooks/pattern_generalization_check.py:67-71 assumes tokens[1] is the subcommand. Pre-subcommand git global options (-c key=val, -C <path>, --no-pager, --git-dir=<path>, -P) push the real subcommand to tokens[2+], so 'git -c gpg.sign=false commit -m foo', 'git --no-pager commit ...', and 'git -C /tmp commit ...' silently bypass the broad-mutation detector and the pattern-generalization Stop hook never fires. Fourth instance in the same matcher-derivation family — directly contradicts the 'tokenized parser closes the meta-fix loop' claim recorded on closed sibling skips-long-form-git-add-flags."
 status: open
 stage: null
 contribution: medium

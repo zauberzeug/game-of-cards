@@ -26,9 +26,9 @@ a real newline.
 ## Location
 
 - `goc/schema.yaml:22` — `title_pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"`
-- `goc/engine.py:5469` — `_cmd_new`: `if not re.match(schema.title_pattern, title):`
-- `goc/engine.py:5932` — `_cmd_move`: same check for the rename target
-- `goc/engine.py:1639` — `validate_card`: same check on the stored title
+- `goc/engine.py:5778` — `_cmd_new`: `if not re.match(schema.title_pattern, title):`
+- `goc/engine.py:6245` — `_cmd_move`: same check for the rename target
+- `goc/engine.py:1674` — `validate_card`: same check on the stored title
 
 ## What's broken
 
@@ -48,7 +48,7 @@ sites. Consequences observed empirically:
   `$`-anchored check again.
 - `goc status $'newline-tail\n' active` claims and auto-commits the
   malformed path.
-- The `TITLE_ANTIPATTERNS` jargon guard (engine.py:5374) never fires:
+- The `TITLE_ANTIPATTERNS` jargon guard (engine.py:5654) never fires:
   its character class deliberately admits `\s`, which includes `\n`.
 
 ## Why it matters

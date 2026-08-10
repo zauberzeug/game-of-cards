@@ -1,6 +1,6 @@
 ---
 title: block-scalar-emitter-reenumerates-parser-whitespace-rules-and-keeps-drifting
-summary: "The block-scalar emitter (`_emit_block_field`, engine.py:287) and the vendored block-scalar parser (`_parse_block_scalar`, _vendor/yaml_lite.py) hand-maintain mirror-image rules for which lines carry meaningful whitespace and how the block indent is fixed. Because each side restates the other's whitespace handling rather than sharing one contract, the two keep drifting — 6 separate bug cards have now patched this one family one edge case at a time (leading, interior, trailing, less-indented, leading-only whitespace, plus the `|`/`|-`/`|+` chomp-indicator choice). Decision-gated on how to make the emit->parse round-trip whitespace-faithful by construction."
+summary: "The block-scalar emitter (`_emit_block_field`, engine.py:319) and the vendored block-scalar parser (`_parse_block_scalar`, _vendor/yaml_lite.py) hand-maintain mirror-image rules for which lines carry meaningful whitespace and how the block indent is fixed. Because each side restates the other's whitespace handling rather than sharing one contract, the two keep drifting — 6 separate bug cards have now patched this one family one edge case at a time (leading, interior, trailing, less-indented, leading-only whitespace, plus the `|`/`|-`/`|+` chomp-indicator choice). Decision-gated on how to make the emit->parse round-trip whitespace-faithful by construction."
 status: open
 stage: null
 contribution: medium
@@ -52,7 +52,7 @@ behaviour by hand.
 ## What's broken (the recurring shape)
 
 The emitter decides the block indent / indicator with hand-maintained
-conditions at `goc/engine.py:287` (`_emit_block_field`), e.g. "emit an
+conditions at `goc/engine.py:319` (`_emit_block_field`), e.g. "emit an
 explicit `|2` indicator when the value's leading whitespace would otherwise
 be lost." The parser independently decides, at `goc/_vendor/yaml_lite.py`
 (`_parse_block_scalar`), when a line is a structural blank (`block_indent is

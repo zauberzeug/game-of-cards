@@ -1,6 +1,6 @@
 ---
 title: install-auto-detects-codex-from-the-shared-agents-md-briefing-file
-summary: "`goc install`'s no-flag harness auto-detection treats `AGENTS.md` as a Codex-exclusive marker and `.mcp.json` as a Claude-exclusive marker, but both are cross-agent files, so the detector installs a harness the user never asked for. `AGENTS.md` is GoC's generic cross-agent briefing default and `.mcp.json` is consumed by many MCP clients including Codex. The signal table at `goc/install.py:49` conflates exclusive install markers with shared files."
+summary: "`goc install`'s no-flag harness auto-detection treats `AGENTS.md` as a Codex-exclusive marker and `.mcp.json` as a Claude-exclusive marker, but both are cross-agent files, so the detector installs a harness the user never asked for. `AGENTS.md` is GoC's generic cross-agent briefing default and `.mcp.json` is consumed by many MCP clients including Codex. The signal table at `goc/install.py:51` conflates exclusive install markers with shared files."
 status: open
 stage: null
 contribution: high
@@ -29,9 +29,9 @@ asked for.
 
 ## Location
 
-- `goc/install.py:49` — `AGENT_SIGNAL_PATHS` (the signal table)
-- `goc/install.py:396` — `_detect_agent_surfaces` (consumes the table)
-- `goc/install.py:1431` — install default flow: `detected_agents = _detect_agent_surfaces(target, ...)`
+- `goc/install.py:51` — `AGENT_SIGNAL_PATHS` (the signal table)
+- `goc/install.py:398` — `_detect_agent_surfaces` (consumes the table)
+- `goc/install.py:1525` — install default flow: `detected_agents = _detect_agent_surfaces(target, ...)`
 
 ## What's broken
 
@@ -46,7 +46,7 @@ AGENT_SIGNAL_PATHS = {
 ```
 
 - **`AGENTS.md` is not a Codex marker.** It is GoC's *generic cross-agent
-  briefing file* — `DEFAULT_BRIEFING_TARGET = "AGENTS.md"` (`goc/install.py:55`),
+  briefing file* — `DEFAULT_BRIEFING_TARGET = "AGENTS.md"` (`goc/install.py:57`),
   and in this very repo `CLAUDE.md` is nothing but `@AGENTS.md`. AGENTS.md is the
   emerging universal agent-instructions standard, written by Claude-only setups
   too.
@@ -75,7 +75,7 @@ detected as Claude too.
 ### The maintainers already know AGENTS.md is a false signal
 
 The OpenClaw-plugin branch of `install()` guards against exactly this, but only
-for that one context (`goc/install.py:1423`):
+for that one context (`goc/install.py:1517`):
 
 ```python
 if not explicit_agents and _is_openclaw_plugin_context():
@@ -156,7 +156,7 @@ prior art in `_detect_installed_surfaces`'s docstring on agent-exclusive markers
 ## Fix (pending decision)
 
 Per the chosen option, rewrite `AGENT_SIGNAL_PATHS` and/or
-`_detect_agent_surfaces` at `goc/install.py:49`/`:396`, add regression coverage
+`_detect_agent_surfaces` at `goc/install.py:51`/`:396`, add regression coverage
 mirroring `reproduce.py`'s two cases plus a fresh-Codex positive case, and
 reconcile the `goc install --help` "auto-detect Claude/Codex project markers"
 wording (`goc/cli.py`) if the contract changes. **Do not apply until the gate is

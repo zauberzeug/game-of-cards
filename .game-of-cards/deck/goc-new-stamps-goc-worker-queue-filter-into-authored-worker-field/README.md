@@ -1,6 +1,6 @@
 ---
 title: goc-new-stamps-goc-worker-queue-filter-into-authored-worker-field
-summary: "`goc new`'s `--worker` uses `argparse.SUPPRESS` and shares the default dest `worker` with the global `--worker` queue filter (whose default is `$GOC_WORKER`). So a bare `goc new` run with `GOC_WORKER` or global `--worker` set stamps that triage-filter value into the new card's authored `worker` field. Fix: give `new --worker` a distinct dest, mirroring the `advances_wire`/`advanced_by_wire` remedy at engine.py:2830-2833. Decision-gated on the intended contract."
+summary: "`goc new`'s `--worker` uses `argparse.SUPPRESS` and shares the default dest `worker` with the global `--worker` queue filter (whose default is `$GOC_WORKER`). So a bare `goc new` run with `GOC_WORKER` or global `--worker` set stamps that triage-filter value into the new card's authored `worker` field. Fix: give `new --worker` a distinct dest, mirroring the `advances_wire`/`advanced_by_wire` remedy at engine.py:3735-3738. Decision-gated on the intended contract."
 status: open
 stage: null
 contribution: medium
@@ -13,7 +13,7 @@ tags: [bug, api-contract]
 definition_of_done: |
   - [ ] PROCESS: confirm the intended contract via `## Decision required` — a bare `goc new` should leave `worker` unset even when `GOC_WORKER` / global `--worker` is present (vs. auto-attributing the runner); record the choice via `Skill(decide-card)` (lowers the gate to `none`).
   - [ ] TDD: reproduce.py exits zero — `GOC_WORKER=alice goc new x` (and `goc --worker bob new y`) produces a card with no `worker` field, while `goc new z --worker carol` still writes `worker: carol`.
-  - [ ] MECHANICAL: give `goc new`'s `--worker` a distinct argparse dest (mirroring the `advances_wire` / `advanced_by_wire` remedy at engine.py:2830-2833) so the global filter dest can no longer bleed into `_cmd_new`; read that dest in `_cmd_new`.
+  - [ ] MECHANICAL: give `goc new`'s `--worker` a distinct argparse dest (mirroring the `advances_wire` / `advanced_by_wire` remedy at engine.py:3735-3738) so the global filter dest can no longer bleed into `_cmd_new`; read that dest in `_cmd_new`.
   - [ ] PROCESS: a regression test lands in `tests/`; the existing `tests/test_global_flag_collision.py` tripwire stays green (a distinct dest removes `new --worker` from the parent-collision set).
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green; `uv run goc validate` clean.
 ---
@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:2734` — the **global** `--worker` flag, documented and
+- `goc/engine.py:3636` — the **global** `--worker` flag, documented and
   intended as a queue/triage **filter**, with the env var as its default:
 
   ```python
@@ -30,7 +30,7 @@ definition_of_done: |
                       help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.")
   ```
 
-- `goc/engine.py:2834` — `goc new`'s own `--worker`, declared with
+- `goc/engine.py:3739` — `goc new`'s own `--worker`, declared with
   `default=argparse.SUPPRESS` and sharing the default dest `worker`:
 
   ```python
@@ -56,7 +56,7 @@ definition_of_done: |
 — flows straight into `args.worker` and gets stamped onto the card as
 its authored worker designation.
 
-The global `--worker` is documented (engine.py:2735, AGENTS.md) as a
+The global `--worker` is documented (engine.py:3637, AGENTS.md) as a
 **read-side queue filter** for runner-scoped views; the worker field
 on a card is a **write-side authorship designation**. The two share a
 dest, and the filter value leaks into the authored field.
@@ -93,7 +93,7 @@ and `new`'s own help text promises its `--worker` *overrides*
 Give `goc new`'s `--worker` a distinct dest (e.g. `worker_designation`)
 so the global filter dest cannot bleed in — the same "distinct dests"
 remedy already applied to `--advances` / `--advanced-by` on `goc new`
-(engine.py:2830-2833) — and read that dest in `_cmd_new`. The
+(engine.py:3735-3738) — and read that dest in `_cmd_new`. The
 `tests/test_global_flag_collision.py` tripwire stays green because a
 distinct dest removes `new --worker` from the parent-collision set
 entirely.

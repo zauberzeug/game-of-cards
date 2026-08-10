@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:1629-1630` (`_resolve_upgrade_briefing_target`, the `len(found) == 0` fallback)
+- `goc/install.py:1631-1632` (`_resolve_upgrade_briefing_target`, the `len(found) == 0` fallback)
 - `goc/install.py:143-158` (`_detect_briefing_targets_on_disk` — on-disk marker grep is the only evidence source)
 - `goc/install.py:247-250` (`_sync_claude_import` — treats any `@<importable-target>` line as GoC-owned and rewrites it)
 

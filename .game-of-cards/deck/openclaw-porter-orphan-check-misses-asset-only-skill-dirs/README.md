@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`scripts/port_skills_to_openclaw.py:229-236` (`_orphaned_ported_dirs`), used
+`scripts/port_skills_to_openclaw.py:282-289` (`_orphaned_ported_dirs`), used
 by both `drifted_skills()` (line 296) and the write-mode prune (line 375).
 
 ## What's broken

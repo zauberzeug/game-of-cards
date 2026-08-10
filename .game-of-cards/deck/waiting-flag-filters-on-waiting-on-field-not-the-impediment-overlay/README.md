@@ -37,7 +37,7 @@ The `--waiting` flag is documented (engine.py:3013) as:
 
 But the three-axis stuck model defines the stored impediment overlay as
 `waiting_on` set **or** a bare `waiting_until` — `waiting_impedes`
-(engine.py:2136) and its docstring state that "A `waiting_until` in the
+(engine.py:2514) and its docstring state that "A `waiting_until` in the
 future implies a `deferred` wait" and hides the card from queues. A card
 deferred with `goc wait <title> --until <future-date>` and **no** `--reason`
 therefore:

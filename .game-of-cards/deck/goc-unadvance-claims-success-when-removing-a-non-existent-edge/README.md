@@ -14,7 +14,7 @@ tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero (defect no longer fires — running `goc unadvance` on a non-existent edge produces a distinct signal from removing a real edge).
   - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("no edge to remove")`. Match whichever shape the rest of the engine uses for analogous non-mutating verb calls (e.g. `goc wait --clear` on a card without a wait).
-  - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:4403) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_unadvance` honors before printing the success line and entering the auto-commit branch.
+  - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:6122) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_unadvance` honors before printing the success line and entering the auto-commit branch.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the missing-edge case.
   - [ ] PROCESS: `uv run goc validate` passes.
 ---
@@ -25,7 +25,7 @@ definition_of_done: |
 
 - `goc/engine.py:4403-4414` — `_cmd_unadvance`
 - `goc/engine.py:4171-4177` — `_remove_from_list_field`
-- `goc/engine.py:4180-4193` — `_mutate_pair`
+- `goc/engine.py:5865-5878` — `_mutate_pair`
 
 ## What's broken
 
@@ -33,7 +33,7 @@ definition_of_done: |
 enters the auto-commit branch regardless of whether the edge actually existed.
 
 ```python
-# goc/engine.py:4403
+# goc/engine.py:6122
 def _cmd_unadvance(args):
     """Remove bidirectional value-flow edge."""
     title = args.title
@@ -51,7 +51,7 @@ The mutation helper it calls is a no-op when the title isn't in the target
 field's list:
 
 ```python
-# goc/engine.py:4171
+# goc/engine.py:5856
 def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
     fm, body = parse_frontmatter(text)
     cur = fm.get(field) or []
@@ -63,7 +63,7 @@ def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
 `_mutate_pair` writes the unchanged text back to disk:
 
 ```python
-# goc/engine.py:4192
+# goc/engine.py:5877
 (child_dir / "README.md").write_text(op(child_text, field_on_child, parent_title))
 (parent_dir / "README.md").write_text(op(parent_text, field_on_parent, child_title))
 ```
@@ -72,7 +72,7 @@ The auto-commit's `git diff --cached --quiet` check then silently returns no
 diff (so `_git_auto_commit` returns `False` and the secondary `committed` line
 is omitted) — but the *primary* "unadvance:" line at line 4410 already lied.
 
-Contrast with `_cmd_advance` (engine.py:4382), which validates the proposed
+Contrast with `_cmd_advance` (engine.py:6100), which validates the proposed
 edge before mutation — self-edge (line 4388) and cycle (line 4392). Both
 checks rely on knowing what the edge set already looks like; checking
 "already in / not in" the list would be one more guard in the same shape.
@@ -124,7 +124,7 @@ Three credible failure modes; the engine has analogues for all three and the
 project hasn't settled on a convention for "non-mutating verb call":
 
 1. **`exit 2 + ERROR on stderr`** — matches `_cmd_advance`'s self-edge and
-   cycle handling (engine.py:4389, 4393). Strictest: a no-op verb call is a
+   cycle handling (engine.py:6108, 4393). Strictest: a no-op verb call is a
    user error, surface it.
 2. **`exit 0 + WARNING on stderr + no success message`** — least disruptive
    to scripts that call `unadvance` defensively; still distinguishable from
@@ -132,7 +132,7 @@ project hasn't settled on a convention for "non-mutating verb call":
    `ORPHAN_BLOCKED` validators.
 3. **`exit 0 + "no edge to remove" success line`** — silent acceptance of
    the idempotent shape. Matches `_remove_from_list_field`'s own no-op
-   return (engine.py:4174). Least intrusive but loses information.
+   return (engine.py:5859). Least intrusive but loses information.
 
 Whichever shape the implementer picks should also cover the analogous
 `goc wait --clear` on a card without a wait (currently unverified — check
@@ -141,7 +141,7 @@ applies consistently across the verb set.
 
 ## Fix
 
-Concrete change in `_cmd_unadvance` (engine.py:4403):
+Concrete change in `_cmd_unadvance` (engine.py:6122):
 
 ```python
 def _cmd_unadvance(args):
@@ -157,7 +157,7 @@ def _cmd_unadvance(args):
     ...
 ```
 
-Alternative: have `_mutate_pair` (engine.py:4180) return `True` iff at least
+Alternative: have `_mutate_pair` (engine.py:5865) return `True` iff at least
 one of the two writes changed the file, and let `_cmd_unadvance` branch on
 that return. Cleaner because it also catches the rare case where one side of
 the bidirectional edge exists but the other doesn't (broken referential

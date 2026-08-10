@@ -1,6 +1,6 @@
 ---
 title: validate-ignores-unknown-frontmatter-keys-so-typos-pass-silently
-summary: "`goc validate` never checks that a card's frontmatter keys are drawn from the known set (`required_fields ∪ optional_fields`). The schema declares `optional_fields` as a closed list, but the engine loads it into the `Schema` dataclass (engine.py:469,490) and never reads it again, so a misspelled or invented key validates clean. The most damaging instance is a `wating_on` typo, which leaves the impediment overlay silently inert. Decision-gated on whether to warn or hard-fail on unknown keys."
+summary: "`goc validate` never checks that a card's frontmatter keys are drawn from the known set (`required_fields ∪ optional_fields`). The schema declares `optional_fields` as a closed list, but the engine loads it into the `Schema` dataclass (engine.py:606,490) and never reads it again, so a misspelled or invented key validates clean. The most damaging instance is a `wating_on` typo, which leaves the impediment overlay silently inert. Decision-gated on whether to warn or hard-fail on unknown keys."
 status: open
 stage: null
 contribution: medium
@@ -27,8 +27,8 @@ or invented key is silently accepted.
 - `goc/schema.yaml:9-20` declares the closed `optional_fields` set
   (`summary`, `stage`, `closed_at`, the four relation fields, `tags`,
   `worker`, `waiting_on`, `waiting_until`).
-- `goc/engine.py:469` (`optional_fields: list[str]` dataclass field)
-  and `goc/engine.py:490` (`optional_fields=fm["optional_fields"]`) are
+- `goc/engine.py:606` (`optional_fields: list[str]` dataclass field)
+  and `goc/engine.py:627` (`optional_fields=fm["optional_fields"]`) are
   the ONLY references. `grep -rn "optional_fields" goc/` returns no read
   site. `validate_card` checks `required_fields` and per-field value
   enums but has no "key present in card but not in the known set" check.

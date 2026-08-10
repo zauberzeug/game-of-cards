@@ -46,7 +46,7 @@ duplicated, every new *orphan class* has to be discovered and patched
 separately in each mechanism — and the drift checks share a recurring
 `rglob("*")` blind spot (`if asset.is_dir(): continue`) that makes empty
 orphan directories invisible to `--check`. A related drift-check
-*completeness* gap: `port_skills_to_openclaw.py:279` reports only
+*completeness* gap: `port_skills_to_openclaw.py:349` reports only
 `<orphan>/SKILL.md` for an orphaned ported dir, while the write path
 (`:360`, `shutil.rmtree(orphan)`) removes the whole dir including
 sibling assets — so `--check` still fires (exit 1) but under-lists which

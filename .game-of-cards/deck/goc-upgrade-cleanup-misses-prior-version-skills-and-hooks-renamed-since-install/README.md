@@ -1,6 +1,6 @@
 ---
 title: goc-upgrade-cleanup-misses-prior-version-skills-and-hooks-renamed-since-install
-summary: "`_strip_claude_vendored_harness` (goc/install.py:773-819) and `_sync_skill_tree(replace_skills=True)` (install.py:1140-1178) identify GoC-owned content by enumerating the *current* templates directory. Any skill or hook GoC shipped in a *prior* version but has since renamed or removed (real example: `bootstrap/` → `kickoff/`, see closed card `rename-bootstrap-to-kickoff-as-onboarding-dialog`) is therefore not in the GoC-owned set, so the cleanup `shutil.rmtree` skips it. Stale prior-version GoC content survives indefinitely in `.claude/skills/` and `.claude/hooks/`, accumulating across upgrades. The closed predecessor `goc-upgrade-clobbers-non-goc-skills-and-validate-fails-in-plugin-mode` deliberately tightened these sets to preserve user-authored content; the unintended consequence is that *GoC*-authored content from earlier versions is now indistinguishable from user content under the current identification rule."
+summary: "`_strip_claude_vendored_harness` (goc/install.py:796-846) and `_sync_skill_tree(replace_skills=True)` (install.py:1140-1178) identify GoC-owned content by enumerating the *current* templates directory. Any skill or hook GoC shipped in a *prior* version but has since renamed or removed (real example: `bootstrap/` → `kickoff/`, see closed card `rename-bootstrap-to-kickoff-as-onboarding-dialog`) is therefore not in the GoC-owned set, so the cleanup `shutil.rmtree` skips it. Stale prior-version GoC content survives indefinitely in `.claude/skills/` and `.claude/hooks/`, accumulating across upgrades. The closed predecessor `goc-upgrade-clobbers-non-goc-skills-and-validate-fails-in-plugin-mode` deliberately tightened these sets to preserve user-authored content; the unintended consequence is that *GoC*-authored content from earlier versions is now indistinguishable from user content under the current identification rule."
 status: open
 stage: null
 contribution: medium
@@ -26,9 +26,9 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:773-819` — `_strip_claude_vendored_harness`, called from the vendored→plugin migration cleanup path (`install.py:1641-1653`)
+- `goc/install.py:796-846` — `_strip_claude_vendored_harness`, called from the vendored→plugin migration cleanup path (`install.py:1641-1653`)
 - `goc/install.py:1140-1178` — `_sync_skill_tree` `replace_skills` path, called from the vendored in-place refresh during `goc upgrade --keep-local-skills`
-- `goc/install.py:803-806` — hook-file enumeration inside `_strip_claude_vendored_harness` (same shape)
+- `goc/install.py:830-833` — hook-file enumeration inside `_strip_claude_vendored_harness` (same shape)
 
 ## What's broken
 
@@ -67,7 +67,7 @@ for cmd in GOC_CLAUDE_HOOKS.values():
 file GoC registered in a prior release but has since dropped from the
 manifest is not in the iteration and survives.
 
-`_sync_skill_tree(replace_skills=True)` (install.py:1162-1166) repeats
+`_sync_skill_tree(replace_skills=True)` (install.py:1224-1228) repeats
 the pattern for the in-place vendored refresh:
 
 ```python
@@ -119,7 +119,7 @@ The same pattern applies symmetrically for hook files removed from
 
 Consumer impact is bounded (only fires when GoC renames/removes
 content across an upgrade boundary), but the cleanup contract
-documented at install.py:776-779 ("removes only the skill directories
+documented at install.py:799-802 ("removes only the skill directories
 whose names match GoC templates") quietly under-delivers in the worst
 case it can fire.
 
@@ -140,7 +140,7 @@ Exit code 1 (bug reproduced). The current-template skill (`kickoff`)
 is correctly removed; the prior-version GoC skill (`bootstrap`)
 survives despite being equally GoC-owned content. The reproducer
 exercises `_strip_claude_vendored_harness` directly; the analogous
-hook-loop omission (install.py:803-806) is verified by reading —
+hook-loop omission (install.py:830-833) is verified by reading —
 `GOC_CLAUDE_HOOKS` only enumerates the current registration set.
 
 ## Decision required

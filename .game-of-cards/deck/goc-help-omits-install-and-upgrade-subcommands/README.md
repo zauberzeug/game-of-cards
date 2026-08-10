@@ -23,7 +23,7 @@ definition_of_done: |
 ## Location
 
 - `goc/cli.py:41-99` — early-intercept short-circuit
-- `goc/engine.py:2576-2748` — `_build_parser` subparser registrations (no `install` / `upgrade`)
+- `goc/engine.py:3651-3855` — `_build_parser` subparser registrations (no `install` / `upgrade`)
 
 ## What's broken
 
@@ -31,7 +31,7 @@ definition_of_done: |
 functions *before* the engine's argparse parser is built:
 
 ```python
-# goc/cli.py:38-46
+# goc/cli.py:37-45
 argv = sys.argv[1:]
 
 # --version / -V before any other parsing
@@ -52,7 +52,7 @@ engine_cli(argv)
 The only path that runs `_build_parser()` (and therefore the only
 path that prints `goc --help`) is `engine_cli(argv)`, which never
 sees `install` / `upgrade` as registered subcommands. `_build_parser`
-itself registers 16 verbs (`goc/engine.py:2576-2748` — `validate`,
+itself registers 16 verbs (`goc/engine.py:3651-3855` — `validate`,
 `quality-pass`, `done`, `attest`, `status`, `new`, `wait`, `advance`,
 `unadvance`, `repair-edges`, `move`, `decide`, `triage`, `show`,
 `migrate`, `migrate-list-style`) and stops there.
@@ -129,7 +129,7 @@ Three credible fix paths; the choice changes the engine/cli boundary:
 
 Add lightweight `subparsers.add_parser("install", help="...")` and
 `subparsers.add_parser("upgrade", help="...")` entries in
-`_build_parser` (`goc/engine.py:2576`) with the same flag set the cli.py
+`_build_parser` (`goc/engine.py:3651`) with the same flag set the cli.py
 intercept defines. The cli.py early-route keeps short-circuiting the
 actual invocation (so `install` / `upgrade` continue to bypass the
 engine's deck loader, which is appropriate — they run before a deck

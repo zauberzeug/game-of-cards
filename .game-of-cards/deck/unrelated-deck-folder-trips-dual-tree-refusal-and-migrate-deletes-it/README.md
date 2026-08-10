@@ -30,10 +30,10 @@ top-level files are destroyed without ever being copied.
 
 ## Location
 
-- `goc/engine.py:107` — `if canonical.exists() and legacy.exists(): _DUAL_TREE_CONFLICT = True`
-- `goc/engine.py:3115` — every verb except `migrate` exits 1 on the conflict, suggesting `goc migrate`
-- `goc/engine.py:5217` — `legacy_dirs = {d.name: d for d in legacy.iterdir() if d.is_dir()}` (only dirs are ever copied)
-- `goc/engine.py:5287` — `shutil.rmtree(legacy)` (deletes the whole folder, including never-copied top-level files)
+- `goc/engine.py:131` — `if canonical.exists() and legacy.exists(): _DUAL_TREE_CONFLICT = True`
+- `goc/engine.py:3864` — every verb except `migrate` exits 1 on the conflict, suggesting `goc migrate`
+- `goc/engine.py:6599` — `legacy_dirs = {d.name: d for d in legacy.iterdir() if d.is_dir()}` (only dirs are ever copied)
+- `goc/engine.py:6681` — `shutil.rmtree(legacy)` (deletes the whole folder, including never-copied top-level files)
 - `goc/install.py:453-461` — `_find_installed_deck_dir` requires `deck/.goc-version` before treating `deck/` as a GoC install (the contrasting predicate)
 
 ## What's broken

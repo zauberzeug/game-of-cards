@@ -28,7 +28,7 @@ populate the "Impeded (waiting overlay)" section:
 impeded = [c for c in cards if c.get('waiting_on')]
 ```
 
-The engine's `waiting_impedes` (`goc/engine.py:1752`) evaluates a
+The engine's `waiting_impedes` (`goc/engine.py:2514`) evaluates a
 four-cell matrix over both overlay fields:
 
 | `waiting_on` | `waiting_until`         | engine: impeded? |
@@ -103,7 +103,7 @@ drift.
 ## Possible fixes
 
 The cleanest is to delegate to the engine's precomputed signal. The
-JSON record already exposes `ready` (`engine.py:2345`,
+JSON record already exposes `ready` (`engine.py:3273`,
 `card_is_ready`). The filter can be:
 
 ```python

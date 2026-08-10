@@ -1,6 +1,6 @@
 ---
 title: goc-quality-pass-overstates-dod-rewrite-count-and-drops-unmatched-fixes
-summary: "`_apply_dod_rewrite` (engine.py:3429) only mutates a DoD line when an accepted issue's `idx` falls inside the card's `box_indices`. An accepted fix whose `idx` is out of range — or a duplicate idx that collides with another accepted fix — is silently dropped. But the caller `_apply_verdict_interactive` (engine.py:3487) unconditionally sets `applied[\"dod\"] = len(accepted_issues)` and prints `DoD: N item(s) rewritten`, so the count and per-card tally are overstated and a fix the operator explicitly accepted vanishes with no signal."
+summary: "`_apply_dod_rewrite` (engine.py:4291) only mutates a DoD line when an accepted issue's `idx` falls inside the card's `box_indices`. An accepted fix whose `idx` is out of range — or a duplicate idx that collides with another accepted fix — is silently dropped. But the caller `_apply_verdict_interactive` (engine.py:4356) unconditionally sets `applied[\"dod\"] = len(accepted_issues)` and prints `DoD: N item(s) rewritten`, so the count and per-card tally are overstated and a fix the operator explicitly accepted vanishes with no signal."
 status: open
 stage: null
 contribution: medium

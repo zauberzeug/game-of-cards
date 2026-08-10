@@ -31,14 +31,14 @@ standup, and retrospective velocity consume.
 
 ## Location
 
-`scripts/backfill_terminal_closed_at.py:38-56` (`latest_readme_commit_iso`),
+`scripts/backfill_terminal_closed_at.py:43-61` (`latest_readme_commit_iso`),
 consumed at line 85 via `mutate_frontmatter_field(text, "closed_at", ts)`.
 
 ## Hypothesis (unverified — parked by an audit round)
 
 ```python
 out = subprocess.check_output(
-    ["git", "log", "-1", "--format=%aI", "--", str(rel)],   # backfill_terminal_closed_at.py:47
+    ["git", "log", "-1", "--format=%aI", "--", str(rel)],   # backfill_terminal_closed_at.py:52
     cwd=ROOT,
 ```
 

@@ -24,7 +24,7 @@ definition_of_done: |
 
 Two independent implementations of the same Codex SKILL.md transform:
 
-- `goc/install.py:1111-1136` — `_write_codex_skill`:
+- `goc/install.py:1138-1163` — `_write_codex_skill`:
 
   ```python
   def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:

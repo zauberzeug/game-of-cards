@@ -24,7 +24,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:607-651` — `_merge_claude_settings`, the dedup-and-append loop.
+- `goc/install.py:614-658` — `_merge_claude_settings`, the dedup-and-append loop.
 - `goc/install.py:656-770` — `_strip_goc_settings_entries`, the removal pass.
 - `goc/install.py:539-543` — `GOC_CLAUDE_HOOKS`, the **current**-version event→command map both sites key on.
 
@@ -36,7 +36,7 @@ hook GoC shipped under a *different* command string in a prior version — the
 direct consequence of renaming or repathing a hook file — is invisible to both
 the dedup and the removal logic.
 
-**Merge side** (`_merge_claude_settings`), the dedup at `install.py:644`:
+**Merge side** (`_merge_claude_settings`), the dedup at `install.py:651`:
 
 ```python
 already = any(
@@ -53,7 +53,7 @@ A stale prior-version registration does not equal `command`, so `already` is
 `False` and the current command is **appended as a second group** — leaving
 both the stale and the current registration live.
 
-**Strip side** (`_strip_goc_settings_entries`), `install.py:678` + `736`:
+**Strip side** (`_strip_goc_settings_entries`), `install.py:701` + `736`:
 
 ```python
 goc_commands = set(GOC_CLAUDE_HOOKS.values())   # current strings only

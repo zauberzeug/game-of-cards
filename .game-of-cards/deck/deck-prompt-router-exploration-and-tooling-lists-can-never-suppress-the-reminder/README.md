@@ -197,11 +197,11 @@ why both survived — the code is live, only the effect is absent.
 **Sweep, bounded and reported.** Scanned every module-level constant in
 `goc/` and `scripts/` (93 names, `_vendor/` excluded as third-party) for
 definitions with no reader anywhere in `goc/`, `scripts/`, or `tests/`. One
-hit: `SUPERSEDE_REL_FIELDS` (`goc/engine.py:1218`), whose three neighbours
+hit: `SUPERSEDE_REL_FIELDS` (`goc/engine.py:1231`), whose three neighbours
 `LIST_REL_FIELDS`, `ADVANCE_REL_FIELDS` and `INVERSE_REL` all have readers —
-`HalfEdge.is_advance` (`goc/engine.py:1255`) consults `ADVANCE_REL_FIELDS`,
+`HalfEdge.is_advance` (`goc/engine.py:1268`) consults `ADVANCE_REL_FIELDS`,
 while the supersession branch is written out longhand as
-`edge.field == "superseded_by"` (`goc/engine.py:5739`) rather than through
+`edge.field == "superseded_by"` (`goc/engine.py:5918`) rather than through
 the constant sitting right beside it. That is the degenerate case of this
 shape — an unused name, not a misleading contract — so it is noted here
 rather than filed. The sweep did NOT cover unread dataclass *fields* or dict

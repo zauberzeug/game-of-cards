@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4054-4059` — `_run_derived_check("dod-100-percent", ...)`
+- `goc/engine.py:5263-5268` — `_run_derived_check("dod-100-percent", ...)`
 - `goc/engine.py:3492-3494` — `_cmd_done` free-form refusal
 - `goc/engine.py:3566-3571` — `_cmd_done_bundle` free-form refusal
 
@@ -126,7 +126,7 @@ what story they tell the consumer about a free-form DoD.
 1. **Attest reports SKIPPED.** Change `_run_derived_check` so
    `dod-100-percent` on a free-form DoD returns the sentinel that
    `_format_attestation_block` already renders as `[~] ... SKIPPED —`
-   (see `engine.py:4108-4110`). `Attestation OK` stays correct
+   (see `engine.py:5317-5319`). `Attestation OK` stays correct
    (no failure, just one skip). `goc done` continues to require
    `--force`, consistent with "the engine cannot verify completeness;
    the human must assert it." Recommended baseline: it makes the
@@ -149,7 +149,7 @@ what story they tell the consumer about a free-form DoD.
 
 The fix is single-site once a direction is chosen:
 
-- Options 1 and 2 edit only `_run_derived_check` (`engine.py:4054-4059`)
+- Options 1 and 2 edit only `_run_derived_check` (`engine.py:5263-5268`)
   plus add a regression test.
 - Option 3 edits `_cmd_done` / `_cmd_done_bundle` (`engine.py:3492-3494`,
   `engine.py:3566-3571`) plus add a regression test.

@@ -1,6 +1,6 @@
 ---
 title: goc-status-silently-drops-worker-overrides-on-non-active-transitions
-summary: "`goc status <t> {open|disproved|superseded} --worker-who alice --worker-where feature/foo` silently produces no worker mutation. `_cmd_status` only invokes `_auto_populate_worker` inside `if new_status == \"active\":` (engine.py:4003-4004), so the flags are read off `args` (engine.py:3955-3956) and then dropped on every non-active transition. The argparser at engine.py:2621-2624 advertises both flags with no restriction on `new_status`, unlike `--by` which has an explicit `new_status != \"superseded\"` reject at engine.py:3958-3964. Sibling family of `goc-status-active-discards-worker-overrides-when-target-already-active` (which covers the `prior == new_status == active` early-return path) — this one covers the `new_status != active` code-path branch."
+summary: "`goc status <t> {open|disproved|superseded} --worker-who alice --worker-where feature/foo` silently produces no worker mutation. `_cmd_status` only invokes `_auto_populate_worker` inside `if new_status == \"active\":` (engine.py:4003-4004), so the flags are read off `args` (engine.py:5499-5500) and then dropped on every non-active transition. The argparser at engine.py:3704-3707 advertises both flags with no restriction on `new_status`, unlike `--by` which has an explicit `new_status != \"superseded\"` reject at engine.py:3958-3964. Sibling family of `goc-status-active-discards-worker-overrides-when-target-already-active` (which covers the `prior == new_status == active` early-return path) — this one covers the `new_status != active` code-path branch."
 status: open
 stage: null
 contribution: medium
@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` (honor the override flags on non-active transitions and write the worker block; OR keep silent-drop and document it in `--worker-who` / `--worker-where` help text; OR exit non-zero with a "--worker-who/--worker-where only apply with new_status=active" diagnostic — the same shape `--by` already uses for the `superseded` constraint at engine.py:3958-3964).
   - [ ] TDD: `reproduce.py` exits zero — chosen behavior matches expectation across the matrix (`new_status ∈ {open, disproved, superseded}` × override-flags-set).
   - [ ] TDD: a unittest under `tests/` exercises `goc status <t> disproved --worker-who <new>` on an open card and asserts the chosen behavior so a future `_cmd_status` refactor cannot reintroduce the silent drop.
-  - [ ] MECHANICAL: argparser help text at engine.py:2621-2624 (`--worker-who`, `--worker-where`) reads consistently with the chosen behavior.
+  - [ ] MECHANICAL: argparser help text at engine.py:3704-3707 (`--worker-who`, `--worker-where`) reads consistently with the chosen behavior.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 ---
 
@@ -24,8 +24,8 @@ definition_of_done: |
 ## Location
 
 - Worker-update path that only runs on `active`: `goc/engine.py:4003-4004`
-- Args parsed but never reached: `goc/engine.py:3955-3956`
-- Argparser that advertises the flags without restriction: `goc/engine.py:2621-2624`
+- Args parsed but never reached: `goc/engine.py:5499-5500`
+- Argparser that advertises the flags without restriction: `goc/engine.py:3704-3707`
 - The sister `--by` validator that DOES reject for the wrong `new_status`: `goc/engine.py:3958-3964`
 
 ## What's broken
@@ -129,11 +129,11 @@ and the sibling `goc-status-active-discards-worker-overrides-when-target-already
 
 Reachable without contrived input:
 
-- The argparser at `engine.py:2621-2624` exposes both flags on every
-  `new_status` choice (the `choices=` list at `engine.py:2613` is
+- The argparser at `engine.py:3704-3707` exposes both flags on every
+  `new_status` choice (the `choices=` list at `engine.py:3696` is
   `MUTABLE_STATUS_VALUES` — all non-`done` statuses).
 - `_cmd_status` accepts the args without ever rejecting them
-  (`engine.py:3955-3956` just reads them).
+  (`engine.py:5499-5500` just reads them).
 - `_auto_populate_worker` is the only call site that consults them,
   guarded by `if new_status == "active"` (`engine.py:4003-4004`).
 - The closure-path verb `goc done` has its own `_cmd_done` handler

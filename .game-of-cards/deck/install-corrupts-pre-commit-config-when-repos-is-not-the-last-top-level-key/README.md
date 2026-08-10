@@ -1,6 +1,6 @@
 ---
 title: install-corrupts-pre-commit-config-when-repos-is-not-the-last-top-level-key
-summary: "`goc install`/`goc upgrade` call `_append_precommit_hook` (goc/install.py:1320), which appends its `- repo: local` hook block to the END of an existing `.pre-commit-config.yaml`, assuming the file ends with a block-style `repos:` list. That assumption breaks three ways, each producing invalid YAML that `pre-commit run` refuses to parse: (a) a top-level key *after* `repos:` (e.g. `default_language_version`, `exclude`, `fail_fast`); (b) an empty *inline* list `repos: []`; (c) no `repos:` key at all (e.g. only `ci:`). In every case the install silently corrupts the user's pre-commit configuration."
+summary: "`goc install`/`goc upgrade` call `_append_precommit_hook` (goc/install.py:1723), which appends its `- repo: local` hook block to the END of an existing `.pre-commit-config.yaml`, assuming the file ends with a block-style `repos:` list. That assumption breaks three ways, each producing invalid YAML that `pre-commit run` refuses to parse: (a) a top-level key *after* `repos:` (e.g. `default_language_version`, `exclude`, `fail_fast`); (b) an empty *inline* list `repos: []`; (c) no `repos:` key at all (e.g. only `ci:`). In every case the install silently corrupts the user's pre-commit configuration."
 status: open
 stage: null
 contribution: medium
@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` — parse-and-insert (load YAML, append into `repos:`, dump) vs. structured-text-insert (find `repos:` block end, splice before next top-level key) vs. error-out-with-instructions. Body should weigh round-trip preservation (comments, key order, quoting) against complexity. NOTE: option (2) as literally written ("splice before next top-level key") does not handle the `repos: []` inline-list or absent-`repos:` cases — the chosen mechanism must cover all three shapes below.
   - [ ] TDD: `reproduce.py` exits zero — appending the GoC hook to each of the three broken shapes (top-level key after `repos:`; empty inline `repos: []`; no `repos:` key at all) leaves a parseable, semantically-correct config in which the goc-validate hook is a member of `repos:`.
   - [ ] TDD: a regression test in `tests/` covers the three top-level keys observed in real pre-commit configs (`default_language_version`, `exclude`, `fail_fast`) appearing after `repos:`, the empty inline `repos: []` case, the absent-`repos:` case (e.g. a config with only `ci:`), plus the existing happy-path case where a block-form `repos:` is last.
-  - [ ] MECHANICAL: the fix lands in `goc/install.py:1320` (`_append_precommit_hook`).
+  - [ ] MECHANICAL: the fix lands in `goc/install.py:1723` (`_append_precommit_hook`).
   - [ ] TDD: `uv run goc validate` passes.
 ---
 
@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/install.py:1320` — `_append_precommit_hook`.
+`goc/install.py:1723` — `_append_precommit_hook`.
 
 ```python
 def _append_precommit_hook(target: Path) -> None:

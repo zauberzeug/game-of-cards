@@ -1,6 +1,6 @@
 ---
 title: sync-claude-import-overwrites-user-authored-import-line-with-goc-target
-summary: "`_sync_claude_import` (`goc/install.py:229-267`) identifies the GoC import line to update by matching against ALL importable targets (`@AGENTS.md`, `@CLAUDE.local.md`), not just the one GoC manages. So a user's hand-authored `@CLAUDE.local.md` import is rewritten to `@AGENTS.md` when GoC's briefing target is the default, destroying the user's import. Sibling of `strip-claude-import-removes-user-authored-import-lines-from-claude-md`; both functions need the same ownership rule for bare import lines."
+summary: "`_sync_claude_import` (`goc/install.py:231-269`) identifies the GoC import line to update by matching against ALL importable targets (`@AGENTS.md`, `@CLAUDE.local.md`), not just the one GoC manages. So a user's hand-authored `@CLAUDE.local.md` import is rewritten to `@AGENTS.md` when GoC's briefing target is the default, destroying the user's import. Sibling of `strip-claude-import-removes-user-authored-import-lines-from-claude-md`; both functions need the same ownership rule for bare import lines."
 status: open
 stage: null
 contribution: medium
@@ -21,10 +21,10 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:229-267` — `_sync_claude_import`
+- `goc/install.py:231-269` — `_sync_claude_import`
 - `goc/install.py:247-250` — the sole-line early return
 - `goc/install.py:257-265` — the bare-line replacement loop
-- `goc/install.py:40` — `CLAUDE_IMPORTABLE_TARGETS = ("AGENTS.md", "CLAUDE.local.md")`
+- `goc/install.py:42` — `CLAUDE_IMPORTABLE_TARGETS = ("AGENTS.md", "CLAUDE.local.md")`
 - Caller: `_sync_methodology_blocks` (`install.py`, when `briefing_target != "CLAUDE.md"`)
 
 ## What's broken
@@ -64,7 +64,7 @@ custom CLAUDE.md content, keep it" but the bare-line replacement loop
 mutates a line GoC never wrote.
 
 The intended path for non-GoC content is the marker-bounded block at
-`install.py:267` (`text.rstrip() + "\n\n" + block`); the bug is that the
+`install.py:269` (`text.rstrip() + "\n\n" + block`); the bug is that the
 union-match short-circuits to overwrite before that path is reached.
 
 ## Empirical evidence

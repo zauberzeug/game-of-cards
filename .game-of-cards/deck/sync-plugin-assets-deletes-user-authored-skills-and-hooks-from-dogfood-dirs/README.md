@@ -24,7 +24,7 @@ definition_of_done: |
 - `scripts/sync_plugin_assets.py:270-272` — the dst-only prune inside `_sync_dir`
 - `scripts/sync_plugin_assets.py:171-198` — the dogfood pairs it applies to (`.claude/skills/` with only `_goc-bootstrap.sh` preserved; `.claude/hooks/` with an empty `preserve_files`)
 - `scripts/sync_plugin_assets.py:377` — same prune shape in `_sync_codex_skill_tree` for `.codex/skills/` (`rel.parts[0] not in eligible` unlinks non-GoC names)
-- `scripts/sync_plugin_assets.py:575` — `subprocess.run(["git", "add", "--"] + rel, check=True, ...)` stages the deletions and crashes on untracked ones
+- `scripts/sync_plugin_assets.py:579` — `subprocess.run(["git", "add", "--"] + rel, check=True, ...)` stages the deletions and crashes on untracked ones
 
 ## What's broken
 
@@ -40,7 +40,7 @@ Applied to the dogfood pairs (`goc/templates/skills → .claude/skills`,
 `goc/templates/hooks → .claude/hooks`), this deletes any file GoC does
 not ship — including a contributor's own repo-local skill or hook. The
 engine's consumer-facing contract for the very same directory says the
-opposite (`goc/install.py:1186-1188`, `_sync_skill_tree` docstring):
+opposite (`goc/install.py:1214-1216`, `_sync_skill_tree` docstring):
 
 > Non-eligible directories are left untouched — `.claude/skills/` may hold
 > user-owned skills (or skills from other tools) that GoC does not own and

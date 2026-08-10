@@ -13,7 +13,7 @@ advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` writes a card with `tags: [bug, [nested, list]]`, runs `goc validate`, and exits 1 today (raw `TypeError` traceback) and 0 after the fix (clean per-card error).
-  - [ ] MECHANICAL: `validate_card` rejects non-string elements in the `tags` field with a typed message ("tags: must be a list of strings; got <type> value=<repr> at index N"), mirroring the existing container-type guard at engine.py:1203 and the relationship-list fix sketch on the peer card.
+  - [ ] MECHANICAL: `validate_card` rejects non-string elements in the `tags` field with a typed message ("tags: must be a list of strings; got <type> value=<repr> at index N"), mirroring the existing container-type guard at engine.py:1727 and the relationship-list fix sketch on the peer card.
   - [ ] TDD: a regression test in `tests/` covers a nested-list element AND at least one non-string scalar element (int, null, mapping) on the `tags` field.
   - [ ] EMPIRICAL: `uv run goc validate` on a deck containing such a card prints the typed per-card error and exits non-zero — no Python traceback in the output.
   - [ ] PROCESS: decision recorded — per-site guard (Option 1) vs roll into the shared `_assert_list_of_strings` helper on the meta-fix (Option 2), with rationale.
@@ -38,7 +38,7 @@ else:
 ```
 
 `schema.canonical_tags` is a `set[str]` (see `Schema.canonical_tags` at
-engine.py:400, populated from `schema.yaml` plus
+engine.py:614, populated from `schema.yaml` plus
 `_load_consuming_repo_tags`).
 
 ## What's broken
@@ -56,7 +56,7 @@ This is the same anti-pattern resolved in adjacent code and the
 relationship-list peer card:
 
 - `goc-validate-crashes-with-typeerror-on-non-string-element-in-relationship-list`
-  (open, filed 2026-05-30) — same shape, but at `engine.py:1258` for
+  (open, filed 2026-05-30) — same shape, but at `engine.py:1819` for
   `advances` / `advanced_by` / `supersedes` / `superseded_by`.
 - `Card.tags` property at `engine.py:521-524` already guards the
   *container* type (`return v if isinstance(v, list) else []`) so
@@ -110,7 +110,7 @@ list of strings`).
 
 ## Why it matters
 
-Reachability path: the YAML-lite parser (`goc/engine.py:144`,
+Reachability path: the YAML-lite parser (`goc/engine.py:173`,
 `parse_frontmatter` → `yaml.safe_load`) accepts nested flow sequences
 inside a block sequence — that's a normal YAML 1.2 shape. Any of:
 
@@ -147,7 +147,7 @@ peer card:
 1. **Tighten `validate_card`'s tags loop only.** Add an
    `isinstance(tag, str)` check inside the loop and emit a typed
    message. Smallest diff. Other consumers (e.g. `validate_tag_filters`
-   at engine.py:2088, `_cmd_new` at engine.py:4131) receive tags from
+   at engine.py:2953, `_cmd_new` at engine.py:4131) receive tags from
    argparse so they're already string-typed; the only at-risk consumer
    is the validator itself.
 

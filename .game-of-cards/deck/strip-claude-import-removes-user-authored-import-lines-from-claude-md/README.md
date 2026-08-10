@@ -21,7 +21,7 @@ definition_of_done: |
 ## Location
 
 - `goc/install.py:209-226` — `_strip_claude_import`
-- `goc/install.py:1266` — sole caller, inside `_sync_methodology_blocks` when `briefing_target == "CLAUDE.md"`
+- `goc/install.py:1361` — sole caller, inside `_sync_methodology_blocks` when `briefing_target == "CLAUDE.md"`
 - `goc/install.py:229-268` — `_sync_claude_import`, which shows why ownership of bare lines is ambiguous
 
 ## Hypothesis (unverified — code-reading evidence only)
@@ -51,7 +51,7 @@ The ambiguity is real, not an oversight: `_sync_claude_import`
 sometimes writes GoC's import as a bare line (fresh file, or file
 whose entire content was an import line) and even edits bare lines
 amid user content in place (`replaced_bare_import` path,
-install.py:257-264). So at strip time GoC genuinely cannot tell
+install.py:259-266). So at strip time GoC genuinely cannot tell
 "line I wrote" from "line the user wrote" — the bug is that it
 resolves the ambiguity by deleting user content.
 

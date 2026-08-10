@@ -32,10 +32,10 @@ with a raw `FileNotFoundError` traceback instead.
 
 ## Location
 
-- `goc/install.py:484` — `return _PACKAGE_DIR.parent.name in {"claude-plugin", "codex-plugin", "openclaw-plugin"}`
-- `goc/install.py:498` — `return _PACKAGE_DIR.parent.name == "openclaw-plugin"`
-- `goc/engine.py:4083-4087` — `_claude_plugin_present()` documents the real layouts
-- `tests/test_install.py:1891` — test fabricates `cwd / "_plugin" / "claude-plugin"`, the one layout that matches
+- `goc/install.py:486` — `return _PACKAGE_DIR.parent.name in {"claude-plugin", "codex-plugin", "openclaw-plugin"}`
+- `goc/install.py:500` — `return _PACKAGE_DIR.parent.name == "openclaw-plugin"`
+- `goc/engine.py:5034-5038` — `_claude_plugin_present()` documents the real layouts
+- `tests/test_install.py:2230` — test fabricates `cwd / "_plugin" / "claude-plugin"`, the one layout that matches
 
 ## What's broken
 
@@ -66,13 +66,13 @@ refusal:
 
 With the detection dead, that safety story is false on every real install.
 The OpenClaw no-harness default (`_is_openclaw_plugin_context`, used at
-`install.py:1422` and `install.py:1585`) is equally dead — real OpenClaw
+`install.py:1517` and `install.py:1686`) is equally dead — real OpenClaw
 installs fall back to the Claude-harness default the docstring says must
 never happen (the closed card
 [openclaw-kickoff-defaults-to-claude-install](../openclaw-kickoff-defaults-to-claude-install/)
 fixed that default *conditional on this detection working*).
 
-The regression suite stays green because `tests/test_install.py:1891`
+The regression suite stays green because `tests/test_install.py:2230`
 constructs `plugin_root = cwd / "_plugin" / "claude-plugin"` — exactly the
 one directory name the detection matches, and exactly the layout no
 consumer ever has.

@@ -26,7 +26,7 @@ definition_of_done: |
 
 - `goc/engine.py:2685-2694` (subparser — no `--commit` / `--no-commit`).
 - `goc/engine.py:4252-4306` (`_cmd_repair_edges` — no `_git_auto_commit` call).
-- `goc/engine.py:4180-4193` (`_mutate_pair` — the disk-write helper repair-edges shares with `advance` / `unadvance`).
+- `goc/engine.py:5865-5878` (`_mutate_pair` — the disk-write helper repair-edges shares with `advance` / `unadvance`).
 
 ## What's broken
 
@@ -120,7 +120,7 @@ See `reproduce.py` for the runnable check.
 
 Reachability is direct: the pre-commit hook runs `goc validate`, which
 reports half-edges and prints `Run 'goc repair-edges --apply' to fix.`
-(`engine.py:2920`). Anyone following that hint, or any `/loop` agent
+(`engine.py:4085`). Anyone following that hint, or any `/loop` agent
 running `repair-edges --apply` as part of routine cleanup, leaves the
 working tree dirty.
 
@@ -227,10 +227,10 @@ if repaired:
 
 ## Sibling sweep
 
-`_cmd_move` at `engine.py:4487-4544` exercises a similar disk-write
+`_cmd_move` at `engine.py:6225-6285` exercises a similar disk-write
 path: it uses `git mv` (which stages the directory rename) but the
 subsequent `_move_rewrite_tracked_files` writes to README.md / log.md
 across the repo without staging or committing those rewrites. The
-subparser at `engine.py:2697-2703` also does not expose `--commit` /
+subparser at `engine.py:3801-3807` also does not expose `--commit` /
 `--no-commit`. The DoD `PROCESS:` item flags this for a follow-up
 card if Option A's fix does not generalize to cover move.

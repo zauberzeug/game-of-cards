@@ -109,9 +109,9 @@ error. The contract "this hook can be turned off in
 While reading this file I noticed a second asymmetry vs. the
 just-fixed `deck_session_start.py`:
 
-- `pattern_generalization_check.py:126` reads only
+- `pattern_generalization_check.py:216` reads only
   `CLAUDE_PROJECT_DIR`, never `CODEX_PROJECT_DIR`.
-- `deck_session_start.py:153-154` reads both env vars, with a
+- `deck_session_start.py:282-283` reads both env vars, with a
   helper `_project_dir_from_hook_input()`.
 
 Under a Codex host that sets `CODEX_PROJECT_DIR` and does not pass
