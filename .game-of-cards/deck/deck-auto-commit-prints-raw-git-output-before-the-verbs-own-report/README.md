@@ -1,7 +1,7 @@
 ---
 title: deck-auto-commit-prints-raw-git-output-before-the-verbs-own-report
 summary: "goc's deck auto-commit runs `git add` and `git commit` without `capture_output=True` — the only two subprocess calls in engine.py that do not — so git's own porcelain lands on goc's stdout. When stdout is a pipe (agent tool capture, CI logs, `| head`) Python's block buffering makes git's lines arrive BEFORE the verb's own report, scrambling the output of every auto-committing verb, `goc status <title> active` included. The closed sibling `move-fallback-leaks-git-fatal` already fixed this exact shape at the `git mv` call site."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-10T05:35:14Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: regression test under `tests/` pins that an auto-committing verb's piped stdout contains only goc's own lines, and that a FAILING `git commit` still surfaces git's diagnostic (captured output is reported, not swallowed)
   - [ ] MECHANICAL: `git add` and `git commit` in `_git_auto_commit` pass `capture_output=True` like every other `subprocess.run` in `goc/engine.py`
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` no worse than main; `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # deck auto-commit prints raw git output before the verb's own report
