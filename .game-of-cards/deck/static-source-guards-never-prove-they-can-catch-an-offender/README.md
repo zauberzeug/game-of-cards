@@ -309,9 +309,13 @@ carries only what it teaches about scope.
 Connected 2026-08-10 from
 [refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file](../refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file/).
 That card's check is not code anywhere. It is a sentence in a shipped skill —
-`goc/templates/skills/refine-deck/SKILL.md:105`, "verify each cited file exists
-and the cited line is ≤ EOF" — that an agent re-derives and executes on every
-hygiene pass, then reports as a category with no findings.
+`goc/templates/skills/refine-deck/SKILL.md:103`, until 2026-08-10 reading "verify
+each cited file exists and the cited line is ≤ EOF" — that an agent re-derives and
+executes on every hygiene pass, then reports as a category with no findings.
+That successor card closed on 2026-08-10 and the sentence now specifies an anchor
+test, so this instance's *predicate* is fixed; what it contributes here is
+unchanged, because nothing about the fix gives a prose-specified check something a
+harness could register or a meta-test enumerate.
 
 It is fail-open in the table's exact sense: the output is an empty offender
 list, and nothing distinguishes "no citation rotted" from "this test cannot
@@ -319,9 +323,11 @@ express citation rot". What it adds to the four is that they *could* stop
 guarding, whereas this one never guarded. `≤ EOF` is a bounds test for a
 displacement problem, so it can only fire when a file shrinks past a cite;
 source files grow. Measured recall over the deck's own citations, replayed at
-each card's creating commit: **0 of 482** moved citations reported, while the
-check called all 706 clean. It has been shipping that answer for the life of
-the deck.
+each card's creating commit: **0 of 728** moved citations reported, while the
+check called all 806 clean. It had been shipping that answer for the life of
+the deck. (The figures read 0 of 482 when this section was written; the
+successor's script was widened at closure to map both endpoints of range cites,
+which enlarges the population without changing the recall.)
 
 **What it changes about the options.** Both are scoped to prohibition scanners
 living in `tests/`, and both attach to a Python callable — Option A puts a
@@ -338,7 +344,7 @@ run it against first, so a specification that cannot fire is caught at the point
 of being followed rather than after a deck has rotted underneath it.
 
 The corpus point from the section above recurs in a sharper form. The offender
-sample was never missing here: 482 stale citations were sitting in the deck the
+sample was never missing here: 728 stale citations were sitting in the deck the
 whole time, and every pass walked past them and reported the category clean. A
 check whose population contains hundreds of known offenders and which returns
 none should have to say so out loud.

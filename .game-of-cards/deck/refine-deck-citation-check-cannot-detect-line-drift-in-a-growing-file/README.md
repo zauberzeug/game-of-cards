@@ -1,32 +1,32 @@
 ---
 title: refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file
-summary: "The refine-deck skill specifies its defunct-citation check as `the cited file exists and the cited line is <= EOF`, a predicate that can only fire when a file SHRINKS past the cite. Source files grow, so a citation whose target moved thousands of lines away still passes. Replaying every citation this deck's open cards carried at filing time: 482 of 528 now point at unrelated code and the shipped check flags 0 of them. Every consuming repo running the hygiene pass gets a clean citation report on a fully rotted deck."
-status: open
+summary: "The refine-deck skill specified its defunct-citation check as `the cited file exists and the cited line is <= EOF`, a predicate that can only fire when a file SHRINKS past the cite. Source files grow, so a citation whose target moved thousands of lines away still passed. Replaying every citation this deck's open cards carried at filing time, 728 of 806 now point at unrelated code and the bounds test flagged 0 of them, so every consuming repo's hygiene pass reported a clean deck while the citations rotted. Replaced by an anchor test plus a repair recipe that declines rather than guesses: recall 728/728, zero false positives."
+status: done
 stage: null
 contribution: high
 created: "2026-08-10T02:38:28Z"
-closed_at: null
+closed_at: "2026-08-10T05:02:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every citation whose line content changed
+  - [x] TDD: `reproduce.py` exits zero — every citation whose line content changed
         since filing is reported by whatever check the skill specifies.
-  - [ ] MECHANICAL: the `### Defunct file:line citations` section of
+  - [x] MECHANICAL: the `### Defunct file:line citations` section of
         `goc/templates/skills/refine-deck/SKILL.md` no longer specifies `<= EOF` as
         the test. It specifies an anchor-based check that compares what is AT the
         cited line against what the card says is there, and states plainly that an
         in-range line number is not evidence the citation is current.
-  - [ ] MECHANICAL: the section gives the repair recipe, not just the detection —
+  - [x] MECHANICAL: the section gives the repair recipe, not just the detection —
         resolve each cite against the cited file at the card's creating commit,
         relocate that line's text in HEAD, and rewrite the number only when the
         match is unique and non-trivial. Bare-basename cites (`engine.py:N` for
         `goc/engine.py:N`) resolve too.
-  - [ ] MECHANICAL: all five mirrors regenerate from the template and
+  - [x] MECHANICAL: all five mirrors regenerate from the template and
         `python scripts/sync_plugin_assets.py --check` plus
         `python3 scripts/port_skills_to_openclaw.py --check` are clean.
-  - [ ] PROCESS: the residue is stated rather than hidden — the recipe cannot map a
+  - [x] PROCESS: the residue is stated rather than hidden — the recipe cannot map a
         cite whose line text was deleted or is ambiguous, so the section says those
         are reported for a human read instead of silently skipped.
 ---
@@ -35,15 +35,16 @@ definition_of_done: |
 
 ## Location
 
-- `goc/templates/skills/refine-deck/SKILL.md:105` — the specification.
-- The same sentence ships in all five mirrors: `.claude/skills/refine-deck/SKILL.md`,
+- `goc/templates/skills/refine-deck/SKILL.md:103` — the specification, now the
+  anchor test; `reference.md:111` § "Citation anchor check" carries its long form.
+- The same section ships in all five mirrors: `.claude/skills/refine-deck/SKILL.md`,
   `.codex/skills/refine-deck/SKILL.md`, `claude-plugin/skills/refine-deck/SKILL.md`,
   `codex-plugin/skills/refine-deck/SKILL.md`,
   `openclaw-plugin/skills/refine-deck/SKILL.md`.
 
-## What's broken
+## What was broken
 
-The skill defines the check as:
+The skill defined the check as, verbatim until this card closed:
 
 > For each open card, check its body cites against current code:
 > verify each cited file exists and the cited line is ≤ EOF. A defunct
@@ -66,36 +67,51 @@ the specified test cannot see.
 
 `reproduce.py` replays each open card's citations as they stood in the README blob
 at that card's creating commit, so the measurement is independent of any later
-repair, and compares two verdicts per cite: what the shipped `<= EOF` test reports
-today, and whether the cited line still holds the text it held at filing.
+repair. Ground truth per cite is read straight off the two blobs — the cited line no
+longer holds the text it held at filing — and both predicates are scored against it:
+the `≤ EOF` bounds test the section used to specify, and the anchor test it specifies
+now.
 
 ```
 open cards examined            : 182
-citations replayed at filing   : 528
+citations replayed at filing   : 806
 
-  still correct                : 46
-  FLAGGED by the `<= EOF` check: 0
-  MOVED but reported clean     : 482   <-- the blind region
+  unchanged since filing       : 78
+  DRIFTED (ground truth)       : 728
 
-  examples:
+verdicts on the drifted set:
+  bounds test `line <= EOF`    : 0 reported, 728 missed
+  anchor test (current spec)   : 728 reported, 0 missed
+      auto-repairable          : 521
+      residue, human-reported  : 207  (ambiguous 87, anchor absent 28, trivial 92)
+
+  anchor test on the 78 unchanged cites: 0 false positives
+
+  examples from the drifted set:
     active-state-conflates-being-worked-on-with-parked-at-human-gate
-      cite goc/engine.py:2443 -> goc/engine.py has 6730 lines, so EOF check says CLEAN
+      cite goc/engine.py:2443 in a 6730-line file, so the bounds test says CLEAN
       at filing: 'def render_leverage_line('
-      today    : 'The single "not yet real" predicate consulted by the terminal-tran'
-    advance-cycle-detectors-walk-different-edge-fields
-      cite goc/engine.py:1349 -> goc/engine.py has 6730 lines, so EOF check says CLEAN
-      at filing: 'for a in card.frontmatter.get("advances") or []:'
-      today    : ''
-    agent-manifest-guidance-block-is-built-but-silently-ignored
-      cite goc/install.py:111 -> goc/install.py has 1837 lines, so EOF check says CLEAN
-      at filing: 'AGENTS_GUIDANCE = GuidanceBlock("AGENTS.md", "AGENTS_GOC.md", "# A'
-      today    : ''
+      today    : 'The single "not yet real" predicate consulted by the termina'  -> L3424
+    active-state-conflates-being-worked-on-with-parked-at-human-gate
+      cite goc/engine.py:2477 in a 6730-line file, so the bounds test says CLEAN
+      at filing: ')'
+      today    : 'return False'  -> residue: trivial
+    active-state-conflates-being-worked-on-with-parked-at-human-gate
+      cite goc/engine.py:2480 in a 6730-line file, so the bounds test says CLEAN
+      at filing: 'def render_active_notice('
+      today    : 'if card.human_gate != "none":'  -> L3464
 
-FAIL: the shipped check reported a clean deck while 482 citations pointed at unrelated code.
+PASS: the specified check reports all 728 drifted citations (521 repairable, 207 handed to a human); the bounds test it replaced reports 0.
 ```
 
-The recall figure is 0/482. Two of the three examples now land on a blank line, and
-the first lands in the middle of an unrelated paragraph of prose.
+The bounds test's recall is 0 of 728 — the blind region is the entire drifted
+population, and its silence was indistinguishable from a clean deck. The anchor test
+reaches 728 of 728 with no false positive on the 78 cites that are still correct,
+which rules out the degenerate predicate that reports everything.
+
+The population is larger than the 528 first reported on this card because the script
+now maps both endpoints of range cites (`file.py:120-140`), as the shipped spec
+requires; the recall figures are unchanged in shape.
 
 A second, independent measurement over the working deck agreed before repair: of 181
 citations that name a backticked identifier within 120 characters, 142 sat more than
@@ -137,9 +153,19 @@ Per that card's own convention for evidence connections on an open decision, the
 link is a cross-reference and not an `advances` edge. The fix below is this card's
 to carry regardless of how the scope question there is decided.
 
-## Fix
+## Fix (shipped 2026-08-10)
 
-Replace the bounds test with an anchor test, and ship the repair recipe alongside it.
+The bounds test is gone from `goc/templates/skills/refine-deck/SKILL.md`
+§ "Defunct file:line citations", replaced by the anchor test and the four-step
+repair recipe below; the long form (why bounds fails, the resolution rules, the
+residue table) went to that skill's `reference.md` § "Citation anchor check", and
+all five mirrors were regenerated. The section now says outright that an in-range
+line number is no evidence a cite is current, and that the cites the recipe declines
+are reported for a human rather than skipped. `tests/test_skill_body_size.py` raised
+the refine-deck cap from 10,300 to 11,200 bytes, with the rationale recorded there:
+an agent that has to follow a pointer to learn the test will run the bounds test it
+already remembers.
+
 The recipe is not hypothetical: the 2026-08-10 hygiene pass ran it over this deck and
 repaired 388 citations across 113 of 179 open cards, leaving `uv run goc validate`
 clean. The mechanism, per citation:

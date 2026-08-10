@@ -47,6 +47,7 @@ situation actually applies:
 |---|---|
 | Why this pass exists; hook scope rules | Rationale |
 | Running the four orphaned-dependency sub-checks | Orphaned-dependency sub-check scripts |
+| Anchoring cites; what the recipe declines | Citation anchor check |
 | `goc quality-pass --llm` | Quality-pass `--llm` flag |
 | What the Step 4 report should look like | Example Step 4 output |
 | Which findings Step 4.5 covers, escape valve | Step 4.5 scope notes |
@@ -101,13 +102,28 @@ decide if the lead is still real, and either:
 
 ### Defunct file:line citations
 
-For each open card, check its body cites against current code:
-verify each cited file exists and the cited line is ≤ EOF. A defunct
-citation usually means the cited code was refactored. Re-read the
-card; either update the citation in place (mechanical edit, no
-status change) or — if the refactor also fixed the defect — close
-via `Skill(finish-card)` with a note "fixed incidentally by
-<commit-hash>".
+Check each open card's cites against current code with an ANCHOR
+test, not a bounds test. An in-range line number is no evidence the
+cite is current: a file that grew keeps every old number valid while
+the code that was there moved down, so `line ≤ EOF` can only fire on
+a file that SHRANK. Compare what is AT the cited line now against
+what the card says is there. Per cite (long form: `reference.md`
+§ Citation anchor check):
+
+1. Resolve the path — cards write `engine.py:N` for `goc/engine.py:N`;
+   prefer a non-mirror match. Ranges map both endpoints.
+2. Anchor = that line's text at the card's creating commit
+   (`git log --diff-filter=A -- <card>/README.md`, last entry).
+3. Anchor ≠ the line in HEAD → the cite is defunct.
+4. Relocate the anchor text in HEAD and rewrite the number **only** on
+   a unique match of a non-trivial line (>~12 chars, not a blank or a
+   bare brace). Never guess.
+
+Cites step 4 declines — anchor gone, ambiguous, or trivial — are
+REPORTED for a human to read, never silently skipped. Anchor text that
+exists nowhere usually means the cited code was refactored away:
+re-read the card and, if the refactor also fixed the defect, close via
+`Skill(finish-card)` with a note "fixed incidentally by <commit-hash>".
 
 ### Missing summaries
 

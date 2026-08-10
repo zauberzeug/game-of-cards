@@ -108,6 +108,53 @@ instance `advanced_by` meta-fix), and apply via `goc advance X
 --by Y`. The advance command is symmetric-by-construction so the
 validator stays happy.
 
+## Citation anchor check
+
+**Why the bounds test does not work.** `line ≤ EOF` asks whether a
+number is inside a file; citation rot asks whether the number still
+names the code the card meant. The two coincide only when a file
+SHRINKS past the cite, and source files grow. Measured on this
+project's own deck: replaying every cite its open cards carried at
+filing time, 482 of 528 had drifted onto unrelated code and the bounds
+test flagged 0 of them. Its silence was indistinguishable from a clean
+deck for the life of the deck, which is why the rule below anchors on
+content rather than on range.
+
+**Resolving the cite.** Cards write paths as they read in prose, so
+accept the bare basename (`engine.py:N` for `goc/engine.py:N`) and
+prefer a match outside vendored/mirror trees when several exist. A
+range (`file.py:120-140`) maps its endpoints independently and is
+rewritten only when both resolve.
+
+**Getting the anchor.** The card's creating commit is the last entry
+of `git log --diff-filter=A --format=%H -- <deck>/<card>/README.md`
+(check the legacy `deck/` path too). Read the cited file at that
+commit — `git show <commit>:<path>` — and take the cited line's text.
+That text is what the card meant; the number is only its address at
+the time. Anchoring at the creating commit rather than at HEAD is what
+makes the check independent of any earlier repair pass.
+
+**Deciding.** Anchor text ≠ the text at that line in HEAD → defunct.
+Then look for the anchor text in HEAD and rewrite the number only when
+the match is UNIQUE and the line is NON-TRIVIAL: skip blanks, bare
+braces, and anything under roughly 12 characters, which match
+everywhere. That guard is what makes the repair safe to apply
+unattended — on the pass that produced this rule it repaired 388 cites
+across 113 cards and declined 279 rather than guess.
+
+**The residue is output, not silence.** The declines split three ways
+and each is reported for a human read:
+
+| Decline | What it usually means |
+|---|---|
+| trivial anchor line | the address is unrecoverable mechanically; a reader must re-derive it from the card's prose |
+| ambiguous (>1 match) | boilerplate or a repeated idiom; the card's surrounding text disambiguates, the matcher cannot |
+| anchor text absent | the cited code was refactored away — re-read the card, and if the refactor also fixed the defect, close it per the core skill |
+
+A pass that printed only the cites it could auto-repair would report a
+shrinking problem while the unmappable majority rotted unseen — the
+same fail-open shape as the bounds test it replaced.
+
 ## Tag sweeps
 
 A predicate that *under*-fires is dangerous in a way an over-firing

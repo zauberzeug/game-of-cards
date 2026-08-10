@@ -34,6 +34,15 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # single-predicate rule) went to the reference siblings as this guard
 # prescribes; what stayed is the contract itself, which a reader of the table
 # cannot act on from a pointer.
+#
+# refine-deck was raised again on 2026-08-10 by the card
+# `refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file`: the
+# defunct-citation check was specified as a `line <= EOF` bounds test with
+# measured recall 0 of 482, and its replacement is an anchor comparison plus a
+# four-step repair recipe. The long form (why bounds fails, the resolution
+# rules, the residue table) went to the reference sibling; the rule and the
+# recipe stayed in the core because an agent that has to follow a pointer to
+# learn the test will run the bounds test it already remembers.
 BODY_CAPS = {
     "create-card": 10_000,
     "finish-card": 10_000,
@@ -43,7 +52,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 10_300,
+    "refine-deck": 11_200,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }
