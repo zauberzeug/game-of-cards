@@ -2454,12 +2454,19 @@ def card_is_draft(card: Card) -> bool:
     return card.draft
 
 
-def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
+def card_is_ready(card: Card, by_title: dict[str, Card], *, include_drafts: bool = False) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
     Ready iff `status == open` AND not a draft scaffold (`card_is_draft`)
     AND `human_gate == none` AND no active impediment overlay (`waiting_on`
     unset, `waiting_until` absent or past).
+
+    `include_drafts` suppresses the draft conjunct alone, leaving the other
+    three intact — the readiness counterpart of `filter_cards`' flag of the
+    same name, and threaded from it. It exists so the zero-match reporting
+    path can ask "what would `--ready` have matched if drafts counted as
+    authored?" without restating a predicate this docstring insists lives in
+    one place. No production queue passes it: readiness itself is unchanged.
 
     Non-terminal `advanced_by` prereqs do NOT block readiness — an
     `advances` edge is a "should be done first" (value-flow + closure
@@ -2475,7 +2482,7 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     """
     if card.status != "open":
         return False
-    if card_is_draft(card):
+    if card_is_draft(card) and not include_drafts:
         return False
     if card.human_gate != "none":
         return False
@@ -2780,6 +2787,7 @@ def filter_cards(
     worker: str | None = None,
     ready: bool = False,
     by_title: dict[str, Card] | None = None,
+    include_drafts: bool = False,
 ) -> list[Card]:
     out = list(cards)
     if statuses is not None:
@@ -2791,7 +2799,14 @@ def filter_cards(
     # not appear as queueable. The board path renders the full deck (not this
     # filtered set) and marks drafts instead. `card_is_draft` is the shared
     # not-yet-real predicate (also enforced in `card_is_ready`).
-    if status != "all":
+    #
+    # `include_drafts` suppresses only this conjunct, so a caller can recover
+    # how many cards the draft filter alone removed without restating the rest
+    # of the predicate. Its one user is the zero-match reporting path in
+    # `_cmd_default`: the draft exclusion is the only conjunct no flag can
+    # reveal, so a query emptied entirely by it used to render byte-identically
+    # to a drained deck.
+    if status != "all" and not include_drafts:
         out = [t for t in out if not card_is_draft(t)]
     if stages:
         out = [t for t in out if (str(t.stage) if t.stage is not None else "null") in stages]
@@ -2822,7 +2837,7 @@ def filter_cards(
         out = [t for t in out if needle in _worker_who(t.frontmatter.get("worker")).lower()]
     if ready:
         lookup = by_title if by_title is not None else {t.title: t for t in cards}
-        out = [t for t in out if card_is_ready(t, lookup)]
+        out = [t for t in out if card_is_ready(t, lookup, include_drafts=include_drafts)]
     return out
 
 
@@ -3499,7 +3514,7 @@ def render_active_notice(
     )
 
 
-def render_empty_query_line(args, status: str) -> str:
+def render_empty_query_line(args, status: str, *, hidden_drafts: int = 0) -> str:
     """State that a queue query matched nothing, naming the filters in effect.
 
     `render_table` returns "" for an empty card list, so without this the
@@ -3515,6 +3530,16 @@ def render_empty_query_line(args, status: str) -> str:
     parse time, but `worker` is deliberately unregistered (any person slug,
     machine name or capability tag is legal), so there is no enum to validate
     a typo against and echoing the filter back is the only available signal.
+
+    `hidden_drafts` carries the one conjunct that cannot be read off `args`:
+    `filter_cards` drops unauthored scaffolds from every status filter but
+    `all`, with no flag asking it to. Left unstated, a deck whose only open
+    cards are the ones `goc new` just wrote printed the drained-deck sentence
+    verbatim — the shortest path through the tool (install → new → goc)
+    ending in "nothing here". The count is what separates the two states; an
+    unconditional "excludes drafts" clause would still render identically on
+    a genuinely empty deck, so the clause appears only when drafts were
+    actually dropped.
     """
     parts: list[str] = []
     # `--ready` ADDS a conjunct, it does not replace the status one:
@@ -3562,6 +3587,11 @@ def render_empty_query_line(args, status: str) -> str:
     worker = getattr(args, "worker", None)
     if worker:
         parts.append(f"worker: {worker!r}")
+    if hidden_drafts > 0:
+        noun = _plural(hidden_drafts, "unauthored draft scaffold")
+        parts.append(
+            f"{hidden_drafts} {noun} hidden — author, then `goc publish <title>`"
+        )
     return f"No cards match ({'; '.join(parts)})."
 
 
@@ -4006,10 +4036,33 @@ def _cmd_default(args):
         # Scoped to this arm on purpose: `--json` already says `[]` and
         # `--board` already prints its header, and a prose line in either
         # would break their machine-readable / grid shape.
+        # The draft conjunct is recovered only on the empty path — the normal
+        # query stays one pass — and only when it could have applied at all
+        # (`--status all` does not exclude drafts, so nothing was hidden).
+        hidden_drafts = 0
+        if not filtered and status != "all":
+            hidden_drafts = len([
+                t for t in filter_cards(
+                    cards,
+                    status=status,
+                    stages=stages,
+                    contribution=args.contribution,
+                    human_gate=args.human_gate,
+                    tags=tag_filters,
+                    since=since,
+                    advances=args.advances,
+                    advanced_by=args.advanced_by,
+                    worker=args.worker,
+                    ready=args.ready,
+                    by_title=full_by_title,
+                    include_drafts=True,
+                )
+                if card_is_draft(t)
+            ])
         out = (
             render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
             if filtered
-            else render_empty_query_line(args, status)
+            else render_empty_query_line(args, status, hidden_drafts=hidden_drafts)
         )
         # Scope the active-card banner to --worker, mirroring the board path
         # above: the banner is a per-queue "before you claim work" hint, so a

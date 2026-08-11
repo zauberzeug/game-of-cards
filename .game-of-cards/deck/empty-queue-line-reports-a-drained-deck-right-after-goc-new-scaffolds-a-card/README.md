@@ -1,29 +1,29 @@
 ---
 title: empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card
 summary: "The zero-match queue message enumerates every user-supplied filter but never the draft exclusion filter_cards applies on its own, so a deck whose only open cards are unauthored goc new scaffolds prints \"No cards match (status: open).\" — the exact drained-queue sentence a truly empty deck prints. goc --status all on the same deck lists those cards as status: open and the board marks them, so the table path contradicts its own siblings on the very first thing a new user does."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-11T04:51:17Z"
-closed_at: null
+closed_at: "2026-08-11T04:58:02Z"
 human_gate: none
 advances:
   - query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — a deck of unauthored scaffolds no
+  - [x] TDD: `reproduce.py` exits zero — a deck of unauthored scaffolds no
         longer prints the drained-deck sentence verbatim
-  - [ ] TDD: a regression test pins that the draft conjunct is named with its
+  - [x] TDD: a regression test pins that the draft conjunct is named with its
         count when drafts were dropped, and that a genuinely empty deck (and a
         deck whose visible cards were dropped by a user filter) gains NO draft
         clause — the message must not grow a always-on conjunct
-  - [ ] TDD: existing pins in `tests/test_empty_query_result_line.py` stay green
+  - [x] TDD: existing pins in `tests/test_empty_query_result_line.py` stay green
         (`--json` still `[]`, `--board` still header-only, non-empty tables
         unchanged, every user-supplied filter still named)
-  - [ ] MECHANICAL: plugin mirrors re-synced so the four `engine.py` copies stay
+  - [x] MECHANICAL: plugin mirrors re-synced so the four `engine.py` copies stay
         byte-identical
-  - [ ] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
+  - [x] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
         test red, recorded in `log.md`
 worker: {who: "claude[bot]", where: main}
 ---
@@ -148,25 +148,55 @@ drafts correctly; it just does not disclose that it did. Opposite direction,
 different fix, so it is filed against the reporting family rather than as a
 fourth instance of the gating family.
 
-## Fix
+## Fix (landed)
 
-Give `render_empty_query_line` the one input it cannot read off `args` — how
-many drafts the query dropped — and name that conjunct when it is non-zero.
+`render_empty_query_line` is given the one input it cannot read off `args` —
+how many drafts the query dropped — and names that conjunct when it is
+non-zero. All in `goc/engine.py`:
 
-1. `goc/engine.py` — `filter_cards`: add an `include_drafts: bool = False`
-   keyword that suppresses the `card_is_draft` line at `2794-2795`. No caller
-   changes behavior; it exists so the count can be recovered without
-   duplicating the predicate.
-2. `goc/engine.py` — `_cmd_default` (`3956-4012`): when `filtered` is empty and
-   the status filter is not `all`, re-run `filter_cards` with
-   `include_drafts=True` and pass `len(...)` to `render_empty_query_line` as
-   `hidden_drafts`. Re-running only on the empty path keeps the normal query
-   at one pass.
-3. `goc/engine.py` — `render_empty_query_line`: accept `hidden_drafts: int = 0`
-   and, when it is non-zero, append a conjunct naming the count and the way
-   out, e.g. `2 unauthored draft scaffolds hidden (author them, then
-   goc publish <title>)`.
+1. `filter_cards` — new `include_drafts: bool = False` keyword suppressing the
+   `card_is_draft` conjunct. No existing caller changes behavior; it exists so
+   the count can be recovered without restating the predicate.
+2. `card_is_ready` — the same keyword, threaded from `filter_cards`, gating
+   only its own `card_is_draft` clause. Required, and not anticipated when this
+   card was filed: readiness drops drafts on a *second*, independent axis, so
+   suppressing the conjunct in `filter_cards` alone left `--ready` — the
+   pull-card / next-card surface, the costly one — still reading a deck of
+   scaffolds as a drained queue. Default keeps readiness itself unchanged, so
+   the `card_is_workable_for_scheduler` coupling invariant is untouched.
+3. `_cmd_default` — on the empty path only (and only when `status != "all"`,
+   which excludes nothing), re-run `filter_cards` with `include_drafts=True`
+   and count the drafts. The normal non-empty query stays at one pass.
+4. `render_empty_query_line` — accepts `hidden_drafts: int = 0` and appends
+   `N unauthored draft scaffold(s) hidden — author, then \`goc publish <title>\``
+   when non-zero, pluralized through `_plural`.
 
-Counting rather than always stating the conjunct is what actually separates
-the two states: an unconditional "excludes drafts" clause would still render
-identically on a drained deck.
+Counting rather than always stating the conjunct is what separates the two
+states: an unconditional "excludes drafts" clause would still render
+identically on a drained deck — the exact collapse this surface exists to
+undo.
+
+Post-fix, the two decks the reproduce script builds are distinguishable:
+
+```
+deck A — no card directories at all
+  goc  -> 'No cards match (status: open).'
+
+deck B — two `goc new` scaffolds, both `status: open`
+  goc  -> 'No cards match (status: open; 2 unauthored draft scaffolds hidden
+           — author, then `goc publish <title>`).'
+
+messages identical: False
+PASS
+```
+
+and the `--ready` surface names it too, without inventing a clause where the
+gate (not the draft flag) is what emptied the queue:
+
+```
+$ goc --ready          # one gate-none draft scaffold
+No cards match (ready: status open, gate none, no active impediment;
+                1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+$ goc --tag infra      # drafts do not match the tag either — no draft clause
+No cards match (status: open; tag: infra).
+```
