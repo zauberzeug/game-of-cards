@@ -17,6 +17,7 @@ advanced_by:
   - empty-queue-view-prints-nothing-instead-of-saying-no-cards-match
   - empty-result-line-reports-a-drained-ready-queue-that-still-has-cards
   - empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card
+  - zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
   - [ ] PROCESS: mechanism decision recorded (option A/B/C below, plus error-vs-warn for unknown edge-filter titles) and gate lowered to none
