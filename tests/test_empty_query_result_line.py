@@ -364,5 +364,173 @@ class HiddenDraftConjunctTest(unittest.TestCase):
         self.assertTrue(engine.card_is_ready(card, lookup, include_drafts=True))
 
 
+OVERLAY_CARD = """---
+title: {title}
+summary: "Summary for {title}."
+status: {status}
+stage: null
+contribution: medium
+created: "2026-01-01T00:00:00Z"
+closed_at: {closed_at}
+human_gate: none
+advances: []
+advanced_by: []
+tags: [bug]
+{extra}definition_of_done: |
+  - [ ] TDD: something
+---
+
+# {title}
+"""
+
+
+class HiddenDraftCountSpansTheWholeQueryTest(unittest.TestCase):
+    """The count must reflect the whole query, not just its first stage.
+
+    Regression guard for
+    `zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface`.
+    `_cmd_default` narrows in three stages — `filter_cards`, the
+    `--closed-since` window, then `--waiting`'s `live_impeded` gate — but the
+    recount replayed only the first, so it answered "what would `filter_cards`
+    have matched with drafts included?" instead of "what would this query have
+    matched?". Drafts the other two conjuncts rejected on their own merits were
+    reported as withheld by the draft flag, and the clause told the reader to
+    run `goc publish` to reveal something that would still not appear.
+
+    Each conjunct is pinned in BOTH directions. Suppressing the clause under
+    `--waiting` / `--closed-since` wholesale would pass the false-positive
+    halves while silently deleting the surface the predecessor card built, so
+    the true-positive halves — a draft those queries really are hiding — are
+    what make the guard discriminate rather than just go quiet.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self._root = Path(self._tmp.name)
+        self._prev = engine.DECK_DIR
+        self.addCleanup(self._restore)
+
+    def _restore(self) -> None:
+        engine.DECK_DIR = self._prev
+        self._tmp.cleanup()
+
+    def _deck(self, name: str, cards: dict[str, dict]) -> None:
+        """Deck of `{title: {status, closed_at, waiting_on, draft}}`.
+
+        Every card is authored (real DoD and body inherited from the template)
+        so `card_is_draft` fires on the explicit flag alone — the placeholder
+        half of that predicate would confound what is being measured here.
+        """
+        deck = self._root / name / ".game-of-cards" / "deck"
+        deck.mkdir(parents=True)
+        for title, spec in cards.items():
+            card = deck / title
+            card.mkdir()
+            extra = ""
+            if spec.get("waiting_on"):
+                extra += f"waiting_on: {spec['waiting_on']}\n"
+            if spec.get("draft", True):
+                extra += "draft: true\n"
+            (card / "README.md").write_text(OVERLAY_CARD.format(
+                title=title,
+                status=spec.get("status", "open"),
+                closed_at=spec.get("closed_at", "null"),
+                extra=extra,
+            ))
+        engine.DECK_DIR = deck
+
+    _run = staticmethod(_render)
+
+    CLAUSE = "unauthored draft scaffold"
+
+    @staticmethod
+    def _stamp(hours_ago: int) -> str:
+        from datetime import datetime, timedelta, timezone
+        moment = datetime.now(tz=timezone.utc) - timedelta(hours=hours_ago)
+        return f'"{moment.strftime("%Y-%m-%dT%H:%M:%SZ")}"'
+
+    # ---- --waiting -------------------------------------------------------
+
+    def test_draft_without_an_overlay_is_not_counted_under_waiting(self) -> None:
+        """Publishing it reveals nothing: `--waiting` wants an active overlay."""
+        self._deck("no-overlay", {"alpha": {}})
+        out = self._run(waiting=True, status_flag="open")
+        self.assertIn("waiting: active impediment overlay", out)
+        self.assertNotIn(self.CLAUSE, out)
+
+    def test_actively_impeded_draft_is_still_counted_under_waiting(self) -> None:
+        """The true positive: here the draft flag IS the only thing hiding it."""
+        self._deck("impeded", {"alpha": {"waiting_on": "external"}})
+        out = self._run(waiting=True, status_flag="open")
+        self.assertIn("1 unauthored draft scaffold hidden", out)
+        self.assertIn("goc publish", out)
+
+    def test_the_two_waiting_shapes_do_not_render_identically(self) -> None:
+        """The collapse itself — opposite situations, byte-identical sentence."""
+        self._deck("no-overlay", {"alpha": {}})
+        without = self._run(waiting=True, status_flag="open")
+        self._deck("impeded", {"alpha": {"waiting_on": "external"}})
+        impeded = self._run(waiting=True, status_flag="open")
+        self.assertNotEqual(without, impeded)
+
+    # ---- --closed-since --------------------------------------------------
+
+    def test_draft_outside_the_closed_since_window_is_not_counted(self) -> None:
+        """Publishing it reveals nothing: it closed long before the window."""
+        self._deck("stale", {
+            "alpha": {"status": "done", "closed_at": '"2026-01-02T00:00:00Z"'},
+        })
+        out = self._run(closed_since="1h", status_flag="done")
+        self.assertIn("closed-since: 1h", out)
+        self.assertNotIn(self.CLAUSE, out)
+
+    def test_draft_inside_the_closed_since_window_is_still_counted(self) -> None:
+        """The true positive for the window conjunct."""
+        self._deck("fresh", {
+            "alpha": {"status": "done", "closed_at": self._stamp(1)},
+        })
+        out = self._run(closed_since="30d", status_flag="done")
+        self.assertIn("1 unauthored draft scaffold hidden", out)
+
+    # ---- the helper the counterfactual needs -----------------------------
+
+    def test_live_impeded_still_rejects_drafts_by_default(self) -> None:
+        """The suppression flag is opt-in; what counts as impeded is unchanged.
+
+        Mirrors `card_is_ready`'s pin one class up. `live_impeded` is the third
+        and last axis the draft gate is inlined on, and the one the recount
+        could not see past — but only the recount passes the flag.
+        """
+        self._deck("impeded", {"alpha": {"waiting_on": "external"}})
+        card = engine.load_all_cards()[0]
+        self.assertTrue(engine.card_is_draft(card))
+        self.assertFalse(engine.live_impeded(card))
+        self.assertTrue(engine.live_impeded(card, include_drafts=True))
+
+    def test_include_drafts_does_not_widen_the_other_conjuncts(self) -> None:
+        """It suppresses the draft clause alone — terminal and overlay hold.
+
+        A closed card carries its overlay forever, and a card with no overlay
+        was never impeded; neither becomes impeded just because the caller
+        stopped caring about the draft flag.
+        """
+        self._deck("mixed", {
+            "closed": {
+                "status": "done", "closed_at": '"2026-01-02T00:00:00Z"',
+                "waiting_on": "external",
+            },
+            "unimpeded": {},
+        })
+        by_title = {c.title: c for c in engine.load_all_cards()}
+        self.assertFalse(
+            engine.live_impeded(by_title["closed"], include_drafts=True),
+            msg="a terminal card's stale overlay is not an active impediment",
+        )
+        self.assertFalse(
+            engine.live_impeded(by_title["unimpeded"], include_drafts=True),
+            msg="a card with no overlay is not impeded",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

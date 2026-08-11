@@ -2567,7 +2567,9 @@ def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bo
     return until_dt > now
 
 
-def live_impeded(card: Card, *, today: "date | datetime | None" = None) -> bool:
+def live_impeded(
+    card: Card, *, today: "date | datetime | None" = None, include_drafts: bool = False
+) -> bool:
     """True iff the card is *actively* impeded — the "show ⏳" variant.
 
     `waiting_impedes` reads the overlay alone and deliberately ignores the
@@ -2581,10 +2583,21 @@ def live_impeded(card: Card, *, today: "date | datetime | None" = None) -> bool:
     `deck/waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/`
     for the wider consolidation (this helper covers the live variant; the
     stricter open-only variant used by `card_is_ready` is still inlined).
+
+    `include_drafts` suppresses the draft conjunct alone, leaving the
+    terminal-status and overlay clauses intact — the impediment counterpart
+    of the flag `filter_cards` and `card_is_ready` already carry, and the
+    third and last axis the draft gate is inlined on. Without it the
+    `--waiting` conjunct cannot be evaluated counterfactually at all: it
+    short-circuits on the flag before reading the overlay, so a draft that
+    IS actively impeded and a draft carrying no overlay whatsoever are
+    indistinguishable. Its one user is the zero-match draft recount in
+    `_cmd_default`; no production read surface passes it, so what counts as
+    impeded is unchanged.
     """
     return (
         card.status not in TERMINAL_STATUSES
-        and not card_is_draft(card)
+        and (include_drafts or not card_is_draft(card))
         and waiting_impedes(card, today=today)
     )
 
@@ -3983,37 +3996,61 @@ def _cmd_default(args):
     stages = parse_stage_filter(args.stage_flag)
     tag_filters = validate_tag_filters(args.tags)
     full_by_title = {t.title: t for t in cards}
-    filtered = filter_cards(
-        cards,
-        status=status,
-        stages=stages,
-        contribution=args.contribution,
-        human_gate=args.human_gate,
-        tags=tag_filters,
-        since=since,
-        advances=args.advances,
-        advanced_by=args.advanced_by,
-        worker=args.worker,
-        ready=args.ready,
-        by_title=full_by_title,
-    )
-    if closed_since_threshold is not None:
-        filtered = [
-            t for t in filtered
-            if (dt := _closed_at_instant(t.closed_at)) is not None
-            and dt >= closed_since_threshold
-        ]
-    if getattr(args, "waiting", False):
-        # `--waiting` surfaces *active* impediments. A terminal card can
-        # still carry an overlay (closing never clears `waiting_on` /
-        # `waiting_until`), but that overlay is stale by definition and is
-        # not an actionable wait. A draft scaffold (`card_is_draft`) is not
-        # yet real work either — it is hidden from the queue and marked `✎`
-        # (not `⏳`) on the board. `live_impeded` owns that rule so this
-        # filter, the board's ⏳, and the table's overlay detail line cannot
-        # disagree about what counts as impeded — the gate hand-inlined here
-        # had already drifted twice.
-        filtered = [t for t in filtered if live_impeded(t)]
+
+    def run_query(*, include_drafts: bool = False) -> list[Card]:
+        """Apply the whole query predicate, not just its first stage.
+
+        `--closed-since` and `--waiting` narrow the result *after*
+        `filter_cards`, because both read state (`closed_at` instants, the
+        impediment overlay) that the generic filter deliberately does not.
+        That makes the predicate three-staged, and anything replaying only
+        `filter_cards` is answering a different question than the one asked.
+        The zero-match draft recount below is the caller that made exactly
+        that mistake — it reported drafts as withheld from queries those
+        drafts failed on their own merits — so both callers route through
+        here and a fourth stage cannot re-split them.
+
+        `include_drafts` is threaded to every axis the draft gate is inlined
+        on: `filter_cards`' own conjunct, `card_is_ready` (via it), and
+        `live_impeded`. Only then does the recount ask "would this card
+        appear here if its draft flag were cleared?" instead of getting
+        `False` back from a helper that never looked past the flag.
+        """
+        rows = filter_cards(
+            cards,
+            status=status,
+            stages=stages,
+            contribution=args.contribution,
+            human_gate=args.human_gate,
+            tags=tag_filters,
+            since=since,
+            advances=args.advances,
+            advanced_by=args.advanced_by,
+            worker=args.worker,
+            ready=args.ready,
+            by_title=full_by_title,
+            include_drafts=include_drafts,
+        )
+        if closed_since_threshold is not None:
+            rows = [
+                t for t in rows
+                if (dt := _closed_at_instant(t.closed_at)) is not None
+                and dt >= closed_since_threshold
+            ]
+        if getattr(args, "waiting", False):
+            # `--waiting` surfaces *active* impediments. A terminal card can
+            # still carry an overlay (closing never clears `waiting_on` /
+            # `waiting_until`), but that overlay is stale by definition and is
+            # not an actionable wait. A draft scaffold (`card_is_draft`) is not
+            # yet real work either — it is hidden from the queue and marked `✎`
+            # (not `⏳`) on the board. `live_impeded` owns that rule so this
+            # filter, the board's ⏳, and the table's overlay detail line cannot
+            # disagree about what counts as impeded — the gate hand-inlined here
+            # had already drifted twice.
+            rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
+        return rows
+
+    filtered = run_query()
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
@@ -4039,26 +4076,16 @@ def _cmd_default(args):
         # The draft conjunct is recovered only on the empty path — the normal
         # query stays one pass — and only when it could have applied at all
         # (`--status all` does not exclude drafts, so nothing was hidden).
+        # It re-runs the WHOLE query rather than `filter_cards` alone: the
+        # count is a claim about what publishing would reveal, so a draft the
+        # `--closed-since` window or the `--waiting` overlay rejects on its
+        # own merits must not be counted — publishing it reveals nothing, and
+        # the clause would send the reader to `goc publish` for no effect.
         hidden_drafts = 0
         if not filtered and status != "all":
-            hidden_drafts = len([
-                t for t in filter_cards(
-                    cards,
-                    status=status,
-                    stages=stages,
-                    contribution=args.contribution,
-                    human_gate=args.human_gate,
-                    tags=tag_filters,
-                    since=since,
-                    advances=args.advances,
-                    advanced_by=args.advanced_by,
-                    worker=args.worker,
-                    ready=args.ready,
-                    by_title=full_by_title,
-                    include_drafts=True,
-                )
-                if card_is_draft(t)
-            ])
+            hidden_drafts = len(
+                [t for t in run_query(include_drafts=True) if card_is_draft(t)]
+            )
         out = (
             render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
             if filtered

@@ -1,34 +1,34 @@
 ---
 title: zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface
 summary: "The zero-match queue line's hidden-draft count replays only filter_cards, not the --closed-since and --waiting conjuncts _cmd_default applies after it, so `goc --waiting --status open` and `goc --closed-since 1h --status done` report drafts as hidden from queries those drafts would not match even once published. live_impeded carries a third inlined draft conjunct that the predecessor card's include_drafts thread never reached, so under --waiting the count cannot be evaluated counterfactually at all. The clause exists to separate a drained deck from a deck of scaffolds; miscounted, it sends the reader to `goc publish` for nothing."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-11T05:24:17Z"
-closed_at: null
+closed_at: "2026-08-11T05:32:24Z"
 human_gate: none
 advances:
   - query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — neither the no-overlay draft under
+  - [x] TDD: `reproduce.py` exits zero — neither the no-overlay draft under
         `--waiting` nor the long-closed draft under `--closed-since` produces a
         hidden-draft clause, and the impeded-draft control still does
-  - [ ] TDD: a regression test in `tests/test_empty_query_result_line.py` pins
+  - [x] TDD: a regression test in `tests/test_empty_query_result_line.py` pins
         both false-positive shapes AND the two true-positive controls (a draft
         the `--waiting` query really is hiding, a draft inside the
         `--closed-since` window), so the fix cannot be "never count under those
         flags"
-  - [ ] MECHANICAL: the recount evaluates the draft conjunct counterfactually on
+  - [x] MECHANICAL: the recount evaluates the draft conjunct counterfactually on
         every axis it is inlined on — `filter_cards`, `card_is_ready` and
         `live_impeded` — rather than only the first two
-  - [ ] TDD: existing pins in `tests/test_empty_query_result_line.py` stay green
+  - [x] TDD: existing pins in `tests/test_empty_query_result_line.py` stay green
         (plain `goc`, `--ready`, `--json`, `--board`, non-empty tables, and every
         user-supplied filter still named)
-  - [ ] MECHANICAL: plugin mirrors re-synced so the four `engine.py` copies stay
+  - [x] MECHANICAL: plugin mirrors re-synced so the four `engine.py` copies stay
         byte-identical
-  - [ ] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
+  - [x] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
         test red, recorded in `log.md`
 worker: {who: "claude[bot]", where: main}
 ---
@@ -41,13 +41,20 @@ publishing them changes nothing, because a *different* filter excludes them.
 
 ## Location
 
-- `goc/engine.py:4042-4061` — the `hidden_drafts` recount in `_cmd_default`.
-- `goc/engine.py:4000-4005` — the `--closed-since` window, applied *after*
-  `filter_cards` and never replayed by the recount.
-- `goc/engine.py:4006-4016` — the `--waiting` narrowing, same.
-- `goc/engine.py:2585-2589` — `live_impeded`, which carries its own
-  `not card_is_draft(card)` conjunct.
-- `goc/engine.py:3590-3594` — `render_empty_query_line`, which emits the clause.
+Line numbers below are **post-fix**; the pre-fix shape each one replaced is
+quoted in "What's broken".
+
+- `goc/engine.py:4000` — `run_query`, the closure that now holds all three
+  query stages and that both callers go through.
+- `goc/engine.py:4034` / `goc/engine.py:4050` — the `--closed-since` window and
+  the `--waiting` narrowing, the two conjuncts that run outside `filter_cards`
+  and that the recount used to skip.
+- `goc/engine.py:4086` — the `hidden_drafts` recount in `_cmd_default`.
+- `goc/engine.py:2570` — `live_impeded` and its own draft conjunct, the third
+  axis, now carrying `include_drafts`.
+- `goc/engine.py:3530` / `goc/engine.py:3606` — `render_empty_query_line` and
+  the clause it emits (unchanged by this card; it renders whatever it is
+  handed).
 
 ## What's broken
 
@@ -118,7 +125,8 @@ never sees them.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/reproduce.py`:
+`uv run python .game-of-cards/deck/zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/reproduce.py`
+**before the fix** (exit 1):
 
 ```
 A. goc --waiting --status open   (draft has NO waiting_on/waiting_until)
@@ -139,9 +147,19 @@ C. control — goc --waiting --status open, draft IS impeded (waiting_on: extern
 FAIL: deck(s) A, B report hidden drafts that publishing would not surface — the recount replays filter_cards only, skipping the --closed-since and --waiting conjuncts applied after it.
 ```
 
-Decks A and C print **byte-identical** sentences while describing opposite
+Decks A and C printed **byte-identical** sentences while describing opposite
 situations — the same collapse the predecessor card removed for the drained
 deck, reintroduced one flag over.
+
+**After the fix** (exit 0), A and B lose the clause and C keeps it:
+
+```
+A.  No cards match (status: open; waiting: active impediment overlay).
+B.  No cards match (status: done; closed-since: 1h).
+C.  No cards match (status: open; waiting: active impediment overlay; 1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+
+PASS: the count reflects the whole query — no clause on A/B, clause kept on C.
+```
 
 ## Reachability
 
@@ -191,23 +209,40 @@ Related, not duplicate:
 - [waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift](../waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/)
   — why `live_impeded` exists as the shared gate at all.
 
-## Fix
+## Fix (landed)
 
 Two changes, both continuing the pattern the predecessor established rather
 than introducing a new one.
 
-1. **Replay the whole query, not its first stage.** Factor the two
-   post-`filter_cards` conjuncts in `_cmd_default` (`engine.py:4000-4016`) into
-   one local narrowing step, and apply it to the recount as well as to
-   `filtered`. This is the half that fixes `--closed-since`, which has no draft
-   axis at all — it is simply a filter the recount forgot.
+1. **Replay the whole query, not its first stage.** The three stages in
+   `_cmd_default` now live in one local `run_query(*, include_drafts=False)`
+   closure, called by both the real query and the recount. This is the half
+   that fixes `--closed-since`, which has no draft axis at all — it was simply
+   a filter the recount forgot. Collapsing the stages is also what stops a
+   fourth conjunct from re-splitting them.
 
-2. **Thread `include_drafts` through `live_impeded`** (`engine.py:2570`), the
-   third site the draft conjunct is inlined on, exactly as
-   `card_is_ready` (`engine.py:2457`) already carries it and for the same
-   stated reason. Default unchanged, so every production read surface keeps
-   excluding drafts; only the counterfactual recount passes it.
+2. **Thread `include_drafts` through `live_impeded`**, the third site the draft
+   conjunct is inlined on, exactly as `card_is_ready` already carries it and
+   for the same stated reason:
 
-With both, the recount asks the question the clause claims to answer — *would
+   ```python
+   return (
+       card.status not in TERMINAL_STATUSES
+       and (include_drafts or not card_is_draft(card))
+       and waiting_impedes(card, today=today)
+   )
+   ```
+
+   The default is unchanged, so every production read surface — the board's
+   `⏳`, the table's overlay line, the `--waiting` filter itself — keeps
+   excluding drafts. Only the counterfactual recount passes it.
+
+Together the recount asks the question the clause claims to answer — *would
 this card appear in this query if its draft flag were cleared?* — so deck C
 keeps its clause and decks A and B lose theirs.
+
+The regression guard pins each conjunct in **both** directions. Suppressing the
+clause under `--waiting` / `--closed-since` wholesale would satisfy the
+false-positive halves while deleting the surface the predecessor built, so the
+two true-positive controls are what make the test discriminate rather than just
+go quiet.
