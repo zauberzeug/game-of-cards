@@ -16,6 +16,7 @@ advanced_by:
   - since-filter-without-done-hides-open-queue
   - empty-queue-view-prints-nothing-instead-of-saying-no-cards-match
   - empty-result-line-reports-a-drained-ready-queue-that-still-has-cards
+  - empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
   - [ ] PROCESS: mechanism decision recorded (option A/B/C below, plus error-vs-warn for unknown edge-filter titles) and gate lowered to none
