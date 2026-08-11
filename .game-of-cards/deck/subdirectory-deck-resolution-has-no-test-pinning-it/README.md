@@ -1,6 +1,6 @@
 ---
 title: subdirectory-deck-resolution-has-no-test-pinning-it
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-01T09:01:14Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a test chdirs into a subdirectory of a fixture deck repo and pins, together, that `validate`, `quality-pass`, `--status all --json`, `--ready --json` and `show` all address the real deck (red against the pre-3e17e3b3 behavior, green at HEAD)
   - [ ] TDD: the same suite pins the write half — `goc new` from a subdirectory files into the real deck and does not scaffold a nested `.game-of-cards/` under cwd
   - [ ] TDD: the contract's boundary is pinned — the walk stops before an ancestor that is a different git working tree, and a mutating command outside any deck is refused rather than scaffolding at cwd
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Subdirectory deck resolution has no test pinning it
