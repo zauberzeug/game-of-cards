@@ -35,3 +35,27 @@ instance table where a decision-maker reads it:
 
 No new card filed: the root exists, the instance was already connected,
 and a second umbrella would be the redundant-root anti-pattern.
+
+## 2026-08-11T05:05:00Z — Third output-half instance connected
+
+[empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/)
+closed today; its `advances` edge was wired at filing time. Amended this
+card's body with the instance because the edge alone claimed more than the
+body could carry: every row in the instance table named a *flag*, and this
+instance has none.
+
+What it adds beyond a row: `render_empty_query_line`'s enumeration is
+parallel to `filter_cards`' parameter list, so it can only describe conjuncts
+that have a parameter. The draft exclusion is applied unconditionally inside
+`filter_cards` (and again inside `card_is_ready`), with no flag to mirror —
+the dual of the `--worker` case, where a flag exists but no input-side
+contract can cover it. Recorded as third consequence for the decision: a
+per-flag contract table (option A) is structurally blind to this class, so
+the output-half enumeration should be driven by the predicate actually
+applied rather than by the flag list.
+
+Gate and DoD untouched — this is evidence for the open decision, not a
+resolution of it.
+
+No new card filed: the root exists and the instance is connected to it;
+a second umbrella would be the redundant-root anti-pattern.

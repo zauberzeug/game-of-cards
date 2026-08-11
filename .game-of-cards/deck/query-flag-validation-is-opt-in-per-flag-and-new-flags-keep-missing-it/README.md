@@ -126,6 +126,7 @@ The family is already catalogued, one card per flag, all closed:
 | unknown `--advances`/`--advanced-by` title | this card, instance 1 | **none** |
 | `--json` ∧ `--board` conflict | this card, instance 2 | **none** |
 | `--closed-since` ∧ non-terminal status / `--waiting` | this card, instance 3 | **none** |
+| draft exclusion — a conjunct with *no flag* | [empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/) | output-half clause, count-gated |
 
 Each fix so far guarded exactly the flag its card named, and the next
 flag added to the parser (`--advances`/`--advanced-by`, `--board`,
@@ -189,6 +190,34 @@ Two consequences for the decision below:
    filter set is a load-bearing claim about deck state, so "legible" is
    not a soft nice-to-have tier below "impossible" — an unguarded output
    half has its own failure mode, and it is worse than silence.
+
+### And one conjunct can never have a flag — the dual of the `--worker` case
+
+[empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/)
+(done, 2026-08-11) found the third output-half instance, and it is the one
+that constrains the mechanism rather than just adding a row.
+`render_empty_query_line`'s hand-maintained enumeration is parallel to
+`filter_cards`' **parameter** list, so it can only ever describe conjuncts
+that *have* a parameter. The draft exclusion has none: `filter_cards` applies
+`card_is_draft` unconditionally for every status but `all`, and `card_is_ready`
+applies it a second time on its own axis, with nothing on the command line for
+a parallel list to mirror. A deck whose only open cards were the ones `goc new`
+had just written therefore printed the drained-deck sentence verbatim.
+
+This is the exact dual of the `--worker` case above. There, a flag exists but
+no input-side contract can cover it, so the output half has to. Here, the
+output half is the *only* half there could be, because there is no flag to
+attach a contract to at all.
+
+Third consequence for the decision:
+
+3. **A per-flag contract table is structurally blind to this class.** Option A
+   registers contracts against flags; a conjunct with no flag has nothing to
+   register. So whichever option is picked, the output-half enumeration needs
+   to be driven by the predicate `filter_cards` actually applies, not by the
+   flag list — otherwise the next unconditional conjunct added to the filter
+   chain goes unnamed on empty output exactly as this one did, and a fail-closed
+   property over flags will report full coverage while it happens.
 
 ## Decision required
 
