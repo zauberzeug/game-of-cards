@@ -35,3 +35,24 @@ options more sharply than the other five. It is not a surface *listing* an
 unauthored card — it is goc criticising its own generated text, which no
 per-site `if card_is_draft(c): continue` reads as a principled fix so much as
 a sixth patch.
+
+## 2026-08-11 — evidence added: un-gating is per-site too
+
+Connected from
+[zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface](../zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/),
+closed today. Not a seventh instance of "a surface forgot to exclude drafts" —
+the mirror image, and it bears on the mechanism choice.
+
+Producing the zero-match line's hidden-draft count means asking "would this
+card appear if its draft flag were cleared?". Because `card_is_draft` is
+inlined per call site, that counterfactual had to be threaded through each site
+separately as an opt-in `include_drafts` keyword: `filter_cards` and
+`card_is_ready` (predecessor card), then `live_impeded` (this one, found when
+`goc --waiting --status open` claimed a draft was hidden that publishing would
+not have revealed). Three keywords, three cards, one predicate.
+
+Consequence for the decision below: an inverted default that only makes
+"exclude drafts" implicit would still leave the counterfactual scattered. The
+mechanism should be judged on both directions — one place to apply the gate AND
+one place to ask what it removed. No DoD item ticked and no gate change; this
+is evidence for whoever picks.

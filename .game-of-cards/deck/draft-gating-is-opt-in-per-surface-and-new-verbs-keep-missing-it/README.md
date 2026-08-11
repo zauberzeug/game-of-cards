@@ -87,6 +87,35 @@ Six instances of one root cause is a missing default, not six bugs.
 Per-site patching demonstrably does not converge — each new surface
 reintroduces the leak.
 
+### The cost is now symmetric: un-gating is per-site too (2026-08-11)
+
+The six instances above are all "a surface forgot to exclude drafts".
+A closure on
+[zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface](../zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/)
+adds the mirror-image cost, which sharpens the mechanism choice rather
+than adding a seventh instance of the same shape.
+
+The zero-match queue line reports how many drafts a query is hiding.
+Producing that number means asking the counterfactual *"would this card
+appear if its draft flag were cleared?"* — and because the gate is
+inlined per site, the counterfactual has to be threaded through **every
+site separately**, as an opt-in `include_drafts` keyword:
+
+- `filter_cards` (`engine.py:2809`) — added by
+  [empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/)
+- `card_is_ready` (`engine.py:2485`) — same commit; readiness drops
+  drafts on a second, independent axis
+- `live_impeded` (`engine.py:2570`) — a *third* axis, missed by that
+  commit and found only when `goc --waiting --status open` reported a
+  draft as hidden that publishing would not have revealed
+
+Three keywords, three cards, one predicate. So the inlining is not just
+a recall problem for authors writing new surfaces — it also makes the
+gate impossible to reason about *counterfactually* without touching
+every site again. Any mechanism chosen below should be judged on both
+directions: it has to make "exclude drafts" the default AND leave one
+place to ask what that default removed.
+
 ## Empirical evidence
 
 `uv run python .game-of-cards/deck/draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it/reproduce.py`:
