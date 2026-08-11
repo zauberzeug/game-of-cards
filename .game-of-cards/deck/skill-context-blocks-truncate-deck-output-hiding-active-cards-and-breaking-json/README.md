@@ -161,9 +161,26 @@ source it falls back to.
   leaves the shape in place; this card exists so it is fixed once. Related
   but distinct:
   [`empty-queue-view-prints-nothing-instead-of-saying-no-cards-match`](../empty-queue-view-prints-nothing-instead-of-saying-no-cards-match/)
-  (closed) fixed the *empty* end of the same render path;
-  [`board-truncates-columns-to-max-rows-without-showing-how-many-are-hidden`](../board-truncates-columns-to-max-rows-without-showing-how-many-are-hidden/)
-  (closed) fixed the *bounded* end for the board only.
+  (closed) fixed the *empty* end of the same render path.
+
+## The closed family this instance belongs to
+
+"A view bounds its output without reporting what it hid" has been fixed
+four times already, each time at the **engine-renderer** layer, and each
+time the same way — bound *and* report:
+
+- [`board-truncates-columns-to-max-rows-without-showing-how-many-are-hidden`](../board-truncates-columns-to-max-rows-without-showing-how-many-are-hidden/) — added the `… +N more` row.
+- [`board-truncates-worker-label-to-eight-characters`](../board-truncates-worker-label-to-eight-characters/)
+- [`triage-decision-required-preview-silently-truncates-at-six-lines`](../triage-decision-required-preview-silently-truncates-at-six-lines/)
+- [`triage-summary-fallback-preview-truncates-at-140-chars-without-indicator`](../triage-summary-fallback-preview-truncates-at-140-chars-without-indicator/)
+
+All four are closed, which is why this card carries no umbrella edge and
+no new root card was filed: there is nothing left to coordinate, only a
+precedent to apply. What makes this instance the awkward one is the
+layer — it lives in a **shell pipe inside a skill body**, where `head` has
+no channel to report on and the engine has no bound to offer. That is the
+gap the decision below has to close, and the four closed cards are the
+evidence for which way to close it.
 
 ## Decision required
 
