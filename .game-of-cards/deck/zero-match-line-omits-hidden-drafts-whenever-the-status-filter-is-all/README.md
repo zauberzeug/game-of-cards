@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-08-12T04:57:03Z"
 closed_at: "2026-08-12T05:06:02Z"
 human_gate: none
-advances: []
+advances:
+  - query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

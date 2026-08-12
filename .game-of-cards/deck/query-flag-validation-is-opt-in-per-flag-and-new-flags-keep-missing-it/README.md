@@ -18,6 +18,7 @@ advanced_by:
   - empty-result-line-reports-a-drained-ready-queue-that-still-has-cards
   - empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card
   - zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface
+  - zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
   - [ ] PROCESS: mechanism decision recorded (option A/B/C below, plus error-vs-warn for unknown edge-filter titles) and gate lowered to none
@@ -128,6 +129,18 @@ The family is already catalogued, one card per flag, all closed:
 | `--json` ∧ `--board` conflict | this card, instance 2 | **none** |
 | `--closed-since` ∧ non-terminal status / `--waiting` | this card, instance 3 | **none** |
 | draft exclusion — a conjunct with *no flag* | [empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/) | output-half clause, count-gated |
+| that clause over-counting under `--waiting` / `--closed-since` | [zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface](../zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/) | recount replays all three query stages |
+| that clause silenced by `--status all` (incl. the value `--waiting` auto-resolves to) | [zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all](../zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all/) | recount's `status` guard deleted |
+
+The last three rows are one flag's worth of clause needing three cards,
+which is the family shape at its sharpest: the draft conjunct has no flag
+of its own, so the output half is all it ever gets — and that output half
+then had to be corrected twice more, once for over-counting and once for
+being silenced entirely. The third one is the tell for the mechanism
+question below: its guard was keyed to `--status`, a *different* flag,
+and read correctly for one of the three stages the query runs. A per-flag
+table cannot express "this clause is a claim about the whole predicate",
+which is why the same clause keeps being wrong in a new way each time.
 
 Each fix so far guarded exactly the flag its card named, and the next
 flag added to the parser (`--advances`/`--advanced-by`, `--board`,

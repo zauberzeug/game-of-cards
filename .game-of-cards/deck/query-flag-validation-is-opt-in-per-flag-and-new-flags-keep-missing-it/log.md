@@ -59,3 +59,32 @@ resolution of it.
 
 No new card filed: the root exists and the instance is connected to it;
 a second umbrella would be the redundant-root anti-pattern.
+
+## 2026-08-12 — instance connected: the draft clause silenced by `--status all`
+
+Wired
+[zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all](../zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all/)
+(closed today) into `advanced_by`, matching how the four earlier zero-match
+cards are attached. The recount that names hidden drafts on a zero-match query
+was skipped whenever the status filter was `all` — a guard keyed to `--status`,
+correct for the `filter_cards` stage and wrong for the `card_is_ready` and
+`live_impeded` stages, neither of which reads the status filter. Since
+`--waiting` / `--closed-since` / `--board` auto-extend an unset `--status` to
+`all`, the flagless `goc --waiting` was always in the skipped branch.
+
+Bears on the mechanism question: this is the first instance where the offending
+guard names a *different* flag than the one whose behaviour it governs. A table
+of per-flag contracts has no cell for "this clause is a claim about the whole
+predicate, so no single flag's value can decide it" — which is why the same
+clause has now been wrong three ways (absent, over-counting, silenced) across
+three cards.
+
+Table maintenance: added rows for this card AND for
+`zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface`, which
+was in `advanced_by` but had no row. The instance table now matches the edge
+list. Note for the eventual fix — the `## Location` line numbers are stale
+(`engine.py:3930` for the status auto-extend is now `:3980`); left as-is rather
+than half-refreshed, since the DoD already calls for a full re-audit of this
+section.
+
+No DoD item ticked and no gate change; evidence for whoever picks.
