@@ -56,3 +56,28 @@ Consequence for the decision below: an inverted default that only makes
 mechanism should be judged on both directions — one place to apply the gate AND
 one place to ask what it removed. No DoD item ticked and no gate change; this
 is evidence for whoever picks.
+
+## 2026-08-12 — evidence added: the per-site gate also corrupts the *decision* to ask
+
+Connected from
+[zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all](../zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all/),
+closed today. Still not a seventh instance of "a surface forgot to exclude
+drafts", and it adds no fourth `include_drafts` site — it removed a stale
+conditional.
+
+Yesterday's entry recorded that the counterfactual has to be threaded through
+every inlined site. This one is the next turn of the same screw: with the gate
+living at three sites, the *guard deciding whether to run the counterfactual at
+all* was written against one of them. `_cmd_default` skipped the recount when
+`status == "all"`, which is exactly right for `filter_cards` and wrong for
+`card_is_ready` and `live_impeded`, neither of which reads the status filter.
+Since `--waiting` / `--closed-since` / `--board` auto-extend an unset `--status`
+to `all`, the flagless `goc --waiting` never asked, and reported a deck of
+impeded scaffolds as drained.
+
+Consequence for the decision below: "one place to ask what the default removed"
+is not only about where the keyword lives. It is about there being one
+condition under which the question is meaningful. Three sites means three
+conditions a reader can confuse for the predicate's — and the confusion is
+invisible, because the wrong guard produces a plausible sentence rather than a
+crash. No DoD item ticked and no gate change; evidence for whoever picks.

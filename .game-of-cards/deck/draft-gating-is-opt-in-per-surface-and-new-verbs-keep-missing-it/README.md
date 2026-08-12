@@ -116,6 +116,20 @@ every site again. Any mechanism chosen below should be judged on both
 directions: it has to make "exclude drafts" the default AND leave one
 place to ask what that default removed.
 
+A fourth card,
+[zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all](../zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all/)
+(closed 2026-08-12), sharpens that further: the damage is not only in
+*threading* the counterfactual, but in **deciding whether to ask it at
+all**. The recount's entry guard read `status != "all"` — true of
+`filter_cards`' conjunct, false of `card_is_ready`'s and
+`live_impeded`'s, which never consult the status filter — so the
+counterfactual was correct and simply never evaluated on the flagless
+`goc --waiting`. Three sites means three places a reader can mistake
+one site's condition for the predicate's. The guard was deleted rather
+than widened, so the count is now unconditional on the empty path; a
+single-site gate would have made the wrong shortcut unavailable to
+write in the first place.
+
 ## Empirical evidence
 
 `uv run python .game-of-cards/deck/draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it/reproduce.py`:
