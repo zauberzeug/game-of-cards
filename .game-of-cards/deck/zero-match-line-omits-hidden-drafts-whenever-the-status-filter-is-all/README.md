@@ -1,7 +1,7 @@
 ---
 title: zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all
 summary: "The zero-match queue line only recounts hidden drafts when the status filter is not `all`, on the premise that `--status all` does not exclude drafts. That is true of `filter_cards` alone, but `card_is_ready` and `live_impeded` each carry their own draft conjunct that stays live at `all` — and `--waiting`, `--closed-since` and `--board` auto-extend an unset status to `all`. So plain `goc --waiting` prints the drained-deck sentence while hiding an impeded scaffold that publishing would reveal, the exact collapse the clause exists to undo."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-12T04:57:03Z"
@@ -10,7 +10,6 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits non-zero — plain `goc --waiting` and
         `goc --ready --status all` both name the scaffold they are hiding,
@@ -30,6 +29,7 @@ definition_of_done: |
         byte-identical
   - [ ] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
         test red, recorded in `log.md`
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The hidden-draft clause goes missing exactly where the status filter is `all`
