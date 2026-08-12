@@ -532,5 +532,116 @@ class HiddenDraftCountSpansTheWholeQueryTest(unittest.TestCase):
         )
 
 
+class HiddenDraftCountSurvivesStatusAllTest(unittest.TestCase):
+    """Widening the status filter to `all` must not delete a true clause.
+
+    Regression guard for
+    `zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all`.
+    The recount used to be skipped whenever `status == "all"`, on the premise
+    that `--status all` does not exclude drafts. That holds for `filter_cards`
+    and for nothing else: `card_is_ready` and `live_impeded` drop drafts
+    without consulting the status filter at all. And `--waiting` /
+    `--closed-since` / `--board` auto-extend an UNSET `--status` to `all`, so
+    the flagless `goc --waiting` — the impediment review surface — took the
+    skipped branch every time.
+
+    Every case in the sibling class above passes `status_flag="open"`
+    explicitly, which is exactly why this survived that card. These cases
+    leave the status filter where the command line really leaves it, and pair
+    each one against the `--status open` rendering of the same deck: widening
+    a filter cannot make a hidden card less hidden, so the two must agree.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self._root = Path(self._tmp.name)
+        self._prev = engine.DECK_DIR
+        self.addCleanup(self._restore)
+
+    def _restore(self) -> None:
+        engine.DECK_DIR = self._prev
+        self._tmp.cleanup()
+
+    def _deck(self, name: str, cards: dict[str, dict]) -> None:
+        """Deck of `{title: {status, closed_at, waiting_on, draft}}`."""
+        deck = self._root / name / ".game-of-cards" / "deck"
+        deck.mkdir(parents=True)
+        for title, spec in cards.items():
+            card = deck / title
+            card.mkdir()
+            extra = ""
+            if spec.get("waiting_on"):
+                extra += f"waiting_on: {spec['waiting_on']}\n"
+            if spec.get("draft", True):
+                extra += "draft: true\n"
+            (card / "README.md").write_text(OVERLAY_CARD.format(
+                title=title,
+                status=spec.get("status", "open"),
+                closed_at=spec.get("closed_at", "null"),
+                extra=extra,
+            ))
+        engine.DECK_DIR = deck
+
+    _run = staticmethod(_render)
+
+    CLAUSE = "1 unauthored draft scaffold hidden"
+
+    def test_flagless_waiting_names_the_scaffold_it_is_hiding(self) -> None:
+        """`goc --waiting` with no `--status` — the shape that resolves to all."""
+        self._deck("impeded", {"alpha": {"waiting_on": "external"}})
+        out = self._run(waiting=True)
+        self.assertIn("waiting: active impediment overlay", out)
+        self.assertIn(self.CLAUSE, out)
+        self.assertIn("goc publish", out)
+
+    def test_widening_to_all_does_not_change_what_waiting_reports(self) -> None:
+        """The discriminator: same deck, same query, one extra flag."""
+        self._deck("impeded", {"alpha": {"waiting_on": "external"}})
+        explicit_open = self._run(waiting=True, status_flag="open")
+        explicit_all = self._run(waiting=True, status_flag="all")
+        self.assertIn(self.CLAUSE, explicit_open)
+        self.assertIn(self.CLAUSE, explicit_all)
+
+    def test_ready_at_status_all_names_the_scaffold_too(self) -> None:
+        """`--ready`'s draft conjunct lives in `card_is_ready`, not the status."""
+        self._deck("queueable", {"alpha": {}})
+        plain = self._run(ready=True)
+        widened = self._run(ready=True, status_flag="all")
+        self.assertIn(self.CLAUSE, plain)
+        self.assertIn("status: all", widened)
+        self.assertIn(self.CLAUSE, widened)
+
+    def test_all_still_gains_no_clause_when_no_stage_hides_the_draft(self) -> None:
+        """The true negative — the fix is not "always count under `all`".
+
+        Without `--waiting` or `--ready`, `--status all` really does list
+        drafts, so an empty result there was emptied by something else and
+        publishing would reveal nothing.
+        """
+        self._deck("visible-draft", {"alpha": {}})
+        out = self._run(status_flag="all", contribution="high")
+        self.assertIn("No cards match", out)
+        self.assertNotIn("draft", out)
+
+    def test_unimpeded_draft_is_still_not_counted_under_flagless_waiting(self) -> None:
+        """The other true negative, on the very query the guard used to skip.
+
+        `--waiting` wants an active overlay; this draft has none, so publishing
+        it would not put it in this result either.
+        """
+        self._deck("no-overlay", {"alpha": {}})
+        out = self._run(waiting=True)
+        self.assertIn("waiting: active impediment overlay", out)
+        self.assertNotIn("draft", out)
+
+    def test_the_two_flagless_waiting_shapes_do_not_render_identically(self) -> None:
+        """The collapse itself, on the default invocation."""
+        self._deck("no-overlay", {"alpha": {}})
+        without = self._run(waiting=True)
+        self._deck("impeded", {"alpha": {"waiting_on": "external"}})
+        impeded = self._run(waiting=True)
+        self.assertNotEqual(without, impeded)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -4074,15 +4074,25 @@ def _cmd_default(args):
         # `--board` already prints its header, and a prose line in either
         # would break their machine-readable / grid shape.
         # The draft conjunct is recovered only on the empty path — the normal
-        # query stays one pass — and only when it could have applied at all
-        # (`--status all` does not exclude drafts, so nothing was hidden).
-        # It re-runs the WHOLE query rather than `filter_cards` alone: the
-        # count is a claim about what publishing would reveal, so a draft the
-        # `--closed-since` window or the `--waiting` overlay rejects on its
-        # own merits must not be counted — publishing it reveals nothing, and
-        # the clause would send the reader to `goc publish` for no effect.
+        # query stays one pass. It re-runs the WHOLE query rather than
+        # `filter_cards` alone: the count is a claim about what publishing
+        # would reveal, so a draft the `--closed-since` window or the
+        # `--waiting` overlay rejects on its own merits must not be counted —
+        # publishing it reveals nothing, and the clause would send the reader
+        # to `goc publish` for no effect.
+        #
+        # Deliberately unguarded on `status`. A `status != "all"` short-circuit
+        # read the draft gate off `filter_cards` alone, where `--status all`
+        # genuinely is inert — but `card_is_ready` and `live_impeded` drop
+        # drafts without ever consulting the status filter, and the branch
+        # above auto-extends an unset `--status` to `all` for `--waiting` /
+        # `--closed-since` / `--board`. So the flagless `goc --waiting` took
+        # the skipped branch every time and reported a deck of impeded
+        # scaffolds as drained. No guard is needed: the recount runs only when
+        # the query matched nothing, and with no draft-gated stage active the
+        # replay returns that same empty set — count 0, clause absent.
         hidden_drafts = 0
-        if not filtered and status != "all":
+        if not filtered:
             hidden_drafts = len(
                 [t for t in run_query(include_drafts=True) if card_is_draft(t)]
             )

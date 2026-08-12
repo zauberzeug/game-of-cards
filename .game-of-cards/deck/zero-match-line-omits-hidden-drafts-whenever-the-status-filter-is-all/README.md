@@ -1,33 +1,33 @@
 ---
 title: zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all
 summary: "The zero-match queue line only recounts hidden drafts when the status filter is not `all`, on the premise that `--status all` does not exclude drafts. That is true of `filter_cards` alone, but `card_is_ready` and `live_impeded` each carry their own draft conjunct that stays live at `all` — and `--waiting`, `--closed-since` and `--board` auto-extend an unset status to `all`. So plain `goc --waiting` prints the drained-deck sentence while hiding an impeded scaffold that publishing would reveal, the exact collapse the clause exists to undo."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-12T04:57:03Z"
-closed_at: null
+closed_at: "2026-08-12T05:06:02Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits non-zero — plain `goc --waiting` and
+  - [x] TDD: `reproduce.py` exits non-zero — plain `goc --waiting` and
         `goc --ready --status all` both name the scaffold they are hiding,
         matching what the same decks print under `--status open`
-  - [ ] TDD: a regression test in `tests/test_empty_query_result_line.py` pins
+  - [x] TDD: a regression test in `tests/test_empty_query_result_line.py` pins
         both shapes with the status filter LEFT UNSET (the predecessor's cases
         all pass `status_flag="open"`, which is why this survived), plus the
         true-negative control that `--status all` alone still gains no clause
-  - [ ] MECHANICAL: the recount's entry condition no longer names a single
+  - [x] MECHANICAL: the recount's entry condition no longer names a single
         conjunct — `filter_cards`' draft gate is one of three axes, so the
         guard must not claim to know from `status` alone that nothing was hidden
-  - [ ] TDD: existing pins in `tests/test_empty_query_result_line.py` stay green
+  - [x] TDD: existing pins in `tests/test_empty_query_result_line.py` stay green
         (plain `goc`, `--ready`, `--json`, `--board`, the two `--waiting` and two
         `--closed-since` counterfactual halves, and every user-supplied filter
         still named)
-  - [ ] MECHANICAL: plugin mirrors re-synced so the four `engine.py` copies stay
+  - [x] MECHANICAL: plugin mirrors re-synced so the four `engine.py` copies stay
         byte-identical
-  - [ ] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
+  - [x] PROCESS: guard sensitivity confirmed — reverting the fix turns the new
         test red, recorded in `log.md`
 worker: {who: "claude[bot]", where: main}
 ---
@@ -42,7 +42,10 @@ put it there.
 
 ## Location
 
-- `goc/engine.py:4085` — the recount's entry condition in `_cmd_default`:
+Line numbers are **post-fix**; the pre-fix shape is quoted inline.
+
+- `goc/engine.py:4095` — the recount's entry condition in `_cmd_default`,
+  which read:
 
   ```python
   if not filtered and status != "all":
@@ -75,9 +78,9 @@ put it there.
 ## What's broken
 
 The recount answers a counterfactual: *would this card appear if its draft
-flag were cleared?* Its entry guard is an optimization — skip the second pass
-when the draft gate could not have removed anything. The comment above it
-states the premise:
+flag were cleared?* Its entry guard was an optimization — skip the second
+pass when the draft gate could not have removed anything. The comment above
+it stated the premise:
 
 > ```
 > # The draft conjunct is recovered only on the empty path — the normal
@@ -98,7 +101,7 @@ three separate axes:
 
 `card_is_ready` and `live_impeded` never look at the status filter — they
 drop drafts unconditionally. So under `--ready` or `--waiting`, drafts stay
-hidden at `--status all`, and the guard suppresses the very count that would
+hidden at `--status all`, and the guard suppressed the very count that would
 have said so.
 
 The predecessor card
@@ -113,7 +116,13 @@ the branch quoted above.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all/reproduce.py`
+`reproduce.py` exits 0 while the defect is present and 1 once it is fixed.
+Both pairs it prints are the **same deck** rendered twice, so the two halves
+are directly comparable: widening a filter cannot make a hidden card less
+hidden, so the renderings must agree.
+
+Before the fix — the `--status open` half prints the clause, widening to
+`all` deletes it:
 
 ```
 shape 1 — an impeded draft, queried two ways
@@ -128,11 +137,22 @@ shape 2 — a queueable draft, queried two ways
 [DEFECT] adding `--status all` (or letting --waiting resolve it) silently drops a true hidden-draft clause
 ```
 
-Both pairs are the **same deck** rendered twice. The `--status open` half
-prints the clause; widening to `all` — which cannot make a hidden card less
-hidden — deletes it. The third line is the discriminator that makes this a
-false negative rather than a correctly-withheld clause: publishing the
-scaffold makes the identical default query list it.
+The third line is the discriminator that makes the omission a false negative
+rather than a correctly-withheld clause: publishing the scaffold makes the
+identical default query list it.
+
+After the fix (exit 1) — both halves of both pairs agree:
+
+```
+shape 1 — an impeded draft, queried two ways
+  goc --waiting --status open : No cards match (status: open; waiting: active impediment overlay; 1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+  goc --waiting               : No cards match (status: all; waiting: active impediment overlay; 1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+  ...after `goc publish`      : alpha  open    medium    3.0  none  bug   0/1
+
+shape 2 — a queueable draft, queried two ways
+  goc --ready                 : No cards match (ready: status open, gate none, no active impediment; 1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+  goc --ready --status all    : No cards match (ready: status open, gate none, no active impediment; status: all; 1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+```
 
 ## Why it matters
 
@@ -163,29 +183,38 @@ over. This is not a seventh instance of "a surface forgot to exclude drafts",
 and it adds no fourth `include_drafts` site — it removes a stale conditional.
 The fix below stands whichever mechanism that card's decision picks.
 
-## Fix
+## Fix (applied)
 
-Drop the `status != "all"` half of the entry guard in `_cmd_default`
-(`goc/engine.py:4085`):
+The `status != "all"` half of the entry guard is gone from `_cmd_default`
+(`goc/engine.py:4095`):
 
 ```python
+hidden_drafts = 0
 if not filtered:
     hidden_drafts = len(
         [t for t in run_query(include_drafts=True) if card_is_draft(t)]
     )
 ```
 
-The recount is already exact — it replays the whole query and counts only
+The recount was already exact — it replays the whole query and counts only
 cards the draft flag alone is hiding — so the guard was never load-bearing
 for correctness, only for skipping a second pass. Removing it is safe by the
 recount's own construction: it runs only when `filtered` is empty, and when
-`status == "all"` with no draft-gated stage active, `run_query(include_drafts=True)`
-returns the same empty set, so the count is `0` and the clause stays absent.
-`test_status_all_gains_no_clause_because_it_hides_nothing`
-(`tests/test_empty_query_result_line.py:313`) keeps that true-negative pinned.
-
-The comment above the guard must lose the `--status all` justification with
-it — that sentence is the defect, restated.
+`status == "all"` with no draft-gated stage active,
+`run_query(include_drafts=True)` returns that same empty set, so the count is
+`0` and the clause stays absent. The comment above the guard lost the
+`--status all` justification with it — that sentence was the defect, restated
+— and now says why the recount needs no `status` guard at all, so the next
+reader does not re-derive the same wrong shortcut.
 
 Cost: one extra `run_query` pass on `--status all` queries that matched
 nothing, the same pass every other empty query already pays.
+
+`tests/test_empty_query_result_line.py` gained
+`HiddenDraftCountSurvivesStatusAllTest`: three positives that leave the
+status filter where the command line leaves it (flagless `--waiting`,
+`--waiting --status all` paired against `--status open`, `--ready --status
+all` paired against plain `--ready`), and three negatives that stop the fix
+from degenerating into "always count under `all`" — an unimpeded draft under
+flagless `--waiting`, `--status all` with no draft-gated stage active, and
+the two flagless `--waiting` shapes asserted non-identical.
