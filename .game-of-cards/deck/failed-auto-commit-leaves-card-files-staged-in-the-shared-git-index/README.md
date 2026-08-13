@@ -144,6 +144,23 @@ nor
 touches the index-cleanup path: the first adds a pre-flight refusal, the
 second only re-routed the diagnostic to stderr.
 
+**Why this is a single-site defect, not a family.** The engine already has
+the convention this call site is missing: the claim-push path aborts its own
+half-finished git state on failure (`git rebase --abort`, `engine.py:5060`),
+and `goc move`'s `git mv` falls back rather than stranding a side effect
+(`engine.py:6391-6393`). `_git_auto_commit` is the outlier against a local
+convention, and it is the one shared helper every auto-committing verb routes
+through — so the fix is one function, not an architectural sweep. It is also
+adjacent to but NOT a member of
+[mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success](../mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success/):
+that epic's eight children all accept *invalid input* where they should
+refuse, whereas here the input is well-formed and an environmental step
+fails. Deliberately left unwired (no `advances` edge), per the verdict
+recorded on
+[meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired](../meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired/)
+that a single-site defect carrying zero edges is not rot; the epic's Scope
+notes carry the reciprocal cross-reference.
+
 ## Decision required
 
 Two independent questions, both with credible answers.

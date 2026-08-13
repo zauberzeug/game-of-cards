@@ -168,3 +168,14 @@ slice.
   [meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired](../meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired/):
   a single-site defect with no prose roster carrying zero edges is not
   rot).
+- **Adjacent, deliberately NOT a child:**
+  [failed-auto-commit-leaves-card-files-staged-in-the-shared-git-index](../failed-auto-commit-leaves-card-files-staged-in-the-shared-git-index/)
+  shares the visible symptom — a mutation verb prints its success line and
+  exits 0 when its effect did not land — but its cause is an *environmental*
+  failure (`git commit` rejected by a pre-commit hook), not input this epic's
+  verbs should have refused. There is nothing to validate: the arguments are
+  well-formed. Wiring it into `advanced_by` would make this epic's second DoD
+  item ("All eight open child cards are closed…") false and would put a case
+  with no invalid input under a shared input-validation shape. Recorded here
+  so a future triage pass recognises it as already-considered rather than
+  re-filing it as a ninth child.
