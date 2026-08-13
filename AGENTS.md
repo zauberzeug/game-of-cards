@@ -187,10 +187,24 @@ for everything `goc install` writes into a consuming repo:
 The hook list is derived from `templates/hooks/*.py` at install time
 (see `deck_hook_scripts` in `goc/install.py`); dropping a new `.py`
 file in that directory wires it into the install copy and the parity
-mirrors automatically. The event mapping (`SessionStart`, `Stop`, etc.)
-stays explicit in `GOC_CLAUDE_HOOKS`, and `goc validate` enforces that
-every script has a registration and every registration points at a
-real file.
+mirrors automatically. The **event mapping** is not derived — it stays
+explicit in three hand-maintained registries, one per install path:
+`GOC_CLAUDE_HOOKS` (`goc/install.py`, the vendored `--local-skills`
+path) plus `claude-plugin/hooks/hooks.json` and
+`codex-plugin/hooks/hooks.json` (the plugin path, which is the
+default). They stay hand-written because a command is not derivable
+from a script name — Codex carries per-event `statusMessage` strings
+and a version-fallback shell wrapper, Claude a different root
+variable. `goc validate` covers all three: `validate_hook_registration`
+checks `GOC_CLAUDE_HOOKS`, and `validate_plugin_hook_registration`
+checks each payload's `hooks.json` against the scripts that payload
+ships — in both directions, so a script nothing registers (installed
+but never invoked) and a registration naming a script the payload no
+longer ships (fails on every fire) each turn the build red. The
+plugin check is gated on the payload root existing at the repo root,
+so it is inert in consuming repos. OpenClaw is out of scope for it:
+it reimplements the deck hooks in TypeScript inside
+`openclaw-plugin/index.ts` and ships no `hooks.json`.
 
 ### Skill and hook files have two copies — edit the template, sync handles the rest
 

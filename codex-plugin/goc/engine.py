@@ -1396,6 +1396,131 @@ def validate_hook_registration() -> list[str]:
     return errors
 
 
+#: Every `<name>.py` a plugin hook command refers to. Claude's command names
+#: the script once (`python3 ${CLAUDE_PLUGIN_ROOT}/hooks/<name>.py`); Codex's
+#: version-fallback shell wrapper names it three times. Collecting basenames
+#: into a set collapses both shapes without either grammar being hard-coded, so
+#: a host whose command form changes again does not need a parser change here.
+_PLUGIN_HOOK_SCRIPT_RE = re.compile(r"[\w.-]+\.py")
+
+#: Payload root → its hand-maintained hook registry, relative to REPO_ROOT.
+#: OpenClaw is absent on purpose: it reimplements the deck hooks in TypeScript
+#: inside `openclaw-plugin/index.ts` and ships no `hooks.json`.
+PLUGIN_HOOK_REGISTRIES = ("claude-plugin", "codex-plugin")
+
+
+def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]]:
+    """Script basenames every command in `registry` names, plus shape errors.
+
+    Parsed defensively at each level. `hooks.json` is authored by hand, so a
+    malformed one is a plausible input, and this repo has a standing family of
+    cards about loaders that trusted their input shape and turned a typo into a
+    traceback. A shape that cannot be read is reported and skipped — the caller
+    still gets whatever the well-formed entries yielded.
+    """
+    rel = _display_path(registry)
+    try:
+        data = json.loads(registry.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        return set(), [f"hook registration: {rel}: cannot be read as JSON: {exc}"]
+
+    if not isinstance(data, dict) or not isinstance(data.get("hooks"), dict):
+        return set(), [
+            f"hook registration: {rel}: expected a JSON object with a 'hooks' "
+            "object; nothing can be registered from this shape"
+        ]
+
+    names: set[str] = set()
+    errors: list[str] = []
+    for event, groups in data["hooks"].items():
+        if not isinstance(groups, list):
+            errors.append(
+                f"hook registration: {rel}: event {event!r} must map to a list "
+                f"of hook groups (got {type(groups).__name__})"
+            )
+            continue
+        for group in groups:
+            entries = group.get("hooks") if isinstance(group, dict) else None
+            if not isinstance(entries, list):
+                errors.append(
+                    f"hook registration: {rel}: event {event!r} has a group "
+                    "without a 'hooks' list"
+                )
+                continue
+            for entry in entries:
+                command = entry.get("command") if isinstance(entry, dict) else None
+                if not isinstance(command, str):
+                    errors.append(
+                        f"hook registration: {rel}: event {event!r} has an entry "
+                        "without a string 'command'"
+                    )
+                    continue
+                names.update(_PLUGIN_HOOK_SCRIPT_RE.findall(command))
+    return names, errors
+
+
+def validate_plugin_hook_registration() -> list[str]:
+    """Check each plugin payload's `hooks.json` against the scripts it ships.
+
+    `validate_hook_registration` above enforces script ↔ registration parity for
+    `GOC_CLAUDE_HOOKS`, which drives `.claude/settings.json` on the vendored
+    `--local-skills` install. That is the opt-in minority path. The DEFAULT
+    install writes `skills_source: plugin`, and there the registry is the
+    payload's own `hooks.json` — hand-maintained, deliberately preserved by
+    `scripts/sync_plugin_assets.py` and deliberately excluded from
+    `validate_plugin_mirror_parity`'s byte comparison, so until this check
+    existed no mechanism owned it.
+
+    Both directions matter and fail silently in opposite ways. A script the
+    payload ships but no command names is dead weight the host never invokes; a
+    command naming a script the payload no longer ships ENOENTs on every fire of
+    that event. The sync produces the second shape on its own, since retiring a
+    template prunes the mirrored file while leaving the registry untouched.
+
+    Gated on the payload roots existing at `REPO_ROOT`, like the mirror-parity
+    check, so this is inert in consuming repos.
+    """
+    from goc.install import deck_hook_scripts
+
+    templates = PACKAGE_DIR / "templates"
+    if not (templates / "hooks").exists():
+        return []
+    shipped_by_source = set(deck_hook_scripts(templates))
+
+    errors: list[str] = []
+    for plugin in PLUGIN_HOOK_REGISTRIES:
+        hooks_dir = REPO_ROOT / plugin / "hooks"
+        registry = hooks_dir / "hooks.json"
+        if not registry.exists():
+            continue
+        registered, shape_errors = _plugin_registered_hook_scripts(registry)
+        errors.extend(shape_errors)
+        rel = _display_path(registry)
+
+        # Compare against what the payload actually ships where present, and
+        # fall back to the template set otherwise: `--check` runs before the
+        # sync has copied anything into a freshly cloned payload dir.
+        shipped = (
+            {p.name for p in hooks_dir.glob("*.py")}
+            if hooks_dir.exists()
+            else shipped_by_source
+        )
+
+        for name in sorted(shipped - registered):
+            errors.append(
+                f"hook registration: {plugin}/hooks/{name} is shipped in the "
+                f"plugin payload but no command in {rel} names it — the file "
+                "would be installed and never invoked. Add an event entry."
+            )
+        for name in sorted(registered - shipped):
+            errors.append(
+                f"hook registration: {rel} registers {name}, which "
+                f"{plugin}/hooks/ does not ship — the hook would fail with "
+                "'no such file' on every fire. Drop the entry or restore the script."
+            )
+    return errors
+
+
 class _DeepDircmp(filecmp.dircmp):
     """`filecmp.dircmp` variant that compares file contents (`shallow=False`).
 
@@ -4137,6 +4262,9 @@ def _cmd_validate(args):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for e in validate_hook_registration():
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
+    for e in validate_plugin_hook_registration():
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for t in cards:

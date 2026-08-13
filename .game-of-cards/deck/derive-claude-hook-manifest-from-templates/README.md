@@ -23,6 +23,18 @@ worker: {who: "claude[bot]", where: main}
 
 # Derive Claude hook manifest from templates
 
+> **Forward pointer (2026-08-13).** The enumeration below was complete
+> when this card closed, and two registration sites have appeared since:
+> `claude-plugin/hooks/hooks.json` and `codex-plugin/hooks/hooks.json`,
+> the event registries the *default* (plugin) install path reads. They
+> inherited neither the derivation nor the tripwire, so failure mode (2)
+> — "file copied but never invoked; silent no-op" — was reachable again
+> on the majority path. Closed by
+> [plugin-payload-hooks-json-never-registers-a-newly-added-hook-script](../plugin-payload-hooks-json-never-registers-a-newly-added-hook-script/),
+> which added `validate_plugin_hook_registration` to `goc validate`.
+> Nothing below needs reopening; this card's conclusion held for the
+> three sites it named.
+
 ## Why
 
 Three sites in the codebase enumerate hooks:
