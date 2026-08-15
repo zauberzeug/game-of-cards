@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Twelfth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree."
+summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Thirteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them."
 status: open
 stage: null
 contribution: medium
@@ -54,8 +54,9 @@ the *unguarded* claims.
 | `test_no_shipped_skill_body_links_into_a_deck` (own file, `tests/test_skill_template_deck_links.py`) | [card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/) | 2026-07-29 |
 | *(none yet — open)* | [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/) | — |
 | `LlmsTxtInstallChannelTest` (own file, `tests/test_llms_txt_install_channels.py`) | [llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/) | 2026-08-01 |
+| *(no new class — four tests added to the existing `AgentsArchitectureAccuracyTest`)* | [agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/) | 2026-08-15 |
 
-Twelve instances across three months, each its own file → claim → fix → guard cycle.
+Thirteen instances across three months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -161,6 +162,37 @@ asserted", this adds: **when a fact has no in-tree source at all, the fact that 
 surfaces restate it is itself the derivable invariant.** That reaches a class
 neither option currently covers, and it costs one consistency test per claim
 family rather than one guard per claim.
+
+The thirteenth widens nothing — and that is what makes it the sharpest instance
+in the table. Its surface (`AGENTS.md`'s `## Code architecture`) and its guard
+class (`AgentsArchitectureAccuracyTest`) are the *second* instance's, already
+catalogued here since 2026-05-27.
+[agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/)
+found all three clauses of the `goc/cli.py` bullet false at once: the parser
+build, the `install`/`upgrade` registration and the `--version` ownership were
+each attributed to a file that does none of them. Every one of those clauses was
+written *by the second instance's own repair*, in the same sentence it was
+fixing, and the guard it added that day — `test_cli_bullet_does_not_mention_click`
+— went green on the rewritten text without ever looking at what the rewrite now
+asserted.
+
+This is the ninth instance's lesson ("the act of fixing the first assertion is
+what created the stale second one") recurring inside a *guarded* surface, and it
+narrows the unit of coverage by one more level. The eighth showed a guard keyed
+to a file misses the same claim asserted elsewhere; this shows a guard keyed to a
+*claim* misses the other claims in the sentence it guards. Neither Option A's
+sweep (the surface has a guard) nor Option B's claim-keyed pinning (the three new
+claims were novel, pinned nowhere) would have caught it.
+
+The datum for the scope decision is therefore about *when* to sweep, not where:
+the highest-yield moment to look for unguarded restatements is the commit that
+edits a documentation sentence, because a repair rewrites more prose than it was
+aimed at. Whatever option is adopted, a guarded surface should not be treated as
+a covered one — the repair took the local route (four derived tests replacing the
+one `click` regex, three of them checked against the stale text to prove they
+fire), but the general shape is a diff-scoped check: **when a commit touches a
+guarded doc surface, every factual clause in the changed lines needs a guard, not
+just the one that motivated the edit.**
 
 ## What's structurally wrong
 
