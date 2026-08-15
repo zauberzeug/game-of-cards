@@ -1,7 +1,7 @@
 ---
 title: agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does
 summary: "AGENTS.md's `## Code architecture` section says `goc/cli.py` \"Builds the engine's argparse parser via `_build_parser`, bolts on `install` + `upgrade` from `install.py`, and adds `--version`\". All three clauses are false: cli.py imports `_build_parser` and never calls it (the parser is built inside `engine.cli()`), install/upgrade are intercepted on `argv[0]` before argparse and routed to two standalone parsers rather than registered as subcommands, and `--version` is registered by `engine._build_parser` — as cli.py's own comment three lines above the interception says. The bullet is the always-loaded briefing an agent reads before touching the CLI, and it contradicts the open card `goc-help-omits-install-and-upgrade-subcommands`, whose whole premise is that the two verbs are never registered on that parser."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-15T04:34:08Z"
@@ -10,7 +10,6 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — no clause of the AGENTS.md `goc/cli.py` bullet asserts wiring `goc/cli.py` does not perform.
   - [ ] TDD: `tests/test_guidance_accuracy.py` gains assertions in `AgentsArchitectureAccuracyTest` that derive each claim from the tree (cli.py's AST and the engine parser) rather than restating it, so the bullet turns the build red the day the wiring changes back.
@@ -18,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the unused `_build_parser` import is removed from `goc/cli.py:13` — it is the mechanical evidence for the false first clause, and leaving it invites the claim back.
   - [ ] PROCESS: cross-referenced from [goc-help-omits-install-and-upgrade-subcommands](../goc-help-omits-install-and-upgrade-subcommands/), whose premise the stale bullet contradicts.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # AGENTS.md's `goc/cli.py` bullet describes parser wiring the entry point never does
