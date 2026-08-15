@@ -8,6 +8,7 @@ implementation and misleads autonomous agents into believing a commit has landed
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
 import re
 import sys
@@ -81,6 +82,14 @@ _SCHEMA_TOP_LEVEL_KEYS = tuple(
 )
 
 
+def _agents_cli_bullet() -> str:
+    """Return the `goc/cli.py` bullet of AGENTS.md's architecture section."""
+    section = _agents_architecture_section()
+    start = section.index("**`goc/cli.py`**")
+    end = section.index("**`goc/engine.py`**")
+    return section[start:end]
+
+
 def _engine_subcommands() -> set[str]:
     """Every subcommand the engine's argparse parser registers."""
     from goc.engine import _build_parser
@@ -92,14 +101,154 @@ def _engine_subcommands() -> set[str]:
     raise AssertionError("no subparsers found on engine parser")
 
 
+def _engine_registers_version() -> bool:
+    """True iff the engine parser owns the `--version` action."""
+    from goc.engine import _build_parser
+
+    return any("--version" in a.option_strings for a in _build_parser()._actions)
+
+
+CLI_PY = ROOT / "goc" / "cli.py"
+
+
+def _cli_tree() -> ast.Module:
+    return ast.parse(CLI_PY.read_text(encoding="utf-8"), filename=str(CLI_PY))
+
+
+def _cli_calls(name: str) -> bool:
+    """True iff `goc/cli.py` calls `name(...)` anywhere.
+
+    An import alone is not a call — the distinction the stale bullet lost.
+    """
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == name
+        for node in ast.walk(_cli_tree())
+    )
+
+
+def _cli_registers_version() -> bool:
+    """True iff `goc/cli.py` itself calls `.add_argument("--version", ...)`."""
+    for node in ast.walk(_cli_tree()):
+        if not isinstance(node, ast.Call):
+            continue
+        if not (isinstance(node.func, ast.Attribute) and node.func.attr == "add_argument"):
+            continue
+        if any(isinstance(a, ast.Constant) and a.value == "--version" for a in node.args):
+            return True
+    return False
+
+
 class AgentsArchitectureAccuracyTest(unittest.TestCase):
     def test_cli_bullet_does_not_mention_click(self) -> None:
-        section = _agents_architecture_section()
-        cli_bullet = section[section.index("**`goc/cli.py`**"):section.index("**`goc/engine.py`**")]
         self.assertNotRegex(
-            cli_bullet,
+            _agents_cli_bullet(),
             re.compile(r"click", re.IGNORECASE),
             msg="AGENTS.md goc/cli.py bullet still mentions Click; the package uses argparse.",
+        )
+
+    def test_entry_point_wiring_is_what_the_cli_bullet_describes(self) -> None:
+        """The behavioural half: the three facts the doc assertions below rest on.
+
+        Deriving them from the tree — rather than restating them in prose —
+        means the day somebody really does move the parser build, the verb
+        registration, or `--version` into `goc/cli.py`, this test fails first
+        and points the editor at the bullet, instead of the doc guards below
+        silently pinning a claim that has become false in the other direction.
+        Regression guard for
+        `agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does`,
+        which is how all three clauses came to be false at once.
+        """
+        self.assertFalse(
+            _cli_calls("_build_parser"),
+            msg=(
+                "goc/cli.py now calls `_build_parser` itself; the engine parser "
+                "used to be built inside `engine.cli()`. Re-derive the AGENTS.md "
+                "goc/cli.py bullet and the doc assertions below it."
+            ),
+        )
+        self.assertEqual(
+            sorted(_engine_subcommands() & {"install", "upgrade"}),
+            [],
+            msg=(
+                "install/upgrade are now engine subcommands; they used to be "
+                "intercepted on argv[0] before argparse. Re-derive the AGENTS.md "
+                "goc/cli.py bullet — and revisit the open card "
+                "`goc-help-omits-install-and-upgrade-subcommands`, whose premise "
+                "is that they never reach that parser."
+            ),
+        )
+        self.assertFalse(
+            _cli_registers_version(),
+            msg=(
+                "goc/cli.py now registers `--version` itself; it used to be an "
+                "action on the engine parser. Re-derive the AGENTS.md goc/cli.py "
+                "bullet and the doc assertion below it."
+            ),
+        )
+        self.assertTrue(
+            _engine_registers_version(),
+            msg=(
+                "the engine parser no longer registers `--version`; the AGENTS.md "
+                "goc/cli.py bullet attributes it there."
+            ),
+        )
+
+    def test_cli_bullet_does_not_attribute_the_parser_build_to_cli_py(self) -> None:
+        bullet = _agents_cli_bullet()
+        self.assertNotRegex(
+            bullet,
+            re.compile(r"[Bb]uilds\s+the\s+engine's\s+argparse\s+parser", re.DOTALL),
+            msg=(
+                "AGENTS.md goc/cli.py bullet says cli.py builds the engine's "
+                "argparse parser. It imports nothing of the sort at call time — "
+                "`engine.cli()` builds it (goc/engine.py). Name the delegate, not "
+                "a composition step that does not happen."
+            ),
+        )
+        self.assertIn(
+            "engine.cli()",
+            bullet,
+            msg=(
+                "AGENTS.md goc/cli.py bullet does not name `engine.cli()`. That "
+                "delegate is where the parser is built and where every global "
+                "flag is handled; without it the bullet leaves an agent looking "
+                "for a parser object cli.py does not hold."
+            ),
+        )
+
+    def test_cli_bullet_does_not_claim_install_and_upgrade_are_registered(self) -> None:
+        bullet = _agents_cli_bullet()
+        self.assertNotRegex(
+            bullet,
+            re.compile(r"bolts\s+on", re.IGNORECASE | re.DOTALL),
+            msg=(
+                "AGENTS.md goc/cli.py bullet says install/upgrade are bolted onto "
+                "the engine parser. They are intercepted on argv[0] before "
+                "argparse and routed to standalone parsers — which is exactly why "
+                "`goc --help` omits them."
+            ),
+        )
+        self.assertIn(
+            "argv[0]",
+            bullet,
+            msg=(
+                "AGENTS.md goc/cli.py bullet does not name the argv[0] "
+                "interception. It is the mechanism an agent has to change to fix "
+                "`goc --help`, and the bullet is the map that agent reads first."
+            ),
+        )
+
+    def test_cli_bullet_does_not_attribute_version_to_cli_py(self) -> None:
+        self.assertNotRegex(
+            _agents_cli_bullet(),
+            re.compile(r"adds\s+`--version`", re.DOTALL),
+            msg=(
+                "AGENTS.md goc/cli.py bullet says cli.py adds `--version`. It is "
+                "registered by `engine._build_parser`, as cli.py's own comment "
+                "states — attribute it to the engine parser."
+            ),
         )
 
     def test_cli_source_has_no_click(self) -> None:

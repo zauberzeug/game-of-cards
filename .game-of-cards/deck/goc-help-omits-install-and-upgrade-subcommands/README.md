@@ -200,6 +200,16 @@ cli.py intercept — so the stubs need only the verb-line help text.)
 - [agents-md-architecture-section-cites-removed-click-and-omits-verbs](../agents-md-architecture-section-cites-removed-click-and-omits-verbs/)
   — closed; noted the install/upgrade carve-out without filing this
   user-facing bug.
+- [agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/)
+  — closed; the AGENTS.md architecture bullet used to claim cli.py
+  "bolts on `install` + `upgrade`", i.e. the exact opposite of this
+  card's premise, so an agent pulling this fix would have gone looking
+  for an `add_parser("install", ...)` call that never existed. The
+  bullet now names the `argv[0]` intercept and points here, and
+  `tests/test_guidance_accuracy.py` pins the claim to the engine
+  parser's real subcommand set — so implementing Option A here (stub
+  subparser registration) will turn that guard red and prompt the
+  bullet to be re-derived in the same commit.
 - [global-cli-flags-silently-dropped-by-subcommand-flag-defaults](../global-cli-flags-silently-dropped-by-subcommand-flag-defaults/)
   — open; related subparser-vs-top-level-parser issue, distinct
   root cause.

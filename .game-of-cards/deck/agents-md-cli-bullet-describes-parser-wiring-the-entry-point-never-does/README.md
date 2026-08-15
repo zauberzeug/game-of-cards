@@ -1,22 +1,22 @@
 ---
 title: agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does
 summary: "AGENTS.md's `## Code architecture` section says `goc/cli.py` \"Builds the engine's argparse parser via `_build_parser`, bolts on `install` + `upgrade` from `install.py`, and adds `--version`\". All three clauses are false: cli.py imports `_build_parser` and never calls it (the parser is built inside `engine.cli()`), install/upgrade are intercepted on `argv[0]` before argparse and routed to two standalone parsers rather than registered as subcommands, and `--version` is registered by `engine._build_parser` — as cli.py's own comment three lines above the interception says. The bullet is the always-loaded briefing an agent reads before touching the CLI, and it contradicts the open card `goc-help-omits-install-and-upgrade-subcommands`, whose whole premise is that the two verbs are never registered on that parser."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-08-15T04:34:08Z"
-closed_at: null
+closed_at: "2026-08-15T04:42:31Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [documentation, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — no clause of the AGENTS.md `goc/cli.py` bullet asserts wiring `goc/cli.py` does not perform.
-  - [ ] TDD: `tests/test_guidance_accuracy.py` gains assertions in `AgentsArchitectureAccuracyTest` that derive each claim from the tree (cli.py's AST and the engine parser) rather than restating it, so the bullet turns the build red the day the wiring changes back.
-  - [ ] MECHANICAL: the `goc/cli.py` bullet in `AGENTS.md` describes what the entry point actually does — restores SIGPIPE, intercepts `install`/`upgrade` on `argv[0]` and routes them to standalone parsers in `install.py`, delegates everything else to `engine.cli()` (which builds the parser and owns `--version`).
-  - [ ] MECHANICAL: the unused `_build_parser` import is removed from `goc/cli.py:13` — it is the mechanical evidence for the false first clause, and leaving it invites the claim back.
-  - [ ] PROCESS: cross-referenced from [goc-help-omits-install-and-upgrade-subcommands](../goc-help-omits-install-and-upgrade-subcommands/), whose premise the stale bullet contradicts.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+  - [x] TDD: `reproduce.py` exits zero — no clause of the AGENTS.md `goc/cli.py` bullet asserts wiring `goc/cli.py` does not perform.
+  - [x] TDD: `tests/test_guidance_accuracy.py` gains assertions in `AgentsArchitectureAccuracyTest` that derive each claim from the tree (cli.py's AST and the engine parser) rather than restating it, so the bullet turns the build red the day the wiring changes back.
+  - [x] MECHANICAL: the `goc/cli.py` bullet in `AGENTS.md` describes what the entry point actually does — restores SIGPIPE, intercepts `install`/`upgrade` on `argv[0]` and routes them to standalone parsers in `install.py`, delegates everything else to `engine.cli()` (which builds the parser and owns `--version`).
+  - [x] MECHANICAL: the unused `_build_parser` import is removed from `goc/cli.py:13` — it is the mechanical evidence for the false first clause, and leaving it invites the claim back.
+  - [x] PROCESS: cross-referenced from [goc-help-omits-install-and-upgrade-subcommands](../goc-help-omits-install-and-upgrade-subcommands/), whose premise the stale bullet contradicts.
+  - [x] PROCESS: `uv run goc validate` passes, and `uv run python -m unittest discover -s tests` introduces no new failure — the suite's only red is the pre-existing `test_canonical_tag_rows.test_live_cards_satisfy_every_state_row`, tracked by [regression-suite-red-on-main-over-the-unverified-tag-row](../regression-suite-red-on-main-over-the-unverified-tag-row/) and red on the same test before this card's first edit.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -136,7 +136,29 @@ of which install/upgrade           : (none)
 3 false claim(s) in AGENTS.md:148-151.
 ```
 
-Exit code 1 today; 0 once the bullet describes the real wiring.
+After the fix, the same script exits 0:
+
+```
+=== what goc/cli.py actually does ===
+imports `_build_parser`            : False
+calls   `_build_parser`            : False
+registers `--version` itself       : False
+...
+claims still asserted              : (none)
+
+=== verdict ===
+[ok]   AGENTS.md no longer claims 'builds the engine parser via _build_parser'
+[ok]   AGENTS.md no longer claims 'bolts install + upgrade onto that parser'
+[ok]   AGENTS.md no longer claims 'adds --version'
+
+AGENTS.md's goc/cli.py bullet matches what cli.py does.
+```
+
+The three new negative assertions in
+`tests/test_guidance_accuracy.py` were each checked against the stale
+bullet text and match it, and the two new positive assertions
+(`engine.cli()`, `argv[0]`) each fail on it — so the guard demonstrably
+catches the offender rather than merely reporting a clean tree.
 
 ## Why it matters
 
@@ -170,9 +192,9 @@ were never pinned, which is why the 2026-05-27 Click→argparse rewrite of
 this bullet introduced three new false statements while turning the guard
 green.
 
-## Fix
+## Fix (applied)
 
-1. `AGENTS.md:148-151` — replace the bullet with what the file does:
+1. `AGENTS.md:148-156` — the bullet now describes what the file does:
 
    ```markdown
    - **`goc/cli.py`** — thin console-script entry point. Restores the
@@ -187,14 +209,27 @@ green.
      Wired as `goc = "goc.cli:main"` in `pyproject.toml`.
    ```
 
-2. `goc/cli.py:13` — drop the unused import:
+2. `goc/cli.py:11` — the unused import is gone, and the module docstring
+   (which carried the same three false claims) now matches the bullet:
 
    ```python
    from goc.engine import cli as engine_cli
    ```
 
-3. `tests/test_guidance_accuracy.py` — extend `AgentsArchitectureAccuracyTest`
-   with the three derived assertions `reproduce.py` performs (cli.py's AST
-   for the `_build_parser` call and the `--version` registration; the engine
-   parser's subcommand set for install/upgrade), so each claim is pinned to
-   the tree rather than to a reviewer's memory.
+   The three plugin mirrors (`claude-plugin/goc/cli.py`,
+   `codex-plugin/goc/cli.py`, `openclaw-plugin/goc/cli.py`) were
+   regenerated by `scripts/sync_plugin_assets.py`.
+
+3. `tests/test_guidance_accuracy.py` — `AgentsArchitectureAccuracyTest`
+   gained a behavioural test (`test_entry_point_wiring_is_what_the_cli_bullet_describes`,
+   deriving all three facts from cli.py's AST and the engine parser) plus
+   three doc tests that pin the bullet against the stale phrasing and
+   require it to name `engine.cli()` and `argv[0]`. The shared
+   `_agents_cli_bullet()` helper replaces the inline slice the pre-existing
+   `click` test used.
+
+   The behavioural test is the important half: if somebody later
+   implements Option A on
+   [goc-help-omits-install-and-upgrade-subcommands](../goc-help-omits-install-and-upgrade-subcommands/)
+   and registers stub subparsers, that test fails first and points the
+   editor back at this bullet — the failure mode this card is a record of.

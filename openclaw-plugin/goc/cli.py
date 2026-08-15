@@ -1,7 +1,9 @@
 """Console-script entry point for the `goc` command.
 
-Builds the argparse parser from engine.py, adds `install` and `upgrade`
-subcommands from install.py, and wires up the `--version` flag.
+Restores the default SIGPIPE disposition, intercepts `install` / `upgrade`
+on `argv[0]` and routes them to standalone argparse parsers over
+install.py, and delegates every other invocation to `engine.cli()`, which
+builds the engine parser and owns the global flags including `--version`.
 Registered as `goc = "goc.cli:main"` in pyproject.toml.
 """
 
@@ -10,7 +12,7 @@ from __future__ import annotations
 import signal
 import sys
 
-from goc.engine import _build_parser, cli as engine_cli
+from goc.engine import cli as engine_cli
 from goc.install import (
     BRIEFING_TARGET_HELP,
     BRIEFING_TARGETS,

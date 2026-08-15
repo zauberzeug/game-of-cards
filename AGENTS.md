@@ -145,9 +145,14 @@ publisher configuration details.
 
 The Python package is intentionally small:
 
-- **`goc/cli.py`** — thin argparse entry point. Builds the engine's
-  argparse parser via `_build_parser`, bolts on `install` + `upgrade`
-  from `install.py`, and adds `--version`. Wired as
+- **`goc/cli.py`** — thin console-script entry point. Restores the
+  default SIGPIPE disposition, intercepts `install` / `upgrade` on
+  `argv[0]` and routes them to standalone argparse parsers over
+  `install.py`, and delegates every other invocation to `engine.cli()`,
+  which builds the engine parser (`_build_parser`) and owns the global
+  flags including `--version`. Because the two install verbs never reach
+  that parser, they do not appear in `goc --help` — see the open card
+  `goc-help-omits-install-and-upgrade-subcommands`. Wired as
   `goc = "goc.cli:main"` in `pyproject.toml`.
 - **`goc/engine.py`** — the bulk of the tool: frontmatter parser, schema
   loader, card loader, validator, value/edge graph, table/board
