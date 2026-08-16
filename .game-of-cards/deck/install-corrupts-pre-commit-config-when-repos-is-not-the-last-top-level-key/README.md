@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-30T09:29:04Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - install-corrupts-pre-commit-config-in-the-style-pre-commit-itself-generates
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
