@@ -27,9 +27,10 @@ uv run goc --help                  # exercise the CLI from source
 uv run goc validate                # check every card's frontmatter
 uv run python -m unittest discover -s tests  # run the regression suite
 uv build                           # produce wheel + sdist in dist/
-pre-commit run --all-files         # sync plugin assets + goc validate + card language
+pre-commit run --all-files         # sync plugin assets + goc validate + card language + card YAML
 python scripts/sync_plugin_assets.py --check  # verify claude-plugin/ is in sync
 uv run python scripts/check_card_language.py  # cards obey the English-only rule
+uv run python scripts/check_card_frontmatter_yaml.py  # card frontmatter is valid YAML
 ```
 
 `tests/` is a stdlib `unittest`-based regression suite (run it locally
@@ -482,6 +483,20 @@ When filing GoC cards in this repo:
   precision-first: a slug built entirely from cognates can still slip
   through. The rule is this repo's convention, not goc semantics, so
   the guard is deliberately repo-local and ships to no consumer.
+- **Frontmatter must be valid YAML, not merely yaml-lite-parseable.**
+  goc reads cards through `goc/_vendor/yaml_lite.py`, scoped on
+  purpose as a superset of what `emit_frontmatter` produces, and
+  `validate_card` checks parsed field *values* rather than the
+  block's YAML legality — so a hand-edited card can pass
+  `goc validate` while a strict parser refuses it. Quote any scalar
+  holding `: ` or opening with a YAML indicator (`` ` ``, `@`, `&`,
+  `*`, `!`, `%`, `#`, `,`); `emit_frontmatter` already produces the
+  correct form, so re-emitting the card is the fix. Guarded by
+  `scripts/check_card_frontmatter_yaml.py`, which runs as the
+  `card-frontmatter-yaml` pre-commit hook and from
+  `tests/test_card_frontmatter_yaml.py` in CI. Repo-local for the
+  same reason: `goc validate` ships to consumers and cannot take a
+  YAML dependency back.
 - **No direct quotes from discussions.** Do not paste verbatim
   quotes from meetings, transcripts, chat, or coding-coffee
   retrospectives into card bodies. Synthesize the technical content

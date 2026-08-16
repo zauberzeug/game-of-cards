@@ -1,6 +1,6 @@
 ---
 title: repair-edges-help-and-docstrings-omit-supersession-half-edges-from-scope
-summary: `goc repair-edges --help` and the verb's docstrings claim the verb only handles `advances/advanced_by` half-edges, but the implementation walks every entry in `INVERSE_REL` (advances/advanced_by AND supersedes/superseded_by) and repairs supersession asymmetries just fine. A user reading `goc validate`'s "Run 'goc repair-edges --apply' to fix" against a supersession half-edge then `goc repair-edges --help` would assume the verb cannot help and try to repair by hand.
+summary: "`goc repair-edges --help` and the verb's docstrings claim the verb only handles `advances/advanced_by` half-edges, but the implementation walks every entry in `INVERSE_REL` (advances/advanced_by AND supersedes/superseded_by) and repairs supersession asymmetries just fine. A user reading `goc validate`'s \"Run 'goc repair-edges --apply' to fix\" against a supersession half-edge then `goc repair-edges --help` would assume the verb cannot help and try to repair by hand."
 status: done
 stage: null
 contribution: low

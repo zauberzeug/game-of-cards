@@ -22,3 +22,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^\.game-of-cards/deck/.*$
+      # goc reads cards through its permissive vendored parser, so frontmatter
+      # that no strict YAML parser accepts passes `goc validate` above. Fires on
+      # the filing path for the same reason card-language does.
+      - id: card-frontmatter-yaml
+        name: card frontmatter is valid YAML
+        entry: uv run python scripts/check_card_frontmatter_yaml.py --check
+        language: system
+        pass_filenames: false
+        files: ^\.game-of-cards/deck/.*$

@@ -1,6 +1,6 @@
 ---
 title: closure-on-integration-check-only-runs-for-done-not-disproved-or-superseded
-summary: When `workflow.closure_on_integration: true`, `goc done` refuses to close unless HEAD is reachable from origin/main, but `goc status <title> disproved` and `goc status <title> superseded --by <other>` skip the check entirely. The same terminal-state semantics (others must see the closure to avoid duplicate effort) apply to all three transitions, so the asymmetry creates a loophole: a worker can close locally by disproving instead of done. Decision-class because the scope of the policy is taste — was the done-only framing deliberate, or should the check extend to every terminal flip.
+summary: "When `workflow.closure_on_integration: true`, `goc done` refuses to close unless HEAD is reachable from origin/main, but `goc status <title> disproved` and `goc status <title> superseded --by <other>` skip the check entirely. The same terminal-state semantics (others must see the closure to avoid duplicate effort) apply to all three transitions, so the asymmetry creates a loophole: a worker can close locally by disproving instead of done. Decision-class because the scope of the policy is taste — was the done-only framing deliberate, or should the check extend to every terminal flip."
 status: open
 stage: null
 contribution: medium
