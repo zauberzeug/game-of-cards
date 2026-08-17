@@ -7,7 +7,8 @@ contribution: high
 created: "2026-08-17T02:21:41Z"
 closed_at: null
 human_gate: none
-advances: []
+advances:
+  - re-run-safety-is-proven-per-verb-and-new-verbs-keep-missing-it
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |

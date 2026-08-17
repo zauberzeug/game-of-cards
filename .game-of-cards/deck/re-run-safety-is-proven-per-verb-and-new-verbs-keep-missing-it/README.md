@@ -8,7 +8,8 @@ created: "2026-08-17T03:14:22Z"
 closed_at: null
 human_gate: none
 advances: []
-advanced_by: []
+advanced_by:
+  - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
 tags: [bug, test, meta-fix]
 definition_of_done: |
   - [ ] TDD: a class-level re-run test lands in `tests/` — it derives the verb list rather than enumerating it by hand, runs each mutating verb twice against a scratch deck, and asserts the second run either leaves the deck byte-identical or refuses. `reproduce.py` exits zero once it exists.
