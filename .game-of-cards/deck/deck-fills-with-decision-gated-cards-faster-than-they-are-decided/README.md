@@ -1,7 +1,7 @@
 ---
 title: deck-fills-with-decision-gated-cards-faster-than-they-are-decided
 summary: "Only 8 of 193 open cards sit at human_gate none; 166 are gated on decision and 19 on session, so the autonomous picker has a runway of days against a backlog of months. The gate is the schema default, which makes 'nobody chose a gate' indistinguishable from 'a human must pick'. Sampling 50 cards closed in the last 90 days, 44 were born ungated and 6 were born gated and later decided, and 83 of the 185 gated cards have had no log activity for over 60 days."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-17T02:58:07Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/schema.yaml` and `Skill(create-card)` Step 3 agree with each other and with the implemented default; today the skill calls `decision` "the *fallback*" while the schema makes it the value you get by omission.
   - [ ] MECHANICAL: if the fix adds a triage surface for the gated backlog, `goc --help` describes its real scope, and the mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The deck fills with decision-gated cards faster than they are decided
