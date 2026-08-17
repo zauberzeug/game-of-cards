@@ -126,13 +126,29 @@ prefer a match outside vendored/mirror trees when several exist. A
 range (`file.py:120-140`) maps its endpoints independently and is
 rewritten only when both resolve.
 
-**Getting the anchor.** The card's creating commit is the last entry
-of `git log --diff-filter=A --format=%H -- <deck>/<card>/README.md`
-(check the legacy `deck/` path too). Read the cited file at that
-commit — `git show <commit>:<path>` — and take the cited line's text.
-That text is what the card meant; the number is only its address at
-the time. Anchoring at the creating commit rather than at HEAD is what
-makes the check independent of any earlier repair pass.
+**Getting the anchor.** A cite means what it meant when its number was
+last AUTHORED, so the anchor commit is the one that wrote the number —
+the filing commit for a cite no pass has touched, the repair commit for
+one an earlier pass rewrote. Find it by walking the card's own history:
+list `git log --follow --format=%H -- <deck>/<card>/README.md` oldest to
+newest (check the legacy `deck/` path too), read the README at each
+commit, and take the newest commit at which the exact cite token turns
+from absent to present. Read the cited file at that commit — `git show
+<commit>:<path>` — and take the cited line's text. That text is what the
+card meant; the number is only its address at the time.
+
+**Why not the creating commit.** It is the same commit for a cite no
+pass has ever rewritten, so the walk subsumes that older rule rather
+than replacing it — but a repair pass rewrites the number, which is its
+whole job, and from then on the creating commit resolves whatever
+unrelated code sat at that offset when the card was filed. The recipe
+below then finds that text elsewhere in HEAD and moves the cite onto
+it, passing the uniqueness guard because the wrong anchor is genuinely
+unique. Measured on this project's deck one week after its first repair
+pass: of 850 open-card cites, the creating-commit anchor would have
+moved 165 that were correct. Repair passes recur, so second passes are
+the normal case; an anchor that is right only on a virgin deck is right
+only once.
 
 **Deciding.** Anchor text ≠ the text at that line in HEAD → defunct.
 Then look for the anchor text in HEAD and rewrite the number only when

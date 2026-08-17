@@ -43,6 +43,17 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # rules, the residue table) went to the reference sibling; the rule and the
 # recipe stayed in the core because an agent that has to follow a pointer to
 # learn the test will run the bounds test it already remembers.
+#
+# refine-deck was raised a third time on 2026-08-17 by the card
+# `second-citation-repair-pass-moves-correct-cites-onto-unrelated-code`: step 2
+# of that same recipe anchored on the card's creating commit, which is correct
+# exactly once — a repair pass rewrites the number, and reading a rewritten
+# number at the creating commit resolves unrelated code (measured: 165 of 850
+# correct cites would have been moved on this deck's second pass). Its
+# replacement is the history walk that finds the commit which last wrote the
+# number. The measurement and the why went to the reference sibling; the walk
+# itself stayed in the core for the reason above — an agent that has to follow
+# a pointer to learn the anchor will use the one-liner in front of it.
 BODY_CAPS = {
     "create-card": 10_000,
     "finish-card": 10_000,
@@ -52,7 +63,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 11_200,
+    "refine-deck": 11_500,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

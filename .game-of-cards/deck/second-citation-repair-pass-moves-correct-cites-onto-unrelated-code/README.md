@@ -1,23 +1,23 @@
 ---
 title: second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
-summary: "refine-deck's citation-repair recipe anchors each cite at the card's CREATING commit, but once a repair pass has rewritten a cite's line number that commit no longer knows what the number means. Replayed against this deck one week after its first repair pass, the shipped recipe would move 165 citations that are correct today onto unrelated code. reference.md claims the creating-commit anchor is what makes the check independent of any earlier repair pass; it is precisely what breaks it."
-status: active
+summary: "refine-deck's citation-repair recipe anchored each cite at the card's CREATING commit, but once a repair pass has rewritten a cite's line number that commit no longer knows what the number means; replayed one week after this deck's first repair pass, that recipe would have moved 165 citations that were correct onto unrelated code. The anchor is now the commit that last WROTE the number, found by walking the card README's own history for the commit where the cite token turns from absent to present, which degenerates to the creating commit on a deck no pass has repaired. reference.md's claim that the creating-commit anchor made the check independent of earlier repair passes is replaced by the measurement that refutes it."
+status: done
 stage: null
 contribution: high
 created: "2026-08-17T02:21:41Z"
-closed_at: null
+closed_at: "2026-08-17T04:39:57Z"
 human_gate: none
 advances:
   - re-run-safety-is-proven-per-verb-and-new-verbs-keep-missing-it
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the recipe the skill specifies agrees with the introduction-commit anchor on every open-card cite, including the ones a prior pass rewrote.
-  - [ ] TDD: a regression case covers the two-pass shape directly rather than only the live deck — a card whose cite was rewritten once, then whose target moved again, is repaired to the right line. It must fail on today's recipe.
-  - [ ] MECHANICAL: `goc/templates/skills/refine-deck/SKILL.md` step 2 of the citation check no longer says "the card's creating commit". It names the commit that last WROTE the cited number, and gives the `git log --follow` walk that finds it.
-  - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" drops the claim that the creating-commit anchor makes the check independent of earlier repair passes, and states the real invariant: a cite means what it meant when its number was last authored.
-  - [ ] MECHANICAL: all five mirrors regenerate from the template — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are both clean.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+  - [x] TDD: `reproduce.py` exits zero — the recipe the skill specifies agrees with the introduction-commit anchor on every open-card cite, including the ones a prior pass rewrote.
+  - [x] TDD: a regression case covers the two-pass shape directly rather than only the live deck — a card whose cite was rewritten once, then whose target moved again, is repaired to the right line. It must fail on today's recipe.
+  - [x] MECHANICAL: `goc/templates/skills/refine-deck/SKILL.md` step 2 of the citation check no longer says "the card's creating commit". It names the commit that last WROTE the cited number, and gives the `git log --follow` walk that finds it.
+  - [x] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" drops the claim that the creating-commit anchor makes the check independent of earlier repair passes, and states the real invariant: a cite means what it meant when its number was last authored.
+  - [x] MECHANICAL: all five mirrors regenerate from the template — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are both clean.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -25,18 +25,20 @@ worker: {who: "claude[bot]", where: main}
 
 ## Location
 
-- `goc/templates/skills/refine-deck/SKILL.md:115` — step 2 of the defunct-citation check.
-- `goc/templates/skills/refine-deck/reference.md:129-135` — § "Citation anchor check", **Getting the anchor**.
+- `goc/templates/skills/refine-deck/SKILL.md:115` — step 2 of the defunct-citation check, now the history walk.
+- `goc/templates/skills/refine-deck/reference.md:129-151` — § "Citation anchor check", **Getting the anchor** + **Why not the creating commit**.
+- `tests/test_refine_deck_citation_anchor.py` — the two-pass regression fixture.
 - Mirrors carrying the same text: `.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`, `openclaw-plugin/`.
 
-## What's broken
+## What was broken
 
-The skill tells the pass where to read a cite's anchor:
+The skill shipped this rule for where to read a cite's anchor until
+2026-08-17:
 
 > 2. Anchor = that line's text at the card's creating commit
 >    (`git log --diff-filter=A -- <card>/README.md`, last entry).
 
-and `reference.md` justifies that choice explicitly:
+and `reference.md` justified that choice explicitly:
 
 > Anchoring at the creating commit rather than at HEAD is what makes the
 > check independent of any earlier repair pass.
@@ -76,37 +78,49 @@ pass ran.
 
 ## Empirical evidence
 
-`reproduce.py` replays both anchors over every open-card cite in this repo,
-one week after the first repair pass:
+`reproduce.py` reads the anchor rule out of the shipped skill body and
+replays it over every open-card cite in this repo, scoring it against the
+introduction-commit reference and carrying the retired rule as a standing
+counterfactual. After the fix:
 
 ```
-open-card cites replayed: 850
+open-card cites replayed: 859
+cites whose number a repair pass rewrote: 485
 
-Shipped recipe (anchor at the card's CREATING commit) vs
-corrected recipe (anchor at the commit that INTRODUCED the cite):
+anchor named by goc/templates/skills/refine-deck/SKILL.md step 2: authoring-commit
+
+Specified recipe vs reference anchor (the commit that INTRODUCED the cite):
+
+  moves a cite that is CORRECT today : 0
+  moves a cite to the WRONG line     : 0
+  declines a cite it should repair   : 0
+  agrees with the reference recipe   : 859
+
+Counterfactual — the retired creating-commit anchor, same cites:
 
   moves a cite that is CORRECT today : 165
   moves a cite to the WRONG line     : 2
   declines a cite it should repair   : 3
-  agrees with the corrected recipe   : 680
+  agrees with the reference recipe   : 689
 
-  sample — correct cites the shipped recipe would move:
-    engine.py:1792 in support-custom-frontmatter-fields-with-enum-and-required-when-rules
-      -> would be rewritten to line 4509
-    install.py:1686 in plugin-context-detection-never-fires-on-real-marketplace-installs
-      -> would be rewritten to line 1795
-    goc/install.py:51 in install-auto-detects-codex-from-the-shared-agents-md-briefing-file
-      -> would be rewritten to line 53
-
-DEFECT PRESENT: the shipped recipe disagrees with the corrected anchor on 170 of 850 cites.
-Running the documented pass a second time rewrites correct citations onto unrelated code.
+PASS: the recipe the skill specifies agrees with the reference anchor
+on every cite, including the ones an earlier pass rewrote.
 ```
 
-Measured on the pre-repair tree (commit `67692824`, before the 2026-08-17
-pass corrected them), the same replay put the shipped recipe at 197 cites
-relocated to a wrong line, 44 correct cites moved, and 167 repairable cites
-declined — 408 of 851 wrong in one direction or another, against 343 where
-the two recipes agreed.
+The counterfactual row is the defect as it was measured when this card was
+filed: 170 of 850 open-card cites wrong in one direction or another, 165 of
+them correct cites that the pass would have moved onto unrelated code.
+Measured earlier still, on the pre-repair tree (commit `67692824`, before
+the 2026-08-17 pass corrected the numbers), the same replay put the shipped
+recipe at 197 cites relocated to a wrong line, 44 correct cites moved, and
+167 repairable cites declined — 408 of 851 wrong, against 343 agreements.
+
+The live-deck replay can only ever measure a deck that has already been
+repaired once, so `tests/test_refine_deck_citation_anchor.py` builds the
+two-pass shape from scratch — file a cite, drift it, repair it, drift it
+again — and asserts the recipe the skill prose specifies lands on the code
+the card is about (line 16 of the fixture) rather than on the decoy the
+creating-commit anchor finds (line 21). It fails on the retired recipe.
 
 ## Why it matters
 
@@ -139,26 +153,32 @@ that an agent follows literally.
 
 The 2026-08-17 hygiene pass on this repo deviated from the shipped recipe and
 used the introduction-commit anchor instead; commit `f290f5f7` records that
-deviation and its reasoning. Without the fix below, the next pass to follow
-the skill as written will undo that work.
+deviation and its reasoning. The fix below promotes that deviation to the
+rule, so the next pass to follow the skill as written preserves its work
+instead of undoing it.
 
 ## Fix
 
-Replace "the card's creating commit" with "the commit that last wrote this
-cite's number" in both files. Finding it is a walk over the README's own
+"The card's creating commit" is gone from both files, replaced by the commit
+that last WROTE the cite's number. Finding it is a walk over the README's own
 history rather than a single `git log` call: list the README's commits oldest
 to newest, read the file at each, and take the newest commit at which the
 exact cite token transitions from absent to present. That commit is where the
-number was authored — the creating commit for a virgin cite, the repair
-commit for a repaired one — so the rule subsumes today's behaviour rather
-than replacing it.
+number was authored — the filing commit for a virgin cite, the repair commit
+for a repaired one — so the rule subsumes the old behaviour rather than
+replacing it.
 
-`reproduce.py` in this directory contains a working implementation of the
-walk (`intro` in `main()`); it is the reference for the skill text.
+- `SKILL.md` step 2 carries the walk itself, because an agent that has to
+  follow a pointer to learn the anchor will use the one-liner in front of it.
+  The body cap in `tests/test_skill_body_size.py` rose 11,200 → 11,500 for it.
+- `reference.md` § "Citation anchor check" states the invariant — a cite
+  means what it meant when its number was last authored — and its new
+  **Why not the creating commit** paragraph carries the measurement in place
+  of the retired independence claim.
+- Both surfaces are guarded: `tests/test_refine_deck_citation_anchor.py`
+  parses the anchor rule out of each and requires them to name the same
+  commit, then runs the parsed rule against the two-pass fixture.
 
-The gate is `none` because the fix is determined: the recipe is wrong for a
-stated reason, the corrected rule is a strict generalization of it, and the
-implementation already exists and is measured. A reader who disagrees that
-the skill should carry the full history walk — rather than, say, forbidding
-repair passes from rewriting numbers at all — should raise the gate and say
-so, but nothing about the defect itself is open.
+`reproduce.py` in this directory holds the same walk (`intro` in `main()`)
+and now reads its subject rule from `SKILL.md`, so it measures what the
+shipped instructions do rather than a copy of them.

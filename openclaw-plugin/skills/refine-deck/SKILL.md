@@ -110,8 +110,12 @@ what the card says is there. Per cite (long form: `reference.md`
 
 1. Resolve the path — cards write `engine.py:N` for `goc/engine.py:N`;
    prefer a non-mirror match. Ranges map both endpoints.
-2. Anchor = that line's text at the card's creating commit
-   (`git log --diff-filter=A -- <card>/README.md`, last entry).
+2. Anchor = that line's text at the commit that last WROTE the number:
+   walk `git log --follow --format=%H -- <card>/README.md` oldest →
+   newest and take the newest commit where the cite token turns from
+   absent to present — the filing commit for a virgin cite, the repair
+   commit for one an earlier pass rewrote. Anchoring a repaired number
+   at the filing commit reads unrelated code and moves the cite onto it.
 3. Anchor ≠ the line in HEAD → the cite is defunct.
 4. Relocate the anchor text in HEAD and rewrite the number **only** on
    a unique match of a non-trivial line (>~12 chars, not a blank or a

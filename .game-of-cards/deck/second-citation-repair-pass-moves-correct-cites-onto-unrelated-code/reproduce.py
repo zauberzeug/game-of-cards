@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
 """Replay refine-deck's citation-repair recipe over this repo's own deck.
 
-The skill specifies the anchor as "that line's text at the card's creating
-commit" (`goc/templates/skills/refine-deck/reference.md`, section
-"Citation anchor check"). That is correct exactly once. After a repair pass
-rewrites a cite's line number, the number was authored by the *repair*
-commit, so reading it at the *creating* commit yields whatever unrelated
-code happened to sit at that offset back then — and the recipe then
-"relocates" the cite to wherever that unrelated text lives now.
+The anchor commit the skill names is read out of the skill itself
+(`goc/templates/skills/refine-deck/SKILL.md`, step 2 of the defunct-citation
+check), so this script measures what a pass following the shipped
+instructions would actually do rather than a copy of them.
+
+The recipe that shipped until 2026-08-17 anchored at "the card's creating
+commit". That is correct exactly once. After a repair pass rewrites a cite's
+line number, the number was authored by the *repair* commit, so reading it at
+the *creating* commit yields whatever unrelated code happened to sit at that
+offset back then — and the recipe then "relocates" the cite to wherever that
+unrelated text lives now.
 
 This script computes, for every `file:line` cite on every open card:
 
-  SHIPPED   anchor = cited_file @ card's creating commit  [line]
-  CORRECTED anchor = cited_file @ commit that INTRODUCED this cite [line]
+  SPECIFIED anchor = cited_file @ the commit the SKILL names       [line]
+  REFERENCE anchor = cited_file @ commit that INTRODUCED this cite [line]
 
-and reports the cites where the two disagree. The corrected anchor
-degenerates to the creating commit for a cite no pass has ever touched, so
-the two recipes agree on a virgin deck; they diverge only on repaired ones.
+and reports the cites where the two disagree, plus a standing counterfactual
+for the retired creating-commit anchor. The reference anchor degenerates to
+the creating commit for a cite no pass has ever touched, so the two rules
+agree on a virgin deck; they diverge only on repaired ones — which is why the
+defect could not surface until a second pass ran.
 
-Exit 1 while the defect is present, 0 once the shipped recipe matches the
-corrected one.
+Exit 1 while the specified recipe disagrees with the reference anchor,
+0 once it matches.
 """
 
 import json
@@ -42,6 +48,30 @@ def _repo_root() -> Path:
 
 ROOT = _repo_root()
 DECK = ROOT / ".game-of-cards" / "deck"
+SKILL = ROOT / "goc" / "templates" / "skills" / "refine-deck" / "SKILL.md"
+
+CREATING = "creating-commit"
+AUTHORING = "authoring-commit"
+
+
+def specified_anchor() -> str:
+    """Which anchor commit does the shipped skill body name?
+
+    The two rules are told apart by the git incantation each needs: the
+    creating-commit rule exists only to find the README's ADD commit
+    (`--diff-filter=A`), the authoring rule walks the README's own history
+    (`--follow`) for the commit where the cite token turns from absent to
+    present. Prose naming both, or neither, is unclassifiable and treated
+    as the creating-commit rule so this script cannot pass by ambiguity.
+    """
+    step2 = re.search(
+        r"^2\. Anchor = .*?(?=^3\. )",
+        SKILL.read_text(encoding="utf-8"),
+        re.S | re.M,
+    )
+    prose = step2.group(0) if step2 else ""
+    walk = "--follow" in prose and "absent to present" in prose
+    return AUTHORING if walk and "--diff-filter=A" not in prose else CREATING
 
 CITE_RE = re.compile(
     r"(?<![\w/.-])((?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+"
@@ -138,11 +168,20 @@ def main() -> int:
     ).stdout
     cards = [c for c in json.loads(deck_json) if c["status"] in ("open", "active")]
 
-    corrupts_correct = []   # shipped moves a cite that is right today
-    wrong_target = []       # shipped moves a cite to a different line than corrected
-    missed = 0              # shipped declines a cite the corrected recipe repairs
-    agree = 0
+    specified = specified_anchor()
+
+    # One tally per candidate anchor rule, scored against the reference.
+    tallies = {
+        mode: {
+            "corrupts_correct": [],  # moves a cite that is right today
+            "wrong_target": [],      # moves a cite somewhere else than reference
+            "missed": 0,             # declines a cite the reference repairs
+            "agree": 0,
+        }
+        for mode in (AUTHORING, CREATING)
+    }
     total = 0
+    repaired = 0  # cites whose number was authored after the card was filed
 
     for card in cards:
         title = card["title"]
@@ -184,7 +223,7 @@ def main() -> int:
                 continue
             total += 1
 
-            # CORRECTED anchor: the commit that introduced this exact cite token.
+            # REFERENCE anchor: the commit that introduced this exact cite token.
             intro, prev = None, False
             for c, body in zip(hist, contents):
                 here = raw in body
@@ -192,6 +231,8 @@ def main() -> int:
                     intro = c
                 prev = here
             intro = intro or creating
+            if intro != creating:
+                repaired += 1
 
             def anchor_of(commit):
                 src = blob(commit, target)
@@ -199,53 +240,76 @@ def main() -> int:
                     return None
                 return src[line - 1]
 
-            shipped_anchor = anchor_of(creating)
-            corrected_anchor = anchor_of(intro)
-
+            reference_anchor = anchor_of(intro)
             cur_line = cur[line - 1] if line <= len(cur) else None
-            corrected_ok = cur_line is not None and cur_line == corrected_anchor
-            shipped_ok = cur_line is not None and cur_line == shipped_anchor
+            reference_ok = cur_line is not None and cur_line == reference_anchor
+            reference_move = (
+                None if reference_ok else relocate(reference_anchor, cur)
+            )
 
-            shipped_move = None if shipped_ok else relocate(shipped_anchor, cur)
-            corrected_move = None if corrected_ok else relocate(corrected_anchor, cur)
+            for mode, commit in ((AUTHORING, intro), (CREATING, creating)):
+                tally = tallies[mode]
+                anchor = anchor_of(commit)
+                ok = cur_line is not None and cur_line == anchor
+                move = None if ok else relocate(anchor, cur)
+                if move is not None and reference_ok:
+                    tally["corrupts_correct"].append((title, raw, move))
+                elif move is not None and move != reference_move:
+                    tally["wrong_target"].append((title, raw, move, reference_move))
+                elif move is None and reference_move is not None:
+                    tally["missed"] += 1
+                else:
+                    tally["agree"] += 1
 
-            if shipped_move is not None and corrected_ok:
-                corrupts_correct.append((title, raw, shipped_move))
-            elif shipped_move is not None and shipped_move != corrected_move:
-                wrong_target.append((title, raw, shipped_move, corrected_move))
-            elif shipped_move is None and corrected_move is not None:
-                missed += 1
-            else:
-                agree += 1
+    def report(tally, label, who="specified"):
+        print(f"{label}\n")
+        print(f"  moves a cite that is CORRECT today : {len(tally['corrupts_correct'])}")
+        print(f"  moves a cite to the WRONG line     : {len(tally['wrong_target'])}")
+        print(f"  declines a cite it should repair   : {tally['missed']}")
+        print(f"  agrees with the reference recipe   : {tally['agree']}")
+        if tally["corrupts_correct"]:
+            print("\n  sample — correct cites it would move:")
+            for title, raw, to in tally["corrupts_correct"][:3]:
+                print(f"    {raw} in {title}")
+                print(f"      -> would be rewritten to line {to}")
+        if tally["wrong_target"]:
+            print("\n  sample — cites it would misplace:")
+            for title, raw, got, want in tally["wrong_target"][:3]:
+                print(f"    {raw} in {title}")
+                print(f"      {who} -> {got}   reference -> {want}")
+        return (
+            len(tally["corrupts_correct"]) + len(tally["wrong_target"]) + tally["missed"]
+        )
 
-    print(f"open-card cites replayed: {total}\n")
-    print("Shipped recipe (anchor at the card's CREATING commit) vs")
-    print("corrected recipe (anchor at the commit that INTRODUCED the cite):\n")
-    print(f"  moves a cite that is CORRECT today : {len(corrupts_correct)}")
-    print(f"  moves a cite to the WRONG line     : {len(wrong_target)}")
-    print(f"  declines a cite it should repair   : {missed}")
-    print(f"  agrees with the corrected recipe   : {agree}")
+    print(f"open-card cites replayed: {total}")
+    print(f"cites whose number a repair pass rewrote: {repaired}")
+    print("  (the two anchors can only differ on these — a deck no pass has")
+    print("   repaired exercises none of them, which is why one pass hid this)\n")
+    print(f"anchor named by {SKILL.relative_to(ROOT)} step 2: {specified}\n")
 
-    if corrupts_correct:
-        print("\n  sample — correct cites the shipped recipe would move:")
-        for title, raw, to in corrupts_correct[:3]:
-            print(f"    {raw} in {title}")
-            print(f"      -> would be rewritten to line {to}")
-    if wrong_target:
-        print("\n  sample — cites the shipped recipe would misplace:")
-        for title, raw, got, want in wrong_target[:3]:
-            print(f"    {raw} in {title}")
-            print(f"      shipped -> {got}   corrected -> {want}")
+    broken = report(
+        tallies[specified],
+        "Specified recipe vs reference anchor (the commit that INTRODUCED the cite):",
+    )
+    if specified != CREATING:
+        print()
+        report(
+            tallies[CREATING],
+            "Counterfactual — the retired creating-commit anchor, same cites:",
+            who="retired  ",
+        )
 
-    broken = len(corrupts_correct) + len(wrong_target) + missed
     if broken:
         print(
-            f"\nDEFECT PRESENT: the shipped recipe disagrees with the corrected "
+            f"\nDEFECT PRESENT: the specified recipe disagrees with the reference "
             f"anchor on {broken} of {total} cites. Running the documented pass a "
             f"second time rewrites correct citations onto unrelated code."
         )
         return 1
-    print("\nPASS: the shipped recipe and the corrected anchor agree on every cite.")
+    print(
+        "\nPASS: the recipe the skill specifies agrees with the reference anchor "
+        "on every cite, including the ones an earlier pass rewrote."
+    )
     return 0
 
 
