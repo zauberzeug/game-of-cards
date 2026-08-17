@@ -1,12 +1,12 @@
 ---
 title: deck-fills-with-decision-gated-cards-faster-than-they-are-decided
-summary: "Only 8 of 193 open cards sit at human_gate none; 166 are gated on decision and 19 on session, so the autonomous picker has a runway of days against a backlog of months. The gate is the schema default, which makes 'nobody chose a gate' indistinguishable from 'a human must pick'. Sampling 50 cards closed in the last 90 days, 44 were born ungated and 6 were born gated and later decided, and 83 of the 185 gated cards have had no log activity for over 60 days."
+summary: "Only 8 of 193 open cards sit at human_gate none; 166 are gated on decision and 19 on session, so the autonomous picker has a runway of days against a backlog of months. Measuring the backlog rather than the default relocates the defect: 156 of the 166 decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 185 — 83 have had no log activity for over 60 days and 35 are contribution high. Parked 2026-08-17 on the intake-vs-outlet choice."
 status: active
 stage: null
 contribution: high
 created: "2026-08-17T02:58:07Z"
 closed_at: null
-human_gate: none
+human_gate: decision
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
@@ -49,25 +49,47 @@ by the pass that wrote this card. The other 185 are invisible to
 `Skill(pull-card)` and `Skill(next-card)`, which filter to `human_gate: none`
 — correctly, for loop safety.
 
-The mechanism is a default rather than a decision. `create-card` describes
-`decision` as *the fallback for findings whose fix path genuinely needs a
-human pick*, and that description is right. But `goc/schema.yaml:27` also
-makes it the value a card gets when nobody supplies one, so the two states
+The default was the first suspect. `goc/schema.yaml:27` sets
+`human_gate_default: decision`, and `_build_parser`'s `p_new.add_argument
+("--gate", …)` in `goc/engine.py` hands that value to every card filed
+without an explicit `--gate` — it is the field's only consumer. So the two
+states
 
 - "I considered the gate and a human really must pick"
 - "the gate never came up"
 
-are recorded identically and are afterwards indistinguishable. Every filing
-that does not think about the gate lands in the same bucket as the ones that
-did, and that bucket is unreachable by the only mechanism draining the deck.
+are written to disk identically, and the filer who thought about neither
+lands in the same bucket as the filer who thought hard.
 
-Nothing here is a wrong gate on any individual card. Sampling the gated
-cards, most of them do name a real decision in a `## Decision required`
-section. The defect is in the aggregate: a fallback that is also a default
-will collect everything, and no surface reports that the queue behind it has
-grown past what anyone will ever read.
+Measuring the backlog instead of the default narrows that sharply. Every one
+of the 185 gated live cards was checked for a `## Decision required`
+section — the artefact `Skill(card-schema)` § "Decision-gate body contract"
+requires whenever an agent *chooses* a `decision` gate, and therefore a
+usable proxy for "the gate was deliberate":
+
+| | with `## Decision required` | without |
+|---|---|---|
+| `human_gate: decision` (166) | **156** | 10 |
+| `human_gate: session` (19) | 4 | 15 |
+
+Only 10 of 166 decision gates look accidental, and 15 of the 19 session
+gates are roadmap epics for which an options matrix was never the right
+shape. In practice the two states *are* distinguishable, and the backlog is
+overwhelmingly real undecided decisions rather than filings that never
+considered the gate.
+
+That relocates the defect. The intake is legitimate; the outlet is missing.
+Changing what a card gets by omission would move at most 10 of 185 cards,
+and would leave today's runway in the single digits. Nothing consumes the
+other 175: 83 of the 185 have had no log activity in 60+ days, the oldest
+was filed 2026-05-03, and 35 are `contribution: high`. `goc triage` is the
+one surface that reads them, and at this size it emits 1491 lines in
+creation order with no cap and no value ranking — a dump, not a working
+queue.
 
 ## Empirical evidence
+
+`reproduce.py`, re-run 2026-08-17:
 
 ```
 open + active cards: 193
@@ -78,21 +100,42 @@ open + active cards: 193
 autonomous runway (gate=none, claimable by the picker): 8
 
 sample of 50 cards closed in the last 90 days:
-  born gated, later decided and closed: 6
+  born gated, later decided and closed: 5
   born at gate=none:                    44
+  indeterminate:                        1
 
 gated open cards with no log activity for 60+ days: 83/185
 
 DEFECT PRESENT: the picker has 8 claimable cards against 185 gated ones. Ungated cards
-close 7x more often than gated ones get decided, so the backlog grows while the runway
+close 9x more often than gated ones get decided, so the backlog grows while the runway
 does not.
 ```
 
-The sample is the load-bearing part. It reads each closed card's *first*
-committed frontmatter, so it distinguishes a card that was born ungated from
-one that was gated and later decided — a distinction the current frontmatter
-cannot show, because `decide` lowers the gate in place and all 519 closed
-cards therefore read `human_gate: none` today.
+The sample is the load-bearing part of the *rate* claim. It reads each closed
+card's *first* committed frontmatter, so it distinguishes a card that was
+born ungated from one that was gated and later decided — a distinction the
+current frontmatter cannot show, because `decide` lowers the gate in place
+and all 519 closed cards therefore read `human_gate: none` today.
+
+The second measurement is what reframes the card (2026-08-17 pull session,
+census of all 185 gated live cards, not a sample):
+
+```
+gated live cards: 185
+  with a '## Decision required' section: 160   (decision 156, session   4)
+  without one:                            25   (decision  10, session  15)
+
+stale 60d+ among the 160 with a section: 72
+stale 60d+ among the 25 without:         11
+contribution mix of the 185: high 35, medium 135, low 15
+oldest gated card: created 2026-05-03
+```
+
+The original filing assumed the gated pile was largely accidental — that the
+default had swept in filings nobody gated on purpose. It has not: 94% of the
+decision gates carry the deliberate-gate artefact. The defect survives, but
+it is an outlet problem, not an intake problem, and the fix options below are
+re-scored accordingly.
 
 ## Why it matters
 
@@ -119,34 +162,96 @@ prerequisite that one names
 ([human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property](../human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property/))
 constrains this one as well.
 
-## Fix options
+## Decision required
 
-Filed at `human_gate: none` per this repo's autonomous-filing convention.
-The choice below is real and a reader who wants to make it deliberately
-should raise the gate and record it via `Skill(decide-card)`.
+Filed at `human_gate: none` per this repo's autonomous-filing convention and
+raised to `decision` by the 2026-08-17 pull session, which measured the
+backlog and could not responsibly pick for three reasons. Option A edits a
+value shipped in `goc/schema.yaml` to every PyPI / npm / ClawHub consumer, so
+it inverts the tool's default safety posture for repos nobody here can see.
+Option C's usefulness is bounded by
+[decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting](../decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting/),
+which is itself undecided. And this card's own body already records that it
+should be decided together with
+[autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish](../autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish/),
+whose stated prerequisite
+[human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property](../human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property/)
+is also undecided — picking here in isolation would pre-empt two parked
+cards rather than resolve them.
 
-**A. Stop defaulting to a gate.** Change `human_gate_default` to `none` and
-make `decision` something a filer opts into. The two states above become
-distinguishable immediately, and the runway recovers for new work. Cost:
-findings that genuinely need a pick will sometimes reach the picker
-ungated — the exact failure the sibling card is about — so this is only safe
-paired with something that catches an unanswerable DoD.
+### Question 1 — where does the fix go?
 
-**B. Make the gate a claim the filer has to earn.** Keep the default, but
-have `goc validate` warn (or `goc new` refuse) when a `decision`-gated card
-carries no `## Decision required` section naming credible options. That
-separates the two states without changing anyone's default, and there is
-already a card asking for this warning for a different reason —
-[decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting](../decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting/)
-DoD item 6 proposes exactly it. Cost: does nothing about the 185 already
-filed.
+**Option A — stop defaulting to a gate.** Set `human_gate_default: none` and
+make `decision` opt-in.
 
-**C. Give the backlog an outlet instead of a smaller intake.** Add a
-batch-decide surface — the gated cards, their options, one pass — so clearing
-gates costs a session rather than 185 individual reads. Cost: it depends on
-the option shape being parseable, which is the open card named above; and it
-treats the symptom, so the intake keeps producing.
+- Pros: the two states become distinguishable at the source; every future
+  ungated-by-omission filing lands on the runway.
+- Cons: the census says this is now the *weakest* option here — it addresses
+  10 of 185 cards, leaves the runway in single digits, and hands every
+  downstream consumer the failure that
+  `autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish`
+  describes. Only safe paired with something that catches an unanswerable
+  DoD, which is exactly the undecided prerequisite card.
+- Edit: `goc/schema.yaml:27` plus its byte-identical twin
+  `goc/templates/skills/card-schema/schema.yaml:27` (parity is enforced by
+  `tests/test_skill_schema_yaml_parity.py`); no engine change — the field's
+  sole consumer is `p_new.add_argument("--gate", …)` in `_build_parser`.
 
-Whichever is chosen, the DoD asks it to state what happens to the 185
-existing cards. Any option that only changes new filings leaves today's
-runway at eight.
+**Option B — make the gate a claim the filer has to earn.** Keep the
+default; have `goc validate` warn (or `goc new` refuse) when a
+`decision`-gated card carries no `## Decision required` section.
+
+- Pros: separates the two states without touching anyone's default; the
+  option-shape card's DoD item 6 already proposes this warning for an
+  unrelated reason, so it lands once and serves both.
+- Cons: the census says the deck is already 94% compliant, so it would flag
+  10 decision-gated cards and change nothing about the runway. It is
+  hygiene, not the fix.
+- Edit: a new check in `validate_card` / the validator walk in
+  `goc/engine.py`, reusing `extract_decision_required_section`.
+
+**Option C — give the backlog an outlet instead of a smaller intake.** Make
+`goc triage` a working decision queue rather than a dump: rank by
+contribution and staleness, cap the default output, and add a decide loop
+that walks cards and calls `goc decide` per card.
+
+- Pros: the only option the census actually supports — 175 of the 185 are
+  real decisions whose sole cost is that reading them costs 1491 lines in
+  creation order. Most of the surface exists already
+  (`_cmd_triage` in `goc/engine.py`, with `--json` for Q&A consumers and
+  `extract_decision_required_section` for previews), so this is largely
+  ranking, capping, and a loop.
+- Cons: the preview fidelity depends on the undecided option-shape card; and
+  it treats the symptom — intake keeps producing, so it needs re-running.
+- Edit: `_cmd_triage` and its subparser (`p_triage`, `goc/engine.py:4001`),
+  whose `--help` string — "List parked cards (gate ≠ none), grouped by gate,
+  oldest-first" — also understates its real scope today: it silently filters
+  to `status == "open"` and to non-drafts, which is why it reports 181 of the
+  185 gated cards.
+
+### Question 2 — what happens to the 185 already gated?
+
+The DoD requires this answered explicitly; any option that only changes new
+filings leaves today's runway at eight.
+
+1. **Nothing structural — route them through the outlet.** They are real
+   decisions (156/166 carry the artefact); they need reading, not
+   re-labelling. Implies C.
+2. **Bulk-lower the 10 decision-gated cards with no `## Decision required`
+   section.** The only subset the evidence marks as plausibly
+   gated-by-omission. Small, reversible, and reviewable card-by-card.
+3. **Bulk-lower all 185.** Rejected by the census — it would discard a
+   deliberate signal on 160 cards and hand the picker work it cannot finish.
+4. **Prune by age.** Close or disprove the 83 stale ones unread. Cheapest,
+   and destroys the most: 72 of the 83 carry a worked options section, and
+   35 of the 185 are `contribution: high`.
+
+### Recommendation
+
+Not binding: **C for question 1, with 2 as the one-time cleanup** — the
+census moved the defect from intake to outlet, and 175 cards whose only
+problem is that nobody can read them cheaply are fixed by making them
+readable, not by re-labelling them. Doing B alongside is nearly free and
+keeps the 94% honest. A should wait for
+`human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property`,
+which may make the card-level flag moot.
