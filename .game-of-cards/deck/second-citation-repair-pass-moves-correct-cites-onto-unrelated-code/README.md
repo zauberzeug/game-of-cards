@@ -1,7 +1,7 @@
 ---
 title: second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
 summary: "refine-deck's citation-repair recipe anchors each cite at the card's CREATING commit, but once a repair pass has rewritten a cite's line number that commit no longer knows what the number means. Replayed against this deck one week after its first repair pass, the shipped recipe would move 165 citations that are correct today onto unrelated code. reference.md claims the creating-commit anchor is what makes the check independent of any earlier repair pass; it is precisely what breaks it."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-17T02:21:41Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" drops the claim that the creating-commit anchor makes the check independent of earlier repair passes, and states the real invariant: a cite means what it meant when its number was last authored.
   - [ ] MECHANICAL: all five mirrors regenerate from the template — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are both clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The second citation-repair pass moves correct cites onto unrelated code
