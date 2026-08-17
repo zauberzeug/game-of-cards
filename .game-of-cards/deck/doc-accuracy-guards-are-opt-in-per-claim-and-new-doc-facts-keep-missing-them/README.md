@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Thirteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them."
+summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Fourteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them. The fourteenth adds the first surface whose rot is executed rather than read — a skill body specifying a procedure an agent follows literally, which moved 165 correct citations onto unrelated code before it was caught — and it is guardable only by running the instruction against a fixture, which is neither option as written."
 status: open
 stage: null
 contribution: medium
@@ -56,8 +56,9 @@ the *unguarded* claims.
 | *(none yet — open)* | [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/) | — |
 | `LlmsTxtInstallChannelTest` (own file, `tests/test_llms_txt_install_channels.py`) | [llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/) | 2026-08-01 |
 | *(no new class — four tests added to the existing `AgentsArchitectureAccuracyTest`)* | [agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/) | 2026-08-15 |
+| `DocumentedAnchorRuleTest` + `SecondRepairPassTest` (own file, `tests/test_refine_deck_citation_anchor.py`) | [second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/) | 2026-08-17 |
 
-Thirteen instances across three months, each its own file → claim → fix → guard cycle.
+Fourteen instances across four months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -194,6 +195,31 @@ one `click` regex, three of them checked against the stale text to prove they
 fire), but the general shape is a diff-scoped check: **when a commit touches a
 guarded doc surface, every factual clause in the changed lines needs a guard, not
 just the one that motivated the edit.**
+
+The fourteenth adds a surface class the taxonomy above has no row for: prose
+that is **executed rather than read**. `Skill(refine-deck)`'s citation-repair
+recipe told a hygiene pass to anchor each cite at the card's creating commit;
+[second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/)
+measured that instruction moving 165 correct cites of 850 onto unrelated code
+on the second pass. Every other instance in the table is a claim a reader may
+be misled by; this one is an instruction an agent runs, so its rot mutates the
+tree instead of merely describing it wrongly. The blast radius argues for
+ranking, not for a new option: instruction-shaped prose ships in all five
+plugin payloads and is followed literally.
+
+Three datums for the scope decision. First, it recurs the thirteenth's lesson
+one level deeper — the false claim ("anchoring at the creating commit is what
+makes the check independent of any earlier repair pass") was itself written by
+the *previous* instance's repair of that same recipe
+([refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file](../refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file/),
+closed 2026-08-10), so a repaired surface is no more covered than a guarded
+one. Second, it is guardable, but by neither option as written: the rule is not
+derivable from the tree (Option A) and not a restatement to pin against a twin
+(Option B) — the guard parses the rule out of the skill body and *runs* it
+against a synthetic fixture, which is a third technique the decision should
+name. Third, its rot needed two hygiene passes to become visible at all, which
+puts a lower bound on how long an instruction-shaped defect can sit green: the
+sweep interval of whatever process executes it.
 
 ## What's structurally wrong
 

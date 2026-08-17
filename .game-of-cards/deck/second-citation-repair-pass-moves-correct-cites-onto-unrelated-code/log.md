@@ -38,3 +38,13 @@ the implementation was never wrong, the instruction was.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-08-17 — Closure' present
+
+## 2026-08-17T04:52:00Z — Wired to the doc-accuracy family
+
+Connected as instance 14 of
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+via `advances`, rather than filing a second umbrella. It is the first member
+whose surface is prose an agent EXECUTES rather than reads, and the false
+claim it removed was written by the previous instance's own repair of the same
+recipe — the thirteenth's lesson one level deeper. That card's instance table
+and scope-decision narrative carry the datums; nothing is duplicated here.
