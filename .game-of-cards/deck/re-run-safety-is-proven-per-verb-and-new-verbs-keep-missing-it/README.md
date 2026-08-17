@@ -1,7 +1,7 @@
 ---
 title: re-run-safety-is-proven-per-verb-and-new-verbs-keep-missing-it
 summary: "Seven cards have fixed an operation that was correct on its first run and wrong on its second — install, done, kickoff, upgrade, the settings merge twice, and now refine-deck's citation-repair recipe. Each was found in production and each shipped a test for that one surface, so re-run safety is coverage a verb earns only after a defect bites it: of the fourteen mutating verbs the engine registers, one has a dedicated re-run test. Probing the rest shows they are stable today, which is the point — nothing holds them there."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-17T03:14:22Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] PROCESS: decide and record in `log.md` whether "refuses on the second run" counts as safe for every verb or only for the ones where refusing is the documented contract — today `decide` and `move` exit 2 on re-run and that is correct, while `publish` exiting 2 on an unauthored scaffold is a different thing entirely.
   - [ ] PROCESS: the non-verb surfaces in the instance list (the `goc install` / `goc upgrade` entry points and `_merge_claude_settings`) are either brought under the same check or explicitly scoped out with a reason.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Re-run safety is proven per verb, and new verbs keep missing it
