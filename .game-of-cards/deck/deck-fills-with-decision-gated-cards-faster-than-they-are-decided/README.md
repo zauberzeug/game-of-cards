@@ -1,7 +1,7 @@
 ---
 title: deck-fills-with-decision-gated-cards-faster-than-they-are-decided
 summary: "Only 8 of 193 open cards sit at human_gate none; 166 are gated on decision and 19 on session, so the autonomous picker has a runway of days against a backlog of months. Measuring the backlog rather than the default relocates the defect: 156 of the 166 decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 185 — 83 have had no log activity for over 60 days and 35 are contribution high. Parked 2026-08-17 on the intake-vs-outlet choice."
-status: active
+status: open
 stage: null
 contribution: high
 created: "2026-08-17T02:58:07Z"
