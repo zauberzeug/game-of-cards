@@ -39,9 +39,9 @@ source already has an article before "Claude", and always emit lowercase,
 ignoring sentence-initial position. The corruption is committed in the
 shipped plugin payload today:
 
-- `openclaw-plugin/skills/kickoff/SKILL.md:123` — "the **the agent**-specific"
-  (source `goc/templates/skills/kickoff/SKILL.md:123`: "the Claude-specific")
-- `openclaw-plugin/skills/kickoff/SKILL.md:133` — "plus the **the agent**-specific extras"
+- `openclaw-plugin/skills/kickoff/SKILL.md:133` — "the **the agent**-specific"
+  (source `goc/templates/skills/kickoff/SKILL.md:133`: "the Claude-specific")
+- `openclaw-plugin/skills/kickoff/SKILL.md:143` — "plus the **the agent**-specific extras"
 - `openclaw-plugin/skills/kickoff/SKILL.md:172` — "is the **the agent**-only path"
 - `openclaw-plugin/skills/openclaw-kickoff/SKILL.md:81` — "hunting for a
   **the host**-style analog" (source: "a Claude Code-style analog")
@@ -90,8 +90,8 @@ gives a durable tripwire either way.
 
 ```
 $ grep -rnE '\bthe the\b|\ba the\b' openclaw-plugin/skills/
-openclaw-plugin/skills/kickoff/SKILL.md:123:> instructions plus, when CLAUDE.md is the home, the the agent-specific
-openclaw-plugin/skills/kickoff/SKILL.md:133:>    plus the the agent-specific extras live inline. **Cross-runtime
+openclaw-plugin/skills/kickoff/SKILL.md:133:> instructions plus, when CLAUDE.md is the home, the the agent-specific
+openclaw-plugin/skills/kickoff/SKILL.md:143:>    plus the the agent-specific extras live inline. **Cross-runtime
 openclaw-plugin/skills/kickoff/SKILL.md:172:briefing. `--briefing-target CLAUDE.md` is the the agent-only path: the
 openclaw-plugin/skills/openclaw-kickoff/SKILL.md:81:hunting for a the host-style analog:
 ```

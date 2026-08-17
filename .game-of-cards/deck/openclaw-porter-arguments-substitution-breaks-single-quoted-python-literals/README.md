@@ -24,7 +24,7 @@ definition_of_done: |
 ## Location
 
 - `scripts/port_skills_to_openclaw.py:72` — the substitution
-- `goc/templates/skills/retrospective/SKILL.md:46` — the source snippet
+- `goc/templates/skills/retrospective/SKILL.md:53` — the source snippet
 - `openclaw-plugin/skills/retrospective/SKILL.md:49` — the broken output
 
 ## What's broken
@@ -73,8 +73,8 @@ only what the *port* breaks:
 ```
 porter substitution: (re.compile(r"\$ARGUMENTS"), "the user's argument"),
 
-[PORT BREAKS IT] goc/templates/skills/retrospective/SKILL.md:46
-                 → openclaw-plugin/skills/retrospective/SKILL.md:43
+[PORT BREAKS IT] goc/templates/skills/retrospective/SKILL.md:53
+                 → openclaw-plugin/skills/retrospective/SKILL.md:50
                  source snippet compiles; ported snippet: SyntaxError: unterminated string literal (detected at line 6)
                  offending line: n = int('the user's argument'.strip() or '10')
 

@@ -1,6 +1,6 @@
 ---
 title: render-json-emits-bare-string-edge-fields-as-json-strings-not-lists
-summary: "Eighth confirmed sibling of [[bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes]]. `render_json` (engine.py:3263-3266) reads the four edge fields with an `or []` fallback, which only catches `None` and empty containers; a truthy bare-string scalar like `advances: foo-card` passes through verbatim, so `goc --json` emits a string where the output contract promises a list. Close under whichever architectural fix the meta-fix adopts (loader reject / shared list-coercing helper / per-consumer guard)."
+summary: "Eighth confirmed sibling of [[bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes]]. `render_json` (engine.py:3416-3419) reads the four edge fields with an `or []` fallback, which only catches `None` and empty containers; a truthy bare-string scalar like `advances: foo-card` passes through verbatim, so `goc --json` emits a string where the output contract promises a list. Close under whichever architectural fix the meta-fix adopts (loader reject / shared list-coercing helper / per-consumer guard)."
 status: open
 stage: null
 contribution: medium
@@ -12,9 +12,9 @@ advances:
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: this card is filed as the 8th confirmed sibling of [[bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes]]. Close it under whichever architectural approach the meta-fix decides on (A: loader rejects; B: centralized `_field_as_list` helper that `render_json` also routes through; C: per-consumer `isinstance(..., list)` guard at `engine.py:3263-3266`).
+  - [ ] PROCESS: this card is filed as the 8th confirmed sibling of [[bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes]]. Close it under whichever architectural approach the meta-fix decides on (A: loader rejects; B: centralized `_field_as_list` helper that `render_json` also routes through; C: per-consumer `isinstance(..., list)` guard at `engine.py:3416-3419`).
   - [ ] TDD: a regression test asserts `render_json` emits `[]` (or whatever the chosen architectural fix dictates) for a card whose `advances` / `advanced_by` / `supersedes` / `superseded_by` is a bare-string scalar — currently emits the bare string verbatim, breaking the JSON output contract.
-  - [ ] MECHANICAL: implementation per the chosen approach. Under C, four lines at `engine.py:3263-3266` swap from `t.frontmatter.get(field) or []` to a list-coerced read.
+  - [ ] MECHANICAL: implementation per the chosen approach. Under C, four lines at `engine.py:3416-3419` swap from `t.frontmatter.get(field) or []` to a list-coerced read.
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 ---
 
@@ -34,7 +34,7 @@ reading the four edge fields straight from the parsed frontmatter
 with a falsy-fallback:
 
 ```python
-# goc/engine.py:3263-3266
+# goc/engine.py:3416-3419
 "advances": t.frontmatter.get("advances") or [],
 "advanced_by": t.frontmatter.get("advanced_by") or [],
 "supersedes": t.frontmatter.get("supersedes") or [],
@@ -122,6 +122,6 @@ it on the parent card, not here:
   a register for future sightings.
 
 Do not implement a stand-alone `isinstance(..., list)` guard at
-`engine.py:3263-3266` without first reconciling the architectural
+`engine.py:3416-3419` without first reconciling the architectural
 choice on the parent card — that's exactly the per-consumer pattern
 the meta-fix card is trying to retire.

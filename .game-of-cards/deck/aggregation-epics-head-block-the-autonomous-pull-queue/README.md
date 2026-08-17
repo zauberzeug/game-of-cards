@@ -28,7 +28,7 @@ its children close. Its closure is therefore gated on its open
 `advanced_by` children.
 
 But the GRPW value sort composes a card's value *up* the `advances`
-chain (`compute_values`, `engine.py:2643`):
+chain (`compute_values`, `engine.py:2788`):
 `value(c) = rank(c) + γ·max(value(d) for d in advances(c))`. An epic's
 `advances` edge points at its parent, so the epic's value is its own
 rank PLUS a discounted share of the chain above it — placing it *above*

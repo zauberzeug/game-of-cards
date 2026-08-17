@@ -22,10 +22,10 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:150` — `LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"`
-- `goc/engine.py:4998` — consumption: `for path in (GAME_OF_CARDS_CONFIG_FILE, LEGACY_DECK_CONFIG_FILE):`
+- `goc/engine.py:5246` — consumption: `for path in (GAME_OF_CARDS_CONFIG_FILE, LEGACY_DECK_CONFIG_FILE):`
 - `goc/install.py:1073` — the upgrade migration's contrasting (correct)
   name: `legacy_config = target / ".claude" / "deck-config.yaml"`
-- `goc/templates/game_of_cards/README.md:24` — "Legacy
+- `goc/templates/game_of_cards/README.md:32` — "Legacy
   `.claude/deck-config.yaml` is migrated here on upgrade."
 
 ## What's broken

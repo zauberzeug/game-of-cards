@@ -26,7 +26,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:796-846` — `_strip_claude_vendored_harness`, called from the vendored→plugin migration cleanup path (`install.py:1641-1653`)
+- `goc/install.py:796-846` — `_strip_claude_vendored_harness`, called from the vendored→plugin migration cleanup path (`install.py:1793-1805`)
 - `goc/install.py:1140-1178` — `_sync_skill_tree` `replace_skills` path, called from the vendored in-place refresh during `goc upgrade --keep-local-skills`
 - `goc/install.py:830-833` — hook-file enumeration inside `_strip_claude_vendored_harness` (same shape)
 

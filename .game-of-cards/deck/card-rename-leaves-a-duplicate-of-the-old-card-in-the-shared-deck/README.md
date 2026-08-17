@@ -27,7 +27,7 @@ definition_of_done: |
 - `goc/engine.py:6270-6273` — `_cmd_move` renames the directory with
   `git mv`, which **stages** both halves of the rename: the addition of
   the destination and the *deletion* of the source.
-- `goc/engine.py:6285` — `_cmd_move` returns after printing
+- `goc/engine.py:6533` — `_cmd_move` returns after printing
   `old → new`. It never commits, so that staged deletion is left sitting
   in the index (the sibling card
   [goc-move-leaves-cross-reference-rewrites-uncommitted](../goc-move-leaves-cross-reference-rewrites-uncommitted/)

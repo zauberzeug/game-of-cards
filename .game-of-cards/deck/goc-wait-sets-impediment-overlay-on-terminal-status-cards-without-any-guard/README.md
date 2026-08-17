@@ -14,8 +14,8 @@ tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` — guard `goc wait` against terminal targets (the sibling-consistent option), allow with a "historical record" semantic, or split (allow `--clear` but reject `--reason`/`--until`).
   - [ ] TDD: `reproduce.py` exits non-zero — running `goc wait` against a terminal card no longer mutates the overlay (or behaves per the recorded decision).
-  - [ ] MECHANICAL: `_cmd_wait` in `goc/engine.py` carries a `TERMINAL_STATUSES` guard mirroring `_cmd_decide` (engine.py:4555), with an error message naming the replacement path (file a new card; supersede if the closed card needs revisiting).
-  - [ ] PROCESS: `validate_waiting_overlay` (engine.py:2061) decision recorded — either keep the terminal skip (now defensible because the setter refuses) or extend it to emit a `TERMINAL_OVERLAY` warning for legacy stragglers.
+  - [ ] MECHANICAL: `_cmd_wait` in `goc/engine.py` carries a `TERMINAL_STATUSES` guard mirroring `_cmd_decide` (engine.py:4773), with an error message naming the replacement path (file a new card; supersede if the closed card needs revisiting).
+  - [ ] PROCESS: `validate_waiting_overlay` (engine.py:2186) decision recorded — either keep the terminal skip (now defensible because the setter refuses) or extend it to emit a `TERMINAL_OVERLAY` warning for legacy stragglers.
 ---
 
 # `goc wait` sets an impediment overlay on a terminal-status card without any guard
@@ -57,7 +57,7 @@ if t.status in TERMINAL_STATUSES:
     sys.exit(2)
 ```
 
-`_cmd_status` (engine.py:5492+) and `_cmd_done` (engine.py:4450+) carry
+`_cmd_status` (engine.py:5740+) and `_cmd_done` (engine.py:4668+) carry
 analogous terminal-status guards. `_cmd_wait` is the sibling that was
 overlooked when this family of guards was added.
 
@@ -155,7 +155,7 @@ The fix is mechanical (5-line guard mirroring `_cmd_decide`), but the
    the cleanup path without re-opening the "set after close" surface.
 
 Sibling-shape audit (out of scope here; track separately): `_cmd_advance`
-(engine.py:6100) and `_cmd_unadvance` (engine.py:6122) also lack
+(engine.py:6348) and `_cmd_unadvance` (engine.py:6370) also lack
 `TERMINAL_STATUSES` guards. Supersession records `superseded_by` /
 `supersedes` edges atomically, so those verbs probably *should* accept
 terminal targets — but the convention deserves its own card if option 1

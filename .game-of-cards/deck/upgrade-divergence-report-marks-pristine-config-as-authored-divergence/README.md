@@ -30,7 +30,7 @@ definition_of_done: |
   `skills_source:` line.
 - `goc/templates/game_of_cards/config.yaml:94` — ships
   `# skills_source: auto` (commented).
-- `goc/templates/skills/upgrade/SKILL.md:55-57` — the consumer that
+- `goc/templates/skills/upgrade/SKILL.md:59-61` — the consumer that
   reconciles every `evolving` + `preserved` file.
 
 ## What's broken
@@ -58,7 +58,7 @@ can **never** be byte-equal to the template, and always classifies
 `preserved`.
 
 The divergence-report consumer treats `preserved` as authored
-divergence. From `goc/templates/skills/upgrade/SKILL.md:55-57`:
+divergence. From `goc/templates/skills/upgrade/SKILL.md:59-61`:
 
 > **For each `evolving` file with `status: preserved`** — read the
 > local file ... AND the shipped template ... Drive a 2-way reconcile:

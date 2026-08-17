@@ -22,7 +22,7 @@ definition_of_done: |
 
 - `goc/install.py:209-226` — `_strip_claude_import`
 - `goc/install.py:1361` — sole caller, inside `_sync_methodology_blocks` when `briefing_target == "CLAUDE.md"`
-- `goc/install.py:229-268` — `_sync_claude_import`, which shows why ownership of bare lines is ambiguous
+- `goc/install.py:231-268` — `_sync_claude_import`, which shows why ownership of bare lines is ambiguous
 
 ## Hypothesis (unverified — code-reading evidence only)
 

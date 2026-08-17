@@ -23,8 +23,8 @@ Four prohibition scanners across two test files:
 | Guard | Scanner | Prohibited shape |
 |---|---|---|
 | `tests/test_guidance_accuracy.py:21` | `_STALE_PATTERN` | the stale `close + commit` phrasing |
-| `tests/test_guidance_accuracy.py:218` | `_STALE_BICONDITIONAL` | the stale `No ⏳ ⇒ pullable` claim |
-| `tests/test_guidance_accuracy.py:292` | `_STALE_STUB` | the stale `reproduce.py stub` phrasing |
+| `tests/test_guidance_accuracy.py:367` | `_STALE_BICONDITIONAL` | the stale `No ⏳ ⇒ pullable` claim |
+| `tests/test_guidance_accuracy.py:441` | `_STALE_STUB` | the stale `reproduce.py stub` phrasing |
 | `tests/test_skill_frontmatter_strict_yaml.py:21` | `NESTED_MAPPING_COLON` | a nested mapping in skill frontmatter |
 
 Three in-tree counter-examples show the fix shape needs no invention:
@@ -239,7 +239,7 @@ Option B cannot catch it. A generated sensitivity case runs the scanner over a
 the production corpus goes empty. The registration needs a fourth element — a
 corpus floor asserting the tree the scanner walks in production still exists and
 still holds a plausible number of files. The precedent is in-tree and predates
-this card: `tests/test_card_authoring_rules.py:399`
+this card: `tests/test_card_authoring_rules.py:480`
 (`test_live_deck_is_actually_being_scanned`, "a clean result must come from real
 cards, not an empty glob") is exactly this element, and the new guard's
 `test_the_trees_are_actually_being_swept` is its generalization to a multi-tree

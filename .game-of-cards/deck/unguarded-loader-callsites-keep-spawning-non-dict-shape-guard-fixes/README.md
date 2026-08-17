@@ -19,7 +19,7 @@ advanced_by:
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (shared `load_mapping_or_warn` helper that wraps json.loads / yaml.safe_load and routes every user-editable load through it), B (per-callsite `isinstance(_, dict)` guard at each remaining site), or C (status-quo per-site whack-a-mole). Record the decision in log.md with the rationale. See `## Decision required` below.
-  - [ ] MECHANICAL: implement the chosen approach. For A: introduce the helper in `goc/engine.py` (or a shared `goc/_loaders.py`); migrate every documented user-editable callsite through it; a regression test asserts no `yaml.safe_load(...) or {}` or `json.loads(...)` pattern remains unguarded outside the helper for the enumerated callsites. For B: add `isinstance(_, dict)` guards mirroring the closed-sibling shape at `load_deck_config` (engine.py:4989), `_resolve_deck_dir`'s config-probe (engine.py:99), and the canonical-tags fenced-YAML loader (engine.py:680). For C: file the three outstanding instances as separate cards and walk away.
+  - [ ] MECHANICAL: implement the chosen approach. For A: introduce the helper in `goc/engine.py` (or a shared `goc/_loaders.py`); migrate every documented user-editable callsite through it; a regression test asserts no `yaml.safe_load(...) or {}` or `json.loads(...)` pattern remains unguarded outside the helper for the enumerated callsites. For B: add `isinstance(_, dict)` guards mirroring the closed-sibling shape at `load_deck_config` (engine.py:5237), `_resolve_deck_dir`'s config-probe (engine.py:99), and the canonical-tags fenced-YAML loader (engine.py:680). For C: file the three outstanding instances as separate cards and walk away.
   - [ ] TDD: a reproduce.py builds a tmp repo with `.game-of-cards/config.yaml` containing `null` (one shape) and `[]` (another shape), then runs a code path that calls `load_deck_config()` (e.g. `goc done` or `goc attest`) — currently crashes with `AttributeError`; after the fix, the load surfaces a coherent warning and the command continues or fails with a clean error.
   - [ ] TDD: regression tests covering each enumerated callsite against each non-dict shape (`null`, `[]`, `"string"`, `42`), asserting no `AttributeError` escapes.
   - [ ] PROCESS: cross-link the two closed siblings via `advanced_by` (already wired) so a cold reader sees the family this card retires. If approach A is chosen, also add the helper to `Skill(card-schema)` or `AGENTS.md` as the canonical loader pattern for new user-editable config files.
@@ -67,7 +67,7 @@ A `grep -n "json.loads\|yaml.safe_load" goc/*.py` against the current
 tree surfaces three more user-editable-input callsites with the same
 shape:
 
-### 1. `load_deck_config` — `goc/engine.py:4989-5005`
+### 1. `load_deck_config` — `goc/engine.py:5237-5253`
 
 ```python
 def load_deck_config() -> dict:

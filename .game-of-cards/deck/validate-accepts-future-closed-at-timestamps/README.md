@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:1692-1694` — `validate_card`'s `closed_at` check:
+- `goc/engine.py:1817-1819` — `validate_card`'s `closed_at` check:
 
   ```python
   closed_at = fm.get("closed_at")
@@ -64,9 +64,9 @@ covers it.
 The validator's contract is now strictly weaker than the implicit
 invariant `closed_at <= now` that consumers assume:
 
-- `--done --since YYYY-MM-DD` (engine.py:2805) silently includes a card
+- `--done --since YYYY-MM-DD` (engine.py:2958) silently includes a card
   whose `closed_at` is `2099-12-31` for any `--since` in this century.
-- `--closed-since WINDOW` (engine.py:2885) compares against `now -
+- `--closed-since WINDOW` (engine.py:3038) compares against `now -
   window`; a future timestamp passes the `>= threshold` test trivially
   for any reasonable window, so audit windows include fictional closures.
 - `goc validate`'s own date-field tightening peer
@@ -88,9 +88,9 @@ DEFECT: validator accepts closed_at ~73 years in the future
 ## Why it matters
 
 **Reachability path.** The engine itself always writes `closed_at` via
-`_utc_now_iso()` (`_cmd_done` at engine.py:3263; `_cmd_status` for
-`disproved`/`superseded` at engine.py:3349; `_auto_populate_worker`-adjacent
-flips at engine.py:5584). So the offending input is **not** produced by
+`_utc_now_iso()` (`_cmd_done` at engine.py:4720; `_cmd_status` for
+`disproved`/`superseded` at engine.py:4818; `_auto_populate_worker`-adjacent
+flips at engine.py:5832). So the offending input is **not** produced by
 shipping code in normal operation. The realistic input paths are:
 
 1. **Hand-edit.** Agents and humans hand-edit frontmatter when migrating,
@@ -131,7 +131,7 @@ Out-of-scope on this card unless the decision says otherwise:
 
 ## Fix sketch (depending on decision)
 
-Add a helper next to `_closed_at_instant` (engine.py:2927):
+Add a helper next to `_closed_at_instant` (engine.py:3080):
 
 ```python
 def _is_in_future(value, *, tolerance: timedelta = timedelta(0)) -> bool:

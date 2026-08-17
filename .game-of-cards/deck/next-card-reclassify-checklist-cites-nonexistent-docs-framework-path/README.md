@@ -12,7 +12,7 @@ advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
   - [ ] PROCESS: human picks fix path A (delete) or B (generalize); decision recorded in body
-  - [ ] MECHANICAL: `goc/templates/skills/next-card/SKILL.md:117` edited per the chosen path
+  - [ ] MECHANICAL: `goc/templates/skills/next-card/SKILL.md:121` edited per the chosen path
   - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py` regenerates `.claude/skills/`, `.codex/skills/`, `claude-plugin/skills/`, `codex-plugin/skills/` mirrors; `--check` exits zero
   - [ ] MECHANICAL: `python scripts/port_skills_to_openclaw.py` re-ports the openclaw skill; `--check` exits zero
   - [ ] PROCESS: `uv run goc validate` clean
@@ -22,17 +22,17 @@ definition_of_done: |
 
 ## Location
 
-- `goc/templates/skills/next-card/SKILL.md:117` — the "Reclassify after reading" checklist's first bullet:
+- `goc/templates/skills/next-card/SKILL.md:121` — the "Reclassify after reading" checklist's first bullet:
 
   ```
   - Close (or reopen) a gap in `docs/framework/*.md`.
   ```
 
 - Auto-synced mirrors carry the same line:
-  - `.claude/skills/next-card/SKILL.md:117`
-  - `.codex/skills/next-card/SKILL.md:117`
-  - `claude-plugin/skills/next-card/SKILL.md:117`
-  - `codex-plugin/skills/next-card/SKILL.md:117`
+  - `.claude/skills/next-card/SKILL.md:121`
+  - `.codex/skills/next-card/SKILL.md:144`
+  - `claude-plugin/skills/next-card/SKILL.md:121`
+  - `codex-plugin/skills/next-card/SKILL.md:144`
   - `openclaw-plugin/skills/next-card/SKILL.md` (hand-ported via `scripts/port_skills_to_openclaw.py`)
 
 ## What's broken
@@ -113,7 +113,7 @@ Either path: regenerate auto-synced mirrors via `python scripts/sync_plugin_asse
 definition_of_done (replace after decision):
 
   - [ ] PROCESS: human picks fix path A (delete) or B (generalize); decision recorded above
-  - [ ] MECHANICAL: `goc/templates/skills/next-card/SKILL.md:117` edited per the chosen path
+  - [ ] MECHANICAL: `goc/templates/skills/next-card/SKILL.md:121` edited per the chosen path
   - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py` regenerates `.claude/skills/`, `.codex/skills/`, `claude-plugin/skills/`, `codex-plugin/skills/` mirrors; `--check` exits zero
   - [ ] MECHANICAL: `python scripts/port_skills_to_openclaw.py` re-ports the openclaw skill; `--check` exits zero
   - [ ] PROCESS: `uv run goc validate` clean

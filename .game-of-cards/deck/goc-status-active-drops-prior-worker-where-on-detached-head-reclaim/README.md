@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` (fall back to `existing_dict['where']` when branch detection yields nothing, OR refuse the transition with a clear error, OR keep current behavior and document the silent drop as intentional).
   - [ ] TDD: reproduce.py exits zero (the chosen behavior is observed).
   - [ ] TDD: a unit test in `tests/` covers the `worker_where is None AND existing_dict has where AND git rev-parse returns 'HEAD'` path.
-  - [ ] MECHANICAL: `_auto_populate_worker` docstring at `goc/engine.py:5431` updated to match the chosen behavior.
+  - [ ] MECHANICAL: `_auto_populate_worker` docstring at `goc/engine.py:5679` updated to match the chosen behavior.
   - [ ] PROCESS: `uv run goc validate` passes.
 ---
 
@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5458-5488` — `_auto_populate_worker`.
+`goc/engine.py:5706-5736` — `_auto_populate_worker`.
 
 ## What's broken
 
@@ -72,7 +72,7 @@ active` from a detached HEAD checkout is rewritten as bare-string
 `worker: alice` — the `where: feature/x` record is silently
 destroyed.
 
-The function's own docstring at `goc/engine.py:5432-5437` codifies
+The function's own docstring at `goc/engine.py:5680-5685` codifies
 the intent:
 
 > If the card already has a worker.who (designation), preserve it
@@ -86,7 +86,7 @@ mentioned anywhere.
 
 ## Reachability path
 
-Triggered from `_cmd_status` at `goc/engine.py:5492` on every
+Triggered from `_cmd_status` at `goc/engine.py:5740` on every
 `open/blocked → active` transition. Concrete flows that reach a
 detached HEAD or no-branch state:
 

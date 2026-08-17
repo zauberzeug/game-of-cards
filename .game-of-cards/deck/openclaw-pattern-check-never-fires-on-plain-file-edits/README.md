@@ -10,10 +10,10 @@ human_gate: decision
 advances:
   - openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting
 advanced_by: []
-tags: [bug, infra, api-contract, unverified]
+tags: [bug, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: human resolves `## Decision required` — recognizer strategy chosen (enumerate OpenClaw's edit-tool names / invert to a read-only denylist / drop tool-name matching for a host-supplied mutation signal), recorded in log.md
-  - [ ] EMPIRICAL: OpenClaw's actual file-edit tool names enumerated from the installed SDK (recipe in `## Falsification recipe`), verdict recorded in log.md either way — this is what clears the `unverified` tag
+  - [x] EMPIRICAL: OpenClaw's actual file-edit tool names enumerated from the installed SDK (recipe in `## Falsification recipe`), verdict recorded in log.md either way — this is what clears the `unverified` tag
   - [ ] TDD: reproduce.py exits 1 — the detector fires for the host's own edit-tool spellings, not only for Claude Code's three
   - [ ] TDD: baselines preserved — still fires on `Edit`/`Write`/`NotebookEdit` (Claude-shaped transcripts remain covered) and on a broad git command under both `exec` and `Bash`; still silent on a read-only-tools-only turn
   - [ ] MECHANICAL: fix lands in `openclaw-plugin/index.ts` (hand-ported, not auto-synced) and `openclaw-plugin/dist/` is rebuilt; the Python hook `goc/templates/hooks/pattern_generalization_check.py` is left alone unless the chosen strategy is host-neutral
@@ -118,21 +118,24 @@ The 8 OpenClaw-side spellings are a *sweep*, not a claim about which name
 is real: the finding is that no spelling outside the Claude triple can
 satisfy the predicate, whichever one OpenClaw actually uses.
 
-## Falsification recipe (clears the `unverified` tag)
+## Falsification recipe — run 2026-08-17, card confirmed
 
-The structural inconsistency above is confirmed by reproduce.py. What is
-unverified is OpenClaw's exact edit-tool names, which decide the fix. To
-settle it:
+The recipe was run against **openclaw 2026.5.7** (`npm install` in
+`openclaw-plugin/`, then reading the host's registered tool ids out of
+`node_modules/openclaw/dist/`). Its step 3 disproves this card if any
+registered edit tool is named `Edit` / `Write` / `NotebookEdit`. None is —
+the host registers `edit`, `write`, `apply_patch` (and read-only `read`),
+all lowercase. The card is confirmed on the host's real vocabulary, and
+the `unverified` tag is dropped. Full readout in `log.md`.
 
-1. `cd openclaw-plugin && npm install` (resolves the `openclaw`
-   peer dependency, `>=2026.3.24-beta.2`).
-2. Enumerate the host's registered tool names from the installed SDK — the
-   same `node_modules/openclaw/dist/` reading that pinned the
-   `runCommandWithTimeout` signature and the `CONVERSATION_HOOK_NAMES`
-   list already cited in `index.ts:623-627` and `:757-758`.
-3. If any registered edit tool is named `Edit` / `Write` / `NotebookEdit`,
-   this card is disproved — flip it to `disproved` with the tool list as
-   the rebuttal. Otherwise record the real names and pick a fix.
+Those three names are the enumeration option A would consume. The SDK also
+carries its own mutation classifier (`isMutatingToolCall`,
+`isLikelyMutatingToolName`, `MUTATING_TOOL_NAMES` in
+`src/agents/tool-mutation.ts`) — the host-supplied signal option C wants —
+but it is **internal**: no public entry in the package's `exports` map
+re-exports it, so option C costs an upstream export request. That
+constraint is new information for the decision below; `log.md` records how
+it was established.
 
 ## Why it matters
 

@@ -14,8 +14,8 @@ tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` — guard `goc attest` against terminal targets (the sibling-consistent option), allow with a "re-attest is a no-op echo of the original" semantic, or split (re-attest passes by reading the already-recorded block instead of mutating).
   - [ ] TDD: `reproduce.py` exits zero — running `goc attest` against a closed card no longer mutates `log.md` (or behaves per the recorded decision).
-  - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` carries a `TERMINAL_STATUSES` guard mirroring `_cmd_decide` (engine.py:4555) and `_cmd_done` (engine.py:3243), with an error message naming the replacement path (re-open is forbidden; file a new card).
-  - [ ] MECHANICAL: the misleading `Next: goc done <title> to close once all DoD items are ticked.` print at `engine.py:5428` is dropped on terminal-card paths (or removed entirely if the guard short-circuits before it runs).
+  - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` carries a `TERMINAL_STATUSES` guard mirroring `_cmd_decide` (engine.py:4773) and `_cmd_done` (engine.py:3243), with an error message naming the replacement path (re-open is forbidden; file a new card).
+  - [ ] MECHANICAL: the misleading `Next: goc done <title> to close once all DoD items are ticked.` print at `engine.py:5676` is dropped on terminal-card paths (or removed entirely if the guard short-circuits before it runs).
   - [ ] PROCESS: `uv run goc validate` clean; full regression suite green.
 ---
 
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5324-5428` — `_cmd_attest`.
+`goc/engine.py:5572-5676` — `_cmd_attest`.
 
 The verb loads the card, iterates the configured layer-2 / layer-3
 checks, then unconditionally writes the `## Closure verification`
@@ -63,7 +63,7 @@ The sibling state-touching verbs all refuse terminal targets:
 
 - `_cmd_done` — `engine.py:3243` — `if prior in TERMINAL_STATUSES: ...`
 - `_cmd_status` — `engine.py:3982` — `if prior in TERMINAL_STATUSES: ...`
-- `_cmd_decide` — `engine.py:4555` — `if t.status in TERMINAL_STATUSES: ...`
+- `_cmd_decide` — `engine.py:4773` — `if t.status in TERMINAL_STATUSES: ...`
 - `_cmd_attest` — **no guard**.
 
 (`_cmd_wait` is the other missing member of the family; see

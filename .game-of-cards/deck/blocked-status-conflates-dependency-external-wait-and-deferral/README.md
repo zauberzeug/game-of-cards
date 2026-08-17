@@ -85,8 +85,8 @@ and the breaking migration is acceptable before the audience widens.
 The single strongest cross-track signal is **derived vs. stored**: a guard
 auto-clears when its condition clears; a stored status strands the card when
 the blocker resolves silently. GoC's `validate_blocker_coherence`
-(`engine.py:2178`) already walks `advanced_by` as the blocker set
-(`engine.py:2222`) — but only **warns** (`STALE_BLOCKED`) instead of deriving
+(`engine.py:2303`) already walks `advanced_by` as the blocker set
+(`engine.py:2347`) — but only **warns** (`STALE_BLOCKED`) instead of deriving
 the state. It is a half-built guard.
 
 ## Subtype map (GoC already owns two of five)

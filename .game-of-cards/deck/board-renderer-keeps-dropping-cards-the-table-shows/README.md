@@ -27,10 +27,10 @@ definition_of_done: |
 
 ## The pattern
 
-`render_table` (`goc/engine.py:3096`) iterates `for t in cards` and
+`render_table` (`goc/engine.py:3249`) iterates `for t in cards` and
 emits a row for **every** card in its input — the show-everything
 contract of the default `goc` queue view. `render_board`
-(`goc/engine.py:3321`) instead re-derives, by hand, which cards land on
+(`goc/engine.py:3474`) instead re-derives, by hand, which cards land on
 the board (column bucketing, row caps, filter defaults). That
 hand-rolled derivation has silently *dropped* cards present in its
 input five separate times, each found and fixed as an individual card:

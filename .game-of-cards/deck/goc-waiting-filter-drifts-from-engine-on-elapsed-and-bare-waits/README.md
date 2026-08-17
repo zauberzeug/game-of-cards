@@ -1,6 +1,6 @@
 ---
 title: goc-waiting-filter-drifts-from-engine-on-elapsed-and-bare-waits
-summary: "`goc --waiting` filters with `t.waiting_on is not None` (engine.py:2846), but the engine's authoritative `waiting_impedes` predicate (engine.py:2514) walks a four-cell matrix over both `waiting_on` AND `waiting_until`. The CLI flag disagrees with the engine in two cells: it INCLUDES cards whose `waiting_until` has elapsed (engine has already resurfaced them) and it OMITS bare deferrals where only `waiting_until` is set. Same drift class as the recent session-start `_is_impeded` precision fix and the just-filed `standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits` — except this time the engine's own CLI lies about its own impedance predicate."
+summary: "`goc --waiting` filters with `t.waiting_on is not None` (engine.py:2846), but the engine's authoritative `waiting_impedes` predicate (engine.py:2646) walks a four-cell matrix over both `waiting_on` AND `waiting_until`. The CLI flag disagrees with the engine in two cells: it INCLUDES cards whose `waiting_until` has elapsed (engine has already resurfaced them) and it OMITS bare deferrals where only `waiting_until` is set. Same drift class as the recent session-start `_is_impeded` precision fix and the just-filed `standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits` — except this time the engine's own CLI lies about its own impedance predicate."
 status: open
 stage: null
 contribution: medium
@@ -23,7 +23,7 @@ definition_of_done: |
 ## Location
 
 - Filter: `goc/engine.py:2846`
-- Authoritative impedance predicate: `goc/engine.py:2514` (`waiting_impedes`)
+- Authoritative impedance predicate: `goc/engine.py:2646` (`waiting_impedes`)
 - Flag help text: `goc/engine.py:2545-2546`
 
 ## What's broken
@@ -37,7 +37,7 @@ if getattr(args, "waiting", False):
 ```
 
 The engine's authoritative `waiting_impedes` predicate at
-`engine.py:2514` walks a four-cell matrix over BOTH overlay fields
+`engine.py:2646` walks a four-cell matrix over BOTH overlay fields
 (`waiting_on` and `waiting_until`) — quoting its docstring:
 
 > A `waiting_on` reason without an elapsed `waiting_until` means the

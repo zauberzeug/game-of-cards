@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5244-5262` — `_run_derived_check` for the
+`goc/engine.py:5492-5510` — `_run_derived_check` for the
 `advanced-by-closed` layer-3 closure check.
 
 ## What's broken
@@ -35,7 +35,7 @@ card in the deck at all, so none of them are "closed" in any
 meaningful sense.
 
 ```python
-# goc/engine.py:5246-5262
+# goc/engine.py:5494-5510
 if name == "advanced-by-closed":
     advanced_by = card.frontmatter.get("advanced_by") or []
     if not isinstance(advanced_by, list):
@@ -58,7 +58,7 @@ if name == "advanced-by-closed":
 Contrast `validate_supersedes_targets` at `engine.py:1297-1306`,
 which uses the same `by_title.get(ref); if target is None: continue`
 shape on the record-axis pointer — but that path is paired with the
-generic dangling-ref error from `validate_card` at `engine.py:1819`
+generic dangling-ref error from `validate_card` at `engine.py:1944`
 (`{field}: references unknown title`), which `goc validate` emits
 once per dangling entry. `attest` runs `_run_derived_check`
 independently and does not consult `validate_card`, so the layer-3

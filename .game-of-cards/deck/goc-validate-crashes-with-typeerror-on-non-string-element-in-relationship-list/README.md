@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:1250-1259` — `validate_card`, the `LIST_REL_FIELDS` loop:
+`goc/engine.py:1936-1945` — `validate_card`, the `LIST_REL_FIELDS` loop:
 
 ```python
 for field in LIST_REL_FIELDS:

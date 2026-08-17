@@ -27,7 +27,7 @@ definition_of_done: |
   f"`goc status {title} active`), or delete it with `goc move`.",
   ```
 
-- `goc/engine.py:3801` — `goc move` is a rename verb:
+- `goc/engine.py:3969` — `goc move` is a rename verb:
   `subparsers.add_parser("move", help="Rename a title and rewrite known cross-references.")`
   with two required positionals (`old_title new_title`); the executor is
   `git mv`/`shutil.move` plus cross-reference rewrite. No deletion mode,

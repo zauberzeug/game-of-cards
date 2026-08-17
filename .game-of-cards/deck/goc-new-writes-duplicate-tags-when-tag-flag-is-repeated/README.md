@@ -23,7 +23,7 @@ definition_of_done: |
 ## Location
 
 `goc/engine.py:4107-4108` (the dedup is applied to `advances` /
-`advanced_by` only) and `goc/engine.py:4130-4151` (the tag loop
+`advanced_by` only) and `goc/engine.py:6033-6057` (the tag loop
 validates each tag against `canonical_tags` but stores the list
 verbatim).
 
@@ -58,7 +58,7 @@ for tag in tags:
 Then `tags` is written through unchanged:
 
 ```python
-# goc/engine.py:5809
+# goc/engine.py:6057
 "tags": list(tags),
 ```
 
@@ -102,7 +102,7 @@ waiting to be hit again whenever a new such flag is added.
 ## Fix
 
 Apply `_unique_preserving_order` to `tags` alongside the existing
-calls. Concretely, at `goc/engine.py:5750`:
+calls. Concretely, at `goc/engine.py:5998`:
 
 ```python
 tags = args.tags

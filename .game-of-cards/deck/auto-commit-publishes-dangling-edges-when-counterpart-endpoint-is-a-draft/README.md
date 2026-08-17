@@ -21,10 +21,10 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4637-4647` — `_git_auto_commit`'s `exclude_draft` filter.
+- `goc/engine.py:4855-4865` — `_git_auto_commit`'s `exclude_draft` filter.
 - `goc/engine.py:5234-5237` — `_cmd_status`: `commit_targets = [card_dir]`
   plus `DECK_DIR / successor` for `superseded --by`.
-- `goc/engine.py:6112` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
+- `goc/engine.py:6360` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
   `_git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], ...)`.
 
 ## What's broken
@@ -57,7 +57,7 @@ warning that the commit was split. Same for `goc status <old> superseded
 --by <draft-successor>`.
 
 The lone caller that opts out (`goc new --commit`,
-`engine.py:5828-5833`, `exclude_draft=False`) exists precisely "to avoid a
+`engine.py:6076-6081`, `exclude_draft=False`) exists precisely "to avoid a
 half-edge (one endpoint committed, the other left untracked)" — the exact
 failure the two-card verbs now reproduce.
 
@@ -110,7 +110,7 @@ committed trees. A human should pick which invariant bends.
 
 **Option A — commit the draft counterpart together with the edge
 (atomicity wins).** Pass `exclude_draft=False` from the two-card call
-sites at `engine.py:5599`, `:5710`, `:5725`.
+sites at `engine.py:5847`, `:5710`, `:5725`.
 
 - Pros: committed tree always validates; matches the `goc new --commit`
   precedent and the half-edge rule; smallest behavior change.
@@ -144,7 +144,7 @@ nothing and prints a "left uncommitted: counterpart is a draft" notice.
 - Cons: silently downgrades auto_commit's atomicity promise — mutations
   linger as ambient worktree changes that the next unrelated commit may
   sweep up, which is the failure auto_commit was built to avoid.
-- Preview: change the filter at `engine.py:4637-4647` to all-or-nothing
+- Preview: change the filter at `engine.py:4855-4865` to all-or-nothing
   plus a stderr notice.
 
 **Recommendation.** Option A — the committed-tree referential-integrity

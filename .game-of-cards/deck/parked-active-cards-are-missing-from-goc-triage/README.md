@@ -24,7 +24,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:4609-4671` (`_cmd_triage`). The selection filter is on
+`goc/engine.py:6714-6793` (`_cmd_triage`). The selection filter is on
 line 4613:
 
 ```python

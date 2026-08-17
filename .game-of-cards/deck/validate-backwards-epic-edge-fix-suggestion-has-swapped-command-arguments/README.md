@@ -13,7 +13,7 @@ advanced_by:
 tags: [bug, api-contract, meta-fix, documentation]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — running the swapped suggestion verbatim leaves `card.advances: [child]` unchanged, and running the corrected suggestion removes it.
-  - [ ] MECHANICAL: `engine.py:2164-2165` rewritten to read `goc unadvance <child> --by <card>` then `goc advance <card> --by <child>` (arguments un-swapped).
+  - [ ] MECHANICAL: `engine.py:2289-2290` rewritten to read `goc unadvance <child> --by <card>` then `goc advance <card> --by <child>` (arguments un-swapped).
   - [ ] TDD: a unit test in `tests/` asserts the warning text contains the corrected command sequence (so a future re-swap is caught at test time, not at user-time).
   - [ ] PROCESS: `log.md` entry recording the fix and the date.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes.
@@ -137,7 +137,7 @@ designed for.
 
 ## Decision required
 
-The fix is a one-line text rewrite at `engine.py:2164-2165`. The
+The fix is a one-line text rewrite at `engine.py:2289-2290`. The
 gate is `decision` because two test-shape choices are open and a
 human pick keeps the meta-fix family coherent:
 

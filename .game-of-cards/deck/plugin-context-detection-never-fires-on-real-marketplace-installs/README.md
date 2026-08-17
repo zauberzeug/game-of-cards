@@ -34,7 +34,7 @@ with a raw `FileNotFoundError` traceback instead.
 
 - `goc/install.py:486` — `return _PACKAGE_DIR.parent.name in {"claude-plugin", "codex-plugin", "openclaw-plugin"}`
 - `goc/install.py:500` — `return _PACKAGE_DIR.parent.name == "openclaw-plugin"`
-- `goc/engine.py:5034-5038` — `_claude_plugin_present()` documents the real layouts
+- `goc/engine.py:5282-5286` — `_claude_plugin_present()` documents the real layouts
 - `tests/test_install.py:2230` — test fabricates `cwd / "_plugin" / "claude-plugin"`, the one layout that matches
 
 ## What's broken
