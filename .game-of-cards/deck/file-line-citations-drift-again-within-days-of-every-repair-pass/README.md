@@ -1,7 +1,7 @@
 ---
 title: file-line-citations-drift-again-within-days-of-every-repair-pass
 summary: "Cards address code by bare line number, and a bare line number does not survive ordinary growth. Six days after the 2026-08-10 hygiene pass repaired 329 citations, 227 of them (69%) were wrong again — goc/engine.py grew 6731 to 6979 lines and carried 181 of the failures. Repair is therefore permanent recurring work rather than a fix, and between passes a reader cannot tell a good cite from a rotted one without re-deriving it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-17T02:36:14Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] TDD: a check that fails on a card citing code that does not contain the cited anchor, proving it can catch an offender rather than passing on an empty list (see `static-source-guards-never-prove-they-can-catch-an-offender`).
   - [ ] MECHANICAL: all five mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `file:line` citations drift again within days of every repair pass
