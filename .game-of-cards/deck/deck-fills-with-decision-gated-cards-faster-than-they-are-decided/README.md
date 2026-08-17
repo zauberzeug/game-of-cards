@@ -12,7 +12,7 @@ advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — the autonomous runway is at least 15 open cards.
-  - [ ] PROCESS: a mechanism is chosen from `## Fix options` and recorded in `log.md` with its rationale. The choice must say explicitly what happens to the 185 cards already gated, not only to newly filed ones.
+  - [ ] PROCESS: a mechanism is chosen from `## Decision required` question 1 and recorded in `log.md` with its rationale. Question 2 must be answered explicitly — what happens to the 185 cards already gated, not only to newly filed ones.
   - [ ] TDD: a regression test pins the chosen filing behaviour — a finding filed without an explicit `--gate` lands where the decision says it should, and one filed with `--gate decision` still lands gated. It must fail on today's default.
   - [ ] MECHANICAL: `goc/schema.yaml` and `Skill(create-card)` Step 3 agree with each other and with the implemented default; today the skill calls `decision` "the *fallback*" while the schema makes it the value you get by omission.
   - [ ] MECHANICAL: if the fix adds a triage surface for the gated backlog, `goc --help` describes its real scope, and the mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` clean.
