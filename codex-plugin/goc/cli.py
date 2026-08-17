@@ -25,6 +25,13 @@ from goc.install import (
 )
 
 
+#: Verbs intercepted on `argv[0]` before the engine parser is built. They are
+#: routed to standalone argparse parsers over install.py, so they never appear
+#: in the engine's subparser registry — anything enumerating goc's full command
+#: surface has to union this with that registry.
+INSTALL_VERBS = ("install", "upgrade")
+
+
 def main() -> None:
     """Console-script entry point."""
     # Restore default SIGPIPE disposition so `goc ... | head` exits cleanly
@@ -44,7 +51,7 @@ def main() -> None:
     # engine_cli below alongside every other global flag.
 
     # Route install / upgrade to their argparse-independent functions
-    if argv and argv[0] in ("install", "upgrade"):
+    if argv and argv[0] in INSTALL_VERBS:
         sub = argv[0]
         rest = argv[1:]
         import argparse

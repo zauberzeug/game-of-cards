@@ -22,6 +22,7 @@ nothing. Exit 1 while no class-level re-run test exists in the suite, 0
 once one does.
 """
 
+import importlib.util
 import os
 import re
 import shutil
@@ -193,14 +194,53 @@ def dynamic_probe():
     return results
 
 
-def suite_has_class_level_check() -> bool:
-    """Is there a test that walks the verb list and re-runs each one?"""
-    for path in TESTS.glob("test_*.py"):
+def registered_verbs() -> set:
+    """Every verb goc exposes: the engine's subparsers plus cli.py's two."""
+    sys.path.insert(0, str(ROOT))
+    import argparse
+
+    from goc import cli as goc_cli
+    from goc.engine import _build_parser
+
+    verbs = set(getattr(goc_cli, "INSTALL_VERBS", ("install", "upgrade")))
+    for action in _build_parser()._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            verbs.update(action.choices)
+    return verbs
+
+
+def suite_has_class_level_check() -> tuple[bool, str]:
+    """Is there a test that covers every verb against a second run?
+
+    Grepping for the words alone scores any file that merely mentions them —
+    the fail-open shape this card's census already tripped over, and a first
+    draft of this function duly nominated an unrelated doc-accuracy test. So
+    the grep only narrows the field; a module qualifies when it carries a
+    table keyed by exactly the verbs goc registers (i.e. it derives its scope
+    instead of listing it), and the verdict is that module actually passing.
+    """
+    verbs = registered_verbs()
+    for path in sorted(TESTS.glob("test_*.py")):
         text = path.read_text(encoding="utf-8", errors="replace")
-        if re.search(r"MUTATING|for verb in|every mutating verb", text) and \
-           re.search(r"idempot|second[_ ]run|re-?run", text, re.I):
-            return True
-    return False
+        if not re.search(r"idempot|second[_ ]run|re-?run|twice", text, re.I):
+            continue
+        spec = importlib.util.spec_from_file_location(f"_probe_{path.stem}", path)
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)
+        except Exception:  # noqa: BLE001 - a module we cannot import is not it
+            continue
+        if not any(isinstance(v, dict) and set(v) == verbs
+                   for v in vars(module).values()):
+            continue
+        proc = subprocess.run(
+            [sys.executable, "-m", "unittest", f"tests.{path.stem}"],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        if proc.returncode == 0:
+            return True, f"tests/{path.name}"
+        return False, f"tests/{path.name} covers every verb but FAILS:\n{proc.stderr}"
+    return False, ""
 
 
 def main() -> int:
@@ -222,14 +262,18 @@ def main() -> int:
     for verb, rc1, rc2, verdict in dynamic_probe():
         print(f"    goc {verb:14s} exit {rc1}/{rc2}   {verdict}")
 
-    if suite_has_class_level_check():
-        print("\nPASS: the suite carries a class-level re-run check.")
+    ok, where = suite_has_class_level_check()
+    if ok:
+        print(f"\nPASS: {where} carries a class-level re-run check, and it "
+              f"passes. Note the static census above is unchanged and should "
+              f"be: it counts per-VERB re-run tests, which is a different "
+              f"thing from the one class-level check that now covers them all.")
         return 0
     print(
         "\nDEFECT PRESENT: no test in tests/ asserts re-run safety over the "
         "verb list. The probe above shows the class-level check is cheap and "
         "generalizes, but nothing runs it, so coverage stays a thing a verb "
-        "earns only after a defect ships."
+        f"earns only after a defect ships.{chr(10) + where if where else ''}"
     )
     return 1
 

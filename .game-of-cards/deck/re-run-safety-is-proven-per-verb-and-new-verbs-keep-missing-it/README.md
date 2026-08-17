@@ -1,23 +1,23 @@
 ---
 title: re-run-safety-is-proven-per-verb-and-new-verbs-keep-missing-it
-summary: "Seven cards have fixed an operation that was correct on its first run and wrong on its second — install, done, kickoff, upgrade, the settings merge twice, and now refine-deck's citation-repair recipe. Each was found in production and each shipped a test for that one surface, so re-run safety is coverage a verb earns only after a defect bites it: of the fourteen mutating verbs the engine registers, one has a dedicated re-run test. Probing the rest shows they are stable today, which is the point — nothing holds them there."
-status: active
+summary: "Seven cards fixed an operation that was correct on its first run and wrong on its second — install, done, kickoff, upgrade, the settings merge twice, and refine-deck's citation-repair recipe — each found in production, each shipping a test for that one surface, so re-run safety was coverage a verb earned only after a defect bit it. `tests/test_verb_rerun_safety.py` now enforces it as a class over all nineteen surfaces goc registers, deriving the list from the engine parser plus `cli.INSTALL_VERBS` so a verb added tomorrow fails the recipe check instead of inheriting nothing. Each surface declares its second-run shape; refusal turns out not to be the safety property, preserving recorded state is."
+status: done
 stage: null
 contribution: medium
 created: "2026-08-17T03:14:22Z"
-closed_at: null
+closed_at: "2026-08-17T05:31:23Z"
 human_gate: none
 advances: []
 advanced_by:
   - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
 tags: [bug, test, meta-fix]
 definition_of_done: |
-  - [ ] TDD: a class-level re-run test lands in `tests/` — it derives the verb list rather than enumerating it by hand, runs each mutating verb twice against a scratch deck, and asserts the second run either leaves the deck byte-identical or refuses. `reproduce.py` exits zero once it exists.
-  - [ ] TDD: the new test proves it can catch an offender — a deliberately non-idempotent verb (or a stubbed one) makes it fail, per `static-source-guards-never-prove-they-can-catch-an-offender`. A guard that only ever sees a clean tree is indistinguishable from one that stopped running.
-  - [ ] MECHANICAL: the verb list is derived from the engine's own parser registration, so a verb added tomorrow is covered without anyone remembering to add it. Hard-coding the list reproduces the defect this card describes.
-  - [ ] PROCESS: decide and record in `log.md` whether "refuses on the second run" counts as safe for every verb or only for the ones where refusing is the documented contract — today `decide` and `move` exit 2 on re-run and that is correct, while `publish` exiting 2 on an unauthored scaffold is a different thing entirely.
-  - [ ] PROCESS: the non-verb surfaces in the instance list (the `goc install` / `goc upgrade` entry points and `_merge_claude_settings`) are either brought under the same check or explicitly scoped out with a reason.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+  - [x] TDD: a class-level re-run test lands in `tests/` — it derives the verb list rather than enumerating it by hand, runs each mutating verb twice against a scratch deck, and asserts the second run either leaves the deck byte-identical or refuses. `reproduce.py` exits zero once it exists.
+  - [x] TDD: the new test proves it can catch an offender — a deliberately non-idempotent verb (or a stubbed one) makes it fail, per `static-source-guards-never-prove-they-can-catch-an-offender`. A guard that only ever sees a clean tree is indistinguishable from one that stopped running.
+  - [x] MECHANICAL: the verb list is derived from the engine's own parser registration, so a verb added tomorrow is covered without anyone remembering to add it. Hard-coding the list reproduces the defect this card describes.
+  - [x] PROCESS: decide and record in `log.md` whether "refuses on the second run" counts as safe for every verb or only for the ones where refusing is the documented contract — today `decide` and `move` exit 2 on re-run and that is correct, while `publish` exiting 2 on an unauthored scaffold is a different thing entirely.
+  - [x] PROCESS: the non-verb surfaces in the instance list (the `goc install` / `goc upgrade` entry points and `_merge_claude_settings`) are either brought under the same check or explicitly scoped out with a reason.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -45,92 +45,102 @@ onto unrelated code have nothing in common at the code level. What they
 share is how they were found: by someone running the thing twice, in
 production, after it shipped.
 
-## What's broken
+## What was broken
 
-Re-run safety is a property every one of these surfaces was expected to
+Re-run safety was a property every one of these surfaces was expected to
 have and none of them was asked to prove. Each fix shipped a test for its
 own surface, which is right, and no fix could have covered the next
-surface, which is the problem. The property is enforced one verb at a time,
-in arrears, so a verb added tomorrow inherits nothing.
+surface, which was the problem. The property was enforced one verb at a
+time, in arrears, so a verb added tomorrow inherited nothing.
 
-The census makes the gap concrete. Of the fourteen mutating verbs the
-engine registers, exactly one — `repair-edges` — carries a test whose name
-says it re-runs the verb:
+The census made the gap concrete. Of the fourteen mutating verbs the
+engine registers, exactly one — `repair-edges` — carried a test whose name
+said it re-ran the verb; the other thirteen were unpinned. That was not the
+same as broken. Probing each verb by running it twice against a scratch
+deck, every one was stable. **No live re-run defect was ever claimed here.**
+The finding was that the deck's being in good shape on this axis was not
+load-bearing on anything: no test asserted it, so the next refactor that
+broke it would be discovered the way the previous seven were.
 
-```
-static census — mutating verbs with a re-run test: 1/14
-    yes  goc repair-edges  (test_repair_edges.py::test_repair_edges_apply_repairs_and_is_idempotent)
-```
+## What now holds
 
-The other thirteen are unpinned. That is not the same as broken — probing
-each verb by running it twice against a scratch deck, all eight probed
-today are stable:
+`tests/test_verb_rerun_safety.py` runs every surface goc registers twice
+against a scratch repo and asserts the second run preserves recorded state.
+The list is derived from two places, not written down: the engine parser's
+subparser registry, plus `cli.INSTALL_VERBS` for the two verbs `goc/cli.py`
+intercepts on `argv[0]` before the parser exists. Nineteen surfaces are
+covered. A verb added tomorrow has no row in the recipe table and fails
+`test_every_registered_surface_has_a_rerun_recipe`, which is the point.
 
-```
-dynamic probe — run each verb twice on a scratch deck:
-    goc publish        exit 0/0   stable
-    goc wait           exit 0/0   stable
-    goc advance        exit 0/0   stable
-    goc status         exit 0/0   stable
-    goc decide         exit 0/2   stable
-    goc move           exit 0/2   stable
-    goc quality-pass   exit 0/0   stable
-    goc repair-edges   exit 0/0   stable
-```
+Each surface declares its second-run shape in one word — `READ_ONLY`,
+`NO_OP`, `REFUSES`, `RE_EMITS` or `APPENDS`. `log.md` carries the reasoning
+and the per-verb assignment; the short version is that **refusal is not the
+safety property**. Preserving recorded state is, and refusal is one way to
+get there. Exit codes are pinned coarsely (zero versus nonzero) so a verb
+flipping between refusing and no-op reddens the build, while the exact code
+stays the per-verb test's business.
 
-**No live re-run defect is being claimed here.** The deck is in good shape
-on this axis right now. The finding is that its being in good shape is not
-load-bearing on anything: no test asserts it, so the next refactor that
-breaks it will be discovered the same way the previous seven were.
-
-The probe above is roughly forty lines and derives its behaviour from the
-verb list rather than from thirteen hand-written cases. That is the whole
-argument — the class-level check is cheap, it generalizes, and it does not
-exist.
+Two clauses earn their keep and are worth knowing about before editing the
+table. A same-bytes rewrite counts as a change, because the two runs land
+in the same wall-clock second and a re-stamped `closed_at` — instance 2
+above — otherwise compares byte-equal. And `attest` is append-only rather
+than idempotent: `log.md` is a journal, so its check is that the second run
+extends the record instead of rewriting it.
 
 ## Empirical evidence
 
-`reproduce.py` prints the instance roster, the static census, and the
-dynamic probe, and exits 1 while `tests/` contains no test that walks the
-verb list re-running each one.
+`reproduce.py` prints the instance roster, the static census and the
+dynamic probe, and exits 1 unless `tests/` carries a module that covers the
+whole registered verb set and passes.
 
-One detail from building it is worth keeping, because it is an instance of
-a *different* family this deck already tracks. The census's first draft
-matched the re-run signal anywhere in a test's body and reported **4/14**
-coverage — three false positives, including a `yaml_lite` parser test that
-scored as coverage for `goc status` because it quotes `"status"` as a
-frontmatter key. Requiring the signal in the test's name and requiring the
-body to actually drive the CLI brought it to a true 1/14. A grep-shaped
-guard that over-reports coverage is exactly the failure
+Two false-positive stories from building this are worth keeping, because
+both are instances of a *different* family this deck tracks. The census's
+first draft matched the re-run signal anywhere in a test's body and
+reported **4/14** coverage — three false positives, including a `yaml_lite`
+parser test that scored as coverage for `goc status` because it quotes
+`"status"` as a frontmatter key. Requiring the signal in the test's name
+and requiring the body to drive the CLI brought it to a true 1/14. Then the
+rewritten "does the class-level check exist yet" detector, still
+grep-shaped, nominated `tests/test_guidance_accuracy.py`; it now requires a
+module carrying a table keyed by exactly the registered verb set, and runs
+that module for the verdict. A grep-shaped guard that over-reports coverage
+is the failure
 [static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/)
-describes, which is why this card's DoD asks the new test to demonstrate it
-can go red.
+describes, which is why this card's DoD asked the new test to demonstrate
+it can go red — and why the guard is now shown to redden three separate
+ways: five stub surfaces (one per clause), a synthetic `frobnicate`
+subparser, and the reintroduced `done` re-stamp.
 
-## Why it matters
+The census still reads 1/14 and should. It counts per-verb re-run tests,
+which is a different measurement from the one class-level check that now
+covers all of them.
 
-The cost is not the seven fixes — those were cheap individually. It is that
-the seventh was found the same way as the first, with no accumulated
-defence in between, and the eighth will be too.
+## Why it mattered
 
-The most recent instance is the one that shows what that costs. The
-citation-repair recipe was correct on the pass that introduced it and
-corrupting on the pass after; had it not been caught by hand during the
-2026-08-17 hygiene pass, it would have rewritten 165 correct citations onto
-unrelated code and each subsequent pass would have tracked the corruption
-faithfully forward. A class-level re-run check would not have caught that
-one directly — the recipe lives in a skill body, not a verb — which is why
-the DoD asks explicitly whether the non-verb surfaces come under the same
-check or are scoped out with a reason.
+The cost was not the seven fixes — those were cheap individually. It was
+that the seventh was found the same way as the first, with no accumulated
+defence in between.
+
+The most recent instance shows what that costs. The citation-repair recipe
+was correct on the pass that introduced it and corrupting on the pass
+after; had it not been caught by hand during the 2026-08-17 hygiene pass,
+it would have rewritten 165 correct citations onto unrelated code and each
+subsequent pass would have tracked the corruption faithfully forward. The
+class-level check does not catch that one — the recipe lives in a skill
+body, not a verb — and skill bodies are scoped out deliberately, with the
+reason recorded in `log.md`: there is no process to run twice and no exit
+code to read, so prose an agent executes needs a different mechanism.
 
 ## Relationship to the instances
 
-The six closed instances stay closed; they are cited here as the evidence
-for the family, not as work to redo. The one open instance,
+The seven instances stay closed; they are cited here as the evidence for
+the family, not as work to redo. The last of them,
 [second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/),
-carries an `advances` edge to this card: a class-level re-run guard cannot
-ship green while a known re-run defect is still open.
+carries an `advances` edge to this card: a class-level re-run guard could
+not ship green while a known re-run defect was still open, and it closed
+first.
 
 Filed at `human_gate: none` per this repo's autonomous-filing convention.
-The DoD's one genuine judgment call — whether "refuses on re-run" counts as
-safe — is recorded as a PROCESS item rather than a gate, so a reader can
-settle it in place.
+The DoD's two genuine judgment calls — whether "refuses on re-run" counts
+as safe, and which non-verb surfaces come under the check — were recorded
+as PROCESS items rather than a gate, and both are settled in `log.md`.
