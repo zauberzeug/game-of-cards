@@ -9,6 +9,7 @@ closed_at: "2026-08-17T04:39:57Z"
 human_gate: none
 advances:
   - re-run-safety-is-proven-per-verb-and-new-verbs-keep-missing-it
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |

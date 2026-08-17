@@ -24,6 +24,7 @@ advanced_by:
   - five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs
   - meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card
   - agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does
+  - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
