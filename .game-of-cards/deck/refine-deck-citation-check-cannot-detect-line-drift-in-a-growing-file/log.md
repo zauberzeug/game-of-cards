@@ -59,3 +59,19 @@ to follow a pointer to learn the test will run the bounds test it remembers.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-08-10 — Closure' present
+
+## 2026-08-17 — Post-close evidence: the repair recipe is not idempotent
+
+The 2026-08-17 hygiene pass ran this card's recipe as the second pass over
+the deck and found that step 2 is only correct on a first pass. Anchoring at
+the card's creating commit reads a number that a *repair* commit authored, so
+it resolves unrelated code and then relocates the cite to match it. Measured
+at 165 correct citations moved, 2 misplaced, 3 wrongly declined out of 850.
+
+Not reopened — the defect this card fixed (a bounds test that could not fire)
+is genuinely fixed, and the content-anchor shape it introduced is right. Only
+the choice of anchor commit is wrong. Forward pointer added to the README and
+the correction filed as
+`second-citation-repair-pass-moves-correct-cites-onto-unrelated-code`, with
+the decay rate that makes second passes routine filed as
+`file-line-citations-drift-again-within-days-of-every-repair-pass`.

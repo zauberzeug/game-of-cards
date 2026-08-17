@@ -189,3 +189,21 @@ by <commit-hash>").
 
 Line-range cites (`file.py:120-140`) map both endpoints independently and are
 rewritten only when both resolve.
+
+## Superseded in part — step 2 is wrong on a second pass (2026-08-17)
+
+Step 2 above, and the `reference.md` sentence claiming the creating-commit
+anchor makes the check "independent of any earlier repair pass", are both
+incorrect once a repair pass has run. A repair rewrites the cite's number,
+so from then on the creating commit no longer knows what that number means
+and the recipe re-anchors on unrelated code. Replayed six days after this
+card's own repair pass, the recipe would have moved 165 correct citations.
+
+The fix is narrow — anchor at the commit that last *wrote* the number, which
+is the creating commit for a cite no pass has touched — and is tracked by
+[second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/).
+Everything else here stands: the bounds test really was unable to fire, and
+the content anchor plus its uniqueness-and-substance guard is still the right
+shape. See also
+[file-line-citations-drift-again-within-days-of-every-repair-pass](../file-line-citations-drift-again-within-days-of-every-repair-pass/)
+for how fast the repaired numbers decay.
