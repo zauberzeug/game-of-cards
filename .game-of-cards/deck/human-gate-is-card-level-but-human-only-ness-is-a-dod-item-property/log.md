@@ -60,3 +60,11 @@ wrapper.
 
 Recorded as a cross-reference, not a new card: this card already names the
 shape, per the dedup-then-connect rule.
+
+Second occurrence the same day, on a different card: the pull session that
+parked `file-line-citations-drift-again-within-days-of-every-repair-pass`
+followed the same Andon-cord text and reached the same hand-edit — YAML
+`human_gate` flipped by hand, then `goc status … open --no-commit` as a
+separate mutation. Two for two: every park this repo performed on 2026-08-17
+went around the CLI, which makes the missing verb the default path rather
+than an edge case, and turns the earlier single datapoint into a rate.
