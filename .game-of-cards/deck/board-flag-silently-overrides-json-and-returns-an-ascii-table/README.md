@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-08-18T04:33:11Z"
 closed_at: "2026-08-18T04:40:58Z"
 human_gate: none
-advances: []
+advances:
+  - query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
@@ -137,6 +138,27 @@ literal`, with nothing on goc's stderr to explain it.
   and goes live the moment that card lands.
 
 ## Scope boundary
+
+**This is instance 2 of a catalogued family, found and fixed without
+reaching the root card.**
+[query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it](../query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it/)
+(open, `human_gate: decision`) had already tabulated this exact defect as
+its instance 2 — same file:line, same `pass only one of --done / --status`
+precedent — and its DoD names "`--json` + `--board` conflict" as one of
+four regression tests the meta-fix owes. The dedup pass that filed this
+card grepped card *titles* for `board` and `json` and missed it, because
+that card's title names the shape rather than either flag.
+
+The edge is wired (`advances` → that card) and its instance table is
+re-audited, but this fix does **not** advance its thesis: it is the sixth
+hand-written per-pair guard on a surface whose defect is that guards are
+per-pair. That card stays open with all five DoD items unticked — two rows
+of its table are still unguarded (`--advances`/`--advanced-by` accept
+nonexistent titles; `--closed-since` composes with a non-terminal
+`--status` or `--waiting` into can-never-match queries), and only its item
+5 (a contract that makes *future* query flags fail closed) would have
+prevented this card from being needed at all.
+
 
 Distinct from [board-view-silently-ignores-filters-other-than-status-and-worker](../board-view-silently-ignores-filters-other-than-status-and-worker/)
 (open), which shares the same four lines of source. That card is about

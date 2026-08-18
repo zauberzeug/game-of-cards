@@ -1,6 +1,6 @@
 ---
 title: query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it
-summary: "Query-flag validation is bolted on one flag at a time (--tag, --status, --since each got their own guard card), so every unguarded flag silently returns wrong or empty output with exit 0: --advances/--advanced-by accept nonexistent titles, --board silently overrides --json with an ASCII grid, and --closed-since composes with a non-terminal --status or with --waiting into can-never-match queries. Meta-fix: one declared contract per query flag, enforced centrally, so a new flag without a contract fails closed."
+summary: "Query-flag validation is bolted on one flag at a time (--tag, --status, --since each got their own guard card), so every unguarded flag silently returns wrong or empty output with exit 0: --advances/--advanced-by accept nonexistent titles, and --closed-since composes with a non-terminal --status or with --waiting into can-never-match queries. Instance 2 (--board overriding --json) has since been guarded one-off, which is the family shape repeating rather than the fix. Meta-fix: one declared contract per query flag, enforced centrally, so a new flag without a contract fails closed."
 status: open
 stage: null
 contribution: medium
@@ -19,6 +19,7 @@ advanced_by:
   - empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card
   - zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface
   - zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all
+  - board-flag-silently-overrides-json-and-returns-an-ascii-table
 tags: [bug, meta-fix, api-contract]
 definition_of_done: |
   - [ ] PROCESS: mechanism decision recorded (option A/B/C below, plus error-vs-warn for unknown edge-filter titles) and gate lowered to none
@@ -48,7 +49,8 @@ output, exit 0.
 
 ## What's broken
 
-Three unguarded instances, confirmed on this deck (2026-07-11):
+Three instances, confirmed on this deck (2026-07-11). Two are still
+unguarded; instance 2 was fixed one-off on 2026-08-18 (see below):
 
 **1. `--advances` / `--advanced-by` accept a nonexistent card title.**
 `filter_cards` (`goc/engine.py:2959`) tests membership only:
@@ -71,16 +73,31 @@ remedy for an unknown tag — and `compute_values`, which stderr-WARNs on
 dangling `advances` edges in card frontmatter while the CLI filter for
 the same edge field stays silent.
 
-**2. `--board` silently overrides `--json`.** The presentation dispatch
-(`goc/engine.py:4181`) is `if args.board: ... elif args.as_json: ...`,
-so `goc --json --board` prints the ASCII kanban grid with exit 0 — a
-machine consumer expecting JSON gets unparseable output. The repo's own
-precedent for a flag conflict is a hard error
-(`goc: error: pass only one of --done / --status`, exit 2, at
-`goc/engine.py:4092`). Same-site symptom: `--slim` is read only inside
-the `elif args.as_json` branch, so `goc --slim` without `--json` is a
-silent no-op (its help text does say "With --json:", so that one is at
-least documented).
+**2. `--board` silently overrides `--json` — GUARDED 2026-08-18, one-off.**
+The presentation dispatch (`goc/engine.py:4196`) was
+`if args.board: ... elif args.as_json: ...`, so `goc --json --board`
+printed the ASCII kanban grid with exit 0 — a machine consumer expecting
+JSON got unparseable output. Fixed by
+[board-flag-silently-overrides-json-and-returns-an-ascii-table](../board-flag-silently-overrides-json-and-returns-an-ascii-table/)
+(done, 2026-08-18), which added exactly the guard this row's precedent
+predicted: a hand-written per-pair conflict check at
+`goc/engine.py:4096-4107`, spelled like
+`goc: error: pass only one of --done / --status` (exit 2,
+`goc/engine.py:4093`).
+
+**That fix is evidence for this card, not a dent in it.** It was found by
+an independent audit pass that did not reach this card during dedup — the
+root card's title names neither flag — and it shipped the 6th
+hand-written per-instance guard on a surface whose problem is that the
+guards are per-instance. This card's DoD item 5 (a guard that makes future
+query flags fail closed) is the only item that would have prevented it,
+and nothing about the one-off fix moves it. Two rows below remain
+unguarded and the mechanism decision is still open.
+
+Same-site symptom, still unaddressed: `--slim` is read only inside the
+`elif args.as_json` branch, so `goc --slim` without `--json` is a silent
+no-op (its help text does say "With --json:", so that one is at least
+documented). `--max-rows` has the same shape against `--board`.
 
 **3. `--closed-since` composes into can-never-match queries.** The
 status auto-extend (`goc/engine.py:4098`) fires only when
@@ -97,22 +114,28 @@ impeded cards and recent closures.
 
 ```
 [FAIL (silent, exit 0)] goc --advances no-such-card-xyz-reproduce
-         exit=0  stdout[0]='ACTIVE: 4 claimed cards outside this open queue: support-external-game'
+         exit=0  stdout[0]='ACTIVE: 5 claimed cards outside this open queue: support-external-game'
 [FAIL (silent, exit 0)] goc --advanced-by no-such-card-xyz-reproduce
-         exit=0  stdout[0]='ACTIVE: 4 claimed cards outside this open queue: support-external-game'
-[FAIL (silent, exit 0)] goc --json --board
-         exit=0  stdout[0]='OPEN                                                                  '
+         exit=0  stdout[0]='ACTIVE: 5 claimed cards outside this open queue: support-external-game'
+[OK  (guarded)] goc --json --board
 [FAIL (silent, exit 0)] goc --status open --closed-since 7d
-         exit=0  stdout[0]='ACTIVE: 4 claimed cards outside this open queue: support-external-game'
+         exit=0  stdout[0]='ACTIVE: 5 claimed cards outside this open queue: support-external-game'
 [FAIL (silent, exit 0)] goc --waiting --closed-since 24h
-         exit=0  stdout[0]='<no stdout>'
+         exit=0  stdout[0]='No cards match (status: all; waiting: active impediment overlay; close'
 
 contrast (per-flag guards that DO exist):
   goc --tag no-such-tag           -> exit=2 stderr="goc: error: --tag: unknown tag 'no-such-tag' — add a project"
   goc --done --status open        -> exit=2 stderr='goc: error: pass only one of --done / --status'
 
-DEFECT: 5/5 query-flag probes silently return wrong/empty output with exit 0
+DEFECT: 4/5 query-flag probes silently return wrong/empty output with exit 0
 ```
+
+Re-run 2026-08-18. The `--json --board` probe flipped to `[OK (guarded)]`
+after instance 2 was fixed one-off; the `--waiting --closed-since` probe
+now prints a zero-match sentence instead of nothing, courtesy of
+[empty-queue-view-prints-nothing-instead-of-saying-no-cards-match](../empty-queue-view-prints-nothing-instead-of-saying-no-cards-match/)
+— legible, still a query that can never match. The remaining 4 are the
+ones this card's DoD covers.
 
 ## Why it matters — this is the 6th–8th instance of one root-cause shape
 
@@ -126,7 +149,7 @@ The family is already catalogued, one card per flag, all closed:
 | `--done` ∧ `--status` conflict | [done-shortcut-overrides-status-filter](../done-shortcut-overrides-status-filter/) | explicit conflict error, exit 2 |
 | `--since` without `--done` | [since-filter-without-done-hides-open-queue](../since-filter-without-done-hides-open-queue/) | explicit conflict error, exit 2 |
 | unknown `--advances`/`--advanced-by` title | this card, instance 1 | **none** |
-| `--json` ∧ `--board` conflict | this card, instance 2 | **none** |
+| `--json` ∧ `--board` conflict | [board-flag-silently-overrides-json-and-returns-an-ascii-table](../board-flag-silently-overrides-json-and-returns-an-ascii-table/) | explicit conflict error, exit 2 — the 6th hand-written one |
 | `--closed-since` ∧ non-terminal status / `--waiting` | this card, instance 3 | **none** |
 | draft exclusion — a conjunct with *no flag* | [empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/) | output-half clause, count-gated |
 | that clause over-counting under `--waiting` / `--closed-since` | [zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface](../zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/) | recount replays all three query stages |
@@ -147,6 +170,15 @@ flag added to the parser (`--advances`/`--advanced-by`, `--board`,
 `--closed-since`, `--waiting`) shipped with no guard. Per the audit
 sibling-sweep rule, the 4th+ instance of a catalogued family files the
 architectural meta-fix, not three more instance cards.
+
+The `--board` row updated on 2026-08-18 is the family's clearest
+demonstration to date, because it happened *after* this card was filed:
+an independent audit pass rediscovered instance 2 from scratch, filed it,
+and shipped a sixth hand-written per-pair guard — without ever reaching
+this card, whose title names no flag. So the table now records six
+one-off guards and two unguarded rows, which is the same ratio it
+described at filing time with one more guard in it. Only DoD item 5 (a
+fail-closed contract for *future* flags) changes that trajectory.
 
 Reachability: all probes are plain CLI invocations of the default query
 verb — the exact commands scripted consumers (CI dashboards, the

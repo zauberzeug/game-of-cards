@@ -14,3 +14,23 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-08-18 — Closure' present
+## 2026-08-18T04:44:24Z — Post-close: connected to the family root card
+
+A Stop-hook generalization check surfaced what this session's dedup pass
+missed: the defect was already tabulated as instance 2 of
+`query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it`
+(open, gate `decision`), with the same file:line and the same
+`--done`/`--status` precedent cited. No duplicate filed — this card stays
+closed as the per-instance fix, an `advances` edge now points at the root
+card, and the root card's instance table, summary and evidence block were
+re-audited in place.
+
+The fix itself is unchanged and still correct; what was missing was the
+link. Recorded on the root card: this is its 6th hand-written per-pair
+guard, none of its five DoD items moved, and the rediscovery-from-scratch
+is itself evidence for its thesis.
+
+Dedup gap worth naming: the title grep run before filing looked for
+`board` and `json` in card titles. The root card's title names the shape
+("query-flag validation is opt-in per flag"), not either symptom, so it was
+invisible. A body grep for the flag pair would have found it in one step.

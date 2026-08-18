@@ -88,3 +88,31 @@ than half-refreshed, since the DoD already calls for a full re-audit of this
 section.
 
 No DoD item ticked and no gate change; evidence for whoever picks.
+## 2026-08-18T04:43:58Z — Instance 2 guarded one-off; edge wired, card stays open
+
+An audit pass filed and closed
+`board-flag-silently-overrides-json-and-returns-an-ascii-table` for the
+`--json` ∧ `--board` conflict — instance 2 of this card's table — without
+reaching this card during dedup. The title-based dedup grep it ran matched
+neither flag, because this card's title names none; the body match was never
+tried. Edge wired after the fact (`advanced_by += ` that card), README
+instance table and evidence block re-audited in place.
+
+- **Effect on this card**: none of the five DoD items ticked. Item 3 wants
+  regression coverage of four compositions and one landed; item 4 wants
+  every table row guarded and two remain unguarded
+  (`--advances`/`--advanced-by` unknown title, `--closed-since` ∧
+  non-terminal status / `--waiting`); items 1, 2 and 5 are untouched. The
+  mechanism decision (option A/B/C) is still the gate.
+- **Evidence**: this card's `reproduce.py` went 5/5 → 4/5 silent-failure
+  probes; `goc --json --board` now reads `[OK (guarded)]`.
+- **Why it strengthens the thesis**: the fix is the sixth hand-written
+  per-pair guard on a surface whose defect is that guards are per-pair. It
+  was rediscovered from scratch by a session with no memory of this card,
+  which is exactly the cost the meta-fix is meant to remove. Two of this
+  card's own dedup surfaces would have caught it — a body grep for the flag
+  pair, or an edge from the instance rows to a per-instance card — and
+  neither existed at the time.
+- **Dedup lesson for the next instance**: a root card whose title names the
+  *shape* rather than the *symptom* is invisible to symptom-keyed title
+  greps. Grep card bodies, not just titles, before filing on this surface.
