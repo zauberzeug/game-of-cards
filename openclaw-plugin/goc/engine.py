@@ -3809,10 +3809,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", dest="verbose", action="count", default=0,
                         help="-v adds STAGE/CREATED columns + summary line; -vv inlines DoD checklist + cross-refs.")
     parser.add_argument("--json", dest="as_json", action="store_true",
-                        help="Machine-readable JSON.")
+                        help="Machine-readable JSON. Mutually exclusive with --board.")
     parser.add_argument("--no-color", action="store_true")
     parser.add_argument("--board", action="store_true",
-                        help="ASCII multi-column kanban board.")
+                        help="ASCII multi-column kanban board. Mutually exclusive with --json.")
     parser.add_argument("--max-rows", type=_non_negative_int, default=20,
                         help="Cap rows per column in --board.")
 
@@ -4088,10 +4088,25 @@ def cli(argv=None):
 
 
 def _cmd_default(args):
-    cards = load_all_cards()
+    # Flag conflicts are refused before `load_all_cards()`: a usage error must
+    # not first pay for a full deck walk.
     if args.done_flag and args.status_flag is not None:
         print("goc: error: pass only one of --done / --status", file=sys.stderr)
         sys.exit(2)
+    # `--board` and `--json` are alternative *renderers*, not a renderer plus a
+    # modifier, so passing both is a usage error like `--done`/`--status` above.
+    # Refusing beats the `if args.board: … elif args.as_json:` precedence this
+    # replaced: that silently returned an ASCII table to a caller who asked for
+    # machine-readable output, with exit 0 and nothing on stderr to explain the
+    # jq parse error one hop downstream.
+    if args.board and args.as_json:
+        print(
+            "goc: error: pass only one of --board / --json "
+            "(alternative renderers)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    cards = load_all_cards()
     closed_since_threshold = parse_closed_since(getattr(args, "closed_since", None))
     if args.done_flag:
         status = "done"
