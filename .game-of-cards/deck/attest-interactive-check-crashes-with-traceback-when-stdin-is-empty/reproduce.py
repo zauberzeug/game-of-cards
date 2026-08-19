@@ -96,10 +96,32 @@ def main() -> int:
             print("DEFECT: case 1 died with an unhandled EOFError traceback.")
             print("Expected: the same declined outcome case 3 already produces.")
             return 1
-        print("FIXED: case 1 no longer raises EOFError.")
-        declined = next((ln.strip() for ln in eof.stdout.splitlines()
+
+        # Cases 2 and 3 are the no-regression half of the contract: the fix
+        # must not change either path that already worked.
+        regressions = []
+        piped_line = next((ln.strip() for ln in piped.stdout.splitlines()
+                           if "docs-updated" in ln), "<none>")
+        if "[x] docs-updated" not in piped_line:
+            regressions.append(f"piped answer no longer accepted: {piped_line}")
+        ni_line = next((ln.strip() for ln in ni.stdout.splitlines()
+                        if "docs-updated" in ln), "<none>")
+        if "non-interactive: manual check declined" not in ni_line:
+            regressions.append(f"--non-interactive changed: {ni_line}")
+        eof_line = next((ln.strip() for ln in eof.stdout.splitlines()
                          if "docs-updated" in ln), "<none>")
-        print(f"case 1 docs-updated line: {declined}")
+        if "[ ] docs-updated" not in eof_line:
+            regressions.append(f"EOF did not decline the check: {eof_line}")
+
+        if regressions:
+            print("REGRESSION:")
+            for r in regressions:
+                print(f"  - {r}")
+            return 1
+
+        print("FIXED: case 1 no longer raises EOFError.")
+        print(f"case 1 docs-updated line: {eof_line}")
+        print("cases 2 and 3 unchanged.")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

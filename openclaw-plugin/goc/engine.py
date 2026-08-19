@@ -5546,25 +5546,46 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
     return False, f"unknown derived check '{name}'"
 
 
+def _prompt_line(prompt: str) -> str:
+    """Read one answer line for an interactive closure check, EOF-safe.
+
+    Mirrors the non-TTY contract `confirm` and `install._confirm` already
+    implement: a piped answer is honoured, and EOF — no terminal and nothing on
+    stdin, which is how an agent harness runs `goc attest` — yields "" instead
+    of raising `EOFError` out of the check loop (which catches only
+    `KeyboardInterrupt`). "" then falls through to the callers' existing
+    declined path, i.e. exactly the outcome `--non-interactive` already names,
+    so the flagless run degrades to the documented refusal rather than a
+    traceback.
+    """
+    try:
+        return input(prompt).strip()
+    except EOFError:
+        # input() echoed the prompt but consumed no newline; close the line so
+        # the following result row starts at column 0.
+        print()
+        return ""
+
+
 def _prompt_yes_no(prompt: str) -> str:
-    return input(f"  {prompt} ").strip().lower()
+    return _prompt_line(f"  {prompt} ").lower()
 
 
 def _prompt_manual(check: dict) -> tuple[bool, str]:
     answer = _prompt_yes_no(check.get("prompt", f"Did {check['name']} pass? (y/n)"))
     passed = answer in ("y", "yes")
     rationale_prompt = check.get("rationale_prompt", "")
-    rationale = input(f"    {rationale_prompt} ").strip() if rationale_prompt else ""
+    rationale = _prompt_line(f"    {rationale_prompt} ") if rationale_prompt else ""
     return passed, rationale or ("OK" if passed else "(declined)")
 
 
 def _prompt_agent(check: dict) -> tuple[bool, str]:
     answer = _prompt_yes_no(check.get("prompt", f"Did {check['name']} report PASS? (y/n/n-a)"))
     if answer in ("n-a", "n/a", "na", "skip"):
-        rationale = input(f"    {check.get('rationale_prompt', 'Reason:')} ").strip()
+        rationale = _prompt_line(f"    {check.get('rationale_prompt', 'Reason:')} ")
         return True, f"N/A — {rationale or 'no doc changes'}"
     passed = answer in ("y", "yes")
-    rationale = input(f"    {check.get('rationale_prompt', '')} ").strip() if check.get("rationale_prompt") else ""
+    rationale = _prompt_line(f"    {check.get('rationale_prompt', '')} ") if check.get("rationale_prompt") else ""
     return passed, rationale or ("OK" if passed else "(declined)")
 
 
