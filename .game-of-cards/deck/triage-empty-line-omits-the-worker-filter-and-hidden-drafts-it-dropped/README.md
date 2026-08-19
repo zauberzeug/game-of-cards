@@ -1,19 +1,19 @@
 ---
 title: triage-empty-line-omits-the-worker-filter-and-hidden-drafts-it-dropped
 summary: "goc triage prints the fixed sentence \"No parked cards (gate ≠ none).\" whenever its result is empty, naming neither the --worker filter it matched on nor the unauthored draft scaffolds it dropped. On a deck with 184 parked cards, goc triage --worker nobody reports that none exist; right after goc new scaffolds a gated card, triage reports an empty park queue while the queue table's own zero-match line names both conjuncts."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-19T05:06:15Z"
-closed_at: null
+closed_at: "2026-08-19T05:14:54Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits non-zero — `goc triage`'s empty line names the `--worker` value, the hidden-draft count, and the `status: open` conjunct
-  - [ ] TDD: regression test asserts the empty line echoes an unmatched `--worker` value verbatim and counts dropped drafts, and that a non-empty triage render is unchanged
-  - [ ] MECHANICAL: `render_empty_query_line`'s docstring no longer cites `goc triage` as a surface that already states its zero-match predicate
+  - [x] TDD: reproduce.py exits non-zero — `goc triage`'s empty line names the `--worker` value, the hidden-draft count, and the `status: open` conjunct
+  - [x] TDD: regression test asserts the empty line echoes an unmatched `--worker` value verbatim and counts dropped drafts, and that a non-empty triage render is unchanged
+  - [x] MECHANICAL: `render_empty_query_line`'s docstring no longer cites `goc triage` as a surface that already states its zero-match predicate
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -140,11 +140,36 @@ which tracks surfaces that fail to apply the draft filter at all.
 
 `--json` is unaffected: it prints `[]`, which is self-describing.
 
-## Fix
+## Fix (landed)
 
-Replace the constant at `goc/engine.py:6791` with a sentence built from the
-same three ingredients the queue line uses — the predicate, the `--worker`
-value quoted (unregistered values are quoted so a stray space or case is
-visible), and the hidden-draft count with the `goc publish` next step. Count
-the drafts from the same load `_cmd_triage` already performs, so no second walk
-of the deck is needed.
+`render_empty_triage_line(worker, hidden_drafts)` (`goc/engine.py`) replaces the
+constant, building the sentence from the predicate, the quoted `--worker` value,
+and the hidden-draft count with its `goc publish` next step:
+
+```
+No parked cards (status: open; gate ≠ none; worker: 'nobdy').
+No parked cards (status: open; gate ≠ none; 2 unauthored draft scaffolds hidden — author, then `goc publish <title>`).
+```
+
+`_cmd_triage` now applies `--worker` **before** splitting drafts off, so
+`hidden_drafts` is the number `goc publish` would actually surface *in this
+view* — a draft the worker filter also excludes is not disclosed. That is the
+lesson of
+[zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface](../zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/),
+applied here from the start rather than as a follow-up. The count comes off the
+load `_cmd_triage` already performs; the deck is not walked twice.
+
+The draft clause itself moved into `_hidden_drafts_clause`, shared with
+`render_empty_query_line`, so the count, the noun and the next step cannot
+drift between the two surfaces. `render_empty_query_line`'s docstring no longer
+implies triage was already doing this.
+
+`status: open` is disclosed, not changed: whether triage should surface cards
+parked at `active` is the open decision on
+[parked-active-cards-are-missing-from-goc-triage](../parked-active-cards-are-missing-from-goc-triage/).
+Naming the conjunct is what makes today's behaviour legible while that is
+pending. `--json` still prints exactly `[]`.
+
+`tests/test_triage_empty_line.py` (13 tests) locks all of it, including both
+directions of the worker-scoped count and the unchanged non-empty render.
+Against the pre-fix engine it produces 8 failures + 2 errors.

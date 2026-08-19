@@ -3663,6 +3663,13 @@ def render_empty_query_line(args, status: str, *, hidden_drafts: int = 0) -> str
     byte-identically: a genuinely drained queue, a filter no card satisfies,
     and a mistyped `--worker` value.
 
+    Printing *a* sentence was never sufficient, only necessary: `goc triage`
+    printed a constant naming one of its four conjuncts and collapsed the same
+    three states, which is why it now has its own
+    `render_empty_triage_line` holding the identical contract. The two share
+    `_hidden_drafts_clause` so the one conjunct a reader cannot derive from the
+    command line reads the same on both.
+
     That last one is why the message enumerates the predicate rather than
     just saying "no cards". `--status` and `--tag` reject unknown values at
     parse time, but `worker` is deliberately unregistered (any person slug,
@@ -3725,12 +3732,60 @@ def render_empty_query_line(args, status: str, *, hidden_drafts: int = 0) -> str
     worker = getattr(args, "worker", None)
     if worker:
         parts.append(f"worker: {worker!r}")
-    if hidden_drafts > 0:
-        noun = _plural(hidden_drafts, "unauthored draft scaffold")
-        parts.append(
-            f"{hidden_drafts} {noun} hidden — author, then `goc publish <title>`"
-        )
+    clause = _hidden_drafts_clause(hidden_drafts)
+    if clause:
+        parts.append(clause)
     return f"No cards match ({'; '.join(parts)})."
+
+
+def _hidden_drafts_clause(hidden_drafts: int) -> str:
+    """The "N drafts were dropped" conjunct, or "" when none were.
+
+    Shared by every zero-match line so the count, the noun and the next step
+    cannot drift between surfaces: a reader who learns what the clause means on
+    the queue table must read it the same way under `goc triage`.
+    """
+    if hidden_drafts <= 0:
+        return ""
+    noun = _plural(hidden_drafts, "unauthored draft scaffold")
+    return f"{hidden_drafts} {noun} hidden — author, then `goc publish <title>`"
+
+
+def render_empty_triage_line(worker: str | None, hidden_drafts: int) -> str:
+    """State that `goc triage` matched nothing, naming the filters in effect.
+
+    `_cmd_triage` selects on four conjuncts — `status == "open"`,
+    `human_gate != "none"`, `not card_is_draft`, and an optional `--worker`
+    substring — but reported a zero match with a constant naming only the
+    second. Three unrelated deck states then rendered byte-identically: an
+    empty park queue, a mistyped `--worker` value, and a deck whose parked
+    cards are all unauthored `goc new` scaffolds.
+
+    That last one is the shortest path through the tool: `goc new --gate
+    decision` files a card that is parked AND `draft: true`, so the very next
+    `goc triage` answered "nothing is waiting on you" about the card just
+    filed. And `worker` is deliberately unregistered — any person slug, machine
+    name or capability tag is legal — so a typo cannot be rejected at parse
+    time and echoing the filter back is the only signal available. Both are the
+    arguments `render_empty_query_line` already makes for the queue table; this
+    is the same contract on the surface a human reads to decide whether any
+    card needs them.
+
+    `status: open` is named rather than fixed: whether triage should surface
+    cards parked at `active` is an open question tracked by
+    `parked-active-cards-are-missing-from-goc-triage`. Until that is decided,
+    stating the conjunct is what makes the current behaviour legible.
+    """
+    parts = ["status: open", "gate ≠ none"]
+    # Quoted for the same reason the queue line quotes it: an unregistered
+    # free-form value is the one filter a reader cannot check against a schema,
+    # so a stray space or case difference has to be visible.
+    if worker:
+        parts.append(f"worker: {worker!r}")
+    clause = _hidden_drafts_clause(hidden_drafts)
+    if clause:
+        parts.append(clause)
+    return f"No parked cards ({'; '.join(parts)})."
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -6751,16 +6806,19 @@ def _cmd_triage(args):
     """List parked cards (gate ≠ none), grouped by gate, oldest-first."""
     as_json = args.as_json
     worker = args.worker
-    all_cards = [
-        t
-        for t in load_all_cards()
-        if t.status == "open" and t.human_gate != "none" and not card_is_draft(t)
+    parked = [
+        t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"
     ]
     if worker:
         needle = worker.lower()
-        cards = [t for t in all_cards if needle in _worker_who(t.frontmatter.get("worker")).lower()]
-    else:
-        cards = all_cards
+        parked = [
+            t for t in parked if needle in _worker_who(t.frontmatter.get("worker")).lower()
+        ]
+    cards = [t for t in parked if not card_is_draft(t)]
+    # Counted AFTER every other conjunct, so the number is what `goc publish`
+    # would actually surface here — a draft that the `--worker` filter also
+    # excludes is not a card this view is hiding from this reader.
+    hidden_drafts = len(parked) - len(cards)
     today = _utc_today()
 
     def aged_days(t: Card) -> int:
@@ -6788,7 +6846,7 @@ def _cmd_triage(args):
         return
 
     if not payload:
-        print("No parked cards (gate ≠ none).")
+        print(render_empty_triage_line(worker, hidden_drafts))
         return
 
     by_gate: dict[str, list[dict]] = {}
