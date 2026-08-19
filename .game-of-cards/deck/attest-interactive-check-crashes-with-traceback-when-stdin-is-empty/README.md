@@ -1,7 +1,7 @@
 ---
 title: attest-interactive-check-crashes-with-traceback-when-stdin-is-empty
 summary: "`goc attest` raises an uncaught `EOFError` when a `manual` or `agent` closure check is reached with nothing on stdin: `_prompt_yes_no` calls bare `input()`, so an agent harness running the `Skill(finish-card)` Step-5 command gets a traceback and exit 1 instead of the declined outcome `--non-interactive` already defines. Three sibling prompt sites (`confirm`, `install._confirm`, the briefing-target picker) already guard exactly this case; only the four attest prompts do not."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-19T04:49:06Z"
@@ -10,13 +10,13 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: a regression test runs `_cmd_attest` (or `_prompt_manual` / `_prompt_agent` directly) with a `manual` check and stdin at EOF, and asserts no `EOFError` plus a declined result
   - [ ] TDD: the same test covers the `agent` kind, and asserts the already-working piped-answer and `--non-interactive` paths are unchanged
   - [ ] MECHANICAL: the four `input()` sites in `_prompt_yes_no` / `_prompt_manual` / `_prompt_agent` read through one EOF-safe helper that mirrors `confirm`'s non-TTY contract
   - [ ] TDD: reproduce.py exits zero (the crash no longer fires) on a clean checkout
   - [ ] MECHANICAL: `uv run goc validate` passes and the plugin engine mirrors are re-synced
+worker: {who: "claude[bot]", where: main}
 ---
 
 # attest-interactive-check-crashes-with-traceback-when-stdin-is-empty
