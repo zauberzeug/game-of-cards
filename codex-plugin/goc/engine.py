@@ -3793,8 +3793,20 @@ def render_empty_triage_line(worker: str | None, hidden_drafts: int) -> str:
 
 
 def confirm(prompt: str, *, default: bool = False) -> bool:
+    """Ask a yes/no question; return `default` for any answer that isn't one.
+
+    The `isatty()` branch is about *prompt echo*, not about EOF: a terminal
+    reader needs to see the question, and a piped caller must not have it
+    interleaved into captured stdout. Both branches must survive EOF, and only
+    the terminal one ever raises it — `readline()` signals end of input by
+    returning `""`, while `input()` raises `EOFError`, which is exactly what
+    Ctrl-D produces. So the TTY read goes through `_prompt_line`, the shared
+    EOF-safe reader, and EOF folds into the same `if not ans` default a bare
+    Enter already takes. (The `EOFError` in the non-TTY handler is kept for a
+    substituted stdin object that raises rather than returning `""`.)
+    """
     if sys.stdin.isatty():
-        ans = input(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").strip().lower()
+        ans = _prompt_line(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").lower()
     else:
         try:
             ans = sys.stdin.readline().strip().lower()
@@ -5602,16 +5614,24 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
 
 
 def _prompt_line(prompt: str) -> str:
-    """Read one answer line for an interactive closure check, EOF-safe.
+    """Read one interactive answer line, EOF-safe. The module's only `input()`.
 
-    Mirrors the non-TTY contract `confirm` and `install._confirm` already
-    implement: a piped answer is honoured, and EOF — no terminal and nothing on
-    stdin, which is how an agent harness runs `goc attest` — yields "" instead
-    of raising `EOFError` out of the check loop (which catches only
-    `KeyboardInterrupt`). "" then falls through to the callers' existing
-    declined path, i.e. exactly the outcome `--non-interactive` already names,
-    so the flagless run degrades to the documented refusal rather than a
-    traceback.
+    A piped answer is honoured, and EOF yields "" instead of raising
+    `EOFError` out of the caller. Both ways of reaching EOF matter and neither
+    is exotic: an agent harness runs `goc attest` with nothing on stdin (the
+    check loop catches only `KeyboardInterrupt`), and a human presses Ctrl-D at
+    a `confirm` prompt. "" then falls through to each caller's existing
+    empty-answer path — the declined outcome `--non-interactive` already names
+    for the attest checks, the `default` for `confirm` — so a refusal degrades
+    to the documented result rather than a traceback.
+
+    Deliberately has no `sys.stdin.isatty()` branch. `confirm` needs one to
+    decide whether to *echo* the prompt, but EOF safety is not what that branch
+    was ever about: `readline()` returns "" at end of input and cannot raise,
+    so a guard placed there guards nothing while the terminal `input()` stays
+    bare. `tests/test_confirm_prompt_eof.py` asserts by AST that this is the
+    only `input()` call site in `goc/engine.py`, so a new prompt cannot
+    reintroduce that split.
     """
     try:
         return input(prompt).strip()

@@ -1,6 +1,6 @@
 ---
 title: attest-interactive-check-crashes-with-traceback-when-stdin-is-empty
-summary: "`goc attest` raises an uncaught `EOFError` when a `manual` or `agent` closure check is reached with nothing on stdin: `_prompt_yes_no` calls bare `input()`, so an agent harness running the `Skill(finish-card)` Step-5 command gets a traceback and exit 1 instead of the declined outcome `--non-interactive` already defines. Three sibling prompt sites (`confirm`, `install._confirm`, the briefing-target picker) already guard exactly this case; only the four attest prompts do not."
+summary: "`goc attest` raises an uncaught `EOFError` when a `manual` or `agent` closure check is reached with nothing on stdin: `_prompt_yes_no` calls bare `input()`, so an agent harness running the `Skill(finish-card)` Step-5 command gets a traceback and exit 1 instead of the declined outcome `--non-interactive` already defines. Three sibling prompt sites (`confirm`, `install._confirm`, the briefing-target picker) guard the piped case but not the terminal one, so `_prompt_line` — which wraps `input()` with no `isatty()` branch — became the correct pattern the three older sites then adopted (see ctrl-d-at-a-goc-confirmation-prompt-crashes-with-a-traceback)."
 status: done
 stage: null
 contribution: medium
@@ -26,9 +26,11 @@ worker: {who: "claude[bot]", where: main}
 `goc attest` raised an uncaught `EOFError` when a `manual` or `agent`
 closure check was reached with nothing on stdin — the condition an agent
 harness runs it under. The four prompt call sites used bare `input()`,
-while the three other interactive sites in the codebase already guard the
-same case. Fixed: the prompts now read through one EOF-safe helper and
-degrade to the declined outcome `--non-interactive` already defines.
+while the three other interactive sites guarded the same case on their piped
+branch (but, as `ctrl-d-at-a-goc-confirmation-prompt-crashes-with-a-traceback`
+later found, not on their terminal one). Fixed: the prompts now read through
+one EOF-safe helper and degrade to the declined outcome `--non-interactive`
+already defines.
 
 ## Location
 
@@ -48,8 +50,13 @@ def _prompt_yes_no(prompt: str) -> str:
     return input(f"  {prompt} ").strip().lower()
 ```
 
-Every *other* interactive site in the codebase guards the same case. The
-engine's own `confirm` (`goc/engine.py:3740`):
+Every *other* interactive site in the codebase guards the same case **on its
+piped branch** — and, as
+[ctrl-d-at-a-goc-confirmation-prompt-crashes-with-a-traceback](../ctrl-d-at-a-goc-confirmation-prompt-crashes-with-a-traceback/)
+established afterwards, on that branch only: `readline()` returns `""` at EOF
+and never raises, so the guard those three sites carry is on the one call that
+cannot need it, while their terminal `input()` was bare. The engine's own
+`confirm` (`goc/engine.py:3740`), as it stood when this card was worked:
 
 ```python
 def confirm(prompt: str, *, default: bool = False) -> bool:
@@ -63,9 +70,13 @@ def confirm(prompt: str, *, default: bool = False) -> bool:
 ```
 
 `install._confirm` (`goc/install.py:1447`) is the same shape, and the
-briefing-target picker (`goc/install.py:1644`) repeats it a third time. So
-the repo had a settled three-site convention for "prompt that may run
-without a terminal", and the four `attest` prompts were its only violators.
+briefing-target picker (`goc/install.py:1644`) repeats it a third time. So the
+repo had a three-site convention for "prompt that may run without a terminal",
+and the four `attest` prompts were the only violators of *that* half of it.
+The convention itself was incomplete: none of the three handled Ctrl-D, which
+is why `_prompt_line` — deliberately written without an `isatty()` branch —
+turned out to be the pattern all three were later migrated onto rather than
+the other way round.
 
 `_cmd_attest` already *defined* the right answer for "cannot ask the
 human" — its `--non-interactive` branch:

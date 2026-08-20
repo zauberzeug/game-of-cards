@@ -1444,9 +1444,35 @@ _PLUGIN_INSTALL_CMDS = (
 )
 
 
+def _prompt_line(prompt: str) -> str:
+    """Read one interactive answer line, EOF-safe.
+
+    `install.py` cannot import `engine._prompt_line` — `engine` imports *this*
+    module, so the dependency only runs one way — so the reader is duplicated
+    here rather than shared. Same contract: a typed answer is returned stripped,
+    and EOF (Ctrl-D at the prompt) returns `""` instead of raising `EOFError`
+    out of the verb, so it falls through to each caller's existing
+    empty-answer default.
+    """
+    try:
+        return input(prompt).strip()
+    except EOFError:
+        # input() echoed the prompt but consumed no newline; close the line so
+        # whatever the caller prints next starts at column 0.
+        print()
+        return ""
+
+
 def _confirm(prompt: str, *, default: bool = False) -> bool:
+    """Ask a yes/no question; return `default` for any answer that isn't one.
+
+    The `isatty()` branch selects prompt echo, not EOF safety: `readline()`
+    returns `""` at end of input while `input()` raises `EOFError`, so the
+    terminal branch is the only one that can crash and it reads through
+    `_prompt_line`. Mirrors `engine.confirm`, which this is a second copy of.
+    """
     if sys.stdin.isatty():
-        ans = input(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").strip().lower()
+        ans = _prompt_line(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").lower()
     else:
         try:
             ans = sys.stdin.readline().strip().lower()
@@ -1641,7 +1667,9 @@ def _resolve_upgrade_briefing_target(
     for idx, candidate in enumerate(found, start=1):
         print(f"  {idx}) {candidate}")
     if sys.stdin.isatty():
-        raw = input(f"Pick [1-{len(found)}, default 1]: ").strip()
+        # `_prompt_line`, not bare `input()`: Ctrl-D here must take the
+        # `if not raw` default below rather than raise out of the upgrade.
+        raw = _prompt_line(f"Pick [1-{len(found)}, default 1]: ")
     else:
         try:
             raw = sys.stdin.readline().strip()
