@@ -1,7 +1,7 @@
 ---
 title: ctrl-d-at-a-goc-confirmation-prompt-crashes-with-a-traceback
 summary: "Pressing Ctrl-D at any goc confirmation prompt raises an uncaught EOFError traceback. `confirm` (engine.py:3796), `install._confirm` (install.py:1448) and the briefing-target picker (install.py:1643) each branch on `sys.stdin.isatty()` and put the `except (EOFError, OSError)` on the non-TTY `readline()` branch — which returns `''` at EOF and cannot raise it — leaving the TTY `input()` branch, the only one that can, bare. So a piped empty stdin declines cleanly while an interactive Ctrl-D crashes, in front of `goc migrate`'s rmtree and two `goc upgrade` prompts."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-20T04:38:59Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero (case 1 and case 2 no longer raise) with case 3's piped decline unchanged
   - [ ] MECHANICAL: the stale claim that these three sites "already guard exactly this case" is corrected in `attest-interactive-check-crashes-with-traceback-when-stdin-is-empty`'s body, with a forward pointer to this card in its log.md
   - [ ] MECHANICAL: `uv run goc validate` passes, the regression suite is green, and the four plugin engine mirrors are re-synced
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Pressing Ctrl-D at a `goc` confirmation prompt crashes with a traceback
