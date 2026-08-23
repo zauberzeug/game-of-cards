@@ -110,8 +110,16 @@ Show the top 3 open `human_gate: none` cards by value score (the cards
 `Skill(pull-card)` would pick next), as a forward look.
 
 ```bash
-goc 2>/dev/null | head -5 || true
+goc --ready 2>/dev/null | head -5 || true
 ```
+
+`--ready` is the engine's pull predicate (`status: open` ∧ not a draft ∧
+`human_gate: none` ∧ no active impediment overlay) — the same selection
+`Skill(pull-card)` makes. Bare `goc` is only the first of those four
+conjuncts, and because the queue is value-sorted while gated epics carry
+the top values, it surfaces the *least* pullable cards in the deck. When
+`--ready` matches nothing, report that instead of omitting the section:
+an empty pull queue is the day's headline, and Section 4 is its cause.
 
 ## Output format
 
@@ -135,8 +143,10 @@ goc 2>/dev/null | head -5 || true
 - <title> (value: <N>): <one-line summary>
 ```
 
-Sections with no entries are omitted. Total output ≤ 40 lines. The sync
-warning, if present, always goes first — never bury a stale-data caveat.
+Sections with no entries are omitted — except "Next up", which reports
+"Nothing pullable" rather than vanishing, because an empty pull queue is
+a finding, not an absence. Total output ≤ 40 lines. The sync warning, if
+present, always goes first — never bury a stale-data caveat.
 
 ## Cross-references
 

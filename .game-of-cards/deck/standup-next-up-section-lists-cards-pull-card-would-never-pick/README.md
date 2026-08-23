@@ -1,22 +1,22 @@
 ---
 title: standup-next-up-section-lists-cards-pull-card-would-never-pick
 summary: "The standup skill's Section 5 (\"Next up\") prose promises \"the top 3 open `human_gate: none` cards by value score (the cards `Skill(pull-card)` would pick next)\", but the shipped command is bare `goc 2>/dev/null | head -5`, which applies no gate and no impediment filter. On this repo's own deck it lists three `human_gate: session` cards with `ready=false` while the true ready count is 0 — precision 0/3, and it hides the fact that nothing is pullable. Fix is the one-token substitution `goc --ready`, the predicate `pull-card` and `next-card` already use."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-23T04:49:50Z"
-closed_at: null
+closed_at: "2026-08-23T04:56:59Z"
 human_gate: none
 advances:
   - extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — Section 5 of `goc/templates/skills/standup/SKILL.md` selects with `goc --ready`; it exits 1 on the pre-fix template.
-  - [ ] TDD: a regression test under `tests/` asserts that the Section 5 bash block in the standup template AND in every shipped mirror (`.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`, `openclaw-plugin/`) uses `--ready`, so a future template edit cannot reintroduce the drift silently.
-  - [ ] MECHANICAL: only `goc/templates/skills/standup/SKILL.md` is hand-edited; the five mirrors are regenerated (`python scripts/sync_plugin_assets.py`, `python3 scripts/port_skills_to_openclaw.py`) and `--check` is clean for both.
-  - [ ] EMPIRICAL: the fixed command is run against this repo's own deck and its output recorded in `log.md` — it must report the ready queue, not the three `human_gate: session` epics the bare queue shows today.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] TDD: `reproduce.py` exits zero — Section 5 of `goc/templates/skills/standup/SKILL.md` selects with `goc --ready`; it exits 1 on the pre-fix template.
+  - [x] TDD: a regression test under `tests/` asserts that the Section 5 bash block in the standup template AND in every shipped mirror (`.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`, `openclaw-plugin/`) uses `--ready`, so a future template edit cannot reintroduce the drift silently.
+  - [x] MECHANICAL: only `goc/templates/skills/standup/SKILL.md` is hand-edited; the five mirrors are regenerated (`python scripts/sync_plugin_assets.py`, `python3 scripts/port_skills_to_openclaw.py`) and `--check` is clean for both.
+  - [x] EMPIRICAL: the fixed command is run against this repo's own deck and its output recorded in `log.md` — it must report the ready queue, not the three `human_gate: session` epics the bare queue shows today.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -36,9 +36,9 @@ mechanical mirrors of the same block:
 | `codex-plugin/skills/standup/SKILL.md` | 136 |
 | `openclaw-plugin/skills/standup/SKILL.md` | 106 |
 
-## What's broken
+## What was broken
 
-The section states its own contract, then ships a command that does not
+The section stated its own contract, then shipped a command that did not
 honour it:
 
 ````markdown
@@ -64,14 +64,14 @@ documents as four conjuncts:
 
 Bare `goc` satisfies the first conjunct only. Because the queue is
 value-sorted and gated epics carry the deck's highest values, the three
-rows Section 5 surfaces are systematically the *least* pullable cards in
+rows Section 5 surfaced were systematically the *least* pullable cards in
 the deck: a `human_gate: session` epic outranks every `none`-gated card
 that shares its contribution tier, and a `waiting_on: external` card
 keeps its full value while being invisible to the picker.
 
-`Skill(pull-card)` and `Skill(next-card)` both already select with
+`Skill(pull-card)` and `Skill(next-card)` both already selected with
 `goc --ready` (`goc/templates/skills/pull-card/SKILL.md:42`,
-`goc/templates/skills/next-card/SKILL.md:19`), so the drift is confined
+`goc/templates/skills/next-card/SKILL.md:19`), so the drift was confined
 to this one restatement.
 
 ## Empirical evidence
@@ -114,8 +114,21 @@ $ goc --ready
 No cards match (ready: status open, gate none, no active impediment; ...)
 ```
 
-Precision 0/3, and the one fact a reader needs — *nothing is pullable* —
-is the fact the section suppresses.
+Precision 0/3, and the one fact a reader needed — *nothing is pullable* —
+was the fact the section suppressed.
+
+After the fix, the same reproducer exits 0 and the same live deck reports
+the truth:
+
+```
+Shipped Section 5 command: 'goc --ready 2>/dev/null | head -5 || true'
+[OK] Section 5 uses `goc --ready`.
+
+$ goc --ready 2>/dev/null | head -5
+ACTIVE: 6 claimed cards outside this open queue: ...
+No cards match (ready: status open, gate none, no active impediment;
+1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+```
 
 ## Why it matters
 
@@ -133,7 +146,7 @@ self-correcting: `goc --ready`'s zero-match line names the predicate and
 its hidden-draft count, and its trailing leverage comparison points at the
 highest-value gated card — exactly the handoff Section 4 wants.
 
-## Fix
+## Fix (applied)
 
 `goc/templates/skills/standup/SKILL.md:113`:
 
@@ -142,11 +155,27 @@ highest-value gated card — exactly the handoff Section 4 wants.
 +goc --ready 2>/dev/null | head -5 || true
 ```
 
-Then regenerate the five mirrors (`python scripts/sync_plugin_assets.py`
+Two prose changes ship with it, because the substitution alone leaves the
+section silently empty on a dry queue:
+
+- a short note under the command naming the four conjuncts `--ready`
+  applies and why bare `goc` inverts the ranking, so a future editor
+  cannot lose the flag without reading why it is there;
+- an exception to the skill's "sections with no entries are omitted"
+  rule — "Next up" reports *Nothing pullable* rather than vanishing.
+  An empty pull queue is the day's headline, not an absence, and its
+  cause is the gates Section 4 lists.
+
+The five mirrors were regenerated (`python scripts/sync_plugin_assets.py`
 for the four Claude/Codex copies, `python3
 scripts/port_skills_to_openclaw.py` for the OpenClaw port) — per AGENTS.md
 § "Skill and hook files have two copies", the template is the only
 hand-edited file.
+
+`tests/test_standup_next_up_predicate.py` pins the substitution across the
+template and all five mirrors. The guard was confirmed to fail on the
+pre-fix state (it named all five stale mirrors while the template was
+already fixed), so it is a real tripwire, not a tautology.
 
 **Out of scope:** `head -5` assumes exactly two header lines, so an
 `ACTIVE:` notice line shrinks the section to two rows. That miscount is
