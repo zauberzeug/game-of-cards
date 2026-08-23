@@ -1,7 +1,7 @@
 ---
 title: standup-next-up-section-lists-cards-pull-card-would-never-pick
 summary: "The standup skill's Section 5 (\"Next up\") prose promises \"the top 3 open `human_gate: none` cards by value score (the cards `Skill(pull-card)` would pick next)\", but the shipped command is bare `goc 2>/dev/null | head -5`, which applies no gate and no impediment filter. On this repo's own deck it lists three `human_gate: session` cards with `ready=false` while the true ready count is 0 — precision 0/3, and it hides the fact that nothing is pullable. Fix is the one-token substitution `goc --ready`, the predicate `pull-card` and `next-card` already use."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-23T04:49:50Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: only `goc/templates/skills/standup/SKILL.md` is hand-edited; the five mirrors are regenerated (`python scripts/sync_plugin_assets.py`, `python3 scripts/port_skills_to_openclaw.py`) and `--check` is clean for both.
   - [ ] EMPIRICAL: the fixed command is run against this repo's own deck and its output recorded in `log.md` — it must report the ready queue, not the three `human_gate: session` epics the bare queue shows today.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # standup "Next up" lists cards pull-card would never pick
