@@ -40,3 +40,19 @@ command. No code changed.
 The generalisable finding (a parked card whose defect is fixed elsewhere is
 never re-checked, and structurally cannot be retired without a human) is
 filed as `parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`.
+
+## 2026-08-24T05:12:00Z — Staleness re-check
+
+Fixed by `91d40320` (2026-06-24) closing
+[`goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue`](../goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue/)
+— `goc --waiting` now routes through the `waiting_impedes` predicate instead
+of testing `t.waiting_on is not None`, which is exactly the drift this card
+reports. `fd34c7cc` (2026-07-27) then extracted `live_impeded` and routed the
+flag through it.
+
+Machine-readable restatement of the prose note above, under the greppable
+heading `Skill(finish-card)` § "Other cards your fix also fixed" now
+prescribes, so a staleness scan can tell a card that was re-read from one
+nobody has opened. Retiring this card needs `goc decide`; an agent may not
+lower the gate. Tracked by
+[`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/).

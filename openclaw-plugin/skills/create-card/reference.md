@@ -37,6 +37,38 @@ avoid:
   same family must too. Inventing a new slug shape per instance makes
   the family illegible.
 
+## Dedup against parked cards
+
+`goc --status all | grep` matches titles, and a title is written in
+the vocabulary of whoever filed the card. The symbol you are about to
+file against sits in the *body*. That gap is survivable on the open
+queue, where cards get read and closed; it is not on the gated
+backlog, because nothing re-reads a card parked on a human gate. A
+duplicate filed past one survives as long as the park does.
+
+Measured on this project's own deck (2026-08-24): three separate cards
+described one `goc --waiting` defect. Two were filed at
+`human_gate: decision` and sat there; the third was filed at
+`--gate none` five days after the second, fixed, and closed the same
+day. Nothing linked them. `goc validate` stayed clean throughout —
+it checks edge symmetry, and an un-written edge is symmetric.
+
+So Step 2 greps `.game-of-cards/deck/*/README.md` as well. When a
+gated card already describes your finding:
+
+- Add the new evidence to *its* body and append a dated `log.md`
+  entry. Do not file beside it.
+- If your evidence answers its `## Decision required` — a new
+  measurement, an option that has since become impossible — say so in
+  that entry. The human reading it then has one less choice to make,
+  which is the only thing that shortens the gated backlog.
+- Do not lower its gate, and do not edit its options to match your
+  view. Adding evidence is an agent's act; deciding is not.
+
+The mirror duty at the other end of a card's life — a closer checking
+whether the fix also retires someone else's open card — is
+`Skill(finish-card)` § "Other cards your fix also fixed".
+
 ## Rubric-derived decisions (lazy Andon)
 
 If the card being filed has a substantive decision at its core

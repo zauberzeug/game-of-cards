@@ -23,6 +23,7 @@ directory) — read the named section only when the situation applies:
 | Situation | `reference.md` section |
 |---|---|
 | Slug reads badly aloud | Title quality |
+| A parked card may already hold this finding | Dedup against parked cards |
 | The card coordinates other cards | Edge direction for coordinating cards |
 | A substantive decision at the card's core | Rubric-derived decisions |
 | Body needs diagrams / matrices / forms | Rich artifact files |
@@ -55,6 +56,16 @@ Same root cause as an existing card = supporting evidence on that
 card's body + a `log.md` appendage on the existing entry, NOT a new
 filing. Grep for the candidate's identifying string yourself, e.g.
 `goc --status all | grep -i <fragment>`.
+
+**Titles are not enough.** Duplicates hide in the gated backlog:
+parked cards name your symbol in the body, and nothing re-reads them
+(`reference.md` § Dedup against parked cards). A gated hit is a card
+to strengthen, not to file beside.
+
+```bash
+grep -rli '<symbol-or-phrase>' .game-of-cards/deck/*/README.md
+goc triage                 # gated cards, oldest first
+```
 
 If a `disproved` rebuttal exists for this hypothesis, re-read it
 before filing. Re-promote only if `git log -p -- <cited-file>` shows

@@ -54,9 +54,23 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # number. The measurement and the why went to the reference sibling; the walk
 # itself stayed in the core for the reason above — an agent that has to follow
 # a pointer to learn the anchor will use the one-liner in front of it.
+#
+# create-card and finish-card were raised on 2026-08-24 by the card
+# `parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`:
+# dedup ran on titles only, and a title is written in the filer's vocabulary
+# while the symbol sits in the body. Measured on this deck, three cards
+# described one `goc --waiting` defect; two sat at `human_gate: decision` for
+# 61 days after the third was fixed and closed, with no edge between them.
+# The two skills now carry the body-grep at both ends of a card's life —
+# create-card before filing, finish-card before the close. The measurement,
+# the worked instance and the gated-card etiquette went to the reference
+# siblings; what stayed in each core is the one-line rule plus the grep,
+# because an agent that has to follow a pointer to learn that titles are
+# insufficient will run the title grep it already remembers. create-card was
+# at 9996 of 10000 before this, so no addition of any size would have fit.
 BODY_CAPS = {
-    "create-card": 10_000,
-    "finish-card": 10_000,
+    "create-card": 10_500,
+    "finish-card": 10_500,
     "advance-card": 10_000,
     "decide-card": 10_000,
     "next-card": 10_000,

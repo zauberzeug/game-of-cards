@@ -32,3 +32,20 @@ the same day. No reference to this card and no supersession edge.
 **Why it is still open.** Closing requires lowering the gate, which
 `goc decide` owns and an autonomous pass may not do; the engine refuses
 `goc status ... superseded` while `human_gate: decision`. No code changed.
+
+## 2026-08-24T05:12:00Z — Staleness re-check
+
+Fixed by `91d40320` (2026-06-24) closing
+[`goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue`](../goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue/)
+— filed five days after this card, at `human_gate: none`, for the same
+defect, and closed the same day with no reference and no supersession edge.
+Note the engine shipped the predicate reading, i.e. the option this card
+argued *against*, so what remains here is a change request against shipped
+behaviour rather than a live bug report.
+
+Machine-readable restatement of the prose note above, under the greppable
+heading `Skill(finish-card)` § "Other cards your fix also fixed" now
+prescribes, so a staleness scan can tell a card that was re-read from one
+nobody has opened. Retiring this card needs `goc decide`; an agent may not
+lower the gate. Tracked by
+[`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/).

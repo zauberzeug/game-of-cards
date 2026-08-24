@@ -6,19 +6,19 @@ stage: null
 contribution: high
 created: "2026-08-24T02:32:11Z"
 closed_at: null
-human_gate: none
+human_gate: decision
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — it must first FAIL on today's tree by finding at least one parked card whose cited anchor text is absent from HEAD, and pass only once such cards are surfaced by a mechanism rather than by accident. Include a known-caught control (a card whose anchors all still resolve) so a green run distinguishes "nothing stale" from "nothing scanned", per `static-source-guards-never-prove-they-can-catch-an-offender`.
-  - [ ] EMPIRICAL: measure how many of the 170 decision-gated cards are affected, using absent-anchor count as the proxy. This pass found 44 absent anchors across 30 cards without looking for stale parks; the real number is unknown and the decision below should not be taken on two instances.
+  - [x] EMPIRICAL: measure how many of the 170 decision-gated cards are affected, using absent-anchor count as the proxy. This pass found 44 absent anchors across 30 cards without looking for stale parks; the real number is unknown and the decision below should not be taken on two instances.
   - [ ] PROCESS: the `## Decision required` question is answered and recorded — whether staleness detection is a `goc` mechanism, a `Skill(refine-deck)` category, or a documented duty of whoever runs `goc triage`.
-  - [ ] MECHANICAL: whichever way it goes, the closing path gains the missing step — `Skill(finish-card)` § "After closure" tells a closer to check whether the defect they just fixed is also described by an open card, and to write the supersession edge. Today nothing prompts that.
-  - [ ] MECHANICAL: `Skill(create-card)` dedups new filings against the *gated* backlog, not only against open titles. Both instances below were filed as fresh cards while a parked card already described the defect.
+  - [x] MECHANICAL: whichever way it goes, the closing path gains the missing step — `Skill(finish-card)` § "After closure" tells a closer to check whether the defect they just fixed is also described by an open card, and to write the supersession edge. Today nothing prompts that.
+  - [x] MECHANICAL: `Skill(create-card)` dedups new filings against the *gated* backlog, not only against open titles. Both instances below were filed as fresh cards while a parked card already described the defect.
   - [ ] PROCESS: decide explicitly whether the gate should keep blocking `goc status <t> superseded`. It is the reason a stale park cannot be retired autonomously, and loosening it is a real option with real risk — record the rejection if it is rejected.
-  - [ ] MECHANICAL: if a mechanism ships, mirrors re-synced (`python scripts/sync_plugin_assets.py --check`) and the OpenClaw port re-run (`python3 scripts/port_skills_to_openclaw.py --check`), both clean.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] MECHANICAL: if a mechanism ships, mirrors re-synced (`python scripts/sync_plugin_assets.py --check`) and the OpenClaw port re-run (`python3 scripts/port_skills_to_openclaw.py --check`), both clean.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -47,9 +47,7 @@ Both surfaced on 2026-08-24, and neither was found by looking. They fell out
 of the defunct-citation category of a `Skill(refine-deck)` pass, which
 reported their anchor text as *absent from the tree* — the one signal in the
 current scheme that means "the cited code was refactored away, re-read this
-card". The pass found 44 absent anchors across 30 cards; these two happened
-to be stale parks, and the other 28 cards were not audited for the same
-thing.
+card".
 
 | card | filed | gate | parked for |
 |---|---|---|---|
@@ -80,15 +78,97 @@ throughout, because edge symmetry is what it checks and there were no edges.
 Not inferred from the commit message. The first card ships a `reproduce.py`
 that compares `goc --waiting` against `waiting_impedes` ground truth across
 the matrix; re-run at HEAD it reports zero false positives and zero false
-negatives. `tests/test_waiting_filter_status_scope.py:91` independently pins
-the two named cells against the real CLI over a temp deck. The `--waiting`
-help text now describes the predicate rather than the storage field.
+negatives. `tests/test_waiting_filter_status_scope.py` independently pins the
+two named cells against the real CLI over a temp deck. The `--waiting` help
+text now describes the predicate rather than the storage field.
 
 One detail sharpens the cost. The fix took the option the second card
 explicitly argued *against* — that card recommended overlay-field-presence
 and the engine shipped the predicate reading, which drops elapsed-wait cards
 from `--waiting`. A parked card is not only going stale; it can be silently
 overruled, and the record shows neither the ruling nor the disagreement.
+
+## How big it is (measured 2026-08-24)
+
+`reproduce.py` in this directory anchors every `file:line` cite a gated card
+carries and asks whether that line still exists in HEAD:
+
+| | count |
+|---|---|
+| gated cards (`human_gate` ≠ `none`) | 190 |
+| ... carrying at least one resolvable anchor | 146 |
+| ... at least one anchor now absent from HEAD | **26** (18% of scanned) |
+| absent anchors in total | 31 |
+
+(The scan ran at 189/145 before this card's own gate went up; this card's
+anchors resolve, so only the population rows moved.)
+
+So the honest answer to "how many of the 170 are stale" is: **26 gated cards
+quote code that no longer exists**, and that is an upper bound on candidates,
+not a confirmed count of fixed defects. An absent anchor proves the cited
+code moved; only reading the card proves the defect went with it. Both known
+instances are inside the 26, which is the reason to trust the number as a
+screen. The 44-across-30 figure quoted when this card was filed came from a
+different anchoring rule and is superseded by the table above.
+
+## The signal erases itself — and that decides Option B
+
+`Skill(refine-deck)` anchors a cite at the commit that **last wrote** the line
+number. That is the correct rule for *repairing* a drifted number, and it is
+the wrong rule for detecting staleness, because step 4 of the same recipe then
+relocates the number onto a line that does exist. The repair consumes the
+evidence.
+
+It is not a corner case. Of the 157 gated cards carrying cites, **133 have had
+at least one cite rewritten by a repair pass** — 85%. Both cards in the table
+above were repaired by the 2026-08-10 pass, and at HEAD, last-write anchoring
+now finds nothing wrong with either of them:
+
+| anchoring rule | catches the two known stale parks | cards flagged |
+|---|---|---|
+| last-write (what `refine-deck` computes today) | **0 of 2** | 24 |
+| as-filed (anchor at the card's filing commit) | **2 of 2** | 26 |
+
+The two rules flag similar totals but not the same cards, and only the
+as-filed rule recovers the line the card actually complains about —
+`filtered = [t for t in filtered if t.waiting_on is not None]`, absent from
+HEAD since `91d40320`.
+
+This changes the recommendation the card was filed with. Option B is still
+the cheapest option, but **not** as "report the absent anchors the pass
+already has" — those are the post-repair ones, and they would have missed
+both known instances. B has to anchor as-filed, which is a second pass over
+history the current recipe does not do, and it has to run *before* the repair
+step in any pass that does both.
+
+## What landed in this session
+
+Two prevention steps the DoD marks as unconditional, plus the harness:
+
+- **`reproduce.py`** (this directory) — as-filed anchor scan over the gated
+  backlog. Fails today (exit 1, 24 unsurfaced candidates). Its controls run
+  first and refuse to report a clean deck unless a synthetic offender is
+  caught, a synthetic clean case is cleared, and both known stale parks are
+  re-found — so a green run cannot mean "nothing scanned".
+- **`Skill(finish-card)` § "Other cards your fix also fixed"** — the closer,
+  who is the only actor who knows what was just fixed, greps card *bodies*
+  before the flip. Gate `none` → write the `superseded` edge. Gate
+  `decision`/`session` → the engine refuses and should, so append a
+  `## <ts> — Staleness re-check` entry naming the fixing commit.
+- **`Skill(create-card)` § "Dedup against parked cards"** — the same grep at
+  the other end of a card's life, because the title grep that dedup used
+  cannot see into a parked card's body.
+- The `Staleness re-check` heading is now the machine-readable marker for
+  "someone re-read this". Applied to both known instances, which is why
+  `reproduce.py` reports 24 unsurfaced out of 26 candidates rather than 26.
+- `tests/test_skill_body_size.py` caps for the two skills raised 10,000 →
+  10,500 with the rationale recorded there; `create-card` was at 9,996 bytes,
+  so no addition of any size would have fit. The measurement and the worked
+  instance went to the `reference.md` siblings, per that guard's contract.
+
+None of this detects staleness on its own. It stops the *next* instance and
+marks the two known ones; the 24 remaining candidates still need whatever
+mechanism the decision below picks.
 
 ## Why the engine makes it irreducible
 
@@ -130,62 +210,70 @@ distinct harms, in increasing order of cost:
 
 ## Decision required
 
-The defect is not in dispute: two cards asserted a fixed bug for two months
-and no mechanism could have noticed. What needs a pick is where detection
-lives, because the three homes have very different costs and one of them is
-"nowhere, deliberately".
+**Option C is done** — it was the one option the DoD marks unconditional, so
+this session implemented it rather than asking. What is left is narrower than
+the card was filed with, and the measurement above moves it: the question is
+who runs an **as-filed** anchor scan over the 24 remaining candidates, given
+that the pass which would naturally host it destroys its own input.
 
 **Option A — a `goc` check.** Extend `goc validate` (advisory) or add a verb
 that, for each non-terminal card, extracts cited anchors and reports the ones
 absent from the tree.
 
 - *For:* the only option that fires without a human or a hygiene pass in the
-  loop, and it ships to every consumer.
+  loop, and it ships to every consumer. It is also the only home immune to
+  the erasure problem, because it would anchor from history rather than from
+  whatever the last repair pass wrote.
 - *Against:* `goc validate` does not read card bodies today, and giving it a
-  citation parser is a real surface addition. It is also bounded by
+  citation parser is a real surface addition. Cost is now known rather than
+  guessed — `reproduce.py` is the working implementation, ~230 lines, one
+  `git log --follow` plus one `git cat-file --batch` per card, whole-deck run
+  in well under a minute. It remains bounded by
   [file-line-citations-drift-again-within-days-of-every-repair-pass](../file-line-citations-drift-again-within-days-of-every-repair-pass/):
-  absent-anchor detection is only as good as the citation form, and that form
-  is itself parked on a decision. Adding a check keyed to a convention that
-  may be replaced is work that may need redoing.
+  the scan is only as good as the citation form, and that form is itself
+  parked on a decision.
 
 **Option B — a `Skill(refine-deck)` category.** Make "stale parks" a named
-sub-section beside "Stale unverified parks", scanning gated cards for absent
-anchors and reporting them.
+sub-section beside "Stale unverified parks".
 
-- *For:* cheapest by a wide margin, and it is where this finding was actually
-  made — the pass already computes absent anchors as a by-product, so the
-  category is a report over data it has in hand. Ships to consumers with the
-  skill.
-- *Against:* only fires when someone runs the pass, and it can only report.
-  The retirement still needs a human `goc decide`, so the backlog shrinks at
-  human cadence either way.
-
-**Option C — a duty on the closer, not the deck.** `Skill(finish-card)` gains
-a step: before closing, check whether an open card describes the defect you
-fixed, and write the supersession edge. Prevention rather than detection.
-
-- *For:* attacks the cause. All three cards here existed simultaneously; a
-  closer who looked would have found the two parked ones in one query.
-  Costs nothing at rest.
-- *Against:* unguarded — it holds exactly as far as the closer's care does,
-  which is the same failure mode as the two unguarded card-authoring rules in
-  AGENTS.md. And it does nothing for the 170 already parked.
+- *For:* still the cheapest, and it is where the finding was made. Ships to
+  consumers with the skill.
+- *Against:* **the "free by-product" argument does not survive the
+  measurement.** The pass computes *post-repair* anchors, which caught 0 of 2
+  known instances; the category needs a second, as-filed anchoring pass, and
+  it must run before the repair step or there is nothing left to find. That
+  is a real change to the recipe, not a report over data in hand. It also
+  only fires when someone runs the pass, and it can only report.
 
 **Option D — accept it, and say so.** Document that a parked card's claims
 are as of its filing date and must be re-verified before deciding.
 
 - *For:* honest, and free. The re-verification cost lands on the reader who
-  is already reading the card, which is the cheapest possible moment.
+  is already reading the card, which is the cheapest possible moment. C plus
+  the `Staleness re-check` marker already covers every *new* instance, so D
+  concedes only the 24 standing candidates.
 - *Against:* the reader is precisely who has not shown up for 101 of these
-  cards in 60+ days, and it does nothing about the wasted-rediscovery harm.
+  cards in 60+ days.
 
-**Recommendation, not binding: B plus C.** B is nearly free and is the only
-option that fires on the existing 170; C is the only one that stops new
-instances. A is the strongest mechanism and the wrong time to build it —
-it should wait for the citation-form decision it depends on. The sibling
-outlet card's option C (a working `goc triage`) should also carry a staleness
+**Revised recommendation, not binding: A, or D.** B was the recommendation
+when the pass looked free; it no longer is, and a second anchoring pass
+bolted into a hygiene skill is most of A's cost in a home that only fires by
+hand. If the 24 candidates are worth clearing, `reproduce.py` is already the
+mechanism — promoting it to a `goc` verb is mostly relocation. If they are
+not, say so under D and let C hold the line going forward. The sibling
+outlet card's option C (a working `goc triage`) should carry the staleness
 signal if it lands, since a decision queue that presents stale cards as live
 is the harm restated one layer up.
+
+### Second question — should the gate keep blocking `superseded`?
+
+Unchanged, and the recommendation is still **keep it**. An agent that could
+clear human gates to tidy the board would be worse than the rot. This session
+is the evidence that the refusal is survivable: the two known stale parks were
+marked with a machine-readable `## Staleness re-check` entry and left at their
+gate, which is a better note without being an unauthorized decision. Record
+the rejection explicitly when deciding — the DoD asks for that, not for
+silence.
 
 ## Non-goals
 
