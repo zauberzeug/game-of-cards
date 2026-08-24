@@ -1,6 +1,6 @@
 ---
 title: deck-fills-with-decision-gated-cards-faster-than-they-are-decided
-summary: "The runway has now reached zero. Re-measured 2026-08-24: 5 of 194 live cards sit at human_gate none, 170 are gated on decision and 19 on session — and goc --ready returns NO cards at all, because every one of the 5 is either impeded, claimed, or an unpublished draft. Measuring the backlog rather than the default relocates the defect: 94% of the decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 189 — 101 have had no log activity for over 60 days. Parked 2026-08-17 on the intake-vs-outlet choice; the runway hitting zero does not change the options, only the urgency."
+summary: "The runway has reached zero. Re-measured 2026-08-24 with a runway metric that now reads the engine predicate instead of counting gates: 6 of 196 live cards sit at human_gate none, 171 are gated on decision and 19 on session — and goc --ready returns NO cards at all, because every one of the 6 is impeded, claimed, or an unpublished draft. Measuring the backlog rather than the default relocates the defect: 94% of the decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 190 — 99 have had no log activity for over 60 days. Parked 2026-08-17 on the intake-vs-outlet choice; the runway hitting zero does not change the options, only the urgency."
 status: open
 stage: null
 contribution: high
@@ -11,7 +11,12 @@ advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the autonomous runway is at least 15 open cards.
+  - [ ] TDD: `reproduce.py` exits zero — `goc --ready` returns at least 15 claimable
+    cards. The threshold reads the engine's `card_is_ready`, NOT the `human_gate:
+    none` count the script reports alongside it as the runway's upper bound; 15
+    gate-free cards that are all impeded, claimed, or drafts must NOT clear this
+    item. See
+    [reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate](../reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate/).
   - [ ] PROCESS: a mechanism is chosen from `## Decision required` question 1 and recorded in `log.md` with its rationale. Question 2 must be answered explicitly — what happens to the 185 cards already gated, not only to newly filed ones.
   - [ ] TDD: a regression test pins the chosen filing behaviour — a finding filed without an explicit `--gate` lands where the decision says it should, and one filed with `--gate decision` still lands gated. It must fail on today's default.
   - [ ] MECHANICAL: `goc/schema.yaml` and `Skill(create-card)` Step 3 agree with each other and with the implemented default; today the skill calls `decision` "the *fallback*" while the schema makes it the value you get by omission.
@@ -38,17 +43,17 @@ not a slow imbalance; the queue has now emptied completely:
 
 | | 2026-08-17 | 2026-08-24 |
 |---|---|---|
-| open + active cards | 193 | 194 |
-| `human_gate: none` | 8 | **5** |
-| `human_gate: decision` | 166 | 170 |
+| open + active cards | 193 | 196 |
+| `human_gate: none` (upper bound) | 8 | **6** |
+| `human_gate: decision` | 166 | 171 |
 | `human_gate: session` | 19 | 19 |
-| gated cards with no log activity for 60+ days | 83 | 101 |
-| **cards `goc --ready` actually returns** | — | **0** |
+| gated cards with no log activity for 60+ days | 83 | 99 |
+| **cards `goc --ready` actually returns (the runway)** | — | **0** |
 
 The last row is the one that matters, and it is a number this card was not
 measuring a week ago. The gate count is an *upper bound* on the runway, not
 the runway: `card_is_ready` also excludes impeded cards, drafts, and cards
-already claimed. All five of the `human_gate: none` cards fail one of those:
+already claimed. All six of the `human_gate: none` cards fail one of those:
 
 | card | why it is not pullable |
 |---|---|
@@ -57,18 +62,20 @@ already claimed. All five of the `human_gate: none` cards fail one of those:
 | `blocked-status-conflates-dependency-external-wait-and-deferral` | `waiting_on: deferred` |
 | `remove-blocked-from-status-enum-and-migrate-existing-cards` | `waiting_on: deferred` |
 | `escalate-repeatedly-auto-released-cards-without-an-attempt-counter` | `draft: true`, held deliberately |
+| `reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate` | `status: active` — the session that fixed this script claimed the deck's last ready card |
 
 So `goc --ready` prints `No cards match`. The autonomous runway is not
 "a few days" — it is exhausted, and has been since before this measurement.
-The other 189 are invisible to `Skill(pull-card)` and `Skill(next-card)`,
+The other 190 are invisible to `Skill(pull-card)` and `Skill(next-card)`,
 which filter to `human_gate: none` — correctly, for loop safety.
 
-This card's own `reproduce.py` does not measure that: it reports `runway =
-gates.get("none", 0)`, a bare gate count, which said 5 where the engine says
-0. Filed as
-[reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate](../reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate/),
-because DoD item 1 gates on that number and can go green with a real runway
-of zero.
+This card's own `reproduce.py` did not measure that until 2026-08-24: it
+reported `runway = gates.get("none", 0)`, a bare gate count, which said 5
+where the engine said 0 — so DoD item 1 could have gone green on 15 gate-free
+cards the picker could not touch. Fixed by
+[reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate](../reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate/):
+the runway is now `len(goc --ready --json)` and the gate count is reported
+next to it as the upper bound, so the two are never read as one number again.
 
 The default was the first suspect. `goc/schema.yaml:27` sets
 `human_gate_default: decision`, and `_build_parser`'s `p_new.add_argument
@@ -110,30 +117,42 @@ queue.
 
 ## Empirical evidence
 
-`reproduce.py`, re-run 2026-08-24:
+`reproduce.py`, re-run 2026-08-24 after its runway metric was repaired to read
+the engine predicate:
 
 ```
-open + active cards: 194
-  human_gate: none         5
-  human_gate: decision   170
+open + active cards: 196
+  human_gate: none         6
+  human_gate: decision   171
   human_gate: session     19
 
-autonomous runway (gate=none, claimable by the picker): 5
+gate-none cards (upper bound on the runway):   6
+autonomous runway (goc --ready, claimable):    0
+  6 gate-none cards are not claimable:
+       2  claimed (status: active)
+       2  impeded (waiting_on: deferred)
+       1  impeded (waiting_on: external)
+       1  unpublished draft
 
 sample of 50 cards closed in the last 90 days:
   born gated, later decided and closed: 7
   born at gate=none:                    42
   indeterminate:                        1
 
-gated open cards with no log activity for 60+ days: 101/189
+gated open cards with no log activity for 60+ days: 99/190
 
-DEFECT PRESENT: the picker has 5 claimable cards against 189 gated ones. Ungated cards
-close 6x more often than gated ones get decided, so the backlog grows while the runway
-does not.
+DEFECT PRESENT: the picker has 0 claimable cards (gate-none upper bound 6) against
+190 gated ones. Ungated cards close 6x more often than gated ones get decided, so
+the backlog grows while the runway does not.
 ```
 
-Read that "runway: 5" against the engine, which is the number that decides
-whether the loop has work:
+The first two numbers under the census used to be one number. Until 2026-08-24
+the script reported `autonomous runway (gate=none, claimable by the picker): 5`
+— a bare `human_gate` count — and nothing next to it. That number is the upper
+bound, and on this deck the bound is the whole gap: every gate-free card is
+excluded by one of the three axes `card_is_ready` also reads, so the runway is
+zero and the reassuring 5 was measuring the wrong set. `goc --ready` agrees
+from the other side:
 
 ```
 $ uv run goc --ready
@@ -141,10 +160,10 @@ No cards match (ready: status open, gate none, no active impediment;
 1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
 ```
 
-The script's runway is a gate count and the engine's is a four-axis
-predicate, so the script overstates by 5 where it matters most — at zero.
-The staleness count also moved the wrong way: 101 of 189 gated cards now have
-no log activity in 60+ days, up from 83 of 185 in one week.
+The staleness share climbed across the same week: 99 of 190 gated cards have no
+log activity in 60+ days (52%), against 83 of 185 (45%) on 2026-08-17. The
+denominator grew and the share grew with it, so the gated pile is accumulating
+faster than anything reads it.
 
 The sample is the load-bearing part of the *rate* claim. It reads each closed
 card's *first* committed frontmatter, so it distinguishes a card that was

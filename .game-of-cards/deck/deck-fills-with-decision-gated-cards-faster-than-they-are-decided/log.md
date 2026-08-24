@@ -106,3 +106,55 @@ describe defects that have since been fixed in code without anyone noticing
 So the gated pile is not merely unread — part of it is no longer true. That
 sharpens option C: an outlet that only ranks and caps would still present
 stale cards as live decisions.
+
+## 2026-08-24 — instrument repaired: the runway now reads the engine predicate
+
+`reproduce.py` no longer measures the runway with a `human_gate` count. It
+calls `goc --ready --json` — the exact surface `Skill(pull-card)` selects
+with — and reports the gate count beside it as the explicit upper bound.
+Fixed under
+`reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate`,
+whose own `reproduce.py` is the falsifying probe: it runs a verbatim copy of
+this script against a synthetic deck of 16 gate-free cards that are all
+impeded, claimed, or unpublished, plus a control deck with three genuinely
+pullable cards.
+
+**Both numbers, measured on this deck today (DoD item 5 of the fixing card):**
+
+```
+gate-none cards (upper bound on the runway):   6
+autonomous runway (goc --ready, claimable):    0
+```
+
+The upper bound reads 6 rather than the 5 recorded earlier today because the
+fixing session claimed the deck's one remaining ready card; the runway is 0
+either way, which is the number the exit code now gates on. Before the fix
+the same deck reported `runway: 5` and the same deck today would report 6 —
+never 0. Against the synthetic fail-open deck the pre-fix script printed
+`PASS: runway of 16 cards is above the 15-card floor` and exited **zero**
+while `goc --ready` returned nothing; the fixed script prints `runway 0`
+against a gate-none upper bound of 16 and exits 1.
+
+DoD item 1 was rewritten to gate on the engine predicate, so that pass state
+is no longer reachable. Nothing else about this card changed: the option set,
+the census, and the recommendation are untouched — the instrument was wrong,
+not the argument.
+
+**Sweep of sibling deck scripts (DoD item 6 of the fixing card).** All 439
+`reproduce.py` files under `.game-of-cards/deck/` were scanned for a
+`human_gate` comparison standing in for pullability, then for the words
+runway / pullable / claimable / ready appearing with no engine seam.
+**One offender: this script.** Ten scripts mention the gate outside a
+frontmatter fixture; each was read:
+
+| how the gate is used | scripts | verdict |
+|---|---|---|
+| `runway = gates.get("none", 0)` | 1 (this one) | **the drift** |
+| fixture value or prose only, no pullability computed | 4 | clean |
+| second conjunct beside the engine's own `ready` field | 2 | clean |
+| reproducing `_cmd_triage`'s parked-card filter, where `human_gate != none` IS the predicate under test | 1 | clean |
+| mirroring the engine's leverage-line gated set, pullability from `card_is_ready` | 1 | clean |
+| counting the gated complement for a staleness census | 1 | clean |
+
+Zero siblings carry the drift. Reported rather than assumed, because a silent
+sweep is the failure mode the fixing card is an instance of.
