@@ -24,6 +24,11 @@ worker: {who: "claude[bot]", where: main}
 
 # The second citation-repair pass moves correct cites onto unrelated code
 
+> Later evidence: the last-write anchor this card installed is right for
+> *repairing* a cite and wrong for *detecting* a stale card — the repair
+> relocates the number and erases the signal. See
+> [`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/).
+
 ## Location
 
 - `goc/templates/skills/refine-deck/SKILL.md:115` — step 2 of the defunct-citation check, now the history walk.

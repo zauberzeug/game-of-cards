@@ -88,3 +88,27 @@ this card", and it only fires by accident. Filed as
 
 README dashboard rewritten in place with the new datapoint. Gate and status
 unchanged; no code changed.
+
+## 2026-08-24T05:35:00Z — Evidence: repair coverage measured, and a second cost for the bare-line-number form
+
+Measured while working
+[`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/),
+over the 189 gated open/active cards: **133 of the 157 that carry a
+`file:line` cite (85%) have had at least one cite rewritten by a repair pass.**
+That is a coverage figure for the recurring-work argument this card makes — the
+repair treadmill has already touched five sixths of the gated backlog.
+
+The new part is a cost the census did not price. A bare line number is not only
+*wrong* between passes; repairing it **destroys a signal**. An anchor that
+resolves nowhere in HEAD is the deck's only evidence that a card's cited code
+was refactored away, and step 4 of the repair recipe relocates the number onto
+a line that does exist. Measured on the two cards known to describe an
+already-fixed defect: anchoring at the last-write commit (what the repaired
+tree yields) catches **0 of 2**; anchoring at the filing commit catches
+**2 of 2**.
+
+This does not favour one option in this card's `## Decision required` on its
+own, but it adds a criterion the options should be scored against: a
+self-anchoring text form carries its own evidence and cannot be silently
+repaired into looking current, while a bare line number can. No gate change and
+no edit to the options — that is the human's call.

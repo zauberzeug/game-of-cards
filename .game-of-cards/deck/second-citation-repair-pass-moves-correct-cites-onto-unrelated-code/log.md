@@ -48,3 +48,22 @@ whose surface is prose an agent EXECUTES rather than reads, and the false
 claim it removed was written by the previous instance's own repair of the same
 recipe — the thirteenth's lesson one level deeper. That card's instance table
 and scope-decision narrative carry the datums; nothing is duplicated here.
+
+## 2026-08-24T05:36:00Z — Post-close amendment
+
+Extended by
+[`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/)
+— the last-write anchor this card installed is correct for citation *repair*
+and wrong for *staleness detection*, because step 4 of the same recipe then
+relocates the number onto a line that exists, consuming the evidence that the
+cited code was refactored away.
+
+Measured on the two cards known to describe an already-fixed defect:
+last-write anchoring catches 0 of 2, anchoring at the card's filing commit
+catches 2 of 2. 133 of the 157 cited gated cards (85%) have been repaired this
+way, so the erasure is the common case rather than a corner.
+
+Nothing here retracts this card's finding or its fix — replaying the creating-
+commit recipe would still have moved 165 correct cites. The amendment is that
+the recipe now has two readers with opposite needs, and a staleness scan must
+anchor as filed rather than reuse the repair anchor.
