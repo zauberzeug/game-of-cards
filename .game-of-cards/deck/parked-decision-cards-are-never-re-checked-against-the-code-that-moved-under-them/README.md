@@ -1,7 +1,7 @@
 ---
 title: parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them
 summary: "Nothing re-checks a human_gate: decision card against the code it cites, so a parked card whose defect is fixed by later work keeps advertising a live defect indefinitely. Two measured instances: goc-waiting-filter-drifts-from-engine-on-elapsed-and-bare-waits and waiting-flag-filters-on-waiting-on-field-not-the-impediment-overlay both described a --waiting drift that commit 91d40320 fixed on 2026-06-24 while closing a third, gate-free card filed for the same defect the same day — no reference, no supersession edge, 61 days parked. The engine also makes this irreducible: goc status ... superseded refuses while the gate is up, so no autonomous pass can retire a stale park."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-24T02:32:11Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] PROCESS: decide explicitly whether the gate should keep blocking `goc status <t> superseded`. It is the reason a stale park cannot be retired autonomously, and loosening it is a real option with real risk — record the rejection if it is rejected.
   - [ ] MECHANICAL: if a mechanism ships, mirrors re-synced (`python scripts/sync_plugin_assets.py --check`) and the OpenClaw port re-run (`python3 scripts/port_skills_to_openclaw.py --check`), both clean.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # A parked card is never re-checked against the code that moved under it
