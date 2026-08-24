@@ -1,7 +1,7 @@
 ---
 title: commits-touching-only-generated-mirrors-skip-every-pre-commit-hook
 summary: "All four hooks in .pre-commit-config.yaml are pass_filenames: false whole-tree checks, but each is gated on a files: regex naming only part of the tree it checks — so a commit that edits only a generated mirror (codex-plugin/, openclaw-plugin/, .claude/skills/, .codex/skills/, .claude/hooks/) matches no filter and pre-commit reports \"(no files to check) Skipped\" for every hook, exit 0. The same working tree fails CI: goc validate exits 1 on plugin mirror drift and sync_plugin_assets.py --check exits 1 on both files. AGENTS.md states the sync hook regenerates mirrors \"on every commit\" and that a hand-edited mirror \"gets overwritten by the next pre-commit pass\" — the files: filters make both claims false."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-24T05:25:29Z"
@@ -23,6 +23,7 @@ definition_of_done: |
     as the second, independent reason pre-commit does not fire.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green and
     `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Commits touching only generated mirrors skip every pre-commit hook
