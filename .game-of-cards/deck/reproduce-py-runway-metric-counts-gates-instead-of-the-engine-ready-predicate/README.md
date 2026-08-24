@@ -1,7 +1,7 @@
 ---
 title: reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate
 summary: "The reproduce.py of deck-fills-with-decision-gated-cards-faster-than-they-are-decided measures its autonomous runway as runway = gates.get(\"none\", 0) — a bare human_gate count over open+active cards. The engine's card_is_ready also excludes impeded cards, unpublished drafts, and cards already claimed. On 2026-08-24 the script reported runway 5 while goc --ready returned no cards at all, so the card's DoD gate (runway at least 15) can go green with a real runway of zero. Seventh known hand-rolled copy of the pull-readiness predicate, and a fail-open defect test."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-24T02:31:19Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: run the fixed script on this repo's deck and record both numbers in that card's `log.md`. Today they are 5 and 0.
   - [ ] PROCESS: decide and record whether the sibling deck scripts carry the same drift — a sweep of `.game-of-cards/deck/*/reproduce.py` for `human_gate` / `"none"` comparisons that stand in for pullability. Report the count even if it is zero; a silent sweep is the failure mode this card is an instance of.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # A card's runway metric counts gates where the engine counts pullability
