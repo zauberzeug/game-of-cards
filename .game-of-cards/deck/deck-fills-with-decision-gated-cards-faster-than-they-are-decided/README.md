@@ -1,6 +1,6 @@
 ---
 title: deck-fills-with-decision-gated-cards-faster-than-they-are-decided
-summary: "The runway has reached zero. Re-measured 2026-08-24 with a runway metric that now reads the engine predicate instead of counting gates: 6 of 196 live cards sit at human_gate none, 171 are gated on decision and 19 on session — and goc --ready returns NO cards at all, because every one of the 6 is impeded, claimed, or an unpublished draft. Measuring the backlog rather than the default relocates the defect: 94% of the decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 190 — 99 have had no log activity for over 60 days. Parked 2026-08-17 on the intake-vs-outlet choice; the runway hitting zero does not change the options, only the urgency."
+summary: "The runway has reached zero. Re-measured 2026-08-24 with a runway metric that now reads the engine predicate instead of counting gates: 5 of 195 live cards sit at human_gate none, 171 are gated on decision and 19 on session — and goc --ready returns NO cards at all, because every one of the 5 is impeded, claimed, or an unpublished draft. Measuring the backlog rather than the default relocates the defect: 94% of the decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 190 — 99 have had no log activity for over 60 days. Parked 2026-08-17 on the intake-vs-outlet choice; the runway hitting zero does not change the options, only the urgency."
 status: open
 stage: null
 contribution: high
@@ -43,8 +43,8 @@ not a slow imbalance; the queue has now emptied completely:
 
 | | 2026-08-17 | 2026-08-24 |
 |---|---|---|
-| open + active cards | 193 | 196 |
-| `human_gate: none` (upper bound) | 8 | **6** |
+| open + active cards | 193 | 195 |
+| `human_gate: none` (upper bound) | 8 | **5** |
 | `human_gate: decision` | 166 | 171 |
 | `human_gate: session` | 19 | 19 |
 | gated cards with no log activity for 60+ days | 83 | 99 |
@@ -53,7 +53,7 @@ not a slow imbalance; the queue has now emptied completely:
 The last row is the one that matters, and it is a number this card was not
 measuring a week ago. The gate count is an *upper bound* on the runway, not
 the runway: `card_is_ready` also excludes impeded cards, drafts, and cards
-already claimed. All six of the `human_gate: none` cards fail one of those:
+already claimed. All five of the `human_gate: none` cards fail one of those:
 
 | card | why it is not pullable |
 |---|---|
@@ -62,7 +62,6 @@ already claimed. All six of the `human_gate: none` cards fail one of those:
 | `blocked-status-conflates-dependency-external-wait-and-deferral` | `waiting_on: deferred` |
 | `remove-blocked-from-status-enum-and-migrate-existing-cards` | `waiting_on: deferred` |
 | `escalate-repeatedly-auto-released-cards-without-an-attempt-counter` | `draft: true`, held deliberately |
-| `reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate` | `status: active` — the session that fixed this script claimed the deck's last ready card |
 
 So `goc --ready` prints `No cards match`. The autonomous runway is not
 "a few days" — it is exhausted, and has been since before this measurement.
@@ -121,28 +120,27 @@ queue.
 the engine predicate:
 
 ```
-open + active cards: 196
-  human_gate: none         6
+open + active cards: 195
+  human_gate: none         5
   human_gate: decision   171
   human_gate: session     19
 
-gate-none cards (upper bound on the runway):   6
+gate-none cards (upper bound on the runway):   5
 autonomous runway (goc --ready, claimable):    0
-  6 gate-none cards are not claimable:
-       2  claimed (status: active)
+  5 gate-none cards are not claimable:
        2  impeded (waiting_on: deferred)
+       1  claimed (status: active)
        1  impeded (waiting_on: external)
        1  unpublished draft
 
 sample of 50 cards closed in the last 90 days:
-  born gated, later decided and closed: 7
+  born gated, later decided and closed: 8
   born at gate=none:                    42
-  indeterminate:                        1
 
 gated open cards with no log activity for 60+ days: 99/190
 
-DEFECT PRESENT: the picker has 0 claimable cards (gate-none upper bound 6) against
-190 gated ones. Ungated cards close 6x more often than gated ones get decided, so
+DEFECT PRESENT: the picker has 0 claimable cards (gate-none upper bound 5) against
+190 gated ones. Ungated cards close 5x more often than gated ones get decided, so
 the backlog grows while the runway does not.
 ```
 
@@ -151,8 +149,9 @@ the script reported `autonomous runway (gate=none, claimable by the picker): 5`
 — a bare `human_gate` count — and nothing next to it. That number is the upper
 bound, and on this deck the bound is the whole gap: every gate-free card is
 excluded by one of the three axes `card_is_ready` also reads, so the runway is
-zero and the reassuring 5 was measuring the wrong set. `goc --ready` agrees
-from the other side:
+zero and the reassuring 5 was measuring the wrong set. The two now sit side by
+side and the exit code reads the lower one. `goc --ready` agrees from the
+other side:
 
 ```
 $ uv run goc --ready

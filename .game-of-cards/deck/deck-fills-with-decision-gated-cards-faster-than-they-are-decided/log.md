@@ -158,3 +158,20 @@ frontmatter fixture; each was read:
 
 Zero siblings carry the drift. Reported rather than assumed, because a silent
 sweep is the failure mode the fixing card is an instance of.
+
+## 2026-08-24 — settled measurement after the fixing card closed
+
+The pair recorded in the entry above was taken with
+`reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate`
+claimed, so the gate-none upper bound read 6. With that card closed the deck
+settles to the pair this card's dashboard now shows:
+
+```
+gate-none cards (upper bound on the runway):   5
+autonomous runway (goc --ready, claimable):    0
+```
+
+Both entries are the same fact — the runway is 0 and the upper bound wobbles by
+one as cards are claimed and closed, which is precisely why the two are now
+reported as two numbers. The `## What's broken` table and `## Empirical
+evidence` block are re-rendered from this run.
