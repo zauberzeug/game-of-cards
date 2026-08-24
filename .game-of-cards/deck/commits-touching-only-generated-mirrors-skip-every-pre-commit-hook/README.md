@@ -1,27 +1,27 @@
 ---
 title: commits-touching-only-generated-mirrors-skip-every-pre-commit-hook
 summary: "All four hooks in .pre-commit-config.yaml are pass_filenames: false whole-tree checks, but each is gated on a files: regex naming only part of the tree it checks — so a commit that edits only a generated mirror (codex-plugin/, openclaw-plugin/, .claude/skills/, .codex/skills/, .claude/hooks/) matches no filter and pre-commit reports \"(no files to check) Skipped\" for every hook, exit 0. The same working tree fails CI: goc validate exits 1 on plugin mirror drift and sync_plugin_assets.py --check exits 1 on both files. AGENTS.md states the sync hook regenerates mirrors \"on every commit\" and that a hand-edited mirror \"gets overwritten by the next pre-commit pass\" — the files: filters make both claims false."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-08-24T05:25:29Z"
-closed_at: null
+closed_at: "2026-08-24T05:33:08Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every mirror path `goc validate` /
+  - [x] TDD: `reproduce.py` exits zero — every mirror path `goc validate` /
     `sync_plugin_assets.py --check` guard triggers at least one pre-commit hook.
-  - [ ] TDD: a regression test in `tests/` asserts each `pass_filenames: false`
+  - [x] TDD: a regression test in `tests/` asserts each `pass_filenames: false`
     hook in `.pre-commit-config.yaml` is reachable from a commit confined to any
     tree its check reads, and fails on today's `files:`-only config.
-  - [ ] MECHANICAL: `.pre-commit-config.yaml` is fixed so the local hook set is
+  - [x] MECHANICAL: `.pre-commit-config.yaml` is fixed so the local hook set is
     the mirror of the CI check set, with the reason recorded in the file.
-  - [ ] MECHANICAL: cross-referenced from
+  - [x] MECHANICAL: cross-referenced from
     [pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate](../pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate/)
     as the second, independent reason pre-commit does not fire.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` green and
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` green and
     `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
@@ -161,16 +161,16 @@ disjoint in fix location — that one needs a human commit under
 `.github/workflows/` (the bot's `GITHUB_TOKEN` cannot write there), this one is
 a repo-root config the bot can land.
 
-## Fix
+## Fix (landed)
 
-Set `always_run: true` on all four hooks. A `pass_filenames: false` hook already
-declares "I check the whole tree"; `always_run: true` is pre-commit's documented
-way to say "so run me whenever anything is committed", and it is the only form
-that cannot drift again as `goc validate` or the sync script learn new
-surfaces. Measured cost of the full set on this repo is ~1.5s
-(`sync_plugin_assets` 0.17s, `goc validate` 0.58s, `check_card_language` 0.54s,
-`check_card_frontmatter_yaml` 0.18s), and it makes the local hook set the exact
-mirror of what CI runs unconditionally.
+All four hooks now carry `always_run: true` and no `files:` filter. A
+`pass_filenames: false` hook already declares "I check the whole tree";
+`always_run: true` is pre-commit's documented way to say "so run me whenever
+anything is committed", and it is the only form that cannot drift again as
+`goc validate` or the sync script learn new surfaces. Measured cost of the full
+set on this repo is ~1.5s (`sync_plugin_assets` 0.17s, `goc validate` 0.58s,
+`check_card_language` 0.54s, `check_card_frontmatter_yaml` 0.18s), which makes
+the local hook set the exact mirror of what CI runs unconditionally.
 
 The alternative considered and rejected: widen each `files:` regex to enumerate
 every tree its check reads. It restores today's behaviour for today's surfaces,
@@ -178,3 +178,40 @@ but it re-creates the failure mode — a seventh mirror, or a new validator
 surface, silently falls out of the pattern with no symptom. That is precisely
 how `goc-upgrade-leaves-stale-pre-commit-validate-pattern` happened, and it buys
 about a second per commit.
+
+`always_run: true` and `files:` are not mutually exclusive in pre-commit's
+schema — a config carrying both is accepted, and `always_run` wins — but the
+filter is then dead weight that reads as a live scope, so it was removed rather
+than left in place.
+
+## Verification
+
+The same drift that used to sail through now stops the commit, and the sync hook
+repairs it in the same pass — the contract AGENTS.md always claimed:
+
+```
+$ printf '\n# DRIFT MARKER\n' >> codex-plugin/goc/engine.py
+$ printf '\nDRIFT MARKER\n'   >> .claude/skills/deck/SKILL.md
+$ pre-commit run --files codex-plugin/goc/engine.py .claude/skills/deck/SKILL.md
+sync plugin assets from goc/ to claude-plugin/...........................Failed
+- hook id: sync-plugin-assets
+- files were modified by this hook
+
+sync-plugin-assets: synced 2 file(s), staged for commit.
+
+goc validate.............................................................Passed
+cards are written in English.............................................Passed
+card frontmatter is valid YAML...........................................Passed
+exit=1
+```
+
+(`goc validate` passes on the second line because the sync hook, running first,
+already repaired the drift it would otherwise have reported.)
+
+`reproduce.py` now exits zero, reporting every guarded path as covered by all
+four hooks. `tests/test_precommit_hook_reachability.py` pins the invariant in
+the regression suite: it fails on any `pass_filenames: false` hook that a commit
+could filter out, and failed 50 subtests against the pre-fix config.
+
+Regression suite: 1033 tests, OK. `uv run goc validate` exit 0.
+`python scripts/sync_plugin_assets.py --check` clean.

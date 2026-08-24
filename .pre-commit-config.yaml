@@ -1,3 +1,25 @@
+# Every hook below is `pass_filenames: false` — it re-checks the whole
+# repository and ignores which files changed. So each one carries
+# `always_run: true` and NO `files:` filter.
+#
+# A `files:` pattern on a whole-tree hook is a *trigger*, not a scope, and
+# pre-commit skips a hook whose filtered file list comes out empty
+# ("(no files to check) Skipped"). That made the local hook set narrower than
+# the CI check set: `goc validate` compares three plugin payloads and
+# `scripts/sync_plugin_assets.py --check` compares those three plus this repo's
+# dogfood self-host copies, yet only `claude-plugin/` ever appeared in a
+# pattern — so a commit confined to `codex-plugin/`, `openclaw-plugin/`,
+# `.claude/skills/`, `.claude/hooks/` or `.codex/skills/` fired nothing locally
+# and failed CI on the next push. See
+# `commits-touching-only-generated-mirrors-skip-every-pre-commit-hook`, and
+# `goc-upgrade-leaves-stale-pre-commit-validate-pattern` for the earlier time a
+# `files:` glob silently stopped matching the tree its hook guards.
+#
+# Enumerating every guarded tree in each pattern would re-create that failure
+# mode the next time a check learns a new surface. `always_run: true` cannot
+# drift, and the whole set costs ~1.5s per commit. Keep it that way:
+# `tests/test_precommit_hook_reachability.py` fails on any `pass_filenames:
+# false` hook that a commit could filter out.
 repos:
   - repo: local
     hooks:
@@ -6,13 +28,13 @@ repos:
         entry: uv run python scripts/sync_plugin_assets.py
         language: system
         pass_filenames: false
-        files: ^goc/
+        always_run: true
       - id: goc-validate
         name: goc validate
         entry: uv run goc validate
         language: system
         pass_filenames: false
-        files: ^(\.game-of-cards/deck/|goc/|claude-plugin/).*$
+        always_run: true
       # AGENTS.md § "Card authoring rules" requires English cards. goc's own
       # auto-commit shells out to `git commit` without --no-verify, so this
       # hook fires on `goc new --commit` too — the filing path, not just CI.
@@ -21,7 +43,7 @@ repos:
         entry: uv run python scripts/check_card_language.py --check
         language: system
         pass_filenames: false
-        files: ^\.game-of-cards/deck/.*$
+        always_run: true
       # goc reads cards through its permissive vendored parser, so frontmatter
       # that no strict YAML parser accepts passes `goc validate` above. Fires on
       # the filing path for the same reason card-language does.
@@ -30,4 +52,4 @@ repos:
         entry: uv run python scripts/check_card_frontmatter_yaml.py --check
         language: system
         pass_filenames: false
-        files: ^\.game-of-cards/deck/.*$
+        always_run: true

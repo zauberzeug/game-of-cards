@@ -73,14 +73,18 @@ silently leaving the workflow file changed-but-unpushed in working tree.
   There is no `pre-commit install` step and no post-agent
   `pre-commit run` / `goc validate` gate.
 
-- `.pre-commit-config.yaml` — declares the local gates:
+- `.pre-commit-config.yaml` — declares the local gates. Current form (the
+  `files:` filters these two carried until 2026-08-24 are gone; see
+  [commits-touching-only-generated-mirrors-skip-every-pre-commit-hook](../commits-touching-only-generated-mirrors-skip-every-pre-commit-hook/)):
   ```yaml
   - id: sync-plugin-assets
     entry: uv run python scripts/sync_plugin_assets.py
-    files: ^goc/
+    pass_filenames: false
+    always_run: true
   - id: goc-validate
     entry: uv run goc validate
-    files: ^(\.game-of-cards/deck/|goc/|claude-plugin/).*$
+    pass_filenames: false
+    always_run: true
   ```
 
 - `AGENTS.md` (lines 22-31, "Common commands") documents
@@ -231,3 +235,4 @@ tag once verified, not flip it to a non-canonical opposite).
 ## Related
 
 - [ci-skips-deck-validation-after-deck-moved-to-game-of-cards-directory](../ci-skips-deck-validation-after-deck-moved-to-game-of-cards-directory/) — the CI half of the missing safety net. Fixing only this card still leaves CI silent on drift; both are needed.
+- [commits-touching-only-generated-mirrors-skip-every-pre-commit-hook](../commits-touching-only-generated-mirrors-skip-every-pre-commit-hook/) (closed 2026-08-24) — the second, independent reason the gates did not fire. Even on a clone where `pre-commit install` HAS been run, every hook was gated on a `files:` regex narrower than the tree it checks, so a commit confined to a generated mirror was reported `(no files to check) Skipped`. That also constrains fix proposal (B) above: `pre-commit run --from-ref HEAD~1 --to-ref HEAD` is a changed-files run and would have been filtered out by exactly the same patterns. The four hooks are now `always_run: true`, so (B) is viable where it previously was not — but (A), installing the hooks, remains the recommendation here.

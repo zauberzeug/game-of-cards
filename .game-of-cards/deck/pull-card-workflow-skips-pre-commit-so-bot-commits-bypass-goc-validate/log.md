@@ -58,3 +58,9 @@ check that the declared hooks pass over the pushed range regardless of who
 committed).
 
 No status change: this card stays `open` at `human_gate: decision`.
+
+## 2026-08-24T05:45:00Z: cross-referenced the second pre-commit bypass
+
+Added [commits-touching-only-generated-mirrors-skip-every-pre-commit-hook](../commits-touching-only-generated-mirrors-skip-every-pre-commit-hook/) to `## Related`. That card found that the hooks declined to run even when installed: each was `pass_filenames: false` (a whole-tree check) yet gated on a `files:` regex covering only part of the tree, so a commit confined to `codex-plugin/`, `openclaw-plugin/`, `.claude/skills/`, `.claude/hooks/` or `.codex/skills/` matched nothing and pre-commit printed `(no files to check) Skipped` for all four. It landed `always_run: true` on every hook.
+
+This does not close the present card — the workflow still never runs pre-commit at all — but it does change the shape of option (B) in the decision, which is a changed-files run and was subject to the same filtering. No status or gate change here.
