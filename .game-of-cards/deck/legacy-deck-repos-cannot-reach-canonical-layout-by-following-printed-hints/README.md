@@ -37,7 +37,7 @@ no documented exit.
           ...
   ```
 
-- `goc/install.py:1665-1833` — `upgrade()` never migrates the deck tree:
+- `goc/install.py:1693-1861` — `upgrade()` never migrates the deck tree:
   `_find_installed_deck_dir` (`goc/install.py:455-463`) resolves the legacy
   `deck/`, the sentinel is re-stamped *there*
   (`goc/install.py:1825`), and `_sync_game_of_cards_config(...,

@@ -50,3 +50,41 @@ recorded as A, non-binding, because it is the only option under which a cold
 reader can tell whether the cite in front of them is still true.
 
 No code changed. `uv run goc validate` clean.
+
+## 2026-08-24 — hygiene pass: the one-week decay rate reproduced (71%, was 69%)
+
+Ran `reproduce.py` at HEAD before landing that day's repair commit, so the
+measurement is of `f290f5f7`'s decay rather than of the pass measuring itself.
+
+```
+f290f5f7f     7d    195/273   ( 71%)
+69e1e4f22    13d    246/329   ( 75%)
+9fa3a2421   110d     60/60    (100%)
+```
+
+`f290f5f7` is 71% decayed at seven days — the same age at which `69e1e4f2`
+measured 69%. That is the load-bearing addition: the original filing had one
+datapoint at one week, so 69% could have been a bad week. Two independent
+passes decaying identically seven days apart makes ~70%-at-one-week the
+steady-state rate. `goc/engine.py` grew 6979 → 7093 and `goc/install.py`
+1838 → 1866 over the interval, with no refactor involved.
+
+The residue also reproduced in shape and size. This pass repaired 286
+occurrences across 83 cards and declined: 126 trivial anchors, 89 ambiguous
+matches, 44 absent anchors, 1 ambiguous path, and 153 range cites where one
+endpoint was unsafe (the recipe rewrites neither endpoint in that case, per
+`reference.md` § Citation anchor check). The 2026-08-17 pass declined 236 of
+the same three kinds. So the decline residue is a property of the scheme, not
+of a given pass's diligence — which is the argument the `## Decision
+required` options are priced against.
+
+Two of this pass's declined anchors turned out to matter beyond citation
+hygiene: the absent-anchor bucket is what surfaced that two parked
+decision-gated cards had been describing an already-fixed defect for two
+months. Recorded here because it is evidence for Option A specifically — an
+absent anchor is the only signal in the current scheme that says "re-read
+this card", and it only fires by accident. Filed as
+`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`.
+
+README dashboard rewritten in place with the new datapoint. Gate and status
+unchanged; no code changed.

@@ -1,6 +1,6 @@
 ---
 title: waiting-flag-filters-on-waiting-on-field-not-the-impediment-overlay
-summary: "`goc --waiting` filters with `t.waiting_on is not None`, so a card deferred via `goc wait --until <future>` with no `--reason` (a bare `waiting_until`, which `waiting_impedes` treats as an active `deferred` overlay and the board flags ⏳) is invisible in the one view meant to surface impeded work. The fix needs a small decision: filter on overlay-field-presence (matches the help text) or on the `waiting_impedes` predicate (matches --ready / the board)."
+summary: "FIXED IN CODE, AWAITING RATIFICATION — and the shipped answer is this card's Option B, not the Option A it recommended. `goc --waiting` no longer filters on `t.waiting_on is not None`; commit 91d40320 (2026-06-24) routed it through the `waiting_impedes` predicate and fd34c7cc wrapped that in `live_impeded`. So the bare-`waiting_until` deferral this card was filed about is now visible, and the elapsed-`waiting_until` case this card warned Option B would drop is now dropped. Pinned by tests/test_waiting_filter_status_scope.py. The gate blocks any autonomous close, so a human `goc decide` is the one action left."
 status: open
 stage: null
 contribution: medium
@@ -22,35 +22,50 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:3330-3331`.
+Re-resolved at HEAD on 2026-08-24; the cite this card was filed with is dead.
 
-## What's broken
+- Filter: `goc/engine.py:4257` — now `live_impeded(t, include_drafts=...)`
+- Live-impediment wrapper: `goc/engine.py:2695` (`live_impeded`)
+- Impedance predicate: `goc/engine.py:2646` (`waiting_impedes`)
+- Flag help text: `goc/engine.py:3862`
+- Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
+
+## What was broken, and what the code does now
+
+The filter used to check one overlay field:
 
 ```python
 if getattr(args, "waiting", False):
     filtered = [t for t in filtered if t.waiting_on is not None]
 ```
 
-The `--waiting` flag is documented (engine.py:3013) as:
+and the help text described that field rather than the predicate. The
+three-axis stuck model defines the stored impediment overlay as `waiting_on`
+set **or** a bare `waiting_until`, so a card deferred with `goc wait <title>
+--until <future-date>` and **no** `--reason` was hidden from `--ready`,
+flagged `⏳` on the board, and yet omitted from `goc --waiting` — the one
+view whose purpose is to surface impeded work.
 
-> Filter to cards carrying a waiting_on overlay.
+**That code is gone.** `goc/engine.py:4257` now reads:
 
-But the three-axis stuck model defines the stored impediment overlay as
-`waiting_on` set **or** a bare `waiting_until` — `waiting_impedes`
-(engine.py:2646) and its docstring state that "A `waiting_until` in the
-future implies a `deferred` wait" and hides the card from queues. A card
-deferred with `goc wait <title> --until <future-date>` and **no** `--reason`
-therefore:
+```python
+rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
+```
 
-- has `waiting_on is None` but `waiting_until` set,
-- is hidden from `--ready` (because `waiting_impedes` returns True),
-- is flagged `⏳` on the board,
-- yet is **omitted** from `goc --waiting` — the one view whose purpose is to
-  surface impeded/waiting work.
+and the help text (`goc/engine.py:3862`) reads "Filter to cards with an
+active impediment overlay (a waiting_on reason or an unelapsed
+waiting_until)." The bare-deferral card this was filed about is returned.
 
-So a genuinely-impeded deferred card is invisible exactly where an operator
-goes to find impeded cards. The `--waiting` filter has drifted from the
-engine's own `waiting_impedes` predicate that `--ready` and the board use.
+**The fix took Option B, which this card did not recommend.** Option A
+(overlay-field-presence) was the recommendation precisely because it is a
+strict superset that drops nothing; the shipped `live_impeded` reading is
+Option B plus two further exclusions (terminal status, draft scaffold). So
+the second case this card identified is now live behaviour: a card whose
+`waiting_on` is set but whose `waiting_until` has **elapsed** no longer
+appears under `--waiting`. That is the SLE-escalation view the card argued an
+operator most wants; `validate_waiting_overlay` is the surface that still
+carries it. Ratifying this card means accepting that trade, and that is the
+substance of the decision below — not the bare-deferral bug, which is fixed.
 
 ## Reachability path
 
@@ -80,6 +95,12 @@ semantics should stay consistent between the two.
 
 ## Decision required
 
+**Reduced on 2026-08-24 to: ratify Option B, or restore Option A.** The code
+already ships Option B. Nothing is undecided in the engine; what is missing
+is a human's name on a semantics that was chosen by a fix for a different
+card. No autonomous pass may supply it — `goc status ... superseded` refuses
+while `human_gate: decision` and points at `goc decide`.
+
 **Q: What should `goc --waiting` filter on?**
 
 - **Option A (overlay-field-presence):** `waiting_on is not None or waiting_until is not None`.
@@ -90,6 +111,17 @@ semantics should stay consistent between the two.
   elapsed-wait cards (which are arguably the ones an operator most wants to see
   for SLE escalation).
 
-Recommendation: **Option A** — the flag's name and help are about *carrying
-the overlay*, and elapsed-wait surfacing is exactly what `--waiting` should
-keep showing. Confirm before implementing.
+Recommendation at filing: **Option A** — the flag's name and help are about
+*carrying the overlay*, and elapsed-wait surfacing is exactly what
+`--waiting` should keep showing.
+
+**What actually shipped: Option B**, in commit `91d40320` (2026-06-24),
+which closed the gate-free card
+[goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue](../goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue/)
+— filed 2026-06-24, five days after this card, for the same defect — without
+referencing this card or writing a supersession edge. The help text was
+rewritten to match Option B rather than Option A, so the "matches the help
+text literally" argument for A no longer holds: the help text has moved. If
+A is still preferred, this card is a live change request against shipped
+behaviour, not a bug report. The accumulation pattern is filed separately as
+[parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/).

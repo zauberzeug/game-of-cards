@@ -31,7 +31,7 @@ asked for.
 
 - `goc/install.py:51` — `AGENT_SIGNAL_PATHS` (the signal table)
 - `goc/install.py:398` — `_detect_agent_surfaces` (consumes the table)
-- `goc/install.py:1525` — install default flow: `detected_agents = _detect_agent_surfaces(target, ...)`
+- `goc/install.py:1551` — install default flow: `detected_agents = _detect_agent_surfaces(target, ...)`
 
 ## What's broken
 
@@ -75,7 +75,7 @@ detected as Claude too.
 ### The maintainers already know AGENTS.md is a false signal
 
 The OpenClaw-plugin branch of `install()` guards against exactly this, but only
-for that one context (`goc/install.py:1517`):
+for that one context (`goc/install.py:1543`):
 
 ```python
 if not explicit_agents and _is_openclaw_plugin_context():

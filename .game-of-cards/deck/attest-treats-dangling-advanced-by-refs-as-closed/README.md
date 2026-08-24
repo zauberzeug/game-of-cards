@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5492-5510` — `_run_derived_check` for the
+`goc/engine.py:5574-5592` — `_run_derived_check` for the
 `advanced-by-closed` layer-3 closure check.
 
 ## What's broken
@@ -35,7 +35,7 @@ card in the deck at all, so none of them are "closed" in any
 meaningful sense.
 
 ```python
-# goc/engine.py:5494-5510
+# goc/engine.py:5576-5592
 if name == "advanced-by-closed":
     advanced_by = card.frontmatter.get("advanced_by") or []
     if not isinstance(advanced_by, list):

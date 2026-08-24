@@ -147,7 +147,7 @@ peer card:
 1. **Tighten `validate_card`'s tags loop only.** Add an
    `isinstance(tag, str)` check inside the loop and emit a typed
    message. Smallest diff. Other consumers (e.g. `validate_tag_filters`
-   at engine.py:3106, `_cmd_new` at engine.py:6034) receive tags from
+   at engine.py:3106, `_cmd_new` at engine.py:6145) receive tags from
    argparse so they're already string-typed; the only at-risk consumer
    is the validator itself.
 

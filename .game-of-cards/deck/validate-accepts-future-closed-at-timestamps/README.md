@@ -88,9 +88,9 @@ DEFECT: validator accepts closed_at ~73 years in the future
 ## Why it matters
 
 **Reachability path.** The engine itself always writes `closed_at` via
-`_utc_now_iso()` (`_cmd_done` at engine.py:4720; `_cmd_status` for
-`disproved`/`superseded` at engine.py:4818; `_auto_populate_worker`-adjacent
-flips at engine.py:5832). So the offending input is **not** produced by
+`_utc_now_iso()` (`_cmd_done` at engine.py:4802; `_cmd_status` for
+`disproved`/`superseded` at engine.py:4900; `_auto_populate_worker`-adjacent
+flips at engine.py:5943). So the offending input is **not** produced by
 shipping code in normal operation. The realistic input paths are:
 
 1. **Hand-edit.** Agents and humans hand-edit frontmatter when migrating,

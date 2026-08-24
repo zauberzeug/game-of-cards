@@ -23,7 +23,7 @@ exercised this round. Park with a falsification recipe.
 
 ## Hypothesis (file:line)
 
-`goc/engine.py:5517-5530` (`_run_derived_check`, `log-md-closure-entry`):
+`goc/engine.py:5599-5612` (`_run_derived_check`, `log-md-closure-entry`):
 
 ```python
 date_prefix = _date_part(today)
@@ -36,7 +36,7 @@ if pattern.search(log_path.read_text()):
 return False, f"no '## {date_prefix} — Closure' section"
 ```
 
-`today` is `_utc_now_iso()` captured at attest time (engine.py:5592). The
+`today` is `_utc_now_iso()` captured at attest time (engine.py:5703). The
 pattern only matches a closure header bearing **today's** date. A closure
 entry written just before UTC midnight and attested after it carries a
 `## <yesterday> — Closure` header, which the `## <today>` pattern misses —

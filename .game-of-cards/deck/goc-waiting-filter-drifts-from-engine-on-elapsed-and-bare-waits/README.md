@@ -1,6 +1,6 @@
 ---
 title: goc-waiting-filter-drifts-from-engine-on-elapsed-and-bare-waits
-summary: "`goc --waiting` filters with `t.waiting_on is not None` (engine.py:2846), but the engine's authoritative `waiting_impedes` predicate (engine.py:2646) walks a four-cell matrix over both `waiting_on` AND `waiting_until`. The CLI flag disagrees with the engine in two cells: it INCLUDES cards whose `waiting_until` has elapsed (engine has already resurfaced them) and it OMITS bare deferrals where only `waiting_until` is set. Same drift class as the recent session-start `_is_impeded` precision fix and the just-filed `standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits` — except this time the engine's own CLI lies about its own impedance predicate."
+summary: "FIXED IN CODE, AWAITING RATIFICATION. `goc --waiting` used to filter with `t.waiting_on is not None`, disagreeing with the engine's `waiting_impedes` predicate in two cells of the four-cell overlay matrix. Commit 91d40320 (2026-06-24) aligned the flag with the predicate while closing a later, gate-free card for the same defect; commit fd34c7cc then routed it through `live_impeded`. Re-measured 2026-08-24: this card's own reproduce.py now reports zero false positives and zero false negatives, and tests/test_waiting_filter_status_scope.py pins the matrix against the CLI. What remains is only the record — the shipped semantics are this card's Option A, which the card recommended. The gate blocks any autonomous close, so a human `goc decide` is the one action left."
 status: open
 stage: null
 contribution: medium
@@ -22,23 +22,27 @@ definition_of_done: |
 
 ## Location
 
-- Filter: `goc/engine.py:2846`
+Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
+had drifted or died):
+
+- Filter: `goc/engine.py:4257` — now `live_impeded(t, include_drafts=...)`
+- Live-impediment wrapper: `goc/engine.py:2695` (`live_impeded`)
 - Authoritative impedance predicate: `goc/engine.py:2646` (`waiting_impedes`)
-- Flag help text: `goc/engine.py:2545-2546`
+- Flag help text: `goc/engine.py:3862`
+- Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
+  (`test_waiting_matches_impedes_predicate`)
 
-## What's broken
+## What was broken, and what the code does now
 
-The `--waiting` filter at `engine.py:2845-2846` checks one overlay
-field:
+The `--waiting` filter used to check one overlay field:
 
 ```python
 if getattr(args, "waiting", False):
     filtered = [t for t in filtered if t.waiting_on is not None]
 ```
 
-The engine's authoritative `waiting_impedes` predicate at
-`engine.py:2646` walks a four-cell matrix over BOTH overlay fields
-(`waiting_on` and `waiting_until`) — quoting its docstring:
+The engine's authoritative `waiting_impedes` predicate (`goc/engine.py:2646`)
+walks a matrix over BOTH overlay fields — quoting its docstring:
 
 > A `waiting_on` reason without an elapsed `waiting_until` means the
 > block is ongoing (no expected return date, or the date is in the
@@ -51,42 +55,215 @@ The engine's authoritative `waiting_impedes` predicate at
 > queue with no manual action — the elapsed-wait is then surfaced
 > separately by `validate_waiting_overlay` as an SLE escalation signal.
 
-| `waiting_on` | `waiting_until`        | engine: impeded?       | `--waiting` says |
-|--------------|------------------------|------------------------|------------------|
-| set          | absent                 | yes (open-ended)       | yes ✓            |
-| set          | future                 | yes                    | yes ✓            |
-| set          | **elapsed**            | **no** (resurfaces)    | **yes** ✗        |
-| unset        | **future**             | **yes** (deferred)     | **no**  ✗        |
-| unset        | elapsed                | no                     | no ✓             |
-| unset        | absent                 | no                     | no ✓             |
+**That code is gone.** `goc/engine.py:4257` now reads:
 
-The flag help text at `engine.py:2545-2546` also frames the flag in
-terms of the storage field, not the predicate:
+```python
+rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
+```
+
+`live_impeded` (`goc/engine.py:2695`) is `waiting_impedes` plus two
+exclusions the read surfaces all need (terminal status, draft scaffold), so
+the flag and the predicate can no longer disagree. The help text moved with
+it (`goc/engine.py:3862`):
 
 ```python
 parser.add_argument("--waiting", action="store_true",
-                    help="Filter to cards carrying a waiting_on overlay.")
+                    help="Filter to cards with an active impediment overlay "
+                         "(a waiting_on reason or an unelapsed waiting_until).")
 ```
 
-So the help text is consistent with the buggy code, not with the
-contract everyone else in the codebase uses for "what's impeded."
+The matrix this card was filed on now agrees in every cell:
+
+| `waiting_on` | `waiting_until`        | engine: impeded?       | `--waiting` says | at filing |
+|--------------|------------------------|------------------------|------------------|-----------|
+| set          | absent                 | yes (open-ended)       | yes ✓            | yes ✓     |
+| set          | future                 | yes                    | yes ✓            | yes ✓     |
+| set          | **elapsed**            | **no** (resurfaces)    | **no** ✓         | yes ✗     |
+| unset        | **future**             | **yes** (deferred)     | **yes** ✓        | no ✗      |
+| unset        | elapsed                | no                     | no ✓             | no ✓      |
+| unset        | absent                 | no                     | no ✓             | no ✓      |
 
 ## Empirical evidence
 
-`reproduce.py` builds a temp deck with one card per matrix cell, runs
-`uv run goc --waiting` against it, and compares the output to the set
-derived from `waiting_impedes` (via the JSON `ready` field plus the
-overlay fields). Output:
+This card's own `reproduce.py`, re-run at HEAD on 2026-08-24:
 
 ```
-goc --waiting             : ['a-elapsed-with-reason', 'c-reason-only']
+goc --waiting             : ['b-future-bare-deferral', 'c-reason-only']
 waiting_impedes ground truth: ['b-future-bare-deferral', 'c-reason-only']
 
-false-positive (--waiting includes, engine has resurfaced): ['a-elapsed-with-reason']
-false-negative (engine impedes, --waiting omits)         : ['b-future-bare-deferral']
+false-positive (--waiting includes, engine has resurfaced): []
+false-negative (engine impedes, --waiting omits)         : []
 
-DRIFT REPRODUCED
+(unexpected — investigate)
 ```
+
+Both drift directions are empty. The script still exits 1, because it was
+written to assert `DRIFT REPRODUCED` and has no success branch — its exit
+code is inverted relative to DoD item 1, which asks it to exit zero when the
+output matches. That is a defect in the witness, not in the engine; the two
+title lists above are the measurement, and they are identical.
+
+`tests/test_waiting_filter_status_scope.py` independently pins the two cells
+this card named, driving the real CLI over a temp deck:
+`test_waiting_matches_impedes_predicate` asserts `bare-deferral` IS returned
+and `elapsed-wait` is NOT.
+
+## Who fixed it, and when
+
+Commit `91d40320` (2026-06-24) — *"fix(engine): align goc --waiting with the
+waiting_impedes predicate"* — closed
+[goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue](../goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue/),
+a card filed at `human_gate: none` on 2026-06-24 and closed the same day for
+the same defect this card had been describing since 2026-05-29. Commit
+`fd34c7cc` (2026-07-27) then extracted `live_impeded` and routed the flag
+through it. Neither commit referenced this card, and no supersession edge was
+written, so this card has advertised a fixed defect for 61 days. That
+accumulation pattern is filed separately as
+[parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/).
+
+## Why it mattered
+
+Three known consumers of impedance information each re-derived the predicate
+from one input field instead of walking the matrix:
+
+- `session-start` hook `_is_impeded` (fixed in commits c191410 and
+  64361be — elapsed handling, full-precision datetime comparison).
+- `standup` skill body filter (open card
+  [`standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits`](../standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits/)).
+- **And the engine itself**, via `goc --waiting` (this card — since fixed).
+
+That last one was the load-bearing surface: every other consumer that shells
+out to `goc --waiting` — skill bodies, scripts, user documentation —
+inherited the drift transitively. Both symptoms are now gone:
+
+1. A card with `waiting_on: external, waiting_until: <past>` used to show up
+   under `goc --waiting` while `goc --ready` would autonomously grab it,
+   so the two flags lied about each other. It is now excluded.
+2. A card with only `waiting_until: 2030-01-01` (a bare deferral, no reason)
+   used to be invisible to the flag named after the overlay. It is now
+   returned.
+
+The principle the fix settled: `--waiting` is expressed by calling the
+function whose job is exactly that judgment, rather than restating it.
+The `standup` sibling above is still open, so the drift class is not
+retired — only the engine's own copy of it.
+
+## Reachability path
+
+`goc --waiting` is the documented surface that GoC's `--help` output exposes
+for "show me impeded cards", and both drift directions were reachable
+without contrived input — a `goc wait <title> --until <future>` with no
+`--reason`, and any card whose `waiting_until` passed while the human was
+away. Kept here because it is the reachability record for the closed defect,
+and because it is the input shape a ratifying reader should re-run.
+
+## Decision required") is recorded in `log.md` with the principle invoked.
+  - [ ] MECHANICAL: `--waiting` help text in `_build_parser` (`engine.py:2545-2546`) reads consistently with the chosen interpretation.
+  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+---
+
+# `goc --waiting` filter drifts from the engine on elapsed and bare waits
+
+## Location
+
+Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
+had drifted or died):
+
+- Filter: `goc/engine.py:4257` — now `live_impeded(t, include_drafts=...)`
+- Live-impediment wrapper: `goc/engine.py:2695` (`live_impeded`)
+- Authoritative impedance predicate: `goc/engine.py:2646` (`waiting_impedes`)
+- Flag help text: `goc/engine.py:3862`
+- Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
+  (`test_waiting_matches_impedes_predicate`)
+
+## What was broken, and what the code does now
+
+The `--waiting` filter used to check one overlay field:
+
+```python
+if getattr(args, "waiting", False):
+    filtered = [t for t in filtered if t.waiting_on is not None]
+```
+
+The engine's authoritative `waiting_impedes` predicate (`goc/engine.py:2646`)
+walks a matrix over BOTH overlay fields — quoting its docstring:
+
+> A `waiting_on` reason without an elapsed `waiting_until` means the
+> block is ongoing (no expected return date, or the date is in the
+> future) and the card is hidden from queues.
+>
+> A `waiting_until` in the future implies a `deferred` wait and
+> hides the card until that instant passes.
+>
+> When `waiting_until` is in the past (elapsed), the card RE-ENTERS the
+> queue with no manual action — the elapsed-wait is then surfaced
+> separately by `validate_waiting_overlay` as an SLE escalation signal.
+
+**That code is gone.** `goc/engine.py:4257` now reads:
+
+```python
+rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
+```
+
+`live_impeded` (`goc/engine.py:2695`) is `waiting_impedes` plus two
+exclusions the read surfaces all need (terminal status, draft scaffold), so
+the flag and the predicate can no longer disagree. The help text moved with
+it (`goc/engine.py:3862`):
+
+```python
+parser.add_argument("--waiting", action="store_true",
+                    help="Filter to cards with an active impediment overlay "
+                         "(a waiting_on reason or an unelapsed waiting_until).")
+```
+
+The matrix this card was filed on now agrees in every cell:
+
+| `waiting_on` | `waiting_until`        | engine: impeded?       | `--waiting` says | at filing |
+|--------------|------------------------|------------------------|------------------|-----------|
+| set          | absent                 | yes (open-ended)       | yes ✓            | yes ✓     |
+| set          | future                 | yes                    | yes ✓            | yes ✓     |
+| set          | **elapsed**            | **no** (resurfaces)    | **no** ✓         | yes ✗     |
+| unset        | **future**             | **yes** (deferred)     | **yes** ✓        | no ✗      |
+| unset        | elapsed                | no                     | no ✓             | no ✓      |
+| unset        | absent                 | no                     | no ✓             | no ✓      |
+
+## Empirical evidence
+
+This card's own `reproduce.py`, re-run at HEAD on 2026-08-24:
+
+```
+goc --waiting             : ['b-future-bare-deferral', 'c-reason-only']
+waiting_impedes ground truth: ['b-future-bare-deferral', 'c-reason-only']
+
+false-positive (--waiting includes, engine has resurfaced): []
+false-negative (engine impedes, --waiting omits)         : []
+
+(unexpected — investigate)
+```
+
+Both drift directions are empty. The script still exits 1, because it was
+written to assert `DRIFT REPRODUCED` and has no success branch — its exit
+code is inverted relative to DoD item 1, which asks it to exit zero when the
+output matches. That is a defect in the witness, not in the engine; the two
+title lists above are the measurement, and they are identical.
+
+`tests/test_waiting_filter_status_scope.py` independently pins the two cells
+this card named, driving the real CLI over a temp deck:
+`test_waiting_matches_impedes_predicate` asserts `bare-deferral` IS returned
+and `elapsed-wait` is NOT.
+
+## Who fixed it, and when
+
+Commit `91d40320` (2026-06-24) — *"fix(engine): align goc --waiting with the
+waiting_impedes predicate"* — closed
+[goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue](../goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue/),
+a card filed at `human_gate: none` on 2026-06-24 and closed the same day for
+the same defect this card had been describing since 2026-05-29. Commit
+`fd34c7cc` (2026-07-27) then extracted `live_impeded` and routed the flag
+through it. Neither commit referenced this card, and no supersession edge was
+written, so this card has advertised a fixed defect for 61 days. That
+accumulation pattern is filed separately as
+[parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/).
 
 ## Why it matters
 
@@ -137,7 +314,20 @@ real decks — both directions are reachable without contrived input:
 
 ## Decision required
 
-Two credible fixes exist; they differ on what `--waiting` *means*.
+**Reduced to a ratification on 2026-08-24.** The code already implements
+Option A: the filter calls the predicate and the help text describes an
+active impediment overlay. Nothing here is undecided in the engine — what is
+missing is a human's name on the semantics that shipped, which DoD item 3
+requires and which no autonomous pass may supply (`goc status ... superseded`
+refuses while `human_gate: decision`, pointing at `goc decide`).
+
+The one action left: `goc decide` this card in favour of Option A, then close
+it — or, since a later card actually delivered the fix, supersede it via
+`goc status <this card> superseded --by goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue`.
+Option B remains on the record below only so that ratifying A is a choice
+rather than a default.
+
+Two credible fixes existed; they differed on what `--waiting` *means*.
 
 ### Option A — Align with `waiting_impedes` (impedance semantics)
 
@@ -195,11 +385,12 @@ escalation view, but in CLI flag form rather than via `goc validate`.
 
 ### Recommendation
 
-Option A reads as the obvious choice given the engine's own internal
-shape — the help text reflects a stale framing of "what an overlay
-is" (the original implementation predates the `waiting_until`
-addition). But the breaking risk for downstream scripts is unknown,
-so the gate is `decision` until the human picks.
+Option A, and it is what shipped. The help text at filing reflected a stale
+framing of "what an overlay is" (the original implementation predated the
+`waiting_until` addition); commit `91d40320` replaced both the filter and the
+help text with the predicate reading. The breaking risk this card flagged as
+unknown has since been absorbed in production for 61 days with no reported
+fallout, and `tests/test_waiting_filter_status_scope.py` pins the semantics.
 
 ## Artifacts
 

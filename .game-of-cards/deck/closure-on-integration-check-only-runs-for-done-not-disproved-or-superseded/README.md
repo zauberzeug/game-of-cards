@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded — does the policy extend to all terminal transitions, or stay scoped to `done`?
   - [ ] TDD: reproduce.py exits zero (the chosen behaviour fires consistently on the three terminal transitions per the decision)
   - [ ] MECHANICAL: the relevant call site(s) in `goc/engine.py` updated (extend → call `_enforce_closure_on_integration_or_exit` from the `_cmd_status` terminal branch; keep → rename / re-doc the helper so its scope is unambiguous)
-  - [ ] MECHANICAL: docstring at `goc/engine.py:5064` and kickoff doc at `goc/templates/skills/kickoff/reference.md:72-74` updated to match the chosen scope
+  - [ ] MECHANICAL: docstring at `goc/engine.py:5146` and kickoff doc at `goc/templates/skills/kickoff/reference.md:72-74` updated to match the chosen scope
   - [ ] TDD: regression test in `tests/` covering the chosen behaviour for `done`, `disproved`, and `superseded` flips under `closure_on_integration: true`
 ---
 
@@ -22,10 +22,10 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4716` — `_cmd_done` calls `_enforce_closure_on_integration_or_exit(title)`.
-- `goc/engine.py:4803` — `_cmd_done_bundle` calls the same helper inside its bundle loop.
+- `goc/engine.py:4798` — `_cmd_done` calls `_enforce_closure_on_integration_or_exit(title)`.
+- `goc/engine.py:4885` — `_cmd_done_bundle` calls the same helper inside its bundle loop.
 - `goc/engine.py:4302-4303` — `_cmd_status` enters the terminal-status branch (`if new_status in TERMINAL_STATUSES`) and calls *only* `_enforce_no_inbound_superseded_by_or_exit(title, new_status)`. The integration check is not invoked here.
-- `goc/engine.py:5064-5070` — helper docstring framing.
+- `goc/engine.py:5146-5070` — helper docstring framing.
 - `goc/templates/skills/kickoff/reference.md:72-74` — user-facing description of the workflow knob.
 
 ## What's broken
@@ -138,7 +138,7 @@ flipping to A is a behaviour change consumers may not expect.
 **If A:**
 
 ```python
-# goc/engine.py:5831
+# goc/engine.py:5942
 if new_status in TERMINAL_STATUSES:
     _enforce_no_inbound_superseded_by_or_exit(title, new_status)
     _enforce_closure_on_integration_or_exit(title)

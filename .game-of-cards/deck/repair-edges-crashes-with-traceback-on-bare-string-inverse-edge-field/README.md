@@ -32,7 +32,7 @@ same crash hits `goc advance <child> --by <parent>` (and the other
 
 - `goc/engine.py:4906-4916` — `_add_to_list_field` (the repairer; raises).
 - `goc/engine.py:4951-4966` — `_repair_edge_diff` (calls it in the dry-run preview).
-- `goc/engine.py:6113-6126` — `_mutate_pair` (calls it via `--apply`, `advance`, `new`, `superseded --by`).
+- `goc/engine.py:6224-6237` — `_mutate_pair` (calls it via `--apply`, `advance`, `new`, `superseded --by`).
 - `goc/engine.py:2041-2059` — `find_half_edges` (the detector; tolerates the bare string).
 
 ## What's broken
@@ -52,7 +52,7 @@ if t.title not in inverse_list:
 ```
 
 The REPAIRER refuses the very same shape with an uncaught `raise`
-(`engine.py:6091-6096`):
+(`engine.py:6202-6207`):
 
 ```python
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
@@ -100,7 +100,7 @@ CONFIRMED: the validator-recommended repair path raises ValueError('advanced_by:
 Live CLI confirmation against a throwaway deck (`card-a.advances: [card-b]`,
 `card-b.advanced_by: card-a` as a bare string):
 
-- `goc repair-edges` (dry run) → traceback ending `ValueError: advanced_by: not a list` at `engine.py:6139 → 4911`.
+- `goc repair-edges` (dry run) → traceback ending `ValueError: advanced_by: not a list` at `engine.py:6250 → 4911`.
 - `goc repair-edges --apply` → same traceback via `_cmd_repair_edges → _mutate_pair → 4911`.
 - `goc advance card-b --by card-a` → same `ValueError` traceback.
 

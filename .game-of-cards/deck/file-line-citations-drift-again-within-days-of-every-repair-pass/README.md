@@ -43,15 +43,18 @@ The rate is the finding. This is not slow rot measured over quarters:
 
 | Repair pass | Age | Citations it wrote that are wrong at HEAD |
 |---|---|---|
-| `9fa3a242` deck move | 103 days | 60 / 60 (100%) |
-| `69e1e4f2` first anchored repair | 7 days | 227 / 329 (69%) |
-| `f290f5f7` this pass | 0 days | 0 / 273 (0%) |
+| `9fa3a242` deck move | 110 days | 60 / 60 (100%) |
+| `69e1e4f2` first anchored repair | 13 days | 246 / 329 (75%) |
+| `f290f5f7` second anchored repair | 7 days | 195 / 273 (71%) |
 
-Two thirds of a repair pass's output was wrong again inside a week. The
-cause is unremarkable: `goc/engine.py` grew from 6731 to 6979 lines over
-that span, and 181 of the failures are in that one file. No refactor,
-no reorganization — just a week of ordinary work on the most-cited file in
-the repo.
+**The rate reproduced.** Measured 2026-08-24, `f290f5f7` is 71% decayed at
+exactly the age at which `69e1e4f2` measured 69%. Two independent passes,
+seven days apart, decaying at the same rate is the finding that the original
+single datapoint could not establish: ~70% at one week is the steady-state
+behaviour of a bare line number in this repo, not an artefact of one unusual
+week. `goc/engine.py` grew 6979 → 7093 lines and `goc/install.py` 1838 →
+1866 over the interval — no refactor, no reorganization, just a week of
+ordinary work on the two most-cited files in the repo.
 
 So a citation's useful life is shorter than the interval between the passes
 that maintain it. Between passes the deck is in its normal state, which is
@@ -62,9 +65,13 @@ produces confident misreading rather than a visible error.
 The repair itself is not cheap, either, and most of it cannot be automated.
 The 2026-08-17 pass repaired 320 cites and **declined 236** — 112 whose
 anchor line is too short to match uniquely, 81 that match in more than one
-place, 42 whose text no longer exists anywhere. Those 236 are not a backlog
-that shrinks; they are the permanent residue of a scheme that has to
-re-derive an address that was never stable.
+place, 42 whose text no longer exists anywhere. The 2026-08-24 pass repaired
+286 occurrences across 83 cards and declined a residue of the same shape and
+size: 126 trivial anchors, 89 ambiguous, 44 absent, 1 ambiguous path, plus
+153 range cites where one endpoint was unsafe and the recipe therefore
+rewrites neither. Two passes, near-identical residue — those declines are not
+a backlog that shrinks; they are the permanent residue of a scheme that has
+to re-derive an address that was never stable.
 
 ## Empirical evidence
 
@@ -72,21 +79,26 @@ re-derive an address that was never stable.
 how much of its output survives at HEAD. Measuring per pass rather than
 "right now" keeps the number meaningful immediately after a repair:
 
+Re-run 2026-08-24, before that day's repair commit landed:
+
 ```
 Decay of each bulk citation-repair pass, measured at HEAD:
 
   commit       age         decayed   subject
-  f290f5f7f     0d      0/273   (  0%)  chore(deck): hygiene pass — 2026-08-17
-  69e1e4f22     7d    227/329   ( 69%)  chore(deck): hygiene pass — repair 389 drifted file:
-  9fa3a2421   103d     60/60    (100%)  deck: move canonical deck from deck/ to .game-of-car
+  f290f5f7f     7d    195/273   ( 71%)  chore(deck): hygiene pass — 2026-08-17
+  69e1e4f22    13d    246/329   ( 75%)  chore(deck): hygiene pass — repair 389 drifted file:
+  9fa3a2421   110d     60/60    (100%)  deck: move canonical deck from deck/ to .game-of-car
 
-newest pass at least 3 days old: 69e1e4f22, 7 days ago — 227/329 of its citations (69%) are
+newest pass at least 3 days old: f290f5f7f, 7 days ago — 195/273 of its citations (71%) are
 already wrong, budget 25%
-  over that span: goc/engine.py 6731 -> 6979 lines; goc/install.py 1838 -> 1838 lines
+  over that span: goc/engine.py 6979 -> 7093 lines; goc/install.py 1838 -> 1866 lines
 
 DEFECT PRESENT: a bare line number does not survive ordinary code growth, so citation repair
 is permanent recurring work and a reader cannot trust a cite between hygiene passes.
 ```
+
+The 7-day column is now measured twice at two different commits (69% then
+71%), which is what upgrades this from a rate observed once to a rate.
 
 ## Why it matters
 

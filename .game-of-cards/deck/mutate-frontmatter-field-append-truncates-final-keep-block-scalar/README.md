@@ -79,10 +79,10 @@ DEFECT REPRODUCED: appended field wedged inside the keep scalar's trailing blank
 ## Why it matters
 
 Reachability: `goc status <title> active` on a card without a `worker`
-field appends one via `_auto_populate_worker` (`goc/engine.py:5737`) — the
+field appends one via `_auto_populate_worker` (`goc/engine.py:5848`) — the
 routine claim step every pull-card session performs. `goc done` /
 `goc status <t> disproved|superseded` append `closed_at` the same way on
-hand-authored cards lacking the key (`goc/engine.py:4720`, `5310`). The
+hand-authored cards lacking the key (`goc/engine.py:4802`, `5310`). The
 precondition — a `|+` keep scalar as the *final* frontmatter field — is the
 exact shape the closed cards
 [frontmatter-re-drops-trailing-blank-line-of-final-keep-block-scalar](../frontmatter-re-drops-trailing-blank-line-of-final-keep-block-scalar/)

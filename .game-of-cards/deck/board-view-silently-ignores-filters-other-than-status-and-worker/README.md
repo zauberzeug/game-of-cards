@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] TDD: regression test asserts that `goc --ready --board` does NOT render cards whose `human_gate != none` (or carry an active `waiting_on` overlay).
   - [ ] TDD: regression test asserts that `goc --tag <T> --board` only renders cards carrying tag `T`. Add sibling assertions for `--human-gate`, `--contribution`, `--waiting`, `--advances`, `--advanced-by`, and `--closed-since` so the whole filter family is covered by the suite.
   - [ ] PROCESS: decision recorded — should `--board` use the filtered set whenever any filter is passed (drop the `status_filter_explicit or args.worker` gate), keep the "full deck for context" intent only for the no-filter default, or split the difference (e.g. always render every column but cap each column to the filtered set)? `Skill(decide-card)` records the choice in this body.
-  - [ ] MECHANICAL: `engine.py:4182` updated to reflect the chosen rule. Every filter the table renderer honors must reach `render_board` (or be explicitly documented as out-of-scope in `--board`'s help text).
+  - [ ] MECHANICAL: `engine.py:4264` updated to reflect the chosen rule. Every filter the table renderer honors must reach `render_board` (or be explicitly documented as out-of-scope in `--board`'s help text).
   - [ ] TDD: `reproduce.py` exits zero (defect no longer fires — all four `BUG: ...` assertions PASS).
 ---
 
@@ -22,14 +22,14 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4181-4182` — the `--board` branch of `_cmd_default`:
+- `goc/engine.py:4263-4264` — the `--board` branch of `_cmd_default`:
 
   ```python
   if args.board:
       board_cards = filtered if (status_filter_explicit or args.worker) else cards
   ```
 
-- `goc/engine.py:4116` — `status_filter_explicit = bool(args.done_flag or args.status_flag is not None)`.
+- `goc/engine.py:4198` — `status_filter_explicit = bool(args.done_flag or args.status_flag is not None)`.
 
 ## What's broken
 
@@ -158,7 +158,7 @@ renderer.
 ## Fix sketch (Option B)
 
 ```python
-# engine.py:4116 (replace)
+# engine.py:4198 (replace)
 status_filter_explicit = bool(args.done_flag or args.status_flag is not None)
 
 any_filter_explicit = (
@@ -176,7 +176,7 @@ any_filter_explicit = (
     or args.stage_flag
 )
 
-# engine.py:4182 (replace)
+# engine.py:4264 (replace)
 if args.board:
     board_cards = filtered if any_filter_explicit else cards
 ```

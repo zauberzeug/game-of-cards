@@ -163,13 +163,13 @@ writes a *placeholder* DoD (`SCAFFOLD_DOD_PLACEHOLDER`); the real DoD is
 authored afterwards into `README.md`. See `card_is_draft`
 (`goc/engine.py:2575`). A heuristic there would inspect the placeholder
 and find nothing. Any authoring-time detection must hook `_cmd_publish`
-(`goc/engine.py:5879`) — where the authored DoD first reaches the queue,
+(`goc/engine.py:5990`) — where the authored DoD first reaches the queue,
 and where the sibling `is_placeholder_scaffold` guard already lives.
 This is a pure fact about the code and holds under every model.
 
 **Counting `## ` headings in `log.md` is not a usable attempt metric.**
 There is partial precedent for the engine reading log.md as machine
-state (the `log-md-closure-entry` derived check, `goc/engine.py:5517`),
+state (the `log-md-closure-entry` derived check, `goc/engine.py:5599`),
 but that is a *presence check for one well-known heading at one decision
 point*, not a tally over an open vocabulary. Heading formats are already
 heterogeneous — `goc decide` writes `## {ts}: decision recorded`,

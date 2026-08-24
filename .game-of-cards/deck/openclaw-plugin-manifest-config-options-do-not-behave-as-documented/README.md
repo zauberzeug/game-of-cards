@@ -28,9 +28,9 @@ definition_of_done: |
 - `openclaw-plugin/openclaw.plugin.json:31` — `"additionalProperties": false`
 - `openclaw-plugin/openclaw.plugin.json:33-36` — `deck_path`
 - `openclaw-plugin/openclaw.plugin.json:37-41` — `pattern_generalization_check`
-- `openclaw-plugin/index.ts:333-341` — `resolveDeckDir`
+- `openclaw-plugin/index.ts:343-341` — `resolveDeckDir`
 - `openclaw-plugin/index.ts:585-597` — `isEnabled` and its "default off" contract
-- `openclaw-plugin/index.ts:772-777` — the `agent_end` runtime gate
+- `openclaw-plugin/index.ts:782-787` — the `agent_end` runtime gate
 - `openclaw-plugin/README.md:52` — the hook table's stated default
 - `goc/engine.py:121-143` — `_resolve_deck_dir`, the engine's deck resolution
 
@@ -53,7 +53,7 @@ Neither one does what the schema says.
 ```
 
 Nothing reads it. The plugin's own deck resolution hardcodes the path
-(`openclaw-plugin/index.ts:333`):
+(`openclaw-plugin/index.ts:343`):
 
 ```ts
 async function resolveDeckDir(projectDir: string): Promise<string> {
@@ -96,7 +96,7 @@ itself.
 ```
 
 Every other surface says the hook is **off** unless explicitly enabled.
-`openclaw-plugin/index.ts:585-587`:
+`openclaw-plugin/index.ts:595-597`:
 
 ```ts
 // Opt-in (default off): the GoC project config must explicitly enable the
@@ -104,7 +104,7 @@ Every other surface says the hook is **off** unless explicitly enabled.
 // other value leaves it disabled.
 ```
 
-`openclaw-plugin/index.ts:776-777` — the gate short-circuits on anything
+`openclaw-plugin/index.ts:786-787` — the gate short-circuits on anything
 that is not literally `true`:
 
 ```ts

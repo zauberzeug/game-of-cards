@@ -33,8 +33,8 @@ race the claim protocol was designed to stop.
 
 ## Location
 
-- `goc/engine.py:5187` — `if rebase.returncode != 0:` (the only race detection)
-- `goc/engine.py:5223` — `print("  pushed (after rebase)"); return True` (no post-rebase check that the local claim commit survived)
+- `goc/engine.py:5269` — `if rebase.returncode != 0:` (the only race detection)
+- `goc/engine.py:5305` — `print("  pushed (after rebase)"); return True` (no post-rebase check that the local claim commit survived)
 
 ## What's broken
 

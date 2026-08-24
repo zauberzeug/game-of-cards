@@ -24,9 +24,9 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:3969-3975` — `move` subparser. No `--commit` /
+- `goc/engine.py:4036-4042` — `move` subparser. No `--commit` /
   `--no-commit` flags (every other state-mutation verb pair has them).
-- `goc/engine.py:6473-6533` — `_cmd_move`. Calls `git mv` (which
+- `goc/engine.py:6584-6644` — `_cmd_move`. Calls `git mv` (which
   stages the directory rename), then `_move_rewrite_tracked_files`
   (which mutates tracked text files across the repo with no staging),
   then appends a `## <iso>: renamed from <old>` entry to the renamed

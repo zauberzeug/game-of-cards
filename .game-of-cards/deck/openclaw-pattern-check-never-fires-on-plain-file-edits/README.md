@@ -24,7 +24,7 @@ definition_of_done: |
 
 ## Location
 
-`openclaw-plugin/index.ts:400` — `CODE_MUTATING_TOOLS`.
+`openclaw-plugin/index.ts:410` — `CODE_MUTATING_TOOLS`.
 `openclaw-plugin/index.ts:784-791` — the `agent_end` handler's `mutating`
 predicate that reads it.
 
@@ -36,7 +36,7 @@ injects a self-assessment reminder. It makes that decision by matching
 **tool names**, and it treats the two kinds of mutating tool inconsistently:
 
 ```ts
-// openclaw-plugin/index.ts:400
+// openclaw-plugin/index.ts:410
 const CODE_MUTATING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
 
 // openclaw-plugin/index.ts:784-791
@@ -184,7 +184,7 @@ which costs an agent round-trip each time (the reason the hook is opt-in).
 **C. Stop matching tool names.** Ask the host for the mutation signal —
 if OpenClaw's `agent_end` context exposes file-change or diff metadata,
 key off that instead of a name list. Most robust, and would let the
-`TODO(verify-context-shape)` at `index.ts:779-782` be resolved in the same
+`TODO(verify-context-shape)` at `index.ts:789-792` be resolved in the same
 pass. Requires knowing what `agent_end` actually carries, which the same
 `npm install` spike in the falsification recipe would establish.
 

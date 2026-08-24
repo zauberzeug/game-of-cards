@@ -25,7 +25,7 @@ definition_of_done: |
   only `if (new / ".goc-version").exists()` (same for the legacy tree).
 - `goc/install.py:1538-1544` — the already-installed refusal, keyed
   solely on that sentinel lookup.
-- `goc/install.py:1564` — the unconditional clobber:
+- `goc/install.py:1590` — the unconditional clobber:
   `(deck_dir / "log.md").write_text("# Deck Log\n\nAppend deck-level events here (sprint notes, schema bumps, etc.).\n")`
 - `goc/install.py:920-921` — the upgrade planner's contrasting rule:
   `if write.path.name == "log.md": continue` (upgrade never touches the
@@ -81,7 +81,7 @@ sentinel, or backup/copy tooling that drops hidden files.
 Three credible fix shapes:
 
 1. **Create-only journal write** — `if not (deck_dir / "log.md").exists():`
-   before the write at `goc/install.py:1564`, mirroring the upgrade
+   before the write at `goc/install.py:1590`, mirroring the upgrade
    planner's skip. Minimal, preserves current install semantics
    otherwise.
 2. **Broaden already-installed detection** — treat an existing

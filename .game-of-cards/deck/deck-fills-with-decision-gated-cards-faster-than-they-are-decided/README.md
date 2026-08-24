@@ -1,6 +1,6 @@
 ---
 title: deck-fills-with-decision-gated-cards-faster-than-they-are-decided
-summary: "Only 8 of 193 open cards sit at human_gate none; 166 are gated on decision and 19 on session, so the autonomous picker has a runway of days against a backlog of months. Measuring the backlog rather than the default relocates the defect: 156 of the 166 decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 185 — 83 have had no log activity for over 60 days and 35 are contribution high. Parked 2026-08-17 on the intake-vs-outlet choice."
+summary: "The runway has now reached zero. Re-measured 2026-08-24: 5 of 194 live cards sit at human_gate none, 170 are gated on decision and 19 on session — and goc --ready returns NO cards at all, because every one of the 5 is either impeded, claimed, or an unpublished draft. Measuring the backlog rather than the default relocates the defect: 94% of the decision-gated cards already carry a '## Decision required' section, so the gate is deliberate and the missing half is the outlet, not the intake. Nothing consumes the 189 — 101 have had no log activity for over 60 days. Parked 2026-08-17 on the intake-vs-outlet choice; the runway hitting zero does not change the options, only the urgency."
 status: open
 stage: null
 contribution: high
@@ -34,20 +34,41 @@ The deck has two intakes and one outlet. Findings arrive continuously —
 `Skill(audit-deck)` files one most days, hygiene passes file more — and by
 default they arrive gated. Gates are cleared by a human running
 `Skill(decide-card)`, and on this repo that happens rarely. The result is
-not a slow imbalance; it is a queue that has already emptied:
+not a slow imbalance; the queue has now emptied completely:
 
-| | count |
+| | 2026-08-17 | 2026-08-24 |
+|---|---|---|
+| open + active cards | 193 | 194 |
+| `human_gate: none` | 8 | **5** |
+| `human_gate: decision` | 166 | 170 |
+| `human_gate: session` | 19 | 19 |
+| gated cards with no log activity for 60+ days | 83 | 101 |
+| **cards `goc --ready` actually returns** | — | **0** |
+
+The last row is the one that matters, and it is a number this card was not
+measuring a week ago. The gate count is an *upper bound* on the runway, not
+the runway: `card_is_ready` also excludes impeded cards, drafts, and cards
+already claimed. All five of the `human_gate: none` cards fail one of those:
+
+| card | why it is not pullable |
 |---|---|
-| open + active cards | 193 |
-| `human_gate: none` — the entire autonomous runway | **8** |
-| `human_gate: decision` | 166 |
-| `human_gate: session` | 19 |
-| gated cards with no log activity for 60+ days | 83 |
+| `openclaw-plugin-skills-force-repeated-reads-every-session` | `status: active` (claimed) + `waiting_on: external` |
+| `openclaw-subagent-plugin-tools-alsoallow-ignored` | `waiting_on: external` — upstream OpenClaw release |
+| `blocked-status-conflates-dependency-external-wait-and-deferral` | `waiting_on: deferred` |
+| `remove-blocked-from-status-enum-and-migrate-existing-cards` | `waiting_on: deferred` |
+| `escalate-repeatedly-auto-released-cards-without-an-attempt-counter` | `draft: true`, held deliberately |
 
-Eight claimable cards is a few days of loop. Two of those eight were filed
-by the pass that wrote this card. The other 185 are invisible to
-`Skill(pull-card)` and `Skill(next-card)`, which filter to `human_gate: none`
-— correctly, for loop safety.
+So `goc --ready` prints `No cards match`. The autonomous runway is not
+"a few days" — it is exhausted, and has been since before this measurement.
+The other 189 are invisible to `Skill(pull-card)` and `Skill(next-card)`,
+which filter to `human_gate: none` — correctly, for loop safety.
+
+This card's own `reproduce.py` does not measure that: it reports `runway =
+gates.get("none", 0)`, a bare gate count, which said 5 where the engine says
+0. Filed as
+[reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate](../reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate/),
+because DoD item 1 gates on that number and can go green with a real runway
+of zero.
 
 The default was the first suspect. `goc/schema.yaml:27` sets
 `human_gate_default: decision`, and `_build_parser`'s `p_new.add_argument
@@ -89,27 +110,41 @@ queue.
 
 ## Empirical evidence
 
-`reproduce.py`, re-run 2026-08-17:
+`reproduce.py`, re-run 2026-08-24:
 
 ```
-open + active cards: 193
-  human_gate: none         8
-  human_gate: decision   166
+open + active cards: 194
+  human_gate: none         5
+  human_gate: decision   170
   human_gate: session     19
 
-autonomous runway (gate=none, claimable by the picker): 8
+autonomous runway (gate=none, claimable by the picker): 5
 
 sample of 50 cards closed in the last 90 days:
-  born gated, later decided and closed: 5
-  born at gate=none:                    44
+  born gated, later decided and closed: 7
+  born at gate=none:                    42
   indeterminate:                        1
 
-gated open cards with no log activity for 60+ days: 83/185
+gated open cards with no log activity for 60+ days: 101/189
 
-DEFECT PRESENT: the picker has 8 claimable cards against 185 gated ones. Ungated cards
-close 9x more often than gated ones get decided, so the backlog grows while the runway
+DEFECT PRESENT: the picker has 5 claimable cards against 189 gated ones. Ungated cards
+close 6x more often than gated ones get decided, so the backlog grows while the runway
 does not.
 ```
+
+Read that "runway: 5" against the engine, which is the number that decides
+whether the loop has work:
+
+```
+$ uv run goc --ready
+No cards match (ready: status open, gate none, no active impediment;
+1 unauthored draft scaffold hidden — author, then `goc publish <title>`).
+```
+
+The script's runway is a gate count and the engine's is a four-axis
+predicate, so the script overstates by 5 where it matters most — at zero.
+The staleness count also moved the wrong way: 101 of 189 gated cards now have
+no log activity in 60+ days, up from 83 of 185 in one week.
 
 The sample is the load-bearing part of the *rate* claim. It reads each closed
 card's *first* committed frontmatter, so it distinguishes a card that was
@@ -223,7 +258,7 @@ that walks cards and calls `goc decide` per card.
   ranking, capping, and a loop.
 - Cons: the preview fidelity depends on the undecided option-shape card; and
   it treats the symptom — intake keeps producing, so it needs re-running.
-- Edit: `_cmd_triage` and its subparser (`p_triage`, `goc/engine.py:4001`),
+- Edit: `_cmd_triage` and its subparser (`p_triage`, `goc/engine.py:4068`),
   whose `--help` string — "List parked cards (gate ≠ none), grouped by gate,
   oldest-first" — also understates its real scope today: it silently filters
   to `status == "open"` and to non-drafts, which is why it reports 181 of the

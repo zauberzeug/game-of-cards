@@ -25,12 +25,12 @@ definition_of_done: |
 
 - `openclaw-plugin/index.ts:77-86` — `GocToolParams.verb` is a required
   literal union (`Type.Union`, **not** wrapped in `Type.Optional`).
-- `openclaw-plugin/index.ts:129` — `buildArgs` returns
+- `openclaw-plugin/index.ts:139` — `buildArgs` returns
   `[...flagTokens, input.verb, ...(input.args ?? [])]`; the verb is spliced
   unconditionally.
 - `openclaw-plugin/dist/index.js:2406-2449` — the compiled artifact consumers
   actually load; identical on both points.
-- `goc/engine.py:4049-4050` — `if args.command is None: _cmd_default(args)`.
+- `goc/engine.py:4116-4050` — `if args.command is None: _cmd_default(args)`.
   The queue table, `--board`, `--ready`, `--json` and the leverage line all
   live behind that branch.
 - `scripts/port_skills_to_openclaw.py:106-107` — the porter's injected
@@ -45,7 +45,7 @@ definition_of_done: |
 The engine renders the deck only when argparse resolves **no subcommand**:
 
 ```python
-# goc/engine.py:4049
+# goc/engine.py:4116
     if args.command is None:
         _cmd_default(args)
 ```

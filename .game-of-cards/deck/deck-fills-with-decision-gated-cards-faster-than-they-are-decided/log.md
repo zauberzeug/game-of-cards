@@ -57,3 +57,52 @@ with the 10-card cleanup for question 2.
 Status returned to `open` so the card appears in `goc triage`, where gated
 cards are read; `worker` is left as the historical record of this session, not
 as a live claim.
+
+## 2026-08-24 — hygiene pass: the runway reached zero
+
+Re-measured during a `Skill(refine-deck)` pass. No code changed, no gate
+changed; the README dashboard was rewritten in place because its headline
+number was stale in a way that understated the defect.
+
+```
+open + active cards: 194   (was 193)
+  human_gate: none         5   (was 8)
+  human_gate: decision   170   (was 166)
+  human_gate: session     19   (was 19)
+gated open cards with no log activity for 60+ days: 101/189   (was 83/185)
+```
+
+**The finding this pass adds.** `reproduce.py` reports `runway = 5`, but
+`goc --ready` returns **no cards at all**. The script counts
+`human_gate: none`; the engine's `card_is_ready` additionally excludes
+impeded cards, unpublished drafts, and cards already claimed. All five of the
+gate-free cards fail one of those tests — three carry `waiting_on`, one is
+`active`, one is a deliberately-held draft. So the autonomous runway is not
+short, it is exhausted, and the card had no row for that.
+
+Two consequences worth separating:
+
+1. It does not change the option set. The census still says the backlog is
+   94% deliberate decisions and the missing half is the outlet, so
+   recommendation C (make `goc triage` a working decision queue) stands
+   unaltered. What changed is urgency: there is no longer any autonomous
+   work to do while the decision waits.
+2. It is a defect in this card's own instrument, and DoD item 1 gates on that
+   instrument — "the autonomous runway is at least 15 open cards" can go
+   green with fifteen gate-free cards that are all impeded and a real runway
+   of zero. That is the fail-open shape
+   `static-source-guards-never-prove-they-can-catch-an-offender` describes,
+   and the drifted-copy-of-the-ready-predicate shape that
+   `extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate`
+   roots. Filed as
+   `reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate`
+   rather than fixed here, because editing the threshold test of a parked
+   card changes what the card claims.
+
+Also observed while measuring: 101 of the 189 gated cards are now 60+ days
+without log activity, up from 83 of 185 a week ago, and at least two of them
+describe defects that have since been fixed in code without anyone noticing
+(see `parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`).
+So the gated pile is not merely unread — part of it is no longer true. That
+sharpens option C: an outlet that only ranks and caps would still present
+stale cards as live decisions.

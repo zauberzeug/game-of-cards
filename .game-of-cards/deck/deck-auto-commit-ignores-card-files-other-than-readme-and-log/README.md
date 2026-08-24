@@ -16,7 +16,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits 1 (auto-commit stages the sibling `reproduce.py`)
   - [ ] TDD: a regression test asserts that after `goc publish <title> --commit` on a card dir containing a sibling file, `git status --porcelain --untracked-files=all` is clean for that card path
   - [ ] TDD: a regression test pins the chosen exclusion contract (whatever the decision excludes — e.g. `__pycache__`, `*.pyc` — stays unstaged) so the fix cannot commit build droppings
-  - [ ] MECHANICAL: the fix lands in `_git_auto_commit` (`goc/engine.py:4833`) so all seven callers inherit it, not per-verb
+  - [ ] MECHANICAL: the fix lands in `_git_auto_commit` (`goc/engine.py:4915`) so all seven callers inherit it, not per-verb
   - [ ] MECHANICAL: full regression suite green; `uv run goc validate` clean; plugin-asset sync `--check` clean
 ---
 
@@ -26,7 +26,7 @@ definition_of_done: |
 
 - `goc/engine.py:4502-4536` — `_git_auto_commit` docstring and draft filter
 - `goc/engine.py:4569-4574` — the hardcoded filename pair
-- `goc/engine.py:5853, 5489, 5660, 5917, 5939, 5954, 6283` — the seven
+- `goc/engine.py:5964, 5489, 5660, 5917, 5939, 5954, 6283` — the seven
   callers: `_cmd_status`, `_cmd_publish`, `_cmd_new`, `_cmd_wait`,
   `_cmd_advance`, `_cmd_unadvance`, `_cmd_decide`
 - `goc/templates/skills/create-card/SKILL.md` § Step 6 and § Step 7 — the
@@ -49,7 +49,7 @@ paths: list[str] = [
 
 Anything else in the card directory is invisible to it. The docstring is
 candid about the mechanism — "Stage README.md + log.md across the given
-card dirs and commit" (`goc/engine.py:4834`) — but no caller, and no
+card dirs and commit" (`goc/engine.py:4916`) — but no caller, and no
 skill, tells the author that the rest of the directory is left behind.
 
 That directly contradicts what `Skill(create-card)` requires of card
