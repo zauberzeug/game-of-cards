@@ -1,7 +1,7 @@
 ---
 title: installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder
 summary: "goc install writes a goc-validate pre-commit hook that is pass_filenames: false — it re-checks the whole repo — yet gates it on files: ^\\.game-of-cards/deck/.*$ (goc/install.py:64-73). pre-commit skips a hook whose filtered file list is empty, so in a skills_source: vendored consumer a commit that only drifts .claude/skills/ or .codex/skills/ fires nothing, even though goc validate would report it through validate_skill_dir_parity. Same shape as commits-touching-only-generated-mirrors-skip-every-pre-commit-hook, which fixed this repo own config on 2026-08-24; this card is the consumer-facing half."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-24T05:34:00Z"
@@ -27,6 +27,7 @@ definition_of_done: |
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green and
     `uv run goc validate` clean; plugin mirrors resynced
     (`python scripts/sync_plugin_assets.py --check`).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The installed pre-commit hook never fires on anything outside the deck folder
