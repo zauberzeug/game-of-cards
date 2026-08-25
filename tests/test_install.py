@@ -2565,39 +2565,68 @@ class UpgradeAppendsPrecommitHookTest(unittest.TestCase):
 
 class RefreshStalePrecommitHookTest(unittest.TestCase):
     """Regression: `_append_precommit_hook` must migrate a stale GoC-managed
-    `goc-validate` stanza in place. A repo installed before the deck moved
-    from deck/ to .game-of-cards/deck/ carries a legacy `files: ^deck/.*$`
-    glob; the no-op-when-present short-circuit left it dead (matching no card
-    path) across `goc upgrade`."""
+    `goc-validate` stanza in place — the no-op-when-present short-circuit
+    otherwise pins whatever a repo was installed with, forever.
 
-    LEGACY = (
-        "repos:\n"
-        "  - repo: local\n"
-        "    hooks:\n"
-        "      - id: goc-validate\n"
-        "        name: goc validate\n"
-        "        entry: goc validate\n"
-        "        language: system\n"
-        "        pass_filenames: false\n"
-        "        files: ^deck/.*$\n"
-    )
+    Two migrations are covered, both instances of a `files:` filter on a
+    `pass_filenames: false` hook (pre-commit reports `(no files to check)
+    Skipped` when the filter matches nothing in the commit):
+
+    - `files: ^deck/.*$` — installed before the deck moved to
+      `.game-of-cards/deck/`, so it matched no card path at all
+      (`goc-upgrade-leaves-stale-pre-commit-validate-pattern`).
+    - `files: ^\\.game-of-cards/deck/.*$` — matched the deck and nothing else,
+      so a commit drifting `.claude/skills/` or `.codex/skills/` fired nothing
+      (`installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder`).
+    """
+
+    @staticmethod
+    def _stanza(files_line: str) -> str:
+        return (
+            "repos:\n"
+            "  - repo: local\n"
+            "    hooks:\n"
+            "      - id: goc-validate\n"
+            "        name: goc validate\n"
+            "        entry: goc validate\n"
+            "        language: system\n"
+            "        pass_filenames: false\n"
+            f"        {files_line}\n"
+        )
 
     def _git_dir(self, tmp: str) -> Path:
         root = Path(tmp)
         (root / ".git").mkdir()
         return root
 
+    def _assert_current(self, text: str) -> None:
+        """The stanza is the one the package ships today, exactly once."""
+        from goc.install import PRE_COMMIT_HOOK  # noqa: PLC0415
+
+        self.assertIn(PRE_COMMIT_HOOK, text)
+        self.assertNotIn("files:", text)
+        self.assertIn("always_run: true", text)
+        self.assertEqual(text.count("id: goc-validate"), 1)
+
     def test_legacy_files_glob_is_migrated(self) -> None:
         from goc.install import _append_precommit_hook  # noqa: PLC0415
 
         with tempfile.TemporaryDirectory() as tmp:
             cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
-            cfg.write_text(self.LEGACY)
+            cfg.write_text(self._stanza("files: ^deck/.*$"))
             _append_precommit_hook(cfg)
-            text = cfg.read_text()
-            self.assertNotIn("files: ^deck/.*$", text)
-            self.assertIn(r"files: ^\.game-of-cards/deck/.*$", text)
-            self.assertEqual(text.count("id: goc-validate"), 1)
+            self._assert_current(cfg.read_text())
+
+    def test_deck_scoped_files_glob_is_migrated(self) -> None:
+        """The block every repo installed since the deck move carries: a
+        whole-tree hook triggered only by deck edits."""
+        from goc.install import _append_precommit_hook  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
+            cfg.write_text(self._stanza(r"files: ^\.game-of-cards/deck/.*$"))
+            _append_precommit_hook(cfg)
+            self._assert_current(cfg.read_text())
 
     def test_current_block_is_byte_identical_noop(self) -> None:
         from goc.install import PRE_COMMIT_HOOK, _append_precommit_hook  # noqa: PLC0415
@@ -2622,11 +2651,12 @@ class RefreshStalePrecommitHookTest(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as tmp:
             cfg = self._git_dir(tmp) / ".pre-commit-config.yaml"
-            cfg.write_text(self.LEGACY + user_block)
+            cfg.write_text(self._stanza("files: ^deck/.*$") + user_block)
             _append_precommit_hook(cfg)
             text = cfg.read_text()
             # GoC stanza refreshed...
-            self.assertIn(r"files: ^\.game-of-cards/deck/.*$", text)
+            self.assertIn("always_run: true", text)
+            self.assertNotIn("files: ^deck/.*$", text)
             # ...user's own hook untouched.
             self.assertIn("id: my-linter", text)
             self.assertIn("entry: ./lint.sh", text)

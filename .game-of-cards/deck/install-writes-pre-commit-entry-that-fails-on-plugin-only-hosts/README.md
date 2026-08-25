@@ -33,9 +33,16 @@ definition_of_done: |
           entry: goc validate
           language: system
           pass_filenames: false
-          files: ^\\.game-of-cards/deck/.*$
+          always_run: true
   """
   ```
+
+  Amended 2026-08-25: the last line was `files: ^\\.game-of-cards/deck/.*$`
+  when this card was filed;
+  [installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder](../installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder/)
+  replaced it with `always_run: true`. That changes *when* the stanza fires,
+  not whether `entry: goc validate` resolves — this card's defect is
+  untouched, and now fires on every commit rather than only on deck edits.
 
 - `goc/install.py:1322` — `_append_precommit_hook`, called unconditionally
   for git repos at `goc/install.py:1576` (install) and `goc/install.py:1823`

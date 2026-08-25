@@ -61,6 +61,21 @@ BRIEFING_HEADERS = {
     "CLAUDE.local.md": "# Local notes for Claude Code (not checked in)",
 }
 
+# `pass_filenames: false` declares what `goc validate` does: it re-checks the
+# whole repository and ignores which files changed. A `files:` key on such a
+# hook is therefore a *trigger*, not a scope — and pre-commit skips a hook
+# whose filtered file list comes out empty ("(no files to check) Skipped").
+# Gating this one on the deck folder left every other surface the check reads
+# ungated: `.claude/skills/` and `.codex/skills/`, walked by
+# `validate_skill_dir_parity` in `skills_source: vendored`, plus the two files
+# that decide whether that check runs at all (`.game-of-cards/config.yaml` and
+# `.claude/settings.json`). `always_run: true` is the form that matches the
+# hook's own semantics, and unlike an enumeration it cannot drift as
+# `goc validate` learns new surfaces — the failure mode shared by both
+# incidents here (`goc-upgrade-leaves-stale-pre-commit-validate-pattern`, where
+# the glob stopped matching the deck, and
+# `installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder`,
+# where it never matched anything else). Cost is one `goc validate` per commit.
 PRE_COMMIT_HOOK = """\
   - repo: local
     hooks:
@@ -69,7 +84,7 @@ PRE_COMMIT_HOOK = """\
         entry: goc validate
         language: system
         pass_filenames: false
-        files: ^\\.game-of-cards/deck/.*$
+        always_run: true
 """
 
 
@@ -1272,9 +1287,10 @@ def _refresh_goc_validate_block(text: str) -> str:
     """Re-emit the GoC-managed `goc-validate` stanza if it has drifted.
 
     Finds the standalone `- repo: local` block that carries the
-    `id: goc-validate` hook and replaces it with the current `PRE_COMMIT_HOOK`
-    (e.g. to migrate a legacy `files: ^deck/.*$` glob to the
-    `.game-of-cards/deck` path). Only a single-hook GoC-signature block is
+    `id: goc-validate` hook and replaces it with the current `PRE_COMMIT_HOOK`,
+    whatever drifted (a legacy `files: ^deck/.*$` glob predating the
+    `.game-of-cards/deck` move, or any `files:`-gated form predating
+    `always_run: true`). Only a single-hook GoC-signature block is
     rewritten — user-authored hooks co-located in the same stanza, other
     `repo: local` blocks, and unrelated repos are all left untouched. A block
     that already matches stays byte-identical.
@@ -1303,7 +1319,8 @@ def _precommit_refresh_pending(target: Path) -> bool:
     Detects the one case the same-version `upgrade()` short-circuit must
     not skip: a real git repo whose `.pre-commit-config.yaml` carries a
     GoC-managed `goc-validate` stanza that `_refresh_goc_validate_block`
-    would change (e.g. a legacy `files: ^deck/.*$` glob). Pure check — no
+    would change (a legacy `files: ^deck/.*$` glob, or any `files:`-gated
+    form predating `always_run: true`). Pure check — no
     write — so it can gate the "nothing to do" guard. Returns False when
     the stanza is already current (the refresh would be a byte-identical
     no-op), so the existing no-op path is preserved.
@@ -1329,10 +1346,12 @@ def _append_precommit_hook(target: Path) -> None:
         return
     text, newline = _read_text_keep_newline(target)
     if "id: goc-validate" in text:
-        # Already present — but a pre-move install may carry a stale `files:`
-        # glob that no longer matches any card path, silently disabling the
-        # hook. Refresh the GoC-managed stanza in place so `goc upgrade`
-        # carries template fixes forward.
+        # Already present — but an older install may carry a stale `files:`
+        # key: a pre-move glob matching no card path, or the deck-only glob
+        # that filtered this whole-tree hook out of every non-deck commit.
+        # Either way pre-commit silently skips the hook. Refresh the
+        # GoC-managed stanza in place so `goc upgrade` carries template fixes
+        # forward.
         refreshed = _refresh_goc_validate_block(text)
         if refreshed != text:
             _write_text_keep_newline(target, refreshed, newline)
@@ -1771,9 +1790,10 @@ def upgrade(
 
     pending_cleanup = needs_vendored_cleanup and not dry_run
     pending_briefing_migration = bool(legacy_briefings_to_strip) and not dry_run
-    # A stale pre-commit goc-validate glob (e.g. legacy `^deck/.*$`) must be
-    # migrated even at the same version — otherwise the drift-gate hook stays
-    # silently dead. _append_precommit_hook (run below) is idempotent, so this
+    # A stale pre-commit goc-validate stanza (a legacy `^deck/.*$` glob, or
+    # any `files:`-gated form predating `always_run: true`) must be migrated
+    # even at the same version — otherwise the drift-gate hook stays silently
+    # skipped. _append_precommit_hook (run below) is idempotent, so this
     # only defeats the short-circuit when there is a real drifted stanza to fix.
     pending_precommit_refresh = (
         _precommit_refresh_pending(target / ".pre-commit-config.yaml") and not dry_run

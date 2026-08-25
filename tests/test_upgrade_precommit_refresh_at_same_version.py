@@ -1,5 +1,5 @@
 """Regression: `goc upgrade` must migrate a stale pre-commit goc-validate
-glob even when the repo is already at the current version.
+stanza even when the repo is already at the current version.
 
 `upgrade()`'s same-version "nothing to do" short-circuit used to return
 before `_append_precommit_hook` ran, so a legacy `files: ^deck/.*$` glob
@@ -8,6 +8,11 @@ the frontmatter-drift pre-commit hook silently matching no card path.
 The fix adds a `pending_precommit_refresh` signal that defeats the
 short-circuit only when a real drifted stanza needs fixing; a pristine,
 already-current repo still takes the no-op path.
+
+The same path now also carries the `files:` -> `always_run: true` migration
+(`installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder`),
+so the assertions here compare against `PRE_COMMIT_HOOK` itself rather than a
+literal glob that has to be edited every time the stanza evolves.
 """
 
 from __future__ import annotations
@@ -27,7 +32,6 @@ sys.path.insert(0, str(ROOT))
 from goc import install as goc_install  # noqa: E402
 
 LEGACY_GLOB = "files: ^deck/.*$"
-NEW_GLOB = "files: ^\\.game-of-cards/deck/.*$"
 
 LEGACY_PRECOMMIT = (
     "repos:\n"
@@ -77,7 +81,9 @@ class UpgradePrecommitRefreshAtSameVersionTest(unittest.TestCase):
                 after = precommit.read_text()
 
         self.assertNotIn(LEGACY_GLOB, after, msg="stale glob was not migrated")
-        self.assertIn(NEW_GLOB, after, msg="migrated glob missing")
+        self.assertIn(
+            goc_install.PRE_COMMIT_HOOK, after, msg="current stanza missing after migration"
+        )
 
     def test_pristine_current_repo_still_short_circuits(self) -> None:
         """A repo already current with an up-to-date pre-commit stanza takes
