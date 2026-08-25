@@ -1893,6 +1893,12 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         errors.append(f"{t.title}: summary: missing — required on published cards")
 
     worker = fm.get("worker")
+    if status_value == "active" and worker is None:
+        errors.append(
+            f"{t.title}: worker: must be set when status=active "
+            f"(release with `goc status {t.title} open`, then reclaim with "
+            f"`goc status {t.title} active --worker-who <identity>`)"
+        )
     if worker is not None:
         if isinstance(worker, str):
             if not worker.strip():
@@ -5943,10 +5949,24 @@ def _cmd_status(args):
         text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(_utc_now_iso()))
     if new_status == "active":
         text = _auto_populate_worker(text, t, worker_who, worker_where)
+        claimed_fm, _ = parse_frontmatter(text)
+        if claimed_fm.get("worker") is None:
+            print(
+                f"ERROR: {title}: cannot claim without a worker identity; "
+                f"git user.name is unavailable and the card has no existing worker. "
+                f"Pass --worker-who <identity>.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
         # Claiming a card proves it is authored: clear any draft flag so it
         # rejoins the queue and auto_commit will publish it (the guard above
         # already ensured we are not racing a terminal transition on a draft).
         text = remove_frontmatter_field(text, "draft")
+    elif new_status == "open":
+        # Re-queueing ends the live claim. Keeping the worker here makes an
+        # open card still look assigned and lets stale ownership survive every
+        # release/reclaim cycle. Terminal cards retain the worker as history.
+        text = remove_frontmatter_field(text, "worker")
     (card_dir / "README.md").write_text(text)
     if successor is not None:
         # Maintain typed bidirectional supersession link on both endpoints.
@@ -6385,9 +6405,10 @@ def _cmd_repair_edges(args):
 def _cmd_wait(args):
     """Set or clear the impediment overlay (`waiting_on` + `waiting_until`).
 
-    The overlay is orthogonal to `status` — a card may be active AND
-    impeded. `--clear` drops both fields; otherwise `--reason` and/or
-    `--until` set the overlay.
+    The overlay is orthogonal to `status`, so imported or hand-authored cards
+    may be active AND impeded. The writing command does not create that stale
+    shape: setting an overlay releases an active claim to open and clears its
+    worker. `--clear` drops only the overlay.
     """
     _validate_commit_flags(args.commit, args.no_commit)
     title = args.title
@@ -6398,6 +6419,7 @@ def _cmd_wait(args):
     fm, body = parse_frontmatter(text)
     prior_reason = fm.get("waiting_on")
     prior_until = fm.get("waiting_until")
+    released_claim = False
     if args.clear:
         if prior_reason is None and prior_until is None:
             print(f"{title}: no waiting overlay to clear; nothing to do")
@@ -6431,6 +6453,10 @@ def _cmd_wait(args):
             fm["waiting_on"] = new_reason
         if new_until is not None:
             fm["waiting_until"] = new_until
+        if t.status == "active":
+            fm["status"] = "open"
+            fm.pop("worker", None)
+            released_claim = True
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     effective_reason = fm.get("waiting_on") or ("deferred" if fm.get("waiting_until") else None)
     if args.clear:
@@ -6444,6 +6470,7 @@ def _cmd_wait(args):
             f"waiting_until={fm.get('waiting_until')!r}"
             + (f" (no reason set; implied {effective_reason!r})"
                if fm.get("waiting_on") is None and effective_reason else "")
+            + ("; active claim released to open" if released_claim else "")
         )
     commit_policy = _commit_override(args.commit, args.no_commit)
     if auto_commit_enabled(commit_policy):

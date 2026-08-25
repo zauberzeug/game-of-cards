@@ -71,10 +71,11 @@ Run `goc show <title>` yourself with the real title bound. Confirm:
   transitions).
 
 `status`, `human_gate`, and the impediment overlay (`waiting_on` +
-`waiting_until`) are orthogonal axes — a card may be `active` AND
-carry `waiting_on: external` (see `Skill(card-schema)` "Three-axis
-stuck model"). The legacy `status: blocked` is deprecated; set the
-overlay (Step 6) or rely on derived readiness instead
+`waiting_until`) are orthogonal axes — imported or hand-authored state may be
+`active` AND carry `waiting_on: external` (see `Skill(card-schema)`
+"Three-axis stuck model"). The CLI does not create that abandoned-claim shape:
+setting a wait releases `active → open` and clears `worker`. The legacy
+`status: blocked` is deprecated; set the overlay (Step 6) or rely on derived readiness instead
 (`reference.md` § Deprecated blocked status).
 
 ## Step 2 — match the transition to the CLI
@@ -82,7 +83,7 @@ overlay (Step 6) or rely on derived readiness instead
 | transition | CLI | notes |
 |---|---|---|
 | `open → active` | `goc status <title> active` | "claiming" the card; also clears `draft: true` |
-| `active → open` | `goc status <title> open` | release the claim (re-queue) when stepping away mid-flight without disproving the work |
+| `active → open` | `goc status <title> open` | release the claim (re-queue) and clear `worker` when stepping away mid-flight without disproving the work |
 | `* → open` | `goc status <title> open` | re-queue (rare) |
 | `* → disproved` | `goc status <title> disproved` | populate rebuttal first; CLI stamps `closed_at` |
 | `* → superseded` | `goc status <title> superseded --by <successor>` | sets the typed `superseded_by` / `supersedes` link bidirectionally; CLI stamps `closed_at` |
@@ -157,6 +158,10 @@ goc wait <title> --until 2026-06-15    # bare --until implies deferred
 goc wait <title> --reason resource     # open-ended wait
 goc wait <title> --clear
 ```
+
+Setting a wait on an `active` card atomically re-queues it as `open` and clears
+the live `worker` claim; the overlay keeps it out of `--ready`. Clearing the
+overlay does not claim the card again.
 
 A future `waiting_until` (or a reason with no date) hides the card
 from `--ready` / next-card / pull-card and re-enters it automatically
