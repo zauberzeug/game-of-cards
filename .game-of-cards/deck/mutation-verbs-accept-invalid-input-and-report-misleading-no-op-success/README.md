@@ -16,11 +16,12 @@ advanced_by:
   - goc-status-silently-drops-worker-overrides-on-non-active-transitions
   - goc-wait-clear-silently-discards-reason-and-until-set-in-same-call
   - goc-status-superseded-discards-by-override-when-target-already-superseded
+  - goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue
 tags: [epic, meta-fix, api-contract]
-summary: "Aggregation epic for a family of `goc` mutation verbs that accept redundant, empty, conflicting, or otherwise invalid input and — instead of rejecting it — perform a misleading no-op or silently drop the input, reporting exit 0 / a success line. Eight open sibling cards (filed 2026-05-29..06-22, each carrying its own `human_gate: decision`) share this shape across `advance`, `unadvance`, `decide`, `attest`, `status`, and `wait`. They cross-referenced each other in prose (the `goc <verb> accepts unwanted input` family named in `goc-decide-accepts-empty…`) but carried no schema edges, so the family was invisible to the scheduler/record axes and recurred as zero-edge `meta-fix` noise in every refine-deck orphan-dependency pass. Distinct from the `terminal-status-guard-missing-across-mutation-verbs` epic, which targets mutation of cards whose *status* is terminal regardless of input validity."
+summary: "Aggregation epic for a family of `goc` mutation verbs that accept redundant, empty, conflicting, or otherwise invalid input and — instead of rejecting it — perform a misleading no-op or silently drop the input, reporting exit 0 / a success line. Nine open sibling cards (filed 2026-05-29..2026-08-26, each carrying its own `human_gate: decision`) share this shape across `advance`, `unadvance`, `decide`, `attest`, `status`, and `wait`. They cross-referenced each other in prose (the `goc <verb> accepts unwanted input` family named in `goc-decide-accepts-empty…`) but carried no schema edges, so the family was invisible to the scheduler/record axes and recurred as zero-edge `meta-fix` noise in every refine-deck orphan-dependency pass. Distinct from the `terminal-status-guard-missing-across-mutation-verbs` epic, which targets mutation of cards whose *status* is terminal regardless of input validity."
 definition_of_done: |
   - [ ] PROCESS: A shared validation-failure shape is decided and recorded in this card's `log.md` — strict-refuse (exit 2, no mutation) vs. exit-0-with-stderr-WARNING vs. distinct no-op success message — and whether a reusable helper or per-verb inline checks are the right factoring. Note that the two no-op-success siblings (`advance`/`unadvance` redundant edge) explicitly want one shape applied to BOTH directions symmetrically.
-  - [ ] PROCESS: All eight open child cards are closed or superseded under the agreed shape; this epic's `advanced_by` roster is all terminal.
+  - [ ] PROCESS: All nine open child cards are closed or superseded under the agreed shape; this epic's `advanced_by` roster is all terminal.
   - [ ] TDD: A regression test asserts each guarded verb rejects (or honestly signals the no-op for) its invalid-input case — redundant edge add/remove, self-target unadvance, empty `--decision`/`--because`, unknown `--skip` name, worker-override on a non-active transition, `--clear` combined with `--reason`/`--until`, and `--by` on an already-superseded target.
   - [ ] MECHANICAL: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green after each child closes.
 worker: {who: "claude[bot]", where: main}
@@ -51,13 +52,13 @@ input-validation guard checks the *arguments*.
 
 This epic cannot be drained by an autonomous puller: its DoD requires a
 shared validation-failure-shape decision (DoD item 1) **and** closing
-all eight children — each of which carries its own `human_gate:
+all nine children — each of which carries its own `human_gate:
 decision` per-verb option menu. The gate was raised here (by a
 2026-06-25 pull-card pass) precisely to record the shared-shape bundle
 before authorising a single implementation series, exactly as the
 original scope note anticipated. A human (or a session with authority
 to make API-contract taste calls) needs to pick **one** shared shape so
-the eight children stop re-deriving it eight ways.
+the nine children stop re-deriving it nine ways.
 
 ### The three candidate shapes (DoD item 1)
 
@@ -105,7 +106,7 @@ non-active transition — so only the failure emission is shared).
 **To proceed:** `Skill(decide-card)
 mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 --decision "<shape + factoring>" --because "<why>"`, then a follow-on
-series can close the eight children under the recorded shape.
+series can close the nine children under the recorded shape.
 
 ## Family roster (open children, wired via `advanced_by`)
 
@@ -121,6 +122,7 @@ check:
 - [goc-status-silently-drops-worker-overrides-on-non-active-transitions](../goc-status-silently-drops-worker-overrides-on-non-active-transitions/) — `--worker-who`/`--worker-where` are read only inside the `active` branch, so they silently produce no mutation on `open`/`disproved`/`superseded` transitions.
 - [goc-wait-clear-silently-discards-reason-and-until-set-in-same-call](../goc-wait-clear-silently-discards-reason-and-until-set-in-same-call/) — `wait --clear --reason X --until Y` clears the overlay and silently discards the requested set; the mode conflict is accepted without rejection.
 - [goc-status-superseded-discards-by-override-when-target-already-superseded](../goc-status-superseded-discards-by-override-when-target-already-superseded/) — `status <t> superseded --by <new>` early-returns when `prior == new_status`, before the `_mutate_pair` that wires the new typed forward routing, so a re-pointing `--by` is silently dropped.
+- [goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue](../goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue/) — `wait --until <date already past>` writes an overlay the engine's own read guard treats as non-impeding, then reports it exactly like a wait that took effect; the card stays in `--ready` and the next autonomous pull claims it.
 
 ## Why it matters
 
@@ -128,8 +130,8 @@ A misleading success is worse than an honest failure: it defeats the
 scripts and agents that drive these verbs with `--commit` and trust the
 exit code, and it corrupts the record axis (an empty `## Decision`
 block, a check the user believes was skipped, a worker attribution that
-never landed). Fixing the eight one at a time re-derives the same
-"validate the argument before mutating" shape eight times and lets it
+never landed). Fixing the nine one at a time re-derives the same
+"validate the argument before mutating" shape nine times and lets it
 drift between verbs — exactly the meta-fix smell. This epic exists so
 the family is resolved under one decision about the shared
 validation-failure shape.
@@ -150,14 +152,15 @@ slice.
 
 ## Scope notes
 
-- The eight children each carry their own `human_gate: decision` with a
+- The nine children each carry their own `human_gate: decision` with a
   per-verb option menu; those catalogues stay in each child's body. This
-  epic is filed at `human_gate: none` by an autonomous refine-deck pass
-  with no human in the loop — the wiring and framing are mechanical
-  record/scheduler-axis hygiene, not a taste call. A future reader may
-  raise this epic's gate to `decision` and record the shared-shape bundle
-  (mirroring how `terminal-status-guard…` consolidated its children's
-  recommendations) before authorising a single implementation series.
+  epic was filed at `human_gate: none` by an autonomous refine-deck pass
+  (the wiring and framing were mechanical record/scheduler-axis hygiene,
+  not a taste call); a 2026-06-25 pull-card pass then raised the gate to
+  `decision` to record the shared-shape bundle — mirroring how
+  `terminal-status-guard…` consolidated its children's recommendations —
+  before authorising a single implementation series. See `## Decision
+  required` above for the bundle.
 - Other zero-edge `meta-fix` cards surfaced in the same pass
   (`goc-migrate-list-style-leaves-bulk-rewrite-uncommitted`,
   `goc-decide-leaves-prior-decision-block-when-the-body-already-has-one`,
@@ -175,7 +178,7 @@ slice.
   failure (`git commit` rejected by a pre-commit hook), not input this epic's
   verbs should have refused. There is nothing to validate: the arguments are
   well-formed. Wiring it into `advanced_by` would make this epic's second DoD
-  item ("All eight open child cards are closed…") false and would put a case
+  item ("All nine open child cards are closed…") false and would put a case
   with no invalid input under a shared input-validation shape. Recorded here
   so a future triage pass recognises it as already-considered rather than
-  re-filing it as a ninth child.
+  re-filing it as another child.
