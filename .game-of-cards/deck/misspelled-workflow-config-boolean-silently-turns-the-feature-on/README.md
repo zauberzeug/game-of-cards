@@ -1,6 +1,6 @@
 ---
 title: misspelled-workflow-config-boolean-silently-turns-the-feature-on
-summary: "`_coerce_config_bool` recognizes four false spellings and falls through to Python truthiness for everything else, so any unrecognized non-empty scalar in `.game-of-cards/config.yaml`'s `workflow` block reads as True. A typo turns a default-off opt-in ON — `claim_push: nope` arms the remote-push path — and defeats an intentional `auto_commit: off`, whose own \"auto_commit is disabled\" warning then never fires."
+summary: "`_coerce_config_bool` recognizes four false spellings and falls through to Python truthiness for everything else, so any unrecognized non-empty scalar in `.game-of-cards/config.yaml`'s `workflow` block reads as True. A typo turns a default-off opt-in ON — `claim_push: nope` arms the remote-push path — and defeats an intentional `auto_commit: off`, whose own \"auto_commit is disabled\" warning then never fires. The sibling reader `get_skills_source` answers the same question with a documented fall-back-to-default, so the fix direction is settled; only silent-vs-warn is open."
 status: open
 stage: null
 contribution: medium
@@ -11,11 +11,11 @@ advances: []
 advanced_by: []
 tags: [bug, api-contract, infra]
 definition_of_done: |
-  - [ ] PROCESS: Decision recorded in the body's `## Decision required` section (refuse-and-exit vs fall-back-to-default-and-warn) and the gate lowered to `none`.
+  - [ ] PROCESS: Decision recorded in the body's `## Decision required` section (silent, matching `get_skills_source`, vs warn-once-per-key on stderr) and the gate lowered to `none`. The fall-back-to-default *direction* is already settled by precedent and is not re-litigated here.
   - [ ] TDD: `reproduce.py` exits zero — no misspelling in its table coerces to the opposite of the intent, and neither end-to-end symptom (armed `claim_push`, silently-still-on `auto_commit`) reproduces.
   - [ ] TDD: a regression test under `tests/` drives `_coerce_config_bool` over the recognized true set, the recognized false set, and at least three unrecognized scalars, asserting the chosen behaviour for each — including that `default=False` keys cannot be turned on by an unrecognized value.
-  - [ ] MECHANICAL: the diagnostic names the offending key and value (`workflow.claim_push`, `'nope'`), which means the three call sites at `goc/engine.py:5135`, `:5156` and `:5210` pass their key name in; no call site may report a bare "invalid boolean".
-  - [ ] MECHANICAL: non-string non-bool values (a list, a mapping, a float) reach the same path as an unrecognized string — the fallback must not stay `bool(value)` for them either.
+  - [ ] MECHANICAL: `_coerce_config_bool` returns the caller's `default` for an unrecognized value, matching `get_skills_source` (`goc/engine.py:5342`); if the decision picks warn-once, the diagnostic names the offending key and value (`workflow.claim_push`, `'nope'`), which means the three call sites at `goc/engine.py:5135`, `:5156` and `:5210` pass their key name in — no call site may report a bare "invalid boolean".
+  - [ ] MECHANICAL: non-string non-bool values (a list, a mapping, a float) reach the same path as an unrecognized string — the fallback must not stay `bool(value)` for them either; mirror `get_skills_source`'s `isinstance(value, str)` guard.
   - [ ] MECHANICAL: `goc/templates/game_of_cards/config.yaml` states the accepted spellings beside `auto_commit` (line 30) so the vocabulary is discoverable without reading the engine; this repo's own `.game-of-cards/config.yaml` is user-owned and is NOT rewritten by the fix.
   - [ ] TDD: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green.
 ---
@@ -29,6 +29,8 @@ definition_of_done: |
 - `_enforce_closure_on_integration_or_exit` — `goc/engine.py:5156` (`default=False`)
 - `claim_push_enabled` — `goc/engine.py:5210` (`default=False`)
 - the "auto_commit is disabled" warning that never fires — `goc/engine.py:5139`
+- `get_skills_source` — `goc/engine.py:5342-5354`, the sibling config reader
+  that answers the same question the other way (see the section below)
 - the config template the user copies from — `goc/templates/game_of_cards/config.yaml:30`
 
 ## What's broken
@@ -163,50 +165,94 @@ after. Distinct from
 which guards the *shape of the document*; this is the *value inside a
 well-formed mapping*.
 
+## The engine already has a policy for this — in the sibling reader
+
+`_coerce_config_bool` is not the only place goc reads a user-authored value
+out of `.game-of-cards/config.yaml`. `get_skills_source`
+(`goc/engine.py:5342-5354`) does the same job for the `skills_source` key,
+and it states the policy for an unrecognized value outright:
+
+```python
+def get_skills_source() -> str:
+    """Return the configured `skills_source` value, or 'auto' if absent/invalid.
+
+    Invalid values fall back to 'auto' silently — the config is meant to be
+    forward-compatible.
+    """
+    value = load_deck_config().get("skills_source")
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in SKILLS_SOURCE_VALUES:
+            return normalized
+    return DEFAULT_SKILLS_SOURCE
+```
+
+Same file, same "read a hand-edited value" job, same unrecognized-input
+question — and the answer is **fall back to the declared default**, with a
+recorded rationale (forward-compatibility). `_coerce_config_bool` is the
+outlier: it is the only config reader in the module that discards the
+caller's declared default and substitutes Python truthiness.
+
+That is what narrows the decision below. This is not a greenfield policy
+choice; it is one reader disagreeing with its own sibling.
+
 ## Decision required
 
-The fallback has to stop being `bool(value)`. What replaces it is the call,
-and the repo's own precedent points two ways.
+The direction is settled by the precedent above — the fallback becomes the
+caller's `default`, not `bool(value)`. Two options are therefore recorded
+as **rejected**, and the open question is a narrow one.
 
-**Option A — refuse and exit.** Print
+**Rejected — refuse and exit.** Print
 `ERROR: .game-of-cards/config.yaml: workflow.claim_push: 'nope' is not a boolean`
-and `sys.exit(2)`.
+and `sys.exit(2)`. It matches how goc treats invalid *card* fields and CLI
+flags, but not how it treats config: `load_deck_config` is read by nearly
+every verb, so one typo would brick the whole CLI — including the `goc show`
+the user would run to diagnose it. `get_skills_source` already declined this,
+and the closed card
+[`load-deck-config-crashes-on-non-mapping-config-yaml`](../load-deck-config-crashes-on-non-mapping-config-yaml/)
+moved deliberately away from hard failure on a malformed config.
 
-- *For:* matches how goc treats every other invalid input. `goc validate`
-  refuses out-of-enum card fields (`stage: 'gamma' not in [...]`); the CLI
-  refuses `--max-rows -5` and a blank `--worker` at the boundary, before any
-  write. Config would stop being the one unvalidated surface.
-- *Against:* `load_deck_config` is read by nearly every verb, so a single
-  typo bricks the whole CLI — including the `goc show` a user would run to
-  work out what went wrong. The closed card
-  [`load-deck-config-crashes-on-non-mapping-config-yaml`](../load-deck-config-crashes-on-non-mapping-config-yaml/)
-  deliberately moved *away* from hard failure on a malformed config, and
-  reverting that instinct for values is a real reversal, not an extension.
-
-**Option B — fall back to the declared default and warn once on stderr.**
-
-- *For:* the run always proceeds under the documented default, which is the
-  safe direction for both polarities — a misspelled `auto_commit` stays on
-  (the documented default, and non-destructive), a misspelled `claim_push`
-  stays off (no network). It matches the existing "warn and carry on" shape
-  already in this exact function's caller (`goc/engine.py:5136-5142`) and in
-  `_enforce_closure_on_integration_or_exit`'s fetch/merge-base fallbacks.
-- *Against:* a warning on stderr is easy to miss in an autonomous loop, and
-  `auto_commit`'s default is `True` — so a user who misspelled their way out
-  of auto-commit still gets commits, just with a line of stderr attached.
-
-**Option C — widen the recognized false vocabulary** (add `n`, `none`,
-`disabled`, …) and keep truthiness for the rest. Recorded to be rejected
-explicitly: it treats the symptom as a missing-synonyms problem, leaves the
-fallback direction unfixed, and the enumeration is exactly the shape that
+**Rejected — widen the recognized false vocabulary** (add `n`, `none`,
+`disabled`, …) and keep truthiness for the rest. It treats the symptom as a
+missing-synonyms problem, leaves the fallback direction unfixed, and the
+enumeration is exactly the shape that
 [`frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting`](../frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting/)
 records as drift-prone.
 
-Whichever is picked, the diagnostic needs the key name, which
+**Open: silent, or warn once on stderr?** `get_skills_source` is silent and
+says so on purpose. But the two readers are not quite symmetric:
+
+- *Silent* is the literal precedent, and keeps a config typo from spraying
+  stderr into every autonomous-loop transcript.
+- *Warn once* fits `auto_commit` specifically, where falling back to the
+  declared default means falling back to `True` — the user misspelled their
+  way out of auto-commit and still gets commits. This exact function's
+  caller already carries a warn-once-and-carry-on shape for the neighbouring
+  case (`goc/engine.py:5136-5142`), as do
+  `_enforce_closure_on_integration_or_exit`'s fetch and merge-base
+  fallbacks. A `_warned_keys` set would keep it to one line per key per run.
+
+Whichever is picked, a warn path needs the key name, which
 `_coerce_config_bool` does not currently receive — so the decision also
 settles whether the three call sites (`goc/engine.py:5135`, `:5156`,
 `:5210`) pass a label in, or whether the reader moves up into
 `load_deck_config` and validates the whole `workflow` block at load time.
+
+If the answer is "silent, matching `get_skills_source`", the fix collapses
+to a one-line change at `goc/engine.py:5043` with no call-site churn, and
+this card is mechanical from there.
+
+## Fix sketch (pending the decision above)
+
+Replace the `return bool(value)` fallback at `goc/engine.py:5043` with
+`return default`, plus the warn branch if that is the pick — threading a
+`key: str` parameter through the three call sites only in that case, so the
+message can name `workflow.<key>`. Non-string, non-bool values take the same
+branch: today a list or a mapping also rides Python truthiness, and
+`get_skills_source`'s `isinstance(value, str)` guard is the shape to mirror.
+Then state the accepted spellings in
+`goc/templates/game_of_cards/config.yaml` beside `auto_commit` so the
+vocabulary is discoverable from the file the user is editing.
 
 ## Fix sketch (pending the decision above)
 
