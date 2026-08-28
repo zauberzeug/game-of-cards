@@ -19,6 +19,7 @@ advanced_by:
   - inline-emitter-writes-multi-line-strings-bare-destroying-subsequent-frontmatter
   - inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
   - definition-of-done-emitter-silently-splits-checkboxes-on-non-lf-line-breaks
+  - goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.
@@ -124,3 +125,23 @@ behaviour rather than a hand-maintained twin?
 
 Pick one (or a hybrid: C as a guard now, A/B as the structural fix). Record
 the choice and rationale in `log.md`, then the card becomes mechanical.
+
+### Counter-evidence: all three options pick the wrong oracle
+
+Filed 2026-08-28 on
+[`goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse`](../goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse/),
+with a `reproduce.py`: seven scalar shapes — values opening with `!`, `%`,
+`- `, `? `, or a non-header `|`/`>`, plus any value holding a TAB — are emitted
+bare, and **`yaml_lite` round-trips all seven faithfully**. Strict YAML refuses
+every one, and this repo's committed `card-frontmatter-yaml` pre-commit hook
+flags six of them.
+
+That breaks each option above as written. Option A's probe
+(`parse_scalar(s) != s`) sees no change and stays silent. Option C's property
+test (`parse(emit(s)) == s`) passes. Option B inherits `&*` from the parser's
+indicator-first set. So a factoring derived purely from parser behaviour would
+close the historical family and leave a live defect in place.
+
+The oracle has to be the **union** of the vendored parser's coercions and
+strict-YAML legality. Any option picked here should be restated against that
+wider target before it is implemented.
