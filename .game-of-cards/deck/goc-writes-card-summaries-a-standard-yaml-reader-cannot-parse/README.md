@@ -1,7 +1,7 @@
 ---
 title: goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse
 summary: "goc's own frontmatter emitter leaves six plain-scalar shapes unquoted that strict YAML refuses — values opening with '!', '%', '- ', '? ', or a non-header '|'/'>' — plus any value holding a tab. The repo's committed pre-commit guard flags exactly those, so 'goc new --summary' can write a card that turns the guard red, and every full-frontmatter re-emit verb strips hand-added quotes back out, making the guard's own remedy ('emit_frontmatter already produces the correct form') an unbreakable loop."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-28T07:00:13Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the two false remediation claims are corrected or made true — `scripts/check_card_frontmatter_yaml.py:181` and `AGENTS.md:494` both tell the reader `emit_frontmatter` already produces the correct form. Either the fix makes that true for every shape the guard flags, or the sentences say what is actually guaranteed.
   - [ ] PROCESS: the finding that a parser-derived quote trigger would NOT fix these shapes is recorded on `frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting`, so its pending decision is made against the right oracle.
   - [ ] MECHANICAL: `uv run goc validate` clean, `uv run python -m unittest discover -s tests` green, `uv run python scripts/check_card_frontmatter_yaml.py --check` clean, and plugin mirrors synced.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc writes card summaries a standard YAML reader cannot parse
