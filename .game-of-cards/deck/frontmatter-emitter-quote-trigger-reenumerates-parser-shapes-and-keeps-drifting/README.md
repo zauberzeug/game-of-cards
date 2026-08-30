@@ -145,3 +145,28 @@ close the historical family and leave a live defect in place.
 The oracle has to be the **union** of the vendored parser's coercions and
 strict-YAML legality. Any option picked here should be restated against that
 wider target before it is implemented.
+
+### Half the union now exists — the decision is only about the parser half
+
+`goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse` closed on
+2026-08-30 by building the strict-YAML half directly instead of deriving it:
+`goc/engine.py` now holds `_YAML_INDICATORS`, YAML 1.2 §5.3's closed
+`c-indicator` list transcribed from the spec, split into
+`_YAML_INDICATOR_FIRST` and `_YAML_SPACE_BOUND_INDICATORS`, plus a TAB entry
+in `_YAML_NEEDS_QUOTE`. `scripts/check_card_frontmatter_yaml.py` imports those
+sets rather than restating them, and
+`tests/test_emitter_strict_yaml_quoting.py` pins the agreement in both
+directions with the spec list enumerated independently, so shrinking the
+engine's set turns the build red.
+
+That narrows this card rather than answering it. The emitter's trigger is now
+an explicit union of two oracles: two spec-derived clauses (a strict reader
+must accept the output) and three parser-derived ones
+(`_parser_coerces_scalar`, `_YAML_BLOCK_HEADER_RE`, `s != s.strip()`). Only
+the second group is still a hand-maintained twin of `yaml_lite`, so that is
+the whole remaining scope of Options A / B / C — and whichever is picked has
+to *keep* the spec-derived clauses rather than replace them, because a
+parser-derived trigger is silent on every shape that card fixed. The
+spec-import pattern is also the concrete precedent for Option B: one
+definition in the engine, imported by the other consumer, drift caught by a
+test that enumerates the external reference itself.

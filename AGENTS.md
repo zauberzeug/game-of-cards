@@ -489,9 +489,13 @@ When filing GoC cards in this repo:
   `validate_card` checks parsed field *values* rather than the
   block's YAML legality — so a hand-edited card can pass
   `goc validate` while a strict parser refuses it. Quote any scalar
-  holding `: ` or opening with a YAML indicator (`` ` ``, `@`, `&`,
-  `*`, `!`, `%`, `#`, `,`); `emit_frontmatter` already produces the
-  correct form, so re-emitting the card is the fix. Guarded by
+  holding `: ` or a TAB, or opening with a YAML indicator — the
+  spec's closed `c-indicator` list, held once in `goc.engine` as
+  `_YAML_INDICATORS` and imported by the guard rather than restated
+  (three of them, `-` `?` `:`, bind only before a space or alone).
+  Re-emitting the card through any goc verb is the fix: the emitter
+  consults the same set, so it quotes every shape the guard flags
+  and preserves a quote you added by hand. Guarded by
   `scripts/check_card_frontmatter_yaml.py`, which runs as the
   `card-frontmatter-yaml` pre-commit hook and from
   `tests/test_card_frontmatter_yaml.py` in CI. Repo-local for the

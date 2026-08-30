@@ -73,7 +73,7 @@ def main() -> int:
     roundtrip_regressed = False
 
     print("=" * 72)
-    print("Part 1 — emit_frontmatter renders these as plain (illegal) scalars")
+    print("Part 1 — how emit_frontmatter renders seven strict-YAML-illegal values")
     print("=" * 72)
     print(f"  emitter quote-trigger : engine._YAML_INDICATOR_FIRST = "
           f"{''.join(sorted(engine._YAML_INDICATOR_FIRST))!r}")
@@ -94,16 +94,21 @@ def main() -> int:
         flagged = bool(guard.flag_frontmatter(block))
         if plain:
             plain_failures += 1
-        # Where it lands differs, and both landings are bad. Flagged: the
-        # emitter wrote frontmatter this repo's own pre-commit hook rejects.
-        # Not flagged: the emitter wrote frontmatter strict YAML rejects and
-        # nothing in this repo objects — it ships to consumers.
-        verdict = (
-            "FLAGGED — emitter wrote what the commit hook rejects"
-            if flagged
-            else "not flagged — guard blind spot, ships silently"
-        )
-        if flagged != guard_catches:
+        # Where the output lands. While the emitter writes plain, both landings
+        # are bad — flagged: it wrote frontmatter this repo's own pre-commit
+        # hook rejects; not flagged: it wrote frontmatter strict YAML rejects
+        # and nothing in this repo objects, so it ships to consumers. Once the
+        # emitter quotes, the guard has nothing to flag by construction, which
+        # is the fixed state rather than a blind spot.
+        if not plain:
+            verdict = "clean — quoted, so the guard has nothing left to flag"
+        elif flagged:
+            verdict = "FLAGGED — emitter wrote what the commit hook rejects"
+        else:
+            verdict = "not flagged — guard blind spot, ships silently"
+        # Guard coverage is only a live question while the emitter still writes
+        # the value plain; a quoted emit never reaches the indicator check.
+        if plain and flagged != guard_catches:
             print(f"  [NOTE] guard coverage for {value!r} changed since filing")
         print(f"  [{'FAIL' if plain else ' ok ':^5}] {why}")
         print(f"         emitted: {emitted!r}")
@@ -111,10 +116,10 @@ def main() -> int:
 
     print()
     print("=" * 72)
-    print("Part 2 — the guard's own remedy is a loop")
+    print("Part 2 — the guard's remedy has to converge")
     print("=" * 72)
-    print("  guard failure message says: \"Quote the value — `emit_frontmatter`")
-    print("  already produces the correct form.\"  Re-emitting the flagged value:")
+    print("  The guard tells the operator to quote the value and says a re-emit")
+    print("  produces the same form. Hand-quoting, then re-emitting:")
     print()
     for value, _why, _catches in CASES[:1]:
         first = _frontmatter_block(value)

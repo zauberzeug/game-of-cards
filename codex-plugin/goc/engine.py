@@ -205,11 +205,33 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return data, m.group(3) or ""
 
 
-_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
-# Leading indicator chars the vendored parser rejects in value position:
-# `&`/`*` crash the parse (anchors/aliases not supported). `[`/`{`/`"`/`'`
-# are already caught anywhere by _YAML_NEEDS_QUOTE.
-_YAML_INDICATOR_FIRST = frozenset("&*")
+# Characters that force a quoted scalar wherever in the value they appear.
+# TAB is in the class because it is illegal ANYWHERE in a YAML plain scalar —
+# a strict reader refuses `summary: column<TAB>separated` with "while scanning
+# for the next token" — while the leading/trailing cases alone are caught by
+# the `s != s.strip()` trigger below. A double-quoted scalar carries a literal
+# TAB unchanged (YAML's `nb-json` admits #x9), so quoting is the whole fix.
+_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@\t]")
+# YAML 1.2 §5.3 `c-indicator` — the spec's closed list of characters that carry
+# syntactic meaning. Taken from the spec rather than from the shapes the
+# vendored parser happens to reinterpret, because the emitter's contract is
+# "output any YAML reader accepts", not "output yaml_lite survives": the parser
+# round-trips `!tag`, `%dir`, `- item`, `? key`, `|pipe` and `>fold` faithfully
+# while strict YAML refuses all six, so a trigger derived from parser behaviour
+# alone stays silent on every one of them. The correct oracle is the union of
+# strict-YAML legality and the parser's coercions — see the card
+# `goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse`.
+_YAML_INDICATORS = frozenset("-?:,[]{}#&*!|>'\"%@`")
+# `-`, `?` and `:` are indicators only when followed by whitespace or standing
+# alone: `-v` and `?query` are ordinary plain scalars, while `- v` is a sequence
+# entry, `? v` an explicit key, and a bare `-` an empty sequence entry.
+_YAML_SPACE_BOUND_INDICATORS = frozenset("-?:")
+# Every other indicator is illegal at position 0 whatever follows it. Several
+# members are already caught anywhere by `_YAML_NEEDS_QUOTE`; the set stays
+# spec-complete rather than minimized so it can serve as the single definition
+# of "cannot open a plain scalar" for `scripts/check_card_frontmatter_yaml.py`,
+# which imports it instead of restating it.
+_YAML_INDICATOR_FIRST = _YAML_INDICATORS - _YAML_SPACE_BOUND_INDICATORS
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
 # Covers both bare-indicator forms (`|`, `|-`, `>+`) and the explicit-indent
 # forms the vendored parser's `_BLOCK_INDICATOR_RE` / `_FOLDED_INDICATOR_RE`
@@ -237,6 +259,24 @@ def _contains_line_break(s: str) -> bool:
     `s` contains at least one.
     """
     return "".join(s.splitlines()) != s
+
+
+def _opens_with_yaml_indicator(s: str) -> bool:
+    """True when `s`'s first character bars it from being a YAML plain scalar.
+
+    Derived from `_YAML_INDICATORS`, the spec's closed indicator list, so a
+    shape nobody has reported yet is already covered — the per-shape drift this
+    predicate replaces is catalogued on
+    `frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting`.
+    The three space-bound indicators bind only when the value is exactly the
+    indicator or the indicator is followed by a space or TAB (YAML's `s-white`);
+    a line break cannot reach here, `_contains_line_break` refuses it first.
+    """
+    if not s:
+        return False
+    if s[0] in _YAML_INDICATOR_FIRST:
+        return True
+    return s[0] in _YAML_SPACE_BOUND_INDICATORS and s[1:2] in ("", " ", "\t")
 
 
 def _parser_coerces_scalar(s: str) -> bool:
@@ -303,11 +343,21 @@ def _yaml_inline(value) -> str:
             "emit_frontmatter (block-scalar `|-`); other line breaks are "
             "unsupported."
         )
+    # The quote trigger is the UNION of two oracles, because either one alone
+    # leaves real defects standing. Strict-YAML legality (the first two
+    # clauses) covers shapes the vendored parser reads back faithfully but no
+    # other YAML reader accepts — `goc install` promises consumers each card is
+    # "a plain Markdown file with YAML frontmatter". Parser reinterpretation
+    # (the last three) covers shapes that are legal YAML yet come back from
+    # `yaml_lite` as a different value, or crash it. The `|`/`>` heads of
+    # `_YAML_BLOCK_HEADER_RE` are now subsumed by the indicator set; the clause
+    # stays as the parser side of the union, so narrowing either half alone
+    # still leaves a bare block header quoted.
     if (
         _YAML_NEEDS_QUOTE.search(s)
+        or _opens_with_yaml_indicator(s)
         or _parser_coerces_scalar(s)
         or bool(_YAML_BLOCK_HEADER_RE.match(s))
-        or (s and s[0] in _YAML_INDICATOR_FIRST)
         or s != s.strip()
     ):
         # Escape \ and " for safe inclusion in "..." YAML scalar.

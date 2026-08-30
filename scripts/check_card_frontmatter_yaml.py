@@ -30,7 +30,7 @@ push.
 
 ## What it checks
 
-Two hazard shapes, both specific to an **unquoted (plain) scalar** — the only
+Three hazard shapes, all specific to an **unquoted (plain) scalar** — the only
 value form a hand-editor produces by accident, and the form both real offenders
 took:
 
@@ -44,7 +44,13 @@ took:
    re-type the value as an anchor, alias, tag, comment, flow collection, or
    block scalar. `-`, `?` and `:` are indicators only when followed by a
    space — `-v` and `?query` are ordinary scalars — so they are checked
-   separately.
+   separately. Both sets are imported from `goc.engine`, which derives them
+   from YAML 1.2 §5.3's closed `c-indicator` list and consults the same sets
+   when `emit_frontmatter` decides to quote — so this guard cannot ask for a
+   form the emitter refuses to write.
+3. A plain scalar containing a TAB. YAML admits no TAB anywhere in a plain
+   scalar (`while scanning for the next token`), and a double-quoted scalar
+   carries it through unchanged, so quoting is the fix here too.
 
 A value that already opens with `"`, `'`, `[` or `{` is quoted or flow-structured
 and is left alone: its legality is a question about quoting, which
@@ -81,7 +87,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from goc.engine import FRONTMATTER_RE, _YAML_BLOCK_HEADER_RE  # noqa: E402
+from goc.engine import (  # noqa: E402
+    FRONTMATTER_RE,
+    _YAML_BLOCK_HEADER_RE,
+    _YAML_INDICATOR_FIRST,
+    _YAML_SPACE_BOUND_INDICATORS,
+)
 
 DECK_DIR = ROOT / ".game-of-cards" / "deck"
 
@@ -89,11 +100,15 @@ DECK_DIR = ROOT / ".game-of-cards" / "deck"
 NESTED_MAPPING_COLON = re.compile(r":(?:[ \t]|$)")
 
 #: Indicator characters that are illegal or meaning-changing at position 0 of a
-#: plain scalar, whatever follows them.
-LEADING_INDICATORS = tuple("`@&*!|>'\"%[]{},#")
+#: plain scalar, whatever follows them — imported from the engine's spec-derived
+#: `c-indicator` set rather than restated, so this guard cannot demand a form
+#: `emit_frontmatter` does not produce. Restating it is what let the emitter
+#: write six shapes this guard rejects
+#: (`goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse`).
+LEADING_INDICATORS = tuple(sorted(_YAML_INDICATOR_FIRST))
 
 #: Indicators that only bind when followed by a space (or standing alone).
-SPACE_BOUND_INDICATORS = ("-", "?", ":")
+SPACE_BOUND_INDICATORS = tuple(sorted(_YAML_SPACE_BOUND_INDICATORS))
 
 #: Value forms that are already quoted or flow-structured — not plain scalars.
 #: `|` / `>` are deliberately absent: they are legal only as a complete block
@@ -129,6 +144,8 @@ def flag_frontmatter(block: str) -> list[tuple[int, str, str]]:
             )
         elif NESTED_MAPPING_COLON.search(value):
             findings.append((lineno, key, "plain scalar contains an unquoted ': '"))
+        elif "\t" in value:
+            findings.append((lineno, key, "plain scalar contains a TAB"))
     return findings
 
 
@@ -177,8 +194,11 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"\n{len(findings)} finding(s). goc reads cards through its permissive "
         "vendored parser, so these load fine under `goc validate` and fail for "
-        "everyone reading the deck with a strict YAML parser. Quote the value — "
-        "`emit_frontmatter` already produces the correct form.",
+        "everyone reading the deck with a strict YAML parser. Quote the value, "
+        "or re-emit the card through any goc verb: `emit_frontmatter` quotes "
+        "every shape this guard flags — it consults the same indicator sets "
+        "(`goc.engine._YAML_INDICATOR_FIRST`, `_YAML_SPACE_BOUND_INDICATORS`) "
+        "and re-emits the quoted form, so a hand-added quote survives.",
         file=sys.stderr,
     )
     return 1 if args.check else 0
