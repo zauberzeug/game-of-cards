@@ -24,7 +24,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:3501-3524` — the board cell renderer.
+`goc/engine.py:3551-3574` — the board cell renderer.
 
 ## Hypothesis (verbatim quote)
 

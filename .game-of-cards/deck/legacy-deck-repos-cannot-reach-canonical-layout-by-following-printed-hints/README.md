@@ -28,7 +28,7 @@ no documented exit.
 
 ## Location
 
-- `goc/engine.py:3687-3691` — every non-exempt verb warns:
+- `goc/engine.py:4160-4164` — every non-exempt verb warns:
 
   ```python
   if _LEGACY_ONLY and args.command not in ("migrate", "install", "upgrade", None):
@@ -38,16 +38,16 @@ no documented exit.
   ```
 
 - `goc/install.py:1693-1861` — `upgrade()` never migrates the deck tree:
-  `_find_installed_deck_dir` (`goc/install.py:455-463`) resolves the legacy
+  `_find_installed_deck_dir` (`goc/install.py:470-478`) resolves the legacy
   `deck/`, the sentinel is re-stamped *there*
   (`goc/install.py:1825`), and `_sync_game_of_cards_config(...,
-  migrate_legacy=True)` (`goc/install.py:1074-1075`) migrates only the
+  migrate_legacy=True)` (`goc/install.py:1089-1090`) migrates only the
   legacy `.claude/deck-config.yaml` config file — it never creates
   `.game-of-cards/deck/`.
-- `goc/engine.py:6246-6252` — `goc migrate` refuses legacy-only repos:
+- `goc/engine.py:7003-7009` — `goc migrate` refuses legacy-only repos:
   `"ERROR: canonical deck location {canonical} does not exist.\n Run \`goc
   install\` first to set up the canonical deck location."`
-- `goc/install.py:1540-1546` — `goc install` refuses in turn (its
+- `goc/install.py:1585-1591` — `goc install` refuses in turn (its
   `_find_installed_deck_dir` also matches legacy `deck/.goc-version`):
   `"already installed ({rel}/.goc-version → {existing})"` / `"Run \`goc
   upgrade\` to re-sync templates."`

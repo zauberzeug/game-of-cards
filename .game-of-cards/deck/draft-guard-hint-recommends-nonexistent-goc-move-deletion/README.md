@@ -20,14 +20,14 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:5298-5307` — the draft-scaffold refusal inside `_cmd_status`:
+- `goc/engine.py:5972-5981` — the draft-scaffold refusal inside `_cmd_status`:
 
   ```python
   f"draft state guards against. Author it first (then `goc publish {title}` or "
   f"`goc status {title} active`), or delete it with `goc move`.",
   ```
 
-- `goc/engine.py:4036` — `goc move` is a rename verb:
+- `goc/engine.py:4086` — `goc move` is a rename verb:
   `subparsers.add_parser("move", help="Rename a title and rewrite known cross-references.")`
   with two required positionals (`old_title new_title`); the executor is
   `git mv`/`shutil.move` plus cross-reference rewrite. No deletion mode,

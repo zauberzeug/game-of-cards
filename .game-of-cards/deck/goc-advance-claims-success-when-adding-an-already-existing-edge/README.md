@@ -14,7 +14,7 @@ tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits non-zero (defect no longer fires — running `goc advance` on a pre-existing edge produces a distinct signal from creating a new edge).
   - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("edge already exists")`. Match whichever shape the resolved sibling `goc-unadvance-claims-success-when-removing-a-non-existent-edge` picks for analogous non-mutating verb calls.
-  - [ ] MECHANICAL: `_cmd_advance` (engine.py:6459) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_advance` honors before printing the success line and entering the auto-commit branch.
+  - [ ] MECHANICAL: `_cmd_advance` (engine.py:6509) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_advance` honors before printing the success line and entering the auto-commit branch.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the already-existing-edge case.
   - [ ] PROCESS: `uv run goc validate` passes.
 ---
@@ -24,8 +24,8 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:4382-4400` — `_cmd_advance`
-- `goc/engine.py:4158-4168` — `_add_to_list_field` (idempotent: returns input text when the value is already present)
-- `goc/engine.py:6224-6237` — `_mutate_pair` (writes the result of `_add_to_list_field` back, but exposes no signal when the write was a no-op)
+- `goc/engine.py:6252-6262` — `_add_to_list_field` (idempotent: returns input text when the value is already present)
+- `goc/engine.py:6274-6287` — `_mutate_pair` (writes the result of `_add_to_list_field` back, but exposes no signal when the write was a no-op)
 
 ## What's broken
 
@@ -34,7 +34,7 @@ enters the auto-commit branch regardless of whether the edge actually
 existed beforehand.
 
 ```python
-# goc/engine.py:6459
+# goc/engine.py:6509
 def _cmd_advance(args):
     """Add bidirectional value-flow edge: title.advanced_by += advancer, advancer.advances += title."""
     title = args.title
@@ -59,7 +59,7 @@ def _cmd_advance(args):
 `_add_to_list_field` is correctly idempotent at the data layer:
 
 ```python
-# goc/engine.py:6202
+# goc/engine.py:6252
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
     """Add title_to_add to a frontmatter list field, idempotent."""
     fm, body = parse_frontmatter(text)
@@ -114,10 +114,10 @@ verb is reachable through three documented paths:
 
 1. Direct CLI: `goc advance <title> --by <advancer>` — invoked from
    `Skill(advance-card)` when an agent links two existing cards.
-2. `goc new --advanced-by <existing>` (`engine.py:6177-6180`) — routes
+2. `goc new --advanced-by <existing>` (`engine.py:6227-6230`) — routes
    through the same `_mutate_pair` codepath. A `goc new` filing that
    re-asserts an already-wired edge would also misreport.
-3. `goc repair-edges --execute` (`engine.py:6372`) — repairs half-edges
+3. `goc repair-edges --execute` (`engine.py:6422`) — repairs half-edges
    by calling `_mutate_pair(..., add=True)` for each missing inverse.
    The repair loop pre-filters to genuinely missing inverses, so this
    path is not currently miscalled — but the misreporting shape lives

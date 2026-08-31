@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:1814-1815` — `validate_card`'s `created` check:
+- `goc/engine.py:1864-1865` — `validate_card`'s `created` check:
 
   ```python
   if "created" in fm and not _is_iso_date(fm["created"]):
@@ -78,7 +78,7 @@ match the closed_at peer's analysis:
 Downstream `created`-consuming surfaces that quietly drift on a future
 value:
 
-- `_cmd_triage` at `engine.py:4911-4915` computes `aged_days = today -
+- `_cmd_triage` at `engine.py:6894-6898` computes `aged_days = today -
   date.fromisoformat(_date_part(t.created))` — a future `created`
   produces a **negative** aged_days. `goc triage` then sorts parked
   cards with that negative number leading the queue ("oldest first").

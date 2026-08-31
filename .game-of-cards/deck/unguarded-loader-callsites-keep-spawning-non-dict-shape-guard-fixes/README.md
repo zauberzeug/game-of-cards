@@ -19,7 +19,7 @@ advanced_by:
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (shared `load_mapping_or_warn` helper that wraps json.loads / yaml.safe_load and routes every user-editable load through it), B (per-callsite `isinstance(_, dict)` guard at each remaining site), or C (status-quo per-site whack-a-mole). Record the decision in log.md with the rationale. See `## Decision required` below.
-  - [ ] MECHANICAL: implement the chosen approach. For A: introduce the helper in `goc/engine.py` (or a shared `goc/_loaders.py`); migrate every documented user-editable callsite through it; a regression test asserts no `yaml.safe_load(...) or {}` or `json.loads(...)` pattern remains unguarded outside the helper for the enumerated callsites. For B: add `isinstance(_, dict)` guards mirroring the closed-sibling shape at `load_deck_config` (engine.py:5319), `_resolve_deck_dir`'s config-probe (engine.py:99), and the canonical-tags fenced-YAML loader (engine.py:680). For C: file the three outstanding instances as separate cards and walk away.
+  - [ ] MECHANICAL: implement the chosen approach. For A: introduce the helper in `goc/engine.py` (or a shared `goc/_loaders.py`); migrate every documented user-editable callsite through it; a regression test asserts no `yaml.safe_load(...) or {}` or `json.loads(...)` pattern remains unguarded outside the helper for the enumerated callsites. For B: add `isinstance(_, dict)` guards mirroring the closed-sibling shape at `load_deck_config` (engine.py:5369), `_resolve_deck_dir`'s config-probe (engine.py:99), and the canonical-tags fenced-YAML loader (engine.py:730). For C: file the three outstanding instances as separate cards and walk away.
   - [ ] TDD: a reproduce.py builds a tmp repo with `.game-of-cards/config.yaml` containing `null` (one shape) and `[]` (another shape), then runs a code path that calls `load_deck_config()` (e.g. `goc done` or `goc attest`) — currently crashes with `AttributeError`; after the fix, the load surfaces a coherent warning and the command continues or fails with a clean error.
   - [ ] TDD: regression tests covering each enumerated callsite against each non-dict shape (`null`, `[]`, `"string"`, `42`), asserting no `AttributeError` escapes.
   - [ ] PROCESS: cross-link the two closed siblings via `advanced_by` (already wired) so a cold reader sees the family this card retires. If approach A is chosen, also add the helper to `Skill(card-schema)` or `AGENTS.md` as the canonical loader pattern for new user-editable config files.
@@ -39,7 +39,7 @@ loader callsite where the parsed payload is then treated as a mapping:
    parses to a non-mapping (was: `AttributeError` on `fm.get(...)`
    inside `load_card`).
 2. [`claude-settings-json-that-parses-to-a-non-dict-crashes-install-with-attributeerror`](../claude-settings-json-that-parses-to-a-non-dict-crashes-install-with-attributeerror/)
-   — `_merge_claude_settings` (`install.py:579`) and
+   — `_merge_claude_settings` (`install.py:594`) and
    `_strip_goc_settings_entries` (`install.py:596`) now backup-and-warn
    / warn-and-return when `.claude/settings.json` is valid JSON of a
    non-dict shape (`null`, list, string, number). Was:
@@ -67,7 +67,7 @@ A `grep -n "json.loads\|yaml.safe_load" goc/*.py` against the current
 tree surfaces three more user-editable-input callsites with the same
 shape:
 
-### 1. `load_deck_config` — `goc/engine.py:5319-5335`
+### 1. `load_deck_config` — `goc/engine.py:5369-5385`
 
 ```python
 def load_deck_config() -> dict:
@@ -91,7 +91,7 @@ sections; deleting all of them and leaving a blank file is fine, but
 leaving any non-mapping content (a stray top-level list, a YAML-lite
 scalar at the root) crashes `goc done` / `goc attest`.
 
-### 2. `_resolve_deck_dir`'s config-probe — `goc/engine.py:86-93`
+### 2. `_resolve_deck_dir`'s config-probe — `goc/engine.py:96-103`
 
 ```python
 config_path = common_root / ".game-of-cards" / "config.yaml"
@@ -137,7 +137,7 @@ crash.
 
 ### Possibly more
 
-A full sweep should also re-check `goc/install.py:314` (manifest load
+A full sweep should also re-check `goc/install.py:329` (manifest load
 — input is package data, not user-editable, so probably fine but worth
 verifying) and any `json.load(sys.stdin)` hook entrypoints (input is
 the harness's JSON envelope, trusted).

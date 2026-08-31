@@ -25,7 +25,7 @@ worker: null
 
 ## Location
 
-- `goc/engine.py:581-596` — `replace_or_append_decision`. The two-branch logic (`if DECISION_REQUIRED_RE.search(body): sub` else `append`) never inspects the body for a pre-existing `## Decision` heading.
+- `goc/engine.py:631-646` — `replace_or_append_decision`. The two-branch logic (`if DECISION_REQUIRED_RE.search(body): sub` else `append`) never inspects the body for a pre-existing `## Decision` heading.
 - `goc/engine.py:4786-4846` — `_cmd_decide`. Calls `extract_decision_required_section` + `replace_or_append_decision` without touching any prior `## Decision` block already in the README.
 
 ## What's broken

@@ -22,9 +22,9 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:3261-3269` — `_format_bundle_attestation_block` (the
+- `goc/engine.py:4861-4869` — `_format_bundle_attestation_block` (the
   hard-coded "PASS" block).
-- `goc/engine.py:4831-4905` — `_cmd_done_bundle` (writes the block,
+- `goc/engine.py:4881-4955` — `_cmd_done_bundle` (writes the block,
   flips status, never calls `_run_derived_check` /
   `_run_automated_check`).
 - `goc/templates/skills/finish-card/reference.md:79-90` — the
@@ -34,7 +34,7 @@ definition_of_done: |
 
 `goc attest <title>` reads `.game-of-cards/config.yaml`, runs each
 layer-2 + layer-3 check, and writes a result-based Closure
-verification block (`goc/engine.py:5683-5786`). The non-bundle
+verification block (`goc/engine.py:5733-5836`). The non-bundle
 closure flow is documented as two steps: `goc attest` (records
 attestation) → `goc done` (flips status).
 
@@ -66,7 +66,7 @@ def _format_bundle_attestation_block(timestamp: str, titles: list[str]) -> str:
         f"- Closed via: `goc done --bundle`\n"
     )
 ```
-— `goc/engine.py:3261-3269`
+— `goc/engine.py:4861-4869`
 
 Compare the non-bundle equivalent, which loops through every
 configured check, runs it, and records the per-check result:
@@ -80,7 +80,7 @@ def _format_attestation_block(today: str, results: list[dict]) -> str:
             continue
         ...
 ```
-— `goc/engine.py:5667-5680`
+— `goc/engine.py:5717-5730`
 
 ## Empirical evidence
 

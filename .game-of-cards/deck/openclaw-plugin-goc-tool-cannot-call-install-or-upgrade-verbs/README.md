@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `openclaw-plugin/index.ts:46-64` — `GOC_VERBS` literal union (17 verbs, no
+- `openclaw-plugin/index.ts:48-66` — `GOC_VERBS` literal union (17 verbs, no
   `install`, no `upgrade`); line 67 feeds it into `Type.Union` for the tool's
   `verb` parameter, so out-of-union verbs are rejected at input validation.
 - `goc/cli.py:47` — `if argv and argv[0] in ("install", "upgrade"):` —
@@ -60,7 +60,7 @@ fails typebox validation. Every fallback is worse:
 
 - `exec` of bare `goc install` → ENOENT on a plugin-only host.
 - A pipx-installed `goc install` runs *outside* the plugin payload, so
-  `_is_openclaw_plugin_context()` (`goc/install.py:489-500`, keyed on
+  `_is_openclaw_plugin_context()` (`goc/install.py:504-515`, keyed on
   `_PACKAGE_DIR.parent.name == "openclaw-plugin"`) is False and install
   defaults to the **Claude** harness — writing the `CLAUDE.md` import that
   `openclaw-kickoff` explicitly promises never appears ("No `CLAUDE.md`

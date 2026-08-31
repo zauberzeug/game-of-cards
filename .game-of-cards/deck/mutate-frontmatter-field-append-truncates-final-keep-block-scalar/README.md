@@ -32,7 +32,7 @@ passes before and after — fully silent data loss, reachable from
 
 ## Location
 
-- `goc/engine.py:486-488` — the field-absent append:
+- `goc/engine.py:536-538` — the field-absent append:
 
   ```python
   if not pattern.search(fm_text):
@@ -79,7 +79,7 @@ DEFECT REPRODUCED: appended field wedged inside the keep scalar's trailing blank
 ## Why it matters
 
 Reachability: `goc status <title> active` on a card without a `worker`
-field appends one via `_auto_populate_worker` (`goc/engine.py:5848`) — the
+field appends one via `_auto_populate_worker` (`goc/engine.py:5898`) — the
 routine claim step every pull-card session performs. `goc done` /
 `goc status <t> disproved|superseded` append `closed_at` the same way on
 hand-authored cards lacking the key (`goc/engine.py:4802`, `5310`). The

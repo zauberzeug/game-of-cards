@@ -61,7 +61,7 @@ traceback. The retrospective silently reports no closures.
 
 Two other ported sites take the same substitution in prose, where the
 apostrophe is harmless (`scan-deck/SKILL.md:22`,
-`create-card/SKILL.md:33` — both `User argument: the user's argument`).
+`create-card/SKILL.md:34` — both `User argument: the user's argument`).
 Only the `retrospective` site lands inside quoting.
 
 ## Empirical evidence

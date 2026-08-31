@@ -15,8 +15,8 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — after a rejected `git commit`, `git diff --cached --name-only` is empty.
   - [ ] TDD: a regression test asserts the pre-existing-stage case directly — a path the caller had already staged before the verb ran is left staged after a failed auto-commit, so the cleanup cannot be a blanket `git restore --staged` over the pathspec.
   - [ ] TDD: a regression test asserts the success path is unchanged — a normal auto-commit still lands one commit and leaves the index clean (`tests/test_git_auto_commit_pathspec.py` stays green).
-  - [ ] MECHANICAL: the chosen remedy landed in `_git_auto_commit` (`goc/engine.py:4705-4819`) and its docstring's "Skipping is silent and non-fatal" paragraph states what happens to the index, not only to the disk mutation.
-  - [ ] MECHANICAL: whichever of the exit-code / success-line options the decision picks is implemented consistently across all seven call sites (`engine.py:5964, 5763, 5959, 6216, 6238, 6253, 6582`), rather than in `_cmd_publish` alone.
+  - [ ] MECHANICAL: the chosen remedy landed in `_git_auto_commit` (`goc/engine.py:4965-5079`) and its docstring's "Skipping is silent and non-fatal" paragraph states what happens to the index, not only to the disk mutation.
+  - [ ] MECHANICAL: whichever of the exit-code / success-line options the decision picks is implemented consistently across all seven call sites (`engine.py:6014, 5763, 5959, 6216, 6238, 6253, 6582`), rather than in `_cmd_publish` alone.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 ---
 
@@ -51,10 +51,10 @@ definition_of_done: |
   There is no `git restore --staged` / `git reset` on this path. The
   `git add` side effect survives the failure.
 
-- Seven auto-committing call sites reach it: `goc status` (`engine.py:5964`),
+- Seven auto-committing call sites reach it: `goc status` (`engine.py:6014`),
   `goc publish` (`:5763`), `goc new --commit` (`:5959`), `goc wait` (`:6216`),
   `goc advance` (`:6238`), `goc unadvance` (`:6253`), `goc decide` (`:6582`).
-  `auto_commit_enabled` (`engine.py:5127-5135`) defaults to **true** whenever
+  `auto_commit_enabled` (`engine.py:5177-5185`) defaults to **true** whenever
   the deck is git-tracked, so this is the default path, not an opt-in one.
 
 ## What's broken
@@ -89,7 +89,7 @@ stage — the case the same section's `git commit -- <path>...` pathspec rule
 exists to contain ("The pathspec is the last guard against accidentally
 bundling unrelated staged files").
 
-The trigger is not exotic. `.pre-commit-config.yaml:16-18` says so in its own
+The trigger is not exotic. `.pre-commit-config.yaml:38-40` says so in its own
 comment:
 
 > AGENTS.md § "Card authoring rules" requires English cards. goc's own
@@ -146,9 +146,9 @@ second only re-routed the diagnostic to stderr.
 
 **Why this is a single-site defect, not a family.** The engine already has
 the convention this call site is missing: the claim-push path aborts its own
-half-finished git state on failure (`git rebase --abort`, `engine.py:5270`),
+half-finished git state on failure (`git rebase --abort`, `engine.py:5320`),
 and `goc move`'s `git mv` falls back rather than stranding a side effect
-(`engine.py:6630-6632`). `_git_auto_commit` is the outlier against a local
+(`engine.py:6680-6682`). `_git_auto_commit` is the outlier against a local
 convention, and it is the one shared helper every auto-committing verb routes
 through — so the fix is one function, not an architectural sweep. It is also
 adjacent to but NOT a member of

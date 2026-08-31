@@ -276,7 +276,7 @@ that walks cards and calls `goc decide` per card.
   ranking, capping, and a loop.
 - Cons: the preview fidelity depends on the undecided option-shape card; and
   it treats the symptom — intake keeps producing, so it needs re-running.
-- Edit: `_cmd_triage` and its subparser (`p_triage`, `goc/engine.py:4068`),
+- Edit: `_cmd_triage` and its subparser (`p_triage`, `goc/engine.py:4118`),
   whose `--help` string — "List parked cards (gate ≠ none), grouped by gate,
   oldest-first" — also understates its real scope today: it silently filters
   to `status == "open"` and to non-drafts, which is why it reports 181 of the

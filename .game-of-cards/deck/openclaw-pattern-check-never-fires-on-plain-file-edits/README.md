@@ -25,7 +25,7 @@ definition_of_done: |
 ## Location
 
 `openclaw-plugin/index.ts:410` — `CODE_MUTATING_TOOLS`.
-`openclaw-plugin/index.ts:784-791` — the `agent_end` handler's `mutating`
+`openclaw-plugin/index.ts:794-801` — the `agent_end` handler's `mutating`
 predicate that reads it.
 
 ## What's broken

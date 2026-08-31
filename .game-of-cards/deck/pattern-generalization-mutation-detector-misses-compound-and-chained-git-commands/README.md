@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/templates/hooks/pattern_generalization_check.py:40-70` —
+`goc/templates/hooks/pattern_generalization_check.py:49-79` —
 `_is_broad_git_mutation`. Mirrored byte-for-byte in
 `claude-plugin/hooks/pattern_generalization_check.py` and
 `codex-plugin/hooks/pattern_generalization_check.py`, and ported to

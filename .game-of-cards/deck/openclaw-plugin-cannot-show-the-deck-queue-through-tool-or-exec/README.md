@@ -30,7 +30,7 @@ definition_of_done: |
   unconditionally.
 - `openclaw-plugin/dist/index.js:2406-2449` — the compiled artifact consumers
   actually load; identical on both points.
-- `goc/engine.py:4116-4050` — `if args.command is None: _cmd_default(args)`.
+- `goc/engine.py:4166-4100` — `if args.command is None: _cmd_default(args)`.
   The queue table, `--board`, `--ready`, `--json` and the leverage line all
   live behind that branch.
 - `scripts/port_skills_to_openclaw.py:106-107` — the porter's injected
@@ -45,7 +45,7 @@ definition_of_done: |
 The engine renders the deck only when argparse resolves **no subcommand**:
 
 ```python
-# goc/engine.py:4116
+# goc/engine.py:4166
     if args.command is None:
         _cmd_default(args)
 ```
@@ -64,7 +64,7 @@ No parked cards (gate ≠ none).      # ← triage ran; --board was ignored
 parameter is a required literal union, and `buildArgs` always splices it:
 
 ```ts
-// openclaw-plugin/index.ts:119-130
+// openclaw-plugin/index.ts:129-140
 function buildArgs(input: GocToolInput): string[] {
   const flagTokens: string[] = [];
   ...

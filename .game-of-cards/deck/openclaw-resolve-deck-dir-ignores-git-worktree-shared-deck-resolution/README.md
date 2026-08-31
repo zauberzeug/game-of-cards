@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-- `openclaw-plugin/index.ts:266-274` — `resolveDeckDir`:
+- `openclaw-plugin/index.ts:343-351` — `resolveDeckDir`:
 
   ```ts
   async function resolveDeckDir(projectDir: string): Promise<string> {

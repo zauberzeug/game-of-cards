@@ -1,6 +1,6 @@
 ---
 title: codex-only-install-pins-skills-source-to-plugin-skipping-parity-check
-summary: "UNVERIFIED. `goc install` picks `skills_source` as `vendored if 'claude' in agents else 'plugin'` (goc/install.py:1597). A codex-only install (no claude agent) therefore writes `skills_source: plugin` even though Codex skills are vendored under `.codex/skills/` and there is no Claude plugin payload. `effective_skills_source()` then short-circuits the skill-dir parity check (engine.py:~856), so template drift in the vendored codex tree goes unreported by `goc validate`. The value is sticky: upgrade only re-pins `if 'claude' in agents`."
+summary: "UNVERIFIED. `goc install` picks `skills_source` as `vendored if 'claude' in agents else 'plugin'` (goc/install.py:1616). A codex-only install (no claude agent) therefore writes `skills_source: plugin` even though Codex skills are vendored under `.codex/skills/` and there is no Claude plugin payload. `effective_skills_source()` then short-circuits the skill-dir parity check (engine.py:~1377), so template drift in the vendored codex tree goes unreported by `goc validate`. The value is sticky: upgrade only re-pins `if 'claude' in agents`."
 status: open
 stage: null
 contribution: high
@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py runs a codex-only `goc install` into a temp repo and asserts `.game-of-cards/config.yaml` records `skills_source: plugin` while `.codex/skills/` holds real vendored files and no Claude plugin exists — or disproves the claim.
   - [ ] TDD: after simulating drift (delete a vendored `.codex/skills/<verb>/`), assert the parity validator returns `[]` (drift unreported) under the bad pin, and reports the missing skill once corrected.
   - [ ] PROCESS: decide the correct `skills_source` semantics for codex-only / multi-agent installs (does `plugin` mean "Claude plugin specifically", and should codex vendoring be tracked independently?). Record verdict in log.md.
-  - [ ] MECHANICAL: if confirmed, fix the pick at install.py:1597 and the upgrade re-pin guard at install.py:~1403; drop the `unverified` tag once reproduce.py lands.
+  - [ ] MECHANICAL: if confirmed, fix the pick at install.py:1616 and the upgrade re-pin guard at install.py:~1403; drop the `unverified` tag once reproduce.py lands.
 ---
 
 # Codex-only install pins `skills_source: plugin`, skipping the parity check
@@ -25,9 +25,9 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:1597`:
+- `goc/install.py:1616`:
   `chosen_source = "vendored" if "claude" in local_skills_agents else "plugin"`
-- `goc/engine.py:~856`: `if effective_skills_source() == "plugin": return []`
+- `goc/engine.py:~1377`: `if effective_skills_source() == "plugin": return []`
   (skips the skill-dir parity check).
 - `goc/install.py:~1403`: upgrade re-pins `skills_source` only
   `if "claude" in agents` — so a codex-only upgrade never corrects a bad pin.

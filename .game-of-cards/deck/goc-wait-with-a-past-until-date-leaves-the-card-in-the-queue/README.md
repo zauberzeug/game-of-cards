@@ -14,7 +14,7 @@ tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: the shared validation-failure shape decided on [mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success](../mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success/) is applied here rather than re-derived — strict-refuse (exit 2, no mutation), exit-0-with-stderr-WARNING, or an honest no-op line. Record which, and why, in this card's `log.md`.
   - [ ] TDD: `reproduce.py` exits zero — neither `--until <today>` nor `--until <long-past date>` produces exit 0 with a bare success line while the card stays in `--ready` and out of `--waiting`.
-  - [ ] MECHANICAL: `_cmd_wait` (`goc/engine.py:6385`) decides the elapsed case from the engine's own read guard rather than a second copy of the comparison — reuse `_waiting_until_instant` + `_now_instant` (or `waiting_impedes` on the post-write card), so this check cannot drift from `waiting_impedes` the way the hook readers repeatedly did.
+  - [ ] MECHANICAL: `_cmd_wait` (`goc/engine.py:6435`) decides the elapsed case from the engine's own read guard rather than a second copy of the comparison — reuse `_waiting_until_instant` + `_now_instant` (or `waiting_impedes` on the post-write card), so this check cannot drift from `waiting_impedes` the way the hook readers repeatedly did.
   - [ ] MECHANICAL: scoped to the `--until` value supplied in THIS invocation. Whether a bare `--reason` should refresh or clear a **pre-existing** stale `waiting_until` is a different question, owned by [goc-wait-does-not-clear-stale-elapsed-waiting-until](../goc-wait-does-not-clear-stale-elapsed-waiting-until/) — do not resolve it here.
   - [ ] TDD: regression test in `tests/` covers `--until <today>` (bare date, elapsed at midnight UTC), `--until <long-past date>`, `--until <future date>` (unchanged — still impedes, no new output), and the datetime shape `YYYY-MM-DDTHH:MM:SSZ` on both sides of `now`.
   - [ ] MECHANICAL: `Skill(advance-card)` Step 6 (`goc/templates/skills/advance-card/SKILL.md:139-142`) states what an already-elapsed `--until` does — it currently documents only that `goc validate` reports an elapsed date as `WAITING_OVERDUE`, which is the state a card drifts into, not the state this verb can create outright. Plugin mirrors synced; `uv run goc validate` clean.
@@ -24,8 +24,8 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:6385` — `_cmd_wait`, the overlay setter.
-- `goc/engine.py:6424-6433` — the whole of `--until` validation, and the
+- `goc/engine.py:6435` — `_cmd_wait`, the overlay setter.
+- `goc/engine.py:6474-6483` — the whole of `--until` validation, and the
   write that follows it:
 
   ```python
@@ -54,9 +54,9 @@ definition_of_done: |
   )
   ```
 
-- `goc/engine.py:2646-2692` — `waiting_impedes`, the read guard the write
+- `goc/engine.py:2696-2742` — `waiting_impedes`, the read guard the write
   never consults: `return until_dt > now`.
-- `goc/engine.py:1133` — `_waiting_until_instant`: a bare `YYYY-MM-DD`
+- `goc/engine.py:1183` — `_waiting_until_instant`: a bare `YYYY-MM-DD`
   becomes **midnight UTC** of that day.
 
 ## What's broken

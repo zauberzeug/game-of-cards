@@ -24,7 +24,7 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:4780-4838` — `_cmd_move` (no terminal-status check at the entry point or before mutation)
-- `goc/engine.py:4710-4779` — `_move_text_rewrite` / `_move_rewrite_tracked_files` (repo-wide reference rewrite; runs unconditionally)
+- `goc/engine.py:6546-6615` — `_move_text_rewrite` / `_move_rewrite_tracked_files` (repo-wide reference rewrite; runs unconditionally)
 - `goc/engine.py:4621-4634` — `_apply_verdict_interactive` shells out to `goc move` via `subprocess.run`, so the unguarded entry point is the seam through which the quality-pass LLM rewrite path also acts on terminal cards.
 
 ## What's broken
@@ -52,7 +52,7 @@ def _cmd_move(args):
     ...
 ```
 
-The recently-added guard in `_cmd_decide` (`goc/engine.py:4862-4867`) is the shape the move verb is missing — except `_cmd_decide` rejects with `gate already 'none'`, which is the gate analogue of the status analogue we want here. The terminal-status guard that `_cmd_decide` carries via its closed-status rejection sibling, and that `goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard` proposes to add to `_cmd_wait`, is absent from `_cmd_move`.
+The recently-added guard in `_cmd_decide` (`goc/engine.py:6810-6815`) is the shape the move verb is missing — except `_cmd_decide` rejects with `gate already 'none'`, which is the gate analogue of the status analogue we want here. The terminal-status guard that `_cmd_decide` carries via its closed-status rejection sibling, and that `goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard` proposes to add to `_cmd_wait`, is absent from `_cmd_move`.
 
 Compare also to `_cmd_status` (`goc/engine.py:4252-4258`), which has the inverse — refusing to move a terminal card *backward* through `goc status`:
 
@@ -78,7 +78,7 @@ Reachable in two ways:
 
 > **PROCESS: sibling sweep** — confirm `_cmd_move` (engine.py:4487) does or does not need its own terminal-status guard; file a follow-up card if the audit reveals `goc move` standalone is also unguarded (the quality-pass path invokes `move` via subprocess and would benefit from defense-in-depth).
 
-This card is that follow-up. (The line-number reference 4487 in the parent card is stale — `_cmd_move` is now at engine.py:6225. The function is unchanged in behavior.)
+This card is that follow-up. (The line-number reference 4487 in the parent card is stale — `_cmd_move` is now at engine.py:6634. The function is unchanged in behavior.)
 
 ## Why it matters
 
@@ -98,13 +98,13 @@ The cluster of unguarded mutation verbs has three documented fix shapes (see the
 
 Recommendation: **(c)** — reject by default with `--force` to bypass. The kanban record-axis defaults to immutability; deliberate retitles of closed cards (slug normalization sweeps, post-hoc clarifications) are rare enough that an explicit `--force` per call is the right ergonomic. Aligns with the `goc done --force` precedent for the orthogonal DoD-enforcement bypass.
 
-Independent of (a/b/c), record the chosen shape's interaction with the quality-pass subprocess (DoD step 4): does the new guard surface back through the subprocess exit code, and does `_apply_verdict_interactive`'s `r.returncode == 0` check at engine.py:4630 already DTRT (printing the failure to stderr and skipping the title-applied bookkeeping) or does it need its own log line clarifying that the closed-card path is the intended rejection rather than a generic move failure?
+Independent of (a/b/c), record the chosen shape's interaction with the quality-pass subprocess (DoD step 4): does the new guard surface back through the subprocess exit code, and does `_apply_verdict_interactive`'s `r.returncode == 0` check at engine.py:4680 already DTRT (printing the failure to stderr and skipping the title-applied bookkeeping) or does it need its own log line clarifying that the closed-card path is the intended rejection rather than a generic move failure?
 
 ## Sibling sweep
 
 The same root cause — mutation verb missing terminal-status guard — has cards in flight across the family:
 
-- [goc-decide-accepts-decisions-on-already-closed-cards](../goc-decide-accepts-decisions-on-already-closed-cards/) (closed) — guard added at engine.py:6760
+- [goc-decide-accepts-decisions-on-already-closed-cards](../goc-decide-accepts-decisions-on-already-closed-cards/) (closed) — guard added at engine.py:6810
 - [goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard](../goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard/) (open)
 - [goc-attest-mutates-log-md-on-already-closed-cards](../goc-attest-mutates-log-md-on-already-closed-cards/) (open)
 - [goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards](../goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards/) (open; parent card whose DoD step 4 commissioned this audit)

@@ -1,6 +1,6 @@
 ---
 title: goc-quality-pass-dod-rewrite-silently-unchecks-previously-checked-items
-summary: "`_apply_dod_rewrite` (engine.py:4575) hardcodes `- [ ]` when reconstructing a DoD item whose LLM-proposed `fix` text lacks an explicit checkbox prefix. The documented LLM contract (in `_QUALITY_PROMPT_TEMPLATE` at engine.py:4418) asks for `fix: \"rewrite...\"` — just the body text — so a fix accepted for a previously-checked `- [x]` item silently flips it to `- [ ]`. Attested completion is erased, and the card's close-readiness drops without any user-visible signal."
+summary: "`_apply_dod_rewrite` (engine.py:4625) hardcodes `- [ ]` when reconstructing a DoD item whose LLM-proposed `fix` text lacks an explicit checkbox prefix. The documented LLM contract (in `_QUALITY_PROMPT_TEMPLATE` at engine.py:4468) asks for `fix: \"rewrite...\"` — just the body text — so a fix accepted for a previously-checked `- [x]` item silently flips it to `- [ ]`. Attested completion is erased, and the card's close-readiness drops without any user-visible signal."
 status: open
 stage: null
 contribution: medium
@@ -25,7 +25,7 @@ definition_of_done: |
 - `goc/engine.py:3068-3085` — `_apply_dod_rewrite`. Line 3082 unconditionally
   prepends `- [ ]` whenever the LLM's `fix` payload does not start with
   `- [`.
-- `goc/engine.py:2937-2981` — `_QUALITY_PROMPT_TEMPLATE`. Documents the
+- `goc/engine.py:4468-4512` — `_QUALITY_PROMPT_TEMPLATE`. Documents the
   `fix` field as the rewritten *text* (not a full markdown line), so the
   LLM legitimately returns bare body strings.
 
@@ -41,10 +41,10 @@ if not new_text.startswith("- ["):
 lines[line_idx] = new_text
 ```
 
-The branch at `engine.py:4602-4603` hardcodes the unchecked-box prefix
+The branch at `engine.py:4652-4653` hardcodes the unchecked-box prefix
 `- [ ]`, regardless of whether the original line was `- [ ]` or `- [x]`.
 The LLM prompt teaches the model to return only the rewrite text — see
-the documented schema at `engine.py:4445`:
+the documented schema at `engine.py:4495`:
 
 ```
 For each item that's NOT verifiable, return
@@ -82,7 +82,7 @@ attested completion."
 ## Why it matters
 
 The reachable consumer flow is `goc quality-pass --llm` →
-`_apply_verdict_interactive` (`engine.py:4609-4659`) → user (or
+`_apply_verdict_interactive` (`engine.py:4659-4709`) → user (or
 `--auto-yes`) accepts the DoD fix → `_apply_dod_rewrite` writes the
 README. A card whose `- [x]` items represent prior attestation (manual
 edits, `goc attest`, or `goc done` mid-flight checkmarks) loses that

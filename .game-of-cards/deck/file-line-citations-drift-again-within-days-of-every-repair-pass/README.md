@@ -166,7 +166,7 @@ and it shrinks with every day the decision waits.
 ## Decision required
 
 Fixing this means changing what a citation *is*, and the convention is set in
-`goc/templates/skills/create-card/SKILL.md:144` — `- **Location** —
+`goc/templates/skills/create-card/SKILL.md:155` — `- **Location** —
 `file:line` (bug-class) or doc/section (doc-class).` — a skill shipped to
 every PyPI/npm/ClawHub consumer. So the pick is not local deck hygiene: it
 changes the methodology GoC prescribes to repos that have never seen this
@@ -196,7 +196,7 @@ the card states what it expects to find.
   still rot — this makes rot *visible*, not absent, so hygiene passes continue
   at the same frequency with a cheaper per-cite step. 109 cites cannot be
   migrated mechanically.
-- *Edit preview*: `goc/templates/skills/create-card/SKILL.md:144` gains the
+- *Edit preview*: `goc/templates/skills/create-card/SKILL.md:155` gains the
   anchor form; `goc/templates/skills/refine-deck/SKILL.md:103`
   (`### Defunct file:line citations`) drops steps 2 and 4's history walk for a
   read-and-compare; `reference.md:111` (`## Citation anchor check`) loses its

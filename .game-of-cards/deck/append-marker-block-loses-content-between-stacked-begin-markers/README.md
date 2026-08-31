@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/install.py:1255`
+`goc/install.py:1270`
 
 ```python
 def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
@@ -46,7 +46,7 @@ GOC_BEGIN_RE = re.compile(r"<!-- BEGIN GOC v[\w.+!-]+ -->")
 GOC_END = "<!-- END GOC -->"
 ```
 
-The same non-greedy shape appears at `goc/install.py:202` inside
+The same non-greedy shape appears at `goc/install.py:217` inside
 `_strip_goc_block`, so the sibling sweep below covers both.
 
 ## What's broken

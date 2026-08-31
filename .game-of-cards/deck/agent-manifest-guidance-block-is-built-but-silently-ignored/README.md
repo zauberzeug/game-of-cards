@@ -23,11 +23,11 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:109` — `AgentShim.guidance` field declaration
-- `goc/install.py:344-358` — `_load_agent_shim` builds `GuidanceBlock` tuples from `manifest["guidance"]` and assigns them to the shim
+- `goc/install.py:124` — `AgentShim.guidance` field declaration
+- `goc/install.py:359-373` — `_load_agent_shim` builds `GuidanceBlock` tuples from `manifest["guidance"]` and assigns them to the shim
 - `goc/templates/agents/claude/manifest.json:17-23` — declares the block the engine never reads
 - `goc/templates/agents/codex/manifest.json:13` — declares `guidance: []`
-- `goc/install.py:113-114, 136-140` — the actual briefing flow reads from module-level constants `AGENTS_GUIDANCE` / `CLAUDE_GUIDANCE`, not from the per-agent shim
+- `goc/install.py:128-129, 136-140` — the actual briefing flow reads from module-level constants `AGENTS_GUIDANCE` / `CLAUDE_GUIDANCE`, not from the per-agent shim
 
 ## What's broken
 

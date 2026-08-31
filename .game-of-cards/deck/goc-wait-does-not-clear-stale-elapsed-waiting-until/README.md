@@ -1,6 +1,6 @@
 ---
 title: goc-wait-does-not-clear-stale-elapsed-waiting-until
-summary: "UNVERIFIED. `goc wait <title> --reason external` (no `--until`) only writes `waiting_on` and leaves any pre-existing `waiting_until` in place. If that stored date is already elapsed, `waiting_impedes` returns False (an elapsed `waiting_until` always resurfaces the card, even with a reason set), so the freshly-set open-ended external wait is silently ignored and the card stays pullable. Needs confirmation that this is unintended vs. the documented elapsed-resurfaces semantics."
+summary: "`goc wait <title> --reason external` (no `--until`) only writes `waiting_on` and leaves any pre-existing `waiting_until` in place. If that stored date is already elapsed, `waiting_impedes` returns False (an elapsed `waiting_until` always resurfaces the card, even with a reason set), so the freshly-set open-ended external wait is silently ignored and the card stays pullable. Reproduced end-to-end through the shipped verb by `reproduce.py` (2026-08-31). What is still open is intent, not behaviour: whether this is a bug or the documented elapsed-resurfaces semantics — see `## Decision required`."
 status: open
 stage: null
 contribution: low
@@ -9,7 +9,7 @@ closed_at: null
 human_gate: decision
 advances: []
 advanced_by: []
-tags: [bug, api-contract, unverified]
+tags: [bug, api-contract]
 definition_of_done: |
   - [ ] PROCESS: decide whether re-setting a `waiting_on` reason via `goc wait` should refresh/clear a stale elapsed `waiting_until` (or warn); record the decision in log.md.
   - [ ] TDD: if the behavior is a bug, a reproduce.py demonstrates that `goc wait <card> --reason external` on a card with an elapsed `waiting_until` leaves `card_is_ready == True`, and the fix makes it False (or warns); promote off `unverified` when it lands.
@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Hypothesis (file:line)
 
-`goc/engine.py:6430-6433` (the `goc wait` overlay setter):
+`goc/engine.py:6480-6483` (the `goc wait` overlay setter):
 
 ```python
 if new_reason is not None:
@@ -32,7 +32,7 @@ if new_until is not None:
 
 `goc wait <title> --reason external` with no `--until` leaves `new_until`
 None, so a pre-existing `waiting_until` is untouched. If that stored date
-is already in the past, `waiting_impedes` (`goc/engine.py:2691-2692`)
+is already in the past, `waiting_impedes` (`goc/engine.py:2741-2742`)
 returns False:
 
 ```python

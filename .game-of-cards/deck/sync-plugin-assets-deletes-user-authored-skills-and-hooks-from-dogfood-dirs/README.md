@@ -40,7 +40,7 @@ Applied to the dogfood pairs (`goc/templates/skills → .claude/skills`,
 `goc/templates/hooks → .claude/hooks`), this deletes any file GoC does
 not ship — including a contributor's own repo-local skill or hook. The
 engine's consumer-facing contract for the very same directory says the
-opposite (`goc/install.py:1214-1216`, `_sync_skill_tree` docstring):
+opposite (`goc/install.py:1229-1231`, `_sync_skill_tree` docstring):
 
 > Non-eligible directories are left untouched — `.claude/skills/` may hold
 > user-owned skills (or skills from other tools) that GoC does not own and

@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/install.py:1256-1257` — inside `_append_marker_block`.
+`goc/install.py:1271-1272` — inside `_append_marker_block`.
 
 ```python
 def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:

@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`scripts/check_card_frontmatter_yaml.py:116` — the early `continue` in
+`scripts/check_card_frontmatter_yaml.py:131` — the early `continue` in
 `flag_frontmatter`:
 
 ```python
@@ -33,7 +33,7 @@ if value.startswith(STRUCTURED_PREFIXES) or value in {"", "null"}:
     continue
 ```
 
-with (`scripts/check_card_frontmatter_yaml.py:101`):
+with (`scripts/check_card_frontmatter_yaml.py:116`):
 
 ```python
 #: Value forms that are already quoted or flow-structured — not plain scalars.
@@ -60,7 +60,7 @@ company. Four of the six skipped forms are strict-YAML errors that both
 `goc validate` and the guard wave through (`reproduce.py` Part 1).
 
 The docstring justifies the skip like this
-(`scripts/check_card_frontmatter_yaml.py:49`):
+(`scripts/check_card_frontmatter_yaml.py:55`):
 
 > A value that already opens with `"`, `'`, `[` or `{` is quoted or
 > flow-structured and is left alone: its legality is a question about quoting,
@@ -139,7 +139,7 @@ goc validate exit: 0
 ## Reachability — who writes a broken quoted summary
 
 `emit_frontmatter` is not the culprit: `_yaml_inline`
-(`goc/engine.py:314`) escapes `"` to `\"` before wrapping, so every
+(`goc/engine.py:364`) escapes `"` to `\"` before wrapping, so every
 goc-*emitted* summary is well-formed. The exposed path is the hand-edit path —
 which is the only path this guard exists to cover, since
 `goc validate` already covers everything the emitter produces.

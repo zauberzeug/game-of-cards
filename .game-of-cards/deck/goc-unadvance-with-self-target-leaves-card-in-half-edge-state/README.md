@@ -13,8 +13,8 @@ advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — `goc unadvance foo --by foo` on a card with self-edges (`advances: [foo]`, `advanced_by: [foo]`) either errors out at exit 2 (chosen path A) OR cleanly clears BOTH lists (chosen path B), but no longer leaves the card in a half-edge state.
-  - [ ] PROCESS: decision recorded on whether `_cmd_unadvance` rejects self-target like `_cmd_advance` (caller-level guard, mirrors engine.py:4388-4390) OR `_mutate_pair` learns to handle child==parent correctly (helper-level guard, also covers any future `_cmd_repair_edges` self-edge repair). The chosen path is reflected in the body's "Fix" section before implementation.
-  - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:6481) and/or `_mutate_pair` (engine.py:6224) carries the guard described in the decision. The output of `goc unadvance foo --by foo` matches the chosen failure mode (ERROR + exit 2, OR clean removal of both halves).
+  - [ ] PROCESS: decision recorded on whether `_cmd_unadvance` rejects self-target like `_cmd_advance` (caller-level guard, mirrors engine.py:6516-6518) OR `_mutate_pair` learns to handle child==parent correctly (helper-level guard, also covers any future `_cmd_repair_edges` self-edge repair). The chosen path is reflected in the body's "Fix" section before implementation.
+  - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:6531) and/or `_mutate_pair` (engine.py:6274) carries the guard described in the decision. The output of `goc unadvance foo --by foo` matches the chosen failure mode (ERROR + exit 2, OR clean removal of both halves).
   - [ ] TDD: a regression test in `tests/` asserts the chosen behavior for the self-target case (both the no-edge variant and the on-disk self-edge variant).
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` stay green.
 ---
@@ -25,14 +25,14 @@ definition_of_done: |
 
 - `goc/engine.py:4403-4414` — `_cmd_unadvance` (no self-target guard).
 - `goc/engine.py:4382-4400` — `_cmd_advance` (has the guard at lines 4388-4390).
-- `goc/engine.py:6224-6126` — `_mutate_pair` (reads `parent_text` before the first write, so child==parent makes the second write revert the first).
+- `goc/engine.py:6274-6176` — `_mutate_pair` (reads `parent_text` before the first write, so child==parent makes the second write revert the first).
 
 ## What's broken
 
 `_cmd_advance` explicitly rejects self-target:
 
 ```python
-# goc/engine.py:6466
+# goc/engine.py:6516
 if title == advancer:
     print("ERROR: cannot advance a card with itself", file=sys.stderr)
     sys.exit(2)
@@ -41,7 +41,7 @@ if title == advancer:
 `_cmd_unadvance` has no equivalent guard:
 
 ```python
-# goc/engine.py:6481
+# goc/engine.py:6531
 def _cmd_unadvance(args):
     """Remove bidirectional value-flow edge."""
     title = args.title
@@ -57,7 +57,7 @@ The mirrored helper `_mutate_pair` reads both copies of the README before
 either write, which is incorrect when `child_title == parent_title`:
 
 ```python
-# goc/engine.py:6224
+# goc/engine.py:6274
 def _mutate_pair(child_title, parent_title, field_on_child, field_on_parent, *, add):
     child_dir = DECK_DIR / child_title
     parent_dir = DECK_DIR / parent_title

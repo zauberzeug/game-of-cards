@@ -112,3 +112,50 @@ own, but it adds a criterion the options should be scored against: a
 self-anchoring text form carries its own evidence and cannot be silently
 repaired into looking current, while a bare line number can. No gate change and
 no edit to the options — that is the human's call.
+
+## 2026-08-31 — refine-deck: fourth datapoint, and it isolates the mechanism
+
+The 2026-08-24 hygiene pass (`e8449764`) is the fourth measurable repair.
+Measured at HEAD, 7 days later:
+
+| Repair pass | Age | Cites it wrote that are wrong at HEAD |
+|---|---|---|
+| `e8449764` fourth pass | 7 days | 237 / 250 (**95%**) |
+
+That is well above the ~70%-at-one-week steady state this card recorded from
+`69e1e4f2` and `f290f5f7`, and the reason matters more than the number.
+
+**Decay tracks where the earliest edit lands, not how much changed.**
+`goc/engine.py` grew 7092 → 7142 over the interval — net +50 lines, one
+commit (`dc5f3279`, the emitter quote-trigger fix), no refactor. Its earliest
+hunk starts at line 208 of a 7142-line file. 296 of the 349 uniquely
+relocatable `goc/engine.py` cites in the deck shifted by exactly +50; no other
+delta accounts for more than 4. So a single small insertion near the top of
+the most-cited file invalidated essentially every cite below it.
+
+This weakens the "just keep repairing" option more than the earlier
+datapoints did: the prior weeks had ~114 lines of growth and decayed less,
+so decay cannot be predicted from churn volume. Any repair cadence has to
+assume worst case.
+
+**A second new fact: the repair pass cannot reach about a quarter of the rot.**
+Full census this round — 819 distinct cites across 164 open cards, 633 (77%)
+defunct. Splitting the 633 by what the anchor recipe can decide:
+
+| | count | share of defunct |
+|---|---|---|
+| uniquely relocatable (repaired this round) | 458 | 72% |
+| anchor text now ambiguous (multiple matches) | 72 | 11% |
+| range whose end-point anchor did not map | 41 | 6% |
+| anchor text too trivial to match on (≤12 chars) | 34 | 5% |
+| anchor text gone (refactored away) | 28 | 4% |
+
+So 175 defunct cites (28%) are structurally beyond a mechanical pass: no rule
+relocates them without guessing, and the recipe correctly refuses to guess.
+Repair is not merely recurring work, it is *incomplete* recurring work, and
+the residue accumulates across passes. That prices the `## Decision required`
+options: a self-anchoring form does not just remove the repair, it reaches the
+28% that repair never will.
+
+Evidence is a full census, not a sample; no card was filed for it because this
+card already owns the finding.

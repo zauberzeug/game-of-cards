@@ -52,7 +52,7 @@ def _cmd_wait(args):
         ...
 ```
 
-The argparse wiring at `goc/engine.py:3987-4003` declares `--clear`,
+The argparse wiring at `goc/engine.py:4037-4053` declares `--clear`,
 `--reason`, and `--until` as three independent flags with no
 `mutually_exclusive_group`, so all three pass argparse cleanly:
 
@@ -63,7 +63,7 @@ p_wait.add_argument("--clear", action="store_true", ...)
 ```
 
 Sibling state-flip verbs do reject mode-conflicts. `_cmd_status` at
-`goc/engine.py:3958-3964` rejects `--by` when `new_status != "superseded"`
+`goc/engine.py:5917-5923` rejects `--by` when `new_status != "superseded"`
 with exit code 2 and an explicit error. The convention is documented
 behavior across the verb family; `wait` is the lone holdout.
 
@@ -117,7 +117,7 @@ After parsing args, if `args.clear` is set AND (`args.reason` is not
 None OR `args.until` is not None), print
 `ERROR: --clear is mutually exclusive with --reason / --until` and
 exit 2. Matches `_cmd_status`'s `--by`-guard convention at
-`engine.py:3958-3964`. Pros: zero ambiguity, no silent data loss,
+`engine.py:5917-5923`. Pros: zero ambiguity, no silent data loss,
 recipes that conflate the two modes get loud feedback. Cons: a
 recipe that legitimately wants "clear then re-set" must now run two
 invocations.

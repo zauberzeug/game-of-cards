@@ -1,6 +1,6 @@
 ---
 title: advance-cycle-detectors-walk-different-edge-fields
-summary: "UNVERIFIED. The gating validator `detect_advance_cycles` (goc/engine.py:~1323) walks the `advanced_by` field, while the live edge-add guard `_would_create_advance_cycle` (goc/engine.py:1349) walks the `advances` field. On a half-edged deck (only one side populated) the two can return opposite verdicts about the same logical cycle, so `goc validate` may pass a cycle the `goc advance` guard would have refused. Bounded: on a validate-clean (bidirectionally-edged) deck both fields agree."
+summary: "UNVERIFIED. The gating validator `detect_advance_cycles` (goc/engine.py:~2126) walks the `advanced_by` field, while the live edge-add guard `_would_create_advance_cycle` (goc/engine.py:1349) walks the `advances` field. On a half-edged deck (only one side populated) the two can return opposite verdicts about the same logical cycle, so `goc validate` may pass a cycle the `goc advance` guard would have refused. Bounded: on a validate-clean (bidirectionally-edged) deck both fields agree."
 status: open
 stage: null
 contribution: medium
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-- `detect_advance_cycles` — `goc/engine.py:~1323`: walks `advanced_by`
+- `detect_advance_cycles` — `goc/engine.py:~2126`: walks `advanced_by`
   (`advanced_by = t.frontmatter.get("advanced_by") or []`).
 - `_would_create_advance_cycle` — `goc/engine.py:1349`: walks `advances`
   (`for a in card.frontmatter.get("advances") or []`).

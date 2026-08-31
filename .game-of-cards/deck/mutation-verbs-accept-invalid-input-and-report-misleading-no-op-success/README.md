@@ -79,7 +79,7 @@ design space:
 - `_cmd_advance` already rejects a self-target with
   `print("ERROR: cannot advance a card with itself", file=sys.stderr);
   sys.exit(2)` and rejects a would-be cycle the same way
-  (`goc/engine.py:6466`, `:5237`). The
+  (`goc/engine.py:6516`, `:5237`). The
   `goc-unadvance-with-self-target` child is literally asking for the
   symmetric guard `advance` already has.
 - Argument/precondition errors throughout `engine.py` use the

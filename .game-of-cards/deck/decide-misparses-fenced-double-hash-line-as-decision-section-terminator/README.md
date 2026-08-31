@@ -13,7 +13,7 @@ tags: [bug, api-contract]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — `goc decide` preserves the full deliberation prose in the log.md archive and leaves no stray `## ` heading or orphaned fence in the rewritten README
   - [ ] TDD: regression test in `tests/` exercises a `## Decision required` body containing a fenced code block whose content has a line starting with `## ` and asserts the chosen behaviour
-  - [ ] MECHANICAL: `DECISION_REQUIRED_RE` (or its callers `extract_decision_required_section` / `replace_or_append_decision` in `goc/engine.py:518-596`) is fence-aware — either via a tiny fence-tracking scanner, a real markdown parser, or the chosen alternative
+  - [ ] MECHANICAL: `DECISION_REQUIRED_RE` (or its callers `extract_decision_required_section` / `replace_or_append_decision` in `goc/engine.py:568-646`) is fence-aware — either via a tiny fence-tracking scanner, a real markdown parser, or the chosen alternative
   - [ ] PROCESS: decision recorded inline (which fence-handling approach was picked and why; cf. sibling decide-family rebuttals)
 ---
 
@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:518-596` — `DECISION_REQUIRED_RE`,
+`goc/engine.py:568-646` — `DECISION_REQUIRED_RE`,
 `extract_decision_required_section`, and `replace_or_append_decision`.
 
 ## What's broken

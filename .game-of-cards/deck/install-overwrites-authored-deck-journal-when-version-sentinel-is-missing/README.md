@@ -21,13 +21,13 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:453-461` — `_find_installed_deck_dir`: returns a hit
+- `goc/install.py:470-478` — `_find_installed_deck_dir`: returns a hit
   only `if (new / ".goc-version").exists()` (same for the legacy tree).
-- `goc/install.py:1538-1544` — the already-installed refusal, keyed
+- `goc/install.py:1585-1591` — the already-installed refusal, keyed
   solely on that sentinel lookup.
-- `goc/install.py:1590` — the unconditional clobber:
+- `goc/install.py:1609` — the unconditional clobber:
   `(deck_dir / "log.md").write_text("# Deck Log\n\nAppend deck-level events here (sprint notes, schema bumps, etc.).\n")`
-- `goc/install.py:920-921` — the upgrade planner's contrasting rule:
+- `goc/install.py:937-938` — the upgrade planner's contrasting rule:
   `if write.path.name == "log.md": continue` (upgrade never touches the
   journal).
 
@@ -41,7 +41,7 @@ authored journal content. This contradicts the repo's ownership
 contract (AGENTS.md, `.game-of-cards/` ownership model): the engine
 "never destroys authored content under `.game-of-cards/`". The
 codebase already encodes that `log.md` is preserve-worthy — the
-*upgrade* planner explicitly skips it (`goc/install.py:920-921`) — but
+*upgrade* planner explicitly skips it (`goc/install.py:937-938`) — but
 the *install* executor writes it blind. Every other surface install
 touches has preservation machinery (`_sync_game_of_cards_config`
 preserves diverged stubs; marker blocks are goc-owned by contract);
@@ -81,7 +81,7 @@ sentinel, or backup/copy tooling that drops hidden files.
 Three credible fix shapes:
 
 1. **Create-only journal write** — `if not (deck_dir / "log.md").exists():`
-   before the write at `goc/install.py:1590`, mirroring the upgrade
+   before the write at `goc/install.py:1609`, mirroring the upgrade
    planner's skip. Minimal, preserves current install semantics
    otherwise.
 2. **Broaden already-installed detection** — treat an existing
@@ -95,6 +95,6 @@ Three credible fix shapes:
 
 Option 1 is the minimum safe fix; option 3 makes the reachability path
 a supported workflow. The dry-run plan (`_plan_writes`,
-`goc/install.py:868`) should reflect whichever action is chosen so the
+`goc/install.py:883`) should reflect whichever action is chosen so the
 preview stays truthful (cf. the open meta-card
 [dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting](../dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting/)).

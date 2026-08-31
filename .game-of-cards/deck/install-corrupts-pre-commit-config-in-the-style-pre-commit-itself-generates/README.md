@@ -1,6 +1,6 @@
 ---
 title: install-corrupts-pre-commit-config-in-the-style-pre-commit-itself-generates
-summary: "`goc install`/`goc upgrade` append a hard-coded two-space-indented `- repo: local` stanza to the end of an existing `.pre-commit-config.yaml` (`_append_precommit_hook`, goc/install.py:1340-1342) without reading the indentation the file's `repos:` list already uses. Every config whose list items start at column 0 — the style `pre-commit sample-config` emits, which pre-commit's own quickstart tells users to create — is corrupted: the four-space variant becomes unparseable YAML, and the two-space variant parses but silently nests the goc stanza inside the PREVIOUS repo's `hooks:` list. Both make `pre-commit` refuse the whole config, so every hook in the consuming repo stops running, goc-validate included."
+summary: "`goc install`/`goc upgrade` append a hard-coded two-space-indented `- repo: local` stanza to the end of an existing `.pre-commit-config.yaml` (`_append_precommit_hook`, goc/install.py:1359-1361) without reading the indentation the file's `repos:` list already uses. Every config whose list items start at column 0 — the style `pre-commit sample-config` emits, which pre-commit's own quickstart tells users to create — is corrupted: the four-space variant becomes unparseable YAML, and the two-space variant parses but silently nests the goc stanza inside the PREVIOUS repo's `hooks:` list. Both make `pre-commit` refuse the whole config, so every hook in the consuming repo stops running, goc-validate included."
 status: open
 stage: null
 contribution: high
@@ -15,8 +15,8 @@ definition_of_done: |
   - [ ] PROCESS: the `## Decision required` below is resolved. It is the SAME mechanism question as [install-corrupts-pre-commit-config-when-repos-is-not-the-last-top-level-key](../install-corrupts-pre-commit-config-when-repos-is-not-the-last-top-level-key/) — decide once, for both cards. This card's contribution to that decision is a hard constraint: the mechanism must survive a config whose list items sit at column 0, which rules out any fix that only searches for the end of the `repos:` block without reading its indentation.
   - [ ] TDD: `reproduce.py` exits zero — the `goc-validate` hook is a member of the top-level `repos:` list for both column-zero shapes AND the existing two-space control, having exited 1 before the fix.
   - [ ] TDD: a regression test in `tests/` covers the two column-zero shapes verbatim — the exact output of `pre-commit sample-config` (items at column 0, four-space content) and the hand-written `- repo:` / two-space-content variant — plus the two-space control. The `pre-commit sample-config` case must be pinned as its own named test: it is the config pre-commit's quickstart tells every user to create, so a fix that handles only hand-written styles still fails the most common repo.
-  - [ ] MECHANICAL: the fix lands in `_append_precommit_hook` (goc/install.py:1322-1342) and covers `goc install` (goc/install.py:1576) and `goc upgrade` (goc/install.py:1823) alike, since both call the same function.
-  - [ ] MECHANICAL: `_refresh_goc_validate_block` (goc/install.py:1271-1297) is reconciled with the chosen mechanism. Its `_PRECOMMIT_LOCAL_BLOCK_RE` (goc/install.py:1265-1268) is anchored on the literal `^  - repo: local\n` with the same hard-coded two-space indent, so a stanza written at any other indentation is invisible to the refresh path and would never receive template fixes.
+  - [ ] MECHANICAL: the fix lands in `_append_precommit_hook` (goc/install.py:1339-1361) and covers `goc install` (goc/install.py:1576) and `goc upgrade` (goc/install.py:1823) alike, since both call the same function.
+  - [ ] MECHANICAL: `_refresh_goc_validate_block` (goc/install.py:1286-1313) is reconciled with the chosen mechanism. Its `_PRECOMMIT_LOCAL_BLOCK_RE` (goc/install.py:1280-1283) is anchored on the literal `^  - repo: local\n` with the same hard-coded two-space indent, so a stanza written at any other indentation is invisible to the refresh path and would never receive template fixes.
   - [ ] PROCESS: whichever of the two cards lands second records in its `log.md` that the shared fix closed it, so the pair does not read as two independent repairs.
   - [ ] TDD: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 ---
@@ -25,16 +25,16 @@ definition_of_done: |
 
 ## Location
 
-- `PRE_COMMIT_HOOK` — `goc/install.py:64-73` (the stanza, hard-coded at two-space indent).
-- `_append_precommit_hook` — `goc/install.py:1322-1342` (the blind append).
-- `_PRECOMMIT_LOCAL_BLOCK_RE` / `_refresh_goc_validate_block` — `goc/install.py:1265-1297`
+- `PRE_COMMIT_HOOK` — `goc/install.py:79-88` (the stanza, hard-coded at two-space indent).
+- `_append_precommit_hook` — `goc/install.py:1339-1361` (the blind append).
+- `_PRECOMMIT_LOCAL_BLOCK_RE` / `_refresh_goc_validate_block` — `goc/install.py:1280-1313`
   (the refresh path, anchored on the same hard-coded indent).
 - Call sites: `goc/install.py:1576` (`install`) and `goc/install.py:1823` (`upgrade`).
 
 ## What's broken
 
 `PRE_COMMIT_HOOK` is a list item frozen at two-space indentation
-(`goc/install.py:64-73`):
+(`goc/install.py:79-88`):
 
 ```python
 PRE_COMMIT_HOOK = """\
@@ -44,7 +44,7 @@ PRE_COMMIT_HOOK = """\
 ```
 
 `_append_precommit_hook` concatenates it onto the end of the file
-(`goc/install.py:1340-1342`):
+(`goc/install.py:1359-1361`):
 
 ```python
     if not text.endswith("\n"):
@@ -117,9 +117,9 @@ consuming repo stops running — the user's formatters and linters, and
 `goc validate` itself, the gate that keeps card frontmatter from drifting.
 
 The same hard-coded indent disables the repair path. `_PRECOMMIT_LOCAL_BLOCK_RE`
-(`goc/install.py:1265-1268`) matches only `^  - repo: local`, so once a stanza
+(`goc/install.py:1280-1283`) matches only `^  - repo: local`, so once a stanza
 exists at any other indentation `_refresh_goc_validate_block` cannot see it, and
-the `"id: goc-validate" in text` early return at `goc/install.py:1331` makes
+the `"id: goc-validate" in text` early return at `goc/install.py:1348` makes
 every later `goc upgrade` a no-op over the damage.
 
 ## Empirical evidence

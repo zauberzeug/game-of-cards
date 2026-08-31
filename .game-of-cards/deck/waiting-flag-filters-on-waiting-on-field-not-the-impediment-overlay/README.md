@@ -24,10 +24,10 @@ definition_of_done: |
 
 Re-resolved at HEAD on 2026-08-24; the cite this card was filed with is dead.
 
-- Filter: `goc/engine.py:4257` — now `live_impeded(t, include_drafts=...)`
-- Live-impediment wrapper: `goc/engine.py:2695` (`live_impeded`)
-- Impedance predicate: `goc/engine.py:2646` (`waiting_impedes`)
-- Flag help text: `goc/engine.py:3862`
+- Filter: `goc/engine.py:4307` — now `live_impeded(t, include_drafts=...)`
+- Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
+- Impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
+- Flag help text: `goc/engine.py:3912`
 - Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
 
 ## What was broken, and what the code does now
@@ -46,13 +46,13 @@ set **or** a bare `waiting_until`, so a card deferred with `goc wait <title>
 flagged `⏳` on the board, and yet omitted from `goc --waiting` — the one
 view whose purpose is to surface impeded work.
 
-**That code is gone.** `goc/engine.py:4257` now reads:
+**That code is gone.** `goc/engine.py:4307` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
 ```
 
-and the help text (`goc/engine.py:3862`) reads "Filter to cards with an
+and the help text (`goc/engine.py:3912`) reads "Filter to cards with an
 active impediment overlay (a waiting_on reason or an unelapsed
 waiting_until)." The bare-deferral card this was filed about is returned.
 

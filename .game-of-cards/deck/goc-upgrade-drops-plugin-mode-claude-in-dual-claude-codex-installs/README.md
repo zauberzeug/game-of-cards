@@ -22,9 +22,9 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:411-432` — `_detect_installed_surfaces` (the detector)
-- `goc/install.py:1719-1720` — `upgrade()` consumes it: `default_agents = installed or DEFAULT_AGENTS`
-- `goc/install.py:1597-1598` — `goc install` pins `skills_source` (`vendored` iff Claude vendored, else `plugin`)
+- `goc/install.py:428-449` — `_detect_installed_surfaces` (the detector)
+- `goc/install.py:1738-1739` — `upgrade()` consumes it: `default_agents = installed or DEFAULT_AGENTS`
+- `goc/install.py:1616-1617` — `goc install` pins `skills_source` (`vendored` iff Claude vendored, else `plugin`)
 
 ## What's broken
 
@@ -89,7 +89,7 @@ no-flag `goc upgrade` is advertised as *the* basic upgrade command. A user who
 follows both loses the Claude briefing on the next upgrade with no diagnostic.
 The reachability path is entirely inside shipping code: `install()` at
 `install.py:1554-1567` writes plugin-mode Claude + vendored Codex; the next
-`upgrade()` at `install.py:1719` reads `_detect_installed_surfaces` and drops
+`upgrade()` at `install.py:1738` reads `_detect_installed_surfaces` and drops
 Claude.
 
 ## Decision required
@@ -101,7 +101,7 @@ have a failure mode:
 1. **Read `skills_source` from `.game-of-cards/config.yaml`.** Clean and
    already the repo's persisted mode marker — but `goc install` writes
    `skills_source` **unconditionally** (`plugin` even for a *codex-only*
-   install, `install.py:1597`), so `skills_source: plugin` alone does NOT
+   install, `install.py:1616`), so `skills_source: plugin` alone does NOT
    prove Claude was installed. Would need pairing with another Claude-specific
    signal.
 2. **Union with `_detect_agent_surfaces` (ambient `CLAUDE.md` / `.claude/`

@@ -25,10 +25,10 @@ definition_of_done: |
 Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
 had drifted or died):
 
-- Filter: `goc/engine.py:4257` — now `live_impeded(t, include_drafts=...)`
-- Live-impediment wrapper: `goc/engine.py:2695` (`live_impeded`)
-- Authoritative impedance predicate: `goc/engine.py:2646` (`waiting_impedes`)
-- Flag help text: `goc/engine.py:3862`
+- Filter: `goc/engine.py:4307` — now `live_impeded(t, include_drafts=...)`
+- Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
+- Authoritative impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
+- Flag help text: `goc/engine.py:3912`
 - Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
   (`test_waiting_matches_impedes_predicate`)
 
@@ -41,7 +41,7 @@ if getattr(args, "waiting", False):
     filtered = [t for t in filtered if t.waiting_on is not None]
 ```
 
-The engine's authoritative `waiting_impedes` predicate (`goc/engine.py:2646`)
+The engine's authoritative `waiting_impedes` predicate (`goc/engine.py:2696`)
 walks a matrix over BOTH overlay fields — quoting its docstring:
 
 > A `waiting_on` reason without an elapsed `waiting_until` means the
@@ -55,16 +55,16 @@ walks a matrix over BOTH overlay fields — quoting its docstring:
 > queue with no manual action — the elapsed-wait is then surfaced
 > separately by `validate_waiting_overlay` as an SLE escalation signal.
 
-**That code is gone.** `goc/engine.py:4257` now reads:
+**That code is gone.** `goc/engine.py:4307` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
 ```
 
-`live_impeded` (`goc/engine.py:2695`) is `waiting_impedes` plus two
+`live_impeded` (`goc/engine.py:2745`) is `waiting_impedes` plus two
 exclusions the read surfaces all need (terminal status, draft scaffold), so
 the flag and the predicate can no longer disagree. The help text moved with
-it (`goc/engine.py:3862`):
+it (`goc/engine.py:3912`):
 
 ```python
 parser.add_argument("--waiting", action="store_true",
@@ -169,10 +169,10 @@ and because it is the input shape a ratifying reader should re-run.
 Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
 had drifted or died):
 
-- Filter: `goc/engine.py:4257` — now `live_impeded(t, include_drafts=...)`
-- Live-impediment wrapper: `goc/engine.py:2695` (`live_impeded`)
-- Authoritative impedance predicate: `goc/engine.py:2646` (`waiting_impedes`)
-- Flag help text: `goc/engine.py:3862`
+- Filter: `goc/engine.py:4307` — now `live_impeded(t, include_drafts=...)`
+- Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
+- Authoritative impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
+- Flag help text: `goc/engine.py:3912`
 - Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
   (`test_waiting_matches_impedes_predicate`)
 
@@ -185,7 +185,7 @@ if getattr(args, "waiting", False):
     filtered = [t for t in filtered if t.waiting_on is not None]
 ```
 
-The engine's authoritative `waiting_impedes` predicate (`goc/engine.py:2646`)
+The engine's authoritative `waiting_impedes` predicate (`goc/engine.py:2696`)
 walks a matrix over BOTH overlay fields — quoting its docstring:
 
 > A `waiting_on` reason without an elapsed `waiting_until` means the
@@ -199,16 +199,16 @@ walks a matrix over BOTH overlay fields — quoting its docstring:
 > queue with no manual action — the elapsed-wait is then surfaced
 > separately by `validate_waiting_overlay` as an SLE escalation signal.
 
-**That code is gone.** `goc/engine.py:4257` now reads:
+**That code is gone.** `goc/engine.py:4307` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
 ```
 
-`live_impeded` (`goc/engine.py:2695`) is `waiting_impedes` plus two
+`live_impeded` (`goc/engine.py:2745`) is `waiting_impedes` plus two
 exclusions the read surfaces all need (terminal status, draft scaffold), so
 the flag and the predicate can no longer disagree. The help text moved with
-it (`goc/engine.py:3862`):
+it (`goc/engine.py:3912`):
 
 ```python
 parser.add_argument("--waiting", action="store_true",

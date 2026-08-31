@@ -31,7 +31,7 @@ integration policy is a permanent silent no-op and unintegrated work closes as
 
 ## Location
 
-`goc/engine.py:4557-4606` (`_enforce_closure_on_integration_or_exit`), the
+`goc/engine.py:5196-5245` (`_enforce_closure_on_integration_or_exit`), the
 hardcoded names at lines 4573 and 4586.
 
 ## What's broken
@@ -46,7 +46,7 @@ The implementation pins "the canonical branch" to two literal names:
 
 ```python
 fetch = subprocess.run(
-    ["git", "fetch", "--quiet", "origin", "main"],   # engine.py:5162
+    ["git", "fetch", "--quiet", "origin", "main"],   # engine.py:5212
     ...
 )
 if fetch.returncode != 0:
@@ -56,7 +56,7 @@ if fetch.returncode != 0:
     )
     return
 check = subprocess.run(
-    ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],  # engine.py:5175
+    ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],  # engine.py:5225
     ...
 )
 ```

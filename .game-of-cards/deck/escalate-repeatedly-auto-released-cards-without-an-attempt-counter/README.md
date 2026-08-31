@@ -13,7 +13,7 @@ tags: [bug, api-contract]
 draft: true
 definition_of_done: |
   - [ ] PROCESS: HELD AS DRAFT. Do not implement until `human-gate-is-card-level-but-human-only-ness-is-a-dod-item-property` is decided — the ladder below escalates on release, and that card requires escalation to distinguish a productive pass from a no-op one. Reconcile, then publish or close as superseded.
-  - [ ] MECHANICAL: the `active → open` release transition in `_cmd_status` (`goc/engine.py:5851`) applies rung 1 — set `waiting_on` (reason naming the auto-release) plus a near-future `waiting_until` — when the card is released without reaching a terminal status and carries no impediment overlay yet.
+  - [ ] MECHANICAL: the `active → open` release transition in `_cmd_status` (`goc/engine.py:5901`) applies rung 1 — set `waiting_on` (reason naming the auto-release) plus a near-future `waiting_until` — when the card is released without reaching a terminal status and carries no impediment overlay yet.
   - [ ] MECHANICAL: rung 2 — a release on a card whose `waiting_on` already carries the auto-release reason AND whose `waiting_until` has elapsed escalates `human_gate: none → session`, with the reason recorded in `log.md`. Escalation is terminal for the loop: `session` is already filtered by every ready/scheduler/triage predicate.
   - [ ] MECHANICAL: escalation fires ONLY for unattended releases. A human running `goc status <card> open` by hand must not arm the ladder — gate the behaviour on the autonomous path (worker identity or an explicit flag), not on the bare transition.
   - [ ] TDD: a regression test drives rung 1 → elapsed wait → rung 2 and asserts the gate lands on `session`; a sibling case asserts a card released once and then closed normally never escalates, and that a manual human release does not arm the ladder.
@@ -45,9 +45,9 @@ built from the existing `waiting_on` / `waiting_until` overlay, with
 
 ## Location
 
-- `_cmd_status` — `goc/engine.py:5851` (the release transition to hook)
-- `waiting_impedes` — `goc/engine.py:2646` (the overlay predicate reused)
-- `validate_waiting_overlay` — `goc/engine.py:2186` (surfaces elapsed waits)
+- `_cmd_status` — `goc/engine.py:5901` (the release transition to hook)
+- `waiting_impedes` — `goc/engine.py:2696` (the overlay predicate reused)
+- `validate_waiting_overlay` — `goc/engine.py:2236` (surfaces elapsed waits)
 - `card_is_ready` — `goc/engine.py:2424` (unchanged by this card)
 
 ## What's broken
@@ -115,7 +115,7 @@ Hook the `active → open` release transition the engine already mediates:
    blocked.
 
 The rung *is* the count: `none → waiting → session`. This works because
-of a property `waiting_impedes` already documents (`goc/engine.py:2646`):
+of a property `waiting_impedes` already documents (`goc/engine.py:2696`):
 
 > *"When `waiting_until` is in the past (elapsed), the card RE-ENTERS
 > the queue with no manual action — the elapsed-wait is then surfaced
@@ -140,7 +140,7 @@ re-litigated from scratch:
   against AGENTS.md § Parallel-Agent Commit Safety — and costs a schema
   change plus migration for an advisory metric.
 - **Counting `## ` headings in `log.md`** has partial precedent (the
-  `log-md-closure-entry` derived check, `goc/engine.py:5599`), but that
+  `log-md-closure-entry` derived check, `goc/engine.py:5649`), but that
   is a *presence check for one well-known heading at one decision
   point*, not a tally over an open vocabulary. Heading formats are
   already heterogeneous — `goc decide` writes `## {ts}: decision

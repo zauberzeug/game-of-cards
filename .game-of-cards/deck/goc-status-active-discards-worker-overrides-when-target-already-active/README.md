@@ -1,6 +1,6 @@
 ---
 title: goc-status-active-discards-worker-overrides-when-target-already-active
-summary: "`goc status <t> active --worker-who alice --worker-where feature/foo` silently does nothing when `<t>` is already in `status: active`. `_cmd_status` early-returns at `engine.py:3972-3981` whenever `prior == new_status`, BEFORE the `_auto_populate_worker` path that honors the override flags. The argparser at `engine.py:3939-3942` advertises both flags with no restriction on when they take effect, so a CI runner or replacement claimant invoking the verb to update worker metadata sees zero error and zero state change — the flags are dropped on the floor."
+summary: "`goc status <t> active --worker-who alice --worker-where feature/foo` silently does nothing when `<t>` is already in `status: active`. `_cmd_status` early-returns at `engine.py:5947-5956` whenever `prior == new_status`, BEFORE the `_auto_populate_worker` path that honors the override flags. The argparser at `engine.py:3989-3992` advertises both flags with no restriction on when they take effect, so a CI runner or replacement claimant invoking the verb to update worker metadata sees zero error and zero state change — the flags are dropped on the floor."
 status: open
 stage: null
 contribution: medium
@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` (honor the override flags on no-op reclaim, OR keep silent-drop and document it in `--worker-who` / `--worker-where` help text, OR exit with a non-zero "card already active; release first" diagnostic when overrides are passed).
   - [ ] TDD: `reproduce.py` exits zero — the chosen behavior matches expectation across the matrix (active card with no overrides; active card with `--worker-who` only; active card with `--worker-where` only; active card with both).
   - [ ] TDD: a unittest under `tests/` exercises `goc status <t> active --worker-who <new>` on an already-active card and asserts the chosen behavior so a future `_cmd_status` refactor cannot reintroduce the silent drop.
-  - [ ] MECHANICAL: argparser help text at `engine.py:3939-3942` (`--worker-who`, `--worker-where`) reads consistently with the chosen behavior.
+  - [ ] MECHANICAL: argparser help text at `engine.py:3989-3992` (`--worker-who`, `--worker-where`) reads consistently with the chosen behavior.
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 ---
 
@@ -23,9 +23,9 @@ definition_of_done: |
 
 ## Location
 
-- Early-return path: `goc/engine.py:3972-3981`
+- Early-return path: `goc/engine.py:5947-5956`
 - Worker-update path that is bypassed: `goc/engine.py:4001-4002` (`_auto_populate_worker`)
-- Argparser that advertises the dropped flags: `goc/engine.py:3939-3942`
+- Argparser that advertises the dropped flags: `goc/engine.py:3989-3992`
 
 ## What's broken
 
@@ -135,7 +135,7 @@ has changed?").
 
 ## Fix
 
-Mechanical edit at `engine.py:3972-3981` once the decision is
+Mechanical edit at `engine.py:5947-5956` once the decision is
 recorded. The simplest form of option (1):
 
 ```python

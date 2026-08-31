@@ -13,7 +13,7 @@ tags: [bug, api-contract]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero (log.md headers are in chronological order after `goc decide` on a card whose log.md already has a later entry).
   - [ ] TDD: a regression test asserts that all `## YYYY-…Z:` headers appended by `_cmd_decide` use `_utc_now_iso()` at decide-time, not the card's `created` field.
-  - [ ] MECHANICAL: `goc/engine.py:6786` (`filed = t.created or now`) is replaced per the recorded decision; if the original filing date is still desired in the body, it appears as inline prose, not as the header timestamp.
+  - [ ] MECHANICAL: `goc/engine.py:6836` (`filed = t.created or now`) is replaced per the recorded decision; if the original filing date is still desired in the body, it appears as inline prose, not as the header timestamp.
   - [ ] PROCESS: decision recorded in this card's `## Decision` section via `Skill(decide-card)`; rationale captured in log.md.
 ---
 
@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:6777-6805` — the `_cmd_decide` function, specifically
+`goc/engine.py:6827-6855` — the `_cmd_decide` function, specifically
 line 4593 (`filed = t.created or now`) and line 4595
 (`f"## {filed}: decision deliberation archived\n\n..."`).
 
@@ -58,7 +58,7 @@ log_path.write_text(existing.rstrip("\n") + sep + "\n\n".join(entries))
 Every other log writer in the engine uses the now-of-writing
 convention:
 
-- `_cmd_attest` (`engine.py:5703, 3898-3901`) — `today = _utc_now_iso()`
+- `_cmd_attest` (`engine.py:5753, 3898-3901`) — `today = _utc_now_iso()`
 - `_cmd_done` / `_cmd_done_bundle` (`engine.py:3260, 3283, 3344`) — `now = _utc_now_iso()`
 - `_cmd_move` (`engine.py:4547-4551`) — `now = _utc_now_iso()`
 - The sibling `decision recorded` entry one line below (line 4604)
@@ -165,7 +165,7 @@ its frontmatter is rewritten by a future tool.
 
 ## Fix
 
-Change `goc/engine.py:6786` from:
+Change `goc/engine.py:6836` from:
 
 ```python
     if archived:

@@ -29,7 +29,7 @@ definition_of_done: |
 - `openclaw-plugin/openclaw.plugin.json:33-36` — `deck_path`
 - `openclaw-plugin/openclaw.plugin.json:37-41` — `pattern_generalization_check`
 - `openclaw-plugin/index.ts:343-341` — `resolveDeckDir`
-- `openclaw-plugin/index.ts:585-597` — `isEnabled` and its "default off" contract
+- `openclaw-plugin/index.ts:595-607` — `isEnabled` and its "default off" contract
 - `openclaw-plugin/index.ts:782-787` — the `agent_end` runtime gate
 - `openclaw-plugin/README.md:52` — the hook table's stated default
 - `goc/engine.py:121-143` — `_resolve_deck_dir`, the engine's deck resolution

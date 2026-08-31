@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:539-543` (`GOC_CLAUDE_HOOKS` — vendored `--local-skills` path)
+- `goc/install.py:556-560` (`GOC_CLAUDE_HOOKS` — vendored `--local-skills` path)
 - `claude-plugin/hooks/hooks.json:8,18,28` (`${CLAUDE_PLUGIN_ROOT}`, hand-maintained)
 - `codex-plugin/hooks/hooks.json:8,19,30` (`${PLUGIN_ROOT}`, hand-maintained)
 - `.claude/settings.json:8,18,28` (this repo's dogfood copy)
@@ -94,7 +94,7 @@ that bug.
 
 The fix itself is determined — quote the expansion
 (`python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/…"`), matching Claude
-Code's documented examples; `_HOOK_FILE_RE` (`install.py:547`) is
+Code's documented examples; `_HOOK_FILE_RE` (`install.py:562`) is
 unanchored and still matches through a leading quote, so GoC-managed
 entry detection survives. The open question is the rollout for
 already-installed consumers:

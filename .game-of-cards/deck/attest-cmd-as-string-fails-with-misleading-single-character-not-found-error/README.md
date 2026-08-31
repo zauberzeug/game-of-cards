@@ -1,6 +1,6 @@
 ---
 title: attest-cmd-as-string-fails-with-misleading-single-character-not-found-error
-summary: "`_run_automated_check` reads `layer_2_project_dod[*].cmd` from `.game-of-cards/config.yaml` and passes it to `subprocess.run` without `shell=True`. A user who writes the natural YAML shorthand `cmd: \"pytest -q\"` (scalar string) hits `FileNotFoundError`, and the handler at `goc/engine.py:5566` formats the error as `f\"command not found: {cmd[0]}\"` — for a string, `cmd[0]` is the FIRST CHARACTER, so the message reads `command not found: p`. The contract that `cmd` must be a token list is undocumented in the template config and unvalidated in `load_deck_config`. Same root cause, third symptom (2026-06-12): a check entry missing the `name` key crashes `goc attest` with a raw `KeyError: 'name'` traceback at `engine.py:6291` before any check runs — `name`/`kind`/`cmd` are all read by bare indexing with no shape gate."
+summary: "`_run_automated_check` reads `layer_2_project_dod[*].cmd` from `.game-of-cards/config.yaml` and passes it to `subprocess.run` without `shell=True`. A user who writes the natural YAML shorthand `cmd: \"pytest -q\"` (scalar string) hits `FileNotFoundError`, and the handler at `goc/engine.py:5616` formats the error as `f\"command not found: {cmd[0]}\"` — for a string, `cmd[0]` is the FIRST CHARACTER, so the message reads `command not found: p`. The contract that `cmd` must be a token list is undocumented in the template config and unvalidated in `load_deck_config`. Same root cause, third symptom (2026-06-12): a check entry missing the `name` key crashes `goc attest` with a raw `KeyError: 'name'` traceback at `engine.py:6341` before any check runs — `name`/`kind`/`cmd` are all read by bare indexing with no shape gate."
 status: open
 stage: null
 contribution: medium
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5549-5571` — `_run_automated_check(check: dict)`:
+`goc/engine.py:5599-5621` — `_run_automated_check(check: dict)`:
 
 ```python
 def _run_automated_check(check: dict) -> tuple[bool, str]:
@@ -36,7 +36,7 @@ def _run_automated_check(check: dict) -> tuple[bool, str]:
         return False, f"command not found: {cmd[0]}"
 ```
 
-Reached from `_cmd_attest` (`goc/engine.py:5753`), which iterates
+Reached from `_cmd_attest` (`goc/engine.py:5803`), which iterates
 `layer_2_project_dod` from `.game-of-cards/config.yaml` and dispatches
 to `_run_automated_check` for any check with `kind: automated`.
 
@@ -48,7 +48,7 @@ Two coupled defects in the same five-line handler:
    `subprocess.run` without `shell=True`. The implicit contract is
    "list of tokens" (`["pytest", "-q"]`), but neither
    `goc/templates/game_of_cards/config.yaml` nor `load_deck_config`
-   (`goc/engine.py:5319`) documents or validates this. The template
+   (`goc/engine.py:5369`) documents or validates this. The template
    ships `layer_2_project_dod: []` with no commented example.
 
    ```yaml
@@ -73,7 +73,7 @@ Two coupled defects in the same five-line handler:
 ### Third symptom, same root cause: missing keys crash with a raw KeyError (2026-06-12)
 
 The shape gate is missing for *every* required key, not just `cmd`'s
-type. `_cmd_attest` reads `c["name"]` at `goc/engine.py:6291`
+type. `_cmd_attest` reads `c["name"]` at `goc/engine.py:6341`
 (`all_check_names = {c["name"] for c in layer_2_checks} | …`) plus
 `check["name"]` / `check["kind"]` at `:4283` / `:4296` by bare
 indexing. A check entry that lacks `name` (e.g. a typo'd

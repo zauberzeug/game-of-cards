@@ -25,7 +25,7 @@ full-frontmatter re-emit verb.
 
 ## Location
 
-`goc/engine.py:373-378` — `_emit_worker`:
+`goc/engine.py:423-428` — `_emit_worker`:
 
 ```python
 if isinstance(value, dict):
@@ -41,7 +41,7 @@ if isinstance(value, dict):
 When the worker value is a dict with a truthy `where` but an empty or missing
 `who`, the emitter defaults `who` to `""` and writes `{who: "", where: ...}`.
 On re-parse that is `who: ''`, which `validate_card`
-(`goc/engine.py:1901-1904`) rejects:
+(`goc/engine.py:1951-1954`) rejects:
 
 ```python
 if "who" not in worker:
@@ -56,7 +56,7 @@ an empty `who` the author never wrote, mutating a *missing-key* error
 reports success.
 
 This contradicts the module's own invariant. The sibling writer
-`_auto_populate_worker` (`goc/engine.py:4493-4499`) explicitly refuses this
+`_auto_populate_worker` (`goc/engine.py:5883-5889`) explicitly refuses this
 exact shape:
 
 > A worker mapping requires a non-empty `who` ... there is no valid worker to
@@ -76,10 +76,10 @@ line. But six verbs re-emit the **entire** frontmatter through
 `emit_frontmatter` → `_emit_worker`:
 
 - `goc wait` (`_cmd_wait`, engine.py:4957)
-- `goc decide` (`_cmd_decide`, engine.py:6779)
+- `goc decide` (`_cmd_decide`, engine.py:6829)
 - `goc advance` / `goc unadvance` (`_add_to_list_field` / `_remove_from_list_field`, engine.py:4767/4776)
 - `goc quality-pass` (`_apply_summary_rewrite` / `_apply_dod_rewrite`, engine.py:3553/3573)
-- `goc migrate-list-style` (`_cmd_migrate_list_style`, engine.py:7069)
+- `goc migrate-list-style` (`_cmd_migrate_list_style`, engine.py:7119)
 
 None of these validate the card before mutating, so a card hand-authored or
 migrated with `worker: {where: feature/x}` (a plausible shape — AGENTS.md

@@ -1,6 +1,6 @@
 ---
 title: pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries
-summary: "UNVERIFIED. `goc/templates/hooks/pattern_generalization_check.py` reads the harness's JSONL transcript file line-by-line via `json.loads(line)` and immediately calls `entry.get(...)` in `_extract_tool_names`, `_is_tool_result_only`, `_is_code_mutating`, and the main backward-walk loop without a top-level `isinstance(entry, dict)` guard. A transcript line that parses to a list / scalar / null raises `AttributeError`, the Stop hook exits non-zero, and the pattern-generalization reminder never reaches the agent. Reachability is weak (transcript file is harness-written, not user-editable) so this card is filed unverified pending a falsifying recipe."
+summary: "`goc/templates/hooks/pattern_generalization_check.py` reads the harness's JSONL transcript file line-by-line via `json.loads(line)` and immediately calls `entry.get(...)` in `_extract_tool_names`, `_is_tool_result_only`, `_is_code_mutating`, and the main backward-walk loop without a top-level `isinstance(entry, dict)` guard. A transcript line that parses to a list / scalar / null raises `AttributeError`, the Stop hook exits non-zero, and the pattern-generalization reminder never reaches the agent. Reproduced 2026-08-31 by `reproduce.py`: a transcript whose last line is `"oops"` raises `AttributeError: 'str' object has no attribute 'get'` out of `_had_code_mutation`, against a control line that still returns True. Reachability remains weak (the transcript file is harness-written, not user-editable), which is what the open decision below weighs."
 status: open
 stage: null
 contribution: low
@@ -10,7 +10,7 @@ human_gate: decision
 advances:
   - unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes
 advanced_by: []
-tags: [bug, infra, api-contract, meta-fix, unverified]
+tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: a reproduce.py drops a JSONL transcript file with one line containing `[1,2,3]` (or `null`, or `"oops"`), invokes `_had_code_mutation` against it, and prints whether `AttributeError` escapes. Currently expected: AttributeError fires. After fix: no exception, the line is silently skipped (same semantic as `json.JSONDecodeError`).
   - [ ] PROCESS: decide whether reachability is high enough to warrant a per-callsite guard (Approach B), or whether this site should wait for the meta-fix parent's Approach A (shared `load_mapping_or_warn` helper) to close. Record the decision in log.md.
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Hypothesis (unverified)
 
-`goc/templates/hooks/pattern_generalization_check.py:157-182` walks
+`goc/templates/hooks/pattern_generalization_check.py:176-201` walks
 the harness's JSONL transcript file backward, parsing each line with
 `json.loads`:
 

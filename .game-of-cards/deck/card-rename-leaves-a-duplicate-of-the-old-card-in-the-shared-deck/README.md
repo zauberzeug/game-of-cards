@@ -27,12 +27,12 @@ definition_of_done: |
 - `goc/engine.py:6270-6273` — `_cmd_move` renames the directory with
   `git mv`, which **stages** both halves of the rename: the addition of
   the destination and the *deletion* of the source.
-- `goc/engine.py:6644` — `_cmd_move` returns after printing
+- `goc/engine.py:6694` — `_cmd_move` returns after printing
   `old → new`. It never commits, so that staged deletion is left sitting
   in the index (the sibling card
   [goc-move-leaves-cross-reference-rewrites-uncommitted](../goc-move-leaves-cross-reference-rewrites-uncommitted/)
   covers the missing commit itself).
-- `goc/engine.py:4677-4682` — `_git_auto_commit` builds its pathspec by
+- `goc/engine.py:5027-5032` — `_git_auto_commit` builds its pathspec by
   filtering on existence, so a path that was deleted on disk can never
   appear in it:
 
@@ -186,7 +186,7 @@ unable to represent a removal:
 Three credible answers.
 
 **Option 1 — teach `_git_auto_commit` to carry removals.** Replace the
-`.exists()`-filtered file pathspec (`engine.py:4677-4682`) with
+`.exists()`-filtered file pathspec (`engine.py:5027-5032`) with
 *directory* pathspecs, so deletions inside a card directory are
 committed alongside its writes. Measured on git 2.54: `git add --
 <dir>` + `git commit -- <dir>` carries a deletion inside `<dir>`, while
@@ -224,7 +224,7 @@ amended — as written it ships the ghost.
 
 ## Fix sketch (under Option 1)
 
-`goc/engine.py:4677-4682`, replacing the file-level pathspec with a
+`goc/engine.py:5027-5032`, replacing the file-level pathspec with a
 card-directory pathspec so removals are representable:
 
 ```python

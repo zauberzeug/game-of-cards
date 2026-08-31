@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` (refresh both sub-fields on re-claim, OR preserve both as a unit, OR keep current asymmetric behavior and document it as intentional).
   - [ ] TDD: reproduce.py exits zero (the chosen behavior matches expectation).
   - [ ] TDD: a unit test in `tests/` covers the re-claim path under a different `git config user.name`.
-  - [ ] MECHANICAL: `_auto_populate_worker` docstring at `goc/engine.py:5793` updated to match the chosen behavior.
+  - [ ] MECHANICAL: `_auto_populate_worker` docstring at `goc/engine.py:5843` updated to match the chosen behavior.
   - [ ] PROCESS: `uv run goc validate` passes.
 ---
 
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5806-5822` — `_auto_populate_worker`.
+`goc/engine.py:5856-5872` — `_auto_populate_worker`.
 
 ## What's broken
 
@@ -48,7 +48,7 @@ is always refreshed from the live branch.
 3930:        where = r.stdout.strip() ...     # ← always refresh from live branch
 ```
 
-The docstring at `goc/engine.py:5793-5683` codifies the intent:
+The docstring at `goc/engine.py:5843-5733` codifies the intent:
 
 > If the card already has a worker.who (designation), preserve it and only
 > add/update `where`.
@@ -61,7 +61,7 @@ previous one.
 
 ## Reachability path
 
-Triggered from `_cmd_status` at `goc/engine.py:5945`, which calls
+Triggered from `_cmd_status` at `goc/engine.py:5995`, which calls
 `_auto_populate_worker` on every `open/blocked → active` transition. Any of
 the following flows surfaces it:
 

@@ -14,9 +14,9 @@ definition_of_done: |
   - [ ] PROCESS: mechanism chosen from the three options in "## Decision required" and recorded in this body + log.md. A race claim is only sound if it is derived from the remote card's own state, so the decision must say what evidence licenses the "already claimed by X" wording.
   - [ ] TDD: reproduce.py exits zero — neither an unrelated unstaged file nor an unrelated-file rebase conflict is reported as a claim race, and the clean-tree control still pushes after rebase.
   - [ ] TDD: regression test in `tests/` covers the claim_push retry path, which today has none: the three reproduce.py scenarios plus a genuine race (remote card `status: active` under a different `worker.who`) that MUST still abort.
-  - [ ] MECHANICAL: `_git_claim_push_with_retry` (`goc/engine.py:5269`) no longer asserts a claim race from a bare `rebase.returncode != 0`, and never names a worker read off a card whose remote status is not `active`.
-  - [ ] MECHANICAL: the remedy sentence at `goc/engine.py:5291` stops prescribing `reset to origin/<branch>` unconditionally — AGENTS.md "Parallel-Agent Commit Safety" forbids that cleanup class on a shared branch.
-  - [ ] MECHANICAL: the `_git_claim_push_with_retry` docstring (`goc/engine.py:5213`) drops the premise "the rebase fails — meaning another worker modified the same card concurrently", which is the false inference this card is about.
+  - [ ] MECHANICAL: `_git_claim_push_with_retry` (`goc/engine.py:5319`) no longer asserts a claim race from a bare `rebase.returncode != 0`, and never names a worker read off a card whose remote status is not `active`.
+  - [ ] MECHANICAL: the remedy sentence at `goc/engine.py:5341` stops prescribing `reset to origin/<branch>` unconditionally — AGENTS.md "Parallel-Agent Commit Safety" forbids that cleanup class on a shared branch.
+  - [ ] MECHANICAL: the `_git_claim_push_with_retry` docstring (`goc/engine.py:5263`) drops the premise "the rebase fails — meaning another worker modified the same card concurrently", which is the false inference this card is about.
   - [ ] MECHANICAL: exit-code contract for the non-race failure decided and documented — `pull-card` runs `goc status <title> active` and treats exit 2 as an aborted claim, so a warn-and-continue posture changes autonomous-loop behaviour.
   - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green).
 ---
@@ -37,12 +37,12 @@ release, and the prescribed remedy is a branch reset.
 
 ## Location
 
-- `_git_claim_push_with_retry` — `goc/engine.py:5213` (the function)
-- the collapsing branch — `goc/engine.py:5269` (`if rebase.returncode != 0:`)
-- the message and its remedy — `goc/engine.py:5291`
+- `_git_claim_push_with_retry` — `goc/engine.py:5263` (the function)
+- the collapsing branch — `goc/engine.py:5319` (`if rebase.returncode != 0:`)
+- the message and its remedy — `goc/engine.py:5341`
 - the rival-identity read — `goc/engine.py:5283` (`worker = fm.get("worker")`)
-- the caller that turns the verdict into `sys.exit(2)` — `goc/engine.py:5967`
-- the opt-in — `claim_push_enabled`, `goc/engine.py:5198`
+- the caller that turns the verdict into `sys.exit(2)` — `goc/engine.py:6017`
+- the opt-in — `claim_push_enabled`, `goc/engine.py:5248`
 
 ## What's broken
 
@@ -117,7 +117,7 @@ Its fix separated the semantic answer from tool failure, and that function now
 reads:
 
 ```python
-if check.returncode == 1:          # goc/engine.py:5180 — genuinely not integrated
+if check.returncode == 1:          # goc/engine.py:5230 — genuinely not integrated
     ...
     sys.exit(2)
 if check.returncode != 0:          # goc/engine.py:5188 — git error
@@ -202,10 +202,10 @@ Closest to the closed card, but it still calls case 3 — an unrelated-file
 conflict — a claim race, so it fixes one of the two reproduced symptoms.
 
 Coupled sub-question, whichever option wins: **the exit code.** Today any
-`False` return becomes `sys.exit(2)` (`goc/engine.py:5967`). `pull-card` runs
+`False` return becomes `sys.exit(2)` (`goc/engine.py:6017`). `pull-card` runs
 `goc status <title> active` to claim, so exit 2 aborts the pull. If a non-race
 failure warns instead of aborting, the claim stands locally but unpublished —
-which is what the detached-HEAD branch (`goc/engine.py:5249`) already does,
+which is what the detached-HEAD branch (`goc/engine.py:5299`) already does,
 except that it too returns `False` and therefore exits 2 after printing the word
 "Warning". That inconsistency should be resolved in the same pass.
 
@@ -221,7 +221,7 @@ except that it too returns `False` and therefore exits 2 after printing the word
   cause" shape has exactly two instances in `engine.py`: the closed
   `closure_on_integration` card and this one. The remaining `returncode`
   sites either report git's own diagnostic (`goc/engine.py:5188`, `:4563`) or
-  fail toward surfacing the real error (`goc/engine.py:5009`, `:5052`). Two
+  fail toward surfacing the real error (`goc/engine.py:5059`, `:5052`). Two
   instances, one already fixed, is a concrete card — not an architectural
   umbrella.
 - **Not about `worker` persisting.** That the field outlives a claim is

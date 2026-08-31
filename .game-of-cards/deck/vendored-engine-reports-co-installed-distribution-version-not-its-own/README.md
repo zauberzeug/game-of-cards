@@ -71,7 +71,7 @@ Downstream consumers of the lie:
   version on install/upgrade.
 - `goc/install.py:33` — `GOC_BEGIN = f"<!-- BEGIN GOC v{__version__} -->"`,
   so the AGENTS.md marker block advertises the wrong version.
-- `goc/install.py:1783`/`:1764` — the upgrade short-circuit
+- `goc/install.py:1803`/`:1764` — the upgrade short-circuit
   `existing == __version__` → `"already at goc {__version__} — nothing to
   do."` Worst case: a repo stamped by a pip-installed 0.0.20 CLI runs
   `goc upgrade` through the 0.0.27 plugin wrapper; `__version__` resolves to

@@ -22,9 +22,9 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:3944-3956` — `_move_text_rewrite`, the fifth "canonical
+`goc/engine.py:6546-6558` — `_move_text_rewrite`, the fifth "canonical
 text form" (the bare-slug regex), applied repo-wide by
-`_move_rewrite_tracked_files` (`engine.py:6555-6563`) over every file
+`_move_rewrite_tracked_files` (`engine.py:6605-6613`) over every file
 from `git ls-files`.
 
 ## What's broken

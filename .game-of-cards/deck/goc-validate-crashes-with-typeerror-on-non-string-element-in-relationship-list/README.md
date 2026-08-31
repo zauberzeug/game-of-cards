@@ -38,7 +38,7 @@ for field in LIST_REL_FIELDS:
 ```
 
 `LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")`
-(`goc/engine.py:1229`).
+(`goc/engine.py:1279`).
 
 ## What's broken
 

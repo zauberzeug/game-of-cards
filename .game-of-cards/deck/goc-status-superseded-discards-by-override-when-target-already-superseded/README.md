@@ -1,6 +1,6 @@
 ---
 title: goc-status-superseded-discards-by-override-when-target-already-superseded
-summary: "`goc status <t> superseded --by <new>` silently does nothing when `<t>` is already in `status: superseded`. `_cmd_status` early-returns at `engine.py:4294-4303` whenever `prior == new_status`, BEFORE the `_mutate_pair` call at `engine.py:4336-4338` that wires the new typed forward routing pointer. The successor is validated (existence, terminal-status, self-target, cycle) and then dropped — the operator's redirect intent silently no-ops with exit 0. Same architectural class as [goc-status-active-discards-worker-overrides-when-target-already-active](../goc-status-active-discards-worker-overrides-when-target-already-active/), different verb/flag combination."
+summary: "`goc status <t> superseded --by <new>` silently does nothing when `<t>` is already in `status: superseded`. `_cmd_status` early-returns at `engine.py:5947-5956` whenever `prior == new_status`, BEFORE the `_mutate_pair` call at `engine.py:4336-4338` that wires the new typed forward routing pointer. The successor is validated (existence, terminal-status, self-target, cycle) and then dropped — the operator's redirect intent silently no-ops with exit 0. Same architectural class as [goc-status-active-discards-worker-overrides-when-target-already-active](../goc-status-active-discards-worker-overrides-when-target-already-active/), different verb/flag combination."
 status: open
 stage: null
 contribution: medium
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-- Early-return path: `goc/engine.py:4294-4303`
+- Early-return path: `goc/engine.py:5947-5956`
 - Successor validation that runs but is then discarded: `goc/engine.py:4276-4290`
 - Typed-pair mutation that is bypassed: `goc/engine.py:4336-4338` (`_mutate_pair("superseded_by", "supersedes", add=True)`)
 - Argparser that advertises the dropped flag: `goc/engine.py:2630-2633` (`--by`)
@@ -122,7 +122,7 @@ Operators redirect supersession pointers when:
 
 The CLI accepts `--by` and validates it, signaling to the operator that the redirect will be honored. The silent no-op leaves a cold reader walking `foo.superseded_by` at the stale `bar` even though the operator explicitly tried to redirect.
 
-**Reachability:** the early-return at `engine.py:4294-4303` fires on
+**Reachability:** the early-return at `engine.py:5947-5956` fires on
 every `_cmd_status` call where the requested `new_status` equals the
 card's current `status`. The path is reached from the user-facing
 `goc status <title> superseded --by <new>` verb whenever the card is

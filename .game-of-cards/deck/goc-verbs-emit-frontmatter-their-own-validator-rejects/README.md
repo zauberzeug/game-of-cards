@@ -52,7 +52,7 @@ second, separate point fix. The same function, the same field, the same
 validator rule, two independent filings.
 
 That happens because the two sides are written independently. `validate_card`
-(`goc/engine.py:1663-1836`) is the single place that knows what a legal field
+(`goc/engine.py:1838-2011`) is the single place that knows what a legal field
 value is. Every writer re-derives it:
 
 - `_auto_populate_worker` checked `if not who:` — falsiness, which a

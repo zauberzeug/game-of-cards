@@ -47,7 +47,7 @@ success message and no warning.
 - `goc/install.py:1807-1810` — for vendored agents the sync runs with
   `replace = agent in local_skills_agents` →
   `_sync_agent_harness(..., replace_skills=replace)`, and `_sync_skill_tree`
-  (`goc/install.py:1224-1228`) `shutil.rmtree`s each eligible skill dir
+  (`goc/install.py:1239-1243`) `shutil.rmtree`s each eligible skill dir
   before recopying — newer vendored skills/hooks are replaced by the older
   engine's templates.
 - `goc/install.py:1825` — `(deck_dir / ".goc-version").write_text(__version__

@@ -90,7 +90,7 @@ their own enums, and apply **required-when predicates** that depend
 on other field values. Today that's structurally impossible — the
 schema is read straight from `goc/schema.yaml` with no per-repo merge
 beyond `canonical_tags`, and unknown frontmatter keys are silently
-tolerated by the validator (`engine.py:1792` checks
+tolerated by the validator (`engine.py:1842` checks
 `required_fields` only).
 
 ## The motivating real consumer

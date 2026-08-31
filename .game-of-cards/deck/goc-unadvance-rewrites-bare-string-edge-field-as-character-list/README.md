@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — the corrupted character-list rewrite no longer fires
   - [ ] TDD: a regression test in tests/ covers _remove_from_list_field receiving a non-list value (bare string scalar) and asserts the chosen behaviour
   - [ ] PROCESS: decision recorded — per-site isinstance guard mirroring _add_to_list_field, OR rolled into the meta-fix bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
-  - [ ] MECHANICAL: chosen guard / coercion lands at engine.py:6215 (or upstream in parse_frontmatter, per the decision above)
+  - [ ] MECHANICAL: chosen guard / coercion lands at engine.py:6265 (or upstream in parse_frontmatter, per the decision above)
   - [ ] PROCESS: log.md records which path was taken and why
 ---
 
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:4180-4186` — `_remove_from_list_field`.
+`goc/engine.py:6265-6271` — `_remove_from_list_field`.
 
 ## What's broken
 
@@ -66,11 +66,11 @@ When `cur` is a bare string scalar (e.g. `advances: othercard` rather than
 
 ## Reachability path
 
-The only caller is `_mutate_pair(..., add=False)` at `engine.py:6233`, which
+The only caller is `_mutate_pair(..., add=False)` at `engine.py:6283`, which
 runs `op` on both the child's and the parent's README. `_mutate_pair(add=False)`
-is reached exclusively from `_cmd_unadvance` (engine.py:6488) — the
+is reached exclusively from `_cmd_unadvance` (engine.py:6538) — the
 `goc unadvance <title> --by <advancer>` verb. The fields exercised are
-`advanced_by` on the child and `advances` on the parent (see engine.py:6488).
+`advanced_by` on the child and `advances` on the parent (see engine.py:6538).
 
 The bare-string-scalar shape reaches frontmatter through the same path
 documented on the sibling cards in this family — a hand-authored card, an

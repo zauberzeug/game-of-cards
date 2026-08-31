@@ -58,7 +58,7 @@ for tag in tags:
 Then `tags` is written through unchanged:
 
 ```python
-# goc/engine.py:6168
+# goc/engine.py:6218
 "tags": list(tags),
 ```
 
@@ -102,7 +102,7 @@ waiting to be hit again whenever a new such flag is added.
 ## Fix
 
 Apply `_unique_preserving_order` to `tags` alongside the existing
-calls. Concretely, at `goc/engine.py:6109`:
+calls. Concretely, at `goc/engine.py:6159`:
 
 ```python
 tags = args.tags

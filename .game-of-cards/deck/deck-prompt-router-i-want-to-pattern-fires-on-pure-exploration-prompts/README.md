@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/templates/hooks/deck_prompt_router.py:16-26` — `WORK_INITIATING`
+- `goc/templates/hooks/deck_prompt_router.py:26-36` — `WORK_INITIATING`
   patterns. Items 4 and 5 are the offenders:
 
   ```python
@@ -40,7 +40,7 @@ definition_of_done: |
   ]
   ```
 
-- `goc/templates/hooks/deck_prompt_router.py:70-77` — precedence rule:
+- `goc/templates/hooks/deck_prompt_router.py:83-90` — precedence rule:
 
   ```python
   has_work = any(re.search(p, prompt) for p in WORK_INITIATING)

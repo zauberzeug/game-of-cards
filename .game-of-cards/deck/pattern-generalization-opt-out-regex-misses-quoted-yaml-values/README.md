@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/templates/hooks/pattern_generalization_check.py:38-42`
+`goc/templates/hooks/pattern_generalization_check.py:104-108`
 
 ```python
 m = re.search(

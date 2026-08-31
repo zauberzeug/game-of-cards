@@ -24,14 +24,14 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4036-4042` — `move` subparser. No `--commit` /
+- `goc/engine.py:4086-4092` — `move` subparser. No `--commit` /
   `--no-commit` flags (every other state-mutation verb pair has them).
-- `goc/engine.py:6584-6644` — `_cmd_move`. Calls `git mv` (which
+- `goc/engine.py:6634-6694` — `_cmd_move`. Calls `git mv` (which
   stages the directory rename), then `_move_rewrite_tracked_files`
   (which mutates tracked text files across the repo with no staging),
   then appends a `## <iso>: renamed from <old>` entry to the renamed
   card's `log.md` — and returns without calling `_git_auto_commit`.
-- `goc/engine.py:4458-4468` — `_move_rewrite_tracked_files`. Iterates
+- `goc/engine.py:6605-6615` — `_move_rewrite_tracked_files`. Iterates
   every tracked text file from `git ls-files`, applies the rewrites,
   and writes them back in place. No `git add` follows.
 
@@ -203,7 +203,7 @@ deduplicated set of card directories where rewrites landed (so
 `_git_auto_commit`'s pathspec covers every modified card).
 
 That pathspec still cannot cover `src`: `_git_auto_commit` filters
-its paths on `.exists()` (`engine.py:4677-4682`) and the source
+its paths on `.exists()` (`engine.py:5027-5032`) and the source
 directory is gone by then. This sketch therefore needs the
 removal-handling change decided on
 [card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck](../card-rename-leaves-a-duplicate-of-the-old-card-in-the-shared-deck/)

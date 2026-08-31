@@ -25,12 +25,12 @@ definition_of_done: |
 - Round-trip writers (parse → mutate one field → `emit_frontmatter`):
   `_cmd_wait` (`goc/engine.py:4749`), `_cmd_decide` (`goc/engine.py` `_cmd_decide`),
   `_add_to_list_field` / `_remove_from_list_field` used by `goc advance` /
-  `unadvance` / `repair-edges` (`goc/engine.py:6215`), `goc quality-pass`
+  `unadvance` / `repair-edges` (`goc/engine.py:6265`), `goc quality-pass`
   summary/DoD rewrites, and `goc migrate-list-style`.
 - Emitter quoter: `_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")`
   (`goc/engine.py:208`) and `_yaml_inline` (`goc/engine.py:244-253`), reached
   for `summary` via the catch-all scalar branch `emit_frontmatter`
-  (`goc/engine.py:449`).
+  (`goc/engine.py:499`).
 
 ## What's broken
 

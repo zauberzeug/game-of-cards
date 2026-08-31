@@ -1,6 +1,6 @@
 ---
 title: bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
-summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:6215) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:3870) have now surfaced. A 2026-06-21 audit added a second failure mode in the same root cause — a non-string *scalar* on a field whose consumer assumes a string (`contribution: 42`; a non-string element in `tags`) crashes the queue/board renderer with a hard TypeError before validate runs, and `contribution` is a scalar field outside the five list-typed ones, so the family is broader than list fields alone. The family will keep recurring until the loader rejects/coerces the malformed shape at the source (approach A, generalized to all schema-typed fields) or every consumer routes through a shared shape-coercing helper."
+summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:6265) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:3920) have now surfaced. A 2026-06-21 audit added a second failure mode in the same root cause — a non-string *scalar* on a field whose consumer assumes a string (`contribution: 42`; a non-string element in `tags`) crashes the queue/board renderer with a hard TypeError before validate runs, and `contribution` is a scalar field outside the five list-typed ones, so the family is broader than list fields alone. The family will keep recurring until the loader rejects/coerces the malformed shape at the source (approach A, generalized to all schema-typed fields) or every consumer routes through a shared shape-coercing helper."
 status: open
 stage: null
 contribution: medium
@@ -22,7 +22,7 @@ advanced_by:
 tags: [bug, api-contract, meta-fix, infra]
 definition_of_done: |
   - [ ] PROCESS: pick one of approach A (loader-time shape rejection), B (centralized `_field_as_list` helper routing all reads), or C (continue per-consumer guards) — record in log.md with the rationale. See `## Decision required` below.
-  - [ ] MECHANICAL: implement the chosen approach. For A: extend `parse_frontmatter` / `Card` construction to reject (or coerce) non-list scalars on the schema's list-typed fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). For B: introduce a single helper and migrate every documented consumer (the six closed-sibling sites plus `_remove_from_list_field` and the `render_table` verbose `-vv` raw-dump loop, engine.py:3870-3807) through it; a regression test asserts no `frontmatter.get("<list-field>") or []` pattern remains outside the helper. For C: just file the one outstanding sibling (`_remove_from_list_field`).
+  - [ ] MECHANICAL: implement the chosen approach. For A: extend `parse_frontmatter` / `Card` construction to reject (or coerce) non-list scalars on the schema's list-typed fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). For B: introduce a single helper and migrate every documented consumer (the six closed-sibling sites plus `_remove_from_list_field` and the `render_table` verbose `-vv` raw-dump loop, engine.py:3920-3857) through it; a regression test asserts no `frontmatter.get("<list-field>") or []` pattern remains outside the helper. For C: just file the one outstanding sibling (`_remove_from_list_field`).
   - [ ] TDD: a reproduce.py builds a card with `advanced_by: "A"` (bare scalar) and exercises `_remove_from_list_field` via `goc unadvance` — currently produces a list of single characters in the rewritten card; after the fix, either the load fails cleanly (A) or the helper treats the bare scalar as empty / shape-coerces (B). Same reproducer demonstrates the family is closed at the chosen layer.
   - [ ] PROCESS: cross-link the six closed siblings via `advanced_by` (or document them in the body) so a cold reader sees the family this card retires.
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
@@ -49,7 +49,7 @@ list)` guard either:
 - substring-matches via Python's `in` operator (`if x in v`).
 
 Both silently corrupt the consumer's behavior. `goc validate`
-*does* reject this shape (`engine.py:1938`), but the read-time
+*does* reject this shape (`engine.py:1988`), but the read-time
 consumers run on cards that have not been gated through validate
 (in-flight CLI commands, hooks, board rendering) — so the per-
 consumer guard is load-bearing every time.
@@ -88,7 +88,7 @@ That suggestion never got filed. This card is that filing.
 
 ## The latest unfixed sibling (the trigger to file the meta-fix)
 
-`goc/engine.py:6215` — `_remove_from_list_field`:
+`goc/engine.py:6265` — `_remove_from_list_field`:
 
 ```python
 def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
@@ -100,7 +100,7 @@ def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
     return emit_frontmatter(fm, body=body)
 ```
 
-Compare to the sibling `_add_to_list_field` at `engine.py:6202`,
+Compare to the sibling `_add_to_list_field` at `engine.py:6252`,
 which DOES carry the guard:
 
 ```python
@@ -136,7 +136,7 @@ contradict each other. This is direct evidence against approach C
 
 ## An eighth unguarded site (surfaced by a later audit)
 
-`goc/engine.py:3870-3874` — the verbose (`-vv`) branch of
+`goc/engine.py:3920-3924` — the verbose (`-vv`) branch of
 `render_table` dumps every relationship field raw:
 
 ```python
@@ -200,7 +200,7 @@ argues against.
 
 ## Reachability path
 
-`_remove_from_list_field` is called from `_mutate_pair` (engine.py:6224),
+`_remove_from_list_field` is called from `_mutate_pair` (engine.py:6274),
 which is called by:
 
 - `_cmd_unadvance` — `goc unadvance <title> <advancer>` removes
