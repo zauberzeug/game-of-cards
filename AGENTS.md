@@ -267,6 +267,18 @@ changes need a judgment call. Headless / CI / scripted upgrades
 (e.g., the `--keep-local-skills` path) preserve content with no agent
 in the loop.
 
+**"already at goc X — nothing to do" is derived, never enumerated.**
+`upgrade()` computes `_plan_upgrade_writes` first and short-circuits only
+when no planned write is effecting — each write's action comes from asking
+its own executor, in `probe=True` mode, whether it would change the file.
+So the preview and the real run answer "is there work?" from one
+computation, and a repair added to `upgrade()` is covered the moment it is
+planned. Do **not** reintroduce a `pending_*` allowlist term for a new
+write; that per-site register is what let four repairs go unreachable at
+the same version (`goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version`).
+The two remaining terms next to the plan cover non-write work only — the
+interactive vendored-cleanup prompt and the legacy-briefing strip.
+
 ### `skills_source` — which install path owns `.claude/skills/`
 
 `.game-of-cards/config.yaml` holds a `skills_source` key, written by

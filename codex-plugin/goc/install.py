@@ -23,7 +23,7 @@ import os
 import re
 import shutil
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
@@ -94,6 +94,18 @@ class PlannedWrite:
     action: str
     path: Path
     category: str  # "project-state" | "guidance" | "harness"
+    # Which executor operation produces `path`. `_plan_upgrade_writes`
+    # dispatches on this to ask that executor — in probe mode — whether the
+    # write would change anything, so "is there work?" is answered by the
+    # code that does the work rather than by a second enumeration of it.
+    kind: str = "copy"
+    source: Path | None = None  # template bytes, for the copy-shaped kinds
+    executable: bool = False  # copy-shaped kinds the executor also chmods +x
+
+
+# Plan actions that mean "the executor would touch nothing". Everything else
+# is an effecting write.
+_NO_OP_ACTIONS = frozenset({"unchanged", "preserved"})
 
 
 @dataclass(frozen=True)
@@ -205,6 +217,24 @@ def _write_text_keep_newline(path: Path, text: str, newline: str) -> None:
     path.write_bytes(text.encode("utf-8"))
 
 
+def _commit_text(
+    path: Path, new_text: str, old_text: str, newline: str, *, probe: bool
+) -> bool:
+    """Write *new_text* unless it already matches *old_text*; report the change.
+
+    `probe=True` answers the same question without touching the file. This is
+    the single primitive every text-editing executor here shares, so the
+    upgrade planner can ask "would this write do anything?" of the executor
+    itself instead of re-deriving the answer beside it.
+    """
+
+    if new_text == old_text:
+        return False
+    if not probe:
+        _write_text_keep_newline(path, new_text, newline)
+    return True
+
+
 def _strip_goc_block(path: Path) -> None:
     """Remove the GoC marker-bounded block from a markdown file (no-op if absent).
 
@@ -223,13 +253,17 @@ def _strip_goc_block(path: Path) -> None:
         _write_text_keep_newline(path, new + "\n", newline)
 
 
-def _strip_claude_import(path: Path) -> None:
-    """Remove GoC's Claude import pointer from CLAUDE.md, preserving user text."""
+def _strip_claude_import(path: Path, *, probe: bool = False) -> bool:
+    """Remove GoC's Claude import pointer from CLAUDE.md, preserving user text.
+
+    Returns whether the file changes; `probe=True` reports what *would* change
+    without writing or deleting anything.
+    """
 
     if not path.exists():
-        return
-    text, newline = _read_text_keep_newline(path)
-    text = CLAUDE_IMPORT_RE.sub("", text)
+        return False
+    original, newline = _read_text_keep_newline(path)
+    text = CLAUDE_IMPORT_RE.sub("", original)
     lines = [
         line
         for line in text.splitlines()
@@ -238,38 +272,43 @@ def _strip_claude_import(path: Path) -> None:
     new = "\n".join(lines).strip()
     header_only = re.fullmatch(r"# Claude Code Guidelines\s*", new)
     if not new or header_only:
-        path.unlink()
-    else:
-        _write_text_keep_newline(path, new + "\n", newline)
+        if not probe:
+            path.unlink()
+        return True
+    return _commit_text(path, new + "\n", original, newline, probe=probe)
 
 
-def _sync_claude_import(target: Path, briefing_target: str) -> None:
+def _sync_claude_import(target: Path, briefing_target: str, *, probe: bool = False) -> bool:
     """Ensure Claude Code loads a non-CLAUDE.md briefing home via @ import.
 
     Fresh GoC-owned CLAUDE.md files stay as a single `@...` line. If the
     user already has custom CLAUDE.md content, keep it and manage a small
     marker-bounded import block instead of overwriting their text.
+
+    Returns whether CLAUDE.md changes; `probe=True` reports what *would*
+    change without writing.
     """
 
     if briefing_target not in CLAUDE_IMPORTABLE_TARGETS:
-        return
+        return False
     claude_md = target / "CLAUDE.md"
     import_line = f"@{briefing_target}"
     if not claude_md.exists():
-        claude_md.write_text(import_line + "\n")
-        return
+        if not probe:
+            claude_md.write_text(import_line + "\n")
+        return True
 
     text, newline = _read_text_keep_newline(claude_md)
     stripped = text.strip()
     import_lines = {f"@{candidate}" for candidate in CLAUDE_IMPORTABLE_TARGETS}
     if not stripped or stripped in import_lines:
-        _write_text_keep_newline(claude_md, import_line + "\n", newline)
-        return
+        return _commit_text(claude_md, import_line + "\n", text, newline, probe=probe)
 
     block = f"{CLAUDE_IMPORT_BEGIN}\n{import_line}\n{CLAUDE_IMPORT_END}\n"
     if CLAUDE_IMPORT_RE.search(text):
-        _write_text_keep_newline(claude_md, CLAUDE_IMPORT_RE.sub(lambda _: block, text), newline)
-        return
+        return _commit_text(
+            claude_md, CLAUDE_IMPORT_RE.sub(lambda _: block, text), text, newline, probe=probe
+        )
 
     lines = text.splitlines()
     replaced_bare_import = False
@@ -278,10 +317,11 @@ def _sync_claude_import(target: Path, briefing_target: str) -> None:
             lines[idx] = import_line
             replaced_bare_import = True
     if replaced_bare_import:
-        _write_text_keep_newline(claude_md, "\n".join(lines).rstrip() + "\n", newline)
-        return
+        return _commit_text(
+            claude_md, "\n".join(lines).rstrip() + "\n", text, newline, probe=probe
+        )
 
-    _write_text_keep_newline(claude_md, text.rstrip() + "\n\n" + block, newline)
+    return _commit_text(claude_md, text.rstrip() + "\n\n" + block, text, newline, probe=probe)
 
 
 def _templates_root() -> Path:
@@ -570,21 +610,31 @@ def _backup_unparseable_settings(settings_path: Path, original: str) -> Path:
     return backup
 
 
-def _merge_claude_settings(settings_path: Path) -> None:
+def _merge_claude_settings(settings_path: Path, *, probe: bool = False) -> bool:
     """Write or merge .claude/settings.json with GoC hook registrations.
 
     Adds GoC-managed hook entries under each event type without removing
     unrelated keys or hooks that belong to the user.
+
+    Returns whether the file changes; `probe=True` reports what *would*
+    change without writing the file, its backup, or any warning.
     """
-    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    if not probe:
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings: dict = {}
     original: str = ""
     backup_path: Path | None = None
     changed = False
 
+    def _warn(message: str) -> None:
+        if not probe:
+            print(message, file=sys.stderr)
+
     def _ensure_backup() -> Path:
         nonlocal backup_path
         if backup_path is None:
+            if probe:
+                return settings_path.with_name(settings_path.name + ".bak")
             backup_path = _backup_unparseable_settings(settings_path, original)
         return backup_path
 
@@ -594,19 +644,17 @@ def _merge_claude_settings(settings_path: Path) -> None:
             settings = json.loads(original)
         except json.JSONDecodeError as exc:
             backup = _ensure_backup()
-            print(
+            _warn(
                 f"  warning: {settings_path} is not valid JSON ({exc}); "
                 f"backed it up to {backup.name} before writing GoC hooks. "
-                f"Merge your keys back in by hand.",
-                file=sys.stderr,
+                f"Merge your keys back in by hand."
             )
         if not isinstance(settings, dict):
             backup = _ensure_backup()
-            print(
+            _warn(
                 f"  warning: {settings_path} is valid JSON but not an object "
                 f"(got {type(settings).__name__}); backed it up to {backup.name} "
-                f"before writing GoC hooks. Merge your keys back in by hand.",
-                file=sys.stderr,
+                f"before writing GoC hooks. Merge your keys back in by hand."
             )
             settings = {}
             changed = True
@@ -616,11 +664,10 @@ def _merge_claude_settings(settings_path: Path) -> None:
     hooks = settings.setdefault("hooks", {})
     if not isinstance(hooks, dict):
         backup = _ensure_backup()
-        print(
+        _warn(
             f"  warning: {settings_path} has a non-object `hooks` field "
             f"(got {type(hooks).__name__}); backed it up to {backup.name} "
-            f"before writing GoC hooks. Merge your keys back in by hand.",
-            file=sys.stderr,
+            f"before writing GoC hooks. Merge your keys back in by hand."
         )
         settings["hooks"] = {}
         hooks = settings["hooks"]
@@ -630,12 +677,11 @@ def _merge_claude_settings(settings_path: Path) -> None:
         event_hooks = hooks.setdefault(event, [])
         if not isinstance(event_hooks, list):
             backup = _ensure_backup()
-            print(
+            _warn(
                 f"  warning: {settings_path} hooks.{event} is "
                 f"{type(event_hooks).__name__} (expected list); backed it up "
                 f"to {backup.name} and reset to []. Merge your value back in "
-                f"by hand.",
-                file=sys.stderr,
+                f"by hand."
             )
             hooks[event] = []
             event_hooks = hooks[event]
@@ -648,12 +694,11 @@ def _merge_claude_settings(settings_path: Path) -> None:
             group_hooks = group["hooks"]
             if not isinstance(group_hooks, list):
                 backup = _ensure_backup()
-                print(
+                _warn(
                     f"  warning: {settings_path} hooks.{event}[].hooks is "
                     f"{type(group_hooks).__name__} (expected list); backed it "
                     f"up to {backup.name} and reset to []. Merge your value "
-                    f"back in by hand.",
-                    file=sys.stderr,
+                    f"back in by hand."
                 )
                 group["hooks"] = []
                 changed = True
@@ -679,16 +724,16 @@ def _merge_claude_settings(settings_path: Path) -> None:
     # order, trailing newline — untouched rather than reflowing them. The
     # backup is part of that contract: it is the pristine copy made before
     # GoC reflows the file, so it only makes sense when a write happens.
-    if changed:
+    if changed and not probe:
         for event in non_object_item_events:
             backup = _ensure_backup()
-            print(
+            _warn(
                 f"  warning: {settings_path} hooks.{event}[].hooks contains "
                 f"non-object items; backed it up to {backup.name}. The "
-                f"non-object items are preserved verbatim.",
-                file=sys.stderr,
+                f"non-object items are preserved verbatim."
             )
         settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    return changed
 
 
 def _strip_goc_settings_entries(settings_path: Path) -> None:
@@ -880,31 +925,142 @@ def _plan_writes(
 
     deck_dir = target / ".game-of-cards" / "deck"
     writes: list[PlannedWrite] = []
-    writes.append(PlannedWrite("shared", "write", deck_dir / "log.md", "project-state"))
-    writes.append(PlannedWrite("shared", "write", deck_dir / ".goc-version", "project-state"))
+    writes.append(
+        PlannedWrite("shared", "write", deck_dir / "log.md", "project-state", kind="deck-log")
+    )
+    writes.append(
+        PlannedWrite(
+            "shared", "write", deck_dir / ".goc-version", "project-state", kind="version-sentinel"
+        )
+    )
     config_src = templates / "game_of_cards"
     for asset in config_src.rglob("*"):
         if asset.is_dir() or "__pycache__" in asset.parts:
             continue
         rel = asset.relative_to(config_src)
-        writes.append(PlannedWrite("shared", "write", target / ".game-of-cards" / rel, "project-state"))
-    writes.append(PlannedWrite("shared", "append", target / briefing_target, "guidance"))
+        writes.append(
+            PlannedWrite(
+                "shared",
+                "write",
+                target / ".game-of-cards" / rel,
+                "project-state",
+                kind="user-owned",
+                source=asset,
+            )
+        )
+    writes.append(
+        PlannedWrite("shared", "append", target / briefing_target, "guidance", kind="briefing")
+    )
     if "claude" in agents and briefing_target in CLAUDE_IMPORTABLE_TARGETS:
-        writes.append(PlannedWrite("claude", "append", target / "CLAUDE.md", "guidance"))
+        writes.append(
+            PlannedWrite("claude", "append", target / "CLAUDE.md", "guidance", kind="claude-import")
+        )
     for agent in agents:
         shim = _load_agent_shim(templates, agent)
         is_local = agent in local_skills_agents
         if is_local and shim.skills:
+            codex_skills = shim.skills.frontmatter == "codex"
             for rel in _iter_skill_assets(templates / "skills", agent):
-                writes.append(PlannedWrite(agent, "write", target / shim.skills.target / rel, "harness"))
+                writes.append(
+                    PlannedWrite(
+                        agent,
+                        "write",
+                        target / shim.skills.target / rel,
+                        "harness",
+                        kind="codex-skill" if codex_skills and rel.name == "SKILL.md" else "copy",
+                        source=templates / "skills" / rel,
+                    )
+                )
         if is_local:
             for file in shim.files:
-                writes.append(PlannedWrite(agent, "write", target / file.target, "harness"))
+                writes.append(
+                    PlannedWrite(
+                        agent,
+                        "write",
+                        target / file.target,
+                        "harness",
+                        source=templates / file.source,
+                        executable=file.mode == "executable",
+                    )
+                )
         if is_local and shim.settings_json:
-            writes.append(PlannedWrite(agent, "merge", target / shim.settings_json, "harness"))
+            writes.append(
+                PlannedWrite(
+                    agent, "merge", target / shim.settings_json, "harness", kind="settings-merge"
+                )
+            )
     if (target / ".git").exists():
-        writes.append(PlannedWrite("shared", "append", target / ".pre-commit-config.yaml", "guidance"))
+        writes.append(
+            PlannedWrite(
+                "shared", "append", target / ".pre-commit-config.yaml", "guidance", kind="precommit"
+            )
+        )
     return writes
+
+
+def _copy_is_current(write: PlannedWrite) -> bool:
+    """True when the destination already holds the bytes (and mode) a copy would write."""
+
+    if write.source is None or not write.path.is_file():
+        return False
+    if write.kind == "codex-skill":
+        rendered = _codex_skill_text(write.source, skill_name=write.source.parent.name)
+        expected = write.source.read_bytes() if rendered is None else rendered.encode("utf-8")
+    else:
+        expected = write.source.read_bytes()
+    try:
+        if write.path.read_bytes() != expected:
+            return False
+    except OSError:
+        return False
+    return not write.executable or bool(write.path.stat().st_mode & 0o111)
+
+
+def _upgrade_write_action(
+    write: PlannedWrite,
+    *,
+    target: Path,
+    templates: Path,
+    briefing_target: str,
+    classifications: dict[Path, str],
+    config_root: Path,
+) -> str:
+    """Label one planned upgrade write with what the executor would actually do.
+
+    Every branch either asks the owning executor in probe mode or compares the
+    bytes that executor would write, so a label cannot drift from its write.
+    """
+
+    if write.kind == "user-owned":
+        rel = write.path.relative_to(config_root)
+        return classifications.get(rel, "sync")
+    if write.kind == "version-sentinel":
+        try:
+            return "unchanged" if write.path.read_text() == f"{__version__}\n" else "sync"
+        except OSError:
+            return "sync"
+    if write.kind in {"copy", "codex-skill"}:
+        return "unchanged" if _copy_is_current(write) else "sync"
+    if write.kind == "briefing":
+        # `_sync_methodology_blocks` strips the now-redundant CLAUDE.md import
+        # before rewriting the block when CLAUDE.md is itself the home.
+        changed = briefing_target == "CLAUDE.md" and _strip_claude_import(
+            target / "CLAUDE.md", probe=True
+        )
+        changed |= _append_marker_block(
+            write.path,
+            _briefing_body(templates, briefing_target),
+            header=BRIEFING_HEADERS[briefing_target],
+            probe=True,
+        )
+        return "append" if changed else "unchanged"
+    if write.kind == "claude-import":
+        return "append" if _sync_claude_import(target, briefing_target, probe=True) else "unchanged"
+    if write.kind == "settings-merge":
+        return "merge" if _merge_claude_settings(write.path, probe=True) else "unchanged"
+    if write.kind == "precommit":
+        return "append" if _append_precommit_hook(write.path, probe=True) else "unchanged"
+    return "sync" if write.action == "write" else write.action
 
 
 def _plan_upgrade_writes(
@@ -914,13 +1070,24 @@ def _plan_upgrade_writes(
     *,
     local_skills_agents: frozenset[str] = frozenset(),
     briefing_target: str = DEFAULT_BRIEFING_TARGET,
+    deck_dir: Path | None = None,
 ) -> list[PlannedWrite]:
-    """Compute the list of writes the upgrader will perform.
+    """Compute the list of writes the upgrader will perform, each with its effect.
 
-    Project-state `.game-of-cards/` files are labeled with the ownership-aware
-    `create` / `unchanged` / `preserved` actions rather than the blanket
-    `sync`, so a dry-run truthfully reports which authored files will be
-    preserved on the real run vs which absent files will be scaffolded.
+    Every write carries an effect-aware action: the ownership-aware
+    `create` / `unchanged` / `preserved` for `.game-of-cards/` files, and for
+    every other write `unchanged` when the executor would produce
+    byte-identical output. So a dry-run truthfully reports which authored
+    files will be preserved on the real run, which absent files will be
+    scaffolded, and which of the rest are already current.
+
+    `upgrade()` reads its "nothing to do" verdict off this same plan, which is
+    what keeps the preview and the real run in agreement and what makes a
+    repair added to `upgrade()` covered the moment it is planned, rather than
+    when someone remembers to register a signal for it.
+
+    `deck_dir` overrides where the version sentinel lives, for legacy installs
+    that still keep the deck at `deck/` rather than `.game-of-cards/deck/`.
     """
 
     classifications = _user_owned_classifications(target, templates)
@@ -934,20 +1101,19 @@ def _plan_upgrade_writes(
         local_skills_agents=local_skills_agents,
         briefing_target=briefing_target,
     ):
-        if write.path.name == "log.md":
+        if write.kind == "deck-log":
             continue
-        if write.category == "project-state":
-            try:
-                rel = write.path.relative_to(config_root)
-            except ValueError:
-                rel = None
-            if rel is not None and rel in classifications:
-                writes.append(
-                    PlannedWrite(write.owner, classifications[rel], write.path, write.category)
-                )
-                continue
-        action = "sync" if write.action == "write" else write.action
-        writes.append(PlannedWrite(write.owner, action, write.path, write.category))
+        if write.kind == "version-sentinel" and deck_dir is not None:
+            write = replace(write, path=deck_dir / write.path.name)
+        action = _upgrade_write_action(
+            write,
+            target=target,
+            templates=templates,
+            briefing_target=briefing_target,
+            classifications=classifications,
+            config_root=config_root,
+        )
+        writes.append(replace(write, action=action))
     return writes
 
 
@@ -962,7 +1128,12 @@ def _print_plan(command: str, target: Path, writes: list[PlannedWrite], agents: 
     """Render a dry-run write plan grouped by category."""
 
     agents_str = ",".join(agents) if agents else "none"
-    print(f"goc {command} (dry-run) — agents: {agents_str} — {len(writes)} writes planned")
+    # An upgrade plan is mostly `unchanged` on a healthy repo, so lead with how
+    # many writes actually land. A fresh install has no no-ops and prints the
+    # bare count.
+    effecting = sum(1 for write in writes if write.action not in _NO_OP_ACTIONS)
+    suffix = "" if effecting == len(writes) else f" ({effecting} effecting)"
+    print(f"goc {command} (dry-run) — agents: {agents_str} — {len(writes)} writes planned{suffix}")
     for cat_key, cat_label in _CATEGORY_LABELS:
         cat_writes = [w for w in writes if w.category == cat_key]
         if not cat_writes:
@@ -1150,19 +1321,22 @@ edit deck files directly just because `goc` is not on `PATH`.
 """
 
 
-def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
-    """Write a Codex-compatible SKILL.md copy from the shared template."""
+def _codex_skill_text(src: Path, *, skill_name: str) -> str | None:
+    """Render the Codex variant of a shared SKILL.md, or None to copy verbatim.
+
+    Split out from `_write_codex_skill` so the upgrade planner can compare a
+    vendored Codex skill against what the writer *would* produce, rather than
+    against the untransformed template it would never match.
+    """
 
     text = src.read_text()
     if not text.startswith("---\n"):
-        shutil.copy2(src, dst)
-        return
+        return None
 
     try:
         _, frontmatter, body = text.split("---", 2)
     except ValueError:
-        shutil.copy2(src, dst)
-        return
+        return None
 
     name = _frontmatter_value(frontmatter, "name") or skill_name
     description = _frontmatter_value(frontmatter, "description")
@@ -1174,8 +1348,18 @@ def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
             "---",
         )
     )
+    return codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body
+
+
+def _write_codex_skill(src: Path, dst: Path, *, skill_name: str) -> None:
+    """Write a Codex-compatible SKILL.md copy from the shared template."""
+
+    rendered = _codex_skill_text(src, skill_name=skill_name)
+    if rendered is None:
+        shutil.copy2(src, dst)
+        return
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body)
+    dst.write_text(rendered)
 
 
 def skill_for_agent(
@@ -1255,23 +1439,28 @@ def _sync_skill_tree(
         shutil.copy2(asset, target)
 
 
-def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
+def _append_marker_block(
+    target: Path, block_body: str, *, header: str, probe: bool = False
+) -> bool:
     """Append (or replace) a marker-bounded GoC section in a markdown file.
 
     Works for both AGENTS.md and CLAUDE.md — the marker pattern is identical;
     only the content and the file-creation header differ.
+
+    Returns whether the file changes; `probe=True` reports what *would*
+    change without writing.
     """
 
     block = f"{GOC_BEGIN}\n{block_body.rstrip()}\n{GOC_END}\n"
     if not target.exists():
-        target.write_text(f"{header}\n\n{block}")
-        return
+        if not probe:
+            target.write_text(f"{header}\n\n{block}")
+        return True
     text, newline = _read_text_keep_newline(target)
     pattern = re.compile(rf"{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n?", re.DOTALL)
     if pattern.search(text):
-        _write_text_keep_newline(target, pattern.sub(lambda _: block, text), newline)
-        return
-    _write_text_keep_newline(target, text.rstrip() + "\n\n" + block, newline)
+        return _commit_text(target, pattern.sub(lambda _: block, text), text, newline, probe=probe)
+    return _commit_text(target, text.rstrip() + "\n\n" + block, text, newline, probe=probe)
 
 
 # A standalone `- repo: local` stanza and the indented lines that belong to it
@@ -1313,37 +1502,21 @@ def _refresh_goc_validate_block(text: str) -> str:
     return _PRECOMMIT_LOCAL_BLOCK_RE.sub(_replace, text)
 
 
-def _precommit_refresh_pending(target: Path) -> bool:
-    """True iff `_append_precommit_hook` would rewrite a drifted stanza.
+def _append_precommit_hook(target: Path, *, probe: bool = False) -> bool:
+    """Append (or refresh) the `goc validate` hook in `.pre-commit-config.yaml`.
 
-    Detects the one case the same-version `upgrade()` short-circuit must
-    not skip: a real git repo whose `.pre-commit-config.yaml` carries a
-    GoC-managed `goc-validate` stanza that `_refresh_goc_validate_block`
-    would change (a legacy `files: ^deck/.*$` glob, or any `files:`-gated
-    form predating `always_run: true`). Pure check — no
-    write — so it can gate the "nothing to do" guard. Returns False when
-    the stanza is already current (the refresh would be a byte-identical
-    no-op), so the existing no-op path is preserved.
+    Returns whether the file changes; `probe=True` reports what *would*
+    change without writing. The probe answer covers both halves of the
+    contract — an absent config to create and a drifted stanza to migrate —
+    because it is the same branch tree the write takes.
     """
 
     if not (target.parent / ".git").exists():
         return False
     if not target.exists():
-        return False
-    text, _ = _read_text_keep_newline(target)
-    if "id: goc-validate" not in text:
-        return False
-    return _refresh_goc_validate_block(text) != text
-
-
-def _append_precommit_hook(target: Path) -> None:
-    """Append (or refresh) the `goc validate` hook in `.pre-commit-config.yaml`."""
-
-    if not (target.parent / ".git").exists():
-        return
-    if not target.exists():
-        target.write_text("repos:\n" + PRE_COMMIT_HOOK)
-        return
+        if not probe:
+            target.write_text("repos:\n" + PRE_COMMIT_HOOK)
+        return True
     text, newline = _read_text_keep_newline(target)
     if "id: goc-validate" in text:
         # Already present — but an older install may carry a stale `files:`
@@ -1352,13 +1525,11 @@ def _append_precommit_hook(target: Path) -> None:
         # Either way pre-commit silently skips the hook. Refresh the
         # GoC-managed stanza in place so `goc upgrade` carries template fixes
         # forward.
-        refreshed = _refresh_goc_validate_block(text)
-        if refreshed != text:
-            _write_text_keep_newline(target, refreshed, newline)
-        return
-    if not text.endswith("\n"):
-        text += "\n"
-    _write_text_keep_newline(target, text + PRE_COMMIT_HOOK, newline)
+        return _commit_text(
+            target, _refresh_goc_validate_block(text), text, newline, probe=probe
+        )
+    appended = text if text.endswith("\n") else text + "\n"
+    return _commit_text(target, appended + PRE_COMMIT_HOOK, text, newline, probe=probe)
 
 
 def _sync_methodology_blocks(
@@ -1505,19 +1676,22 @@ def _confirm(prompt: str, *, default: bool = False) -> bool:
 _SKILLS_SOURCE_VALUES = ("plugin", "vendored", "auto")
 
 
-def _write_skills_source(target: Path, value: str) -> None:
+def _write_skills_source(target: Path, value: str, *, probe: bool = False) -> bool:
     """Set the `skills_source:` key in `.game-of-cards/config.yaml`.
 
     Append the key if missing; replace the value if a (commented or active)
     line already exists. Treats the config file as line-oriented text to
     avoid round-tripping the whole YAML — preserves comments and ordering
     that a parser-then-dump would lose.
+
+    Returns whether the file changes; `probe=True` reports what *would*
+    change without writing.
     """
     if value not in _SKILLS_SOURCE_VALUES:
         raise ValueError(f"invalid skills_source value: {value!r}")
     config_path = target / ".game-of-cards" / "config.yaml"
     if not config_path.exists():
-        return
+        return False
     text, newline = _read_text_keep_newline(config_path)
     # Prefer the active (non-commented) key; fall back to un-commenting a
     # commented example only when no active line exists. A single
@@ -1535,7 +1709,7 @@ def _write_skills_source(target: Path, value: str) -> None:
     else:
         sep = "" if text.endswith("\n") else "\n"
         new_text = f"{text}{sep}\n{replacement}\n"
-    _write_text_keep_newline(config_path, new_text, newline)
+    return _commit_text(config_path, new_text, text, newline, probe=probe)
 
 
 def install(
@@ -1788,26 +1962,38 @@ def upgrade(
         # agents (codex) still vendor.
         local_skills_agents = frozenset(a for a in agents if a != "claude")
 
-    pending_cleanup = needs_vendored_cleanup and not dry_run
-    pending_briefing_migration = bool(legacy_briefings_to_strip) and not dry_run
-    # A stale pre-commit goc-validate stanza (a legacy `^deck/.*$` glob, or
-    # any `files:`-gated form predating `always_run: true`) must be migrated
-    # even at the same version — otherwise the drift-gate hook stays silently
-    # skipped. _append_precommit_hook (run below) is idempotent, so this
-    # only defeats the short-circuit when there is a real drifted stanza to fix.
-    pending_precommit_refresh = (
-        _precommit_refresh_pending(target / ".pre-commit-config.yaml") and not dry_run
+    upgrade_plan = _plan_upgrade_writes(
+        target,
+        templates,
+        agents,
+        local_skills_agents=local_skills_agents,
+        briefing_target=resolved_briefing,
+        deck_dir=deck_dir,
+    )
+
+    # "Is there work?" is read off the same plan `--dry-run` prints, so the
+    # preview and the real run never disagree, and a repair added below cannot
+    # rejoin the skipped set by forgetting to register a signal here — it is
+    # covered the moment it is planned. Only the two pieces of non-write work
+    # the plan does not model (the interactive cleanup prompt, the legacy
+    # briefing strip) plus the skills_source pin still need their own terms,
+    # and the pin asks the executor that performs it rather than restating it.
+    plan_has_effect = any(write.action not in _NO_OP_ACTIONS for write in upgrade_plan)
+    pending_cleanup = needs_vendored_cleanup
+    pending_briefing_migration = bool(legacy_briefings_to_strip)
+    pending_skills_source = "claude" in agents and _write_skills_source(
+        target, claude_skills_mode, probe=True
     )
 
     if (
         existing == __version__
-        and not dry_run
         and not agents_explicit
-        and not pending_cleanup
         and not keep_local_skills
-        and not pending_briefing_migration
-        and not pending_precommit_refresh
         and briefing_target is None
+        and not plan_has_effect
+        and not pending_cleanup
+        and not pending_briefing_migration
+        and not pending_skills_source
     ):
         print(f"already at goc {__version__} — nothing to do.")
         return
@@ -1822,18 +2008,7 @@ def upgrade(
             )
         suffix = f" ({'; '.join(notes)})" if notes else ""
         print(f"goc upgrade would sync {existing} → {__version__}{suffix}")
-        _print_plan(
-            "upgrade",
-            target,
-            _plan_upgrade_writes(
-                target,
-                templates,
-                agents,
-                local_skills_agents=local_skills_agents,
-                briefing_target=resolved_briefing,
-            ),
-            agents,
-        )
+        _print_plan("upgrade", target, upgrade_plan, agents)
         return
 
     # Plugin-mode + leftover vendored layout: explicit, opt-in cleanup.
