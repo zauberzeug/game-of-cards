@@ -24,6 +24,18 @@ again. Both recipes agree on every commit but the last.
 The recipe under test is the one the skill PROSE specifies — parsed out
 of `SKILL.md` — not a copy of it, so the guard fails when the shipped
 instructions regress, which is where the defect lived.
+
+The same file also guards the recipe's SCOPE, for the same reason at one
+remove: `citation-repair-pass-has-no-rule-for-cites-inside-fenced-code-blocks`
+found that the recipe said whether a number could be relocated and
+nothing about whether it should be, so a cite inside a fenced block was
+left to each pass's invention. The two defensible inventions — every
+fenced cite is evidence, skip it; a fence means nothing, rewrite it —
+disagree on every fenced cite in the deck, and each is wrong on one of
+the two shapes a fence holds (49 comment labels that must be repaired,
+17 pasted-output records that must not). Prose that names the fence
+without naming both dispositions leaves the invention open, so the
+guard classifies rather than greps.
 """
 
 from __future__ import annotations
@@ -42,6 +54,12 @@ REFERENCE = ROOT / "goc" / "templates" / "skills" / "refine-deck" / "reference.m
 
 CREATING = "creating-commit"
 AUTHORING = "authoring-commit"
+
+# Fenced-cite scope verdicts. BLANKET covers both inventions the silence
+# allowed: they differ only in which shape they damage, and neither states
+# a disposition per shape, so the prose reads the same to the classifier.
+SPLIT_BY_CLAIM = "split-by-what-the-cite-claims"
+BLANKET = "one-rule-for-every-fenced-cite"
 
 CARD = "a-card-whose-cite-was-repaired-once"
 CITED_FILE = "src/app.py"
@@ -89,6 +107,43 @@ def documented_anchor(prose: str) -> str | None:
     if add_commit and not walk:
         return CREATING
     return None
+
+
+def documented_fenced_scope(prose: str) -> str | None:
+    """Which fenced-cite rule does this stretch of skill prose prescribe?
+
+    A pass needs three things from the prose to avoid inventing one: that
+    a fence is not itself decisive, the shape inside a fence that IS an
+    assertion about HEAD (a comment label), and the shape that is a dated
+    record it must never rewrite. Prose that names no fence at all is
+    SILENT — returns None, the state the defect was filed for. Prose that
+    names the fence but not both dispositions is BLANKET, which is the
+    invention restated rather than a rule.
+    """
+    lower = prose.lower()
+    if "fenced" not in lower and "code block" not in lower:
+        return None
+    labels_repaired = "comment label" in lower
+    records_excluded = "transcript" in lower and (
+        "out of scope" in lower or "leave the records" in lower
+    )
+    if labels_repaired and records_excluded:
+        return SPLIT_BY_CLAIM
+    return BLANKET
+
+
+def skill_citation_section() -> str:
+    """The core skill's § Defunct file:line citations, that subsection only."""
+    body = SKILL.read_text(encoding="utf-8")
+    match = re.search(
+        r"^### Defunct file:line citations$.*?(?=^#{1,3} \S)", body, re.S | re.M
+    )
+    if match is None:
+        raise AssertionError(
+            "refine-deck SKILL.md no longer has a "
+            "'### Defunct file:line citations' section"
+        )
+    return match.group(0)
 
 
 def skill_step_two() -> str:
@@ -261,6 +316,56 @@ class SecondRepairPassTest(unittest.TestCase):
         # that happened to sit at line 11 when the card was filed, and moves
         # the cite there.
         self.assertEqual(DECOY_LINE_IN_HEAD, repair(self.repo, CREATING))
+
+
+class DocumentedFencedScopeTest(unittest.TestCase):
+    """A cite's scope is what it claims, not whether a fence surrounds it."""
+
+    def test_core_skill_splits_fenced_cites_by_what_they_claim(self) -> None:
+        self.assertEqual(
+            SPLIT_BY_CLAIM,
+            documented_fenced_scope(skill_citation_section()),
+            "refine-deck SKILL.md § Defunct file:line citations must say "
+            "which cites inside a fenced block are repaired (comment labels, "
+            "which assert where code lives now) and which are left and "
+            "reported (pasted output and transcripts, which are dated "
+            "records); silence there is re-invented differently every pass",
+        )
+
+    def test_reference_sibling_prescribes_the_same_scope(self) -> None:
+        self.assertEqual(
+            documented_fenced_scope(skill_citation_section()),
+            documented_fenced_scope(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling scope fenced "
+            "cites differently; a pass following either would repair a "
+            "different set",
+        )
+
+    def test_both_surfaces_give_a_mechanical_test_for_the_label_shape(
+        self,
+    ) -> None:
+        # "comment label" is the name of the shape; a pass also needs to be
+        # able to recognise one without re-deriving the deck census.
+        for label, prose in (
+            ("SKILL.md", skill_citation_section()),
+            ("reference.md", reference_anchor_section()),
+        ):
+            with self.subTest(surface=label):
+                self.assertTrue(
+                    "`#`" in prose and "`//`" in prose and "marker" in prose,
+                    f"refine-deck {label} names the comment-label shape but "
+                    "not the marker test that identifies it",
+                )
+
+    def test_silent_prose_is_classified_as_silent(self) -> None:
+        # The fixture's own proof that the classifier can fail: the recipe as
+        # it shipped before this rule existed named no fence at all.
+        self.assertIsNone(
+            documented_fenced_scope(
+                "Relocate the anchor text in HEAD and rewrite the number only "
+                "on a unique match of a non-trivial line. Never guess."
+            )
+        )
 
 
 if __name__ == "__main__":

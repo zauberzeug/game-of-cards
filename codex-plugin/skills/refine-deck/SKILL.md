@@ -130,8 +130,18 @@ test, not a bounds test. An in-range line number is no evidence the
 cite is current: a file that grew keeps every old number valid while
 the code that was there moved down, so `line ≤ EOF` can only fire on
 a file that SHRANK. Compare what is AT the cited line now against
-what the card says is there. Per cite (long form: `reference.md`
-§ Citation anchor check):
+what the card says is there.
+
+Scope by what the cite CLAIMS, not by where it sits. A cite asserting
+where code lives NOW is in scope in prose and inside a fenced block
+alike — the fenced form is a COMMENT LABEL, a `#` or `//` marker before
+the cite on its line. A cite that is part of a dated record — pasted
+`grep -n` output (`path:line:content`), a `reproduce.py` transcript, a
+quoted error — is OUT of scope: rewriting its number fabricates output
+the command never produced. Repair the labels; leave the records and
+report their count apart from the declines below. Undecidable → record.
+
+Per cite (long form: `reference.md` § Citation anchor check):
 
 1. Resolve the path — cards write `engine.py:N` for `goc/engine.py:N`;
    prefer a non-mirror match. Ranges map both endpoints.

@@ -120,6 +120,36 @@ test flagged 0 of them. Its silence was indistinguishable from a clean
 deck for the life of the deck, which is why the rule below anchors on
 content rather than on range.
 
+**Scope: what the cite claims, not where it sits.** A cite asserts either
+where code lives NOW or what a command printed THEN, and only the first
+is repairable. The second — pasted `grep -n` output in
+`path:line:content` form, a `reproduce.py` transcript, a quoted error
+message — is dated evidence, and rewriting its number fabricates a
+result the command never produced, which costs the card the thing it
+was filed to carry. Fenced code blocks hold both shapes, so "is it
+inside a fence?" is the wrong question. The repairable fenced form is a
+COMMENT LABEL — a `#` or `//` marker before the cite on its line, as in
+`# goc/engine.py:N` above a quoted snippet or `... # engine.py:N`
+beside one — and it is as much an assertion about HEAD as any prose
+cite, so it is repaired by the same recipe. Apply the marker test,
+repair the labels, and leave the records; report the records' count
+under a heading of their own, apart from the declines in the table
+below, because a decline is a repair the pass COULD not make while an
+out-of-scope cite is one it MUST not. Undecidable → treat it as a
+record: a stale label costs a reader one lookup, a rewritten transcript
+costs the card its evidence.
+
+Measured on this deck's open cards at the 2026-08-31 pass: 49 fenced
+cites were comment labels and 17 were pasted output, spread over 31
+cards. That pass read the silence the other way — every fenced cite is
+evidence, skip it — and left 28 defunct labels unrepaired, all 28 of
+which were labels for which it had already computed a valid unique
+relocation. The opposite invention is equally reachable and worse: a
+pass reading the silence as "relocate everything" rewrites the 17
+records and leaves no trace that it did. Both readings are wrong on one
+of the two shapes, which is why the split is stated here rather than
+re-derived per pass.
+
 **Resolving the cite.** Cards write paths as they read in prose, so
 accept the bare basename (`engine.py:N` for `goc/engine.py:N`) and
 prefer a match outside vendored/mirror trees when several exist. A

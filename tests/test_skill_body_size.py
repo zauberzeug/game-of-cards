@@ -68,6 +68,20 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # because an agent that has to follow a pointer to learn that titles are
 # insufficient will run the title grep it already remembers. create-card was
 # at 9996 of 10000 before this, so no addition of any size would have fit.
+#
+# refine-deck was raised a fourth time on 2026-09-01 by the card
+# `citation-repair-pass-has-no-rule-for-cites-inside-fenced-code-blocks`: the
+# repair recipe said whether a number CAN be relocated and nothing about
+# whether it SHOULD be, so a cite inside a fenced block was left to each
+# pass's invention — and the two defensible inventions disagree on every
+# fenced cite in the deck (measured: 49 comment labels, which must be
+# repaired, against 17 pasted-output records, which must not). The 2026-08-31
+# pass invented "skip every fenced cite" and left 28 defunct labels it had
+# already computed valid relocations for. What stayed in the core is the
+# scope rule and its marker test; the census, the failed pass and the
+# reporting shape went to the reference sibling. A pointer would not have
+# worked here for a sharper reason than the earlier three raises: the defect
+# IS a pass inventing the missing rule rather than going to look for it.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -77,7 +91,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 11_500,
+    "refine-deck": 12_300,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }
