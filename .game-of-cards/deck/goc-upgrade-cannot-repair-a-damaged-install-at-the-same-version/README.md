@@ -1,7 +1,7 @@
 ---
 title: goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version
 summary: "goc upgrade returns 'already at goc X — nothing to do' whenever .goc-version matches the installed engine, so a repo whose vendored skills, .game-of-cards stubs, pre-commit stanza, or AGENTS.md marker block were deleted or corrupted is never re-synced. goc install in that repo exits 1 telling the user to run `goc upgrade` to re-sync templates, so goc's own printed remedy is a no-op. The short-circuit is a hand-maintained allowlist of pending_* signals and four repairs added since are not on it."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-31T01:19:28Z"
@@ -38,6 +38,7 @@ definition_of_done: |
         gets a forward pointer to this root card
   - [ ] PROCESS: full regression suite and `uv run goc validate` stay green;
         plugin mirrors re-synced
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version
