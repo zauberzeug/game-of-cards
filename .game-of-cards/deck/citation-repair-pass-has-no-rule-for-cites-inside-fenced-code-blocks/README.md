@@ -1,7 +1,7 @@
 ---
 title: citation-repair-pass-has-no-rule-for-cites-inside-fenced-code-blocks
 summary: "The refine-deck citation recipe tells a pass to relocate a defunct file:line cite on a unique anchor match, but says nothing about cites that sit inside a fenced code block, where the same rewrite can either repair a claim about current code or falsify a recorded transcript. With no rule, a pass must invent one: this round's conservative reading (skip all fenced cites) left 28 cites across 16 cards stale, and a census showed all 28 were in fact code-excerpt labels that should have been repaired. The recipe needs to say which fenced cites are in scope."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-31T02:12:55Z"
@@ -27,6 +27,7 @@ definition_of_done: |
         `python3 scripts/port_skills_to_openclaw.py --check` is clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and
         `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 # Citation repair pass has no rule for cites inside fenced code blocks
 
