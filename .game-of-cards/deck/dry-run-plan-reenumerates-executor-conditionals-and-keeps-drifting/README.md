@@ -13,6 +13,7 @@ advanced_by:
   - dry-run-plan-promises-pre-commit-append-that-real-install-skips-in-non-git-dir
   - repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses
   - dry-run-plan-promises-full-install-that-the-real-run-refuses-as-already-installed
+  - upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict
 tags: [meta-fix, infra, api-contract]
 summary: |
   `goc install/upgrade/migrate --dry-run` maintains a hand-written preview
