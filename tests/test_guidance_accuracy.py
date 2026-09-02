@@ -844,5 +844,163 @@ class CardLanguageGuardAccuracyTest(unittest.TestCase):
         )
 
 
+class UpgradeNoOpGuardParagraphAccuracyTest(unittest.TestCase):
+    """AGENTS.md § "Code architecture" tells the reader that `upgrade()`'s
+    "nothing to do" verdict is derived from the write plan, and closes by
+    accounting for the terms that sit *beside* the plan in the short-circuit.
+
+    That closing sentence is the reader's check on the paragraph's load-bearing
+    claim (do not add a `pending_*` term for a new write). It drifted once — it
+    said two terms, all non-write, while `upgrade()` carried three and the third
+    gated a write to `.game-of-cards/config.yaml`
+    (`agents-md-miscounts-the-upgrade-no-op-guard-terms-and-mislabels-them-non-write`).
+    Derive both the count and which terms write from the source so the next term
+    added turns the build red instead of re-opening that card silently.
+    """
+
+    _SENTENCE_RE = re.compile(
+        r"The (\w+) remaining terms? next to the plan[^.]*\.", re.DOTALL
+    )
+    _NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6}
+
+    def _upgrade_fn(self) -> ast.FunctionDef:
+        tree = ast.parse((ROOT / "goc" / "install.py").read_text())
+        fn = next(
+            (
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.FunctionDef) and node.name == "upgrade"
+            ),
+            None,
+        )
+        self.assertIsNotNone(fn, msg="goc/install.py no longer defines `upgrade()`")
+        return fn
+
+    def _guard_terms(self, fn: ast.FunctionDef) -> list[str]:
+        """The `pending_*` work signals negated into `upgrade()`'s short-circuit.
+
+        Scoped to the `pending_*` prefix because that is the register the
+        sentence counts. The guard's other negated operands (`agents_explicit`,
+        `keep_local_skills`) are caller-flag overrides, not answers to "is there
+        work?", so they are outside what the sentence describes.
+        """
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.If) or not isinstance(node.test, ast.BoolOp):
+                continue
+            names = [
+                operand.operand.id
+                for operand in node.test.values
+                if isinstance(operand, ast.UnaryOp)
+                and isinstance(operand.op, ast.Not)
+                and isinstance(operand.operand, ast.Name)
+            ]
+            if "plan_has_effect" in names:
+                return [name for name in names if name.startswith("pending_")]
+        self.fail(
+            "no short-circuit in `upgrade()` negates `plan_has_effect`. The "
+            "plan-derived no-op verdict AGENTS.md describes is gone or renamed; "
+            "rewrite the paragraph and this guard together."
+        )
+
+    def _writing_terms(self, fn: ast.FunctionDef) -> dict[str, str]:
+        """`pending_*` terms that gate a write, mapped to the executor they probe.
+
+        A term assigned from a call carrying `probe=True` is asking that
+        executor whether it would change a file, so it is true exactly when the
+        real call writes — the repo-wide convention the same paragraph names.
+        Derived, not listed, so a new probing term joins the set without a
+        hand-maintained register. A term that gates a write *without* probing is
+        not detected here; the count assertion is what catches that shape.
+        """
+        found: dict[str, str] = {}
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+                continue
+            target = node.targets[0]
+            if not isinstance(target, ast.Name) or not target.id.startswith("pending_"):
+                continue
+            for call in ast.walk(node.value):
+                if isinstance(call, ast.Call) and any(
+                    kw.arg == "probe" and getattr(kw.value, "value", None) is True
+                    for kw in call.keywords
+                ):
+                    found[target.id] = ast.unparse(call.func)
+        return found
+
+    def _sentence(self) -> tuple[int, str]:
+        match = self._SENTENCE_RE.search((ROOT / "AGENTS.md").read_text())
+        self.assertIsNotNone(
+            match,
+            msg=(
+                "AGENTS.md no longer accounts for the terms beside the write plan "
+                "in `upgrade()`'s short-circuit. That sentence is what stops a "
+                "contributor from reading the paragraph as 'every write is in the "
+                "plan'; restore it rather than dropping it."
+            ),
+        )
+        word = match.group(1).lower()
+        self.assertIn(
+            word,
+            self._NUMBER_WORDS,
+            msg=f"unparseable count word in AGENTS.md's remaining-terms sentence: {word!r}",
+        )
+        return self._NUMBER_WORDS[word], " ".join(match.group(0).split())
+
+    def test_sentence_count_matches_the_guard(self) -> None:
+        terms = self._guard_terms(self._upgrade_fn())
+        count, sentence = self._sentence()
+        self.assertEqual(
+            count,
+            len(terms),
+            msg=(
+                f"AGENTS.md says {count} terms sit beside the write plan in "
+                f"`upgrade()`'s short-circuit, but it ANDs {len(terms)}: "
+                f"{', '.join(terms)}. Update the sentence in the same change that "
+                f"added or removed the term — and prefer planning the work as a "
+                f"`PlannedWrite` over adding another `pending_*` term."
+            ),
+        )
+
+    def test_sentence_does_not_call_a_writing_term_non_write(self) -> None:
+        fn = self._upgrade_fn()
+        terms = self._guard_terms(fn)
+        writers = {k: v for k, v in self._writing_terms(fn).items() if k in terms}
+        _, sentence = self._sentence()
+        if not writers:
+            return
+        self.assertNotIn(
+            "non-write",
+            sentence,
+            msg=(
+                "AGENTS.md characterizes the terms beside the plan as non-write "
+                "work, but " + ", ".join(sorted(writers)) + " probes "
+                + ", ".join(sorted(writers.values()))
+                + " and is true exactly when that executor would write. Say what "
+                "the terms are — work the plan does not model — not that they "
+                "never write."
+            ),
+        )
+
+    def test_sentence_names_every_writing_term(self) -> None:
+        fn = self._upgrade_fn()
+        terms = self._guard_terms(fn)
+        writers = {k: v for k, v in self._writing_terms(fn).items() if k in terms}
+        _, sentence = self._sentence()
+        for term in sorted(writers):
+            # The prose names the pin by its config key (`skills_source`), not by
+            # the local variable, so match on the `pending_` prefix stripped off.
+            with self.subTest(term=term):
+                self.assertIn(
+                    term.removeprefix("pending_"),
+                    sentence,
+                    msg=(
+                        f"{term} gates a write (it probes {writers[term]}), but "
+                        f"AGENTS.md's remaining-terms sentence never names it. A "
+                        f"reader cannot tell which of the terms writes, which is "
+                        f"the one thing the sentence exists to disambiguate."
+                    ),
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

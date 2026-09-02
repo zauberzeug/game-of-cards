@@ -282,8 +282,12 @@ which destination files its wipe-and-recopy would remove and plans one
 `skill-prune` entry per path — that is the shape to copy for the next
 deletion, not a new term beside the guard
 (`upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict`).
-The two remaining terms next to the plan cover non-write work only — the
-interactive vendored-cleanup prompt and the legacy-briefing strip.
+The three remaining terms next to the plan cover work the plan does not
+model: the interactive vendored-cleanup prompt, the legacy-briefing strip,
+and the `skills_source` pin — the one surviving `pending_*` term that does
+gate a write, kept honest by asking `_write_skills_source` in `probe=True`
+mode rather than restating what it would do, and a holdover rather than a
+shape to copy.
 
 ### `skills_source` — which install path owns `.claude/skills/`
 
