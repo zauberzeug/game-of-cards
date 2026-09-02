@@ -2172,7 +2172,17 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             # A fresh `goc new` card is a draft (hidden from the queue until
             # authored); claim-and-release clears the draft flag so it surfaces
             # as a normal open card for the queue assertions below.
-            self.assert_goc_ok(self.run_goc(cwd, "status", "open-card", "active", "--no-commit"))
+            self.assert_goc_ok(
+                self.run_goc(
+                    cwd,
+                    "status",
+                    "open-card",
+                    "active",
+                    "--worker-who",
+                    "test-worker",
+                    "--no-commit",
+                )
+            )
             self.assert_goc_ok(self.run_goc(cwd, "status", "open-card", "open", "--no-commit"))
             self.assert_goc_ok(self.run_goc(cwd, "new", "active-card", "--gate", "none", "--tag", "story"))
             self.assert_goc_ok(

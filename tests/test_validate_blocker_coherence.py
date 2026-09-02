@@ -35,6 +35,7 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
         advanced_by: list[str] | None = None,
         advances: list[str] | None = None,
         dod: str | None = None,
+        worker: str | None = None,
     ) -> None:
         card_dir = cwd / ".game-of-cards" / "deck" / title
         card_dir.mkdir(parents=True)
@@ -47,6 +48,7 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
             return "\n" + "\n".join(f"  - {item}" for item in items)
 
         dod_block = dod if dod is not None else f"  - [{done}] PROCESS: test card"
+        worker_line = f"worker: {worker}\n" if worker is not None else ""
         (card_dir / "README.md").write_text(
             "---\n"
             f"title: {title}\n"
@@ -62,6 +64,7 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
             "tags: [bug]\n"
             "definition_of_done: |\n"
             f"{dod_block}\n"
+            f"{worker_line}"
             "---\n\n"
             f"# {title}\n"
         )
@@ -85,7 +88,13 @@ class ValidateBlockerCoherenceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             self.write_card(cwd, "done-prereq", status="done", advances=["blocked-card"])
-            self.write_card(cwd, "active-prereq", status="active", advances=["blocked-card"])
+            self.write_card(
+                cwd,
+                "active-prereq",
+                status="active",
+                advances=["blocked-card"],
+                worker="test-worker",
+            )
             self.write_card(
                 cwd,
                 "blocked-card",
