@@ -1,7 +1,7 @@
 ---
 title: upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict
 summary: "`_plan_upgrade_writes` enumerates `PlannedWrite`s only, so the `_sync_skill_tree(replace_skills=True)` prune — which `shutil.rmtree`s each GoC-owned skill dir before recopying — is invisible to the plan. Two consequences from one omission: `goc upgrade --dry-run` never lists a deletion it then performs, and `upgrade()`'s plan-derived `plan_has_effect` verdict reports 'already at goc X — nothing to do' at the same version while the identical stale file IS removed at any other version."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-02T04:52:02Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the prune is modelled as a planned entry (a new `PlannedWrite` kind whose action comes from the pruning executor), NOT as a new `pending_*` term beside `plan_has_effect` — `AGENTS.md` forbids that register by name.
   - [ ] TDD: `reproduce.py` exits zero (both `BUG:` assertions pass).
   - [ ] PROCESS: root card `dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting` gains this instance in its `## The instances so far` list.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict
