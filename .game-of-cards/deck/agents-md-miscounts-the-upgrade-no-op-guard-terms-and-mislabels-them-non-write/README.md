@@ -1,7 +1,7 @@
 ---
 title: agents-md-miscounts-the-upgrade-no-op-guard-terms-and-mislabels-them-non-write
 summary: "AGENTS.md's plan-derived-verdict paragraph ends \"The two remaining terms next to the plan cover non-write work only\", but upgrade() carries three terms beside plan_has_effect and the third one writes: pending_skills_source is true exactly when _write_skills_source would change .game-of-cards/config.yaml. The code comment directly above the guard already says \"plus the skills_source pin\", so the two surfaces contradict each other in the same function. A reader trusting the sentence concludes every write is covered by the plan, which is the one belief this paragraph exists to establish and the one the third term breaks."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-09-02T05:09:45Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — AGENTS.md's count matches the `pending_*` terms parsed out of `upgrade()`'s short-circuit, and no term it calls non-write actually writes.
   - [ ] MECHANICAL: the AGENTS.md sentence names all three terms and stops calling them non-write work only — `pending_skills_source` gates a write to `.game-of-cards/config.yaml`, so the honest framing is "work the plan does not model", not "non-write work".
   - [ ] TDD: a guard in `tests/test_guidance_accuracy.py` fails when the sentence's count drifts from the `pending_*` terms `upgrade()` actually ANDs into the short-circuit, so the next term added cannot re-open this.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # agents-md-miscounts-the-upgrade-no-op-guard-terms-and-mislabels-them-non-write
