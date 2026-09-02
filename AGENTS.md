@@ -276,6 +276,12 @@ computation, and a repair added to `upgrade()` is covered the moment it is
 planned. Do **not** reintroduce a `pending_*` allowlist term for a new
 write; that per-site register is what let four repairs go unreachable at
 the same version (`goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version`).
+The plan is not writes only: a repair that *deletes* has no template to be
+derived from, so `_plan_skill_prunes` asks `_sync_skill_tree(probe=True)`
+which destination files its wipe-and-recopy would remove and plans one
+`skill-prune` entry per path — that is the shape to copy for the next
+deletion, not a new term beside the guard
+(`upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict`).
 The two remaining terms next to the plan cover non-write work only — the
 interactive vendored-cleanup prompt and the legacy-briefing strip.
 

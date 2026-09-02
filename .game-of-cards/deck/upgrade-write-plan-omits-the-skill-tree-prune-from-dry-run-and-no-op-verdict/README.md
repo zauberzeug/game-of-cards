@@ -1,40 +1,43 @@
 ---
 title: upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict
-summary: "`_plan_upgrade_writes` enumerates `PlannedWrite`s only, so the `_sync_skill_tree(replace_skills=True)` prune — which `shutil.rmtree`s each GoC-owned skill dir before recopying — is invisible to the plan. Two consequences from one omission: `goc upgrade --dry-run` never lists a deletion it then performs, and `upgrade()`'s plan-derived `plan_has_effect` verdict reports 'already at goc X — nothing to do' at the same version while the identical stale file IS removed at any other version."
-status: active
+summary: "FIXED: the `_sync_skill_tree(replace_skills=True)` prune is now a planned entry. `_plan_upgrade_writes` enumerated `PlannedWrite`s derived from template files only, so the `shutil.rmtree` of each GoC-owned skill dir was invisible to the plan — `goc upgrade --dry-run` never listed a deletion it then performed, and the plan-derived `plan_has_effect` verdict reported 'already at goc X — nothing to do' at the same version while the identical stale file WAS removed at any other version. `_plan_skill_prunes` now asks `_sync_skill_tree(probe=True)` which destination paths it would delete and plans one `skill-prune` entry each; `_print_plan` and `plan_has_effect` needed no change."
+status: done
 stage: null
 contribution: medium
 created: "2026-09-02T04:52:02Z"
-closed_at: null
+closed_at: "2026-09-02T05:07:41Z"
 human_gate: none
 advances:
   - dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] TDD: regression test asserts `_plan_upgrade_writes` emits an effecting entry for a file present inside an eligible (current-template) skill directory that the templates no longer ship, and emits none when the destination tree matches the templates exactly.
-  - [ ] TDD: regression test asserts bare `goc upgrade` at the *same* version removes such a stale file instead of printing "already at goc X — nothing to do".
-  - [ ] TDD: regression test asserts `goc upgrade --dry-run` names the deletion, and that its "N effecting" count includes it.
-  - [ ] MECHANICAL: the prune is modelled as a planned entry (a new `PlannedWrite` kind whose action comes from the pruning executor), NOT as a new `pending_*` term beside `plan_has_effect` — `AGENTS.md` forbids that register by name.
-  - [ ] TDD: `reproduce.py` exits zero (both `BUG:` assertions pass).
-  - [ ] PROCESS: root card `dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting` gains this instance in its `## The instances so far` list.
+  - [x] TDD: regression test asserts `_plan_upgrade_writes` emits an effecting entry for a file present inside an eligible (current-template) skill directory that the templates no longer ship, and emits none when the destination tree matches the templates exactly.
+  - [x] TDD: regression test asserts bare `goc upgrade` at the *same* version removes such a stale file instead of printing "already at goc X — nothing to do".
+  - [x] TDD: regression test asserts `goc upgrade --dry-run` names the deletion, and that its "N effecting" count includes it.
+  - [x] MECHANICAL: the prune is modelled as a planned entry (a new `PlannedWrite` kind whose action comes from the pruning executor), NOT as a new `pending_*` term beside `plan_has_effect` — `AGENTS.md` forbids that register by name.
+  - [x] TDD: `reproduce.py` exits zero (both `BUG:` assertions pass).
+  - [x] PROCESS: root card `dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting` gains this instance in its `## The instances so far` list.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict
 
-`goc upgrade` deletes stale files inside GoC-owned skill directories, but that
-deletion is not part of the write plan — so the dry-run never shows it and the
-same-version no-op verdict never counts it.
+`goc upgrade` deletes stale files inside GoC-owned skill directories. That
+deletion was not part of the write plan, so the dry-run never showed it and the
+same-version no-op verdict never counted it. It is planned now — see
+`## Fix (landed)`; the sections below record the defect as it stood.
 
 ## Location
 
-- `goc/install.py:1427` — `_sync_skill_tree`'s `shutil.rmtree(target)`.
-- `goc/install.py:1066` — `_plan_upgrade_writes`, which enumerates only writes.
-- `goc/install.py:1981` — `plan_has_effect`, derived from that plan.
-- `goc/install.py:1998` — the `already at goc … — nothing to do.` return.
+- `goc/install.py` — `_sync_skill_tree`'s `shutil.rmtree(target)`, now also the
+  probe that answers which files it would remove.
+- `goc/install.py` — `_plan_upgrade_writes`, which enumerated only writes, and
+  `_plan_skill_prunes`, the prune entries it now appends.
+- `goc/install.py` — `plan_has_effect`, derived from that plan, and the
+  `already at goc … — nothing to do.` return it gates.
 
-## What's broken
+## What was broken
 
 `_sync_skill_tree` owns each *eligible* skill directory wholesale. Its
 docstring states the contract:
@@ -91,26 +94,30 @@ a repair that *deletes* is never planned, so it was never covered.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict/reproduce.py`:
+`uv run python .game-of-cards/deck/upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict/reproduce.py` now exits 0:
 
 ```
-engine version: 0.0.27.post1.dev362
+engine version: 0.0.27.post1.dev365
 
 [part 1] same-version upgrade
   planted .claude/skills/deck/reference-v1.md inside a GoC-owned skill dir
-  goc upgrade -> exit 0: already at goc 0.0.27.post1.dev362 — nothing to do.
-  stale file still present: True
+  goc upgrade -> exit 0: GoC project-state divergence report (JSON):
+  stale file still present: False
 
 [part 2] same damage, sentinel rewound to 0.0.1
   goc upgrade --dry-run -> exit 0
-    goc upgrade (dry-run) — agents: claude — 49 writes planned (1 effecting)
-  plan lines naming the deletion: 0
+    goc upgrade (dry-run) — agents: claude — 50 writes planned (2 effecting)
+  plan lines naming the deletion: 1
+    claude delete .claude/skills/deck/reference-v1.md
   real goc upgrade -> exit 0; stale file deleted: True
 
-DEFECT PRESENT (2 of 2 assertions failed):
-  BUG: same-version `goc upgrade` reported 'nothing to do' and left the stale skill file in place
-  BUG: `goc upgrade --dry-run` listed no deletion, then the real run removed the file
+DEFECT ABSENT: the plan carries the skill-tree prune on both paths.
 ```
+
+Before the fix the same script reported `DEFECT PRESENT (2 of 2 assertions
+failed)`: part 1 printed `already at goc … — nothing to do.` with the stale
+file still present, and part 2's dry-run named the deletion on zero lines
+(`49 writes planned (1 effecting)`) before the real run performed it.
 
 ## Why it matters
 
@@ -142,23 +149,38 @@ which is the inverse: there the executor *declines* to delete a whole
 non-eligible directory; here it deletes inside an eligible one and the plan
 does not say so.
 
-## Fix
+## Fix (landed)
 
-Model the prune as a planned entry so both readers of the plan pick it up for
-free. In `_plan_writes`, after the per-agent skill-asset writes, walk the
-*destination* eligible skill dirs and emit one entry per file with no template
-counterpart — a new `kind` (e.g. `"skill-prune"`) carrying the destination
-path. Give `_upgrade_write_action` (`goc/install.py:1035-1063`) a branch that
-asks the pruning executor: effecting when the orphan is present, `unchanged`
-otherwise. `_print_plan` and `plan_has_effect` then need no change, which is
-the point of the plan-derived design.
+The prune is a planned entry, so both readers of the plan pick it up for free.
+It is planned in `_plan_upgrade_writes` rather than `_plan_writes`, because
+only `upgrade()` reaches `_sync_agent_harness(replace_skills=True)` — planning
+it in the shared `_plan_writes` would have given `goc install --dry-run` a
+deletion the installer never performs, the mirror image of this defect.
+
+The entry is not derived by re-walking the destination tree in the planner —
+that is the root card's anti-pattern, a second enumeration free to drift.
+`_sync_skill_tree` grew a `probe=True` mode that returns the destination files
+its wipe-and-recopy removes and does not put back; `_plan_skill_prunes` calls
+it with the same arguments `upgrade()` will and turns each returned path into
+`PlannedWrite(agent, "delete", path, "harness", kind="skill-prune")`. An entry
+exists exactly when the executor would delete that path, and the same call
+produces both answers, so the label cannot drift from the deletion.
+
+`_print_plan` and `plan_has_effect` needed no change, which is the point of the
+plan-derived design: the dry-run now prints
+`claude delete .claude/skills/deck/reference-v1.md` and counts it among the
+effecting writes, and the same-version guard sees effecting work and proceeds
+to the repair.
 
 Explicitly **not** the fix: a new `pending_*` term beside `plan_has_effect`.
 `AGENTS.md` rules that out by name — "Do not reintroduce a `pending_*`
 allowlist term for a new write; that per-site register is what let four
 repairs go unreachable at the same version."
 
-The root card's architectural decision (derive the plan from a recording
-executor pass) would subsume this instance. This card is the concrete hole
-worth closing meanwhile; if the root decision lands first, close this one as
-superseded by it.
+Changed: `goc/install.py` (`_sync_skill_tree` probe mode + `_plan_skill_prunes`),
+`tests/test_upgrade_plan_skill_tree_prune.py` (new), `AGENTS.md` (the
+plan-derived paragraph now says the plan is not writes only).
+
+The root card's architectural decision (derive the whole plan from a recording
+executor pass) still subsumes this instance; this is the concrete hole closed
+meanwhile.

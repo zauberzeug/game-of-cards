@@ -20,10 +20,10 @@ summary: |
   (`_plan_writes` / migrate's preview branch) that re-enumerates conditionals
   the real executor applies independently. The two code paths drift: every
   time an executor grows a guard, the plan must be patched to match by hand,
-  and when it isn't, the dry-run lies. Four instances have surfaced (all
-  fixed one-by-one, the latest in `repair-edges`); this card proposes one
-  architectural fix so the plan derives from the executor instead of
-  re-listing its decisions.
+  and when it isn't, the dry-run lies. Six instances have surfaced (all
+  fixed one-by-one, the latest the un-planned skill-tree prune in
+  `upgrade`); this card proposes one architectural fix so the plan derives
+  from the executor instead of re-listing its decisions.
 definition_of_done: |
   - [ ] PROCESS: decision recorded (see `## Decision required`) — pick the unification mechanism (plan-derived-from-executor, shared predicate table, or property-test that asserts plan/executor parity over a matrix of environments)
   - [ ] TDD: a single parity harness asserts dry-run plan == real executor effects across the environment matrix (git/non-git, identical-only migrate tree, hook-present/absent), failing if any future executor guard is not mirrored in the plan
@@ -49,9 +49,11 @@ contract.
 
 ## The instances so far
 
-Four separate cards. The first three were each fixed by patching the plan to
-re-mirror one executor conditional; the fourth, in a different verb, was fixed
-by unifying its two passes into one incremental classifier:
+Six separate cards. The first three were each fixed by patching the plan to
+re-mirror one executor conditional; the fourth, in a different verb, by
+unifying its two passes into one incremental classifier; the fifth by ordering
+the shared guard ahead of the preview; the sixth by planning the one operation
+the plan had no template to derive it from:
 
 1. [goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run](../goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run/)
    — git-repo case: dry-run promised the pre-commit append, real upgrade
@@ -72,6 +74,21 @@ by unifying its two passes into one incremental classifier:
    both passes through one incremental classifier (`_classify_half_edges`) that
    simulates each same-run repair in memory, so the dry-run sees the forward
    edges earlier repairs add — exactly as `--apply`'s reload does.
+5. [dry-run-plan-promises-full-install-that-the-real-run-refuses-as-already-installed](../dry-run-plan-promises-full-install-that-the-real-run-refuses-as-already-installed/)
+   — `install`: the dry-run returned *before* the `_find_installed_deck_dir`
+   already-installed guard, so a repo that already had GoC got a full write
+   plan and exit 0 from the preview and zero writes and exit 1 from the real
+   run. Fixed by moving the guard ahead of the dry-run short-circuit, so one
+   guard serves both paths rather than the plan re-deciding.
+6. [upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict](../upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict/)
+   — `upgrade`: the plan enumerates one entry per *template* file, so
+   `_sync_skill_tree`'s prune of a destination file the templates no longer
+   ship appeared in neither the dry-run listing nor the `plan_has_effect`
+   no-op verdict read off that plan — the same damage repaired at every other
+   sentinel value, skipped at the current one. The first instance where the
+   un-mirrored executor decision is a *deletion* rather than a guard on a
+   write. Fixed by asking the pruning executor, in probe mode, which paths it
+   would remove and planning one `skill-prune` entry per path.
 
 Instances 1 and 3 are the *same conditional* (`.git` presence around the
 pre-commit append) drifting in opposite directions across two code paths —

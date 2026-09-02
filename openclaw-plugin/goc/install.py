@@ -1079,7 +1079,10 @@ def _plan_upgrade_writes(
     every other write `unchanged` when the executor would produce
     byte-identical output. So a dry-run truthfully reports which authored
     files will be preserved on the real run, which absent files will be
-    scaffolded, and which of the rest are already current.
+    scaffolded, and which of the rest are already current. The plan is not
+    writes only: `_plan_skill_prunes` adds the destination files the skill-tree
+    refresh deletes, so the one repair with no template to derive it from is
+    named too.
 
     `upgrade()` reads its "nothing to do" verdict off this same plan, which is
     what keeps the preview and the real run in agreement and what makes a
@@ -1114,7 +1117,47 @@ def _plan_upgrade_writes(
             config_root=config_root,
         )
         writes.append(replace(write, action=action))
+    writes.extend(_plan_skill_prunes(target, templates, agents, local_skills_agents))
     return writes
+
+
+def _plan_skill_prunes(
+    target: Path,
+    templates: Path,
+    agents: tuple[str, ...],
+    local_skills_agents: frozenset[str],
+) -> list[PlannedWrite]:
+    """Plan the deletions `_sync_skill_tree`'s wipe-and-recopy performs.
+
+    Every other planned entry is derived from a template file, so a *destination*
+    file the templates no longer ship has nothing to be derived from — the shape
+    any release that retires a skill asset leaves in a vendored consumer. The
+    pruning executor answers in probe mode instead: an entry exists exactly when
+    it would delete that path, so the label cannot drift from the deletion and
+    `plan_has_effect` counts the repair without a signal of its own.
+
+    Mirrors `upgrade()`'s own dispatch — only agents vendoring skills locally
+    reach `_sync_agent_harness(replace_skills=True)`; the plugin path prunes
+    nothing.
+    """
+
+    prunes: list[PlannedWrite] = []
+    for agent in agents:
+        if agent not in local_skills_agents:
+            continue
+        shim = _load_agent_shim(templates, agent)
+        if not shim.skills:
+            continue
+        for orphan in _sync_skill_tree(
+            templates,
+            target / shim.skills.target,
+            agent,
+            replace_skills=True,
+            codex_frontmatter=shim.skills.frontmatter == "codex",
+            probe=True,
+        ):
+            prunes.append(PlannedWrite(agent, "delete", orphan, "harness", kind="skill-prune"))
+    return prunes
 
 
 _CATEGORY_LABELS = [
@@ -1405,7 +1448,8 @@ def _sync_skill_tree(
     *,
     replace_skills: bool = False,
     codex_frontmatter: bool = False,
-) -> None:
+    probe: bool = False,
+) -> list[Path]:
     """Copy GoC skills into a runtime-specific skill root, filtered for `agent`.
 
     `replace_skills=True` wipes only the eligible (current-GoC-template) skill
@@ -1413,13 +1457,34 @@ def _sync_skill_tree(
     Non-eligible directories are left untouched — `.claude/skills/` may hold
     user-owned skills (or skills from other tools) that GoC does not own and
     must never delete as a side effect of upgrade.
+
+    Returns the destination files that wipe removes and the recopy does not put
+    back: GoC-owned leftovers of a template this version no longer ships. That
+    is the one piece of upgrade work the write plan cannot derive from the
+    template tree, so `probe=True` reports the list without touching the
+    filesystem and `_plan_upgrade_writes` turns each entry into a planned
+    `skill-prune` — a deletion the preview names rather than performs unseen.
     """
 
     skills_src = templates / "skills"
-    skills_dst.mkdir(parents=True, exist_ok=True)
     eligible = {
         p.name for p in skills_src.iterdir() if p.is_dir() and skill_for_agent(p.name, agent)
     }
+    orphans: list[Path] = []
+    if replace_skills:
+        shipped = {skills_dst / rel for rel in _iter_skill_assets(skills_src, agent)}
+        for name in sorted(eligible):
+            target = skills_dst / name
+            if not target.is_dir():
+                continue
+            orphans.extend(
+                path
+                for path in sorted(target.rglob("*"))
+                if not path.is_dir() and path not in shipped
+            )
+    if probe:
+        return orphans
+    skills_dst.mkdir(parents=True, exist_ok=True)
     if replace_skills:
         for name in sorted(eligible):
             target = skills_dst / name
@@ -1437,6 +1502,7 @@ def _sync_skill_tree(
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(asset, target)
+    return orphans
 
 
 def _append_marker_block(
