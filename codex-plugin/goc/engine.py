@@ -4135,7 +4135,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # migrate-list-style
     p_mls = subparsers.add_parser("migrate-list-style",
-                                  help="Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style.")
+                                  help="Re-emit every card into canonical form. Named for the relation-edge list "
+                                       "(advances/advanced_by/supersedes/superseded_by) block-style migration, but "
+                                       "normalises everything emit_frontmatter owns — scalar quoting, block scalars, "
+                                       "key order, the blank line before the body. The report names the changed part.")
     p_mls.add_argument("--dry-run", action="store_true",
                        help="Show which cards would change without writing files.")
 
@@ -7096,14 +7099,65 @@ def _cmd_migrate(args):
     print("Next: `goc validate` to verify card integrity after migration.")
 
 
+def _split_card_file(text: str) -> tuple[dict[str, str], str]:
+    """Split a card file into {frontmatter key: rendered block} plus the region after it.
+
+    A key's block is its `key:` line together with every following
+    continuation line (block-scalar content, block-style list items) up to the
+    next top-level key. Used to report *which* part of a card a canonical
+    re-emit would rewrite.
+    """
+    lines = text.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return {}, text
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
+        return {}, text
+    blocks: dict[str, str] = {}
+    key = None
+    for line in lines[1:end]:
+        match = re.match(r"^([A-Za-z0-9_]+):", line)
+        if match:
+            key = match.group(1)
+            blocks[key] = line
+        elif key is not None:
+            blocks[key] += "\n" + line
+    return blocks, "\n".join(lines[end + 1:])
+
+
+def _reemit_changes(original: str, rewritten: str) -> list[str]:
+    """Name the parts of a card that a canonical re-emit would change.
+
+    The migration's predicate is whole-card canonical equality, not just
+    relation-edge list style, so the report has to say which part moved —
+    otherwise a summary requote and an `advances` reflow look identical to
+    the reader.
+    """
+    before, before_rest = _split_card_file(original)
+    after, after_rest = _split_card_file(rewritten)
+    changes = {key for key, block in after.items() if before.get(key) != block}
+    changes |= {key for key in before if key not in after}
+    named = sorted(changes)
+    if before_rest != after_rest:
+        named.append("body spacing")
+    return named
+
+
 def _cmd_migrate_list_style(args):
-    """Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style."""
+    """Re-emit every card into canonical form, rewriting whatever `emit_frontmatter` normalises.
+
+    Named for the migration it was introduced for — converting relation-edge
+    lists (advances/advanced_by/supersedes/superseded_by) to block style — but
+    the predicate is whole-card canonical equality, so scalar quoting,
+    block-scalar shape, key order and the blank line before the body are
+    normalised too. The report names the changed part per card.
+    """
     dry_run = args.dry_run
     if not DECK_DIR.exists():
         print(f"ERROR: {DECK_DIR} does not exist", file=sys.stderr)
         sys.exit(1)
 
-    changed: list[str] = []
+    changed: list[tuple[str, list[str]]] = []
     for card_dir in sorted(DECK_DIR.iterdir()):
         readme = card_dir / "README.md"
         if not readme.exists():
@@ -7118,23 +7172,23 @@ def _cmd_migrate_list_style(args):
             continue
         rewritten = emit_frontmatter(fm, body=body)
         if rewritten != original:
-            changed.append(card_dir.name)
+            changed.append((card_dir.name, _reemit_changes(original, rewritten)))
             if not dry_run:
                 readme.write_text(rewritten)
 
     if not changed:
-        print("All cards already use block-style for advances/advanced_by/supersedes/superseded_by — nothing to do.")
+        print("Every card already matches its canonical re-emit — relation-edge lists "
+              "(advances/advanced_by/supersedes/superseded_by) in block style, plus scalar "
+              "quoting, block scalars and spacing — nothing to do.")
         return
 
+    headline = "Would rewrite" if dry_run else "Rewrote"
+    print(f"{headline} {len(changed)} card(s) — re-emit into canonical form, changed part per card:")
+    for name, changes in changed:
+        print(f"  {name} — {', '.join(changes) if changes else 'whitespace'}")
     if dry_run:
-        print(f"Would rewrite {len(changed)} card(s):")
-        for name in changed:
-            print(f"  {name}")
         print("Dry run — no changes made.")
     else:
-        print(f"Rewrote {len(changed)} card(s):")
-        for name in changed:
-            print(f"  {name}")
         print("Done. Run `goc validate` to confirm.")
 
 

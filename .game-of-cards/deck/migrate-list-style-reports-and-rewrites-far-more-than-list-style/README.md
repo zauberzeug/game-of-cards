@@ -1,43 +1,43 @@
 ---
 title: migrate-list-style-reports-and-rewrites-far-more-than-list-style
-summary: "`goc migrate-list-style` chooses which cards to rewrite with `emit_frontmatter(fm, body=body) != original` — a full canonical re-emit — while its subparser help, its docstring and its no-op line all name the four relation-edge list fields as the scope. On this deck the dry run reports 10 cards; all 10 already render `advances`/`advanced_by`/`tags` canonically, and the real diffs are 9 bare-to-quoted `summary` lines plus 1 missing blank line after the frontmatter. So the report is unactionable and the apply path silently performs a whole-card canonicalization under a name that promises only relation-list reformatting."
-status: active
+summary: "`goc migrate-list-style` chooses which cards to rewrite with `emit_frontmatter(fm, body=body) != original` — a full canonical re-emit — while its subparser help, its docstring and its no-op line all name the four relation-edge list fields as the scope. On this deck the dry run reports 10 cards; all 10 already render `advances`/`advanced_by`/`tags` canonically, and the real diffs are 8 bare-to-quoted `summary` lines plus 2 missing blank lines before the body. So the report is unactionable and the apply path silently performs a whole-card canonicalization under a name that promises only relation-list reformatting."
+status: done
 stage: null
 contribution: medium
 created: "2026-09-03T05:32:42Z"
-closed_at: null
+closed_at: "2026-09-03T05:46:09Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — on a deck whose relation-edge lists
+  - [x] TDD: `reproduce.py` exits zero — on a deck whose relation-edge lists
         are all canonical but which drifts in summary quoting and in the blank
         line after the frontmatter, the dry run names the reason each card was
         picked; the control card with genuine inline-flow `advances` is still
         reported.
-  - [ ] MECHANICAL: the `--dry-run` / apply report names, per card, which
+  - [x] MECHANICAL: the `--dry-run` / apply report names, per card, which
         frontmatter keys (and whether the body) the re-emit would change, so a
         reader can tell a relation-list migration from an unrelated
         canonicalization without diffing by hand.
-  - [ ] MECHANICAL: the subparser `help=` and the `_cmd_migrate_list_style`
+  - [x] MECHANICAL: the subparser `help=` and the `_cmd_migrate_list_style`
         docstring describe the real predicate — a full canonical frontmatter +
         body re-emit — instead of naming the four relation-edge lists as the
         scope.
-  - [ ] MECHANICAL: the no-op line no longer claims only that every card
+  - [x] MECHANICAL: the no-op line no longer claims only that every card
         `already use[s] block-style for advances/advanced_by/supersedes/superseded_by`
         when what it verified is full canonical equality.
-  - [ ] TDD: a regression test in `tests/` pins both directions — a card
+  - [x] TDD: a regression test in `tests/` pins both directions — a card
         drifting only outside the relation lists is reported WITH its reason,
         and a card drifting only in relation-list rendering is still reported —
         so the fix cannot regress to either "report nothing" or "report
         everything unlabelled".
-  - [ ] MECHANICAL: the fix touches neither `emit_frontmatter` nor the set of
+  - [x] MECHANICAL: the fix touches neither `emit_frontmatter` nor the set of
         fields it canonicalises. Whether the bare-to-quoted `summary` flip
         should happen at all is owned by the open, decision-gated
         [`editing-one-field-rewrites-unrelated-created-and-summary-lines`](../editing-one-field-rewrites-unrelated-created-and-summary-lines/);
         this card must not pre-empt it, and must not re-emit the 10 live cards.
-  - [ ] PROCESS: plugin mirrors re-synced so the four `engine.py` copies stay
+  - [x] PROCESS: plugin mirrors re-synced so the four `engine.py` copies stay
         byte-identical; `uv run python -m unittest discover -s tests` and
         `uv run goc validate` green.
 worker: {who: "claude[bot]", where: main}
@@ -105,7 +105,7 @@ was never scoped to fields at all.
 On this repo's live deck, the verb reports 10 cards:
 
 ```
-$ uv run goc migrate-list-style --dry-run
+$ uv run goc migrate-list-style --dry-run          # before the fix
 Would rewrite 10 card(s):
   board-truncates-worker-label-to-eight-characters
   citation-repair-pass-has-no-rule-for-cites-inside-fenced-code-blocks
@@ -120,9 +120,29 @@ Would rewrite 10 card(s):
 Dry run — no changes made.
 ```
 
+The same 10 cards after the fix — the verb now names the part it would
+rewrite, and the split (8 requoted summaries, 2 body-spacing) is read off the
+report rather than diffed by hand:
+
+```
+$ uv run goc migrate-list-style --dry-run          # after the fix
+Would rewrite 10 card(s) — re-emit into canonical form, changed part per card:
+  board-truncates-worker-label-to-eight-characters — summary
+  citation-repair-pass-has-no-rule-for-cites-inside-fenced-code-blocks — body spacing
+  claim-drops-existing-worker-where-when-branch-undetectable — summary
+  engine-docs-name-advances-advanced-by-as-scope-but-cover-all-four-relation-fields — summary
+  goc-tool-files-cards-into-wrong-agents-deck-on-multi-agent-gateways — summary
+  marketplace-pin-issue-body-renders-its-instructions-as-a-code-block — body spacing
+  pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries — summary
+  symlinked-card-dir-loads-in-queues-but-every-title-verb-rejects-it — summary
+  trailing-newline-title-passes-guards-and-scaffolds-unaddressable-card-dir — summary
+  waiting-until-with-trailing-newline-passes-wait-then-crashes-reads — summary
+Dry run — no changes made.
+```
+
 **Not one of the 10 has relation-list drift.** All 10 already carry
 `advances: []` / `advanced_by: []` and inline-flow `tags`. The actual diffs
-are 9 bare-to-quoted `summary` lines and 1 missing blank line after `---`:
+are 8 bare-to-quoted `summary` lines and 2 missing blank lines before the body:
 
 ```
 #### board-truncates-worker-label-to-eight-characters
@@ -135,7 +155,8 @@ are 9 bare-to-quoted `summary` lines and 1 missing blank line after `---`:
  # marketplace-pin-issue-body-renders-its-instructions-as-a-code-block
 ```
 
-`reproduce.py` isolates this on a synthetic deck:
+`reproduce.py` isolates this on a synthetic deck — it exits 1 while the
+report is unlabelled:
 
 ```
 CHECK 1 - deck with NO relation-edge-list drift
@@ -153,6 +174,26 @@ CHECK 2 - control: genuine inline-flow relation list
 
 [FAIL] CHECK 1: 2 card(s) reported as list-style migrations while 0 have
 relation-list drift, and the report names no other reason
+```
+
+and exits 0 once each reported card carries its reason:
+
+```
+CHECK 1 - deck with NO relation-edge-list drift
+  cards on disk ............ ['card-alpha', 'card-beta']
+  relation-list drifters ... []
+  verb reports to rewrite .. ['card-alpha', 'card-beta']
+  verb output:
+    | Would rewrite 2 card(s) — re-emit into canonical form, changed part per card:
+    |   card-alpha — summary
+    |   card-beta — body spacing
+    | Dry run — no changes made.
+  reasons given per card ... {'card-alpha': 'summary', 'card-beta': 'body spacing'}
+
+CHECK 2 - control: genuine inline-flow relation list
+  verb reports to rewrite .. ['card-gamma']
+
+[PASS] migrate-list-style's report is actionable.
 ```
 
 ## Why it matters

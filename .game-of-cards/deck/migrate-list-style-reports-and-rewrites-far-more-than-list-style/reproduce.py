@@ -79,11 +79,11 @@ definition_of_done: |
 Body.
 """
 
-# Canonical relation lists and a quoted summary; the only drift is the
-# missing blank line between the frontmatter and the body.
+# Canonical relation lists and a summary the emitter leaves bare; the only
+# drift is the missing blank line between the frontmatter and the body.
 SPACING_DRIFT = """---
 title: card-beta
-summary: "canonical everywhere except the blank line after the frontmatter"
+summary: canonical everywhere except the blank line before the body
 status: open
 stage: null
 contribution: low
@@ -146,7 +146,12 @@ def _dry_run(root: Path) -> str:
 
 def _reported(output: str) -> list:
     """Card names the dry run lists as would-be rewrites."""
-    return re.findall(r"^ {2}(\S+)\s*$", output, re.MULTILINE)
+    return re.findall(r"^ {2}(\S+)", output, re.MULTILINE)
+
+
+def _labelled(output: str) -> dict:
+    """{card name: the reason the report gives for picking it}."""
+    return dict(re.findall(r"^ {2}(\S+)\s+[-\u2014]\s+(.+?)\s*$", output, re.MULTILINE))
 
 
 def _relation_list_drift(readme: Path) -> bool:
@@ -192,22 +197,25 @@ def main() -> int:
 
         # The report is honest if it either picked nothing (predicate narrowed
         # to the relation lists) or told the reader what actually differs.
-        # Scan only the report's PROSE - card names are excluded so a fixture
-        # name can never be mistaken for the verb naming a reason.
-        prose = "\n".join(
-            line for line in out.splitlines()
-            if line.strip() not in reported
-        ).lower()
-        named_reason = any(
-            kw in prose
-            for kw in ("summary", "quot", "blank line", "spacing", "canonical form")
-        )
-        if reported and not named_reason:
+        # The report is honest if it either picked nothing (predicate narrowed
+        # to the relation lists) or told the reader, per card, what differs.
+        labelled = _labelled(out)
+        print(f"  reasons given per card ... {labelled}")
+        unlabelled = [c for c in reported if c not in labelled]
+        if reported and unlabelled:
             failures.append(
                 f"CHECK 1: {len(reported)} card(s) reported as list-style migrations "
-                f"while {len(drifted)} have relation-list drift, and the report names "
-                f"no other reason"
+                f"while {len(drifted)} have relation-list drift, and {len(unlabelled)} "
+                f"of them carry no reason: {unlabelled}"
             )
+        # A reason naming a relation-edge field for these cards would be a
+        # second lie - none of them has relation-list drift.
+        for card, reason in labelled.items():
+            if any(field in reason for field in RELATION_FIELDS):
+                failures.append(
+                    f"CHECK 1: {card} has no relation-list drift, but the report "
+                    f"blames a relation-edge field: {reason!r}"
+                )
 
     # ---- CHECK 2: the control must still be reported ----
     with tempfile.TemporaryDirectory() as tmp:
