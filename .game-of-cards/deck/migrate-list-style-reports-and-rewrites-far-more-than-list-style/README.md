@@ -1,7 +1,7 @@
 ---
 title: migrate-list-style-reports-and-rewrites-far-more-than-list-style
 summary: "`goc migrate-list-style` chooses which cards to rewrite with `emit_frontmatter(fm, body=body) != original` — a full canonical re-emit — while its subparser help, its docstring and its no-op line all name the four relation-edge list fields as the scope. On this deck the dry run reports 10 cards; all 10 already render `advances`/`advanced_by`/`tags` canonically, and the real diffs are 9 bare-to-quoted `summary` lines plus 1 missing blank line after the frontmatter. So the report is unactionable and the apply path silently performs a whole-card canonicalization under a name that promises only relation-list reformatting."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-03T05:32:42Z"
@@ -40,6 +40,7 @@ definition_of_done: |
   - [ ] PROCESS: plugin mirrors re-synced so the four `engine.py` copies stay
         byte-identical; `uv run python -m unittest discover -s tests` and
         `uv run goc validate` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc migrate-list-style` reports and rewrites far more than list style
