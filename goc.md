@@ -269,6 +269,7 @@ goc --board
 goc -v --status all
 goc new rename-the-button-to-export
 goc status rename-the-button-to-export active
+goc wait rename-the-button-to-export --reason external
 goc done rename-the-button-to-export
 goc validate
 ```
@@ -280,12 +281,15 @@ Common verbs:
 | `goc` | Show the open queue, sorted by leverage. |
 | `goc --board` | Show a kanban board by status. |
 | `goc new <title>` | Create a card under the nearest ancestor's `.game-of-cards/deck/<title>/`; requires a prior `goc install`. |
-| `goc status <title> <state>` | Move a card through `open`, `active`, `blocked`, `disproved`, or `superseded`. |
+| `goc status <title> <state>` | Move a card through `open`, `active`, `disproved`, or `superseded`. The enum still accepts the deprecated `blocked`; use `goc wait` instead. |
+| `goc wait <title> --reason <r>` | Set the impediment overlay — the card stays `open` and visible, and is withheld only from `--ready`. `--clear` removes it. |
 | `goc decide <title> --decision X --because Y` | Record a human decision and lower the card gate. |
 | `goc done <title>` | Close a card after every Definition-of-Done checkbox is ticked. |
 | `goc validate` | Validate card frontmatter and schema constraints. |
 | `goc install` | Install the methodology into the current repo. |
 | `goc upgrade` | Re-sync generated templates in an existing install. |
 | `goc migrate` | Merge legacy `deck/` into `.game-of-cards/deck/` and remove the stale tree. |
+
+`status`, `human_gate`, and the impediment overlay (`waiting_on` + `waiting_until`) are orthogonal axes: a card can be `active` *and* carry `waiting_on: external`. The legacy `status: blocked` conflated them and is deprecated — it still parses for backwards compatibility but is being removed in a follow-up release. Migrate a legacy `blocked` card by dropping it to `open` when it was waiting on a prerequisite card (that wait is now derived from the `advances` graph and self-clears), or by setting `goc wait <title> --reason external` when the wait is exogenous.
 
 Run `goc --help` or `goc <command> --help` for the full CLI surface.

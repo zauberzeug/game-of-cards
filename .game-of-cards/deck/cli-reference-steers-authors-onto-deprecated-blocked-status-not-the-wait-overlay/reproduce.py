@@ -123,23 +123,31 @@ def behavioral_claim() -> list[str]:
         print(f"  goc          -> {blocked_queue}")
         print(f"  goc validate -> {blocked_validate}")
 
-        # B) the replacement goc.md never names.
+        # B) the replacement (absent from goc.md before this card).
         _run(["status", "probe-card", "open", "--no-commit"], repo)
         _run(["wait", "probe-card", "--reason", "external", "--no-commit"], repo)
         wait_queue = _run([], repo).stdout.strip().splitlines()
         wait_ready = _run(["--ready"], repo).stdout.strip().splitlines()[-1]
-        print("\nB) after the undocumented `goc wait probe-card --reason external`:")
+        print("\nB) after the replacement `goc wait probe-card --reason external`:")
         for line in wait_queue:
             print(f"  goc          -> {line}")
         print(f"  goc --ready  -> {wait_ready}")
 
+        # This block is the *rationale* for the doc fix, not a defect: the
+        # contrast is what makes recommending `blocked` harmful. It fails only
+        # if the contrast disappears, which would mean the doc's replacement
+        # advice needs re-deriving from new engine behavior.
         if "probe-card" in blocked_queue:
-            print("\n(behavioral claim no longer holds — blocked card stays queued)")
-        else:
             failures.append(
-                "the documented `blocked` flip drops the card out of the "
-                "default `status: open` queue with no reason recorded, while "
-                "the undocumented `goc wait` keeps it visible"
+                "premise stale: a `blocked` card now stays in the default "
+                "queue, so re-derive what goc.md should recommend"
+            )
+        else:
+            print(
+                "\n  contrast holds: the `blocked` flip loses the card from "
+                "every `status: open`\n  query with no reason recorded; "
+                "`goc wait` keeps it visible and withholds it\n  only from "
+                "`--ready`."
             )
     return failures
 

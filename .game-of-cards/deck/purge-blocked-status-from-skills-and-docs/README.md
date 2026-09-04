@@ -69,3 +69,15 @@ the removal does land, the guidance is already in place.
 `.claude`/`.codex`/plugins), `templates/AGENTS_GOC.md`, and this repo's
 `AGENTS.md`. Per repo convention, never edit the `.claude/skills` /
 plugin copies directly.
+
+## Post-close: one surface was missing from the list above
+
+The `## Surfaces` list omitted `goc.md`, the command-level CLI reference
+published at `game-of-cards.com/goc/`. Its "Common verbs" table kept offering
+`blocked` as one of five unmarked `goc status` target states and never named
+the overlay, making it the only surface outside the deck that still
+recommended the deprecated value after this card closed. Filed and fixed as
+[`cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay`](../cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay/),
+which also added the derived guard in `tests/test_guidance_accuracy.py`
+(`DeprecatedStatusGuidanceTest`) that this card's enumerate-the-surfaces
+approach lacked.

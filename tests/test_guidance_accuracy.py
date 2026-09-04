@@ -1002,5 +1002,134 @@ class UpgradeNoOpGuardParagraphAccuracyTest(unittest.TestCase):
                 )
 
 
+# ── A guidance surface may not recommend a deprecated `goc status` target ──
+#
+# `purge-blocked-status-from-skills-and-docs` soft-deprecated `status: blocked`
+# across the skill bodies, but its scope named only the skills and the AGENTS
+# files — so `goc.md`, the CLI reference published at game-of-cards.com/goc/,
+# kept offering the value as one of five unmarked target states and never named
+# the `goc wait` overlay that replaced it. See deck card
+# `cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay`.
+#
+# The deprecated set is DERIVED from the skill bodies rather than pinned to the
+# word `blocked`, for two reasons: a future deprecation is covered the moment
+# the skills announce it, and when the enum removal drops the value from
+# `MUTABLE_STATUS_VALUES` the set empties and these guards retire themselves.
+
+_STATUS_GUIDANCE_FILES = [
+    GOC_MD,
+    ROOT / "goc" / "templates" / "AGENTS_GOC.md",
+    ROOT / "AGENTS.md",
+]
+
+# The overlay the skills point a legacy `blocked` card at. Only asserted while
+# something is actually deprecated.
+_OVERLAY_TOKENS = ("goc wait", "waiting_on")
+
+_DEPRECATION_MARKER = re.compile(r"deprecat|\blegacy\b|being removed", re.IGNORECASE)
+
+# "`<v>` is deprecated" / "legacy `status: <v>`". The value has to sit adjacent
+# to the marker, so an unrelated status named later in the same sentence — say
+# the `open` a migration instruction tells you to drop to — is not swept in.
+_DEPRECATION_BINDINGS = (
+    re.compile(r"`(?:status:\s*)?(?P<value>[a-z]+)`[^`]{0,40}?\bis deprecated\b"),
+    re.compile(
+        r"\b(?:deprecated|legacy)\b[^`]{0,40}?`(?:status:\s*)?(?P<value>[a-z]+)`"
+    ),
+)
+
+
+def _deprecated_status_values() -> set[str]:
+    """Target states of `goc status` that the shipped skill bodies deprecate.
+
+    The skills are the authoritative surface — they are what the purge card
+    rewrote — so whatever they bind to a deprecation marker is what no other
+    guidance surface may recommend. Intersected with the verb's real choices so
+    prose about a value the CLI no longer accepts cannot resurrect the guard.
+    """
+    from goc.engine import MUTABLE_STATUS_VALUES
+
+    accepted = set(MUTABLE_STATUS_VALUES)
+    found: set[str] = set()
+    for path in sorted(SKILL_TEMPLATES.rglob("*.md")):
+        body = path.read_text()
+        for pattern in _DEPRECATION_BINDINGS:
+            found.update(
+                m.group("value") for m in pattern.finditer(body)
+            )
+    return found & accepted
+
+
+class DeprecatedStatusGuidanceTest(unittest.TestCase):
+    def test_skill_bodies_still_announce_a_deprecation(self) -> None:
+        """The behavioural half: assert the derivation has something to find.
+
+        Both guards below are vacuous if this set is empty. An empty set is
+        legitimate exactly once — after the enum removal lands — and at that
+        point `MUTABLE_STATUS_VALUES` no longer carries the value either, so
+        assert the two agree instead of silently passing.
+        """
+        from goc.engine import MUTABLE_STATUS_VALUES
+
+        deprecated = _deprecated_status_values()
+        if deprecated:
+            return
+        self.assertNotIn(
+            "blocked",
+            set(MUTABLE_STATUS_VALUES),
+            msg=(
+                "No skill body binds a `goc status` target to a deprecation "
+                "marker, yet the verb still accepts `blocked`. Either the "
+                "skills lost their deprecation notice (restore it) or the "
+                "binding patterns in _DEPRECATION_BINDINGS no longer match "
+                "how they word it (re-derive them)."
+            ),
+        )
+
+    def test_no_guidance_surface_offers_a_deprecated_status_unmarked(self) -> None:
+        deprecated = _deprecated_status_values()
+        for path in _STATUS_GUIDANCE_FILES:
+            if not path.exists():
+                continue
+            for lineno, line in enumerate(path.read_text().splitlines(), 1):
+                if "goc status" not in line:
+                    continue
+                offered = sorted(
+                    v
+                    for v in deprecated
+                    if re.search(rf"`[^`]*\b{re.escape(v)}\b[^`]*`", line)
+                )
+                if not offered or _DEPRECATION_MARKER.search(line):
+                    continue
+                rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+                self.fail(
+                    f"{rel}:{lineno} presents deprecated "
+                    f"`goc status` target state(s) {offered} with no "
+                    f"deprecation marker:\n  {line.strip()}\n"
+                    "The skill bodies call these deprecated; a reader "
+                    "following this line produces a card that validates OK "
+                    "yet drops out of every `status: open` query with no "
+                    "reason recorded. Mark it on the same line, or drop it "
+                    "and point at `goc wait`."
+                )
+
+    def test_cli_reference_documents_the_overlay_that_replaced_them(self) -> None:
+        """Marking the value deprecated is only half the fix — the reference has
+        to name what to use instead, on the page the reader is already on."""
+        if not _deprecated_status_values():
+            self.skipTest("nothing deprecated; the overlay needs no signposting")
+        text = GOC_MD.read_text()
+        missing = [t for t in _OVERLAY_TOKENS if t not in text]
+        self.assertEqual(
+            [],
+            missing,
+            msg=(
+                f"goc.md never mentions {missing}, so a reader who finds the "
+                "deprecated status marked has no way to learn the replacement "
+                "from the CLI reference itself."
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
