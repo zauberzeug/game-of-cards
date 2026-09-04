@@ -25,6 +25,7 @@ advanced_by:
   - meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card
   - agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does
   - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
+  - cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
