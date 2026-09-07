@@ -21,9 +21,9 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4699-4719` — `_repair_edge_cycle_problem`, the ONLY structural gate the apply loop consults
+- `goc/engine.py:6315-6335` — `_repair_edge_cycle_problem`, the ONLY structural gate the apply loop consults
 - `goc/engine.py:4762-4776` — the apply loop that mutates the inverse side
-- `goc/engine.py:1448-1453` — the validator rule the repair output violates (`superseded_by: non-empty requires status: superseded`)
+- `goc/engine.py:1997-2002` — the validator rule the repair output violates (`superseded_by: non-empty requires status: superseded`)
 - `goc/engine.py` `validate_supersedes_targets` — the rule proving the *forward* half was already invalid before the repair
 
 ## What's broken

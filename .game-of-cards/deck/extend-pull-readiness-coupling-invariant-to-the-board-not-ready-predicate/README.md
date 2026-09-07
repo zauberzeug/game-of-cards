@@ -11,6 +11,8 @@ advances: []
 advanced_by:
   - board-omits-pull-blocking-marker-for-human-gate-parked-cards
   - pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty
+  - standup-next-up-section-lists-cards-pull-card-would-never-pick
+  - reproduce-py-runway-metric-counts-gates-instead-of-the-engine-ready-predicate
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
   - [ ] TDD: a regression test asserts the board's not-pullable marker agrees with `card_is_ready` across the `status × human_gate × waiting_on` cross-product (modulo the board's deliberate advisory `dependency_blocked` superset), so a future axis added to `card_is_ready` that is not mirrored into the board fails the build — the same guarantee `tests/test_scheduler_workable_predicate_coupling.py` gives the scheduler predicate.
@@ -26,10 +28,10 @@ definition_of_done: |
 "Is this card pullable / not-ready?" is computed in three independent
 places in `goc/engine.py`:
 
-1. `card_is_ready` (engine.py:1947) — the queue axis (`next-card` / `pull-card`).
-2. `card_is_workable_for_scheduler` (engine.py:1975) — the scheduler axis.
+1. `card_is_ready` (engine.py:2457) — the queue axis (`next-card` / `pull-card`).
+2. `card_is_workable_for_scheduler` (engine.py:2669) — the scheduler axis.
 3. The board's `not_ready` predicate inside `card_cell` in `render_board`
-   (engine.py:2668) — the at-a-glance ⏳ marker.
+   (engine.py:3559) — the at-a-glance ⏳ marker.
 
 Copies 1 and 2 carry an explicit coupling invariant in their docstrings
 ("a future axis added here must be added there in the same edit"),
@@ -54,6 +56,44 @@ axis, so it launches agent sessions `goc --ready` refuses to feed — see
 That copy is shell, so no Python introspection guard can cover it; its
 fix is substitution (`goc --ready --json`), reinforcing the "expose the
 engine predicate, don't re-roll it" direction here.
+
+A **fifth copy** was confirmed drifted on 2026-08-04, and it is the first
+one that is not executable code at all: `render_empty_query_line`
+(engine.py) restates the readiness predicate as an English sentence —
+
+```python
+parts.append("ready: status open, gate none, no active impediment")
+```
+
+— naming three of `card_is_ready`'s four conjuncts and omitting the
+`card_is_draft` exclusion. Demonstrated on a one-card scratch deck whose
+only card is `status: open`, `human_gate: none`, no impediment,
+`draft: true`:
+
+```
+$ goc --ready
+No cards match (ready: status open, gate none, no active impediment).
+
+$ goc --status all
+TITLE            STATUS  CONTR.  VALUE  GATE  TAGS  DOD
+draft-gate-none  open    medium    3.0  none        0/1
+```
+
+Every condition the sentence names holds for that card, and the card is
+still excluded — so a reader auditing the message against the deck finds
+it self-contradictory. Surfaced while fixing
+[empty-result-line-reports-a-drained-ready-queue-that-still-has-cards](../empty-result-line-reports-a-drained-ready-queue-that-still-has-cards/),
+a different defect in the same sentence (which filters get *named*,
+rather than how the predicate is *spelled*); recorded here rather than
+filed separately because it is this card's pattern, not a new one.
+
+**This copy constrains the decision below.** Option (b) extends an
+introspection test over *code* predicates, and no such test can reach a
+prose string — the sentence would keep drifting undetected. Option (a)
+can cover it, but only if the extracted helper also yields the
+human-readable axis labels (e.g. `_pull_rejection_axes` returning axis
+names the message renders), rather than just a boolean or an opaque set.
+That is a requirement on (a)'s shape, not merely a point in its favour.
 
 ## The pattern
 

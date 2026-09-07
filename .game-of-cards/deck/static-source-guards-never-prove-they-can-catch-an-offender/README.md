@@ -22,17 +22,39 @@ Four prohibition scanners across two test files:
 
 | Guard | Scanner | Prohibited shape |
 |---|---|---|
-| `tests/test_guidance_accuracy.py:20` | `_STALE_PATTERN` | the stale `close + commit` phrasing |
-| `tests/test_guidance_accuracy.py:142` | `_STALE_BICONDITIONAL` | the stale `No ⏳ ⇒ pullable` claim |
-| `tests/test_guidance_accuracy.py:216` | `_STALE_STUB` | the stale `reproduce.py stub` phrasing |
+| `tests/test_guidance_accuracy.py:22` | `_STALE_PATTERN` | the stale `close + commit` phrasing |
+| `tests/test_guidance_accuracy.py:367` | `_STALE_BICONDITIONAL` | the stale `No ⏳ ⇒ pullable` claim |
+| `tests/test_guidance_accuracy.py:441` | `_STALE_STUB` | the stale `reproduce.py stub` phrasing |
 | `tests/test_skill_frontmatter_strict_yaml.py:21` | `NESTED_MAPPING_COLON` | a nested mapping in skill frontmatter |
 
-Two guards in the same suite are the counter-examples that show the fix shape
-already exists in-tree: `tests/test_plugin_mirror_parity.py` carries five
-`*_is_detected` tests that feed synthetic drift to its checker, and
-`tests/test_count_message_pluralization.py` gained four such cases when
+Three in-tree counter-examples show the fix shape needs no invention:
+`tests/test_plugin_mirror_parity.py` carries five `*_is_detected` tests that
+feed synthetic drift to its checker; `tests/test_count_message_pluralization.py`
+gained four such cases when
 [count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box](../count-banners-outside-the-cards-sweep-print-1-boxes-instead-of-1-box/)
-closed.
+closed; and the `reproduce.py` of
+[schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen](../schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen/)
+(closed 2026-08-02) runs two known-caught controls alongside its two drift
+cases.
+
+That third one is worth more than its count, because its controls caught a
+live false negative rather than a hypothetical one. The probe's first draft
+reported **all four** cases as "caught" — which would have disproved the card
+it was written for. The guard under test builds its failure message with
+`relative_to(ROOT)` eagerly, on passing calls too, so redirecting the schema
+paths to a temp dir without also rebinding `ROOT` made every test error out on
+message construction instead of running. Only the controls distinguished
+"nothing drifted" from "nothing ran" — the same two-passing-states problem this
+card describes, hit in the harness rather than in the scanner. Note that the
+mechanism is the one this card's own `reproduce.py` already uses (copy the
+guard, rebind `ROOT` to an absolute path), so the hazard travels with the fix
+technique: whatever scope gets picked below should treat the baseline/control
+line as part of the deliverable, not as optional rigour.
+
+Neither the schema-parity guard nor its predecessor belongs in the offender
+table above — `assertEqual(engine, skill)` is fail-closed, so a dead read
+raises rather than passing empty. The citation is about the technique, not
+membership in the family.
 
 ## What's broken
 
@@ -217,7 +239,7 @@ Option B cannot catch it. A generated sensitivity case runs the scanner over a
 the production corpus goes empty. The registration needs a fourth element — a
 corpus floor asserting the tree the scanner walks in production still exists and
 still holds a plausible number of files. The precedent is in-tree and predates
-this card: `tests/test_card_authoring_rules.py:399`
+this card: `tests/test_card_authoring_rules.py:480`
 (`test_live_deck_is_actually_being_scanned`, "a clean result must come from real
 cards, not an empty glob") is exactly this element, and the new guard's
 `test_the_trees_are_actually_being_swept` is its generalization to a multi-tree
@@ -239,6 +261,97 @@ the wrong population, because it can only surface false positives the current
 corpus already triggers. A registered clean sample has to be a *near-miss the
 corpus does not contain* (there `sprung`, `strung`, `des`), not a sample of
 present data, or it reproduces the same blind spot with more ceremony.
+
+## A fourth surface: closure verifications, which no option below reaches
+
+Connected 2026-08-03 from
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/).
+This card's thesis landed outside `tests/` entirely, on the one-shot script a
+card runs to satisfy an `EMPIRICAL:` DoD box.
+
+[meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag](../meta-fix-tag-predicate-mismatches-how-the-deck-applies-the-tag/)
+closed on "all 45 open `meta-fix`-tagged cards pass the widened predicate;
+zero false positives", from a sweep its log describes as a "per-card README
+read". A README read is the whole file, frontmatter included, and every
+`meta-fix`-tagged card carries the literal `meta-fix` in its own `tags:`
+line — so the literal clause fired on 45 of 45 by construction. Re-running
+the row at that same commit against the body alone fails 5 of the 45. The
+tell was in the recorded result and nobody read it as one: **the pass count
+equalled the population size**, which is what a check that cannot fail
+reports.
+
+This is not the fail-open shape in the table above — nothing died, and the
+assertion was a positive one. It is the *sample* correction from two sections
+up, arriving through the corpus: the surface being searched contained the
+marker unconditionally, so `assertTrue(scanner(sample))` held for every
+sample. Same two indistinguishable passing states, same green.
+
+**What it changes about the options.** Both are scoped to prohibition
+scanners living in `tests/`. Option A adds a sensitivity case beside each
+scanner; Option B registers scanners with a harness and meta-tests that every
+scanner has a sample. A verification script written inside a card directory to
+discharge a DoD box is neither — it is authored once, run once, quoted into a
+closure note, and never executed again. It is the *highest*-leverage
+unguarded surface in the repo, because its output becomes the record: the
+closure figure above was cited as settled fact for 26 days by cards reasoning
+downstream of it. Whatever scope is picked has to say whether a one-shot
+closure sweep is in it. If it is, the cheapest form of the corpus floor
+already exists — a closure check whose pass count equals its population size
+should have to say so out loud.
+
+No `advances` edge, for the reason given in the schema-parity note above:
+that card is an evidence connection on an open decision, and so is this one.
+The successor card carries the fix for the predicate itself; this section
+carries only what it teaches about scope.
+
+## A fifth surface: checks specified in prose, which have no callable to register
+
+Connected 2026-08-10 from
+[refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file](../refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file/).
+That card's check is not code anywhere. It is a sentence in a shipped skill —
+`goc/templates/skills/refine-deck/SKILL.md:103`, until 2026-08-10 reading "verify
+each cited file exists and the cited line is ≤ EOF" — that an agent re-derives and
+executes on every hygiene pass, then reports as a category with no findings.
+That successor card closed on 2026-08-10 and the sentence now specifies an anchor
+test, so this instance's *predicate* is fixed; what it contributes here is
+unchanged, because nothing about the fix gives a prose-specified check something a
+harness could register or a meta-test enumerate.
+
+It is fail-open in the table's exact sense: the output is an empty offender
+list, and nothing distinguishes "no citation rotted" from "this test cannot
+express citation rot". What it adds to the four is that they *could* stop
+guarding, whereas this one never guarded. `≤ EOF` is a bounds test for a
+displacement problem, so it can only fire when a file shrinks past a cite;
+source files grow. Measured recall over the deck's own citations, replayed at
+each card's creating commit: **0 of 728** moved citations reported, while the
+check called all 806 clean. It had been shipping that answer for the life of
+the deck. (The figures read 0 of 482 when this section was written; the
+successor's script was widened at closure to map both endpoints of range cites,
+which enlarges the population without changing the recall.)
+
+**What it changes about the options.** Both are scoped to prohibition scanners
+living in `tests/`, and both attach to a Python callable — Option A puts a
+sensitivity case beside it, Option B registers it with a harness and meta-tests
+that every scanner has a sample. A check that exists only as prose has no
+callable to register and no file a meta-test can enumerate; it is re-derived
+from the same sentence by a different agent each run, so its reach is whatever
+that agent inferred, and it leaves no artifact behind to audit. This is the
+weakest-bound surface of the five: the closure-sweep case above is at least a
+script that once existed, while this one is reconstituted from scratch every
+time. If the scope includes it, the floor cannot be registration — it has to be
+that a specified check ships with a known-offending example the agent is told to
+run it against first, so a specification that cannot fire is caught at the point
+of being followed rather than after a deck has rotted underneath it.
+
+The corpus point from the section above recurs in a sharper form. The offender
+sample was never missing here: 728 stale citations were sitting in the deck the
+whole time, and every pass walked past them and reported the category clean. A
+check whose population contains hundreds of known offenders and which returns
+none should have to say so out loud.
+
+No `advances` edge, for the same reason given in the two notes above: that card
+is an evidence connection on an open decision. It carries its own fix for the
+citation check; this section carries only what it teaches about scope.
 
 ## Decision required
 
@@ -281,3 +394,14 @@ number of prohibition guards.
 
 Deferred to the decision above. Do not start with the four patches: if B is
 picked, those patches are thrown away.
+
+**An Option-A-shaped scanner landed voluntarily (2026-08-03).** The successor
+to the tautology described above shipped `tests/test_canonical_tag_rows.py`,
+which scores the live deck against every `state` tag row and carries an
+`OFFENDERS` table — one violating card per row, asserted rejected — beside the
+clean-tree assertion. That is Option A's shape applied to a new scanner at
+birth rather than retrofitted, and it cost roughly fifteen lines, which is a
+data point for the per-scanner cost estimate the options need. It does **not**
+narrow the scope question this section raises: the guard lives in `tests/`, so
+it is inside both options already. The one-shot closure sweep — the surface
+that produced the tautology — remains unreached by anything in the repo.

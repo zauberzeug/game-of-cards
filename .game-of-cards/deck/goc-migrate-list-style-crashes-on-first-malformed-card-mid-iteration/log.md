@@ -13,3 +13,28 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-05-29 — Closure' present
+
+## 2026-07-31T06:35:00Z — Post-close: second family instance found
+
+- **What**: the same unnetted-bulk-walk shape surfaced in
+  `scripts/check_card_language.py`, closed as
+  `card-language-guard-aborts-the-whole-deck-scan-on-one-unparseable-card`.
+  Forward pointer added to this card's README (family instance 2).
+- **Why this card's sweep missed it**: the DoD's PROCESS sweep item was
+  scoped to "every other direct `parse_frontmatter(` call site in
+  `goc/engine.py`". Repo-local scripts under `scripts/` were outside that
+  scope, so `check_card_language.scan_card` — a whole-deck walk with no net —
+  was never audited. Lesson for the next sweep of this shape: scope it by
+  *walker*, not by file.
+- **Sweep now complete repo-wide**: `scripts/` has one other deck-walker
+  (`backfill_terminal_closed_at.py:69`) and it goes through
+  `engine.load_all_cards()`, already netted. `goc/templates/hooks/` does not
+  call `parse_frontmatter` at all (the hook scripts parse frontmatter
+  themselves — tracked separately by
+  `session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting`).
+  Both remaining engine bulk walks (`_cmd_show`, `_cmd_migrate_list_style`)
+  are netted.
+- **No umbrella card filed**: two instances, both closed, and no unnetted
+  call site remains. Filing an architectural meta-fix now would be the
+  redundant-umbrella anti-pattern the deck-hygiene guidance warns about; if a
+  third instance appears, that is the signal to file the root card.

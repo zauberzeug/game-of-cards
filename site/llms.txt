@@ -75,7 +75,7 @@ translate bare `goc ...` examples to `uv run goc ...`.
 
 The GoC [OpenClaw](https://openclaw.ai) plugin bundles the goc engine inside its npm payload — the only host prerequisite is `python3` (3.10+). `goc` is exposed as a **registered OpenClaw tool** (not a shell-PATH binary), so the agent invokes it like any typed function.
 
-Once the plugin is published, install via ClawHub:
+Install via ClawHub:
 
 ```sh
 openclaw skills install game-of-cards
@@ -83,7 +83,7 @@ openclaw skills install game-of-cards
 
 The same artifact is published to npm as `game-of-cards`; consumers that prefer npm can add it via OpenClaw's plugin loading mechanism (see <https://docs.openclaw.ai/plugins>).
 
-Until publish lands (tracked under `publish-openclaw-plugin`), build from source against this repo's plugin payload at <https://github.com/zauberzeug/game-of-cards/tree/main/openclaw-plugin>.
+To run against an unreleased checkout instead, build from this repo's plugin payload at <https://github.com/zauberzeug/game-of-cards/tree/main/openclaw-plugin>.
 
 > **Known limitation (OpenClaw ≤ 2026.5.6):** spawned subagents do not see the `goc` tool because OpenClaw's plugin-tool allowlist for subagents ignores `tools.subagents.tools.alsoAllow`. Main sessions are unaffected. Upstream tracker: <https://github.com/openclaw/openclaw/pull/51388>. See the plugin README for workaround guidance.
 

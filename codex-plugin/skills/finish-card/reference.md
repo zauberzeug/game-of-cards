@@ -162,3 +162,37 @@ Update only the **original** card — do not retroactively edit other
 closed cards' bodies to reference the new one. The forward pointer
 from the new card's body, plus the back-reference appended here, is
 the full bidirectional link.
+
+### Other cards your fix also fixed
+
+The mirror duty runs the other way too: a closure can silently
+invalidate cards that are still **open**. Two cards describing one
+defect is the normal case, not the pathological one — dedup happens
+at filing time, so every card filed *before* yours was written
+without knowledge of it. Nothing re-reads an open card afterwards, and
+`goc validate` will not notice: it checks edge symmetry, and an
+un-written edge is symmetric.
+
+Left alone, such a card goes on advertising a defect that no longer
+exists. On a gated card that is the expensive version — the next
+human to read it is asked to pick between options for a bug that is
+already fixed, using cites that no longer resolve, with no cheap way
+to tell.
+
+So the closer, who is the only actor who knows what was just fixed,
+writes the link (Step 6 carries the query and the two commands):
+
+- **Gate `none`** → `goc status <other> superseded --by <title>`.
+  Typed supersession, both ends written, the deck stays a record.
+- **Gate `decision` / `session`** → the engine refuses to move a
+  gated card into a terminal status, and should: clearing a human
+  gate to tidy the board is worse than the rot. Leave the better
+  note instead — a `## YYYY-MM-DDTHH:MM:SSZ — Staleness re-check`
+  entry in the other card's `log.md`, naming your closing commit and
+  what it fixed (Step 6 carries the template). The retirement still
+  needs a human `goc decide`, but the human now arrives informed
+  rather than misled, and the heading is greppable, so a later pass
+  can tell a card that was re-read from one nobody has opened.
+
+Do not lower another card's gate, and do not edit its `## Decision
+required` options to match your fix. Report; let the human retire it.

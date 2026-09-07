@@ -96,13 +96,23 @@ const GocToolParams = Type.Object({
         status: Type.Optional(Type.String()),
         contribution: Type.Optional(Type.String()),
         worker: Type.Optional(Type.String()),
-        board: Type.Optional(Type.Boolean()),
-        json: Type.Optional(Type.Boolean()),
+        board: Type.Optional(
+          Type.Boolean({
+            description:
+              "Render the ASCII kanban board. Mutually exclusive with `json` — setting both makes goc exit 2.",
+          }),
+        ),
+        json: Type.Optional(
+          Type.Boolean({
+            description:
+              "Render machine-readable JSON. Mutually exclusive with `board` — setting both makes goc exit 2.",
+          }),
+        ),
         since: Type.Optional(Type.String()),
       },
       {
         description:
-          "Top-level filter flags applied before the verb. Use these for bare-queue listings; otherwise prefer verb-specific flags via `args`.",
+          "Top-level filter flags applied before the verb. Use these for bare-queue listings; otherwise prefer verb-specific flags via `args`. `board` and `json` are alternative renderers: set at most one.",
       },
     ),
   ),

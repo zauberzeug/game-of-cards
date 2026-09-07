@@ -1,6 +1,6 @@
 ---
 title: closure-on-integration-check-only-runs-for-done-not-disproved-or-superseded
-summary: When `workflow.closure_on_integration: true`, `goc done` refuses to close unless HEAD is reachable from origin/main, but `goc status <title> disproved` and `goc status <title> superseded --by <other>` skip the check entirely. The same terminal-state semantics (others must see the closure to avoid duplicate effort) apply to all three transitions, so the asymmetry creates a loophole: a worker can close locally by disproving instead of done. Decision-class because the scope of the policy is taste — was the done-only framing deliberate, or should the check extend to every terminal flip.
+summary: "When `workflow.closure_on_integration: true`, `goc done` refuses to close unless HEAD is reachable from origin/main, but `goc status <title> disproved` and `goc status <title> superseded --by <other>` skip the check entirely. The same terminal-state semantics (others must see the closure to avoid duplicate effort) apply to all three transitions, so the asymmetry creates a loophole: a worker can close locally by disproving instead of done. Decision-class because the scope of the policy is taste — was the done-only framing deliberate, or should the check extend to every terminal flip."
 status: open
 stage: null
 contribution: medium
@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded — does the policy extend to all terminal transitions, or stay scoped to `done`?
   - [ ] TDD: reproduce.py exits zero (the chosen behaviour fires consistently on the three terminal transitions per the decision)
   - [ ] MECHANICAL: the relevant call site(s) in `goc/engine.py` updated (extend → call `_enforce_closure_on_integration_or_exit` from the `_cmd_status` terminal branch; keep → rename / re-doc the helper so its scope is unambiguous)
-  - [ ] MECHANICAL: docstring at `goc/engine.py:3766` and kickoff doc at `goc/templates/skills/kickoff/reference.md:72-74` updated to match the chosen scope
+  - [ ] MECHANICAL: docstring at `goc/engine.py:5199` and kickoff doc at `goc/templates/skills/kickoff/reference.md:72-74` updated to match the chosen scope
   - [ ] TDD: regression test in `tests/` covering the chosen behaviour for `done`, `disproved`, and `superseded` flips under `closure_on_integration: true`
 ---
 
@@ -22,10 +22,10 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:3518` — `_cmd_done` calls `_enforce_closure_on_integration_or_exit(title)`.
-- `goc/engine.py:3603` — `_cmd_done_bundle` calls the same helper inside its bundle loop.
+- `goc/engine.py:4851` — `_cmd_done` calls `_enforce_closure_on_integration_or_exit(title)`.
+- `goc/engine.py:4938` — `_cmd_done_bundle` calls the same helper inside its bundle loop.
 - `goc/engine.py:4302-4303` — `_cmd_status` enters the terminal-status branch (`if new_status in TERMINAL_STATUSES`) and calls *only* `_enforce_no_inbound_superseded_by_or_exit(title, new_status)`. The integration check is not invoked here.
-- `goc/engine.py:3766-3772` — helper docstring framing.
+- `goc/engine.py:5200-5206` — helper docstring framing.
 - `goc/templates/skills/kickoff/reference.md:72-74` — user-facing description of the workflow knob.
 
 ## What's broken
@@ -138,7 +138,7 @@ flipping to A is a behaviour change consumers may not expect.
 **If A:**
 
 ```python
-# goc/engine.py:4302
+# goc/engine.py:5995
 if new_status in TERMINAL_STATUSES:
     _enforce_no_inbound_superseded_by_or_exit(title, new_status)
     _enforce_closure_on_integration_or_exit(title)

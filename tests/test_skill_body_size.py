@@ -25,16 +25,87 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # occasional skills that got the same progressive-disclosure split later.
 # kickoff's cap is higher because its body is mostly verbatim dialog text
 # delivered to the user, which cannot move to the reference sibling.
+#
+# card-schema and refine-deck were raised on 2026-08-03 by the card
+# `meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card`: the
+# canonical-tags table gained a per-row `check` column plus the two-line rule
+# saying what `judgment` implies for a sweep, and both had been sitting within
+# 5 bytes of their cap. The rationale (three measured failures of the old
+# single-predicate rule) went to the reference siblings as this guard
+# prescribes; what stayed is the contract itself, which a reader of the table
+# cannot act on from a pointer.
+#
+# refine-deck was raised again on 2026-08-10 by the card
+# `refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file`: the
+# defunct-citation check was specified as a `line <= EOF` bounds test with
+# measured recall 0 of 482, and its replacement is an anchor comparison plus a
+# four-step repair recipe. The long form (why bounds fails, the resolution
+# rules, the residue table) went to the reference sibling; the rule and the
+# recipe stayed in the core because an agent that has to follow a pointer to
+# learn the test will run the bounds test it already remembers.
+#
+# refine-deck was raised a third time on 2026-08-17 by the card
+# `second-citation-repair-pass-moves-correct-cites-onto-unrelated-code`: step 2
+# of that same recipe anchored on the card's creating commit, which is correct
+# exactly once — a repair pass rewrites the number, and reading a rewritten
+# number at the creating commit resolves unrelated code (measured: 165 of 850
+# correct cites would have been moved on this deck's second pass). Its
+# replacement is the history walk that finds the commit which last wrote the
+# number. The measurement and the why went to the reference sibling; the walk
+# itself stayed in the core for the reason above — an agent that has to follow
+# a pointer to learn the anchor will use the one-liner in front of it.
+#
+# create-card and finish-card were raised on 2026-08-24 by the card
+# `parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`:
+# dedup ran on titles only, and a title is written in the filer's vocabulary
+# while the symbol sits in the body. Measured on this deck, three cards
+# described one `goc --waiting` defect; two sat at `human_gate: decision` for
+# 61 days after the third was fixed and closed, with no edge between them.
+# The two skills now carry the body-grep at both ends of a card's life —
+# create-card before filing, finish-card before the close. The measurement,
+# the worked instance and the gated-card etiquette went to the reference
+# siblings; what stayed in each core is the one-line rule plus the grep,
+# because an agent that has to follow a pointer to learn that titles are
+# insufficient will run the title grep it already remembers. create-card was
+# at 9996 of 10000 before this, so no addition of any size would have fit.
+#
+# refine-deck was raised a fourth time on 2026-09-01 by the card
+# `citation-repair-pass-has-no-rule-for-cites-inside-fenced-code-blocks`: the
+# repair recipe said whether a number CAN be relocated and nothing about
+# whether it SHOULD be, so a cite inside a fenced block was left to each
+# pass's invention — and the two defensible inventions disagree on every
+# fenced cite in the deck (measured: 49 comment labels, which must be
+# repaired, against 17 pasted-output records, which must not). The 2026-08-31
+# pass invented "skip every fenced cite" and left 28 defunct labels it had
+# already computed valid relocations for. What stayed in the core is the
+# scope rule and its marker test; the census, the failed pass and the
+# reporting shape went to the reference sibling. A pointer would not have
+# worked here for a sharper reason than the earlier three raises: the defect
+# IS a pass inventing the missing rule rather than going to look for it.
+#
+# refine-deck was raised a fifth time on 2026-09-07 by the card
+# `citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`:
+# step 1 of the recipe mapped a range's two endpoints as independent
+# single-line lookups and never asked whether the repaired pair still bounded
+# a block, so a pass that relocated one endpoint and left the other emitted a
+# range naming nothing (measured: twelve such cites across eight open cards,
+# one inverted span reaching 232 lines from a 3-line block). The wreck is then
+# invisible — both endpoints anchor cleanly in isolation, so the next pass
+# verdicts it `current` and never declines. What stayed in the core is the
+# pair check and the refusal to re-map an already-incoherent range; the
+# census, the compounding trace and the fourth decline row went to the
+# reference sibling. Same reason as the fourth raise: the defect IS a pass
+# filling in a rule the recipe did not state, so a pointer is what failed.
 BODY_CAPS = {
-    "create-card": 10_000,
-    "finish-card": 10_000,
+    "create-card": 10_500,
+    "finish-card": 10_500,
     "advance-card": 10_000,
     "decide-card": 10_000,
     "next-card": 10_000,
     "pull-card": 10_000,
-    "card-schema": 12_000,
+    "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 10_000,
+    "refine-deck": 12_500,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

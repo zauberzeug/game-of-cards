@@ -12,7 +12,7 @@ advanced_by:
   - waiting-filter-surfaces-draft-scaffolds-as-active-impediments
   - ready-leverage-line-names-draft-scaffolds-as-the-highest-gated-card
 tags: [bug, meta-fix, api-contract]
-summary: "card_is_draft gating is opt-in at every call site, and surfaces keep forgetting it: quality-pass audits (and with --llm --yes rewrites) unauthored scaffolds every listing hides, and decide lowers a draft's gate while printing a false 'any agent can now claim this card'. Fourth and fifth instances of the same family — fix the default, not the sites."
+summary: "card_is_draft gating is opt-in at every call site, and surfaces keep forgetting it: quality-pass audits (and with --llm --yes rewrites) unauthored scaffolds every listing hides, decide lowers a draft's gate while printing a false 'any agent can now claim this card', and validate warns that the DoD placeholder goc new just wrote lacks a method tag. Instances four through six of the same family — fix the default, not the sites."
 definition_of_done: |
   - [ ] PROCESS: decision recorded — inverted default vs validate-time lint vs per-site fixes (see Decision required)
   - [ ] TDD: reproduce.py exits non-zero — quality-pass no longer reports draft scaffolds, and decide on a draft either refuses or stops claiming the card is claimable
@@ -24,7 +24,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4088-4089` (`_cmd_quality_pass`) — the only filter is
+- `goc/engine.py:4728-4729` (`_cmd_quality_pass`) — the only filter is
   status:
 
   ```python
@@ -32,13 +32,13 @@ definition_of_done: |
       cards = [c for c in cards if c.status == status_flag]
   ```
 
-  No `card_is_draft` gate, unlike `filter_cards` (`engine.py:2637`)
+  No `card_is_draft` gate, unlike `filter_cards` (`engine.py:2998`)
   which hides drafts from every listing.
 
 - `goc/engine.py:5951` ff. (`_cmd_decide`) — the only guard is
   `if t.human_gate == "none"`; no draft guard (contrast
   `_cmd_status`'s draft refusal for superseded/disproved at
-  `engine.py:5201`). The unconditional next-step at `engine.py:6000`:
+  `engine.py:5975`). The unconditional next-step at `engine.py:6868`:
 
   ```python
   print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
@@ -57,7 +57,7 @@ Three surfaces already forgot and were fixed one at a time —
 
 1. **quality-pass audits drafts.** Draft scaffolds flow into the
    antipattern/missing-summary report, and into the `--llm` sample,
-   where `_apply_verdict_interactive` (`engine.py:4022`) with `--yes`
+   where `_apply_verdict_interactive` (`engine.py:4662`) with `--yes`
    would rewrite the `summary`/DoD of — and `goc move` — a card nobody
    has authored yet: exactly the race `draft: true` exists to prevent.
 2. **decide unparks a draft into nowhere.** `goc new --gate decision`
@@ -67,9 +67,68 @@ Three surfaces already forgot and were fixed one at a time —
    next-card until someone separately runs `goc publish`. The decision
    silently unparks nothing.
 
-Five instances of one root cause is a missing default, not five bugs.
+A later audit pass (2026-08-07) found instance six, which is the
+sharpest of the set because the offending text is goc's own:
+
+3. **`goc validate` warns about the placeholder it just wrote.**
+   `validate_dod_method_tags` (`engine.py:2539-2565`) exempts terminal
+   cards but not drafts, and `goc new`'s generated DoD stub —
+   `SCAFFOLD_DOD_PLACEHOLDER = "- [ ] (replace with real criteria)"`
+   (`engine.py:2702`) — carries no method tag. So every freshly
+   scaffolded card immediately produces
+   `WARN UNTAGGED_DOD_ITEM <title>: 1 DoD item(s) lack a method tag …
+   [- [ ] (replace with real criteria)]`. The validator's own docstring
+   says the warning "only nudges new authorship"; a draft is by
+   definition not yet authored, so the nudge fires before there is
+   anything to nudge. Reproduced on a two-command scratch deck:
+   `goc new fresh-scaffold-card --summary "…"` then `goc validate`.
+
+Six instances of one root cause is a missing default, not six bugs.
 Per-site patching demonstrably does not converge — each new surface
 reintroduces the leak.
+
+### The cost is now symmetric: un-gating is per-site too (2026-08-11)
+
+The six instances above are all "a surface forgot to exclude drafts".
+A closure on
+[zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface](../zero-match-line-claims-hidden-drafts-that-publishing-would-not-surface/)
+adds the mirror-image cost, which sharpens the mechanism choice rather
+than adding a seventh instance of the same shape.
+
+The zero-match queue line reports how many drafts a query is hiding.
+Producing that number means asking the counterfactual *"would this card
+appear if its draft flag were cleared?"* — and because the gate is
+inlined per site, the counterfactual has to be threaded through **every
+site separately**, as an opt-in `include_drafts` keyword:
+
+- `filter_cards` (`engine.py:2984`) — added by
+  [empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/)
+- `card_is_ready` (`engine.py:2660`) — same commit; readiness drops
+  drafts on a second, independent axis
+- `live_impeded` (`engine.py:2745`) — a *third* axis, missed by that
+  commit and found only when `goc --waiting --status open` reported a
+  draft as hidden that publishing would not have revealed
+
+Three keywords, three cards, one predicate. So the inlining is not just
+a recall problem for authors writing new surfaces — it also makes the
+gate impossible to reason about *counterfactually* without touching
+every site again. Any mechanism chosen below should be judged on both
+directions: it has to make "exclude drafts" the default AND leave one
+place to ask what that default removed.
+
+A fourth card,
+[zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all](../zero-match-line-omits-hidden-drafts-whenever-the-status-filter-is-all/)
+(closed 2026-08-12), sharpens that further: the damage is not only in
+*threading* the counterfactual, but in **deciding whether to ask it at
+all**. The recount's entry guard read `status != "all"` — true of
+`filter_cards`' conjunct, false of `card_is_ready`'s and
+`live_impeded`'s, which never consult the status filter — so the
+counterfactual was correct and simply never evaluated on the flagless
+`goc --waiting`. Three sites means three places a reader can mistake
+one site's condition for the predicate's. The guard was deleted rather
+than widened, so the count is now unconditional on the empty path; a
+single-site gate would have made the wrong shortcut unavailable to
+write in the first place.
 
 ## Empirical evidence
 

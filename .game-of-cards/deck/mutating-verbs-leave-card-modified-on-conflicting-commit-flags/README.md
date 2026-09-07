@@ -153,3 +153,26 @@ inventory is `_cmd_status`, `_cmd_wait`, `_cmd_advance`,
 `_cmd_unadvance`, `_cmd_decide`. `_cmd_new` accepts `--commit` /
 `--no-commit` too — confirm whether its ordering is correct
 during the fix.
+
+## Post-close follow-up — the invariant reached a sixth site
+
+The sweep above did visit `_cmd_new`, and its answer was correct as far as it
+went: `_validate_commit_flags` runs at engine.py:5674, well before
+`card_dir.mkdir`. But the sweep was scoped to *the flag-conflict check*, not to
+the invariant this card actually established — **validate every input before
+any disk write**. `_cmd_new` has two other inputs that reach a validator only
+after the write begins: `--summary` and `--worker`, whose emittability is
+decided inside `emit_frontmatter` at the README write, 23 lines past
+`card_dir.mkdir(parents=True)`. A value carrying a line break the vendored
+parser splits on therefore produced the same failure this card is about — a
+usage error corrupting on-disk state — one door over, and worse: an empty card
+directory that turns `goc validate` red.
+
+Closed and fixed by
+[goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break](../goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break/),
+which moves both checks up beside the other pre-mkdir guards.
+
+The generalizable lesson, recorded here rather than as a fresh umbrella card:
+a sibling sweep scoped to *the failing check* finds fewer sites than one scoped
+to *the invariant the check serves*. Six sites are now known to hold the
+ordering; nothing mechanical enforces it on a seventh.

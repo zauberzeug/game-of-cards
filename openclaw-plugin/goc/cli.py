@@ -1,7 +1,9 @@
 """Console-script entry point for the `goc` command.
 
-Builds the argparse parser from engine.py, adds `install` and `upgrade`
-subcommands from install.py, and wires up the `--version` flag.
+Restores the default SIGPIPE disposition, intercepts `install` / `upgrade`
+on `argv[0]` and routes them to standalone argparse parsers over
+install.py, and delegates every other invocation to `engine.cli()`, which
+builds the engine parser and owns the global flags including `--version`.
 Registered as `goc = "goc.cli:main"` in pyproject.toml.
 """
 
@@ -10,7 +12,7 @@ from __future__ import annotations
 import signal
 import sys
 
-from goc.engine import _build_parser, cli as engine_cli
+from goc.engine import cli as engine_cli
 from goc.install import (
     BRIEFING_TARGET_HELP,
     BRIEFING_TARGETS,
@@ -21,6 +23,13 @@ from goc.install import (
     install as _install,
     upgrade as _upgrade,
 )
+
+
+#: Verbs intercepted on `argv[0]` before the engine parser is built. They are
+#: routed to standalone argparse parsers over install.py, so they never appear
+#: in the engine's subparser registry — anything enumerating goc's full command
+#: surface has to union this with that registry.
+INSTALL_VERBS = ("install", "upgrade")
 
 
 def main() -> None:
@@ -42,7 +51,7 @@ def main() -> None:
     # engine_cli below alongside every other global flag.
 
     # Route install / upgrade to their argparse-independent functions
-    if argv and argv[0] in ("install", "upgrade"):
+    if argv and argv[0] in INSTALL_VERBS:
         sub = argv[0]
         rest = argv[1:]
         import argparse

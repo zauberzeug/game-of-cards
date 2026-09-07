@@ -240,20 +240,28 @@ dimensions across the existing deck.
 Project-specific tags register in `.game-of-cards/canonical-tags.md`
 (merged into the enum by `goc validate`); goc-shipped tags change via
 PR (`reference.md` § Adding new tags). A tag is **load-bearing** iff
-its predicate fires on the title, H1, or first ~2500 chars of body
-(unless its row widens the surface); when in doubt, drop it.
+its row holds; when in doubt, drop it. Every row declares a `check`:
 
-| tag | applies iff |
-|---|---|
-| `bug` | not `epic` and not `story` (default for findings) |
-| `epic` | multiple cards block its closure OR carry its epic-grouping tag |
-| `story` | delivers new/changed capability, not a fix; disjoint from `bug` |
-| `unverified` | no working `reproduce.py` AND tagged at filing |
-| `documentation` | doc-quality failure (`doc`/`stale`/`drift`/`mismatch`/`cite`/`claim`/`readme-` in title, or body cites docstrings / `.md says`) |
-| `test` | title starts `test-` or contains `tolerance`/`vacuous`/`regression`, or body cites pytest / `tests/` |
-| `api-contract` | cites a public API surface callers depend on |
-| `infra` | touches infrastructure (pre-commit, `pyproject.toml`, CI, packaging) |
-| `meta-fix` | literal `meta-fix` / `family meta-fix` in title, `summary:`, or full body (no cutoff), OR an `advances`/`advanced_by` edge to a `meta-fix`-tagged card |
+- **`state`** — satisfied out of frontmatter, edges, or card files.
+  Scorable, so a disagreement is a fact.
+- **`judgment`** — satisfied by what the card *means*. The row's
+  patterns are recognition aids, never a membership test, so one that
+  does not fire is not evidence the tag fails.
+
+No sweep strips a tag mechanically. Both, plus the default pattern
+surface: `reference.md` § Why rows split.
+
+| tag | applies iff | check |
+|---|---|---|
+| `bug` | not `epic` and not `story` (default for findings) | state |
+| `epic` | multiple cards block its closure (≥2 `advanced_by`) OR carry its epic-grouping tag | state |
+| `story` | delivers new/changed capability, not a fix; disjoint from `bug` | judgment |
+| `unverified` | no working `reproduce.py` AND tagged at filing | state |
+| `documentation` | doc-quality failure (`doc`/`stale`/`drift`/`mismatch`/`cite`/`claim`/`readme-` in title, or body cites docstrings / `.md says`) | judgment |
+| `test` | repairs or extends test coverage (title starts `test-` or contains `tolerance`/`vacuous`/`regression`, or body cites pytest / `tests/`) | judgment |
+| `api-contract` | cites a public API surface callers depend on | judgment |
+| `infra` | touches infrastructure (pre-commit, `pyproject.toml`, CI, packaging) | judgment |
+| `meta-fix` | the card's scope is a family or its root cause, not one site — an umbrella, or an instance wired into one (aids: umbrella-shaped title, a body roster, a literal `meta-fix`, an edge to a `meta-fix` card — **none required**) | judgment |
 
 Project-specific predicates appended below:
 

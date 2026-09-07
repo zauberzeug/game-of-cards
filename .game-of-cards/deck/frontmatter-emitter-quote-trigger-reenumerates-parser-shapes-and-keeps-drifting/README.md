@@ -19,6 +19,7 @@ advanced_by:
   - inline-emitter-writes-multi-line-strings-bare-destroying-subsequent-frontmatter
   - inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
   - definition-of-done-emitter-silently-splits-checkboxes-on-non-lf-line-breaks
+  - goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.
@@ -124,3 +125,48 @@ behaviour rather than a hand-maintained twin?
 
 Pick one (or a hybrid: C as a guard now, A/B as the structural fix). Record
 the choice and rationale in `log.md`, then the card becomes mechanical.
+
+### Counter-evidence: all three options pick the wrong oracle
+
+Filed 2026-08-28 on
+[`goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse`](../goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse/),
+with a `reproduce.py`: seven scalar shapes — values opening with `!`, `%`,
+`- `, `? `, or a non-header `|`/`>`, plus any value holding a TAB — are emitted
+bare, and **`yaml_lite` round-trips all seven faithfully**. Strict YAML refuses
+every one, and this repo's committed `card-frontmatter-yaml` pre-commit hook
+flags six of them.
+
+That breaks each option above as written. Option A's probe
+(`parse_scalar(s) != s`) sees no change and stays silent. Option C's property
+test (`parse(emit(s)) == s`) passes. Option B inherits `&*` from the parser's
+indicator-first set. So a factoring derived purely from parser behaviour would
+close the historical family and leave a live defect in place.
+
+The oracle has to be the **union** of the vendored parser's coercions and
+strict-YAML legality. Any option picked here should be restated against that
+wider target before it is implemented.
+
+### Half the union now exists — the decision is only about the parser half
+
+`goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse` closed on
+2026-08-30 by building the strict-YAML half directly instead of deriving it:
+`goc/engine.py` now holds `_YAML_INDICATORS`, YAML 1.2 §5.3's closed
+`c-indicator` list transcribed from the spec, split into
+`_YAML_INDICATOR_FIRST` and `_YAML_SPACE_BOUND_INDICATORS`, plus a TAB entry
+in `_YAML_NEEDS_QUOTE`. `scripts/check_card_frontmatter_yaml.py` imports those
+sets rather than restating them, and
+`tests/test_emitter_strict_yaml_quoting.py` pins the agreement in both
+directions with the spec list enumerated independently, so shrinking the
+engine's set turns the build red.
+
+That narrows this card rather than answering it. The emitter's trigger is now
+an explicit union of two oracles: two spec-derived clauses (a strict reader
+must accept the output) and three parser-derived ones
+(`_parser_coerces_scalar`, `_YAML_BLOCK_HEADER_RE`, `s != s.strip()`). Only
+the second group is still a hand-maintained twin of `yaml_lite`, so that is
+the whole remaining scope of Options A / B / C — and whichever is picked has
+to *keep* the spec-derived clauses rather than replace them, because a
+parser-derived trigger is silent on every shape that card fixed. The
+spec-import pattern is also the concrete precedent for Option B: one
+definition in the engine, imported by the other consumer, drift caught by a
+test that enumerates the external reference itself.

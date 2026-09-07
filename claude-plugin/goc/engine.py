@@ -205,11 +205,33 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return data, m.group(3) or ""
 
 
-_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")
-# Leading indicator chars the vendored parser rejects in value position:
-# `&`/`*` crash the parse (anchors/aliases not supported). `[`/`{`/`"`/`'`
-# are already caught anywhere by _YAML_NEEDS_QUOTE.
-_YAML_INDICATOR_FIRST = frozenset("&*")
+# Characters that force a quoted scalar wherever in the value they appear.
+# TAB is in the class because it is illegal ANYWHERE in a YAML plain scalar —
+# a strict reader refuses `summary: column<TAB>separated` with "while scanning
+# for the next token" — while the leading/trailing cases alone are caught by
+# the `s != s.strip()` trigger below. A double-quoted scalar carries a literal
+# TAB unchanged (YAML's `nb-json` admits #x9), so quoting is the whole fix.
+_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@\t]")
+# YAML 1.2 §5.3 `c-indicator` — the spec's closed list of characters that carry
+# syntactic meaning. Taken from the spec rather than from the shapes the
+# vendored parser happens to reinterpret, because the emitter's contract is
+# "output any YAML reader accepts", not "output yaml_lite survives": the parser
+# round-trips `!tag`, `%dir`, `- item`, `? key`, `|pipe` and `>fold` faithfully
+# while strict YAML refuses all six, so a trigger derived from parser behaviour
+# alone stays silent on every one of them. The correct oracle is the union of
+# strict-YAML legality and the parser's coercions — see the card
+# `goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse`.
+_YAML_INDICATORS = frozenset("-?:,[]{}#&*!|>'\"%@`")
+# `-`, `?` and `:` are indicators only when followed by whitespace or standing
+# alone: `-v` and `?query` are ordinary plain scalars, while `- v` is a sequence
+# entry, `? v` an explicit key, and a bare `-` an empty sequence entry.
+_YAML_SPACE_BOUND_INDICATORS = frozenset("-?:")
+# Every other indicator is illegal at position 0 whatever follows it. Several
+# members are already caught anywhere by `_YAML_NEEDS_QUOTE`; the set stays
+# spec-complete rather than minimized so it can serve as the single definition
+# of "cannot open a plain scalar" for `scripts/check_card_frontmatter_yaml.py`,
+# which imports it instead of restating it.
+_YAML_INDICATOR_FIRST = _YAML_INDICATORS - _YAML_SPACE_BOUND_INDICATORS
 # Whole-value tokens the parser interprets as block/folded scalar indicators.
 # Covers both bare-indicator forms (`|`, `|-`, `>+`) and the explicit-indent
 # forms the vendored parser's `_BLOCK_INDICATOR_RE` / `_FOLDED_INDICATOR_RE`
@@ -237,6 +259,24 @@ def _contains_line_break(s: str) -> bool:
     `s` contains at least one.
     """
     return "".join(s.splitlines()) != s
+
+
+def _opens_with_yaml_indicator(s: str) -> bool:
+    """True when `s`'s first character bars it from being a YAML plain scalar.
+
+    Derived from `_YAML_INDICATORS`, the spec's closed indicator list, so a
+    shape nobody has reported yet is already covered — the per-shape drift this
+    predicate replaces is catalogued on
+    `frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting`.
+    The three space-bound indicators bind only when the value is exactly the
+    indicator or the indicator is followed by a space or TAB (YAML's `s-white`);
+    a line break cannot reach here, `_contains_line_break` refuses it first.
+    """
+    if not s:
+        return False
+    if s[0] in _YAML_INDICATOR_FIRST:
+        return True
+    return s[0] in _YAML_SPACE_BOUND_INDICATORS and s[1:2] in ("", " ", "\t")
 
 
 def _parser_coerces_scalar(s: str) -> bool:
@@ -303,11 +343,21 @@ def _yaml_inline(value) -> str:
             "emit_frontmatter (block-scalar `|-`); other line breaks are "
             "unsupported."
         )
+    # The quote trigger is the UNION of two oracles, because either one alone
+    # leaves real defects standing. Strict-YAML legality (the first two
+    # clauses) covers shapes the vendored parser reads back faithfully but no
+    # other YAML reader accepts — `goc install` promises consumers each card is
+    # "a plain Markdown file with YAML frontmatter". Parser reinterpretation
+    # (the last three) covers shapes that are legal YAML yet come back from
+    # `yaml_lite` as a different value, or crash it. The `|`/`>` heads of
+    # `_YAML_BLOCK_HEADER_RE` are now subsumed by the indicator set; the clause
+    # stays as the parser side of the union, so narrowing either half alone
+    # still leaves a bare block header quoted.
     if (
         _YAML_NEEDS_QUOTE.search(s)
+        or _opens_with_yaml_indicator(s)
         or _parser_coerces_scalar(s)
         or bool(_YAML_BLOCK_HEADER_RE.match(s))
-        or (s and s[0] in _YAML_INDICATOR_FIRST)
         or s != s.strip()
     ):
         # Escape \ and " for safe inclusion in "..." YAML scalar.
@@ -1029,9 +1079,22 @@ def resolve_card_dir(title: str) -> Path:
     verb that resolves a title argument must come through here. `new`/`move`
     additionally enforce the richer slug/antipattern rules on the titles
     they create.
+
+    Staying inside the deck is necessary but not sufficient: the accepted
+    set must also be *canonical*, because callers keep using the raw
+    argument string as the card's identity long after this returns. They
+    write it into frontmatter edge fields (`_mutate_pair`) and compare it
+    to sibling arguments (`_cmd_advance`'s self-edge guard,
+    `_cmd_done_bundle`'s duplicate-member guard). `Path` folds a trailing
+    slash and a `./` prefix away — `Path("a/").parts == Path("./a").parts
+    == ("a",)` — so those spellings resolve to the same card while reading
+    as a *different* identity downstream, which is how one card acquires a
+    self-edge or joins a bundle twice. Requiring `title == Path(title).name`
+    keeps the typed identity and the stored identity the same string.
     """
     if (
         len(Path(title).parts) != 1
+        or title != Path(title).name
         or title == ".."
         or (DECK_DIR / title).resolve().parent != DECK_DIR.resolve()
     ):
@@ -1380,6 +1443,131 @@ def validate_hook_registration() -> list[str]:
             "invoked. Add a mapping in goc/install.py."
         )
 
+    return errors
+
+
+#: Every `<name>.py` a plugin hook command refers to. Claude's command names
+#: the script once (`python3 ${CLAUDE_PLUGIN_ROOT}/hooks/<name>.py`); Codex's
+#: version-fallback shell wrapper names it three times. Collecting basenames
+#: into a set collapses both shapes without either grammar being hard-coded, so
+#: a host whose command form changes again does not need a parser change here.
+_PLUGIN_HOOK_SCRIPT_RE = re.compile(r"[\w.-]+\.py")
+
+#: Payload root → its hand-maintained hook registry, relative to REPO_ROOT.
+#: OpenClaw is absent on purpose: it reimplements the deck hooks in TypeScript
+#: inside `openclaw-plugin/index.ts` and ships no `hooks.json`.
+PLUGIN_HOOK_REGISTRIES = ("claude-plugin", "codex-plugin")
+
+
+def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]]:
+    """Script basenames every command in `registry` names, plus shape errors.
+
+    Parsed defensively at each level. `hooks.json` is authored by hand, so a
+    malformed one is a plausible input, and this repo has a standing family of
+    cards about loaders that trusted their input shape and turned a typo into a
+    traceback. A shape that cannot be read is reported and skipped — the caller
+    still gets whatever the well-formed entries yielded.
+    """
+    rel = _display_path(registry)
+    try:
+        data = json.loads(registry.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        return set(), [f"hook registration: {rel}: cannot be read as JSON: {exc}"]
+
+    if not isinstance(data, dict) or not isinstance(data.get("hooks"), dict):
+        return set(), [
+            f"hook registration: {rel}: expected a JSON object with a 'hooks' "
+            "object; nothing can be registered from this shape"
+        ]
+
+    names: set[str] = set()
+    errors: list[str] = []
+    for event, groups in data["hooks"].items():
+        if not isinstance(groups, list):
+            errors.append(
+                f"hook registration: {rel}: event {event!r} must map to a list "
+                f"of hook groups (got {type(groups).__name__})"
+            )
+            continue
+        for group in groups:
+            entries = group.get("hooks") if isinstance(group, dict) else None
+            if not isinstance(entries, list):
+                errors.append(
+                    f"hook registration: {rel}: event {event!r} has a group "
+                    "without a 'hooks' list"
+                )
+                continue
+            for entry in entries:
+                command = entry.get("command") if isinstance(entry, dict) else None
+                if not isinstance(command, str):
+                    errors.append(
+                        f"hook registration: {rel}: event {event!r} has an entry "
+                        "without a string 'command'"
+                    )
+                    continue
+                names.update(_PLUGIN_HOOK_SCRIPT_RE.findall(command))
+    return names, errors
+
+
+def validate_plugin_hook_registration() -> list[str]:
+    """Check each plugin payload's `hooks.json` against the scripts it ships.
+
+    `validate_hook_registration` above enforces script ↔ registration parity for
+    `GOC_CLAUDE_HOOKS`, which drives `.claude/settings.json` on the vendored
+    `--local-skills` install. That is the opt-in minority path. The DEFAULT
+    install writes `skills_source: plugin`, and there the registry is the
+    payload's own `hooks.json` — hand-maintained, deliberately preserved by
+    `scripts/sync_plugin_assets.py` and deliberately excluded from
+    `validate_plugin_mirror_parity`'s byte comparison, so until this check
+    existed no mechanism owned it.
+
+    Both directions matter and fail silently in opposite ways. A script the
+    payload ships but no command names is dead weight the host never invokes; a
+    command naming a script the payload no longer ships ENOENTs on every fire of
+    that event. The sync produces the second shape on its own, since retiring a
+    template prunes the mirrored file while leaving the registry untouched.
+
+    Gated on the payload roots existing at `REPO_ROOT`, like the mirror-parity
+    check, so this is inert in consuming repos.
+    """
+    from goc.install import deck_hook_scripts
+
+    templates = PACKAGE_DIR / "templates"
+    if not (templates / "hooks").exists():
+        return []
+    shipped_by_source = set(deck_hook_scripts(templates))
+
+    errors: list[str] = []
+    for plugin in PLUGIN_HOOK_REGISTRIES:
+        hooks_dir = REPO_ROOT / plugin / "hooks"
+        registry = hooks_dir / "hooks.json"
+        if not registry.exists():
+            continue
+        registered, shape_errors = _plugin_registered_hook_scripts(registry)
+        errors.extend(shape_errors)
+        rel = _display_path(registry)
+
+        # Compare against what the payload actually ships where present, and
+        # fall back to the template set otherwise: `--check` runs before the
+        # sync has copied anything into a freshly cloned payload dir.
+        shipped = (
+            {p.name for p in hooks_dir.glob("*.py")}
+            if hooks_dir.exists()
+            else shipped_by_source
+        )
+
+        for name in sorted(shipped - registered):
+            errors.append(
+                f"hook registration: {plugin}/hooks/{name} is shipped in the "
+                f"plugin payload but no command in {rel} names it — the file "
+                "would be installed and never invoked. Add an event entry."
+            )
+        for name in sorted(registered - shipped):
+            errors.append(
+                f"hook registration: {rel} registers {name}, which "
+                f"{plugin}/hooks/ does not ship — the hook would fail with "
+                "'no such file' on every fire. Drop the entry or restore the script."
+            )
     return errors
 
 
@@ -2441,12 +2629,19 @@ def card_is_draft(card: Card) -> bool:
     return card.draft
 
 
-def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
+def card_is_ready(card: Card, by_title: dict[str, Card], *, include_drafts: bool = False) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
     Ready iff `status == open` AND not a draft scaffold (`card_is_draft`)
     AND `human_gate == none` AND no active impediment overlay (`waiting_on`
     unset, `waiting_until` absent or past).
+
+    `include_drafts` suppresses the draft conjunct alone, leaving the other
+    three intact — the readiness counterpart of `filter_cards`' flag of the
+    same name, and threaded from it. It exists so the zero-match reporting
+    path can ask "what would `--ready` have matched if drafts counted as
+    authored?" without restating a predicate this docstring insists lives in
+    one place. No production queue passes it: readiness itself is unchanged.
 
     Non-terminal `advanced_by` prereqs do NOT block readiness — an
     `advances` edge is a "should be done first" (value-flow + closure
@@ -2462,7 +2657,7 @@ def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:
     """
     if card.status != "open":
         return False
-    if card_is_draft(card):
+    if card_is_draft(card) and not include_drafts:
         return False
     if card.human_gate != "none":
         return False
@@ -2547,7 +2742,9 @@ def waiting_impedes(card: Card, *, today: "date | datetime | None" = None) -> bo
     return until_dt > now
 
 
-def live_impeded(card: Card, *, today: "date | datetime | None" = None) -> bool:
+def live_impeded(
+    card: Card, *, today: "date | datetime | None" = None, include_drafts: bool = False
+) -> bool:
     """True iff the card is *actively* impeded — the "show ⏳" variant.
 
     `waiting_impedes` reads the overlay alone and deliberately ignores the
@@ -2561,10 +2758,21 @@ def live_impeded(card: Card, *, today: "date | datetime | None" = None) -> bool:
     `deck/waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/`
     for the wider consolidation (this helper covers the live variant; the
     stricter open-only variant used by `card_is_ready` is still inlined).
+
+    `include_drafts` suppresses the draft conjunct alone, leaving the
+    terminal-status and overlay clauses intact — the impediment counterpart
+    of the flag `filter_cards` and `card_is_ready` already carry, and the
+    third and last axis the draft gate is inlined on. Without it the
+    `--waiting` conjunct cannot be evaluated counterfactually at all: it
+    short-circuits on the flag before reading the overlay, so a draft that
+    IS actively impeded and a draft carrying no overlay whatsoever are
+    indistinguishable. Its one user is the zero-match draft recount in
+    `_cmd_default`; no production read surface passes it, so what counts as
+    impeded is unchanged.
     """
     return (
         card.status not in TERMINAL_STATUSES
-        and not card_is_draft(card)
+        and (include_drafts or not card_is_draft(card))
         and waiting_impedes(card, today=today)
     )
 
@@ -2767,6 +2975,7 @@ def filter_cards(
     worker: str | None = None,
     ready: bool = False,
     by_title: dict[str, Card] | None = None,
+    include_drafts: bool = False,
 ) -> list[Card]:
     out = list(cards)
     if statuses is not None:
@@ -2778,7 +2987,14 @@ def filter_cards(
     # not appear as queueable. The board path renders the full deck (not this
     # filtered set) and marks drafts instead. `card_is_draft` is the shared
     # not-yet-real predicate (also enforced in `card_is_ready`).
-    if status != "all":
+    #
+    # `include_drafts` suppresses only this conjunct, so a caller can recover
+    # how many cards the draft filter alone removed without restating the rest
+    # of the predicate. Its one user is the zero-match reporting path in
+    # `_cmd_default`: the draft exclusion is the only conjunct no flag can
+    # reveal, so a query emptied entirely by it used to render byte-identically
+    # to a drained deck.
+    if status != "all" and not include_drafts:
         out = [t for t in out if not card_is_draft(t)]
     if stages:
         out = [t for t in out if (str(t.stage) if t.stage is not None else "null") in stages]
@@ -2809,7 +3025,7 @@ def filter_cards(
         out = [t for t in out if needle in _worker_who(t.frontmatter.get("worker")).lower()]
     if ready:
         lookup = by_title if by_title is not None else {t.title: t for t in cards}
-        out = [t for t in out if card_is_ready(t, lookup)]
+        out = [t for t in out if card_is_ready(t, lookup, include_drafts=include_drafts)]
     return out
 
 
@@ -3486,13 +3702,161 @@ def render_active_notice(
     )
 
 
+def render_empty_query_line(args, status: str, *, hidden_drafts: int = 0) -> str:
+    """State that a queue query matched nothing, naming the filters in effect.
+
+    `render_table` returns "" for an empty card list, so without this the
+    table path is the one read surface that cannot express "the query ran and
+    matched nothing" — `goc triage` prints a sentence, `--json` prints `[]`
+    and `--board` prints its column header, but a zero-match table query
+    printed nothing at all and exited 0. Three different states then rendered
+    byte-identically: a genuinely drained queue, a filter no card satisfies,
+    and a mistyped `--worker` value.
+
+    Printing *a* sentence was never sufficient, only necessary: `goc triage`
+    printed a constant naming one of its four conjuncts and collapsed the same
+    three states, which is why it now has its own
+    `render_empty_triage_line` holding the identical contract. The two share
+    `_hidden_drafts_clause` so the one conjunct a reader cannot derive from the
+    command line reads the same on both.
+
+    That last one is why the message enumerates the predicate rather than
+    just saying "no cards". `--status` and `--tag` reject unknown values at
+    parse time, but `worker` is deliberately unregistered (any person slug,
+    machine name or capability tag is legal), so there is no enum to validate
+    a typo against and echoing the filter back is the only available signal.
+
+    `hidden_drafts` carries the one conjunct that cannot be read off `args`:
+    `filter_cards` drops unauthored scaffolds from every status filter but
+    `all`, with no flag asking it to. Left unstated, a deck whose only open
+    cards are the ones `goc new` just wrote printed the drained-deck sentence
+    verbatim — the shortest path through the tool (install → new → goc)
+    ending in "nothing here". The count is what separates the two states; an
+    unconditional "excludes drafts" clause would still render identically on
+    a genuinely empty deck, so the clause appears only when drafts were
+    actually dropped.
+    """
+    parts: list[str] = []
+    # `--ready` ADDS a conjunct, it does not replace the status one:
+    # `filter_cards` applies both, so a contradictory pair like
+    # `--ready --status done` empties the result for a reason the ready
+    # sentence alone would misattribute to a drained queue — and
+    # `card_is_ready` requires `status == open`, so that pair can never match.
+    # Naming only the ready clause there is a false statement, not just an
+    # incomplete one: the same deck's plain `goc --ready` may well list cards.
+    #
+    # Mirrors `_cmd_default`'s own `status_filter_explicit`, recomputed here
+    # so the signature stays `(args, status)` like every other filter this
+    # function reads straight off `args`. The explicitness test is what keeps
+    # plain `goc --ready` unchanged: `status` is then the auto-resolved "open"
+    # default that the ready sentence already covers, so naming it again would
+    # be redundant noise rather than information.
+    status_explicit = bool(
+        getattr(args, "done_flag", False)
+        or getattr(args, "status_flag", None) is not None
+    )
+    if getattr(args, "ready", False):
+        parts.append("ready: status open, gate none, no active impediment")
+        if status_explicit:
+            parts.append(f"status: {status}")
+    else:
+        parts.append(f"status: {status}")
+    if getattr(args, "waiting", False):
+        parts.append("waiting: active impediment overlay")
+    for label, value in (
+        ("stage", getattr(args, "stage_flag", None)),
+        ("contribution", getattr(args, "contribution", None)),
+        ("gate", getattr(args, "human_gate", None)),
+        ("since", getattr(args, "since", None)),
+        ("closed-since", getattr(args, "closed_since", None)),
+        ("advances", getattr(args, "advances", None)),
+        ("advanced-by", getattr(args, "advanced_by", None)),
+    ):
+        if value:
+            parts.append(f"{label}: {value}")
+    tags = getattr(args, "tags", None)
+    if tags:
+        parts.append(f"tag: {', '.join(tags)}")
+    # Quoted: an unregistered free-form value is the one filter a reader
+    # cannot check against a schema, so show exactly what was matched on.
+    worker = getattr(args, "worker", None)
+    if worker:
+        parts.append(f"worker: {worker!r}")
+    clause = _hidden_drafts_clause(hidden_drafts)
+    if clause:
+        parts.append(clause)
+    return f"No cards match ({'; '.join(parts)})."
+
+
+def _hidden_drafts_clause(hidden_drafts: int) -> str:
+    """The "N drafts were dropped" conjunct, or "" when none were.
+
+    Shared by every zero-match line so the count, the noun and the next step
+    cannot drift between surfaces: a reader who learns what the clause means on
+    the queue table must read it the same way under `goc triage`.
+    """
+    if hidden_drafts <= 0:
+        return ""
+    noun = _plural(hidden_drafts, "unauthored draft scaffold")
+    return f"{hidden_drafts} {noun} hidden — author, then `goc publish <title>`"
+
+
+def render_empty_triage_line(worker: str | None, hidden_drafts: int) -> str:
+    """State that `goc triage` matched nothing, naming the filters in effect.
+
+    `_cmd_triage` selects on four conjuncts — `status == "open"`,
+    `human_gate != "none"`, `not card_is_draft`, and an optional `--worker`
+    substring — but reported a zero match with a constant naming only the
+    second. Three unrelated deck states then rendered byte-identically: an
+    empty park queue, a mistyped `--worker` value, and a deck whose parked
+    cards are all unauthored `goc new` scaffolds.
+
+    That last one is the shortest path through the tool: `goc new --gate
+    decision` files a card that is parked AND `draft: true`, so the very next
+    `goc triage` answered "nothing is waiting on you" about the card just
+    filed. And `worker` is deliberately unregistered — any person slug, machine
+    name or capability tag is legal — so a typo cannot be rejected at parse
+    time and echoing the filter back is the only signal available. Both are the
+    arguments `render_empty_query_line` already makes for the queue table; this
+    is the same contract on the surface a human reads to decide whether any
+    card needs them.
+
+    `status: open` is named rather than fixed: whether triage should surface
+    cards parked at `active` is an open question tracked by
+    `parked-active-cards-are-missing-from-goc-triage`. Until that is decided,
+    stating the conjunct is what makes the current behaviour legible.
+    """
+    parts = ["status: open", "gate ≠ none"]
+    # Quoted for the same reason the queue line quotes it: an unregistered
+    # free-form value is the one filter a reader cannot check against a schema,
+    # so a stray space or case difference has to be visible.
+    if worker:
+        parts.append(f"worker: {worker!r}")
+    clause = _hidden_drafts_clause(hidden_drafts)
+    if clause:
+        parts.append(clause)
+    return f"No parked cards ({'; '.join(parts)})."
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # argparse app
 
 
 def confirm(prompt: str, *, default: bool = False) -> bool:
+    """Ask a yes/no question; return `default` for any answer that isn't one.
+
+    The `isatty()` branch is about *prompt echo*, not about EOF: a terminal
+    reader needs to see the question, and a piped caller must not have it
+    interleaved into captured stdout. Both branches must survive EOF, and only
+    the terminal one ever raises it — `readline()` signals end of input by
+    returning `""`, while `input()` raises `EOFError`, which is exactly what
+    Ctrl-D produces. So the TTY read goes through `_prompt_line`, the shared
+    EOF-safe reader, and EOF folds into the same `if not ans` default a bare
+    Enter already takes. (The `EOFError` in the non-TTY handler is kept for a
+    substituted stdin object that raises rather than returning `""`.)
+    """
     if sys.stdin.isatty():
-        ans = input(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").strip().lower()
+        ans = _prompt_line(f"{prompt} [{'Y/n' if default else 'y/N'}]: ").lower()
     else:
         try:
             ans = sys.stdin.readline().strip().lower()
@@ -3562,10 +3926,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", dest="verbose", action="count", default=0,
                         help="-v adds STAGE/CREATED columns + summary line; -vv inlines DoD checklist + cross-refs.")
     parser.add_argument("--json", dest="as_json", action="store_true",
-                        help="Machine-readable JSON.")
+                        help="Machine-readable JSON. Mutually exclusive with --board.")
     parser.add_argument("--no-color", action="store_true")
     parser.add_argument("--board", action="store_true",
-                        help="ASCII multi-column kanban board.")
+                        help="ASCII multi-column kanban board. Mutually exclusive with --json.")
     parser.add_argument("--max-rows", type=_non_negative_int, default=20,
                         help="Cap rows per column in --board.")
 
@@ -3771,7 +4135,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # migrate-list-style
     p_mls = subparsers.add_parser("migrate-list-style",
-                                  help="Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style.")
+                                  help="Re-emit every card into canonical form. Named for the relation-edge list "
+                                       "(advances/advanced_by/supersedes/superseded_by) block-style migration, but "
+                                       "normalises everything emit_frontmatter owns — scalar quoting, block scalars, "
+                                       "key order, the blank line before the body. The report names the changed part.")
     p_mls.add_argument("--dry-run", action="store_true",
                        help="Show which cards would change without writing files.")
 
@@ -3841,10 +4208,25 @@ def cli(argv=None):
 
 
 def _cmd_default(args):
-    cards = load_all_cards()
+    # Flag conflicts are refused before `load_all_cards()`: a usage error must
+    # not first pay for a full deck walk.
     if args.done_flag and args.status_flag is not None:
         print("goc: error: pass only one of --done / --status", file=sys.stderr)
         sys.exit(2)
+    # `--board` and `--json` are alternative *renderers*, not a renderer plus a
+    # modifier, so passing both is a usage error like `--done`/`--status` above.
+    # Refusing beats the `if args.board: … elif args.as_json:` precedence this
+    # replaced: that silently returned an ASCII table to a caller who asked for
+    # machine-readable output, with exit 0 and nothing on stderr to explain the
+    # jq parse error one hop downstream.
+    if args.board and args.as_json:
+        print(
+            "goc: error: pass only one of --board / --json "
+            "(alternative renderers)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    cards = load_all_cards()
     closed_since_threshold = parse_closed_since(getattr(args, "closed_since", None))
     if args.done_flag:
         status = "done"
@@ -3874,37 +4256,61 @@ def _cmd_default(args):
     stages = parse_stage_filter(args.stage_flag)
     tag_filters = validate_tag_filters(args.tags)
     full_by_title = {t.title: t for t in cards}
-    filtered = filter_cards(
-        cards,
-        status=status,
-        stages=stages,
-        contribution=args.contribution,
-        human_gate=args.human_gate,
-        tags=tag_filters,
-        since=since,
-        advances=args.advances,
-        advanced_by=args.advanced_by,
-        worker=args.worker,
-        ready=args.ready,
-        by_title=full_by_title,
-    )
-    if closed_since_threshold is not None:
-        filtered = [
-            t for t in filtered
-            if (dt := _closed_at_instant(t.closed_at)) is not None
-            and dt >= closed_since_threshold
-        ]
-    if getattr(args, "waiting", False):
-        # `--waiting` surfaces *active* impediments. A terminal card can
-        # still carry an overlay (closing never clears `waiting_on` /
-        # `waiting_until`), but that overlay is stale by definition and is
-        # not an actionable wait. A draft scaffold (`card_is_draft`) is not
-        # yet real work either — it is hidden from the queue and marked `✎`
-        # (not `⏳`) on the board. `live_impeded` owns that rule so this
-        # filter, the board's ⏳, and the table's overlay detail line cannot
-        # disagree about what counts as impeded — the gate hand-inlined here
-        # had already drifted twice.
-        filtered = [t for t in filtered if live_impeded(t)]
+
+    def run_query(*, include_drafts: bool = False) -> list[Card]:
+        """Apply the whole query predicate, not just its first stage.
+
+        `--closed-since` and `--waiting` narrow the result *after*
+        `filter_cards`, because both read state (`closed_at` instants, the
+        impediment overlay) that the generic filter deliberately does not.
+        That makes the predicate three-staged, and anything replaying only
+        `filter_cards` is answering a different question than the one asked.
+        The zero-match draft recount below is the caller that made exactly
+        that mistake — it reported drafts as withheld from queries those
+        drafts failed on their own merits — so both callers route through
+        here and a fourth stage cannot re-split them.
+
+        `include_drafts` is threaded to every axis the draft gate is inlined
+        on: `filter_cards`' own conjunct, `card_is_ready` (via it), and
+        `live_impeded`. Only then does the recount ask "would this card
+        appear here if its draft flag were cleared?" instead of getting
+        `False` back from a helper that never looked past the flag.
+        """
+        rows = filter_cards(
+            cards,
+            status=status,
+            stages=stages,
+            contribution=args.contribution,
+            human_gate=args.human_gate,
+            tags=tag_filters,
+            since=since,
+            advances=args.advances,
+            advanced_by=args.advanced_by,
+            worker=args.worker,
+            ready=args.ready,
+            by_title=full_by_title,
+            include_drafts=include_drafts,
+        )
+        if closed_since_threshold is not None:
+            rows = [
+                t for t in rows
+                if (dt := _closed_at_instant(t.closed_at)) is not None
+                and dt >= closed_since_threshold
+            ]
+        if getattr(args, "waiting", False):
+            # `--waiting` surfaces *active* impediments. A terminal card can
+            # still carry an overlay (closing never clears `waiting_on` /
+            # `waiting_until`), but that overlay is stale by definition and is
+            # not an actionable wait. A draft scaffold (`card_is_draft`) is not
+            # yet real work either — it is hidden from the queue and marked `✎`
+            # (not `⏳`) on the board. `live_impeded` owns that rule so this
+            # filter, the board's ⏳, and the table's overlay detail line cannot
+            # disagree about what counts as impeded — the gate hand-inlined here
+            # had already drifted twice.
+            rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
+        return rows
+
+    filtered = run_query()
     full_values = compute_values(cards)
     filtered = sort_default(filtered, values=full_values, by_title=full_by_title)
     if args.board:
@@ -3921,7 +4327,40 @@ def _cmd_default(args):
             slim=getattr(args, "slim", False),
         ))
     else:
-        out = render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
+        # An empty result gets an explicit statement rather than the empty
+        # string `render_table` returns, so "matched nothing" stops reading
+        # like "did not run" — `render_empty_query_line` carries the why.
+        # Scoped to this arm on purpose: `--json` already says `[]` and
+        # `--board` already prints its header, and a prose line in either
+        # would break their machine-readable / grid shape.
+        # The draft conjunct is recovered only on the empty path — the normal
+        # query stays one pass. It re-runs the WHOLE query rather than
+        # `filter_cards` alone: the count is a claim about what publishing
+        # would reveal, so a draft the `--closed-since` window or the
+        # `--waiting` overlay rejects on its own merits must not be counted —
+        # publishing it reveals nothing, and the clause would send the reader
+        # to `goc publish` for no effect.
+        #
+        # Deliberately unguarded on `status`. A `status != "all"` short-circuit
+        # read the draft gate off `filter_cards` alone, where `--status all`
+        # genuinely is inert — but `card_is_ready` and `live_impeded` drop
+        # drafts without ever consulting the status filter, and the branch
+        # above auto-extends an unset `--status` to `all` for `--waiting` /
+        # `--closed-since` / `--board`. So the flagless `goc --waiting` took
+        # the skipped branch every time and reported a deck of impeded
+        # scaffolds as drained. No guard is needed: the recount runs only when
+        # the query matched nothing, and with no draft-gated stage active the
+        # replay returns that same empty set — count 0, clause absent.
+        hidden_drafts = 0
+        if not filtered:
+            hidden_drafts = len(
+                [t for t in run_query(include_drafts=True) if card_is_draft(t)]
+            )
+        out = (
+            render_table(filtered, verbose=args.verbose, no_color=args.no_color, values=full_values, by_title=full_by_title)
+            if filtered
+            else render_empty_query_line(args, status, hidden_drafts=hidden_drafts)
+        )
         # Scope the active-card banner to --worker, mirroring the board path
         # above: the banner is a per-queue "before you claim work" hint, so a
         # worker-scoped queue must see only that worker's claimed cards.
@@ -3935,9 +4374,11 @@ def _cmd_default(args):
             render_leverage_line(filtered, cards, values=full_values)
             if args.ready else ""
         )
+        # `out` is now always non-empty (a table, or the empty-result line),
+        # so the queue view always prints something; the banner and the
+        # leverage line stay optional.
         lines = [part for part in (active_notice, out, leverage) if part]
-        if lines:
-            print("\n".join(lines))
+        print("\n".join(lines))
 
 
 def _cmd_validate(args):
@@ -3956,6 +4397,9 @@ def _cmd_validate(args):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for e in validate_hook_registration():
+        print(f"ERROR: {e}", file=sys.stderr)
+        errors.append(e)
+    for e in validate_plugin_hook_registration():
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
     for t in cards:
@@ -3998,6 +4442,28 @@ def _cmd_validate(args):
     for e in validate_superseded_by_targets(cards):
         print(f"ERROR: {e}", file=sys.stderr)
         errors.append(e)
+    if not cards:
+        # Every other signal this command emits is per-card, so a run that
+        # walked zero cards writes nothing at all and exits 0 — identical to a
+        # clean pass. That silence is a false green wherever the deck resolved
+        # somewhere unintended: `goc install` writes a `pass_filenames: false`
+        # pre-commit hook, so the hook (and the CI step) inherits whatever
+        # DECK_DIR the cwd produced and never learns which deck it checked.
+        # Naming the resolved path is the actionable half — it separates "the
+        # deck is empty" from "I am standing in the wrong tree".
+        #
+        # stderr, and unconditional of --quiet: warnings already go to stderr,
+        # and --quiet's contract is suppressing the per-card OK lines on
+        # stdout. Under --quiet silence IS the success rendering, which is
+        # exactly where the false green is most dangerous. Exit code stays 0 —
+        # a freshly scaffolded repo legitimately has an empty deck, and
+        # Skill(kickoff) walks new users straight from `goc install` into
+        # `goc validate`.
+        print(
+            f"No cards found in {DECK_DIR} — validated 0 cards "
+            f"(structural checks still ran).",
+            file=sys.stderr,
+        )
     if errors:
         sys.exit(1)
 
@@ -4569,18 +5035,48 @@ def _git_auto_commit(card_dirs: list[Path], message: str, *, exclude_draft: bool
         ]
         if not paths:
             return False
-        subprocess.run(["git", "add", "--", *paths], check=True, cwd=git_cwd)
+        # capture_output on both: an uncaptured child inherits goc's stdout and
+        # writes to it immediately, while CPython block-buffers goc's own prints
+        # whenever stdout is a pipe — so `git commit`'s porcelain summary landed
+        # AHEAD of the verb line that announced the mutation everywhere output
+        # is captured (agent tool calls, CI logs, `goc … | head`). goc already
+        # reports the commit itself with its own `  committed` line; the summary
+        # was redundant as well as misordered. Same fix the `git mv` call site
+        # took in `move-fallback-leaks-git-fatal`, which is why every other
+        # subprocess.run in this module already captures.
+        subprocess.run(
+            ["git", "add", "--", *paths],
+            check=True, cwd=git_cwd, capture_output=True, text=True,
+        )
         diff_check = subprocess.run(
+            # `--quiet` already suppresses the diff, so this one never leaked
+            # in practice; captured anyway so "no child writes to goc's stdout"
+            # holds for every call in the module rather than for the two that
+            # happened to be noisy.
             ["git", "diff", "--cached", "--quiet", "--", *paths],
             cwd=git_cwd,
             check=False,
+            capture_output=True,
+            text=True,
         )
         if diff_check.returncode == 0:
             return False
-        subprocess.run(["git", "commit", "-m", message, "--", *paths], check=True, cwd=git_cwd)
+        subprocess.run(
+            ["git", "commit", "-m", message, "--", *paths],
+            check=True, cwd=git_cwd, capture_output=True, text=True,
+        )
         return True
     except subprocess.CalledProcessError as e:
+        # Capturing must not silence the failure path. git's own diagnostic
+        # (a rejected commit on stderr, a refusing pre-commit hook usually on
+        # stdout) used to reach the terminal only by virtue of being
+        # uncaptured; it now lives on the exception, so replay it here rather
+        # than trading a leak for a silent failure.
         print(f"  (auto-commit failed: {e})", file=sys.stderr)
+        for stream in (e.stderr, e.stdout):
+            if isinstance(stream, str) and stream.strip():
+                for line in stream.rstrip().splitlines():
+                    print(f"    {line}", file=sys.stderr)
         return False
     except FileNotFoundError:
         return False
@@ -4606,6 +5102,41 @@ def _validate_commit_flags(commit: bool, no_commit: bool) -> None:
     can never leave a card half-mutated on disk without an auto-commit."""
     if commit and no_commit:
         print("ERROR: pass only one of --commit / --no-commit", file=sys.stderr)
+        sys.exit(2)
+
+
+def _reject_invalid_worker_flag(flag: str, value: str | None) -> None:
+    """Exit 2 on a worker-flag value the frontmatter contract cannot hold.
+
+    Two independent constraints, both enforced by code that runs far downstream
+    of the CLI:
+
+    * `validate_card` refuses an empty or whitespace-only `worker` (and the same
+      for its `who` / `where` sub-keys), so a blank value writes a card the
+      engine's own validator then rejects — the writing verb having already
+      printed a success line and exited 0.
+    * `worker` has no block-scalar form — `_emit_worker` routes every scalar
+      through `_yaml_inline` — so ANY line break is unemittable, LF included,
+      and reaching the emitter raises a bare `FrontmatterError` traceback
+      instead of the CLI's `ERROR:` + exit 2 contract.
+
+    Callers invoke this at verb entry, before any card is read or created, so a
+    refusal leaves the deck byte-identical. `None` means the flag was omitted.
+    Both predicates are borrowed from the components that enforce them —
+    `str.strip()` from `validate_card`, `_contains_line_break` from the emitter
+    — so the boundary guard cannot drift from what actually round-trips.
+    """
+    if value is None:
+        return
+    if not value.strip():
+        print(f"ERROR: {flag} must not be empty or whitespace-only", file=sys.stderr)
+        sys.exit(2)
+    if _contains_line_break(value):
+        print(
+            f"ERROR: {flag} must not contain a line break; the worker field "
+            f"has no multi-line form",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
 
@@ -5135,25 +5666,54 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
     return False, f"unknown derived check '{name}'"
 
 
+def _prompt_line(prompt: str) -> str:
+    """Read one interactive answer line, EOF-safe. The module's only `input()`.
+
+    A piped answer is honoured, and EOF yields "" instead of raising
+    `EOFError` out of the caller. Both ways of reaching EOF matter and neither
+    is exotic: an agent harness runs `goc attest` with nothing on stdin (the
+    check loop catches only `KeyboardInterrupt`), and a human presses Ctrl-D at
+    a `confirm` prompt. "" then falls through to each caller's existing
+    empty-answer path — the declined outcome `--non-interactive` already names
+    for the attest checks, the `default` for `confirm` — so a refusal degrades
+    to the documented result rather than a traceback.
+
+    Deliberately has no `sys.stdin.isatty()` branch. `confirm` needs one to
+    decide whether to *echo* the prompt, but EOF safety is not what that branch
+    was ever about: `readline()` returns "" at end of input and cannot raise,
+    so a guard placed there guards nothing while the terminal `input()` stays
+    bare. `tests/test_confirm_prompt_eof.py` asserts by AST that this is the
+    only `input()` call site in `goc/engine.py`, so a new prompt cannot
+    reintroduce that split.
+    """
+    try:
+        return input(prompt).strip()
+    except EOFError:
+        # input() echoed the prompt but consumed no newline; close the line so
+        # the following result row starts at column 0.
+        print()
+        return ""
+
+
 def _prompt_yes_no(prompt: str) -> str:
-    return input(f"  {prompt} ").strip().lower()
+    return _prompt_line(f"  {prompt} ").lower()
 
 
 def _prompt_manual(check: dict) -> tuple[bool, str]:
     answer = _prompt_yes_no(check.get("prompt", f"Did {check['name']} pass? (y/n)"))
     passed = answer in ("y", "yes")
     rationale_prompt = check.get("rationale_prompt", "")
-    rationale = input(f"    {rationale_prompt} ").strip() if rationale_prompt else ""
+    rationale = _prompt_line(f"    {rationale_prompt} ") if rationale_prompt else ""
     return passed, rationale or ("OK" if passed else "(declined)")
 
 
 def _prompt_agent(check: dict) -> tuple[bool, str]:
     answer = _prompt_yes_no(check.get("prompt", f"Did {check['name']} report PASS? (y/n/n-a)"))
     if answer in ("n-a", "n/a", "na", "skip"):
-        rationale = input(f"    {check.get('rationale_prompt', 'Reason:')} ").strip()
+        rationale = _prompt_line(f"    {check.get('rationale_prompt', 'Reason:')} ")
         return True, f"N/A — {rationale or 'no doc changes'}"
     passed = answer in ("y", "yes")
-    rationale = input(f"    {check.get('rationale_prompt', '')} ").strip() if check.get("rationale_prompt") else ""
+    rationale = _prompt_line(f"    {check.get('rationale_prompt', '')} ") if check.get("rationale_prompt") else ""
     return passed, rationale or ("OK" if passed else "(declined)")
 
 
@@ -5350,6 +5910,12 @@ def _cmd_status(args):
     _validate_commit_flags(commit, no_commit)
     worker_who = args.worker_who
     worker_where = args.worker_where
+    # Both flags default to None when omitted, so any string here — "" included
+    # — is explicit user input destined for the card's frontmatter. Validate at
+    # entry, beside _validate_commit_flags and above every disk read, so a
+    # refusal cannot leave a claimed-but-invalid card behind.
+    _reject_invalid_worker_flag("--worker-who", worker_who)
+    _reject_invalid_worker_flag("--worker-where", worker_where)
     successor = args.superseded_by
     if successor is not None and new_status != "superseded":
         print(
@@ -5572,11 +6138,36 @@ def _cmd_new(args):
     )
     gate = args.gate
     summary = args.summary
-    if summary is not None and not summary.strip():
-        print("ERROR: --summary must not be empty or whitespace-only", file=sys.stderr)
-        sys.exit(2)
+    if summary is not None:
+        if not summary.strip():
+            print("ERROR: --summary must not be empty or whitespace-only", file=sys.stderr)
+            sys.exit(2)
+        # emit_frontmatter routes a pure-LF summary into a literal block scalar
+        # that round-trips faithfully; any OTHER break character falls through
+        # to _yaml_inline, which refuses it. That refusal is correct, but it
+        # fires at the README write — 60 lines below card_dir.mkdir() — so it
+        # would surface as a traceback and strand an empty card directory that
+        # turns `goc validate` red. Reject here instead, beside the other
+        # pre-mkdir guards, keeping the CLI's `ERROR:` + exit 2 contract. Same
+        # expression emit_frontmatter uses for its block-routing decision, so
+        # the two cannot disagree about which values are emittable.
+        if _contains_line_break(summary.replace("\n", "")):
+            print(
+                "ERROR: --summary contains a line-break character the frontmatter "
+                "parser splits on (CR/VT/FF/FS/GS/RS/NEL/U+2028/U+2029); only "
+                "newline (LF) is supported",
+                file=sys.stderr,
+            )
+            sys.exit(2)
     tags = args.tags
     worker = args.worker
+    # `new --worker` shares its argparse dest with the global `--worker` queue
+    # filter, whose default is `$GOC_WORKER` — so an empty value here is the
+    # "no worker supplied" sentinel that the `if worker:` write below already
+    # treats as absent, not authored input, and stays a no-op. Anything
+    # non-empty IS authored into the card and must satisfy the contract.
+    if worker:
+        _reject_invalid_worker_flag("--worker", worker)
     allow_jargon = args.allow_jargon
     commit = args.commit
     no_commit = args.no_commit
@@ -6288,16 +6879,19 @@ def _cmd_triage(args):
     """List parked cards (gate ≠ none), grouped by gate, oldest-first."""
     as_json = args.as_json
     worker = args.worker
-    all_cards = [
-        t
-        for t in load_all_cards()
-        if t.status == "open" and t.human_gate != "none" and not card_is_draft(t)
+    parked = [
+        t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"
     ]
     if worker:
         needle = worker.lower()
-        cards = [t for t in all_cards if needle in _worker_who(t.frontmatter.get("worker")).lower()]
-    else:
-        cards = all_cards
+        parked = [
+            t for t in parked if needle in _worker_who(t.frontmatter.get("worker")).lower()
+        ]
+    cards = [t for t in parked if not card_is_draft(t)]
+    # Counted AFTER every other conjunct, so the number is what `goc publish`
+    # would actually surface here — a draft that the `--worker` filter also
+    # excludes is not a card this view is hiding from this reader.
+    hidden_drafts = len(parked) - len(cards)
     today = _utc_today()
 
     def aged_days(t: Card) -> int:
@@ -6325,7 +6919,7 @@ def _cmd_triage(args):
         return
 
     if not payload:
-        print("No parked cards (gate ≠ none).")
+        print(render_empty_triage_line(worker, hidden_drafts))
         return
 
     by_gate: dict[str, list[dict]] = {}
@@ -6505,14 +7099,65 @@ def _cmd_migrate(args):
     print("Next: `goc validate` to verify card integrity after migration.")
 
 
+def _split_card_file(text: str) -> tuple[dict[str, str], str]:
+    """Split a card file into {frontmatter key: rendered block} plus the region after it.
+
+    A key's block is its `key:` line together with every following
+    continuation line (block-scalar content, block-style list items) up to the
+    next top-level key. Used to report *which* part of a card a canonical
+    re-emit would rewrite.
+    """
+    lines = text.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return {}, text
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
+        return {}, text
+    blocks: dict[str, str] = {}
+    key = None
+    for line in lines[1:end]:
+        match = re.match(r"^([A-Za-z0-9_]+):", line)
+        if match:
+            key = match.group(1)
+            blocks[key] = line
+        elif key is not None:
+            blocks[key] += "\n" + line
+    return blocks, "\n".join(lines[end + 1:])
+
+
+def _reemit_changes(original: str, rewritten: str) -> list[str]:
+    """Name the parts of a card that a canonical re-emit would change.
+
+    The migration's predicate is whole-card canonical equality, not just
+    relation-edge list style, so the report has to say which part moved —
+    otherwise a summary requote and an `advances` reflow look identical to
+    the reader.
+    """
+    before, before_rest = _split_card_file(original)
+    after, after_rest = _split_card_file(rewritten)
+    changes = {key for key, block in after.items() if before.get(key) != block}
+    changes |= {key for key in before if key not in after}
+    named = sorted(changes)
+    if before_rest != after_rest:
+        named.append("body spacing")
+    return named
+
+
 def _cmd_migrate_list_style(args):
-    """Re-emit every card to convert relation-edge lists (advances/advanced_by/supersedes/superseded_by) to block-style."""
+    """Re-emit every card into canonical form, rewriting whatever `emit_frontmatter` normalises.
+
+    Named for the migration it was introduced for — converting relation-edge
+    lists (advances/advanced_by/supersedes/superseded_by) to block style — but
+    the predicate is whole-card canonical equality, so scalar quoting,
+    block-scalar shape, key order and the blank line before the body are
+    normalised too. The report names the changed part per card.
+    """
     dry_run = args.dry_run
     if not DECK_DIR.exists():
         print(f"ERROR: {DECK_DIR} does not exist", file=sys.stderr)
         sys.exit(1)
 
-    changed: list[str] = []
+    changed: list[tuple[str, list[str]]] = []
     for card_dir in sorted(DECK_DIR.iterdir()):
         readme = card_dir / "README.md"
         if not readme.exists():
@@ -6527,23 +7172,23 @@ def _cmd_migrate_list_style(args):
             continue
         rewritten = emit_frontmatter(fm, body=body)
         if rewritten != original:
-            changed.append(card_dir.name)
+            changed.append((card_dir.name, _reemit_changes(original, rewritten)))
             if not dry_run:
                 readme.write_text(rewritten)
 
     if not changed:
-        print("All cards already use block-style for advances/advanced_by/supersedes/superseded_by — nothing to do.")
+        print("Every card already matches its canonical re-emit — relation-edge lists "
+              "(advances/advanced_by/supersedes/superseded_by) in block style, plus scalar "
+              "quoting, block scalars and spacing — nothing to do.")
         return
 
+    headline = "Would rewrite" if dry_run else "Rewrote"
+    print(f"{headline} {len(changed)} card(s) — re-emit into canonical form, changed part per card:")
+    for name, changes in changed:
+        print(f"  {name} — {', '.join(changes) if changes else 'whitespace'}")
     if dry_run:
-        print(f"Would rewrite {len(changed)} card(s):")
-        for name in changed:
-            print(f"  {name}")
         print("Dry run — no changes made.")
     else:
-        print(f"Rewrote {len(changed)} card(s):")
-        for name in changed:
-            print(f"  {name}")
         print("Done. Run `goc validate` to confirm.")
 
 

@@ -135,6 +135,15 @@ prove the convention; `_cmd_migrate_list_style` is the regression. The DoD's
 PROCESS sweep item makes the next reader audit the remaining call sites
 rather than assuming this is a one-off.
 
+**Family instance 2 (found 2026-07-31, after this card closed):**
+[card-language-guard-aborts-the-whole-deck-scan-on-one-unparseable-card](../card-language-guard-aborts-the-whole-deck-scan-on-one-unparseable-card/)
+— the same unnetted-bulk-walk shape in `scripts/check_card_language.py`.
+This card's sweep was scoped to `goc/engine.py`, so a repo-local
+deck-walking *script* was never in range; that scope gap is what let the
+second instance sit on disk. The sweep is now complete repo-wide — see
+that card's `log.md` for the `scripts/` result and the confirmation that
+`goc/templates/hooks/` does not call `parse_frontmatter` at all.
+
 ## Fix
 
 Wrap the `parse_frontmatter` call in the same try/except shape `load_all_cards`

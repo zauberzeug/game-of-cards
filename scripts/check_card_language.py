@@ -31,6 +31,11 @@ legitimately quote non-English identifiers, upstream error strings, and (in
 several cards) the historical offending title itself, so scanning them would
 report the deck's own record of this bug as a violation.
 
+A card whose frontmatter the parser cannot read (unterminated `---`, a missing
+space after a colon, a duplicate key) is warned about on stderr and then
+checked on its directory slug — the malformation is `goc validate`'s finding,
+not this guard's, and one bad card must not cost every other card's verdict.
+
 Detection is **precision-first**, in two layers:
 
 1. `MARKER_WORDS` — words that are common in another European language and are
@@ -85,7 +90,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from goc.engine import parse_frontmatter  # noqa: E402
+from goc.engine import FrontmatterError, parse_frontmatter  # noqa: E402
 
 DECK_DIR = ROOT / ".game-of-cards" / "deck"
 
@@ -215,7 +220,22 @@ def flag_text(text: str) -> list[str]:
 
 def scan_card(readme: Path) -> list[tuple[str, str]]:
     """Return `(field, reason)` pairs for one card README."""
-    frontmatter, _body = parse_frontmatter(readme.read_text(encoding="utf-8"))
+    try:
+        frontmatter, _body = parse_frontmatter(readme.read_text(encoding="utf-8"))
+    except FrontmatterError as exc:
+        # `parse_frontmatter` returns ({}, text) only for "no opening `---` at
+        # all"; when the opener IS there and the document is unparseable it
+        # RAISES — an unterminated `---`, `status:open` with no space, a
+        # duplicate key. Letting that escape costs this card's slug check AND,
+        # because `scan_deck` is one comprehension, every other card's verdict
+        # in the same run. Warn and continue, the posture
+        # `engine.load_all_cards` takes; the malformation itself belongs to
+        # `goc validate`, which reports it per card and exits 1
+        # (`engine.validate_deck_directories`). Exit code here stays
+        # language-only, so a bad card fails the build once, with the right
+        # diagnostic, instead of twice with the wrong one.
+        print(f"WARNING: {readme.parent.name}: {exc}", file=sys.stderr)
+        frontmatter = {}
     # The directory name is the title of record; fall back to it so a card whose
     # frontmatter the parser cannot read is still checked on its slug.
     frontmatter.setdefault("title", readme.parent.name)

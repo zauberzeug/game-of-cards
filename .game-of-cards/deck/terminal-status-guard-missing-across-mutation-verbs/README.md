@@ -13,13 +13,13 @@ advanced_by:
   - goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards
   - goc-move-renames-terminal-status-cards-without-any-guard
 tags: [epic, meta-fix, api-contract]
-summary: "Aggregation epic for the family of mutation verbs that mutate cards whose `status` is already terminal (`done`/`disproved`/`superseded`) with no `TERMINAL_STATUSES` guard. `goc decide` got a guard (engine.py:~4557, via the closed sibling); `goc wait`, `goc attest`, `goc quality-pass`, and `goc move` still lack one. Collects the open siblings so they can be resolved with one shared guard shape (a helper applied across the verbs) instead of four independent point-fixes that drift."
+summary: "Aggregation epic for the family of mutation verbs that mutate cards whose `status` is already terminal (`done`/`disproved`/`superseded`) with no `TERMINAL_STATUSES` guard. `goc decide` got a guard (engine.py:~5868, via the closed sibling); `goc wait`, `goc attest`, `goc quality-pass`, and `goc move` still lack one. Collects the open siblings so they can be resolved with one shared guard shape (a helper applied across the verbs) instead of four independent point-fixes that drift."
 definition_of_done: |
-  - [ ] PROCESS: A shared guard shape is decided — either a reusable `TERMINAL_STATUSES` helper that each verb calls, or a per-verb inline check mirroring `_cmd_decide` (engine.py:~4557). Recorded in this card's log.md.
+  - [ ] PROCESS: A shared guard shape is decided — either a reusable `TERMINAL_STATUSES` helper that each verb calls, or a per-verb inline check mirroring `_cmd_decide` (engine.py:~5868). Recorded in this card's log.md.
   - [ ] PROCESS: All four open child cards (`goc-wait-...`, `goc-attest-...`, `goc-quality-pass-...`, `goc-move-...`) are closed or superseded under the agreed shape; this epic's `advanced_by` roster all terminal.
   - [ ] MECHANICAL: Each guarded verb's error message names the supersede workflow (`goc status <old> superseded --by <new>`) where that is the correct forward path, matching the post-fix `_cmd_decide` message.
   - [ ] TDD: A regression test asserts each of the four verbs refuses a terminal-status target (exit non-zero, no mutation written).
-  - [ ] PROCESS: Sibling-shape audit closed out — `_cmd_advance` / `_cmd_unadvance` (engine.py:~4383/4404) explicitly classified as in-scope (need a guard) or out-of-scope (supersession edges legitimately mutate closed cards), with the verdict recorded.
+  - [ ] PROCESS: Sibling-shape audit closed out — `_cmd_advance` / `_cmd_unadvance` (engine.py:~5662/4404) explicitly classified as in-scope (need a guard) or out-of-scope (supersession edges legitimately mutate closed cards), with the verdict recorded.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -32,7 +32,7 @@ mutate a card whose `status` is already terminal (`done`,
 `disproved`, `superseded`) with **no `TERMINAL_STATUSES` guard**, so a
 closed card — the deck's durable record-axis artefact — silently gains
 fresh state long after closure. `goc decide` was given the canonical
-guard (`engine.py:~4557`); the rest of the family was overlooked when
+guard (`engine.py:~5868`); the rest of the family was overlooked when
 that guard was added.
 
 ## Family roster

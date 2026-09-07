@@ -23,11 +23,11 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:107` — `AgentShim.guidance` field declaration
-- `goc/install.py:342-356` — `_load_agent_shim` builds `GuidanceBlock` tuples from `manifest["guidance"]` and assigns them to the shim
+- `goc/install.py:136` — `AgentShim.guidance` field declaration
+- `goc/install.py:399-413` — `_load_agent_shim` builds `GuidanceBlock` tuples from `manifest["guidance"]` and assigns them to the shim
 - `goc/templates/agents/claude/manifest.json:17-23` — declares the block the engine never reads
 - `goc/templates/agents/codex/manifest.json:13` — declares `guidance: []`
-- `goc/install.py:111-112, 136-140` — the actual briefing flow reads from module-level constants `AGENTS_GUIDANCE` / `CLAUDE_GUIDANCE`, not from the per-agent shim
+- `goc/install.py:140-141, 136-140` — the actual briefing flow reads from module-level constants `AGENTS_GUIDANCE` / `CLAUDE_GUIDANCE`, not from the per-agent shim
 
 ## What's broken
 
@@ -89,14 +89,14 @@ field.
 
 ```text
 $ grep -rn "shim\.guidance\|AgentShim(.*guidance" goc/ tests/ scripts/
-goc/install.py:107:    guidance: tuple[GuidanceBlock, ...]
-goc/install.py:355:        guidance=guidance,
+goc/install.py:109:    guidance: tuple[GuidanceBlock, ...]
+goc/install.py:357:        guidance=guidance,
 
 $ grep -rn "AGENTS_GUIDANCE\|CLAUDE_GUIDANCE" goc/ tests/
-goc/install.py:111:AGENTS_GUIDANCE = GuidanceBlock(...)
-goc/install.py:112:CLAUDE_GUIDANCE = GuidanceBlock(...)
-goc/install.py:136:    agents_body = (templates / AGENTS_GUIDANCE.template).read_text()...
-goc/install.py:138:        claude_body = (templates / CLAUDE_GUIDANCE.template).read_text()...
+goc/install.py:113:AGENTS_GUIDANCE = GuidanceBlock(...)
+goc/install.py:114:CLAUDE_GUIDANCE = GuidanceBlock(...)
+goc/install.py:140:    agents_body = (templates / AGENTS_GUIDANCE.template).read_text()...
+goc/install.py:140:        claude_body = (templates / CLAUDE_GUIDANCE.template).read_text()...
 ```
 
 The first grep returns only the field's declaration site and the
@@ -183,3 +183,19 @@ Checked against the open / done / disproved queues for
   (done) — addresses the hooks manifest, not the guidance manifest.
 
 No prior card identifies the manifest's `guidance` field as dead data.
+
+**Family instance 2 (found 2026-07-31, this card still open):**
+[deck-prompt-router-exploration-and-tooling-lists-can-never-suppress-the-reminder](../deck-prompt-router-exploration-and-tooling-lists-can-never-suppress-the-reminder/)
+— the same shape in `goc/templates/hooks/deck_prompt_router.py`: the hook
+populates `has_exploration` / `has_tooling` from 13 regexes on every prompt,
+but its two branches partition on `has_work`, so no consumer can act on
+either value. Same failure mode as this card's "why it matters" — an author
+edits the dead surface (there, by adding vocabulary to `EXPLORATION`; here,
+by adding a `guidance` block to a new manifest), ships a no-op, and debugs
+it. Neither is linter-visible: both structures execute on every run, and
+only the effect is missing.
+
+That card carries the shared sweep (93 module-level constants in `goc/` and
+`scripts/`, one degenerate hit) and the reasoning for filing no umbrella at
+two instances. Whichever of these two is fixed first should link the other
+from its `log.md`.

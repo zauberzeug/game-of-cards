@@ -38,6 +38,7 @@ actually applies:
 | `advanced-by-closed` FAILs at attest time | Retraction vs waiting |
 | An attest check needs `--skip` | Attest details and skip policy |
 | New evidence after the card closed | After closure |
+| Your fix also fixes someone else's open card | Other cards your fix also fixed |
 | Commit-message shape, commit-failure handling | Commit conventions |
 | Index hygiene when agents share a worktree | Parallel-agent commit safety |
 | Why these gates exist | Rationale |
@@ -163,6 +164,20 @@ prints `<title>: open → done`.
 - One fix resolving several cards → `goc done --bundle <A> <B> …`
   writes one shared attestation and cross-referenced closure entries;
   read `reference.md` § Bundled closures before first use.
+
+Before the flip, check whether your fix also retires a card nobody is
+looking at — dedup ran when *those* cards were filed, so none of them
+saw yours (`reference.md` § Other cards your fix also fixed):
+
+```bash
+grep -rli '<symbol-your-fix-touched>' .game-of-cards/deck/*/README.md
+```
+
+Per `open`/`active` hit describing the defect you just fixed: at gate
+`none`, `goc status <other> superseded --by <title>`. At gate
+`decision`/`session` the engine refuses — lowering a gate is the
+human's act — so append a `## <ts> — Staleness re-check` entry to that
+card's `log.md` naming your commit instead.
 
 ## Step 7 — project-specific post-close action
 

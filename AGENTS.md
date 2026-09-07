@@ -27,9 +27,10 @@ uv run goc --help                  # exercise the CLI from source
 uv run goc validate                # check every card's frontmatter
 uv run python -m unittest discover -s tests  # run the regression suite
 uv build                           # produce wheel + sdist in dist/
-pre-commit run --all-files         # sync plugin assets + goc validate + card language
+pre-commit run --all-files         # sync plugin assets + goc validate + card language + card YAML
 python scripts/sync_plugin_assets.py --check  # verify claude-plugin/ is in sync
 uv run python scripts/check_card_language.py  # cards obey the English-only rule
+uv run python scripts/check_card_frontmatter_yaml.py  # card frontmatter is valid YAML
 ```
 
 `tests/` is a stdlib `unittest`-based regression suite (run it locally
@@ -145,9 +146,14 @@ publisher configuration details.
 
 The Python package is intentionally small:
 
-- **`goc/cli.py`** — thin argparse entry point. Builds the engine's
-  argparse parser via `_build_parser`, bolts on `install` + `upgrade`
-  from `install.py`, and adds `--version`. Wired as
+- **`goc/cli.py`** — thin console-script entry point. Restores the
+  default SIGPIPE disposition, intercepts `install` / `upgrade` on
+  `argv[0]` and routes them to standalone argparse parsers over
+  `install.py`, and delegates every other invocation to `engine.cli()`,
+  which builds the engine parser (`_build_parser`) and owns the global
+  flags including `--version`. Because the two install verbs never reach
+  that parser, they do not appear in `goc --help` — see the open card
+  `goc-help-omits-install-and-upgrade-subcommands`. Wired as
   `goc = "goc.cli:main"` in `pyproject.toml`.
 - **`goc/engine.py`** — the bulk of the tool: frontmatter parser, schema
   loader, card loader, validator, value/edge graph, table/board
@@ -157,9 +163,15 @@ The Python package is intentionally small:
   `migrate`, `migrate-list-style`).
 - **`goc/install.py`** — `install` and `upgrade` commands. Reads
   templates via `importlib.resources` so it works from a wheel.
-- **`goc/schema.yaml`** — single source of truth for card frontmatter
-  (loaded by `engine.load_schema()`; inlined into the `card-schema`
-  skill body at install time).
+- **`goc/schema.yaml`** — single source of truth for card frontmatter,
+  loaded at runtime by `engine.load_schema()`. The `card-schema` skill
+  ships a byte-identical second copy at
+  `goc/templates/skills/card-schema/schema.yaml`, which `goc install`
+  and the plugin mirrors copy verbatim as a **sibling file** beside
+  `SKILL.md`, which references it rather than embedding it. No script
+  syncs those two: a schema change is a deliberate two-file edit, and
+  `tests/test_skill_schema_yaml_parity.py` fails the build when only
+  one moves.
 
 `engine.py` resolves `DECK_DIR` to the canonical `.game-of-cards/deck/`
 path, with legacy `deck/` fallback and dual-tree conflict detection.
@@ -181,10 +193,24 @@ for everything `goc install` writes into a consuming repo:
 The hook list is derived from `templates/hooks/*.py` at install time
 (see `deck_hook_scripts` in `goc/install.py`); dropping a new `.py`
 file in that directory wires it into the install copy and the parity
-mirrors automatically. The event mapping (`SessionStart`, `Stop`, etc.)
-stays explicit in `GOC_CLAUDE_HOOKS`, and `goc validate` enforces that
-every script has a registration and every registration points at a
-real file.
+mirrors automatically. The **event mapping** is not derived — it stays
+explicit in three hand-maintained registries, one per install path:
+`GOC_CLAUDE_HOOKS` (`goc/install.py`, the vendored `--local-skills`
+path) plus `claude-plugin/hooks/hooks.json` and
+`codex-plugin/hooks/hooks.json` (the plugin path, which is the
+default). They stay hand-written because a command is not derivable
+from a script name — Codex carries per-event `statusMessage` strings
+and a version-fallback shell wrapper, Claude a different root
+variable. `goc validate` covers all three: `validate_hook_registration`
+checks `GOC_CLAUDE_HOOKS`, and `validate_plugin_hook_registration`
+checks each payload's `hooks.json` against the scripts that payload
+ships — in both directions, so a script nothing registers (installed
+but never invoked) and a registration naming a script the payload no
+longer ships (fails on every fire) each turn the build red. The
+plugin check is gated on the payload root existing at the repo root,
+so it is inert in consuming repos. OpenClaw is out of scope for it:
+it reimplements the deck hooks in TypeScript inside
+`openclaw-plugin/index.ts` and ships no `hooks.json`.
 
 ### Skill and hook files have two copies — edit the template, sync handles the rest
 
@@ -240,6 +266,28 @@ LLM reconciliation of the *evolving* files where real upstream
 changes need a judgment call. Headless / CI / scripted upgrades
 (e.g., the `--keep-local-skills` path) preserve content with no agent
 in the loop.
+
+**"already at goc X — nothing to do" is derived, never enumerated.**
+`upgrade()` computes `_plan_upgrade_writes` first and short-circuits only
+when no planned write is effecting — each write's action comes from asking
+its own executor, in `probe=True` mode, whether it would change the file.
+So the preview and the real run answer "is there work?" from one
+computation, and a repair added to `upgrade()` is covered the moment it is
+planned. Do **not** reintroduce a `pending_*` allowlist term for a new
+write; that per-site register is what let four repairs go unreachable at
+the same version (`goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version`).
+The plan is not writes only: a repair that *deletes* has no template to be
+derived from, so `_plan_skill_prunes` asks `_sync_skill_tree(probe=True)`
+which destination files its wipe-and-recopy would remove and plans one
+`skill-prune` entry per path — that is the shape to copy for the next
+deletion, not a new term beside the guard
+(`upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict`).
+The three remaining terms next to the plan cover work the plan does not
+model: the interactive vendored-cleanup prompt, the legacy-briefing strip,
+and the `skills_source` pin — the one surviving `pending_*` term that does
+gate a write, kept honest by asking `_write_skills_source` in `probe=True`
+mode rather than restating what it would do, and a holdover rather than a
+shape to copy.
 
 ### `skills_source` — which install path owns `.claude/skills/`
 
@@ -457,6 +505,24 @@ When filing GoC cards in this repo:
   precision-first: a slug built entirely from cognates can still slip
   through. The rule is this repo's convention, not goc semantics, so
   the guard is deliberately repo-local and ships to no consumer.
+- **Frontmatter must be valid YAML, not merely yaml-lite-parseable.**
+  goc reads cards through `goc/_vendor/yaml_lite.py`, scoped on
+  purpose as a superset of what `emit_frontmatter` produces, and
+  `validate_card` checks parsed field *values* rather than the
+  block's YAML legality — so a hand-edited card can pass
+  `goc validate` while a strict parser refuses it. Quote any scalar
+  holding `: ` or a TAB, or opening with a YAML indicator — the
+  spec's closed `c-indicator` list, held once in `goc.engine` as
+  `_YAML_INDICATORS` and imported by the guard rather than restated
+  (three of them, `-` `?` `:`, bind only before a space or alone).
+  Re-emitting the card through any goc verb is the fix: the emitter
+  consults the same set, so it quotes every shape the guard flags
+  and preserves a quote you added by hand. Guarded by
+  `scripts/check_card_frontmatter_yaml.py`, which runs as the
+  `card-frontmatter-yaml` pre-commit hook and from
+  `tests/test_card_frontmatter_yaml.py` in CI. Repo-local for the
+  same reason: `goc validate` ships to consumers and cannot take a
+  YAML dependency back.
 - **No direct quotes from discussions.** Do not paste verbatim
   quotes from meetings, transcripts, chat, or coding-coffee
   retrospectives into card bodies. Synthesize the technical content

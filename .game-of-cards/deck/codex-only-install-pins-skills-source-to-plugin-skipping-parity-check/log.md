@@ -16,3 +16,19 @@ per-agent skills_source tracking) for a decision then.
 
 Gate intentionally left `decision` — the semantics pick is deferred,
 not made.
+
+## 2026-08-31 — refine-deck: stale park re-checked, kept
+
+96 days parked. Re-read against HEAD: the pin is unchanged —
+`chosen_source = "vendored" if "claude" in local_skills_agents else "plugin"`
+(`goc/install.py:1616`; the body's cite was repaired from `:1597` to that
+number by this pass). A codex-only install therefore still writes
+`skills_source: plugin`.
+
+No `reproduce.py` built this round. The recipe needs a full `goc install`
+into a scratch repo with a codex-only agent set, then a deliberate template
+divergence under `.codex/skills/`, then `goc validate` — three stateful
+steps whose failure modes overlap with the sibling card
+`codex-install-from-plugin-payload-vendors-skills-and-crashes-on-omitted-templates-skills`.
+Building one fixture that serves both is the efficient move and is worth
+more than the remaining budget of a hygiene pass.

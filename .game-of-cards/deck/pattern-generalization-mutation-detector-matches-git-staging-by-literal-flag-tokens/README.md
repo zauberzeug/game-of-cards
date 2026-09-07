@@ -31,7 +31,7 @@ the family stops generating new instances.
 
 ## Location
 
-`goc/templates/hooks/pattern_generalization_check.py:40-70` —
+`goc/templates/hooks/pattern_generalization_check.py:49-79` —
 `_is_broad_git_mutation`. Mirrored verbatim in
 `claude-plugin/hooks/pattern_generalization_check.py`,
 `codex-plugin/hooks/pattern_generalization_check.py`, and the TypeScript
@@ -43,7 +43,7 @@ The matcher tokenizes the Bash command with `shlex.split`, then tests
 each token for **exact equality** against a flat set of flag spellings:
 
 ```python
-# goc/templates/hooks/pattern_generalization_check.py:35-37, 64-70
+# goc/templates/hooks/pattern_generalization_check.py:44-46, 64-70
 _BROAD_STAGING_FLAGS = frozenset(
     {"-A", "-p", "-u", "--all", "--update", "--patch"}
 )

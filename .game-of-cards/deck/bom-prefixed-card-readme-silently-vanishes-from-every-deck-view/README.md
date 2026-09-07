@@ -24,7 +24,7 @@ definition_of_done: |
 
 `goc/engine.py:181` (`parse_frontmatter` opener check), downstream
 `load_card` (`goc/engine.py:944`) and `load_all_cards`
-(`goc/engine.py:966`).
+(`goc/engine.py:1016`).
 
 ## What's broken
 

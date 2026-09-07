@@ -50,8 +50,9 @@ Surface rot and act on it before commit. Two action paths depending
 on the finding's nature:
 
 - **Hygiene findings** (mechanical: stale `unverified` parks, defunct
-  file:line cites, missing summaries, predicate-failing tags,
-  orphaned-edge mechanical wires) — apply the edit directly.
+  file:line cites, missing summaries, orphaned-edge mechanical wires)
+  — apply the edit directly; a non-firing tag row is the one
+  exception, reported and never edited.
 - **Structural findings** (epic-shaped clusters, missing
   canonical-reference families, contribution-recall proposals,
   meta-decision umbrellas, newly-emergent tag candidates surfaced
@@ -69,6 +70,7 @@ situation actually applies:
 |---|---|
 | Why this pass exists; hook scope rules | Rationale |
 | Running the four orphaned-dependency sub-checks | Orphaned-dependency sub-check scripts |
+| Anchoring cites; what the recipe declines | Citation anchor check |
 | `goc quality-pass --llm` | Quality-pass `--llm` flag |
 | What the Step 4 report should look like | Example Step 4 output |
 | Which findings Step 4.5 covers, escape valve | Step 4.5 scope notes |
@@ -123,13 +125,48 @@ decide if the lead is still real, and either:
 
 ### Defunct file:line citations
 
-For each open card, check its body cites against current code:
-verify each cited file exists and the cited line is ≤ EOF. A defunct
-citation usually means the cited code was refactored. Re-read the
-card; either update the citation in place (mechanical edit, no
-status change) or — if the refactor also fixed the defect — close
-via `Skill(finish-card)` with a note "fixed incidentally by
-<commit-hash>".
+Check each open card's cites against current code with an ANCHOR
+test, not a bounds test. An in-range line number is no evidence the
+cite is current: a file that grew keeps every old number valid while
+the code that was there moved down, so `line ≤ EOF` can only fire on
+a file that SHRANK. Compare what is AT the cited line now against
+what the card says is there.
+
+Scope by what the cite CLAIMS, not by where it sits. A cite asserting
+where code lives NOW is in scope in prose and inside a fenced block
+alike — the fenced form is a COMMENT LABEL, a `#` or `//` marker before
+the cite on its line. A cite that is part of a dated record — pasted
+`grep -n` output (`path:line:content`), a `reproduce.py` transcript, a
+quoted error — is OUT of scope: rewriting its number fabricates output
+the command never produced. Repair the labels; leave the records and
+report their count apart from the declines below. Undecidable → record.
+
+Per cite (long form: `reference.md` § Citation anchor check):
+
+1. Resolve the path — cards write `engine.py:N` for `goc/engine.py:N`;
+   prefer a non-mirror match. A range names one BLOCK: map both
+   endpoints, then check the PAIR — emit only if it is ordered
+   (`start <= end`) and the span still fits a block. An unordered pair or
+   an implausible span is a DECLINE, reported. A range that ARRIVES
+   incoherent is an earlier pass's damage, not drift: its endpoints
+   anchor to whatever they were last moved onto, so re-mapping launders
+   the corruption. Report it; never rewrite it.
+2. Anchor = that line's text at the commit that last WROTE the number:
+   walk `git log --follow --format=%H -- <card>/README.md` oldest →
+   newest and take the newest commit where the cite token turns from
+   absent to present — the filing commit for a virgin cite, the repair
+   commit for one an earlier pass rewrote. Anchoring a repaired number
+   at the filing commit reads unrelated code and moves the cite onto it.
+3. Anchor ≠ the line in HEAD → the cite is defunct.
+4. Relocate the anchor text in HEAD and rewrite the number **only** on
+   a unique match of a non-trivial line (>~12 chars, not a blank or a
+   bare brace). Never guess.
+
+Cites step 4 declines — anchor gone, ambiguous, or trivial — are
+REPORTED for a human to read, never silently skipped. Anchor text that
+exists nowhere usually means the cited code was refactored away:
+re-read the card and, if the refactor also fixed the defect, close via
+`Skill(finish-card)` with a note "fixed incidentally by <commit-hash>".
 
 ### Missing summaries
 
@@ -147,10 +184,11 @@ change.
 
 ### Tags without firing predicates
 
-Per `Skill(card-schema)`, a tag must satisfy **its own row's**
-predicate, not a fixed text window; judgment rows aren't
-text-matchable (`reference.md` § Tag sweeps). Survey 5–10 random
-cards per round; strip only where a row plainly fails.
+Per `Skill(card-schema)`, a tag must satisfy **its own row**, not a
+fixed text window; the row's `check` column says whether that is
+scorable or a judgment (`reference.md` § Tag sweeps). Survey 5–10
+random cards per round. **Report, never strip** — a non-firing row
+costs a line of output, not curated grouping.
 
 ### Orphaned dependencies
 
@@ -163,7 +201,8 @@ zero edges; open cards with legacy `**Depends on:** / **Next:** /
 spawned_from: X`). Run the four sub-checks in `reference.md`
 § Orphaned-dependency sub-check scripts, judge each surfaced card's
 edge direction, and wire it via `goc advance X --by Y`
-(symmetric-by-construction, so the validator stays happy).
+(symmetric-by-construction, so the validator stays happy). A card
+whose family members are code sites has nothing to wire — leave it.
 
 ### Card metadata quality pass
 

@@ -23,3 +23,17 @@ there: terminal-status refusal) enforced by one helper every verb routes
 through, instead of N drifting inline checks. `resolve_card_dir` sits at the
 top of each verb's title resolution and is the natural hang-point if that
 epic settles on the same helper pattern.
+
+## 2026-08-02T05:45:00Z — Post-close amendment
+
+Residual found and closed downstream. The guard this card introduced tested
+only *containment* (does the title resolve inside `DECK_DIR`?), not
+*canonicality* (is it the bare directory name?). `Path` folds `a/` and
+`./a` to the same single-component path, so both passed — and every caller
+that keeps the raw argument string as the card's identity (`_mutate_pair`'s
+edge writes, `_cmd_advance`'s self-edge guard, `_cmd_done_bundle`'s
+duplicate-member guard) then read one card as two. Fixed by
+[non-canonical-title-spellings-write-dangling-edges-and-self-references](../non-canonical-title-spellings-write-dangling-edges-and-self-references/),
+which adds `title != Path(title).name` to the same condition; the
+regression file `tests/test_title_resolution_containment.py` grew a
+`CanonicalTitleSpellingTest` class alongside the containment cases.

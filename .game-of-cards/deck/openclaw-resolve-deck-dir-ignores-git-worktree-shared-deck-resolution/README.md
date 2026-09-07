@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-- `openclaw-plugin/index.ts:266-274` — `resolveDeckDir`:
+- `openclaw-plugin/index.ts:343-351` — `resolveDeckDir`:
 
   ```ts
   async function resolveDeckDir(projectDir: string): Promise<string> {
@@ -47,7 +47,7 @@ definition_of_done: |
     path (and flags `_DUAL_TREE_CONFLICT`); legacy is returned only when
     canonical is absent.
 
-- `openclaw-plugin/index.ts:528` — the sole consumer: `session_start` calls
+- `openclaw-plugin/index.ts:710` — the sole consumer: `session_start` calls
   `resolveDeckDir(projectDir)` then `findActiveCards(deckDir)` to compose the
   "[GoC] Active card(s) … resume or close before starting new work" reminder.
 

@@ -311,12 +311,57 @@ capability card as mistagged and invites a hygiene sweep to strip the
 tag wholesale.
 
 **Sweeping caution.** `story` turns on a judgment about what the card
-delivers, so it has no closed-form text predicate. `Skill(refine-deck)`
-§ "Tags without firing predicates" covers what that means for a
-mechanical sweep: inability to evaluate a row is not evidence the row
-fails.
+delivers, so it has no closed-form text predicate — hence `check:
+judgment` in the core table. `Skill(refine-deck)` § "Tags without
+firing predicates" covers what that means for a mechanical sweep:
+inability to evaluate a row is not evidence the row fails, and the
+sweep reports rather than strips.
+
+## Why rows split
+
+A `judgment` row's recognition aids default to the same surface the old
+single rule named — the title, H1, or first ~2500 chars of body —
+unless the row widens it. They are aids either way: a card meets a
+judgment row by being the thing the row describes.
+
+The split exists because trying to give such a row a text *predicate*
+failed three times on the same table, always the same way.
+
+| date | row | measured failure | resolution |
+|---|---|---|---|
+| 2026-07-08 | `meta-fix` | 37 of 45 (search window too narrow) | widen the row |
+| 2026-07-27 | `story` | 67 of 102 (branch nothing could satisfy) | widen the row |
+| 2026-08-03 | `meta-fix` | 3 of 54 (nothing to find at filing time) | classify the rows |
+
+Each widening enlarged the *surface* a literal was searched in. The
+third failure showed the surface was never the problem: an umbrella card
+is filed because a family was noticed, and neither of the row's
+satisfiers follows from that. Repos name umbrellas by shape, not by
+writing the tag name into the prose, and the family roster gets wired
+later or never — so a correctly tagged umbrella was born failing its own
+row and stayed failing until someone happened to write the word. One
+card in the population was unreachable by *any* text-or-edge predicate:
+its whole subject was a deliberately edgeless grouping.
+
+So the fix is not a fourth widening but a classification. A row whose
+satisfier is card state (`bug`, `epic`, `unverified`) is scored. A row
+whose satisfier is meaning (`story`, `documentation`, `test`,
+`api-contract`, `infra`, `meta-fix`) is met by construction — the author
+asserting the tag *is* the claim — and its listed patterns are
+recognition aids that help a reader confirm it, nothing more.
+
+The paired change is in `Skill(refine-deck)`: the sweep's action on a
+row that does not fire is *report*, never *strip*. That bounds the cost
+of every future under-firing predicate, including on rows nobody has
+measured yet, and it is the half that makes a misclassification
+recoverable instead of destructive.
 
 ## Adding new tags
+
+A new row must declare a `check` value. If its satisfier is not
+readable out of frontmatter, edges, or files in the card directory, it
+is `judgment` — write the recognition aids into the row and mark it
+`judgment` rather than promoting the aids to a predicate.
 
 Project-specific tags (domain vocabulary, sub-project names,
 cluster groupings) are added by the consuming repo via

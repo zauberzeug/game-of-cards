@@ -107,3 +107,19 @@ The pre-commit goc-validate hook is the consumer's frontmatter-drift
 gate. A silently-dead glob means card schema violations land uncaught.
 The repair exists in shipping code but is gated behind a short-circuit
 that fires on the most common re-upgrade path.
+
+## Superseded mechanism (2026-09-01)
+
+The `pending_precommit_refresh` term this card added — and the
+`_precommit_refresh_pending` predicate behind it — are gone. Adding one
+allowlist term per repair was per-site by construction, and four further
+repairs below the same `return` were never registered, so
+[goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version](../goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version/)
+replaced the whole allowlist with a guard derived from
+`_plan_upgrade_writes`. The behavior this card established is unchanged
+and still covered by
+`tests/test_upgrade_precommit_refresh_at_same_version.py`: a drifted
+stanza is migrated at the same version, and a pristine repo still takes
+the no-op path with its message intact. Only the mechanism moved — the
+plan now asks `_append_precommit_hook` itself whether it would write,
+which also covers the absent-config half this card's predicate did not.

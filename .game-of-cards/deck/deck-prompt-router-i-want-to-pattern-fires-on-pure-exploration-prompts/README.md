@@ -8,7 +8,8 @@ created: "2026-05-30T02:11:36Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - deck-prompt-router-exploration-and-tooling-lists-can-never-suppress-the-reminder
 tags: [bug, infra]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — none of the four pure-exploration prompts (`I want to understand …`, `I want to know …`, `I want to learn about …`, `we need to investigate …`) print the GoC reminder.
@@ -22,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/templates/hooks/deck_prompt_router.py:16-26` — `WORK_INITIATING`
+- `goc/templates/hooks/deck_prompt_router.py:26-36` — `WORK_INITIATING`
   patterns. Items 4 and 5 are the offenders:
 
   ```python
@@ -39,7 +40,7 @@ definition_of_done: |
   ]
   ```
 
-- `goc/templates/hooks/deck_prompt_router.py:70-77` — precedence rule:
+- `goc/templates/hooks/deck_prompt_router.py:83-90` — precedence rule:
 
   ```python
   has_work = any(re.search(p, prompt) for p in WORK_INITIATING)

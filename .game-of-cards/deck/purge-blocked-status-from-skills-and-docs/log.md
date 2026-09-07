@@ -14,3 +14,11 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-05-26 — Closure' present
+
+## 2026-09-04 — amended post-close
+
+Recorded a forward pointer: the `## Surfaces` list never named `goc.md`, so
+the CLI reference kept recommending `status: blocked` after closure. Successor
+card `cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay`
+carries the fix and the regression guard. No status change — the closure stands,
+its scope was just incomplete.

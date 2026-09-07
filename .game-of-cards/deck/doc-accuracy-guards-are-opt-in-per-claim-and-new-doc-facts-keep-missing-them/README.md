@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds seven guard classes, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Ninth instance of the shape; the fix path needs a scope decision. The ninth adds a third axis — prose restating *prose* (one skill body re-specifying a rule another skill owns), where a derive-from-tree guard is structurally impossible — so the decision must say whether that surface class is in scope."
+summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Fourteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them. The fourteenth adds the first surface whose rot is executed rather than read — a skill body specifying a procedure an agent follows literally, which moved 165 correct citations onto unrelated code before it was caught — and it is guardable only by running the instruction against a fixture, which is neither option as written."
 status: open
 stage: null
 contribution: medium
@@ -19,6 +19,13 @@ advanced_by:
   - openclaw-verb-mirror-comment-names-click-in-an-argparse-cli
   - story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it
   - card-schema-reference-links-to-a-deck-card-no-consumer-repo-has
+  - openclaw-plugin-manifest-config-options-do-not-behave-as-documented
+  - llms-txt-still-presents-the-clawhub-install-as-unpublished
+  - five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs
+  - meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card
+  - agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does
+  - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
+  - cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
@@ -28,9 +35,10 @@ definition_of_done: |
 
 `tests/test_guidance_accuracy.py` is this repo's answer to doc drift: a test that
 pins a prose claim to the code or tree it describes. The mechanism works — but it
-is applied **one claim at a time, always after the fact**. Seven guard classes now
-live in that file, and every one was written in response to an already-rotted
-claim someone happened to notice. Nothing looks for the *unguarded* claims.
+is applied **one claim at a time, always after the fact**. Nine guard classes now
+live in that file (two further guards got their own files), and every one was written in
+response to an already-rotted claim someone happened to notice. Nothing looks for
+the *unguarded* claims.
 
 ## The instance list
 
@@ -45,8 +53,13 @@ claim someone happened to notice. Nothing looks for the *unguarded* claims.
 | *(none yet — open)* | [ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/) | — |
 | `CliFrameworkPointerAccuracyTest` | [openclaw-verb-mirror-comment-names-click-in-an-argparse-cli](../openclaw-verb-mirror-comment-names-click-in-an-argparse-cli/) | 2026-07-26 |
 | *(none — not guardable by the technique; see below)* | [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/) | 2026-07-27 |
+| `test_no_shipped_skill_body_links_into_a_deck` (own file, `tests/test_skill_template_deck_links.py`) | [card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/) | 2026-07-29 |
+| *(none yet — open)* | [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/) | — |
+| `LlmsTxtInstallChannelTest` (own file, `tests/test_llms_txt_install_channels.py`) | [llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/) | 2026-08-01 |
+| *(no new class — four tests added to the existing `AgentsArchitectureAccuracyTest`)* | [agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/) | 2026-08-15 |
+| `DocumentedAnchorRuleTest` + `SecondRepairPassTest` (own file, `tests/test_refine_deck_citation_anchor.py`) | [second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/) | 2026-08-17 |
 
-Nine instances across three months, each its own file → claim → fix → guard cycle.
+Fourteen instances across four months, each its own file → claim → fix → guard cycle.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -102,6 +115,112 @@ satisfy its own row's predicate" and defers, instead of re-specifying the
 surface), and no guard was added, which is why its row in the table above is
 empty. Any option adopted here should say explicitly whether prose-restating-prose
 is in scope, because "add a guard" is not an available answer for it.
+
+The eleventh widens the surface class a fourth time, to a **machine-readable
+manifest**. [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/)
+found both keys in `openclaw-plugin/openclaw.plugin.json`'s `configSchema`
+misdescribing the code: `deck_path` declares a settable override that no consumer
+reads, and `pattern_generalization_check` declares `"default": true` against a
+runtime gate, a source comment, and a README that all say off-by-default. This is
+the same rot as a stale prose claim, but the surface is a JSON declaration rather
+than a sentence — so a sweep scoped to prose (`.md`, comments, docstrings, workflow
+headers) misses it entirely, and the scope decision should name manifests
+explicitly.
+
+It is also the cheapest instance yet for Option A, and that is the useful datum:
+both claims are derivable. "Every key in a `configSchema` is referenced by at
+least one consumer" and "every declared `default` equals the runtime gate's
+default" are both tree-derived predicates of exactly the self-maintaining kind
+described below — no restated constant, nothing to go stale. Where the ninth
+instance bounded Option A from above (prose restating prose is unreachable), this
+one shows the technique reaching *further* than the surfaces catalogued so far:
+declarations in structured config are guardable, and nobody has looked there.
+
+The twelfth widens the surface class a fifth time, to the **public website**, and
+is the first instance whose ground truth lives outside this tree.
+[llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/)
+found `site/llms.txt` — the file LLMs ingest to learn how to recommend GoC — still
+saying the OpenClaw install works "Once the plugin is published" and pointing
+readers at a from-source build "Until publish lands", ten releases after ClawHub
+began serving the package. It is the second confirmed member of the
+**forward-looking promise** shape this card's taxonomy already names, and the
+first where the promise had an externally observable fulfilment date it outlived
+by eleven weeks.
+
+Two datums for the scope decision.
+
+First, it bounds Option A from a direction the ninth did not. Prose restating
+prose is unreachable because there is no tree to derive from; here there *is* a
+fact, but it is not in the tree — "is this package published?" is answerable only
+by an external registry, so a derive-from-tree guard structurally cannot pin it,
+and a guard that could would make CI depend on a third-party API.
+
+Second, the repair shows the way around that, and it generalizes: guard the
+**agreement among restatements** instead of the fact. Four in-repo surfaces
+(`README.md`, `ABOUT.md`, `goc.md`, `site/index.html`) already asserted the
+install was live; `tests/test_llms_txt_install_channels.py` pins llms.txt against
+them, which is fully tree-derived and would have failed the day they diverged.
+Where Option B says "pin every fact a guard already pins, everywhere it is
+asserted", this adds: **when a fact has no in-tree source at all, the fact that N
+surfaces restate it is itself the derivable invariant.** That reaches a class
+neither option currently covers, and it costs one consistency test per claim
+family rather than one guard per claim.
+
+The thirteenth widens nothing — and that is what makes it the sharpest instance
+in the table. Its surface (`AGENTS.md`'s `## Code architecture`) and its guard
+class (`AgentsArchitectureAccuracyTest`) are the *second* instance's, already
+catalogued here since 2026-05-27.
+[agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/)
+found all three clauses of the `goc/cli.py` bullet false at once: the parser
+build, the `install`/`upgrade` registration and the `--version` ownership were
+each attributed to a file that does none of them. Every one of those clauses was
+written *by the second instance's own repair*, in the same sentence it was
+fixing, and the guard it added that day — `test_cli_bullet_does_not_mention_click`
+— went green on the rewritten text without ever looking at what the rewrite now
+asserted.
+
+This is the ninth instance's lesson ("the act of fixing the first assertion is
+what created the stale second one") recurring inside a *guarded* surface, and it
+narrows the unit of coverage by one more level. The eighth showed a guard keyed
+to a file misses the same claim asserted elsewhere; this shows a guard keyed to a
+*claim* misses the other claims in the sentence it guards. Neither Option A's
+sweep (the surface has a guard) nor Option B's claim-keyed pinning (the three new
+claims were novel, pinned nowhere) would have caught it.
+
+The datum for the scope decision is therefore about *when* to sweep, not where:
+the highest-yield moment to look for unguarded restatements is the commit that
+edits a documentation sentence, because a repair rewrites more prose than it was
+aimed at. Whatever option is adopted, a guarded surface should not be treated as
+a covered one — the repair took the local route (four derived tests replacing the
+one `click` regex, three of them checked against the stale text to prove they
+fire), but the general shape is a diff-scoped check: **when a commit touches a
+guarded doc surface, every factual clause in the changed lines needs a guard, not
+just the one that motivated the edit.**
+
+The fourteenth adds a surface class the taxonomy above has no row for: prose
+that is **executed rather than read**. `Skill(refine-deck)`'s citation-repair
+recipe told a hygiene pass to anchor each cite at the card's creating commit;
+[second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/)
+measured that instruction moving 165 correct cites of 850 onto unrelated code
+on the second pass. Every other instance in the table is a claim a reader may
+be misled by; this one is an instruction an agent runs, so its rot mutates the
+tree instead of merely describing it wrongly. The blast radius argues for
+ranking, not for a new option: instruction-shaped prose ships in all five
+plugin payloads and is followed literally.
+
+Three datums for the scope decision. First, it recurs the thirteenth's lesson
+one level deeper — the false claim ("anchoring at the creating commit is what
+makes the check independent of any earlier repair pass") was itself written by
+the *previous* instance's repair of that same recipe
+([refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file](../refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file/),
+closed 2026-08-10), so a repaired surface is no more covered than a guarded
+one. Second, it is guardable, but by neither option as written: the rule is not
+derivable from the tree (Option A) and not a restatement to pin against a twin
+(Option B) — the guard parses the rule out of the skill body and *runs* it
+against a synthetic fixture, which is a third technique the decision should
+name. Third, its rot needed two hygiene passes to become visible at all, which
+puts a lower bound on how long an instruction-shaped defect can sit green: the
+sweep interval of whatever process executes it.
 
 ## What's structurally wrong
 

@@ -1,0 +1,202 @@
+## 2026-08-17T05:10:00Z — Pull session priced the options and parked on the pick
+
+Claimed off the ready queue, confirmed the defect still reproduces, then
+measured the three fix options against the live deck instead of estimating
+them. `reproduce.py` exits 1 at HEAD: the 2026-08-10 pass is now 7 days old
+with 227 of its 329 citations (69%) already wrong, against a 25% budget.
+
+The census changed one of the card's own claims and is written back into the
+README dashboard in place. The corpus is 845 cite occurrences over 190
+open/active cards, deduping to 729 distinct `(path, line)` pairs across 154
+cards, all resolvable. It is far more Python-heavy than the filing assumed:
+
+- 615 cites (84.4%) point at `.py`, 450 of them into `goc/engine.py` alone
+  and 110 into `goc/install.py`.
+- Option B's stated cost — "a resolver for the non-Python surfaces that carry
+  a third of the cites" — is wrong by better than 2×. Non-Python is 15.6%,
+  and 49 of those 114 are `.md`, where 48 sit under a heading and the
+  `§ Heading` form already used in card prose works today. Only 65 cites
+  (8.9%) sit on surfaces with no resolver at all.
+- Option B's real cost is granularity, not coverage: 543 of 615 Python cites
+  (88.3%) resolve to a `def`/`class`, but the 615 cover only 417 distinct
+  lines collapsing into 156 symbols — `engine.py::_build_parser` absorbs 22
+  separately cited lines across 266 lines of body.
+- Option A's migration is 85% mechanical right now: 620 of 729 cites sit on a
+  line that is unique in its file and longer than 12 characters. The 109-cite
+  residue is 39 repeated lines, 39 trivial, 31 blank — smaller than the 236
+  the current recipe declines, because a written anchor needs no history
+  recovery. Measured immediately after a repair pass, so it is an upper bound
+  that decays with the deck.
+
+Gate raised `none` → `decision`, status returned `active` → `open`, and
+`## Fix options` rewritten as a contract-shaped `## Decision required` (DoD
+item 2 repointed at it). Two reasons the puller did not pick:
+
+1. The convention is set in a skill shipped to every PyPI/npm/ClawHub
+   consumer, so the choice changes the methodology GoC prescribes to repos
+   that have never seen this deck, and commits someone to migrating 729 live
+   cites. Who pays — author, tooling, or reader — is a judgement, and
+   `.game-of-cards/hooks/pull-card.md` defines no project-local rubric that
+   answers it, so the Andon cord routes it to the human.
+2. No citation form can make a *historical* repair pass survive, so DoD item
+   1 can only go green by redefining what `reproduce.py` counts as decay —
+   and which redefinition is legitimate follows from the form chosen.
+   Weakening a defect test should carry a human's name, not an agent's.
+
+A fourth option the census surfaced is recorded for completeness: symbol plus
+anchor with no line number at all, which is B's stability and A's
+verifiability at the cost of both migrations and of clickability. Leaning
+recorded as A, non-binding, because it is the only option under which a cold
+reader can tell whether the cite in front of them is still true.
+
+No code changed. `uv run goc validate` clean.
+
+## 2026-08-24 — hygiene pass: the one-week decay rate reproduced (71%, was 69%)
+
+Ran `reproduce.py` at HEAD before landing that day's repair commit, so the
+measurement is of `f290f5f7`'s decay rather than of the pass measuring itself.
+
+```
+f290f5f7f     7d    195/273   ( 71%)
+69e1e4f22    13d    246/329   ( 75%)
+9fa3a2421   110d     60/60    (100%)
+```
+
+`f290f5f7` is 71% decayed at seven days — the same age at which `69e1e4f2`
+measured 69%. That is the load-bearing addition: the original filing had one
+datapoint at one week, so 69% could have been a bad week. Two independent
+passes decaying identically seven days apart makes ~70%-at-one-week the
+steady-state rate. `goc/engine.py` grew 6979 → 7093 and `goc/install.py`
+1838 → 1866 over the interval, with no refactor involved.
+
+The residue also reproduced in shape and size. This pass repaired 286
+occurrences across 83 cards and declined: 126 trivial anchors, 89 ambiguous
+matches, 44 absent anchors, 1 ambiguous path, and 153 range cites where one
+endpoint was unsafe (the recipe rewrites neither endpoint in that case, per
+`reference.md` § Citation anchor check). The 2026-08-17 pass declined 236 of
+the same three kinds. So the decline residue is a property of the scheme, not
+of a given pass's diligence — which is the argument the `## Decision
+required` options are priced against.
+
+Two of this pass's declined anchors turned out to matter beyond citation
+hygiene: the absent-anchor bucket is what surfaced that two parked
+decision-gated cards had been describing an already-fixed defect for two
+months. Recorded here because it is evidence for Option A specifically — an
+absent anchor is the only signal in the current scheme that says "re-read
+this card", and it only fires by accident. Filed as
+`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`.
+
+README dashboard rewritten in place with the new datapoint. Gate and status
+unchanged; no code changed.
+
+## 2026-08-24T05:35:00Z — Evidence: repair coverage measured, and a second cost for the bare-line-number form
+
+Measured while working
+[`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/),
+over the 189 gated open/active cards: **133 of the 157 that carry a
+`file:line` cite (85%) have had at least one cite rewritten by a repair pass.**
+That is a coverage figure for the recurring-work argument this card makes — the
+repair treadmill has already touched five sixths of the gated backlog.
+
+The new part is a cost the census did not price. A bare line number is not only
+*wrong* between passes; repairing it **destroys a signal**. An anchor that
+resolves nowhere in HEAD is the deck's only evidence that a card's cited code
+was refactored away, and step 4 of the repair recipe relocates the number onto
+a line that does exist. Measured on the two cards known to describe an
+already-fixed defect: anchoring at the last-write commit (what the repaired
+tree yields) catches **0 of 2**; anchoring at the filing commit catches
+**2 of 2**.
+
+This does not favour one option in this card's `## Decision required` on its
+own, but it adds a criterion the options should be scored against: a
+self-anchoring text form carries its own evidence and cannot be silently
+repaired into looking current, while a bare line number can. No gate change and
+no edit to the options — that is the human's call.
+
+## 2026-08-31 — refine-deck: fourth datapoint, and it isolates the mechanism
+
+The 2026-08-24 hygiene pass (`e8449764`) is the fourth measurable repair.
+Measured at HEAD, 7 days later:
+
+| Repair pass | Age | Cites it wrote that are wrong at HEAD |
+|---|---|---|
+| `e8449764` fourth pass | 7 days | 237 / 250 (**95%**) |
+
+That is well above the ~70%-at-one-week steady state this card recorded from
+`69e1e4f2` and `f290f5f7`, and the reason matters more than the number.
+
+**Decay tracks where the earliest edit lands, not how much changed.**
+`goc/engine.py` grew 7092 → 7142 over the interval — net +50 lines, one
+commit (`dc5f3279`, the emitter quote-trigger fix), no refactor. Its earliest
+hunk starts at line 208 of a 7142-line file. 296 of the 349 uniquely
+relocatable `goc/engine.py` cites in the deck shifted by exactly +50; no other
+delta accounts for more than 4. So a single small insertion near the top of
+the most-cited file invalidated essentially every cite below it.
+
+This weakens the "just keep repairing" option more than the earlier
+datapoints did: the prior weeks had ~114 lines of growth and decayed less,
+so decay cannot be predicted from churn volume. Any repair cadence has to
+assume worst case.
+
+**A second new fact: the repair pass cannot reach about a quarter of the rot.**
+Full census this round — 819 distinct cites across 164 open cards, 633 (77%)
+defunct. Splitting the 633 by what the anchor recipe can decide:
+
+| | count | share of defunct |
+|---|---|---|
+| uniquely relocatable (repaired this round) | 458 | 72% |
+| anchor text now ambiguous (multiple matches) | 72 | 11% |
+| range whose end-point anchor did not map | 41 | 6% |
+| anchor text too trivial to match on (≤12 chars) | 34 | 5% |
+| anchor text gone (refactored away) | 28 | 4% |
+
+So 175 defunct cites (28%) are structurally beyond a mechanical pass: no rule
+relocates them without guessing, and the recipe correctly refuses to guess.
+Repair is not merely recurring work, it is *incomplete* recurring work, and
+the residue accumulates across passes. That prices the `## Decision required`
+options: a self-anchoring form does not just remove the repair, it reaches the
+28% that repair never will.
+
+Evidence is a full census, not a sample; no card was filed for it because this
+card already owns the finding.
+
+## 2026-09-07 — refine-deck: fourth residue measurement, same shape
+
+The 2026-09-07 pass anchored 893 in-scope cites across 156 open cards and
+repaired 296 occurrences in 90 cards. The residue it could not repair: 110
+trivial anchors, 95 ambiguous, 57 absent — 262 declines, against 236 (2026-08-17)
+and 260 (2026-08-24). Four passes, four near-identical residues; the README's
+"permanent residue of a scheme that has to re-derive an address that was never
+stable" now has a fourth datapoint rather than a third.
+
+One thing the residue table does *not* capture, and which bears on the option
+pick: the recipe can also produce a cite that is wrong without ever declining.
+Twelve range cites in the deck have their endpoints mapped independently onto
+unrelated lines, and because each endpoint anchors cleanly the pass verdicts the
+result `current`. Filed as
+`citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`.
+A self-anchoring form would not have this failure mode at all, which is a point
+for that option that this card's corpus census did not price.
+
+## 2026-09-07T05:05:00Z — The range-endpoint instance closed; what it does and does not settle
+
+`citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`
+closed in `a990a849`. The twelve corrupt cites are repaired by hand, and the
+recipe now checks the pair a range repair would write (ordered, span still a
+block) and refuses to re-map a range that arrives already incoherent —
+reported as a fourth residue reason, `incoherent range pair`, beside trivial
+/ ambiguous / absent.
+
+Bearing on the option pick recorded above. The entry of 2026-09-07 priced
+"the recipe can produce a cite that is wrong without ever declining" as an
+unpriced point FOR a self-anchoring form. That failure mode is now bounded
+rather than open: the pass refuses the rewrite instead of certifying it, so
+the wrong-without-declining path costs a decline in the residue rather than
+a silently corrupt cite. The argument for self-anchoring survives on its own
+terms — a self-anchoring form has no endpoints to diverge in the first place,
+and the four near-identical residues this card measures are untouched by the
+fix — but it should no longer be weighed as an *unguarded* hazard.
+
+What the fix explicitly does not settle: whether a bare line number should
+address code at all. The closed card holds only the narrower invariant, which
+any convention has to keep — a range must bound something — and says so.

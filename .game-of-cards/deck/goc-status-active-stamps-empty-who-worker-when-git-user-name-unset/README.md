@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-06T04:50:09Z"
 closed_at: "2026-06-06T04:55:28Z"
 human_gate: none
-advances: []
+advances:
+  - goc-verbs-emit-frontmatter-their-own-validator-rejects
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

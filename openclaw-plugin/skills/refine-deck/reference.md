@@ -53,15 +53,19 @@ for ep in epics:
 #    advanced_by — family roster declared in body but not wired).
 #    Count BOTH edge fields: a correctly-wired umbrella carries
 #    advanced_by=[siblings] with advances=[], so testing advances
-#    alone false-positives every wired family. A surfaced card is
-#    either (a) a genuine meta-fix whose family wasn't wired, or
-#    (b) a mistagged instance that should not carry the meta-fix
-#    tag — judge by the card-schema tag predicate (Skill(card-schema)
-#    "Tag application criteria"): literal `meta-fix` anywhere in the
-#    title, `summary:` field, or full body means (a) genuine, wire
-#    the family; no literal anywhere means (b) mistagged, strip.
-#    (Zero-edge cards can't satisfy the predicate's edge clause,
-#    so the literal test is decisive here.)
+#    alone false-positives every wired family. `meta-fix` is a
+#    `judgment` row, so a surfaced card is a prompt to read it, not
+#    a verdict. Three dispositions, and only the first edits YAML:
+#      (a) an umbrella whose family members are CARDS that were
+#          never wired — wire them (goc advance X --by Y);
+#      (b) an umbrella whose family members are CODE SITES, not
+#          cards — nothing to wire; the roster lives in the body
+#          and the card is correctly tagged. Leave it;
+#      (c) a card that plainly is not about a family or its root
+#          cause — report it for a human to retag deliberately.
+#    Absence of a literal `meta-fix` is not evidence of (c): repos
+#    name umbrellas by shape, so most umbrellas never contain the
+#    string. Do not strip on this sub-check.
 goc --tag meta-fix --status open --json | \
   python3 -c "
 import json, sys
@@ -104,35 +108,168 @@ instance `advanced_by` meta-fix), and apply via `goc advance X
 --by Y`. The advance command is symmetric-by-construction so the
 validator stays happy.
 
+## Citation anchor check
+
+**Why the bounds test does not work.** `line ≤ EOF` asks whether a
+number is inside a file; citation rot asks whether the number still
+names the code the card meant. The two coincide only when a file
+SHRINKS past the cite, and source files grow. Measured on this
+project's own deck: replaying every cite its open cards carried at
+filing time, 482 of 528 had drifted onto unrelated code and the bounds
+test flagged 0 of them. Its silence was indistinguishable from a clean
+deck for the life of the deck, which is why the rule below anchors on
+content rather than on range.
+
+**Scope: what the cite claims, not where it sits.** A cite asserts either
+where code lives NOW or what a command printed THEN, and only the first
+is repairable. The second — pasted `grep -n` output in
+`path:line:content` form, a `reproduce.py` transcript, a quoted error
+message — is dated evidence, and rewriting its number fabricates a
+result the command never produced, which costs the card the thing it
+was filed to carry. Fenced code blocks hold both shapes, so "is it
+inside a fence?" is the wrong question. The repairable fenced form is a
+COMMENT LABEL — a `#` or `//` marker before the cite on its line, as in
+`# goc/engine.py:N` above a quoted snippet or `... # engine.py:N`
+beside one — and it is as much an assertion about HEAD as any prose
+cite, so it is repaired by the same recipe. Apply the marker test,
+repair the labels, and leave the records; report the records' count
+under a heading of their own, apart from the declines in the table
+below, because a decline is a repair the pass COULD not make while an
+out-of-scope cite is one it MUST not. Undecidable → treat it as a
+record: a stale label costs a reader one lookup, a rewritten transcript
+costs the card its evidence.
+
+Measured on this deck's open cards at the 2026-08-31 pass: 49 fenced
+cites were comment labels and 17 were pasted output, spread over 31
+cards. That pass read the silence the other way — every fenced cite is
+evidence, skip it — and left 28 defunct labels unrepaired, all 28 of
+which were labels for which it had already computed a valid unique
+relocation. The opposite invention is equally reachable and worse: a
+pass reading the silence as "relocate everything" rewrites the 17
+records and leaves no trace that it did. Both readings are wrong on one
+of the two shapes, which is why the split is stated here rather than
+re-derived per pass.
+
+**Resolving the cite.** Cards write paths as they read in prose, so
+accept the bare basename (`engine.py:N` for `goc/engine.py:N`) and
+prefer a match outside vendored/mirror trees when several exist.
+
+**A range is one cite, not two.** `file.py:120-140` asserts a BLOCK, and
+the endpoints are only how the block is addressed — so a repair that
+leaves them no longer bounding a block has destroyed the cite rather
+than moved it, and is strictly worse than the drifted cite it replaced.
+A drifted `file.py:120` still points somewhere a reader can orient from.
+Map each endpoint by the recipe below, then check the PAIR before
+writing it: emit the rewrite only when it is ordered (`start <= end`)
+and the new span still fits a block. An unordered pair, or a span no
+block could have (this deck's guard refuses more than 500 lines), is a
+DECLINE — reported like every other decline, never written.
+
+Endpoints usually move together, because code inserted above a block
+shifts both of its edges by the same amount, and that is exactly what
+makes the failure silent when it stops. A pass that relocates one
+endpoint and leaves the other — its anchor text happened to still sit
+at its own line, so the endpoint read as `current` — emits a pair whose
+two numbers each anchor cleanly in isolation. The NEXT pass therefore
+verdicts the wreck `current` too, and no decline is ever reported for
+it. Measured on this deck: three anchored passes left twelve such cites
+across eight open cards, seven of them `human_gate: decision`, none of
+them reported by any pass.
+
+**Do not re-map a range that ARRIVES incoherent.** `start > end`, or a
+span no block could have, is damage an earlier pass wrote, not drift.
+Its endpoints anchor to whatever they were last mistakenly moved onto,
+so running the recipe over them relocates that unrelated text and
+launders one corrupt cite into a differently corrupt one — the pass
+reports a repair and the cite still names nothing. Report it under the
+same decline reason and leave the numbers alone; only the card's own
+prose says which block it meant.
+
+**Getting the anchor.** A cite means what it meant when its number was
+last AUTHORED, so the anchor commit is the one that wrote the number —
+the filing commit for a cite no pass has touched, the repair commit for
+one an earlier pass rewrote. Find it by walking the card's own history:
+list `git log --follow --format=%H -- <deck>/<card>/README.md` oldest to
+newest (check the legacy `deck/` path too), read the README at each
+commit, and take the newest commit at which the exact cite token turns
+from absent to present. Read the cited file at that commit — `git show
+<commit>:<path>` — and take the cited line's text. That text is what the
+card meant; the number is only its address at the time.
+
+**Why not the creating commit.** It is the same commit for a cite no
+pass has ever rewritten, so the walk subsumes that older rule rather
+than replacing it — but a repair pass rewrites the number, which is its
+whole job, and from then on the creating commit resolves whatever
+unrelated code sat at that offset when the card was filed. The recipe
+below then finds that text elsewhere in HEAD and moves the cite onto
+it, passing the uniqueness guard because the wrong anchor is genuinely
+unique. Measured on this project's deck one week after its first repair
+pass: of 850 open-card cites, the creating-commit anchor would have
+moved 165 that were correct. Repair passes recur, so second passes are
+the normal case; an anchor that is right only on a virgin deck is right
+only once.
+
+**Deciding.** Anchor text ≠ the text at that line in HEAD → defunct.
+Then look for the anchor text in HEAD and rewrite the number only when
+the match is UNIQUE and the line is NON-TRIVIAL: skip blanks, bare
+braces, and anything under roughly 12 characters, which match
+everywhere. That guard is what makes the repair safe to apply
+unattended — on the pass that produced this rule it repaired 388 cites
+across 113 cards and declined 279 rather than guess.
+
+**The residue is output, not silence.** The declines split four ways
+and each is reported for a human read:
+
+| Decline | What it usually means |
+|---|---|
+| trivial anchor line | the address is unrecoverable mechanically; a reader must re-derive it from the card's prose |
+| ambiguous (>1 match) | boilerplate or a repeated idiom; the card's surrounding text disambiguates, the matcher cannot |
+| anchor text absent | the cited code was refactored away — re-read the card, and if the refactor also fixed the defect, close it per the core skill |
+| incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |
+
+A pass that printed only the cites it could auto-repair would report a
+shrinking problem while the unmappable majority rotted unseen — the
+same fail-open shape as the bounds test it replaced.
+
 ## Tag sweeps
 
-The Step 2 sweep strips tags, so a predicate that *under*-fires is
-destructive in a way an over-firing one is not. Two rules keep the
-mechanical path safe.
+A predicate that *under*-fires is dangerous in a way an over-firing
+one is not, because the curated grouping it removes is unrecoverable
+and unflagged. Three rules keep the sweep safe.
+
+**The action on a non-firing row is `report`, never `strip`.** Print
+the card, the row, and what could not be confirmed; leave the
+frontmatter alone. This is the rule that bounds the other two: get
+them wrong and a pass emits a wrong line of output instead of deleting
+curated data. Strip a tag only as a deliberate per-card judgment,
+recorded as such — never as the mechanical consequence of a predicate
+that did not fire.
 
 **Score each tag against its own row, never against a house rule.**
 The title / H1 / first ~2500 chars of body in `Skill(card-schema)`'s
 tag criteria is the *default* surface; individual rows widen or
-replace it. `meta-fix`, for instance, fires on a literal anywhere in
-the title, `summary:` field, or full body with no cutoff, or on an
-edge to another `meta-fix` card. Applying the default window to that
-row scores correctly-wired families as mistagged.
+replace it, so applying the default window to a row that widened it
+scores correct cards as mistagged.
 
-**Inability to evaluate a row is not evidence the row fails.** Some
-rows turn on a judgment about what the card delivers or touches —
-`story` (new or changed capability rather than a fix),
-`api-contract` (cites a public surface callers depend on), `infra`
-(touches pre-commit, packaging, CI) — and have no closed-form text
-predicate at all. There is nothing to grep. Leave these unless the
-card plainly contradicts the row: a `story`-tagged card that is
-transparently a defect finding, say, or one carrying `bug` as well
-(the two rows are disjoint, so that pair is always a real finding).
+**A `judgment` row is not evaluable, and non-firing is not failure.**
+The `check` column splits the table. `state` rows (`bug`, `epic`,
+`unverified`) are satisfied out of frontmatter, edges, and files, so
+they can be scored outright. `judgment` rows (`story`,
+`documentation`, `test`, `api-contract`, `infra`, `meta-fix`) turn on
+what the card means; the patterns printed in those rows are
+recognition aids, and there is nothing to grep that decides
+membership. Leave a judgment row unless the card plainly *contradicts*
+it — a `story`-tagged card that is transparently a defect finding,
+say, or one carrying `bug` as well (those two rows are disjoint, so
+that pair is always a real finding).
 
-Both rules exist because both failure modes have been measured on
-this table. Stripping on an unevaluated judgment row is the larger
-one — a sweep that mistakes "I cannot check this" for "this does not
-hold" removes curated grouping from the record axis, and nothing
-downstream flags the loss.
+`meta-fix` is the cautionary example rather than the evaluable one.
+Twice it was written as a literal-plus-edge test and twice a sweep
+measured most of the tagged population as mistagged; the cards it
+failed were the umbrellas the tag exists to group, because an umbrella
+acquires a literal or a wired roster incidentally and often late. See
+`Skill(card-schema)`'s `reference.md` § "Why rows split into `state`
+and `judgment`" for the three measurements.
 
 ## Quality-pass `--llm` flag
 
@@ -149,7 +286,7 @@ batched LLM pass is a nice-to-have, not load-bearing.
 heuristic-driven-eta: tags=[unverified] created 2026-01-15 (107d) → Skill(advance-card) → disproved (3 rounds without reproduction)
 auth-cookie-expires-too-soon: body cites auth/cookie.ts:84 (file ends at L72) → updated citation to auth/cookie.ts:67
 schultz-eligibility-trace-doc-drift: missing summary → wrote ≤3-sentence summary into frontmatter
-operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → stripped tag
+operating-amplitude-followup-12: tag=plasticity but no plasticity-class predicate fires → reported (tag kept; disposition is a reader's call)
 research-front-emerging-clusters: 6 cards coalescing around <topic>, no canonical tag → Skill(create-card) <new-tag-pr-card>
 ```
 
@@ -158,9 +295,11 @@ research-front-emerging-clusters: 6 cards coalescing around <topic>, no canonica
 The park-or-disprove rule applies to **structural** candidates only —
 the kind project-local pattern-discovery passes produce. Hygiene
 findings (stale parks, defunct cites, missing summaries,
-predicate-failing tags, orphaned-edge sub-checks) keep their
-mechanical-apply path — they're applied directly in Step 2 and need
-no Step 4.5 audit.
+orphaned-edge sub-checks) keep their mechanical-apply path — they're
+applied directly in Step 2 and need no Step 4.5 audit. A
+predicate-failing tag is the exception in the other direction: it is
+reported in Step 2 output and edits nothing, so it needs no
+disposition either.
 
 The rule applies even when the round produces confirmed hygiene
 edits. The "zero applied → ≥1 disposition" rule is the

@@ -143,3 +143,14 @@ This is the per-shape resolution of nine of the ten characters
 wired under the parent meta-fix
 [frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting](../frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting/).
 
+## Post-close follow-up
+
+The refusal installed here is correct at the emitter boundary, but it left one
+call site unhardened: `_cmd_new` creates the card directory before it emits
+frontmatter, so a `--summary` or `--worker` value carrying one of these
+characters now surfaces as an uncaught `FrontmatterError` traceback *and*
+strands an empty card directory that turns `goc validate` red. Tracked by
+[goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break](../goc-new-leaves-an-empty-card-directory-when-summary-or-worker-carries-a-line-break/) —
+the fix there moves the check ahead of `mkdir` and reuses this card's
+`_contains_line_break` predicate rather than re-deriving the character set.
+

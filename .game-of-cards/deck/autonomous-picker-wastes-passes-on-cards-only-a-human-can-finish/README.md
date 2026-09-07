@@ -1,6 +1,5 @@
 ---
 title: autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish
-summary: "A card whose Definition of Done is structurally completable only by a human is still born at `human_gate: none`, because nothing inspects the DoD at creation and `card_is_ready` gates only on status, gate, and the impediment overlay. The autonomous picker therefore pulls it, a fresh agent reads a DoD it cannot satisfy without a human and exits without closing, the harness re-triggers, and the same card is offered again — one wasted pull per cycle until a human raises the gate. Scope is the genuinely all-human-only card; whatever mechanism is chosen must not misfire on mixed cards, which are tracked separately."
 status: open
 stage: null
 contribution: medium
@@ -162,15 +161,15 @@ options but do not resolve them.
 **Option A cannot hook `goc new`.** `goc new` stamps `draft: true` and
 writes a *placeholder* DoD (`SCAFFOLD_DOD_PLACEHOLDER`); the real DoD is
 authored afterwards into `README.md`. See `card_is_draft`
-(`goc/engine.py:2405`). A heuristic there would inspect the placeholder
+(`goc/engine.py:2625`). A heuristic there would inspect the placeholder
 and find nothing. Any authoring-time detection must hook `_cmd_publish`
-(`goc/engine.py:5347`) — where the authored DoD first reaches the queue,
+(`goc/engine.py:6043`) — where the authored DoD first reaches the queue,
 and where the sibling `is_placeholder_scaffold` guard already lives.
 This is a pure fact about the code and holds under every model.
 
 **Counting `## ` headings in `log.md` is not a usable attempt metric.**
 There is partial precedent for the engine reading log.md as machine
-state (the `log-md-closure-entry` derived check, `goc/engine.py:5010`),
+state (the `log-md-closure-entry` derived check, `goc/engine.py:5652`),
 but that is a *presence check for one well-known heading at one decision
 point*, not a tally over an open vocabulary. Heading formats are already
 heterogeneous — `goc decide` writes `## {ts}: decision recorded`,

@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:1250-1259` — `validate_card`, the `LIST_REL_FIELDS` loop:
+`goc/engine.py:1986-1995` — `validate_card`, the `LIST_REL_FIELDS` loop:
 
 ```python
 for field in LIST_REL_FIELDS:
@@ -38,7 +38,7 @@ for field in LIST_REL_FIELDS:
 ```
 
 `LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")`
-(`goc/engine.py:775`).
+(`goc/engine.py:1279`).
 
 ## What's broken
 
@@ -105,7 +105,7 @@ the unhashable crash on line 1258.
 
 ## Why it matters
 
-Reachability path: the YAML-lite parser (`goc/engine.py:144`,
+Reachability path: the YAML-lite parser (`goc/engine.py:173`,
 `parse_frontmatter` -> `yaml.safe_load`) accepts nested flow sequences
 inside a block sequence — that's a normal YAML 1.2 shape. Any of:
 

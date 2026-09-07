@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:64-73` — the stanza template:
+- `goc/install.py:79-88` — the stanza template:
 
   ```python
   PRE_COMMIT_HOOK = """\
@@ -33,11 +33,18 @@ definition_of_done: |
           entry: goc validate
           language: system
           pass_filenames: false
-          files: ^\\.game-of-cards/deck/.*$
+          always_run: true
   """
   ```
 
-- `goc/install.py:1322` — `_append_precommit_hook`, called unconditionally
+  Amended 2026-08-25: the last line was `files: ^\\.game-of-cards/deck/.*$`
+  when this card was filed;
+  [installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder](../installed-pre-commit-hook-never-fires-on-anything-outside-the-deck-folder/)
+  replaced it with `always_run: true`. That changes *when* the stanza fires,
+  not whether `entry: goc validate` resolves — this card's defect is
+  untouched, and now fires on every commit rather than only on deck edits.
+
+- `goc/install.py:1339` — `_append_precommit_hook`, called unconditionally
   for git repos at `goc/install.py:1576` (install) and `goc/install.py:1823`
   (upgrade). No `_is_plugin_context()` / `skills_source` gate, no check that
   any PATH-resolvable `goc` will exist on the host.

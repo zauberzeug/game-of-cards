@@ -8,6 +8,7 @@ implementation and misleads autonomous agents into believing a commit has landed
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
 import re
 import sys
@@ -56,6 +57,39 @@ def _agents_architecture_section() -> str:
     return text[start:end]
 
 
+def _agents_schema_bullet() -> str:
+    """Return the `goc/schema.yaml` bullet of AGENTS.md's architecture section.
+
+    The bullet list ends at the first blank line, so slicing to the next
+    `\\n\\n` yields the bullet alone — the prose paragraph that follows the
+    list never leaks in.
+    """
+    section = _agents_architecture_section()
+    start = section.index("**`goc/schema.yaml`**")
+    end = section.index("\n\n", start)
+    return section[start:end]
+
+
+# Top-level keys of goc/schema.yaml. Read from the file so a future key is
+# covered on the day it lands, rather than enumerated here and left to rot —
+# the failure mode `schema-parity-guard-enumerates-keys-so-new-keys-drift-unseen`
+# already caught once in the sibling parity guard.
+SKILL_TEMPLATES = ROOT / "goc" / "templates" / "skills"
+_SCHEMA_TOP_LEVEL_KEYS = tuple(
+    line.split(":", 1)[0]
+    for line in (ROOT / "goc" / "schema.yaml").read_text().splitlines()
+    if line[:1].isalpha() and ":" in line
+)
+
+
+def _agents_cli_bullet() -> str:
+    """Return the `goc/cli.py` bullet of AGENTS.md's architecture section."""
+    section = _agents_architecture_section()
+    start = section.index("**`goc/cli.py`**")
+    end = section.index("**`goc/engine.py`**")
+    return section[start:end]
+
+
 def _engine_subcommands() -> set[str]:
     """Every subcommand the engine's argparse parser registers."""
     from goc.engine import _build_parser
@@ -67,14 +101,154 @@ def _engine_subcommands() -> set[str]:
     raise AssertionError("no subparsers found on engine parser")
 
 
+def _engine_registers_version() -> bool:
+    """True iff the engine parser owns the `--version` action."""
+    from goc.engine import _build_parser
+
+    return any("--version" in a.option_strings for a in _build_parser()._actions)
+
+
+CLI_PY = ROOT / "goc" / "cli.py"
+
+
+def _cli_tree() -> ast.Module:
+    return ast.parse(CLI_PY.read_text(encoding="utf-8"), filename=str(CLI_PY))
+
+
+def _cli_calls(name: str) -> bool:
+    """True iff `goc/cli.py` calls `name(...)` anywhere.
+
+    An import alone is not a call — the distinction the stale bullet lost.
+    """
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == name
+        for node in ast.walk(_cli_tree())
+    )
+
+
+def _cli_registers_version() -> bool:
+    """True iff `goc/cli.py` itself calls `.add_argument("--version", ...)`."""
+    for node in ast.walk(_cli_tree()):
+        if not isinstance(node, ast.Call):
+            continue
+        if not (isinstance(node.func, ast.Attribute) and node.func.attr == "add_argument"):
+            continue
+        if any(isinstance(a, ast.Constant) and a.value == "--version" for a in node.args):
+            return True
+    return False
+
+
 class AgentsArchitectureAccuracyTest(unittest.TestCase):
     def test_cli_bullet_does_not_mention_click(self) -> None:
-        section = _agents_architecture_section()
-        cli_bullet = section[section.index("**`goc/cli.py`**"):section.index("**`goc/engine.py`**")]
         self.assertNotRegex(
-            cli_bullet,
+            _agents_cli_bullet(),
             re.compile(r"click", re.IGNORECASE),
             msg="AGENTS.md goc/cli.py bullet still mentions Click; the package uses argparse.",
+        )
+
+    def test_entry_point_wiring_is_what_the_cli_bullet_describes(self) -> None:
+        """The behavioural half: the three facts the doc assertions below rest on.
+
+        Deriving them from the tree — rather than restating them in prose —
+        means the day somebody really does move the parser build, the verb
+        registration, or `--version` into `goc/cli.py`, this test fails first
+        and points the editor at the bullet, instead of the doc guards below
+        silently pinning a claim that has become false in the other direction.
+        Regression guard for
+        `agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does`,
+        which is how all three clauses came to be false at once.
+        """
+        self.assertFalse(
+            _cli_calls("_build_parser"),
+            msg=(
+                "goc/cli.py now calls `_build_parser` itself; the engine parser "
+                "used to be built inside `engine.cli()`. Re-derive the AGENTS.md "
+                "goc/cli.py bullet and the doc assertions below it."
+            ),
+        )
+        self.assertEqual(
+            sorted(_engine_subcommands() & {"install", "upgrade"}),
+            [],
+            msg=(
+                "install/upgrade are now engine subcommands; they used to be "
+                "intercepted on argv[0] before argparse. Re-derive the AGENTS.md "
+                "goc/cli.py bullet — and revisit the open card "
+                "`goc-help-omits-install-and-upgrade-subcommands`, whose premise "
+                "is that they never reach that parser."
+            ),
+        )
+        self.assertFalse(
+            _cli_registers_version(),
+            msg=(
+                "goc/cli.py now registers `--version` itself; it used to be an "
+                "action on the engine parser. Re-derive the AGENTS.md goc/cli.py "
+                "bullet and the doc assertion below it."
+            ),
+        )
+        self.assertTrue(
+            _engine_registers_version(),
+            msg=(
+                "the engine parser no longer registers `--version`; the AGENTS.md "
+                "goc/cli.py bullet attributes it there."
+            ),
+        )
+
+    def test_cli_bullet_does_not_attribute_the_parser_build_to_cli_py(self) -> None:
+        bullet = _agents_cli_bullet()
+        self.assertNotRegex(
+            bullet,
+            re.compile(r"[Bb]uilds\s+the\s+engine's\s+argparse\s+parser", re.DOTALL),
+            msg=(
+                "AGENTS.md goc/cli.py bullet says cli.py builds the engine's "
+                "argparse parser. It imports nothing of the sort at call time — "
+                "`engine.cli()` builds it (goc/engine.py). Name the delegate, not "
+                "a composition step that does not happen."
+            ),
+        )
+        self.assertIn(
+            "engine.cli()",
+            bullet,
+            msg=(
+                "AGENTS.md goc/cli.py bullet does not name `engine.cli()`. That "
+                "delegate is where the parser is built and where every global "
+                "flag is handled; without it the bullet leaves an agent looking "
+                "for a parser object cli.py does not hold."
+            ),
+        )
+
+    def test_cli_bullet_does_not_claim_install_and_upgrade_are_registered(self) -> None:
+        bullet = _agents_cli_bullet()
+        self.assertNotRegex(
+            bullet,
+            re.compile(r"bolts\s+on", re.IGNORECASE | re.DOTALL),
+            msg=(
+                "AGENTS.md goc/cli.py bullet says install/upgrade are bolted onto "
+                "the engine parser. They are intercepted on argv[0] before "
+                "argparse and routed to standalone parsers — which is exactly why "
+                "`goc --help` omits them."
+            ),
+        )
+        self.assertIn(
+            "argv[0]",
+            bullet,
+            msg=(
+                "AGENTS.md goc/cli.py bullet does not name the argv[0] "
+                "interception. It is the mechanism an agent has to change to fix "
+                "`goc --help`, and the bullet is the map that agent reads first."
+            ),
+        )
+
+    def test_cli_bullet_does_not_attribute_version_to_cli_py(self) -> None:
+        self.assertNotRegex(
+            _agents_cli_bullet(),
+            re.compile(r"adds\s+`--version`", re.DOTALL),
+            msg=(
+                "AGENTS.md goc/cli.py bullet says cli.py adds `--version`. It is "
+                "registered by `engine._build_parser`, as cli.py's own comment "
+                "states — attribute it to the engine parser."
+            ),
         )
 
     def test_cli_source_has_no_click(self) -> None:
@@ -95,6 +269,56 @@ class AgentsArchitectureAccuracyTest(unittest.TestCase):
             msg=(
                 "AGENTS.md `## Code architecture` section omits engine verb(s) "
                 f"{missing}; the goc/engine.py bullet claims an exhaustive list."
+            ),
+        )
+
+    def test_skill_body_really_carries_no_inlined_schema(self) -> None:
+        """The behavioural half: assert what the doc bullet is allowed to say.
+
+        The two doc assertions below only hold while the schema genuinely
+        ships as a sibling asset. Deriving that from the file — rather than
+        restating it — means the day someone implements real inlining, this
+        test fails first and points the editor at the bullet, instead of the
+        doc guard silently pinning a claim that has become false again.
+        """
+        body = (SKILL_TEMPLATES / "card-schema" / "SKILL.md").read_text()
+        inlined = [key for key in _SCHEMA_TOP_LEVEL_KEYS if key in body]
+        self.assertEqual(
+            inlined,
+            [],
+            msg=(
+                "card-schema/SKILL.md now contains schema key(s) "
+                f"{inlined} — the schema may really be inlined into the skill "
+                "body. Re-derive the AGENTS.md `goc/schema.yaml` bullet and the "
+                "two doc assertions below it."
+            ),
+        )
+
+    def test_schema_bullet_does_not_claim_inlining(self) -> None:
+        self.assertNotRegex(
+            _agents_schema_bullet(),
+            re.compile(r"inlin", re.IGNORECASE),
+            msg=(
+                "AGENTS.md goc/schema.yaml bullet claims the schema is inlined "
+                "into the card-schema skill body. `goc install` copies skill "
+                "assets verbatim (`_iter_skill_assets`); the schema lands as a "
+                "sibling file next to SKILL.md. The word is banned outright "
+                "rather than matched in its affirmative form only: state the "
+                "mechanism that exists ('ships as a sibling file'), not a "
+                "denial of the one that does not."
+            ),
+        )
+
+    def test_schema_bullet_names_the_second_checked_in_copy(self) -> None:
+        self.assertIn(
+            "goc/templates/skills/card-schema/schema.yaml",
+            _agents_schema_bullet(),
+            msg=(
+                "AGENTS.md goc/schema.yaml bullet does not name the second "
+                "checked-in copy. No script syncs it from goc/schema.yaml, so "
+                "an agent that edits only the engine schema turns "
+                "tests/test_skill_schema_yaml_parity.py red with no pointer to "
+                "the file that also has to move."
             ),
         )
 
@@ -616,6 +840,293 @@ class CardLanguageGuardAccuracyTest(unittest.TestCase):
             msg=(
                 "AGENTS.md's Common commands block no longer offers a way to run "
                 "the card-language guard by hand."
+            ),
+        )
+
+
+class UpgradeNoOpGuardParagraphAccuracyTest(unittest.TestCase):
+    """AGENTS.md § "Code architecture" tells the reader that `upgrade()`'s
+    "nothing to do" verdict is derived from the write plan, and closes by
+    accounting for the terms that sit *beside* the plan in the short-circuit.
+
+    That closing sentence is the reader's check on the paragraph's load-bearing
+    claim (do not add a `pending_*` term for a new write). It drifted once — it
+    said two terms, all non-write, while `upgrade()` carried three and the third
+    gated a write to `.game-of-cards/config.yaml`
+    (`agents-md-miscounts-the-upgrade-no-op-guard-terms-and-mislabels-them-non-write`).
+    Derive both the count and which terms write from the source so the next term
+    added turns the build red instead of re-opening that card silently.
+    """
+
+    _SENTENCE_RE = re.compile(
+        r"The (\w+) remaining terms? next to the plan[^.]*\.", re.DOTALL
+    )
+    _NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6}
+
+    def _upgrade_fn(self) -> ast.FunctionDef:
+        tree = ast.parse((ROOT / "goc" / "install.py").read_text())
+        fn = next(
+            (
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.FunctionDef) and node.name == "upgrade"
+            ),
+            None,
+        )
+        self.assertIsNotNone(fn, msg="goc/install.py no longer defines `upgrade()`")
+        return fn
+
+    def _guard_terms(self, fn: ast.FunctionDef) -> list[str]:
+        """The `pending_*` work signals negated into `upgrade()`'s short-circuit.
+
+        Scoped to the `pending_*` prefix because that is the register the
+        sentence counts. The guard's other negated operands (`agents_explicit`,
+        `keep_local_skills`) are caller-flag overrides, not answers to "is there
+        work?", so they are outside what the sentence describes.
+        """
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.If) or not isinstance(node.test, ast.BoolOp):
+                continue
+            names = [
+                operand.operand.id
+                for operand in node.test.values
+                if isinstance(operand, ast.UnaryOp)
+                and isinstance(operand.op, ast.Not)
+                and isinstance(operand.operand, ast.Name)
+            ]
+            if "plan_has_effect" in names:
+                return [name for name in names if name.startswith("pending_")]
+        self.fail(
+            "no short-circuit in `upgrade()` negates `plan_has_effect`. The "
+            "plan-derived no-op verdict AGENTS.md describes is gone or renamed; "
+            "rewrite the paragraph and this guard together."
+        )
+
+    def _writing_terms(self, fn: ast.FunctionDef) -> dict[str, str]:
+        """`pending_*` terms that gate a write, mapped to the executor they probe.
+
+        A term assigned from a call carrying `probe=True` is asking that
+        executor whether it would change a file, so it is true exactly when the
+        real call writes — the repo-wide convention the same paragraph names.
+        Derived, not listed, so a new probing term joins the set without a
+        hand-maintained register. A term that gates a write *without* probing is
+        not detected here; the count assertion is what catches that shape.
+        """
+        found: dict[str, str] = {}
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+                continue
+            target = node.targets[0]
+            if not isinstance(target, ast.Name) or not target.id.startswith("pending_"):
+                continue
+            for call in ast.walk(node.value):
+                if isinstance(call, ast.Call) and any(
+                    kw.arg == "probe" and getattr(kw.value, "value", None) is True
+                    for kw in call.keywords
+                ):
+                    found[target.id] = ast.unparse(call.func)
+        return found
+
+    def _sentence(self) -> tuple[int, str]:
+        match = self._SENTENCE_RE.search((ROOT / "AGENTS.md").read_text())
+        self.assertIsNotNone(
+            match,
+            msg=(
+                "AGENTS.md no longer accounts for the terms beside the write plan "
+                "in `upgrade()`'s short-circuit. That sentence is what stops a "
+                "contributor from reading the paragraph as 'every write is in the "
+                "plan'; restore it rather than dropping it."
+            ),
+        )
+        word = match.group(1).lower()
+        self.assertIn(
+            word,
+            self._NUMBER_WORDS,
+            msg=f"unparseable count word in AGENTS.md's remaining-terms sentence: {word!r}",
+        )
+        return self._NUMBER_WORDS[word], " ".join(match.group(0).split())
+
+    def test_sentence_count_matches_the_guard(self) -> None:
+        terms = self._guard_terms(self._upgrade_fn())
+        count, sentence = self._sentence()
+        self.assertEqual(
+            count,
+            len(terms),
+            msg=(
+                f"AGENTS.md says {count} terms sit beside the write plan in "
+                f"`upgrade()`'s short-circuit, but it ANDs {len(terms)}: "
+                f"{', '.join(terms)}. Update the sentence in the same change that "
+                f"added or removed the term — and prefer planning the work as a "
+                f"`PlannedWrite` over adding another `pending_*` term."
+            ),
+        )
+
+    def test_sentence_does_not_call_a_writing_term_non_write(self) -> None:
+        fn = self._upgrade_fn()
+        terms = self._guard_terms(fn)
+        writers = {k: v for k, v in self._writing_terms(fn).items() if k in terms}
+        _, sentence = self._sentence()
+        if not writers:
+            return
+        self.assertNotIn(
+            "non-write",
+            sentence,
+            msg=(
+                "AGENTS.md characterizes the terms beside the plan as non-write "
+                "work, but " + ", ".join(sorted(writers)) + " probes "
+                + ", ".join(sorted(writers.values()))
+                + " and is true exactly when that executor would write. Say what "
+                "the terms are — work the plan does not model — not that they "
+                "never write."
+            ),
+        )
+
+    def test_sentence_names_every_writing_term(self) -> None:
+        fn = self._upgrade_fn()
+        terms = self._guard_terms(fn)
+        writers = {k: v for k, v in self._writing_terms(fn).items() if k in terms}
+        _, sentence = self._sentence()
+        for term in sorted(writers):
+            # The prose names the pin by its config key (`skills_source`), not by
+            # the local variable, so match on the `pending_` prefix stripped off.
+            with self.subTest(term=term):
+                self.assertIn(
+                    term.removeprefix("pending_"),
+                    sentence,
+                    msg=(
+                        f"{term} gates a write (it probes {writers[term]}), but "
+                        f"AGENTS.md's remaining-terms sentence never names it. A "
+                        f"reader cannot tell which of the terms writes, which is "
+                        f"the one thing the sentence exists to disambiguate."
+                    ),
+                )
+
+
+# ── A guidance surface may not recommend a deprecated `goc status` target ──
+#
+# `purge-blocked-status-from-skills-and-docs` soft-deprecated `status: blocked`
+# across the skill bodies, but its scope named only the skills and the AGENTS
+# files — so `goc.md`, the CLI reference published at game-of-cards.com/goc/,
+# kept offering the value as one of five unmarked target states and never named
+# the `goc wait` overlay that replaced it. See deck card
+# `cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay`.
+#
+# The deprecated set is DERIVED from the skill bodies rather than pinned to the
+# word `blocked`, for two reasons: a future deprecation is covered the moment
+# the skills announce it, and when the enum removal drops the value from
+# `MUTABLE_STATUS_VALUES` the set empties and these guards retire themselves.
+
+_STATUS_GUIDANCE_FILES = [
+    GOC_MD,
+    ROOT / "goc" / "templates" / "AGENTS_GOC.md",
+    ROOT / "AGENTS.md",
+]
+
+# The overlay the skills point a legacy `blocked` card at. Only asserted while
+# something is actually deprecated.
+_OVERLAY_TOKENS = ("goc wait", "waiting_on")
+
+_DEPRECATION_MARKER = re.compile(r"deprecat|\blegacy\b|being removed", re.IGNORECASE)
+
+# "`<v>` is deprecated" / "legacy `status: <v>`". The value has to sit adjacent
+# to the marker, so an unrelated status named later in the same sentence — say
+# the `open` a migration instruction tells you to drop to — is not swept in.
+_DEPRECATION_BINDINGS = (
+    re.compile(r"`(?:status:\s*)?(?P<value>[a-z]+)`[^`]{0,40}?\bis deprecated\b"),
+    re.compile(
+        r"\b(?:deprecated|legacy)\b[^`]{0,40}?`(?:status:\s*)?(?P<value>[a-z]+)`"
+    ),
+)
+
+
+def _deprecated_status_values() -> set[str]:
+    """Target states of `goc status` that the shipped skill bodies deprecate.
+
+    The skills are the authoritative surface — they are what the purge card
+    rewrote — so whatever they bind to a deprecation marker is what no other
+    guidance surface may recommend. Intersected with the verb's real choices so
+    prose about a value the CLI no longer accepts cannot resurrect the guard.
+    """
+    from goc.engine import MUTABLE_STATUS_VALUES
+
+    accepted = set(MUTABLE_STATUS_VALUES)
+    found: set[str] = set()
+    for path in sorted(SKILL_TEMPLATES.rglob("*.md")):
+        body = path.read_text()
+        for pattern in _DEPRECATION_BINDINGS:
+            found.update(
+                m.group("value") for m in pattern.finditer(body)
+            )
+    return found & accepted
+
+
+class DeprecatedStatusGuidanceTest(unittest.TestCase):
+    def test_skill_bodies_still_announce_a_deprecation(self) -> None:
+        """The behavioural half: assert the derivation has something to find.
+
+        Both guards below are vacuous if this set is empty. An empty set is
+        legitimate exactly once — after the enum removal lands — and at that
+        point `MUTABLE_STATUS_VALUES` no longer carries the value either, so
+        assert the two agree instead of silently passing.
+        """
+        from goc.engine import MUTABLE_STATUS_VALUES
+
+        deprecated = _deprecated_status_values()
+        if deprecated:
+            return
+        self.assertNotIn(
+            "blocked",
+            set(MUTABLE_STATUS_VALUES),
+            msg=(
+                "No skill body binds a `goc status` target to a deprecation "
+                "marker, yet the verb still accepts `blocked`. Either the "
+                "skills lost their deprecation notice (restore it) or the "
+                "binding patterns in _DEPRECATION_BINDINGS no longer match "
+                "how they word it (re-derive them)."
+            ),
+        )
+
+    def test_no_guidance_surface_offers_a_deprecated_status_unmarked(self) -> None:
+        deprecated = _deprecated_status_values()
+        for path in _STATUS_GUIDANCE_FILES:
+            if not path.exists():
+                continue
+            for lineno, line in enumerate(path.read_text().splitlines(), 1):
+                if "goc status" not in line:
+                    continue
+                offered = sorted(
+                    v
+                    for v in deprecated
+                    if re.search(rf"`[^`]*\b{re.escape(v)}\b[^`]*`", line)
+                )
+                if not offered or _DEPRECATION_MARKER.search(line):
+                    continue
+                rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+                self.fail(
+                    f"{rel}:{lineno} presents deprecated "
+                    f"`goc status` target state(s) {offered} with no "
+                    f"deprecation marker:\n  {line.strip()}\n"
+                    "The skill bodies call these deprecated; a reader "
+                    "following this line produces a card that validates OK "
+                    "yet drops out of every `status: open` query with no "
+                    "reason recorded. Mark it on the same line, or drop it "
+                    "and point at `goc wait`."
+                )
+
+    def test_cli_reference_documents_the_overlay_that_replaced_them(self) -> None:
+        """Marking the value deprecated is only half the fix — the reference has
+        to name what to use instead, on the page the reader is already on."""
+        if not _deprecated_status_values():
+            self.skipTest("nothing deprecated; the overlay needs no signposting")
+        text = GOC_MD.read_text()
+        missing = [t for t in _OVERLAY_TOKENS if t not in text]
+        self.assertEqual(
+            [],
+            missing,
+            msg=(
+                f"goc.md never mentions {missing}, so a reader who finds the "
+                "deprecated status marked has no way to learn the replacement "
+                "from the CLI reference itself."
             ),
         )
 

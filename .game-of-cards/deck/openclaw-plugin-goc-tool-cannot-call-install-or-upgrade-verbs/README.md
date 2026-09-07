@@ -22,10 +22,10 @@ definition_of_done: |
 
 ## Location
 
-- `openclaw-plugin/index.ts:46-64` — `GOC_VERBS` literal union (17 verbs, no
+- `openclaw-plugin/index.ts:48-66` — `GOC_VERBS` literal union (17 verbs, no
   `install`, no `upgrade`); line 67 feeds it into `Type.Union` for the tool's
   `verb` parameter, so out-of-union verbs are rejected at input validation.
-- `goc/cli.py:45` — `if argv and argv[0] in ("install", "upgrade"):` —
+- `goc/cli.py:47` — `if argv and argv[0] in ("install", "upgrade"):` —
   install/upgrade are routed in `cli.py` *before* the engine parser, so they
   are not `_build_parser` subparsers.
 - `tests/test_plugin_mirror_parity.py:557-568` —
@@ -46,7 +46,7 @@ const GOC_VERBS = [
 
 The plugin's own ported onboarding skills, shipped in the same payload:
 
-- `openclaw-plugin/skills/kickoff/SKILL.md:160` — "On confirmation, run
+- `openclaw-plugin/skills/kickoff/SKILL.md:164` — "On confirmation, run
   `goc install --briefing-target <chosen file>`"
 - `openclaw-plugin/skills/openclaw-kickoff/SKILL.md:94-96` — "Run from the
   OpenClaw plugin, `goc install` recognizes the host and scaffolds a
@@ -60,7 +60,7 @@ fails typebox validation. Every fallback is worse:
 
 - `exec` of bare `goc install` → ENOENT on a plugin-only host.
 - A pipx-installed `goc install` runs *outside* the plugin payload, so
-  `_is_openclaw_plugin_context()` (`goc/install.py:487-498`, keyed on
+  `_is_openclaw_plugin_context()` (`goc/install.py:544-555`, keyed on
   `_PACKAGE_DIR.parent.name == "openclaw-plugin"`) is False and install
   defaults to the **Claude** harness — writing the `CLAUDE.md` import that
   `openclaw-kickoff` explicitly promises never appears ("No `CLAUDE.md`
@@ -69,7 +69,7 @@ fails typebox validation. Every fallback is worse:
 The parity guard makes this structural: adding `install`/`upgrade` to
 `GOC_VERBS` today fails `test_ts_verbs_match_engine_subparsers`, because that
 test pins the union to `_build_parser`'s subparsers and install/upgrade are
-deliberately argparse-independent (`goc/cli.py:45`). The closed card
+deliberately argparse-independent (`goc/cli.py:47`). The closed card
 [openclaw-plugin-goc-tool-cannot-call-wait-or-repair-edges-verbs](../openclaw-plugin-goc-tool-cannot-call-wait-or-repair-edges-verbs/)
 established that parity contract for engine verbs but never adjudicated the
 two cli.py-routed verbs.

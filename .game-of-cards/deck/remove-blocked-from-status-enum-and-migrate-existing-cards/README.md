@@ -15,6 +15,7 @@ advanced_by:
   - migrate-existing-blocked-cards-to-open-or-waiting-overlay
   - purge-blocked-status-from-skills-and-docs
   - remove-blocked-from-the-status-enum-and-validator
+  - cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay
 tags: [epic, api-contract, documentation]
 definition_of_done: |
   - [x] Child `migrate-existing-blocked-cards-to-open-or-waiting-overlay` closed (the safe prep — reclassify the existing blocked cards; autonomous-pull-safe).

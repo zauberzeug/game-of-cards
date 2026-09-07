@@ -50,3 +50,17 @@ The fix is additive: a peer-shaped `## Install (OpenClaw)` section sitting betwe
 
 - The OpenClaw section should be honest about state: pre-publish, the install path is "build-from-source via this repo's `openclaw-plugin/`"; post-publish it's the registry install. If publishing happens before this card lands, point at the registry; otherwise point at the source-build path with a TODO-style comment for the URL.
 - Keep the section ≤ 25 lines so the file as a whole stays scannable. The Claude Code section's length is the working ceiling.
+
+## After closure
+
+The pre-publish framing this card shipped was never flipped. The section landed
+2026-05-09 with "Once the plugin is published, install via ClawHub" and "Until
+publish lands…, build from source"; ClawHub went live 2026-05-10 and the
+sentences stood for ten more releases, contradicting README.md, ABOUT.md,
+goc.md and site/index.html. The "Notes" item above anticipated exactly this
+transition and no card owned it.
+
+Corrected and guarded by
+[llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/),
+which also adds `tests/test_llms_txt_install_channels.py` so a pending-publish
+caveat outliving its publish fails CI instead of shipping.
