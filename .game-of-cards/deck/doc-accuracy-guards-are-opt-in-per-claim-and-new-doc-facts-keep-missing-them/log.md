@@ -155,3 +155,35 @@ Two things recorded in the dashboard above:
   the day the surfaces diverged.
 - **No decision recorded** — the gate stays `decision`; this entry adds evidence
   to the scope question (which surfaces count), not an answer to it.
+
+## 2026-09-07 — eighteenth instance connected: a shipped `--help` string
+
+- **Instance**:
+  `migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does`
+  (closed 2026-09-07). `advances` edge wired; table row added; the count
+  sentence rewritten in place against `advanced_by`.
+- **Why it is not a duplicate**: the shape is exactly this card's — a prose
+  restatement of code behaviour (`goc migrate-list-style --help` and the
+  command docstring enumerating what `emit_frontmatter` normalises), rotted,
+  caught by an audit pass rather than CI, repaired by adding one more per-claim
+  guard in its own file. Surfaced by a `pull-card` session on an empty ready
+  queue; the Stop-hook pattern check routed it here via dedup.
+- **What it adds**: a sixth surface class — the **shipped `--help` output**,
+  which argparse renders before any card or tree is read, so a derive-from-tree
+  guard cannot be evaluated at render time and has to run as a test instead. It
+  is also the sharpest instance yet of the failure mode the thirteenth first
+  showed: the false clause was written *by an earlier instance's own repair*.
+  The predecessor card
+  [migrate-list-style-reports-and-rewrites-far-more-than-list-style](../migrate-list-style-reports-and-rewrites-far-more-than-list-style/)
+  widened the same string from "four relation fields" to "everything
+  emit_frontmatter owns" and hand-enumerated that set, adding `key order` — a
+  member the emitter never had. Both a per-surface sweep and per-claim pinning
+  would have passed: the string was freshly written and correct about
+  everything else. Only deriving the enumeration from the emitter, or testing
+  each listed member against it, reaches it — a datum for Option B's unit.
+- **Table drift recorded**: `advanced_by` held 17 edges against 14 table rows
+  before this entry. Named in the body rather than silently reconciled; filling
+  the three missing rows needs each instance's guard class, which is that
+  card's own work.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.

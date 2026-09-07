@@ -59,8 +59,17 @@ the *unguarded* claims.
 | `LlmsTxtInstallChannelTest` (own file, `tests/test_llms_txt_install_channels.py`) | [llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/) | 2026-08-01 |
 | *(no new class — four tests added to the existing `AgentsArchitectureAccuracyTest`)* | [agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/) | 2026-08-15 |
 | `DocumentedAnchorRuleTest` + `SecondRepairPassTest` (own file, `tests/test_refine_deck_citation_anchor.py`) | [second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/) | 2026-08-17 |
+| `MigrateListStyleKeyOrderScopeTest` (own file, `tests/test_migrate_list_style_key_order_scope.py`) | [migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does](../migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/) | 2026-09-07 |
 
-Fourteen instances across four months, each its own file → claim → fix → guard cycle.
+Eighteen instances across five months, each its own file → claim → fix → guard
+cycle. `advanced_by` is the authoritative count; the table above shows fifteen of
+them, because three closed instances carry the edge but no row yet
+([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
+[cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay](../cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay/)).
+That gap is this card's own thesis turned on itself for the second time: the
+table is a hand-maintained restatement of `advanced_by`, so it rots exactly the
+way every claim catalogued in it did.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
