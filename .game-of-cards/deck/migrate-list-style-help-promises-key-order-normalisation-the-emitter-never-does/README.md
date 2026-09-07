@@ -1,21 +1,21 @@
 ---
 title: migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does
 summary: "The migrate-list-style subparser help and command docstring both list key order among the things a canonical re-emit normalises, but emit_frontmatter iterates the parsed dict in the authored file's own order and never reorders keys. A card whose only drift is key order is reported as already canonical, and the per-card changed-part report can never name key order."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-09-07T04:54:32Z"
-closed_at: null
+closed_at: "2026-09-07T05:03:28Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the promise and the behaviour agree again.
-  - [ ] MECHANICAL: the `migrate-list-style` subparser help (`goc/engine.py:4137`) no longer names key order among what a canonical re-emit normalises, and enumerates only what `emit_frontmatter` actually owns.
-  - [ ] MECHANICAL: `_cmd_migrate_list_style`'s docstring (`goc/engine.py:7144`) carries the same corrected scope, plus a one-line note that key order is *preserved* from the authored file, so the next reader does not re-add the claim.
-  - [ ] TDD: a regression test pins both halves — `emit_frontmatter` round-trips a key-reordered card byte-identically (order preserved), and neither user-facing scope string claims key-order normalisation.
-  - [ ] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; plugin mirrors synced by the pre-commit hook.
+  - [x] TDD: `reproduce.py` exits zero — the promise and the behaviour agree again.
+  - [x] MECHANICAL: the `migrate-list-style` subparser help (`goc/engine.py:4137`) no longer names key order among what a canonical re-emit normalises, and enumerates only what `emit_frontmatter` actually owns.
+  - [x] MECHANICAL: `_cmd_migrate_list_style`'s docstring (`goc/engine.py:7144`) carries the same corrected scope, plus a one-line note that key order is *preserved* from the authored file, so the next reader does not re-add the claim.
+  - [x] TDD: a regression test pins both halves — `emit_frontmatter` round-trips a key-reordered card byte-identically (order preserved), and neither user-facing scope string claims key-order normalisation.
+  - [x] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; plugin mirrors synced by the pre-commit hook.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -74,7 +74,8 @@ correctly omits key order, while the help two screens away promises it.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/reproduce.py`:
+Before the fix, `uv run python .game-of-cards/deck/migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/reproduce.py`
+exited 1:
 
 ```
 === 1. The user-facing strings that promise key-order normalisation ===
@@ -102,6 +103,10 @@ $ goc migrate-list-style --dry-run
 Every card already matches its canonical re-emit — ... — nothing to do.
 ```
 
+After the fix the same script exits 0: sections 2 and 3 are unchanged (the
+behaviour was never the defect), and the verdict reads
+`claims key-order normalisation : False`.
+
 ## Why it matters
 
 The reachability path is a hand-edited card. Frontmatter is edited by hand
@@ -126,15 +131,25 @@ instead of deriving it) is worth a meta-fix card if a fourth appears, but a
 derived string is not obviously reachable for a `--help` line that argparse
 renders before any card is read.
 
-## Fix
+## Fix (applied)
 
-Correct the two strings to what `emit_frontmatter` actually owns, and record
-the preservation explicitly so the claim is not re-added:
+Both strings now describe what `emit_frontmatter` actually owns, and each
+records the preservation explicitly so the claim is not re-added:
 
-- `goc/engine.py:4141` — drop `key order` from the subparser help.
-- `goc/engine.py:7152` — drop it from the docstring and state that key order
-  is carried over from the authored file, because the emitter walks the parsed
-  mapping in its stored order.
+- `goc/engine.py:4137` — the subparser help drops `key order` from the
+  normalised set and states `Key order is carried over, not canonicalised.`
+- `goc/engine.py:7144` — the docstring drops it too and explains *why* it can
+  never be in the set: the emitter walks `fm.items()`, the mapping
+  `parse_frontmatter` filled top-down, and no reference order exists to
+  normalise toward.
+
+`tests/test_migrate_list_style_key_order_scope.py` pins both halves so they
+cannot drift apart again — the behaviour (a key-reordered card round-trips
+byte-identically through both the dry-run and the apply path) and the strings
+(neither may name key order without denying normalisation). The promise
+detector is sentence-scoped rather than substring-scoped, because the corrected
+docstring still says the words "key order"; a test case feeds it the original
+wording to prove the guard can fail.
 
 Making the emitter *actually* canonicalise key order is the other direction and
 is deliberately **not** this card: it would rewrite every card in every

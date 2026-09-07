@@ -4138,7 +4138,8 @@ def _build_parser() -> argparse.ArgumentParser:
                                   help="Re-emit every card into canonical form. Named for the relation-edge list "
                                        "(advances/advanced_by/supersedes/superseded_by) block-style migration, but "
                                        "normalises everything emit_frontmatter owns — scalar quoting, block scalars, "
-                                       "key order, the blank line before the body. The report names the changed part.")
+                                       "the blank line before the body. Key order is carried over, not canonicalised. "
+                                       "The report names the changed part.")
     p_mls.add_argument("--dry-run", action="store_true",
                        help="Show which cards would change without writing files.")
 
@@ -7149,8 +7150,17 @@ def _cmd_migrate_list_style(args):
     Named for the migration it was introduced for — converting relation-edge
     lists (advances/advanced_by/supersedes/superseded_by) to block style — but
     the predicate is whole-card canonical equality, so scalar quoting,
-    block-scalar shape, key order and the blank line before the body are
-    normalised too. The report names the changed part per card.
+    block-scalar shape and the blank line before the body are normalised too.
+    The report names the changed part per card.
+
+    Key order is NOT in that set, and no string here may claim it is:
+    `emit_frontmatter` walks `fm.items()`, i.e. the mapping `parse_frontmatter`
+    filled top-down, so the authored file's own key order is carried straight
+    through. A card whose only drift is a swapped key pair re-emits
+    byte-identically and is correctly reported as already canonical. There is
+    no reference order to normalise toward either — `schema.yaml` lists
+    required and optional fields for validation, not for emission, and the only
+    canonical order that exists is the dict literal in `_cmd_new`.
     """
     dry_run = args.dry_run
     if not DECK_DIR.exists():
