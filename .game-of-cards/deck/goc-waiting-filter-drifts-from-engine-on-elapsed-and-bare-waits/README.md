@@ -25,7 +25,7 @@ definition_of_done: |
 Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
 had drifted or died):
 
-- Filter: `goc/engine.py:4307` — now `live_impeded(t, include_drafts=...)`
+- Filter: `goc/engine.py:4310` — now `live_impeded(t, include_drafts=...)`
 - Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
 - Authoritative impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
 - Flag help text: `goc/engine.py:3912`
@@ -55,7 +55,7 @@ walks a matrix over BOTH overlay fields — quoting its docstring:
 > queue with no manual action — the elapsed-wait is then surfaced
 > separately by `validate_waiting_overlay` as an SLE escalation signal.
 
-**That code is gone.** `goc/engine.py:4307` now reads:
+**That code is gone.** `goc/engine.py:4310` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
@@ -169,7 +169,7 @@ and because it is the input shape a ratifying reader should re-run.
 Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
 had drifted or died):
 
-- Filter: `goc/engine.py:4307` — now `live_impeded(t, include_drafts=...)`
+- Filter: `goc/engine.py:4310` — now `live_impeded(t, include_drafts=...)`
 - Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
 - Authoritative impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
 - Flag help text: `goc/engine.py:3912`
@@ -199,7 +199,7 @@ walks a matrix over BOTH overlay fields — quoting its docstring:
 > queue with no manual action — the elapsed-wait is then surfaced
 > separately by `validate_waiting_overlay` as an SLE escalation signal.
 
-**That code is gone.** `goc/engine.py:4307` now reads:
+**That code is gone.** `goc/engine.py:4310` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]

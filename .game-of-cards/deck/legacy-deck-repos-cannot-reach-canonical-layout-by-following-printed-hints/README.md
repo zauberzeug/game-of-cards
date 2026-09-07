@@ -37,11 +37,11 @@ no documented exit.
           ...
   ```
 
-- `goc/install.py:1693-1861` — `upgrade()` never migrates the deck tree:
+- `goc/install.py:1952-2122` — `upgrade()` never migrates the deck tree:
   `_find_installed_deck_dir` (`goc/install.py:470-478`) resolves the legacy
   `deck/`, the sentinel is re-stamped *there*
   (`goc/install.py:1825`), and `_sync_game_of_cards_config(...,
-  migrate_legacy=True)` (`goc/install.py:1089-1090`) migrates only the
+  migrate_legacy=True)` (`goc/install.py:1303-1304`) migrates only the
   legacy `.claude/deck-config.yaml` config file — it never creates
   `.game-of-cards/deck/`.
 - `goc/engine.py:7003-7009` — `goc migrate` refuses legacy-only repos:

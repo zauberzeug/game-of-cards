@@ -20,3 +20,24 @@ so the fixture has to be hand-written frontmatter, and the honest scope of
 the resulting evidence (a state the tool refuses to create) is itself part
 of what the parked decision has to weigh. That is more than a hygiene pass
 should settle unilaterally.
+
+## 2026-09-07 — refine-deck: defunct cite repaired by hand from the prior pass's note
+
+The 2026-08-31 entry above recorded that the `_would_create_advance_cycle`
+cite (`:1349`) was defunct, that its anchor text had been refactored into
+`advances = card.frontmatter.get("advances") or []`, and that the function
+now sits at `goc/engine.py:2136` with its `advances` walk at `:2154`. That
+located the cite; the mechanical pass could not apply it, because the recipe
+only rewrites a number when the *verbatim* anchor line relocates uniquely.
+
+Re-verified against HEAD (`def _would_create_advance_cycle` at line 2136,
+`advances = card.frontmatter.get("advances") or []` at 2154) and applied the
+repair to both the summary and the Location block, including the quoted
+snippet, which was still the pre-refactor form. `detect_advance_cycles`'s
+`:~2126` cite was checked and is current.
+
+The divergence itself is unchanged and the decision is still parked: the
+gating validator walks `advanced_by`, the live guard walks `advances`. No
+`reproduce.py` this round — the fixture needs a half-edged deck that
+`goc validate` rejects and no goc verb can produce, which is part of what
+the parked decision has to weigh.

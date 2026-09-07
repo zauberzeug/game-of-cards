@@ -26,7 +26,7 @@ definition_of_done: |
 
 - `goc/engine.py:4074-4083` (subparser — no `--commit` / `--no-commit`).
 - `goc/engine.py:4252-4306` (`_cmd_repair_edges` — no `_git_auto_commit` call).
-- `goc/engine.py:6274-6287` (`_mutate_pair` — the disk-write helper repair-edges shares with `advance` / `unadvance`).
+- `goc/engine.py:6277-6290` (`_mutate_pair` — the disk-write helper repair-edges shares with `advance` / `unadvance`).
 
 ## What's broken
 
@@ -120,7 +120,7 @@ See `reproduce.py` for the runnable check.
 
 Reachability is direct: the pre-commit hook runs `goc validate`, which
 reports half-edges and prints `Run 'goc repair-edges --apply' to fix.`
-(`engine.py:4435`). Anyone following that hint, or any `/loop` agent
+(`engine.py:4438`). Anyone following that hint, or any `/loop` agent
 running `repair-edges --apply` as part of routine cleanup, leaves the
 working tree dirty.
 
@@ -227,7 +227,7 @@ if repaired:
 
 ## Sibling sweep
 
-`_cmd_move` at `engine.py:6634-6694` exercises a similar disk-write
+`_cmd_move` at `engine.py:6637-6697` exercises a similar disk-write
 path: it uses `git mv` (which stages the directory rename) but the
 subsequent `_move_rewrite_tracked_files` writes to README.md / log.md
 across the repo without staging or committing those rewrites. The

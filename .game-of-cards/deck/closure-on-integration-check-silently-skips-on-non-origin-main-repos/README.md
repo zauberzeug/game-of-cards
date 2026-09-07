@@ -46,7 +46,7 @@ The implementation pins "the canonical branch" to two literal names:
 
 ```python
 fetch = subprocess.run(
-    ["git", "fetch", "--quiet", "origin", "main"],   # engine.py:5212
+    ["git", "fetch", "--quiet", "origin", "main"],   # engine.py:5215
     ...
 )
 if fetch.returncode != 0:
@@ -56,7 +56,7 @@ if fetch.returncode != 0:
     )
     return
 check = subprocess.run(
-    ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],  # engine.py:5225
+    ["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"],  # engine.py:5228
     ...
 )
 ```

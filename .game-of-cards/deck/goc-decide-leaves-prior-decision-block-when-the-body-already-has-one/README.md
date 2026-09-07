@@ -33,7 +33,7 @@ worker: null
 `replace_or_append_decision` handles two body shapes:
 
 ```python
-# goc/engine.py:581-596
+# goc/engine.py:631-646
 def replace_or_append_decision(body: str, decision: str, reasoning: str, today: str) -> str:
     ...
     block = f"## Decision\n\n*Resolved {today}:* {decision}\n\n*Reasoning:* {reasoning}\n\n"

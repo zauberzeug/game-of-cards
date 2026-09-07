@@ -201,7 +201,7 @@ hit: `SUPERSEDE_REL_FIELDS` (`goc/engine.py:1281`), whose three neighbours
 `LIST_REL_FIELDS`, `ADVANCE_REL_FIELDS` and `INVERSE_REL` all have readers —
 `HalfEdge.is_advance` (`goc/engine.py:1318`) consults `ADVANCE_REL_FIELDS`,
 while the supersession branch is written out longhand as
-`edge.field == "superseded_by"` (`goc/engine.py:6327`) rather than through
+`edge.field == "superseded_by"` (`goc/engine.py:6330`) rather than through
 the constant sitting right beside it. That is the degenerate case of this
 shape — an unused name, not a misleading contract — so it is noted here
 rather than filed. The sweep did NOT cover unread dataclass *fields* or dict

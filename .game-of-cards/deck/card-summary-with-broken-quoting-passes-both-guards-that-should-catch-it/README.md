@@ -33,7 +33,7 @@ if value.startswith(STRUCTURED_PREFIXES) or value in {"", "null"}:
     continue
 ```
 
-with (`scripts/check_card_frontmatter_yaml.py:116`):
+with (`scripts/check_card_frontmatter_yaml.py:131`):
 
 ```python
 #: Value forms that are already quoted or flow-structured — not plain scalars.

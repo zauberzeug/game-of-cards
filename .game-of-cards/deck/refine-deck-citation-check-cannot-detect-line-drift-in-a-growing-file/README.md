@@ -188,7 +188,22 @@ handles correctly ("close via `Skill(finish-card)` with a note fixed incidentall
 by <commit-hash>").
 
 Line-range cites (`file.py:120-140`) map both endpoints independently and are
-rewritten only when both resolve.
+rewritten only when both resolve. **That half is wrong** — see the
+supersession note below.
+
+## Superseded in part — independent endpoints break the range (2026-09-07)
+
+The range rule shipped here maps a cite's two endpoints as separate
+single-line repairs and asks only that both resolve. Nothing then checks
+that the pair still bounds a block, and three passes later twelve range
+cites in the deck have their start past their end or a 3-line span
+stretched past 200. Once both endpoints anchor cleanly the recipe verdicts
+the wreck as `current`, so it is certified rather than reported.
+
+Tracked by
+[citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range](../citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range/),
+which carries the per-pass trace and the coherence guard. The rest of this
+card still stands.
 
 ## Superseded in part — step 2 is wrong on a second pass (2026-08-17)
 

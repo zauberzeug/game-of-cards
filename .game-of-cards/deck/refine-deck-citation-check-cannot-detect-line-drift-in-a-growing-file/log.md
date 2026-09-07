@@ -75,3 +75,19 @@ the correction filed as
 `second-citation-repair-pass-moves-correct-cites-onto-unrelated-code`, with
 the decay rate that makes second passes routine filed as
 `file-line-citations-drift-again-within-days-of-every-repair-pass`.
+
+## 2026-09-07 — refine-deck: post-close evidence against the range rule
+
+Running this card's recipe over the deck's 893 in-scope cites surfaced a
+shape it gets wrong. "Line-range cites map both endpoints independently and
+are rewritten only when both resolve" imposes no coherence requirement on
+the repaired pair, and twelve range cites across eight open cards are now
+incoherent — start past end, or a 3-line span grown to 232. One cite traced
+across every pass that touched it went `2830-2833` (filed) → `3735-3738`
+(this card's own repair, still coherent) → `3903-3738` → `3970-3738` →
+`4020-3788`.
+
+README amended with a forward pointer; the finding is filed as
+`citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`
+with a `reproduce.py`. The bounds-test finding and the content-anchor design
+this card established are unaffected.

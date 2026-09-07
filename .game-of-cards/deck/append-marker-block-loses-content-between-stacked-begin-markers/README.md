@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/install.py:1270`
+`goc/install.py:1526`
 
 ```python
 def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
@@ -46,7 +46,7 @@ GOC_BEGIN_RE = re.compile(r"<!-- BEGIN GOC v[\w.+!-]+ -->")
 GOC_END = "<!-- END GOC -->"
 ```
 
-The same non-greedy shape appears at `goc/install.py:217` inside
+The same non-greedy shape appears at `goc/install.py:247` inside
 `_strip_goc_block`, so the sibling sweep below covers both.
 
 ## What's broken
@@ -148,7 +148,7 @@ detect multiple BEGIN tags.
 The same non-greedy `.*?` pattern lives in `_strip_goc_block`:
 
 ```python
-# goc/install.py:202
+# goc/install.py:247
 pattern = re.compile(rf"\n*{GOC_BEGIN_RE.pattern}.*?{re.escape(GOC_END)}\n*", re.DOTALL)
 new = pattern.sub("\n\n", text).strip()
 ```

@@ -28,7 +28,7 @@ definition_of_done: |
 - `openclaw-plugin/index.ts:139` — `buildArgs` returns
   `[...flagTokens, input.verb, ...(input.args ?? [])]`; the verb is spliced
   unconditionally.
-- `openclaw-plugin/dist/index.js:2406-2449` — the compiled artifact consumers
+- `openclaw-plugin/dist/index.js:2406-2457` — the compiled artifact consumers
   actually load; identical on both points.
 - `goc/engine.py:4166-4100` — `if args.command is None: _cmd_default(args)`.
   The queue table, `--board`, `--ready`, `--json` and the leverage line all
@@ -45,7 +45,7 @@ definition_of_done: |
 The engine renders the deck only when argparse resolves **no subcommand**:
 
 ```python
-# goc/engine.py:4166
+# goc/engine.py:4169
     if args.command is None:
         _cmd_default(args)
 ```

@@ -13,7 +13,7 @@ tags: [bug, api-contract, infra]
 definition_of_done: |
   - [ ] PROCESS: human picks one of the fix paths in `## Decision required`; the choice is recorded inline. Coordinate with the two sibling cards (`append-marker-block-loses-content-between-stacked-begin-markers`, `append-marker-block-duplicates-content-when-file-has-two-complete-marker-blocks`) — a single regex hardening can close all three at once.
   - [ ] TDD: `reproduce.py` exits zero (prose mention preserved verbatim; real block rewritten in place).
-  - [ ] TDD: regression test in `tests/test_install.py` covers the prose-mention input shape against `_append_marker_block` AND `_strip_goc_block` (sibling sweep — same unanchored shape at `goc/install.py:217`).
+  - [ ] TDD: regression test in `tests/test_install.py` covers the prose-mention input shape against `_append_marker_block` AND `_strip_goc_block` (sibling sweep — same unanchored shape at `goc/install.py:247`).
   - [ ] TDD: existing one-block install/upgrade tests still pass (no regression in the happy path); existing two-BEGIN-one-END and two-complete-blocks regressions from the sibling cards still pass.
   - [ ] MECHANICAL: `goc validate` passes; plugin mirrors re-synced if the engine changed.
 ---
@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/install.py:1270`
+`goc/install.py:1526`
 
 ```python
 def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
@@ -39,7 +39,7 @@ def _append_marker_block(target: Path, block_body: str, *, header: str) -> None:
     _write_text_keep_newline(target, text.rstrip() + "\n\n" + block, newline)
 ```
 
-The same unanchored-regex shape appears at `goc/install.py:217`
+The same unanchored-regex shape appears at `goc/install.py:247`
 inside `_strip_goc_block`, so the sibling sweep below covers both
 call sites.
 
@@ -142,7 +142,7 @@ project that *teaches* the convention gets bitten when it explains it.
 ## Why it matters
 
 Reachability path: `goc install` and `goc upgrade` both call
-`_sync_methodology_blocks` (`goc/install.py:1382`) → `_append_marker_block`
+`_sync_methodology_blocks` (`goc/install.py:1619`) → `_append_marker_block`
 (`goc/install.py:1258`). Every consumer who runs `goc upgrade` after
 adding documentation about the marker convention to their AGENTS.md
 or CLAUDE.md is vulnerable. The bug is silent — the rewrite "succeeds"
@@ -180,7 +180,7 @@ formed input** — the file has exactly one real block, and the only
 works.
 
 The four instances together suggest the meta-fix: harden
-`_append_marker_block` (and the sibling shape at `goc/install.py:217`
+`_append_marker_block` (and the sibling shape at `goc/install.py:247`
 in `_strip_goc_block`) so prose mentions and malformed states are
 both excluded by construction.
 
@@ -258,7 +258,7 @@ defect surfaces.
 # goc/install.py:34
 GOC_BEGIN_RE = re.compile(r"^<!-- BEGIN GOC v[\w.+!-]+ -->$", re.MULTILINE)
 
-# goc/install.py:1255
+# goc/install.py:1526
 pattern = re.compile(
     rf"{GOC_BEGIN_RE.pattern}\n.*?^{re.escape(GOC_END)}\n?",
     re.DOTALL | re.MULTILINE,
@@ -276,5 +276,5 @@ _write_text_keep_newline(target, pattern.sub(lambda _: block, text, count=1), ne
 ```
 
 Mirror the same anchoring + exactly-one-match guard on
-`_strip_goc_block` (`goc/install.py:217`) so the sibling sweep is
+`_strip_goc_block` (`goc/install.py:247`) so the sibling sweep is
 complete.

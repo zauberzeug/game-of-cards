@@ -22,10 +22,10 @@ definition_of_done: |
 ## Location
 
 - Emitter: `goc/engine.py:413-429` (`_emit_worker`).
-- Validator: `goc/engine.py:1895-1912` (`validate_card`, worker branch).
+- Validator: `goc/engine.py:1945-1962` (`validate_card`, worker branch).
 - Reachable from any full-emit verb that calls `emit_frontmatter(fm, body=body)`
-  — e.g. `goc wait` at `goc/engine.py:4366`, `goc decide` at `goc/engine.py:6829`,
-  `goc migrate-list-style` at `goc/engine.py:7119`, `goc move` at
+  — e.g. `goc wait` at `goc/engine.py:4366`, `goc decide` at `goc/engine.py:6832`,
+  `goc migrate-list-style` at `goc/engine.py:7173`, `goc move` at
   `goc/engine.py:4157`, `goc triage` at `goc/engine.py:4366`.
 
 ## What's broken

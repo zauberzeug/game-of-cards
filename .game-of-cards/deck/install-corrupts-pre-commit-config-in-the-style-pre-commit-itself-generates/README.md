@@ -16,7 +16,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — the `goc-validate` hook is a member of the top-level `repos:` list for both column-zero shapes AND the existing two-space control, having exited 1 before the fix.
   - [ ] TDD: a regression test in `tests/` covers the two column-zero shapes verbatim — the exact output of `pre-commit sample-config` (items at column 0, four-space content) and the hand-written `- repo:` / two-space-content variant — plus the two-space control. The `pre-commit sample-config` case must be pinned as its own named test: it is the config pre-commit's quickstart tells every user to create, so a fix that handles only hand-written styles still fails the most common repo.
   - [ ] MECHANICAL: the fix lands in `_append_precommit_hook` (goc/install.py:1339-1361) and covers `goc install` (goc/install.py:1576) and `goc upgrade` (goc/install.py:1823) alike, since both call the same function.
-  - [ ] MECHANICAL: `_refresh_goc_validate_block` (goc/install.py:1286-1313) is reconciled with the chosen mechanism. Its `_PRECOMMIT_LOCAL_BLOCK_RE` (goc/install.py:1280-1283) is anchored on the literal `^  - repo: local\n` with the same hard-coded two-space indent, so a stanza written at any other indentation is invisible to the refresh path and would never receive template fixes.
+  - [ ] MECHANICAL: `_refresh_goc_validate_block` (goc/install.py:1541-1568) is reconciled with the chosen mechanism. Its `_PRECOMMIT_LOCAL_BLOCK_RE` (goc/install.py:1280-1283) is anchored on the literal `^  - repo: local\n` with the same hard-coded two-space indent, so a stanza written at any other indentation is invisible to the refresh path and would never receive template fixes.
   - [ ] PROCESS: whichever of the two cards lands second records in its `log.md` that the shared fix closed it, so the pair does not read as two independent repairs.
   - [ ] TDD: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 ---
@@ -27,7 +27,7 @@ definition_of_done: |
 
 - `PRE_COMMIT_HOOK` — `goc/install.py:79-88` (the stanza, hard-coded at two-space indent).
 - `_append_precommit_hook` — `goc/install.py:1339-1361` (the blind append).
-- `_PRECOMMIT_LOCAL_BLOCK_RE` / `_refresh_goc_validate_block` — `goc/install.py:1280-1313`
+- `_PRECOMMIT_LOCAL_BLOCK_RE` / `_refresh_goc_validate_block` — `goc/install.py:1535-1568`
   (the refresh path, anchored on the same hard-coded indent).
 - Call sites: `goc/install.py:1576` (`install`) and `goc/install.py:1823` (`upgrade`).
 
@@ -119,7 +119,7 @@ consuming repo stops running — the user's formatters and linters, and
 The same hard-coded indent disables the repair path. `_PRECOMMIT_LOCAL_BLOCK_RE`
 (`goc/install.py:1280-1283`) matches only `^  - repo: local`, so once a stanza
 exists at any other indentation `_refresh_goc_validate_block` cannot see it, and
-the `"id: goc-validate" in text` early return at `goc/install.py:1348` makes
+the `"id: goc-validate" in text` early return at `goc/install.py:1587` makes
 every later `goc upgrade` a no-op over the damage.
 
 ## Empirical evidence

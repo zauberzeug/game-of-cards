@@ -159,3 +159,21 @@ options: a self-anchoring form does not just remove the repair, it reaches the
 
 Evidence is a full census, not a sample; no card was filed for it because this
 card already owns the finding.
+
+## 2026-09-07 — refine-deck: fourth residue measurement, same shape
+
+The 2026-09-07 pass anchored 893 in-scope cites across 156 open cards and
+repaired 296 occurrences in 90 cards. The residue it could not repair: 110
+trivial anchors, 95 ambiguous, 57 absent — 262 declines, against 236 (2026-08-17)
+and 260 (2026-08-24). Four passes, four near-identical residues; the README's
+"permanent residue of a scheme that has to re-derive an address that was never
+stable" now has a fourth datapoint rather than a third.
+
+One thing the residue table does *not* capture, and which bears on the option
+pick: the recipe can also produce a cite that is wrong without ever declining.
+Twelve range cites in the deck have their endpoints mapped independently onto
+unrelated lines, and because each endpoint anchors cleanly the pass verdicts the
+result `current`. Filed as
+`citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`.
+A self-anchoring form would not have this failure mode at all, which is a point
+for that option that this card's corpus census did not price.

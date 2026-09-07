@@ -175,3 +175,23 @@ Both entries are the same fact — the runway is 0 and the upper bound wobbles b
 one as cards are claimed and closed, which is precisely why the two are now
 reported as two numbers. The `## What's broken` table and `## Empirical
 evidence` block are re-rendered from this run.
+
+## 2026-09-07 — refine-deck: runway re-measured, claim unchanged
+
+Third datapoint for the metric this card is parked on. 192 open cards after
+this pass filed one: 4 at `human_gate: none`, 170 at `decision`, 18 at
+`session`. Three of the four gate-free cards are old umbrellas
+(`openclaw-subagent-plugin-tools-alsoallow-ignored`,
+`blocked-status-conflates-dependency-external-wait-and-deferral`,
+`remove-blocked-from-status-enum-and-migrate-existing-cards`) and impeded,
+claimed, or otherwise unpullable; `goc --ready` returns exactly one card,
+the one this pass filed. So the runway is still supplied by the intake, not
+by the outlet — the same shape the README describes.
+
+Staleness re-measured on the definition the README uses: 103 of the open
+cards have had no `log.md` entry for 60+ days, up from 99 on 2026-08-24. 85
+of those 103 have never had a log entry at all.
+
+No claim in the README changed, so nothing there was rewritten; this is the
+outlet-side trend the parked decision needs, recorded so the next reader has
+three measurements rather than two.

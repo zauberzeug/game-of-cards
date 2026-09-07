@@ -24,7 +24,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4725-4726` (`_cmd_quality_pass`) — the only filter is
+- `goc/engine.py:4728-4729` (`_cmd_quality_pass`) — the only filter is
   status:
 
   ```python
@@ -38,7 +38,7 @@ definition_of_done: |
 - `goc/engine.py:5951` ff. (`_cmd_decide`) — the only guard is
   `if t.human_gate == "none"`; no draft guard (contrast
   `_cmd_status`'s draft refusal for superseded/disproved at
-  `engine.py:5972`). The unconditional next-step at `engine.py:6865`:
+  `engine.py:5975`). The unconditional next-step at `engine.py:6868`:
 
   ```python
   print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
@@ -57,7 +57,7 @@ Three surfaces already forgot and were fixed one at a time —
 
 1. **quality-pass audits drafts.** Draft scaffolds flow into the
    antipattern/missing-summary report, and into the `--llm` sample,
-   where `_apply_verdict_interactive` (`engine.py:4659`) with `--yes`
+   where `_apply_verdict_interactive` (`engine.py:4662`) with `--yes`
    would rewrite the `summary`/DoD of — and `goc move` — a card nobody
    has authored yet: exactly the race `draft: true` exists to prevent.
 2. **decide unparks a draft into nowhere.** `goc new --gate decision`
