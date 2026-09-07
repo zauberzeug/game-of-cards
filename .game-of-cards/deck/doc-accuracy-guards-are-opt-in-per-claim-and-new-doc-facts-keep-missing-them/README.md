@@ -26,6 +26,7 @@ advanced_by:
   - agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does
   - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
   - cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay
+  - migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
