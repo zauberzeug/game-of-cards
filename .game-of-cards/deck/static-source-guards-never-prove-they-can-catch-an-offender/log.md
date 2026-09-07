@@ -99,3 +99,27 @@ and a prose-specified check has none to register. Cross-reference only, no
 `advances` edge — consistent with the schema-parity and closure-verification
 connections already on this card. The instance carries its own fix in
 `refine-deck-citation-check-cannot-detect-line-drift-in-a-growing-file`.
+
+## 2026-09-07T05:06:00Z — Sixth surface: the technique applied voluntarily to a new guard
+
+`citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`
+closed in `a990a849` and cited this card in its DoD, so the new guard was
+built with controls from the start rather than retrofitted. Two of them, on
+the two halves of a prose-plus-fixture guard:
+
+- the prose classifier `documented_range_coherence` is fed the exact sentence
+  the fix replaced and asserted to return `PAIR_UNCHECKED`, so it is shown
+  producing the failing verdict and not only the passing one;
+- the repo fixture is run with the pair check switched off and asserted to
+  write the inverted range `10-8`, so a fixture that stopped reproducing the
+  divergence could not read as "the recipe declines correctly".
+
+Confirmed end to end: reverting the shipped `SKILL.md` step 1 to its pre-fix
+sentence turns three of the new tests red, and restoring it turns them green.
+
+A datapoint for the scope question this card is parked on. It cost roughly
+two extra assertions on a guard being written anyway, and it caught nothing —
+which is the expected outcome on a guard authored the same hour, and is why
+the cost of the technique is better measured here than on the retrofit cases.
+The four guards in this card's offender table are still unaddressed; nothing
+about this closure narrows them.

@@ -177,3 +177,26 @@ result `current`. Filed as
 `citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`.
 A self-anchoring form would not have this failure mode at all, which is a point
 for that option that this card's corpus census did not price.
+
+## 2026-09-07T05:05:00Z — The range-endpoint instance closed; what it does and does not settle
+
+`citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`
+closed in `a990a849`. The twelve corrupt cites are repaired by hand, and the
+recipe now checks the pair a range repair would write (ordered, span still a
+block) and refuses to re-map a range that arrives already incoherent —
+reported as a fourth residue reason, `incoherent range pair`, beside trivial
+/ ambiguous / absent.
+
+Bearing on the option pick recorded above. The entry of 2026-09-07 priced
+"the recipe can produce a cite that is wrong without ever declining" as an
+unpriced point FOR a self-anchoring form. That failure mode is now bounded
+rather than open: the pass refuses the rewrite instead of certifying it, so
+the wrong-without-declining path costs a decline in the residue rather than
+a silently corrupt cite. The argument for self-anchoring survives on its own
+terms — a self-anchoring form has no endpoints to diverge in the first place,
+and the four near-identical residues this card measures are untouched by the
+fix — but it should no longer be weighed as an *unguarded* hazard.
+
+What the fix explicitly does not settle: whether a bare line number should
+address code at all. The closed card holds only the narrower invariant, which
+any convention has to keep — a range must bound something — and says so.
