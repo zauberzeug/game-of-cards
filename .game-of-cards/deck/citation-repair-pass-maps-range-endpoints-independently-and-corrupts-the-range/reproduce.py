@@ -8,6 +8,15 @@ requires the repaired pair to still bound a block.  This script finds every
 range cite in the deck that no longer does, and blames the commit that
 broke it.
 
+This card's OWN README is skipped.  It is the catalogue of the corruption —
+a compounding trace of what each past pass wrote, plus a transcript of this
+script's pre-fix run — so every range cite it carries is a dated record of a
+number some commit once emitted, which the recipe's scope rule
+(`reference.md` § Citation anchor check) already puts out of repair scope.
+Scanning it would make the guard fail on its own evidence, and rewriting
+that evidence would cost the card the thing it was filed to carry.  Every
+other card in the deck is scanned.
+
 Exits 0 when the deck holds no incoherent range cite.
 """
 import re
@@ -74,7 +83,10 @@ def blame(card: str, token: str) -> str:
 
 def main() -> int:
     findings = []
+    own_card = Path(__file__).resolve().parent
     for readme in sorted(DECK.glob("*/README.md")):
+        if readme.parent.resolve() == own_card:
+            continue  # this card's evidence — see the module docstring
         card = readme.parent.name
         for lineno, line in enumerate(readme.read_text(encoding="utf-8").splitlines(), 1):
             for m in RANGE.finditer(line):
@@ -83,7 +95,10 @@ def main() -> int:
                 if why:
                     findings.append((card, m.group(0), lineno, why))
 
-    print(f"scanned {len(list(DECK.glob('*/README.md')))} cards")
+    scanned = sum(
+        1 for r in DECK.glob("*/README.md") if r.parent.resolve() != own_card
+    )
+    print(f"scanned {scanned} cards")
     print(f"incoherent range cites: {len(findings)}\n")
     for card, token, lineno, why in findings:
         print(f"  {token}  ({why})")

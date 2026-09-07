@@ -152,9 +152,38 @@ re-derived per pass.
 
 **Resolving the cite.** Cards write paths as they read in prose, so
 accept the bare basename (`engine.py:N` for `goc/engine.py:N`) and
-prefer a match outside vendored/mirror trees when several exist. A
-range (`file.py:120-140`) maps its endpoints independently and is
-rewritten only when both resolve.
+prefer a match outside vendored/mirror trees when several exist.
+
+**A range is one cite, not two.** `file.py:120-140` asserts a BLOCK, and
+the endpoints are only how the block is addressed — so a repair that
+leaves them no longer bounding a block has destroyed the cite rather
+than moved it, and is strictly worse than the drifted cite it replaced.
+A drifted `file.py:120` still points somewhere a reader can orient from.
+Map each endpoint by the recipe below, then check the PAIR before
+writing it: emit the rewrite only when it is ordered (`start <= end`)
+and the new span still fits a block. An unordered pair, or a span no
+block could have (this deck's guard refuses more than 500 lines), is a
+DECLINE — reported like every other decline, never written.
+
+Endpoints usually move together, because code inserted above a block
+shifts both of its edges by the same amount, and that is exactly what
+makes the failure silent when it stops. A pass that relocates one
+endpoint and leaves the other — its anchor text happened to still sit
+at its own line, so the endpoint read as `current` — emits a pair whose
+two numbers each anchor cleanly in isolation. The NEXT pass therefore
+verdicts the wreck `current` too, and no decline is ever reported for
+it. Measured on this deck: three anchored passes left twelve such cites
+across eight open cards, seven of them `human_gate: decision`, none of
+them reported by any pass.
+
+**Do not re-map a range that ARRIVES incoherent.** `start > end`, or a
+span no block could have, is damage an earlier pass wrote, not drift.
+Its endpoints anchor to whatever they were last mistakenly moved onto,
+so running the recipe over them relocates that unrelated text and
+launders one corrupt cite into a differently corrupt one — the pass
+reports a repair and the cite still names nothing. Report it under the
+same decline reason and leave the numbers alone; only the card's own
+prose says which block it meant.
 
 **Getting the anchor.** A cite means what it meant when its number was
 last AUTHORED, so the anchor commit is the one that wrote the number —
@@ -188,7 +217,7 @@ everywhere. That guard is what makes the repair safe to apply
 unattended — on the pass that produced this rule it repaired 388 cites
 across 113 cards and declined 279 rather than guess.
 
-**The residue is output, not silence.** The declines split three ways
+**The residue is output, not silence.** The declines split four ways
 and each is reported for a human read:
 
 | Decline | What it usually means |
@@ -196,6 +225,7 @@ and each is reported for a human read:
 | trivial anchor line | the address is unrecoverable mechanically; a reader must re-derive it from the card's prose |
 | ambiguous (>1 match) | boilerplate or a repeated idiom; the card's surrounding text disambiguates, the matcher cannot |
 | anchor text absent | the cited code was refactored away — re-read the card, and if the refactor also fixed the defect, close it per the core skill |
+| incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |
 
 A pass that printed only the cites it could auto-repair would report a
 shrinking problem while the unmappable majority rotted unseen — the

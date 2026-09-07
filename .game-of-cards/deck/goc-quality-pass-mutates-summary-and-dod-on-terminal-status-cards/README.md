@@ -24,7 +24,7 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:3132-3211` — `_cmd_quality_pass` (no terminal filter when `--status` selects terminal cards)
-- `goc/engine.py:4611-7123` — `_apply_summary_rewrite` (no terminal guard)
+- `goc/engine.py:4614-4625` — `_apply_summary_rewrite` (no terminal guard)
 - `goc/engine.py:3059-3076` — `_apply_dod_rewrite` (no terminal guard)
 - `goc/engine.py:4662-4712` — `_apply_verdict_interactive` (orchestrator; no terminal guard)
 - `goc/engine.py:2576` — argparser: `--status` default is `open` (safe); `all|done|disproved|superseded` open the hole
@@ -56,7 +56,7 @@ for verdict in verdicts:
 `_apply_summary_rewrite` and `_apply_dod_rewrite` mutate the README frontmatter directly with no status check:
 
 ```python
-# goc/engine.py:4561-7073
+# goc/engine.py:4614-4625
 def _apply_summary_rewrite(card: Card, new_summary: str) -> None:
     """In-place YAML-safe rewrite of the `summary:` field on this card's README.md."""
     readme = card.path / "README.md"

@@ -48,7 +48,7 @@ is always refreshed from the live branch.
 3930:        where = r.stdout.strip() ...     # ← always refresh from live branch
 ```
 
-The docstring at `goc/engine.py:5843-5733` codifies the intent:
+The docstring at `goc/engine.py:5844-5850` codifies the intent:
 
 > If the card already has a worker.who (designation), preserve it and only
 > add/update `where`.

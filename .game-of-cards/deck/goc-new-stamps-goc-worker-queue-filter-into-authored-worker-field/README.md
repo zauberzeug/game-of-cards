@@ -1,6 +1,6 @@
 ---
 title: goc-new-stamps-goc-worker-queue-filter-into-authored-worker-field
-summary: "`goc new`'s `--worker` uses `argparse.SUPPRESS` and shares the default dest `worker` with the global `--worker` queue filter (whose default is `$GOC_WORKER`). So a bare `goc new` run with `GOC_WORKER` or global `--worker` set stamps that triage-filter value into the new card's authored `worker` field. Fix: give `new --worker` a distinct dest, mirroring the `advances_wire`/`advanced_by_wire` remedy at engine.py:4020-3788. Decision-gated on the intended contract."
+summary: "`goc new`'s `--worker` uses `argparse.SUPPRESS` and shares the default dest `worker` with the global `--worker` queue filter (whose default is `$GOC_WORKER`). So a bare `goc new` run with `GOC_WORKER` or global `--worker` set stamps that triage-filter value into the new card's authored `worker` field. Fix: give `new --worker` a distinct dest, mirroring the `advances_wire`/`advanced_by_wire` remedy at engine.py:4020-4023. Decision-gated on the intended contract."
 status: open
 stage: null
 contribution: medium
@@ -13,7 +13,7 @@ tags: [bug, api-contract]
 definition_of_done: |
   - [ ] PROCESS: confirm the intended contract via `## Decision required` — a bare `goc new` should leave `worker` unset even when `GOC_WORKER` / global `--worker` is present (vs. auto-attributing the runner); record the choice via `Skill(decide-card)` (lowers the gate to `none`).
   - [ ] TDD: reproduce.py exits zero — `GOC_WORKER=alice goc new x` (and `goc --worker bob new y`) produces a card with no `worker` field, while `goc new z --worker carol` still writes `worker: carol`.
-  - [ ] MECHANICAL: give `goc new`'s `--worker` a distinct argparse dest (mirroring the `advances_wire` / `advanced_by_wire` remedy at engine.py:4020-3956) so the global filter dest can no longer bleed into `_cmd_new`; read that dest in `_cmd_new`.
+  - [ ] MECHANICAL: give `goc new`'s `--worker` a distinct argparse dest (mirroring the `advances_wire` / `advanced_by_wire` remedy at engine.py:4020-4023) so the global filter dest can no longer bleed into `_cmd_new`; read that dest in `_cmd_new`.
   - [ ] PROCESS: a regression test lands in `tests/`; the existing `tests/test_global_flag_collision.py` tripwire stays green (a distinct dest removes `new --worker` from the parent-collision set).
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green; `uv run goc validate` clean.
 ---
@@ -93,7 +93,7 @@ and `new`'s own help text promises its `--worker` *overrides*
 Give `goc new`'s `--worker` a distinct dest (e.g. `worker_designation`)
 so the global filter dest cannot bleed in — the same "distinct dests"
 remedy already applied to `--advances` / `--advanced-by` on `goc new`
-(engine.py:4020-3956) — and read that dest in `_cmd_new`. The
+(engine.py:4020-4023) — and read that dest in `_cmd_new`. The
 `tests/test_global_flag_collision.py` tripwire stays green because a
 distinct dest removes `new --worker` from the parent-collision set
 entirely.

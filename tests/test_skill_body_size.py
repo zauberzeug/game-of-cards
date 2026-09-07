@@ -82,6 +82,20 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # reporting shape went to the reference sibling. A pointer would not have
 # worked here for a sharper reason than the earlier three raises: the defect
 # IS a pass inventing the missing rule rather than going to look for it.
+#
+# refine-deck was raised a fifth time on 2026-09-07 by the card
+# `citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range`:
+# step 1 of the recipe mapped a range's two endpoints as independent
+# single-line lookups and never asked whether the repaired pair still bounded
+# a block, so a pass that relocated one endpoint and left the other emitted a
+# range naming nothing (measured: twelve such cites across eight open cards,
+# one inverted span reaching 232 lines from a 3-line block). The wreck is then
+# invisible — both endpoints anchor cleanly in isolation, so the next pass
+# verdicts it `current` and never declines. What stayed in the core is the
+# pair check and the refusal to re-map an already-incoherent range; the
+# census, the compounding trace and the fourth decline row went to the
+# reference sibling. Same reason as the fourth raise: the defect IS a pass
+# filling in a rule the recipe did not state, so a pointer is what failed.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -91,7 +105,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 12_300,
+    "refine-deck": 12_500,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

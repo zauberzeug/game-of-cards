@@ -25,7 +25,7 @@ definition_of_done: |
 
 - `goc/engine.py:4403-4414` — `_cmd_unadvance` (no self-target guard).
 - `goc/engine.py:4382-4400` — `_cmd_advance` (has the guard at lines 4388-4390).
-- `goc/engine.py:6274-6176` — `_mutate_pair` (reads `parent_text` before the first write, so child==parent makes the second write revert the first).
+- `goc/engine.py:6277-6290` — `_mutate_pair` (reads `parent_text` before the first write, so child==parent makes the second write revert the first).
 
 ## What's broken
 

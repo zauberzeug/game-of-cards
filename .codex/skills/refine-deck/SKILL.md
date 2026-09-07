@@ -144,7 +144,13 @@ report their count apart from the declines below. Undecidable → record.
 Per cite (long form: `reference.md` § Citation anchor check):
 
 1. Resolve the path — cards write `engine.py:N` for `goc/engine.py:N`;
-   prefer a non-mirror match. Ranges map both endpoints.
+   prefer a non-mirror match. A range names one BLOCK: map both
+   endpoints, then check the PAIR — emit only if it is ordered
+   (`start <= end`) and the span still fits a block. An unordered pair or
+   an implausible span is a DECLINE, reported. A range that ARRIVES
+   incoherent is an earlier pass's damage, not drift: its endpoints
+   anchor to whatever they were last moved onto, so re-mapping launders
+   the corruption. Report it; never rewrite it.
 2. Anchor = that line's text at the commit that last WROTE the number:
    walk `git log --follow --format=%H -- <card>/README.md` oldest →
    newest and take the newest commit where the cite token turns from

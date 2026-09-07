@@ -25,7 +25,7 @@ definition_of_done: |
 - `goc/engine.py:4851` — `_cmd_done` calls `_enforce_closure_on_integration_or_exit(title)`.
 - `goc/engine.py:4938` — `_cmd_done_bundle` calls the same helper inside its bundle loop.
 - `goc/engine.py:4302-4303` — `_cmd_status` enters the terminal-status branch (`if new_status in TERMINAL_STATUSES`) and calls *only* `_enforce_no_inbound_superseded_by_or_exit(title, new_status)`. The integration check is not invoked here.
-- `goc/engine.py:5196-5120` — helper docstring framing.
+- `goc/engine.py:5200-5206` — helper docstring framing.
 - `goc/templates/skills/kickoff/reference.md:72-74` — user-facing description of the workflow knob.
 
 ## What's broken
