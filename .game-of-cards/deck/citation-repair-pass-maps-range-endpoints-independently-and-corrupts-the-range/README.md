@@ -1,7 +1,7 @@
 ---
 title: citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range
 summary: "The refine-deck citation recipe rewrites a range cite's two endpoints as unrelated single-line lookups, so a repair pass can move the start past the end or stretch a 3-line span to 232. Twelve such cites now sit in eight open cards, all written by the three anchored repair passes of 2026-08; each addresses no code block at all, which is the whole content of a range cite. The corruption is self-perpetuating and invisible: an incoherent range whose endpoints both still anchor cleanly verdicts as `current`, so the next pass never looks at it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-07T02:07:44Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] TDD: a regression test feeds a synthetic drifted range to the rule as written and fails on today's text, proving the guard can catch an offender rather than passing on an empty list (see [static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/)).
   - [ ] MECHANICAL: all five mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Citation repair maps range endpoints independently and corrupts the range
