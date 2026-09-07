@@ -1,7 +1,7 @@
 ---
 title: migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does
 summary: "The migrate-list-style subparser help and command docstring both list key order among the things a canonical re-emit normalises, but emit_frontmatter iterates the parsed dict in the authored file's own order and never reorders keys. A card whose only drift is key order is reported as already canonical, and the per-card changed-part report can never name key order."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-07T04:54:32Z"
@@ -10,13 +10,13 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — the promise and the behaviour agree again.
   - [ ] MECHANICAL: the `migrate-list-style` subparser help (`goc/engine.py:4137`) no longer names key order among what a canonical re-emit normalises, and enumerates only what `emit_frontmatter` actually owns.
   - [ ] MECHANICAL: `_cmd_migrate_list_style`'s docstring (`goc/engine.py:7144`) carries the same corrected scope, plus a one-line note that key order is *preserved* from the authored file, so the next reader does not re-add the claim.
   - [ ] TDD: a regression test pins both halves — `emit_frontmatter` round-trips a key-reordered card byte-identically (order preserved), and neither user-facing scope string claims key-order normalisation.
   - [ ] MECHANICAL: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green; plugin mirrors synced by the pre-commit hook.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # migrate-list-style promises key-order normalisation the emitter never does
