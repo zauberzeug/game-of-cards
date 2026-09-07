@@ -55,7 +55,7 @@ setting a wait releases `active → open` and clears `worker`. The legacy
 
 | transition | CLI | notes |
 |---|---|---|
-| `open → active` | `goc status <title> active` | "claiming" the card; also clears `draft: true` |
+| `open → active` | `goc status <title> active` | "claiming" the card; also clears `draft: true`. Needs a worker identity: `--worker-who`, else `$GOC_WORKER_WHO`, else `git config user.name`. A claim with no resolvable identity is refused before the write — set `GOC_WORKER_WHO` in environments without a git identity (CI images, agent sandboxes) instead of relying on the flag being remembered |
 | `active → open` | `goc status <title> open` | release the claim (re-queue) and clear `worker` when stepping away mid-flight without disproving the work |
 | `* → open` | `goc status <title> open` | re-queue (rare) |
 | `* → disproved` | `goc status <title> disproved` | populate rebuttal first; CLI stamps `closed_at` |
@@ -134,7 +134,9 @@ goc wait <title> --clear
 
 Setting a wait on an `active` card atomically re-queues it as `open` and clears
 the live `worker` claim; the overlay keeps it out of `--ready`. Clearing the
-overlay does not claim the card again.
+overlay does not claim the card again. Pass `--keep-claim` when you are staying
+on the card across a bounded wait and will come back to it — the shape this
+guards against is the claim nobody returns to, not the one you still hold.
 
 A future `waiting_until` (or a reason with no date) hides the card
 from `--ready` / next-card / pull-card and re-enters it automatically
