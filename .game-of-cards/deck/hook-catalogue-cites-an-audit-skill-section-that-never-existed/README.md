@@ -1,22 +1,22 @@
 ---
 title: hook-catalogue-cites-an-audit-skill-section-that-never-existed
 summary: "The deck README's Workflow-hook stubs table routes hooks/audit-deck.md authors to a \"Phase 0 priming reads\" section, but the audit-deck skill has no Phase 0 — its phases start at 1 and the hook is injected under \"## Context\"; git log -S shows the string never appeared in any shipped skill, so the row has been wrong since the catalogue was written on 2026-05-04 and has since been copied into five files. The table calls itself \"the authority\" and is backed by a regression test, but tests/test_readme_hook_catalogue_parity.py pins only the first column (the hook-stub set) — the \"Loaded by\" and \"Workflow point\" columns are unguarded prose."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-09-10T04:36:58Z"
-closed_at: null
+closed_at: "2026-09-10T04:42:55Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation, test, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — every numbered anchor in the Workflow-hook stubs catalogue resolves to a heading in the skill the row names
-  - [ ] TDD: `tests/test_readme_hook_catalogue_parity.py` gains a case that fails on a phantom anchor and one that fails when the `Loaded by` cell names a skill that does not `!cat` the stub
-  - [ ] MECHANICAL: the `hooks/audit-deck.md` row names the section the hook is actually injected under, in `goc/templates/game_of_cards/README.md` and the hand-maintained dogfood copy `.game-of-cards/README.md`
-  - [ ] MECHANICAL: the three auto-synced plugin mirrors of the template README carry the corrected row (`python scripts/sync_plugin_assets.py --check` clean)
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+  - [x] TDD: `reproduce.py` exits zero — every numbered anchor in the Workflow-hook stubs catalogue resolves to a heading in the skill the row names
+  - [x] TDD: `tests/test_readme_hook_catalogue_parity.py` gains a case that fails on a phantom anchor and one that fails when the `Loaded by` cell names a skill that does not `!cat` the stub
+  - [x] MECHANICAL: the `hooks/audit-deck.md` row names the section the hook is actually injected under, in `goc/templates/game_of_cards/README.md` and the hand-maintained dogfood copy `.game-of-cards/README.md`
+  - [x] MECHANICAL: the three auto-synced plugin mirrors of the template README carry the corrected row (`python scripts/sync_plugin_assets.py --check` clean)
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -85,17 +85,25 @@ skill, or an anchor that does not exist, and CI stays green.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/hook-catalogue-cites-an-audit-skill-section-that-never-existed/reproduce.py`:
+Before the fix,
+`uv run python .game-of-cards/deck/hook-catalogue-cites-an-audit-skill-section-that-never-existed/reproduce.py`
+exited 1 on both README copies:
 
 ```
-[FAIL] goc/templates/game_of_cards/README.md: row `hooks/audit-deck.md` promises 'Phase 0' in the `audit-deck` skill, but goc/templates/skills/audit-deck/SKILL.md has no such heading. Its headings are: When to invoke, Preflight, Context (read but distrust — these are hypotheses, not ground truth), Audit, Mindset (compressed), Phase 1 — Probe (run BEFORE static hunting), Phase 2 — Hunt (parallel agents in a single message), Phase 3 — File (one card per confirmed defect), Park-or-disprove unfollowed candidates (mandatory), Phase 4 — Commit, Output, Cross-references
-[FAIL] .game-of-cards/README.md: row `hooks/audit-deck.md` promises 'Phase 0' in the `audit-deck` skill, but goc/templates/skills/audit-deck/SKILL.md has no such heading. Its headings are: ...
+[FAIL] goc/templates/game_of_cards/README.md: row `hooks/audit-deck.md` promises 'Phase 0' in the `audit-deck` skill, but goc/templates/skills/audit-deck/SKILL.md has no such heading. Its headings are: When to invoke, Preflight, Context (read but distrust — these are hypotheses, not ground truth), Audit, Mindset (compressed), Phase 1 — Probe, Phase 2 — Hunt, Phase 3 — File, Park-or-disprove unfollowed candidates (mandatory), Phase 4 — Commit, Output, Cross-references
+[FAIL] .game-of-cards/README.md: row `hooks/audit-deck.md` promises 'Phase 0' in the `audit-deck` skill, ...
 
 2 phantom anchor(s) in the Workflow-hook stubs catalogue.
 ```
 
-Exit code 1. The check is precise rather than blanket — all six rows parse, and
-every other numbered anchor resolves:
+After the fix it exits 0:
+
+```
+[OK] every numbered anchor in the Workflow-hook stubs catalogue resolves (2 README copies checked).
+```
+
+The check is precise rather than blanket — all six rows parse, and every other
+numbered anchor already resolved:
 
 ```
 rows matched: 6
@@ -107,12 +115,39 @@ rows matched: 6
   refine-deck    -> refine-deck    anchors=[]
 ```
 
-`finish-card`'s `Step 2` and `Step 7` both exist (`## Step 2 — project-specific
-closure audit`, `## Step 7 — project-specific post-close action`), as do
-`audit-deck`'s `Phase 1` and `Phase 2`. Only `Phase 0` is a phantom.
+`finish-card`'s `Step 2` and `Step 7` both exist, as do `audit-deck`'s `Phase 1`
+and `Phase 2`. Only `Phase 0` was a phantom.
 
-Column 2 is currently correct on all six rows — each named skill really does
-`!cat` its stub — but nothing holds it that way.
+Column 2 was already correct on all six rows — each named skill really does
+`!cat` its stub — but nothing held it that way, so it is now pinned too.
+
+### The new guards are load-bearing
+
+Each was mutation-tested against the defect it targets. Reinstating the phantom
+anchor:
+
+```
+AssertionError: False is not true : goc/templates/game_of_cards/README.md row
+`hooks/audit-deck.md` promises 'Phase 0' in the `audit-deck` skill, but
+goc/templates/skills/audit-deck/SKILL.md has no such heading. ...
+FAILED (failures=1)
+```
+
+Repointing a `Loaded by` cell at a skill that does not read the stub
+(`refine-deck` row → `scan-deck`):
+
+```
+AssertionError: False is not true : goc/templates/game_of_cards/README.md says
+`hooks/refine-deck.md` is loaded by the `scan-deck` skill, but
+goc/templates/skills/scan-deck/SKILL.md contains no
+'!`cat .game-of-cards/hooks/refine-deck.md' injection. Content authored into
+that stub would never reach an agent.
+FAILED (failures=1)
+```
+
+Suite: 1105 passed / 0 failed (1102 before — three new cases).
+`uv run goc validate` reports no errors;
+`python scripts/sync_plugin_assets.py --check` is clean.
 
 ## Why it matters
 
@@ -139,29 +174,34 @@ and the reader assumes it covers the whole. The generalizable half is therefore
 not the row edit but widening the guard to the columns a reader actually acts
 on.
 
-## Fix
+## Fix (applied)
 
-1. `goc/templates/game_of_cards/README.md:54` — replace `Phase 0 priming reads`
-   with the section the hook is really injected under:
+1. `goc/templates/game_of_cards/README.md:54` — the row now names the section
+   the hook is really injected under:
 
    ```
    | `hooks/audit-deck.md` | `audit-deck` | Context priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
    ```
 
-   Apply the identical edit to the hand-maintained dogfood copy
-   `.game-of-cards/README.md`; the three plugin mirrors regenerate from the
-   template via the `sync-plugin-assets` pre-commit hook.
+   The identical edit landed in the hand-maintained dogfood copy
+   `.game-of-cards/README.md`; the three plugin mirrors under `claude-plugin/`,
+   `codex-plugin/`, and `openclaw-plugin/` were regenerated by
+   `scripts/sync_plugin_assets.py`.
 
-2. `tests/test_readme_hook_catalogue_parity.py` — extend from the stem set to
-   the two columns a reader acts on, for both README copies:
+2. `tests/test_readme_hook_catalogue_parity.py` — a new
+   `HookCatalogueRowAccuracyTest` extends the guard from the stem set to the two
+   columns a reader acts on, across both README copies:
 
    - **`Loaded by`**: the named skill's `SKILL.md` must contain
      `` !`cat .game-of-cards/hooks/<stem>.md `` — a row cannot point at a skill
      that does not load the stub.
    - **`Workflow point`**: every `Phase N` / `Step N` token in the cell must
      match a heading in that skill's `SKILL.md`.
+   - A third case guards the guard: the three-column row regex must see every
+     stub the existing column-1 check catalogues, so a reshaped row cannot make
+     the two accuracy checks silently vacuous.
 
    Free prose in column 3 stays free; only its numbered anchors — the part that
-   makes a checkable promise — become load-bearing. That keeps the guard
-   derived from the tree rather than restating the catalogue, so the next row
-   added is covered without editing the test.
+   makes a checkable promise — are load-bearing. Both checks derive from the
+   skill tree rather than restating the catalogue, so the next row added is
+   covered without editing the test.

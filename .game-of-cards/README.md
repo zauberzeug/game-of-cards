@@ -51,7 +51,7 @@ hook-point in its workflow. Same injection syntax as content stubs:
 | `hooks/decide-card.md` | `decide-card` | Agent-invoked decision contract (citation form for `--because`) |
 | `hooks/finish-card.md` | `finish-card` | Step 2 closure-criteria audit AND Step 7 post-close action (status-dashboard refresh, changelog row, etc.) |
 | `hooks/pull-card.md` | `pull-card` | Lazy-Andon trial: when a parked question can be resolved by a project rubric instead of raising the gate |
-| `hooks/audit-deck.md` | `audit-deck` | Phase 0 priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
+| `hooks/audit-deck.md` | `audit-deck` | Context priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
 | `hooks/refine-deck.md` | `refine-deck` | Context priming reads before the hygiene pass |
 
 ## Per-file ownership and `goc upgrade` behavior
