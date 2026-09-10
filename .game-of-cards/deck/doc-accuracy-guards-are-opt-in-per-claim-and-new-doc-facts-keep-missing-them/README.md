@@ -27,6 +27,7 @@ advanced_by:
   - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
   - cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay
   - migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does
+  - hook-catalogue-cites-an-audit-skill-section-that-never-existed
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
