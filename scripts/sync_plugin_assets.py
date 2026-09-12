@@ -218,8 +218,6 @@ def _build_sync_pairs() -> list[SyncPair]:
 
 SYNC_PAIRS: list[SyncPair] = _build_sync_pairs()
 
-_SKIP_FRAGMENTS = ("__pycache__", ".pyc")
-
 
 def _excluded(rel: Path, excludes: frozenset[str]) -> bool:
     """True if `rel` is, or lives under, any excluded subpath."""
@@ -233,8 +231,16 @@ def _excluded(rel: Path, excludes: frozenset[str]) -> bool:
 
 
 def _skip(path: Path) -> bool:
-    s = str(path)
-    return any(frag in s for frag in _SKIP_FRAGMENTS)
+    """True for compiled-Python artifacts: `__pycache__` dirs and `.pyc` files.
+
+    Scoped to the path's OWN components and suffix, matching the three sibling
+    implementations (`scripts/port_skills_to_openclaw.py`, `goc/install.py`).
+    A substring test against `str(path)` matches any ancestor directory that
+    merely contains a fragment (a `.pycharm/` checkout, a `fix-pyc-handling`
+    worktree), which skips every item the walk offers — the sync copies
+    nothing and `--check` reports the empty comparison as byte-for-byte OK.
+    """
+    return "__pycache__" in path.parts or path.suffix == ".pyc"
 
 
 def _sync_dir(
