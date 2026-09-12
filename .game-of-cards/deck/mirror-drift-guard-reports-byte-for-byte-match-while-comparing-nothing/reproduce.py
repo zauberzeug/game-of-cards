@@ -64,7 +64,12 @@ def main() -> int:
         sync = subprocess.run(
             [sys.executable, str(script)], cwd=repo, capture_output=True, text=True,
         )
-        print(f"sync run   : {(sync.stdout.strip() or '(no output — total no-op)')}")
+        # The extracted fixture is not a git repo, so the script's closing
+        # `git add` of the synced paths fails AFTER the files are written:
+        # empty stdout here means "nothing staged", not "nothing done". The
+        # `after sync` line below is what distinguishes a no-op from a repair.
+        print(f"sync run   : exit={sync.returncode} :: "
+              f"{sync.stdout.strip() or '(no stdout — git add fails outside a repo)'}")
 
         still_drifted = "DRIFTED CONTENT" in drifted.read_text()
         still_missing = not deleted.exists()
