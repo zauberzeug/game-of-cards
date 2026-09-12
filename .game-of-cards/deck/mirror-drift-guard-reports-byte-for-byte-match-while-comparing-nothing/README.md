@@ -1,7 +1,7 @@
 ---
 title: mirror-drift-guard-reports-byte-for-byte-match-while-comparing-nothing
 summary: "scripts/sync_plugin_assets.py's __pycache__/.pyc exclusion substring-matches the ABSOLUTE path instead of the path's parts and suffix, so on any checkout whose directory name contains one of those fragments every source and destination item is skipped. --check then prints \"OK — byte-for-byte\" having compared nothing, and the pre-commit auto-sync stages nothing. The three sibling implementations of the identical exclusion all scope it correctly to .parts/.suffix."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-10T04:51:50Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test pins `_skip` itself — the exclusion matches `__pycache__` components and `.pyc` suffixes, and does NOT match a benign ancestor directory named e.g. `.pycharm`
   - [ ] MECHANICAL: `_skip` scopes its test to `path.parts` / `path.suffix`, matching the three sibling sites (`scripts/port_skills_to_openclaw.py:240`, `goc/install.py:938`, `goc/install.py:1194`)
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The mirror drift guard reports a byte-for-byte match while comparing nothing
