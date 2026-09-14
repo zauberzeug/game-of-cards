@@ -115,7 +115,17 @@ class DraftGuardAndLifecycleTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             self.assert_ok(self.run_goc(cwd, "new", "card-a", "--gate", "none", "--tag", "story"))
-            self.assert_ok(self.run_goc(cwd, "status", "card-a", "active", "--no-commit"))
+            self.assert_ok(
+                self.run_goc(
+                    cwd,
+                    "status",
+                    "card-a",
+                    "active",
+                    "--worker-who",
+                    "test-worker",
+                    "--no-commit",
+                )
+            )
             self.assertNotIn("draft:", self.readme(cwd, "card-a"))
 
     def test_done_auto_clears_draft(self) -> None:
