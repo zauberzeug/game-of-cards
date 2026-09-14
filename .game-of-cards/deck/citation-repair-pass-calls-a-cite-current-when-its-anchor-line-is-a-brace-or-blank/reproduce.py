@@ -2,25 +2,38 @@
 """Cites the citation-repair recipe calls `current` on the strength of a brace.
 
 The recipe in `goc/templates/skills/refine-deck/reference.md` § "Citation
-anchor check" decides in two steps.  Step 3 asks whether the cite is defunct:
-"Anchor text != the text at that line in HEAD -> defunct."  Step 4 then
-relocates a defunct cite, and *only there* does the recipe guard on substance
-— "rewrite the number only when the match is UNIQUE and the line is
+anchor check" decides in two steps.  As shipped from 2026-08-10 to
+2026-09-14, step 3 asked whether the cite is defunct — "Anchor text != the
+text at that line in HEAD -> defunct" — with no predicate on what that text
+is, while step 4 relocated a defunct cite and *only there* guarded on
+substance: "rewrite the number only when the match is UNIQUE and the line is
 NON-TRIVIAL: skip blanks, bare braces, and anything under roughly 12
 characters, which match everywhere."
 
-Step 3 carries no such guard.  A cite whose anchor line is `}` is therefore
-verdicted `current` whenever HEAD also holds `}` at that offset, which in a
-brace-dense or blank-line-dense file is the common case rather than the
-exceptional one.  The recipe's own words say why that is not evidence: those
-lines "match everywhere".
+So a cite whose anchor line is `}` was verdicted `current` whenever HEAD also
+held `}` at that offset, which in a brace-dense or blank-line-dense file is
+the common case rather than the exceptional one.  The recipe's own words say
+why that is not evidence: those lines "match everywhere".  And `current` is a
+silent verdict — no decline line, no residue row — so nothing surfaced it.
 
-This script reports every cite in an open or active card whose `current`
-verdict rests on such a line.  It does not repair anything — the point is
-that the pass currently cannot tell these apart from real matches, so it
-reports nothing at all.
+Two checks, both read-only:
 
-Exits 0 when no `current` verdict rests on a trivial anchor line.
+1. The shipped prose is classified.  The fix is an ORDERING: the
+   non-triviality predicate has to run BEFORE the comparison, on both
+   surfaces (`refine-deck/SKILL.md` step 3 and `reference.md`'s **Deciding.**
+   paragraph), and name the DECLINE it produces.  Prose that reaches a
+   verdict without the predicate ahead of it, or that keeps the predicate
+   downstream where it shipped, is unguarded.
+
+2. The deck is censused: every in-scope cite in an open or active card whose
+   anchor text matches HEAD at the cited offset, split by whether that
+   anchor line is one the predicate refuses.  The split does not change with
+   the fix — those cites still exist.  What changes is their disposition:
+   under a guarded recipe they are declines a reader sees, not `current`
+   verdicts nobody can.
+
+Exits 0 when no `current` verdict the shipped recipe would issue rests on a
+trivial anchor line.
 """
 import json
 import re
@@ -56,7 +69,7 @@ def git(*args: str) -> str | None:
 
 
 def trivial(line: str | None) -> bool:
-    """The recipe's own step-4 predicate: blanks, bare braces, under ~12 chars."""
+    """The recipe's non-triviality predicate: blanks, bare braces, <~12 chars."""
     if line is None:
         return True
     t = line.strip()
@@ -91,7 +104,60 @@ def in_scope_cites(readme: Path):
     in_scope_cites.fence = False
 
 
+SKILL = ROOT / "goc/templates/skills/refine-deck/SKILL.md"
+REFERENCE = ROOT / "goc/templates/skills/refine-deck/reference.md"
+
+
+def _flat(prose: str) -> str:
+    """Hard-wrapped prose as one lowercase line, so rules survive rewrapping."""
+    return " ".join(prose.split()).lower()
+
+
+def decide_guarded(prose: str) -> bool | None:
+    """Does this stretch of prose refuse a trivial anchor BEFORE comparing?
+
+    None when the prose reaches no defunct/current verdict at all — it is
+    not the deciding rule and there is nothing to classify.
+    """
+    flat = _flat(prose)
+    if "defunct" not in flat:
+        return None
+    if "bare brace" not in flat:
+        return False
+    return (
+        flat.index("bare brace") < flat.index("defunct")
+        and "decline" in flat
+        and "never `current`" in flat
+    )
+
+
+def shipped_decide_rules() -> dict[str, bool | None]:
+    """The two surfaces a pass can follow, each classified on its own."""
+    skill = SKILL.read_text(encoding="utf-8")
+    section = re.search(
+        r"^### Defunct file:line citations$.*?(?=^#{1,3} \S)", skill, re.S | re.M
+    )
+    step3 = re.search(r"^3\. .*?(?=^4\. )", section.group(0), re.S | re.M) if section else None
+    ref = REFERENCE.read_text(encoding="utf-8")
+    anchor_sec = re.search(r"^## Citation anchor check$.*?(?=^## )", ref, re.S | re.M)
+    deciding = re.search(
+        r"^\*\*Deciding\.\*\* .*?(?=\n\n\*\*)", anchor_sec.group(0), re.S | re.M
+    ) if anchor_sec else None
+    return {
+        "SKILL.md step 3": decide_guarded(step3.group(0)) if step3 else None,
+        "reference.md **Deciding.**": decide_guarded(deciding.group(0)) if deciding else None,
+    }
+
+
 def main() -> int:
+    print('=== 1. does the shipped recipe refuse a trivial anchor first? ===')
+    rules = shipped_decide_rules()
+    for label, verdict in rules.items():
+        word = {True: "guarded", False: "UNGUARDED", None: "not found"}[verdict]
+        print(f"  {label:<28}: {word}")
+    guarded = all(v is True for v in rules.values())
+    print()
+
     head_files = set((git("ls-files") or "").split("\n"))
     deck = json.loads(subprocess.run(
         [sys.executable, "-m", "goc.cli", "--status", "all", "--json"],
@@ -145,15 +211,28 @@ def main() -> int:
             if weak:
                 findings.append((title, token, weak[0] or ""))
 
-    print(f"`current` verdicts over open/active cards : {current_total}")
-    print(f"  ...resting on a trivial anchor line     : {len(findings)}"
+    print("=== 2. what the shipped recipe verdicts over the open/active deck ===")
+    print(f"  anchor matches HEAD at the cited offset  : {current_total}")
+    print(f"  ...on a line the predicate refuses       : {len(findings)}"
           f"  over {len({f[0] for f in findings})} cards")
     if findings:
-        print("\nEach line below is a cite the pass reports as verified, on the strength")
-        print("of an anchor the recipe's own step-4 guard calls unusable:\n")
-        for title, token, anchor in sorted(findings):
+        print("\nEach line below matches its anchor on text the recipe's own predicate")
+        print("calls unusable — a blank, a bare brace, a line under ~12 characters:\n")
+        for title, token, anchor in sorted(findings)[:8]:
             print(f"  {token:<34} anchor={anchor.strip()!r:<14} {title}")
-    return 1 if findings else 0
+        if len(findings) > 8:
+            print(f"  \u2026{len(findings) - 8} more")
+    print()
+
+    certified = 0 if guarded else len(findings)
+    print(f"`current` verdicts resting on a trivial anchor : {certified}")
+    if guarded:
+        print("  the shipped recipe DECLINES them and reports them as residue")
+        print('  ("trivial anchor, verdict undecidable"), so none is certified')
+    else:
+        print("  the shipped recipe certifies them, silently \u2014 no decline line,")
+        print("  no residue row, nothing for a reader to notice")
+    return 1 if certified else 0
 
 
 if __name__ == "__main__":

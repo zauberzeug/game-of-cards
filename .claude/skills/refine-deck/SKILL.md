@@ -134,14 +134,19 @@ Per cite (long form: `reference.md` § Citation anchor check):
    absent to present — the filing commit for a virgin cite, the repair
    commit for one an earlier pass rewrote. Anchoring a repaired number
    at the filing commit reads unrelated code and moves the cite onto it.
-3. Anchor ≠ the line in HEAD → the cite is defunct.
+3. Refuse a trivial anchor BEFORE comparing it: a blank, a bare brace,
+   or anything under ~12 chars matches everywhere, so re-finding it at
+   the cited offset is no evidence the cite is current. DECLINE and
+   report it, never `current`. Else anchor ≠ the line in HEAD → the
+   cite is defunct.
 4. Relocate the anchor text in HEAD and rewrite the number **only** on
-   a unique match of a non-trivial line (>~12 chars, not a blank or a
-   bare brace). Never guess.
+   a UNIQUE match — step 3 already refused the lines that match
+   everywhere. Never guess.
 
-Cites step 4 declines — anchor gone, ambiguous, or trivial — are
-REPORTED for a human to read, never silently skipped. Anchor text that
-exists nowhere usually means the cited code was refactored away:
+Cites the recipe declines — trivial anchor, anchor gone, ambiguous,
+incoherent pair — are REPORTED for a human to read, never silently
+skipped. Anchor text that exists nowhere usually means the cited code
+was refactored away:
 re-read the card and, if the refactor also fixed the defect, close via
 `Skill(finish-card)` with a note "fixed incidentally by <commit-hash>".
 

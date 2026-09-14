@@ -1,19 +1,19 @@
 ---
 title: citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank
 summary: "The citation anchor recipe applies its non-triviality guard only when relocating a defunct cite, never when deciding whether the cite is defunct at all. The compare step tests raw line equality, so a cite whose anchor text is a bare brace, a blank line, or 'return 0' verdicts 'current' whenever HEAD happens to carry the same token at that offset — the silent false-clean the recipe was written to replace. Measured on this deck 2026-09-14: 46 of 413 'current' verdicts (11%), across 28 open cards, rest on such an anchor; two are provably wrong."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-09-14T02:10:56Z"
-closed_at: null
+closed_at: "2026-09-14T04:43:51Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — no `current` verdict over the open/active deck rests on a line the recipe's own step-4 predicate calls unusable.
-  - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" applies the trivial-line predicate at the DECIDE step, not only at the relocate step, and `SKILL.md`'s condensed recipe carries the same clause at its step 3.
-  - [ ] MECHANICAL: that section's residue table gains the new decline reason, so the shape is reported rather than absorbed into `current`.
+  - [x] TDD: `reproduce.py` exits zero — no `current` verdict over the open/active deck rests on a line the recipe's own step-4 predicate calls unusable.
+  - [x] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" applies the trivial-line predicate at the DECIDE step, not only at the relocate step, and `SKILL.md`'s condensed recipe carries the same clause at its step 3.
+  - [x] MECHANICAL: that section's residue table gains the new decline reason, so the shape is reported rather than absorbed into `current`.
   - [x] EMPIRICAL: the two cites named as provably wrong in the transcript above are re-derived from their own cards' prose, corrected, and the correction recorded in each card's `log.md`. Done 2026-09-14 in the pass that filed this card.
 worker: {who: "claude[bot]", where: main}
 ---
@@ -29,7 +29,7 @@ worker: {who: "claude[bot]", where: main}
 - `goc/templates/skills/refine-deck/SKILL.md` — § "Defunct file:line
   citations", the condensed four-step recipe (steps 3 and 4).
 
-## What's broken
+## What was broken
 
 The recipe decides in two steps and guards only the second one. Step 3 asks
 whether the cite is defunct:
@@ -149,9 +149,9 @@ prices the options for replacing bare line numbers. This card does not depend
 on that pick: whatever form is chosen, a verdict that rests on a brace is
 worthless under it too.
 
-## Fix
+## Fix (landed 2026-09-14)
 
-Apply step 4's own predicate at step 3. A cite whose anchor line is trivial
+Step 4's own predicate now runs at step 3. A cite whose anchor line is trivial
 cannot be decided by text equality in either direction, so the honest verdict
 is neither `current` nor `repair` — it is a decline, reported in the residue
 table beside the three that already exist:
@@ -160,18 +160,36 @@ table beside the three that already exist:
 |---|---|
 | **trivial anchor, verdict undecidable** | the anchor line is a blank, a bare brace, or under ~12 characters, so matching it at the cited offset is not evidence the cite is current; a reader must re-derive the address from the card's prose |
 
-Concretely, in `reference.md` § "Citation anchor check", the **Deciding**
-paragraph becomes: refuse the comparison first — if the anchor line is trivial,
-report and stop; only then compare, and only then relocate. `SKILL.md`'s step 3
-gains the same clause in its condensed form. Both files are mirrored, so the
-edit lands once in `goc/templates/skills/refine-deck/` and the pre-commit sync
-propagates it.
+In `reference.md` § "Citation anchor check" the **Deciding** paragraph now
+refuses the comparison first — a trivial anchor is reported and stops there;
+only a substantial one is compared, and only then relocated. Step 4's
+restatement of the predicate went away with the move: nothing reaching the
+relocate step can carry a trivial anchor any more, so what is left there is
+the uniqueness test plus a pointer back to step 3. `SKILL.md`'s step 3 carries
+the same clause in condensed form, and the line listing what the recipe
+declines was widened from "step 4 declines" to all four reasons. The edit
+landed once in `goc/templates/skills/refine-deck/` and the pre-commit sync and
+the OpenClaw porter propagated it to the five mirrors.
 
-Cost: 46 cites move from a false `current` into the reported residue in the
-first pass after the fix, which is the correct accounting rather than a
-regression. The two known-wrong ones are repaired by hand as part of this
-card's DoD, since no mechanical rule can recover an address its author never
-wrote correctly.
+Cost, as predicted: the cites move from a false `current` into the reported
+residue in the first pass after the fix, which is the correct accounting
+rather than a regression — the reference now says so in place, so the next
+pass does not read the jump as one. On today's tree that is 44 cites over 27
+cards out of 639 anchor matches; the 46/413 in the transcript above is the
+measurement at filing time, before the two hand repairs and the same round's
+new cards. The two known-wrong ones were repaired by hand, since no mechanical
+rule can recover an address its author never wrote correctly.
+
+The guard is `tests/test_refine_deck_citation_anchor.py`, the file that
+already holds the three earlier per-step gaps in this recipe. It gained
+`documented_decide_guard(prose)` — which classifies the shipped prose on
+whether the predicate is named BEFORE the verdict, not merely named — with a
+control that feeds it the exact paragraph this card replaced and asserts
+UNGUARDED, and `TrivialAnchorDecideTest`, a two-commit fixture whose cite sits
+on the blank line above the function its card names. The unguarded recipe
+verdicts it `current` while the function has moved six lines down; the shipped
+recipe declines. Reverting `SKILL.md` step 3 turns three tests red; restoring
+it turns them green.
 
 ## Non-goals
 

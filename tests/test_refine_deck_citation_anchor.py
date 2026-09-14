@@ -50,6 +50,21 @@ declines it. Twelve such cites sat across eight open cards. So the prose
 classifier below is paired with a fixture reproducing exactly that
 divergence, and the guard proves the shipped recipe DECLINES the repair
 it must decline rather than only proving the words changed.
+
+A fourth gap in the recipe, and the only one on the DECIDE side:
+`citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank`
+found the non-triviality predicate running on the relocate step alone.
+The same line the recipe refuses as evidence FOR a rewrite — a blank, a
+bare brace, "anything under roughly 12 characters, which match
+everywhere" — was accepted as evidence AGAINST one, because step 3 was a
+bare text comparison with no predicate on what it compared. So `}` at
+the cited offset in HEAD matching `}` at the anchor commit verdicted
+`current`, and a `current` verdict is silence: no decline line, no
+residue row, nothing a reader could notice. Measured on this deck, 46 of
+413 such verdicts over 28 open cards rested on a line the recipe's own
+guard called unusable. The fixture below is the worst shape of it,
+because a blank line cannot decay: an author's off-by-one is frozen into
+a permanent `current` that every later pass re-certifies.
 """
 
 from __future__ import annotations
@@ -80,6 +95,17 @@ BLANKET = "one-rule-for-every-fenced-cite"
 # about what they bound.
 COHERENCE_GUARDED = "pair-checked-after-both-endpoints-map"
 PAIR_UNCHECKED = "endpoints-mapped-independently"
+
+# Decide-step verdicts. DECIDE_UNGUARDED is the recipe as it shipped from
+# 2026-08-10 to 2026-09-14: compare the two texts and believe the answer,
+# with the non-triviality predicate reserved for the relocate step below it.
+DECIDE_GUARDED = "trivial-anchor-refused-before-comparing"
+DECIDE_UNGUARDED = "compared-whatever-the-anchor-line-held"
+
+# What the recipe answers about one cited line.
+CURRENT = "current"
+DEFUNCT = "defunct"
+DECLINE_TRIVIAL = "decline-trivial-anchor"
 
 # A repaired pair wider than this is no longer addressing a block. Mirrors
 # the threshold the shipped prose names and the one the card's reproduce.py
@@ -139,6 +165,15 @@ RANGE_INSERT = ["import os", "import sys", "", "CONST_A = 1"]
 RANGE_CITED = (6, 8)
 RANGE_START_IN_HEAD = 10  # `def target(payload):` after the insert
 RANGE_END_UNMOVED = 8  # line 8 in HEAD is the idiom from old line 4
+
+# The blank-anchor fixture reuses V1 and INSERT_1, because between them they
+# already hold the coincidence the defect needs. Line 5 of V1 is the blank
+# directly above `def target(payload):` — the off-by-one a card author writes
+# once and no pass can catch. INSERT_1 is five lines ending in a blank, so
+# line 5 of HEAD is blank as well: anchor and HEAD agree, the cite verdicts
+# `current`, and the function it names has moved to line 11.
+TRIVIAL_CITED = 5
+TRIVIAL_TARGET_IN_HEAD = 11
 
 
 def documented_anchor(prose: str) -> str | None:
@@ -216,6 +251,36 @@ def documented_range_coherence(prose: str) -> str | None:
     return PAIR_UNCHECKED
 
 
+def documented_decide_guard(prose: str) -> str | None:
+    """Does this stretch of skill prose guard the DECIDE step, or only relocate?
+
+    A pass needs the non-triviality predicate applied BEFORE the anchor
+    text is compared to HEAD, not after. The ordering is the whole rule:
+    a line that "matches everywhere" matches at the cited offset too, so
+    using it to certify a cite is the same unsound step as using it to
+    move one — and the certification is the dangerous half, because it
+    prints nothing.
+
+    Prose that never reaches a defunct/current verdict is not the
+    deciding rule and returns None. Prose that decides without naming the
+    predicate at all, or names it only downstream of the comparison, is
+    DECIDE_UNGUARDED — the shipped text this was filed against, which
+    reads as complete precisely because the guard IS in it, one step too
+    late.
+    """
+    flat = _flat(prose)
+    if "defunct" not in flat:
+        return None
+    if "bare brace" not in flat:
+        return DECIDE_UNGUARDED
+    guarded = (
+        flat.index("bare brace") < flat.index("defunct")
+        and "decline" in flat
+        and "never `current`" in flat
+    )
+    return DECIDE_GUARDED if guarded else DECIDE_UNGUARDED
+
+
 def skill_citation_section() -> str:
     """The core skill's § Defunct file:line citations, that subsection only."""
     body = SKILL.read_text(encoding="utf-8")
@@ -250,6 +315,34 @@ def skill_step_two() -> str:
         raise AssertionError(
             "refine-deck SKILL.md no longer has a step 2 starting "
             "'2. Anchor = ' in the defunct-citation check"
+        )
+    return match.group(0)
+
+
+def skill_step_three() -> str:
+    """Step 3 of the core skill's per-cite recipe — the defunct/current verdict.
+
+    Scoped to the citation subsection first, so the numbered-list match
+    cannot wander into another step list elsewhere in the skill body.
+    """
+    match = re.search(r"^3\. .*?(?=^4\. )", skill_citation_section(), re.S | re.M)
+    if match is None:
+        raise AssertionError(
+            "refine-deck SKILL.md no longer has a step 3 in the "
+            "defunct-citation check"
+        )
+    return match.group(0)
+
+
+def reference_deciding_paragraph() -> str:
+    """The reference sibling's **Deciding.** paragraph, that paragraph only."""
+    match = re.search(
+        r"^\*\*Deciding\.\*\* .*?(?=\n\n\*\*)", reference_anchor_section(), re.S | re.M
+    )
+    if match is None:
+        raise AssertionError(
+            "refine-deck reference.md § Citation anchor check no longer has a "
+            "'**Deciding.**' paragraph"
         )
     return match.group(0)
 
@@ -344,6 +437,24 @@ def build_range_repo(repo: Path) -> None:
     git(repo, "commit", "-q", "-m", "grow the source above the block")
 
 
+def build_trivial_anchor_repo(repo: Path) -> None:
+    """File a cite on the blank line above the target, then grow the file."""
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.email", "test@example.com")
+    git(repo, "config", "user.name", "Test")
+    (repo / CITED_FILE).parent.mkdir(parents=True)
+    (repo / card_readme()).parent.mkdir(parents=True)
+
+    write_source(repo, V1)
+    write_card(repo, TRIVIAL_CITED)  # one line off from the start it meant
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "file the card citing src/app.py:5")
+
+    write_source(repo, INSERT_1 + V1)  # target moves 6 -> 11; line 5 stays blank
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the source; the cite rots unnoticed")
+
+
 def anchor_commit(repo: Path, cite_token: str, mode: str) -> str:
     """Run the anchor rule `mode` names over the card's README history."""
     history = git(
@@ -361,6 +472,37 @@ def anchor_commit(repo: Path, cite_token: str, mode: str) -> str:
     return intro
 
 
+def trivial_anchor(line: str | None) -> bool:
+    """The recipe's non-triviality predicate — blanks, bare braces, <~12 chars.
+
+    One predicate, used at both steps: the fix this file guards is that it
+    runs at the DECIDE step as well, not only when relocating.
+    """
+    if line is None:
+        return True
+    stripped = line.strip()
+    return len(stripped) < 12 or bool(re.fullmatch(r"[{}()\[\],;:]+", stripped))
+
+
+def decide(
+    anchored: list[str], head: list[str], cited_line: int, *, guard: bool
+) -> str:
+    """Step 3 for ONE endpoint: is the cite current, defunct, or undecidable?
+
+    `guard=False` is the recipe as it shipped: compare the anchor text to
+    HEAD's text at the same offset and believe the answer. `guard=True`
+    adds the rule the fixed prose prescribes — refuse the comparison when
+    the anchor line is one that matches everywhere, and report it.
+    """
+    anchor = anchored[cited_line - 1] if cited_line <= len(anchored) else None
+    if anchor is None:
+        return DEFUNCT
+    if guard and trivial_anchor(anchor):
+        return DECLINE_TRIVIAL
+    at_head = head[cited_line - 1] if cited_line <= len(head) else None
+    return CURRENT if at_head == anchor else DEFUNCT
+
+
 def relocate(anchored: list[str], head: list[str], cited_line: int) -> int | None:
     """Steps 3-4 for ONE endpoint: compare to HEAD, relocate the anchor text.
 
@@ -372,8 +514,8 @@ def relocate(anchored: list[str], head: list[str], cited_line: int) -> int | Non
     anchor = anchored[cited_line - 1]
     if cited_line <= len(head) and head[cited_line - 1] == anchor:
         return cited_line  # not defunct
-    if len(anchor.strip()) < 12:
-        return None  # trivial line: never guess
+    if trivial_anchor(anchor):
+        return None  # matches everywhere: never guess
     hits = [i + 1 for i, line in enumerate(head) if line == anchor]
     return hits[0] if len(hits) == 1 else None
 
@@ -617,6 +759,131 @@ class RangeRepairTest(unittest.TestCase):
         self.assertTrue(coherent(120, 140))
         self.assertFalse(coherent(120, 121 + MAX_PLAUSIBLE_SPAN))
         self.assertFalse(coherent(140, 120))
+
+
+class DocumentedDecideGuardTest(unittest.TestCase):
+    """The predicate that refuses a rewrite must also refuse a certification."""
+
+    def test_core_skill_refuses_a_trivial_anchor_before_comparing(self) -> None:
+        self.assertEqual(
+            DECIDE_GUARDED,
+            documented_decide_guard(skill_step_three()),
+            "refine-deck SKILL.md step 3 must apply the non-triviality "
+            "predicate BEFORE comparing the anchor to HEAD and DECLINE rather "
+            "than verdict `current`; a blank or a brace matching at the cited "
+            "offset is not evidence, and the verdict it produces is silent",
+        )
+
+    def test_reference_sibling_prescribes_the_same_rule(self) -> None:
+        self.assertEqual(
+            documented_decide_guard(skill_step_three()),
+            documented_decide_guard(reference_deciding_paragraph()),
+            "refine-deck's core skill and its reference sibling decide a cite "
+            "differently; a pass following either would certify a different "
+            "set of cites as current",
+        )
+
+    def test_the_shipped_rule_this_replaced_is_classified_as_unguarded(
+        self,
+    ) -> None:
+        # The classifier's own proof that it can fail: the paragraph the
+        # recipe shipped from 2026-08-10 to 2026-09-14. It NAMES the
+        # predicate — which is why it read as complete — one step after the
+        # comparison that needed it.
+        self.assertEqual(
+            DECIDE_UNGUARDED,
+            documented_decide_guard(
+                "Anchor text \u2260 the text at that line in HEAD \u2192 defunct. Then "
+                "look for the anchor text in HEAD and rewrite the number only "
+                "when the match is UNIQUE and the line is NON-TRIVIAL: skip "
+                "blanks, bare braces, and anything under roughly 12 "
+                "characters, which match everywhere."
+            ),
+        )
+
+    def test_prose_that_reaches_no_verdict_is_unclassifiable(self) -> None:
+        self.assertIsNone(
+            documented_decide_guard(
+                "Resolve the path \u2014 cards write `engine.py:N` for "
+                "`goc/engine.py:N`; prefer a non-mirror match."
+            )
+        )
+
+    def test_residue_table_carries_the_undecidable_decline(self) -> None:
+        # The verdict has to land somewhere a human reads. Absorbed back into
+        # `current` it is the silence the whole anchored recipe replaced.
+        rows = [
+            line
+            for line in reference_anchor_section().splitlines()
+            if line.startswith("|") and "trivial anchor" in line
+        ]
+        self.assertEqual(
+            1,
+            len(rows),
+            "refine-deck reference.md § Citation anchor check must carry "
+            "exactly one residue row for the trivial-anchor decline",
+        )
+        row = _flat(rows[0])
+        self.assertIn("undecidable", row)
+        self.assertIn(
+            "no evidence the cite is current",
+            row,
+            "the residue row must say what the decline means on the DECIDE "
+            "side, not only that the address cannot be relocated",
+        )
+
+
+class TrivialAnchorDecideTest(unittest.TestCase):
+    """A blank anchor cannot decay, so its false clean is permanent."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_trivial_anchor_repo(self.repo)
+        self.addCleanup(self._tmp.cleanup)
+
+    def verdict(self, *, guard: bool) -> str:
+        readme = (self.repo / card_readme()).read_text(encoding="utf-8")
+        cited = int(
+            re.search(rf"{re.escape(CITED_FILE)}:(\d+)", readme).group(1)
+        )
+        commit = anchor_commit(self.repo, f"{CITED_FILE}:{cited}", AUTHORING)
+        anchored = git(self.repo, "show", f"{commit}:{CITED_FILE}").splitlines()
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        return decide(anchored, head, cited, guard=guard)
+
+    def test_documented_recipe_declines_the_undecidable_cite(self) -> None:
+        self.assertEqual(
+            DECIDE_GUARDED,
+            documented_decide_guard(skill_step_three()),
+            "refine-deck SKILL.md step 3 no longer refuses a trivial anchor",
+        )
+        self.assertEqual(
+            DECLINE_TRIVIAL,
+            self.verdict(guard=True),
+            "the recipe refine-deck ships must DECLINE a cite whose anchor "
+            "line is blank and report it, rather than certify it `current` "
+            "on a match that carries no information",
+        )
+
+    def test_unguarded_recipe_certifies_a_cite_that_names_nothing(self) -> None:
+        # Not a spec \u2014 the fixture's own proof that it exercises the defect.
+        # The anchor is "", HEAD's line 5 is "", the texts match, and the
+        # function the card is about sits six lines further down.
+        self.assertEqual(CURRENT, self.verdict(guard=False))
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual("", head[TRIVIAL_CITED - 1])
+        self.assertEqual(
+            "def target(payload):", head[TRIVIAL_TARGET_IN_HEAD - 1]
+        )
+
+    def test_a_bare_brace_is_refused_like_a_blank(self) -> None:
+        # The predicate is one predicate; the blank is only its worst case.
+        self.assertTrue(trivial_anchor(""))
+        self.assertTrue(trivial_anchor("    }"))
+        self.assertTrue(trivial_anchor("        });"))
+        self.assertTrue(trivial_anchor("    return 0"))
+        self.assertFalse(trivial_anchor("def target(payload):"))
 
 
 if __name__ == "__main__":

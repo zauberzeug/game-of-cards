@@ -209,27 +209,47 @@ moved 165 that were correct. Repair passes recur, so second passes are
 the normal case; an anchor that is right only on a virgin deck is right
 only once.
 
-**Deciding.** Anchor text ≠ the text at that line in HEAD → defunct.
-Then look for the anchor text in HEAD and rewrite the number only when
-the match is UNIQUE and the line is NON-TRIVIAL: skip blanks, bare
-braces, and anything under roughly 12 characters, which match
-everywhere. That guard is what makes the repair safe to apply
-unattended — on the pass that produced this rule it repaired 388 cites
-across 113 cards and declined 279 rather than guess.
+**Deciding.** Test the anchor line BEFORE comparing it. A blank, a bare
+brace, or anything under roughly 12 characters matches everywhere, so
+re-finding it at the cited offset is no more evidence that the cite is
+current than it is evidence of where the cite should move: the verdict
+is a DECLINE, reported, never `current`. Only a non-trivial anchor is
+compared — anchor text ≠ the text at that line in HEAD → defunct. Then
+look for the anchor text in HEAD and rewrite the number only when the
+match is UNIQUE; the line is already known substantial, because the
+refusal above ran first. That guard is what makes the repair safe to
+apply unattended — on the pass that produced this rule it repaired 388
+cites across 113 cards and declined 279 rather than guess.
+
+**One predicate, both directions.** The non-triviality test shipped on
+the relocate step alone, and the asymmetry is the whole defect: a line
+too weak to move a cite by one line was strong enough to certify it for
+another pass. Nothing surfaced that, because a `current` verdict is
+silence — no decline line, no residue row — and a blank anchor cannot
+decay, so it freezes an author's original typo into a permanent
+`current`. Measured on this deck 2026-09-14: 46 of 413 `current`
+verdicts (11%), over 28 open cards, rested on such a line. One had
+passed three consecutive anchored passes while missing the function its
+card named by 910 lines, having never named it correctly at all.
 
 **The residue is output, not silence.** The declines split four ways
 and each is reported for a human read:
 
 | Decline | What it usually means |
 |---|---|
-| trivial anchor line | the address is unrecoverable mechanically; a reader must re-derive it from the card's prose |
+| trivial anchor, verdict undecidable | the anchor line is a blank, a bare brace, or under ~12 characters, so matching it at the cited offset is no evidence the cite is current and finding it elsewhere is no evidence of where it went; a reader must re-derive the address from the card's prose |
 | ambiguous (>1 match) | boilerplate or a repeated idiom; the card's surrounding text disambiguates, the matcher cannot |
 | anchor text absent | the cited code was refactored away — re-read the card, and if the refactor also fixed the defect, close it per the core skill |
 | incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |
 
 A pass that printed only the cites it could auto-repair would report a
 shrinking problem while the unmappable majority rotted unseen — the
-same fail-open shape as the bounds test it replaced.
+same fail-open shape as the bounds test it replaced. Expect the first
+pass after a widened decline to report MORE residue than the one before
+it, and read that as accounting caught up rather than as a regression:
+moving the trivial-anchor test ahead of the comparison reclassified 46
+cites on this deck from a silent `current` into the table above, none of
+which the pass before it had been entitled to certify.
 
 ## Tag sweeps
 

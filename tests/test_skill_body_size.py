@@ -96,6 +96,20 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # census, the compounding trace and the fourth decline row went to the
 # reference sibling. Same reason as the fourth raise: the defect IS a pass
 # filling in a rule the recipe did not state, so a pointer is what failed.
+#
+# refine-deck was raised a sixth time on 2026-09-14 by the card
+# `citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank`:
+# the recipe's non-triviality predicate ran on the relocate step only, so a
+# line too weak to move a cite by one line was strong enough to certify it for
+# another pass — `}` at the cited offset in HEAD matching `}` at the anchor
+# commit verdicts `current` (measured: 46 of 413 `current` verdicts over 28
+# open cards, one of them certifying a cite that missed its named function by
+# 910 lines through three consecutive passes). What stayed in the core is the
+# refusal itself, moved ahead of the comparison into step 3; the asymmetry
+# argument, the census and the widened decline row went to the reference
+# sibling. A pointer fails here for the same reason as the fourth and fifth
+# raises, sharpened: the verdict this catches emits NO output at all, so a
+# pass that does not already carry the rule has nothing to go look it up from.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -105,7 +119,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 12_500,
+    "refine-deck": 12_800,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }
