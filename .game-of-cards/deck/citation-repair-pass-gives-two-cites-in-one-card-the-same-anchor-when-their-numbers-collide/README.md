@@ -1,7 +1,7 @@
 ---
 title: citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide
 summary: "The anchor walk finds a cite's anchor commit by asking when the cite token turns from absent to present in the card README, but a token is not unique within a card. A cite whose number is a substring of a range cite, or that a past repair moved onto a number another cite already held, inherits that other cite's anchor and is then reported as drifted when it is correct. The 2026-09-14 pass caught three such phantom repairs on an idempotence re-run the recipe does not ask for; applying them would have moved three correct cites onto wrong lines."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-14T02:10:56Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" makes the presence test token-exact rather than substring, and declines a cite whose token appears at more than one in-scope occurrence in its card; `SKILL.md`'s step 2 carries both in condensed form.
   - [ ] MECHANICAL: that section's residue table gains the ambiguous-occurrence decline reason.
   - [ ] PROCESS: the skill's citation step ends with an idempotence check — re-run the decision phase after applying and assert zero repairs remain — since that is what surfaced this class and no per-cite rule catches it.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Citation repair pass gives two cites in one card the same anchor when their numbers collide
