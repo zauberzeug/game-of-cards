@@ -143,7 +143,7 @@ project that *teaches* the convention gets bitten when it explains it.
 
 Reachability path: `goc install` and `goc upgrade` both call
 `_sync_methodology_blocks` (`goc/install.py:1619`) → `_append_marker_block`
-(`goc/install.py:1258`). Every consumer who runs `goc upgrade` after
+(`goc/install.py:1508`). Every consumer who runs `goc upgrade` after
 adding documentation about the marker convention to their AGENTS.md
 or CLAUDE.md is vulnerable. The bug is silent — the rewrite "succeeds"
 and the file is left in a state where the user's prose is corrupted

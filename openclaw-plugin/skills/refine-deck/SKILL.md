@@ -145,12 +145,20 @@ Per cite (long form: `reference.md` § Citation anchor check):
    cite is defunct.
 4. Relocate the anchor text in HEAD and rewrite the number **only** on
    a UNIQUE match — step 3 already refused the lines that match
-   everywhere. Never guess.
+   everywhere. Never guess. When the anchor is a `def`/`class` line
+   whose exact text is gone, retry on a unique `def <name>(` /
+   `class <name>(`: a definition is identified by its NAME, not by its
+   parameter list, so a keyword-only argument appended to a signature
+   must not read as "the code was refactored away". Two or more
+   definitions of that name is an ambiguous match — DECLINE. The name
+   rule feeds the endpoint mapper only; step 1's pair check still
+   decides what a range emits.
 
 Cites the recipe declines — ambiguous occurrence, trivial anchor,
 anchor gone, ambiguous match, incoherent pair — are REPORTED for a
-human to read, never silently skipped. Anchor text that exists nowhere
-usually means the cited code was refactored away: re-read the card and,
+human to read, never silently skipped. Anchor text that exists nowhere,
+with no unique definition of its name either, usually means the cited
+code was refactored away: re-read the card and,
 if the refactor also fixed the defect, close via the `finish-card` skill
 with a note "fixed incidentally by <commit-hash>".
 

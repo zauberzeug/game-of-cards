@@ -126,6 +126,21 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # here for a reason the sixth raise does not cover: every per-cite rule PASSES
 # on the repair this produces — real anchor, unique match, confident rewrite —
 # so a pass carrying only a pointer has no symptom that would send it looking.
+#
+# refine-deck was raised an eighth time on 2026-09-14 by the card
+# `citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter`:
+# step 4 relocated a defunct cite on exact full-line equality, which makes the
+# anchor LINE the unit of identity even where the line is a `def` — so a
+# keyword-only parameter appended to a signature reports the function as
+# refactored away while it sits uniquely named a few lines down (measured: 12
+# declines over 9 open cards, and ONE refactor that added `*, probe: bool =
+# False` to five install-time writers produced most of them). What stayed in
+# the core is the name retry, its ambiguity DECLINE, and its subordination to
+# step 1's pair check; the identity argument, the census and the two narrowed
+# residue rows went to the reference sibling. A pointer fails here the way it
+# failed on the fourth through seventh raises, with one twist of its own: the
+# decline is honest OUTPUT, so a pass carrying only a pointer reads a
+# well-formed refusal and has no reason to suspect a rule is missing behind it.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -135,7 +150,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 13_600,
+    "refine-deck": 14_200,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

@@ -33,7 +33,7 @@ chain (`compute_values`, `engine.py:2838`):
 `advances` edge points at its parent, so the epic's value is its own
 rank PLUS a discounted share of the chain above it — placing it *above*
 its own children in the ranking. The autonomous picker (`card_is_ready`,
-`engine.py:2457`) then offers it, because the ready predicate is only:
+`engine.py:2632`) then offers it, because the ready predicate is only:
 
 ```python
 if card.status != "open":      return False

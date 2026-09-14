@@ -123,6 +123,12 @@ DECIDE_UNGUARDED = "compared-whatever-the-anchor-line-held"
 OCCURRENCE_GUARDED = "token-exact-and-repeats-declined"
 TOKEN_WALK = "substring-presence-on-a-bare-token"
 
+# Relocate-step verdicts. EXACT_LINE_ONLY is the recipe as it shipped from
+# 2026-08-10 to 2026-09-14: full-line equality, which makes the anchor LINE
+# the unit of identity even where the line is a definition.
+NAME_GUARDED = "definition-relocated-by-its-name"
+EXACT_LINE_ONLY = "exact-full-line-equality"
+
 # What the recipe answers about one cited line.
 CURRENT = "current"
 DEFUNCT = "defunct"
@@ -133,6 +139,11 @@ DECLINE_OCCURRENCE = "decline-ambiguous-occurrence"
 # fixed presence rule prescribes, so the fixture cannot drift into a second
 # extractor the way the prose drifted into a second predicate.
 CITE_TOKEN = re.compile(r"[\w./-]+\.py:\d+(?:-\d+)?")
+
+# A definition line, and the name that identifies it. Mirrors the shape the
+# shipped prose names — `def <name>(` / `class <name>(` — so the fixture
+# cannot drift into a looser matcher than the one the recipe prescribes.
+DEFN = re.compile(r"^\s*(?:async\s+)?(def|class)\s+([A-Za-z_]\w*)\s*\(")
 
 # A repaired pair wider than this is no longer addressing a block. Mirrors
 # the threshold the shipped prose names and the one the card's reproduce.py
@@ -233,6 +244,54 @@ COLLIDE_SINGLE_LINE = 6  # the helper's return, after the first insert
 COLLIDE_SINGLE_CITE = f"{CITED_FILE}:{COLLIDE_SINGLE_LINE}"
 ALPHA_LINE_IN_COLLIDE_HEAD = 9  # where the helper's return actually went
 TARGET_LINE_IN_COLLIDE_HEAD = 11  # where the RANGE's anchor text went
+
+
+# The signature-drift fixture. The card cites a function by its `def` line;
+# the file then grows AND the function gains a keyword-only parameter, so the
+# anchor text is nowhere in HEAD while the function it names is one grep away
+# and uniquely named. This is the shape one refactor produces in families —
+# five install-time writers on this repo gained `*, probe: bool = False` in a
+# single commit and every card citing any of them lost its anchor at once.
+SIG_V1 = [
+    '"""Fixture module."""',
+    "",
+    "def helper():",
+    '    return "helper result"',
+    "",
+    "def target(payload):",
+    "    return payload * 2",
+    "",
+    "def omega():",
+    "    return None",
+]
+SIG_INSERT = ["import os", "import sys", "", "CONST_A = 1", ""]
+SIG_HEAD_DEF = "def target(payload, *, probe: bool = False):"
+SIG_CITED = 6
+SIG_TARGET_IN_HEAD = 11  # `def target(...)` after the insert
+
+# The range half, built on the same coincidence the earlier range fixture
+# needs: line 8's text is a repeated idiom that also sits at line 4, so an
+# insert of exactly that gap leaves the END anchor reading unchanged AT ITS
+# OWN NUMBER while the START — a `def` line whose signature also changed —
+# only the NAME rule can map. The pair the mapper then hands over is
+# inverted, which is what makes the pair check the deciding step.
+SIG_RANGE_V1 = [
+    '"""Fixture module."""',
+    "",
+    "def alpha():",
+    "    return compute(payload)",
+    "",
+    "def target(payload):",
+    "    value = payload * 2",
+    "    return compute(payload)",
+    "",
+    "def omega():",
+    "    return None",
+]
+SIG_RANGE_INSERT = ["import os", "import sys", "", "CONST_A = 1"]
+SIG_RANGE_CITED = (6, 8)
+SIG_RANGE_START_IN_HEAD = 10  # where the name rule maps the start
+SIG_RANGE_END_UNMOVED = 8  # line 8 in HEAD is the idiom from old line 4
 
 
 def documented_anchor(prose: str) -> str | None:
@@ -369,6 +428,41 @@ def documented_occurrence_rule(prose: str) -> str | None:
     return OCCURRENCE_GUARDED if token_exact and repeats_declined else TOKEN_WALK
 
 
+def documented_definition_rule(prose: str) -> str | None:
+    """Does this stretch of skill prose relocate a DEFINITION by its name?
+
+    Exact full-line equality makes the anchor LINE the unit of identity.
+    For a statement inside a body that is right — the line is all the card
+    ever meant. For a `def` or `class` line it is wrong: the card means the
+    definition, and the line is only how it announced itself on the day the
+    cite was written, so a keyword-only parameter appended to the signature
+    turns a uniquely named function that is one grep away into "anchor text
+    absent", permanently.
+
+    Three things have to be in the prose, and a pass needs all three. The
+    retry itself, on a unique `def <name>(` / `class <name>(` match. The
+    DECLINE when HEAD holds that name twice, since nearest-match is no more
+    available here than to the exact rule. And the subordination to the pair
+    check, because seven of the twelve cites this was filed for are range
+    endpoints and relocating a start while the end stays put is the
+    corruption the range card closed.
+
+    Prose that never relocates is not this rule and returns None. Prose that
+    relocates without all three is EXACT_LINE_ONLY — the shipped text this
+    was filed against, which reads as complete because its refusal to guess
+    IS complete; what it gets wrong is what the anchor identifies.
+    """
+    flat = _flat(prose)
+    if "relocate" not in flat and "look for the anchor text" not in flat:
+        return None
+    by_name = "def <name>(" in flat and "class <name>(" in flat
+    ambiguity_declined = "definitions of that name" in flat and "decline" in flat
+    pair_still_governs = "pair check still" in flat
+    if by_name and ambiguity_declined and pair_still_governs:
+        return NAME_GUARDED
+    return EXACT_LINE_ONLY
+
+
 def documented_idempotence_check(prose: str) -> bool:
     """Does this stretch of skill prose close the pass by re-running it?
 
@@ -433,6 +527,21 @@ def skill_step_three() -> str:
     if match is None:
         raise AssertionError(
             "refine-deck SKILL.md no longer has a step 3 in the "
+            "defunct-citation check"
+        )
+    return match.group(0)
+
+
+def skill_step_four() -> str:
+    """Step 4 of the core skill's per-cite recipe — the relocate rule.
+
+    Scoped to the citation subsection first, then to the numbered item: the
+    list's items carry no blank line of their own, so the first one ends it.
+    """
+    match = re.search(r"^4\. .*?(?=\n\n)", skill_citation_section(), re.S | re.M)
+    if match is None:
+        raise AssertionError(
+            "refine-deck SKILL.md no longer has a step 4 in the "
             "defunct-citation check"
         )
     return match.group(0)
@@ -629,6 +738,46 @@ def build_collision_repo(repo: Path) -> None:
     git(repo, "commit", "-q", "-m", "grow the source again; both cites rot again")
 
 
+def build_signature_drift_repo(repo: Path) -> None:
+    """File a cite on a `def` line, then grow the file AND the signature."""
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.email", "test@example.com")
+    git(repo, "config", "user.name", "Test")
+    (repo / CITED_FILE).parent.mkdir(parents=True)
+    (repo / card_readme()).parent.mkdir(parents=True)
+
+    write_source(repo, SIG_V1)
+    write_card(repo, SIG_CITED)  # correct at this commit
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "file the card citing src/app.py:6")
+
+    grown = SIG_INSERT + SIG_V1
+    grown[len(SIG_INSERT) + SIG_CITED - 1] = SIG_HEAD_DEF
+    write_source(repo, grown)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the file; target gains a probe parameter")
+
+
+def build_signature_range_repo(repo: Path) -> None:
+    """The same drift under a RANGE cite, with the end endpoint left unmoved."""
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.email", "test@example.com")
+    git(repo, "config", "user.name", "Test")
+    (repo / CITED_FILE).parent.mkdir(parents=True)
+    (repo / card_readme()).parent.mkdir(parents=True)
+
+    write_source(repo, SIG_RANGE_V1)
+    write_range_card(repo, *SIG_RANGE_CITED)  # correct at this commit
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "file the card citing src/app.py:6-8")
+
+    grown = SIG_RANGE_INSERT + SIG_RANGE_V1
+    grown[len(SIG_RANGE_INSERT) + SIG_RANGE_CITED[0] - 1] = SIG_HEAD_DEF
+    write_source(repo, grown)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the file above the block; signature changes")
+
+
 def anchor_commit(
     repo: Path, cite_token: str, mode: str, *, exact: bool = False
 ) -> str:
@@ -689,8 +838,34 @@ def decide(
     return CURRENT if at_head == anchor else DEFUNCT
 
 
-def relocate(anchored: list[str], head: list[str], cited_line: int) -> int | None:
+def relocate_by_name(anchor: str, head: list[str]) -> int | None:
+    """Where a DEFINITION went, identified by its name rather than its line.
+
+    None when the anchor is not a definition at all, and None when HEAD
+    holds that name more than once — an ambiguous match is a decline here
+    for the same reason it is one for the exact rule.
+    """
+    match = DEFN.match(anchor)
+    if match is None:
+        return None
+    kind, name = match.groups()
+    pattern = re.compile(
+        r"^\s*(?:async\s+)?" + kind + r"\s+" + re.escape(name) + r"\s*\("
+    )
+    hits = [i + 1 for i, line in enumerate(head) if pattern.match(line)]
+    return hits[0] if len(hits) == 1 else None
+
+
+def relocate(
+    anchored: list[str], head: list[str], cited_line: int, *, by_name: bool = False
+) -> int | None:
     """Steps 3-4 for ONE endpoint: compare to HEAD, relocate the anchor text.
+
+    `by_name=False` is the recipe as it shipped: exact full-line equality,
+    so any edit to the anchor line itself reads as "the code is gone".
+    `by_name=True` adds the rule the fixed prose prescribes — when the
+    anchor is a definition and its exact text is ABSENT, retry on a unique
+    match of that definition's name.
 
     Returns the line number the pass would write, or None where step 4
     declines (anchor gone, ambiguous, or trivial).
@@ -703,10 +878,14 @@ def relocate(anchored: list[str], head: list[str], cited_line: int) -> int | Non
     if trivial_anchor(anchor):
         return None  # matches everywhere: never guess
     hits = [i + 1 for i, line in enumerate(head) if line == anchor]
-    return hits[0] if len(hits) == 1 else None
+    if len(hits) == 1:
+        return hits[0]
+    if by_name and not hits:
+        return relocate_by_name(anchor, head)
+    return None  # gone, or ambiguous on the exact text: never guess
 
 
-def repair(repo: Path, mode: str) -> int | None:
+def repair(repo: Path, mode: str, *, by_name: bool = False) -> int | None:
     """The skill's per-cite recipe on a single-line cite."""
     readme = (repo / card_readme()).read_text(encoding="utf-8")
     cited_line = int(re.search(rf"{re.escape(CITED_FILE)}:(\d+)", readme).group(1))
@@ -715,7 +894,7 @@ def repair(repo: Path, mode: str) -> int | None:
     commit = anchor_commit(repo, cite_token, mode)
     anchored = git(repo, "show", f"{commit}:{CITED_FILE}").splitlines()
     head = (repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
-    return relocate(anchored, head, cited_line)
+    return relocate(anchored, head, cited_line, by_name=by_name)
 
 
 def repair_token(repo: Path, cite_token: str, *, occurrence: bool):
@@ -746,7 +925,9 @@ def coherent(start: int, end: int) -> bool:
     return start <= end and end - start <= MAX_PLAUSIBLE_SPAN
 
 
-def repair_range(repo: Path, *, coherence: bool) -> tuple[int, int] | None:
+def repair_range(
+    repo: Path, *, coherence: bool, by_name: bool = False
+) -> tuple[int, int] | None:
     """The recipe on a RANGE cite, with the pair check switched on or off.
 
     `coherence=False` is the recipe as it shipped: map both endpoints,
@@ -764,7 +945,7 @@ def repair_range(repo: Path, *, coherence: bool) -> tuple[int, int] | None:
     commit = anchor_commit(repo, f"{CITED_FILE}:{start}-{end}", AUTHORING)
     anchored = git(repo, "show", f"{commit}:{CITED_FILE}").splitlines()
     head = (repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
-    mapped = [relocate(anchored, head, n) for n in (start, end)]
+    mapped = [relocate(anchored, head, n, by_name=by_name) for n in (start, end)]
     if any(n is None for n in mapped):
         return None  # an endpoint declined; a half-mapped range is not a repair
     new_start, new_end = mapped
@@ -1307,6 +1488,205 @@ class CollidingCiteAnchorTest(unittest.TestCase):
             repair_token(self.repo, COLLIDE_SINGLE_CITE, occurrence=False),
             "fixture check: the unguarded recipe rewrites both occurrences "
             "and reports a successful repair",
+        )
+
+
+class DocumentedDefinitionNameRuleTest(unittest.TestCase):
+    """A cite naming a function means the FUNCTION, not the line it sat on."""
+
+    def test_core_skill_relocates_a_definition_by_its_name(self) -> None:
+        self.assertEqual(
+            NAME_GUARDED,
+            documented_definition_rule(skill_step_four()),
+            "refine-deck SKILL.md step 4 must retry a `def`/`class` anchor on "
+            "a unique match of its NAME when the exact line is gone, DECLINE "
+            "when HEAD holds that name twice, and leave the range pair check "
+            "deciding; without the retry a function that gained a parameter "
+            "reads as refactored away on this pass and on every later one",
+        )
+
+    def test_reference_sibling_prescribes_the_same_rule(self) -> None:
+        self.assertEqual(
+            documented_definition_rule(skill_step_four()),
+            documented_definition_rule(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling relocate a "
+            "moved definition differently; a pass following either would "
+            "repair a different set of cites",
+        )
+
+    def test_the_shipped_rule_this_replaced_is_classified_as_line_only(
+        self,
+    ) -> None:
+        # The classifier's own proof that it can fail: step 4 as the recipe
+        # shipped from 2026-08-10 to 2026-09-14. It reads as complete because
+        # its refusal to guess IS complete; what it gets wrong is what the
+        # anchor identifies.
+        self.assertEqual(
+            EXACT_LINE_ONLY,
+            documented_definition_rule(
+                "Relocate the anchor text in HEAD and rewrite the number "
+                "**only** on a UNIQUE match \u2014 step 3 already refused the "
+                "lines that match everywhere. Never guess."
+            ),
+        )
+
+    def test_prose_that_never_relocates_is_unclassifiable(self) -> None:
+        self.assertIsNone(
+            documented_definition_rule(
+                "Resolve the path \u2014 cards write `engine.py:N` for "
+                "`goc/engine.py:N`; prefer a non-mirror match."
+            )
+        )
+
+    def test_residue_table_stops_reading_an_absent_anchor_as_a_refactor(
+        self,
+    ) -> None:
+        # The decline is honest, and its advice has to be too: a reader told
+        # the code was refactored away goes looking for a defect that is
+        # still live, finds nothing at the address, and may close the card.
+        rows = [
+            line
+            for line in reference_anchor_section().splitlines()
+            if line.startswith("|") and "anchor text absent" in line
+        ]
+        self.assertEqual(
+            1,
+            len(rows),
+            "refine-deck reference.md \u00a7 Citation anchor check must carry "
+            "exactly one residue row for the absent-anchor decline",
+        )
+        row = _flat(rows[0])
+        self.assertIn(
+            "unique `def`/`class` of that name",
+            row,
+            "the absent-anchor row must say the name test ran too, or the "
+            "decline reads as stronger evidence than it is",
+        )
+        self.assertIn(
+            "renamed",
+            row,
+            "the absent-anchor row must offer a reading other than 'the code "
+            "was refactored away', which is what sent readers looking for a "
+            "defect that is still live",
+        )
+
+    def test_residue_table_carries_the_ambiguous_name_match(self) -> None:
+        rows = [row for row in residue_rows() if "ambiguous match" in row]
+        self.assertEqual(1, len(rows))
+        full = [
+            line
+            for line in reference_anchor_section().splitlines()
+            if line.startswith("|") and "ambiguous match" in line
+        ]
+        self.assertIn(
+            "definition name head holds more than once",
+            _flat(full[0]),
+            "the name rule's own decline has to land in the residue table; "
+            "a second definition of the name is where it declines",
+        )
+
+
+class SignatureDriftRelocateTest(unittest.TestCase):
+    """The anchor line changed; the function it named did not move away."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_signature_drift_repo(self.repo)
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_documented_recipe_finds_the_function_that_gained_a_parameter(
+        self,
+    ) -> None:
+        self.assertEqual(
+            NAME_GUARDED,
+            documented_definition_rule(skill_step_four()),
+            "refine-deck SKILL.md step 4 no longer relocates by definition name",
+        )
+        mode = documented_anchor(skill_step_two())
+        self.assertEqual(
+            SIG_TARGET_IN_HEAD,
+            repair(self.repo, mode, by_name=True),
+            "the recipe refine-deck ships must move a cite whose `def` line "
+            "gained a keyword-only parameter onto the function it names",
+        )
+
+    def test_exact_equality_declines_a_function_one_grep_away(self) -> None:
+        # Not a spec \u2014 the fixture's own proof that it exercises the defect.
+        # The anchor text is nowhere in HEAD, so the exact rule reports it
+        # gone; the function is right there, uniquely named, four lines below
+        # where the cite points.
+        self.assertIsNone(repair(self.repo, AUTHORING))
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(SIG_HEAD_DEF, head[SIG_TARGET_IN_HEAD - 1])
+        self.assertEqual(
+            1, sum(1 for line in head if line.startswith("def target("))
+        )
+
+    def test_a_name_head_holds_twice_is_declined(self) -> None:
+        # The constraint that keeps the relaxation honest: an overload in a
+        # mirror tree, or a method beside a module-level function, and the
+        # matcher has nothing to choose with. Nearest-match is not available.
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        write_source(
+            self.repo,
+            head + ["", "def target(payload, *, probe=True):", "    return None"],
+        )
+        git(self.repo, "add", "-A")
+        git(self.repo, "commit", "-q", "-m", "a second definition of that name")
+        self.assertIsNone(
+            repair(self.repo, AUTHORING, by_name=True),
+            "the recipe refine-deck ships must DECLINE a definition name HEAD "
+            "holds more than once and report it, rather than take the first",
+        )
+
+
+class SignatureDriftRangeTest(unittest.TestCase):
+    """The name rule feeds the endpoint mapper; the pair check still decides."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_signature_range_repo(self.repo)
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_documented_recipe_declines_the_range_the_name_rule_inverts(
+        self,
+    ) -> None:
+        self.assertEqual(
+            NAME_GUARDED,
+            documented_definition_rule(skill_step_four()),
+            "refine-deck SKILL.md step 4 no longer relocates by definition name",
+        )
+        self.assertEqual(
+            COHERENCE_GUARDED,
+            documented_range_coherence(skill_step_one()),
+            "refine-deck SKILL.md step 1 no longer prescribes the pair check",
+        )
+        self.assertIsNone(
+            repair_range(self.repo, coherence=True, by_name=True),
+            "the recipe refine-deck ships must DECLINE a range whose start "
+            "the name rule relocates past an end that stayed put \u2014 seven of "
+            "the twelve cites this rule was written for are range endpoints",
+        )
+
+    def test_the_name_rule_is_what_makes_the_pair_check_load_bearing_here(
+        self,
+    ) -> None:
+        # Not a spec \u2014 the fixture's own proof. With the pair check off, the
+        # mapped pair IS emitted and runs backwards, so the decline above came
+        # from the pair check rather than from an endpoint that never mapped.
+        self.assertEqual(
+            (SIG_RANGE_START_IN_HEAD, SIG_RANGE_END_UNMOVED),
+            repair_range(self.repo, coherence=False, by_name=True),
+        )
+        start, end = repair_range(self.repo, coherence=False, by_name=True)
+        self.assertGreater(start, end)
+        self.assertIsNone(
+            repair_range(self.repo, coherence=False, by_name=False),
+            "fixture check: without the name rule the start never maps, so "
+            "the same range declines one step earlier and for a reason that "
+            "hides the moved function",
         )
 
 

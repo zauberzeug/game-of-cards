@@ -48,7 +48,7 @@ built from the existing `waiting_on` / `waiting_until` overlay, with
 - `_cmd_status` — `goc/engine.py:5905` (the release transition to hook)
 - `waiting_impedes` — `goc/engine.py:2696` (the overlay predicate reused)
 - `validate_waiting_overlay` — `goc/engine.py:2236` (surfaces elapsed waits)
-- `card_is_ready` — `goc/engine.py:2424` (unchanged by this card)
+- `card_is_ready` — `goc/engine.py:2632` (unchanged by this card)
 
 ## What's broken
 

@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 """Cites the recipe declines even though the function they name is findable.
 
-The recipe in `goc/templates/skills/refine-deck/reference.md` § "Citation
-anchor check" relocates a defunct cite by exact full-line equality:
+The citation recipe in `goc/templates/skills/refine-deck/` relocates a
+defunct cite by finding its anchor text in HEAD.  Exact full-line equality
+makes the anchor LINE the unit of identity, which is right for a statement
+inside a body and wrong for a definition line: append a keyword-only
+parameter, widen a return annotation, reflow the argument list, and a
+function that is still present, still uniquely named and still one grep
+away is reported `anchor text absent` and declined — on this pass and on
+every pass after, because nothing about the situation changes.
 
-    look for the anchor text in HEAD and rewrite the number only when the
-    match is UNIQUE and the line is NON-TRIVIAL
+This script replays the SHIPPED recipe over the open and active deck.  It
+reads the two surfaces an agent follows — `SKILL.md` step 4 and
+`reference.md` § Citation anchor check — classifies whether they carry the
+definition-name relocation rule, and runs the walk with that rule enabled
+or disabled accordingly.  The finding it counts is the decline class the
+card was filed for: an `anchor text absent` verdict whose anchor is a
+`def`/`class` line that a unique-name match locates.
 
-Exact equality makes the anchor line itself the unit of identity.  So an edit
-*to that line* — a keyword-only parameter appended to a signature, a changed
-return annotation, an argument list reflowed across two lines — turns a
-function that is still present, still uniquely named, and still trivially
-locatable into "anchor text absent", and the cite is declined on every pass
-from then on.
+Declines from the OTHER rules are not findings.  An ambiguous occurrence,
+a trivial anchor, an ambiguous match, an incoherent range pair — each is a
+different rule's correct refusal, and the pair check in particular is
+supposed to swallow a name-relocated start whose end stayed put.  Counting
+those here would make the guard demand the recipe break its siblings.
 
-This script reports every declined cite whose anchor line is a `def` or
-`class` definition that a unique-name match locates in HEAD.  That subset is
-the safely-relocatable one: a definition line is identified by its name, not
-by its parameter list.
-
-Exits 0 when no decline is recoverable this way.
+Exits 0 when no absent-anchor decline is recoverable by name.
 """
 import json
 import re
@@ -39,6 +44,8 @@ def _repo_root() -> Path:
 
 ROOT = _repo_root()
 DECK = ROOT / ".game-of-cards" / "deck"
+SKILL = ROOT / "goc" / "templates" / "skills" / "refine-deck" / "SKILL.md"
+REFERENCE = ROOT / "goc" / "templates" / "skills" / "refine-deck" / "reference.md"
 
 EXT = r"(?:py|ts|js|mjs|cjs|md|ya?ml|json|sh|toml|txt|cfg|ini|tsx)"
 CITE = re.compile(
@@ -48,11 +55,60 @@ CITE = re.compile(
 FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 MIRROR = ("claude-plugin/", "codex-plugin/", "openclaw-plugin/", ".claude/", ".codex/", "goc/_vendor/")
 DEFN = re.compile(r"^\s*(?:async\s+)?(def|class)\s+([A-Za-z_]\w*)\s*\(")
+MAX_PLAUSIBLE_SPAN = 500
+
+NAME_GUARDED = "definition-relocated-by-its-name"
+EXACT_LINE_ONLY = "exact-full-line-equality"
+
+AMBIG_OCC = "ambiguous occurrence"
+TRIVIAL = "trivial anchor"
+AMBIG = "ambiguous match"
+ABSENT = "anchor text absent"
+INCOHERENT = "incoherent range pair"
+REASONS = (AMBIG_OCC, TRIVIAL, AMBIG, ABSENT, INCOHERENT)
 
 
 def git(*args: str) -> str | None:
     r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True)
     return None if r.returncode else r.stdout.decode("utf-8", "replace")
+
+
+def _flat(prose: str) -> str:
+    return " ".join(prose.split()).lower()
+
+
+def documented_definition_rule(prose: str) -> str | None:
+    """Which relocation rule does this stretch of shipped prose prescribe?
+
+    Three parts, all required: the retry on a unique `def <name>(` /
+    `class <name>(`, the DECLINE when HEAD holds that name twice, and the
+    subordination to the range pair check.  Prose that never relocates is
+    not this rule and returns None.
+    """
+    flat = _flat(prose)
+    if "relocate" not in flat and "look for the anchor text" not in flat:
+        return None
+    by_name = "def <name>(" in flat and "class <name>(" in flat
+    ambiguity_declined = "definitions of that name" in flat and "decline" in flat
+    pair_still_governs = "pair check still" in flat
+    if by_name and ambiguity_declined and pair_still_governs:
+        return NAME_GUARDED
+    return EXACT_LINE_ONLY
+
+
+def skill_step_four() -> str:
+    section = re.search(
+        r"^### Defunct file:line citations$.*?(?=^#{1,3} \S)",
+        SKILL.read_text(encoding="utf-8"), re.S | re.M,
+    ).group(0)
+    return re.search(r"^4\. .*?(?=\n\n)", section, re.S | re.M).group(0)
+
+
+def reference_anchor_section() -> str:
+    return re.search(
+        r"^## Citation anchor check$.*?(?=^## )",
+        REFERENCE.read_text(encoding="utf-8"), re.S | re.M,
+    ).group(0)
 
 
 def resolve(path: str, universe: set[str]) -> str | None:
@@ -79,8 +135,13 @@ def in_scope_cites(readme: Path):
             yield lineno, cm.group(0), cm.group(1), int(cm.group(2)), cm.group(3)
 
 
-def relocatable_by_name(anchor: str, lines: list[str]) -> int | None:
-    """A definition line is identified by its NAME, not by its parameter list."""
+def trivial(line: str) -> bool:
+    stripped = line.strip()
+    return len(stripped) < 12 or bool(re.fullmatch(r"[{}()\[\],;:]+", stripped))
+
+
+def by_name(anchor: str, lines: list[str]) -> int | None:
+    """Where a DEFINITION went — identified by its name, not its signature."""
     m = DEFN.match(anchor)
     if not m:
         return None
@@ -89,19 +150,74 @@ def relocatable_by_name(anchor: str, lines: list[str]) -> int | None:
     return hits[0] if len(hits) == 1 else None
 
 
-def main() -> int:
-    head_files = set((git("ls-files") or "").split("\n"))
-    deck = json.loads(subprocess.run(
-        [sys.executable, "-m", "goc.cli", "--status", "all", "--json"],
-        cwd=ROOT, capture_output=True, text=True,
-        env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin", "HOME": str(Path.home())},
-    ).stdout)
+def map_endpoint(anchored: list[str], head: list[str], n: int, *, name_rule: bool):
+    """One endpoint: (line-to-write, None) or (None, decline-reason)."""
+    if n > len(anchored):
+        return None, ABSENT
+    anchor = anchored[n - 1]
+    if trivial(anchor):
+        return None, TRIVIAL
+    if n <= len(head) and head[n - 1] == anchor:
+        return n, None                                       # current
+    hits = [i + 1 for i, l in enumerate(head) if l == anchor]
+    if len(hits) == 1:
+        return hits[0], None
+    if hits:
+        return None, AMBIG
+    if name_rule:
+        m = DEFN.match(anchor)
+        if m:
+            found = by_name(anchor, head)
+            return (found, None) if found else (None, AMBIG if _name_hits(anchor, head) > 1 else ABSENT)
+    return None, ABSENT
 
-    findings, declines = [], 0
-    for card in [c["title"] for c in deck if c["status"] in ("open", "active")]:
+
+def _name_hits(anchor: str, head: list[str]) -> int:
+    m = DEFN.match(anchor)
+    if not m:
+        return 0
+    pat = re.compile(r"^\s*(?:async\s+)?" + m.group(1) + r"\s+" + re.escape(m.group(2)) + r"\s*\(")
+    return sum(1 for l in head if pat.match(l))
+
+
+def resolves_at_head(prose: str, path: str, n: int, head_files: set[str]) -> bool:
+    """The recipe's belt-and-braces rule, run before the anchor walk.
+
+    "If HEAD holds at the cited line the symbol the card's own prose names,
+    the number is correct and no anchor can say otherwise."  Mechanized as
+    narrowly as that reads: HEAD's cited line is a definition, and the
+    card's text carries that definition's name.
+    """
+    hpath = resolve(path, head_files)
+    if not hpath or not (ROOT / hpath).exists():
+        return False
+    lines = (ROOT / hpath).read_text(encoding="utf-8", errors="replace").split("\n")
+    if n > len(lines):
+        return False
+    m = DEFN.match(lines[n - 1])
+    return bool(m) and m.group(2) in prose
+
+
+def coherent(start: int, end: int) -> bool:
+    return start <= end and end - start <= MAX_PLAUSIBLE_SPAN
+
+
+def walk(cards: list[str], *, name_rule: bool) -> dict:
+    """Replay the recipe over every in-scope cite of every card."""
+    head_files = set((git("ls-files") or "").split("\n"))
+    out = {
+        "cites": 0, "current": 0, "repairs": [], "unanchored": 0,
+        "declines": {r: 0 for r in REASONS}, "recoverable": [],
+    }
+    for card in cards:
         readme = DECK / card / "README.md"
         if not readme.exists():
             continue
+        prose = readme.read_text(encoding="utf-8")
+        occurrences: dict[str, int] = {}
+        for _l, token, *_ in in_scope_cites(readme):
+            occurrences[token] = occurrences.get(token, 0) + 1
+
         log = git("log", "--follow", "--format=@%H", "--name-only", "--",
                   str(readme.relative_to(ROOT)))
         commits, sha = [], None
@@ -113,48 +229,112 @@ def main() -> int:
                 sha = None
         commits.reverse()
         texts = [git("show", f"{s}:{p}") or "" for s, p in commits]
+        tokens_at = [set(m.group(0) for m in CITE.finditer(t)) for t in texts]
 
         for _lineno, token, path, start, end in in_scope_cites(readme):
+            out["cites"] += 1
+            if occurrences[token] > 1:
+                out["declines"][AMBIG_OCC] += 1
+                continue
+            if end is not None and not coherent(start, int(end)):
+                out["declines"][INCOHERENT] += 1
+                continue
+            if resolves_at_head(prose, path, start, head_files):
+                out["current"] += 1                          # belt-and-braces
+                continue
             idx = None
-            for i, t in enumerate(texts):
-                if token in t and not (i and token in texts[i - 1]):
+            for i, present in enumerate(tokens_at):
+                if token in present and not (i and token in tokens_at[i - 1]):
                     idx = i
             if idx is None:
+                out["unanchored"] += 1
                 continue
             asha = commits[idx][0]
             tree = set((git("ls-tree", "-r", "--name-only", asha) or "").split("\n"))
             apath, hpath = resolve(path, tree), resolve(path, head_files)
             if not apath or not hpath:
+                out["unanchored"] += 1
                 continue
             atxt = git("show", f"{asha}:{apath}")
             hp = ROOT / hpath
             if atxt is None or not hp.exists():
+                out["unanchored"] += 1
                 continue
             al = atxt.split("\n")
             hl = hp.read_text(encoding="utf-8", errors="replace").split("\n")
-            at = lambda ls, n: ls[n - 1] if 1 <= n <= len(ls) else None
 
-            for which, n in (("start", start), ("end", int(end) if end else None)):
-                if n is None:
-                    continue
-                anchor, now = at(al, n), at(hl, n)
-                if anchor is None or anchor == now:
-                    continue                                 # current, not declined
-                if anchor in hl and hl.count(anchor) == 1:
-                    continue                                 # the recipe already repairs this
-                declines += 1
-                tgt = relocatable_by_name(anchor, hl)
-                if tgt is not None and tgt != n:
-                    findings.append((card, token, which, n, tgt, anchor.strip(), hl[tgt - 1].strip()))
+            cited = [start] + ([int(end)] if end is not None else [])
+            mapped, reason = [], None
+            for n in cited:
+                got, why = map_endpoint(al, hl, n, name_rule=name_rule)
+                if why:
+                    reason = reason or why
+                    if why == ABSENT and n <= len(al) and by_name(al[n - 1], hl):
+                        out["recoverable"].append(
+                            (card, token, n, by_name(al[n - 1], hl),
+                             al[n - 1].strip(), hl[by_name(al[n - 1], hl) - 1].strip())
+                        )
+                else:
+                    mapped.append(got)
+            if reason:
+                out["declines"][reason] += 1
+                continue
+            if len(mapped) == 2 and not coherent(*mapped):
+                out["declines"][INCOHERENT] += 1
+                continue
+            if mapped == cited:
+                out["current"] += 1
+            else:
+                new = str(mapped[0]) if len(mapped) == 1 else f"{mapped[0]}-{mapped[1]}"
+                out["repairs"].append((card, token, f"{path}:{new}"))
+    return out
 
-    print(f"declines the exact-equality rule produces : {declines}")
-    print(f"  ...whose anchor is a def/class line that a unique-name match locates : "
-          f"{len(findings)}  over {len({f[0] for f in findings})} cards\n")
-    for card, token, which, was, now, anchor, head in sorted(findings):
-        print(f"  {token:<28} {which:<5} {was} -> {now}   {card[:46]}")
+
+def report(label: str, res: dict) -> None:
+    print(f"\n{label}")
+    print(f"  in-scope cites ......................... {res['cites']}")
+    print(f"  current ................................ {res['current']}")
+    print(f"  repairs the pass would apply ........... {len(res['repairs'])}")
+    print(f"  no anchor commit in the card's history . {res['unanchored']}")
+    print(f"  declines ............................... {sum(res['declines'].values())}")
+    for reason in REASONS:
+        print(f"    {reason:.<36} {res['declines'][reason]}")
+    print(f"  absent-anchor declines a unique-name match locates : "
+          f"{len(res['recoverable'])}  over {len({f[0] for f in res['recoverable']})} cards")
+
+
+def main() -> int:
+    verdicts = {
+        "SKILL.md step 4": documented_definition_rule(skill_step_four()),
+        "reference.md § Citation anchor check":
+            documented_definition_rule(reference_anchor_section()),
+    }
+    for surface, verdict in verdicts.items():
+        print(f"{surface:<40} {verdict}")
+    shipped = set(verdicts.values()) == {NAME_GUARDED}
+
+    deck = json.loads(subprocess.run(
+        [sys.executable, "-m", "goc.cli", "--status", "all", "--json"],
+        cwd=ROOT, capture_output=True, text=True,
+        env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin", "HOME": str(Path.home())},
+    ).stdout)
+    cards = [c["title"] for c in deck if c["status"] in ("open", "active")]
+
+    res = walk(cards, name_rule=shipped)
+    report("the recipe as shipped" + ("" if shipped else " (name rule NOT documented)"), res)
+    for card, token, into in sorted(res["repairs"]):
+        print(f"    REPAIR {token:<28} -> {into:<28} {card[:52]}")
+    for card, token, was, now, anchor, head in sorted(res["recoverable"]):
+        print(f"\n  {token:<28} line {was} -> {now}   {card[:52]}")
         print(f"      anchored: {anchor[:86]}")
         print(f"      in HEAD : {head[:86]}")
-    return 1 if findings else 0
+
+    if shipped:
+        counterfactual = walk(cards, name_rule=False)
+        report("under exact full-line equality — the rule this card replaced", counterfactual)
+        for card, token, was, now, anchor, _h in sorted(counterfactual["recoverable"]):
+            print(f"  {token:<28} line {was} -> {now}   {card[:52]}")
+    return 1 if res["recoverable"] else 0
 
 
 if __name__ == "__main__":

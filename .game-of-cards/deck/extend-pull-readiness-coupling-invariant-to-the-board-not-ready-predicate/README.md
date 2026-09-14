@@ -28,7 +28,7 @@ definition_of_done: |
 "Is this card pullable / not-ready?" is computed in three independent
 places in `goc/engine.py`:
 
-1. `card_is_ready` (engine.py:2457) — the queue axis (`next-card` / `pull-card`).
+1. `card_is_ready` (engine.py:2632) — the queue axis (`next-card` / `pull-card`).
 2. `card_is_workable_for_scheduler` (engine.py:2669) — the scheduler axis.
 3. The board's `not_ready` predicate inside `card_cell` in `render_board`
    (engine.py:3559) — the at-a-glance ⏳ marker.
