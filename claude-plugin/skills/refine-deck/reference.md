@@ -191,10 +191,46 @@ the filing commit for a cite no pass has touched, the repair commit for
 one an earlier pass rewrote. Find it by walking the card's own history:
 list `git log --follow --format=%H -- <deck>/<card>/README.md` oldest to
 newest (check the legacy `deck/` path too), read the README at each
-commit, and take the newest commit at which the exact cite token turns
-from absent to present. Read the cited file at that commit — `git show
-<commit>:<path>` — and take the cited line's text. That text is what the
-card meant; the number is only its address at the time.
+commit, and take the newest commit at which the cite token turns from
+absent to present. Presence is SET MEMBERSHIP, not a substring search:
+extract that version's cite tokens with the same pattern the pass uses
+to find cites in the card, and ask whether this token is one of them.
+Read the cited file at that commit — `git show <commit>:<path>` — and
+take the cited line's text. That text is what the card meant; the number
+is only its address at the time.
+
+**Why the presence test has to be token-exact.** A plain text search
+reads `path:N` as present inside `path:N-M`, so a single-line cite that
+shares its number with a range the same card carries never turns from
+absent to present at the commit that actually wrote it — it reads as
+present from whenever the range arrived, and inherits the range's older
+anchor. Calling the token "exact" is not enough and is why this held for
+a month: the word modified the token, while the test around it was still
+`in`. Measured on this deck 2026-09-14, two cites anchored this way,
+both onto text one line above the function their card names, and both
+were proposed for a rewrite onto that wrong line.
+
+**One token at two occurrences — DECLINE.** The walk identifies a cite
+by its TOKEN, and a token is not unique inside a card. Where the same
+in-scope token sits at two or more occurrences, those occurrences share
+one history and no walk can anchor them apart, even in principle:
+token-exactness does not help, because the token genuinely WAS present
+at the earlier commit, at the other occurrence. So count the occurrences
+before walking, and decline the token outright when there is more than
+one — a residue row, never a rewrite. The passes manufacture this shape
+themselves: neighbouring cites drift by the same amount, so a pass
+repairs them together and lands one on a number another already held.
+Measured on this deck 2026-09-14: 63 open cards hold an in-scope token
+at two or more occurrences, benign only while both occurrences still
+mean the same line.
+
+**A cite that already resolves at HEAD is not a repair candidate.**
+Cheap, and worth running first: if HEAD holds at the cited line the
+symbol the card's own prose names, the number is correct and no anchor
+can say otherwise. That would have stopped all three false repairs this
+rule was written for. It is belt-and-braces rather than the fix — it
+silences the symptom for cites that happen to be right and does nothing
+for one that is genuinely defunct and anchored on a neighbour's history.
 
 **Why not the creating commit.** It is the same commit for a cite no
 pass has ever rewritten, so the walk subsumes that older rule rather
@@ -232,13 +268,14 @@ verdicts (11%), over 28 open cards, rested on such a line. One had
 passed three consecutive anchored passes while missing the function its
 card named by 910 lines, having never named it correctly at all.
 
-**The residue is output, not silence.** The declines split four ways
+**The residue is output, not silence.** The declines split five ways
 and each is reported for a human read:
 
 | Decline | What it usually means |
 |---|---|
+| ambiguous occurrence (>1 in the card) | the same cite token sits at two or more in-scope occurrences of one card, so the history walk cannot tell which occurrence it is anchoring; only the card's prose says what each one meant |
 | trivial anchor, verdict undecidable | the anchor line is a blank, a bare brace, or under ~12 characters, so matching it at the cited offset is no evidence the cite is current and finding it elsewhere is no evidence of where it went; a reader must re-derive the address from the card's prose |
-| ambiguous (>1 match) | boilerplate or a repeated idiom; the card's surrounding text disambiguates, the matcher cannot |
+| ambiguous match (>1 hit in HEAD) | boilerplate or a repeated idiom; the card's surrounding text disambiguates, the matcher cannot |
 | anchor text absent | the cited code was refactored away — re-read the card, and if the refactor also fixed the defect, close it per the core skill |
 | incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |
 
@@ -250,6 +287,19 @@ it, and read that as accounting caught up rather than as a regression:
 moving the trivial-anchor test ahead of the comparison reclassified 46
 cites on this deck from a silent `current` into the table above, none of
 which the pass before it had been entitled to certify.
+
+**Close the step by re-running it.** After applying the rewrites, run
+the decision phase again over the cards just written and assert it
+proposes ZERO further repairs. A correctly repaired deck is a fixed
+point, so any second-round proposal is the pass repairing its own
+output — and the per-cite rules cannot catch that, because each such
+proposal is individually well-formed: a real anchor, a unique match, a
+confident rewrite onto the wrong line. The colliding-anchor class above
+was found by exactly this re-run and by nothing else; a pass that had
+followed the recipe as written would have reported three successful
+repairs and left no trace of the three correct cites it moved. Treat a
+non-empty second round as a defect in the recipe to be filed, not as
+more work to apply.
 
 ## Tag sweeps
 

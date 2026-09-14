@@ -110,6 +110,22 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # sibling. A pointer fails here for the same reason as the fourth and fifth
 # raises, sharpened: the verdict this catches emits NO output at all, so a
 # pass that does not already carry the rule has nothing to go look it up from.
+#
+# refine-deck was raised a seventh time on 2026-09-14 by the card
+# `citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide`:
+# step 2's history walk identified a cite by its TOKEN and tested presence with
+# a substring search, so `path:N` read as present inside a `path:N-M` the same
+# card carried and inherited the range's older anchor — and where one token
+# sits at two occurrences of a card, the two share one history and no walk can
+# anchor them apart at all (measured: two colliding anchors proposed for a
+# rewrite onto the line above the function their card named, over a population
+# of 63 open cards holding a repeated token). What stayed in the core is the
+# set-membership presence test and the repeated-token DECLINE, plus the
+# closing re-run that asserts the pass is a fixed point; the why, the census
+# and the fifth decline row went to the reference sibling. A pointer fails
+# here for a reason the sixth raise does not cover: every per-cite rule PASSES
+# on the repair this produces — real anchor, unique match, confident rewrite —
+# so a pass carrying only a pointer has no symptom that would send it looking.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -119,7 +135,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_000,
-    "refine-deck": 12_800,
+    "refine-deck": 13_600,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

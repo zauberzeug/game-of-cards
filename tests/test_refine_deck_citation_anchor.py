@@ -65,6 +65,21 @@ residue row, nothing a reader could notice. Measured on this deck, 46 of
 guard called unusable. The fixture below is the worst shape of it,
 because a blank line cannot decay: an author's off-by-one is frozen into
 a permanent `current` that every later pass re-certifies.
+
+A fifth gap sits one level under the anchor rule itself:
+`citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide`
+found that the walk identifies a cite by its TOKEN and tests presence
+with a substring search, neither of which pins the OCCURRENCE being
+repaired. So `path:N` reads as present inside a `path:N-M` the same card
+carries and inherits the range's older anchor; and where a past repair
+has landed one cite on a number another already held, the two
+occurrences share one history and no walk can anchor them apart at all.
+Either way the cite is anchored on text it never named, verdicted
+defunct while correct, and moved. The last fixture below is the first
+half — a card carrying a range and a single-line cite, where the two
+readings each produce a confident unique relocation onto a different
+line — and the decline is the second, because occurrence-awareness in
+the presence test cannot rescue a token the card holds twice.
 """
 
 from __future__ import annotations
@@ -102,10 +117,22 @@ PAIR_UNCHECKED = "endpoints-mapped-independently"
 DECIDE_GUARDED = "trivial-anchor-refused-before-comparing"
 DECIDE_UNGUARDED = "compared-whatever-the-anchor-line-held"
 
+# Anchor-walk verdicts. TOKEN_WALK is the recipe as it shipped from
+# 2026-08-17 to 2026-09-14: presence tested as a substring of the README
+# text, with a cite identified by its token and nothing else.
+OCCURRENCE_GUARDED = "token-exact-and-repeats-declined"
+TOKEN_WALK = "substring-presence-on-a-bare-token"
+
 # What the recipe answers about one cited line.
 CURRENT = "current"
 DEFUNCT = "defunct"
 DECLINE_TRIVIAL = "decline-trivial-anchor"
+DECLINE_OCCURRENCE = "decline-ambiguous-occurrence"
+
+# How the pass finds the cites in a card — reused as the membership test the
+# fixed presence rule prescribes, so the fixture cannot drift into a second
+# extractor the way the prose drifted into a second predicate.
+CITE_TOKEN = re.compile(r"[\w./-]+\.py:\d+(?:-\d+)?")
 
 # A repaired pair wider than this is no longer addressing a block. Mirrors
 # the threshold the shipped prose names and the one the card's reproduce.py
@@ -174,6 +201,38 @@ RANGE_END_UNMOVED = 8  # line 8 in HEAD is the idiom from old line 4
 # `current`, and the function it names has moved to line 11.
 TRIVIAL_CITED = 5
 TRIVIAL_TARGET_IN_HEAD = 11
+
+# The colliding-anchor fixture. The card carries TWO cites — a range over the
+# target block and a single line inside the helper above it — and the story is
+# the one the deck produced: the file grows, a pass repairs both, and the
+# number the single-line cite lands on is one the RANGE already spelled at an
+# older commit. A substring presence test therefore sees that token as present
+# from the range's own filing and anchors the helper cite on whatever sat at
+# that offset back then, which here is the target's `def` line. Both readings
+# then relocate uniquely and confidently, onto different lines: this is the
+# shape that WRITES rather than mis-verdicts.
+COLLIDE_V1 = [
+    '"""Fixture module."""',
+    "",
+    "def alpha():",
+    '    return "alpha sentinel value"',
+    "",
+    "def target(payload):",
+    "    value = payload * 2",
+    "    return value",
+    "",
+    "def omega():",
+    "    return None",
+]
+COLLIDE_INSERT_1 = ["import os", "import sys"]
+COLLIDE_INSERT_2 = ["import json", "import re", "CONST_B = 2"]
+
+COLLIDE_BLOCK_FILED = (6, 8)  # the target block at the filing commit
+COLLIDE_BLOCK_REPAIRED = (8, 10)  # the same block after the first insert
+COLLIDE_SINGLE_LINE = 6  # the helper's return, after the first insert
+COLLIDE_SINGLE_CITE = f"{CITED_FILE}:{COLLIDE_SINGLE_LINE}"
+ALPHA_LINE_IN_COLLIDE_HEAD = 9  # where the helper's return actually went
+TARGET_LINE_IN_COLLIDE_HEAD = 11  # where the RANGE's anchor text went
 
 
 def documented_anchor(prose: str) -> str | None:
@@ -281,6 +340,51 @@ def documented_decide_guard(prose: str) -> str | None:
     return DECIDE_GUARDED if guarded else DECIDE_UNGUARDED
 
 
+def documented_occurrence_rule(prose: str) -> str | None:
+    """Does this stretch of skill prose tie the anchor walk to an OCCURRENCE?
+
+    Two rules, and a pass needs both. Presence has to be SET MEMBERSHIP
+    over the version's own extracted cite tokens, because a substring
+    search reads `path:N` as present inside a `path:N-M` the same card
+    carries, and the single-line cite then inherits the range's older
+    anchor. And a token the card holds at two or more occurrences has to
+    be DECLINED, because those occurrences share one history and no walk
+    separates them — token-exactness cannot rescue that one, since the
+    token genuinely WAS present at the earlier commit, at the other
+    occurrence.
+
+    Prose that never walks the history is not the anchor rule and
+    returns None. Prose that walks it without both rules is TOKEN_WALK —
+    the shipped text this was filed against, which called the token
+    "exact" and so read as precise already: the word modified the token
+    while the test around it was still a substring `in`.
+    """
+    flat = _flat(prose)
+    if "absent to present" not in flat:
+        return None
+    token_exact = "set membership" in flat and "substring" in flat
+    repeats_declined = (
+        "two or more" in flat or "more than one" in flat
+    ) and "decline" in flat
+    return OCCURRENCE_GUARDED if token_exact and repeats_declined else TOKEN_WALK
+
+
+def documented_idempotence_check(prose: str) -> bool:
+    """Does this stretch of skill prose close the pass by re-running it?
+
+    The colliding-anchor class is invisible per cite: every second-round
+    proposal it produces is individually well-formed — a real anchor, a
+    unique match, a confident rewrite — so no per-cite rule declines it.
+    Re-running the decision phase over what the pass just wrote and
+    finding it EMPTY is the only check that sees the class at all, and
+    it is how this one was found.
+    """
+    flat = _flat(prose)
+    return ("re-run" in flat or "re-running" in flat) and (
+        "zero further repairs" in flat
+    )
+
+
 def skill_citation_section() -> str:
     """The core skill's § Defunct file:line citations, that subsection only."""
     body = SKILL.read_text(encoding="utf-8")
@@ -359,6 +463,24 @@ def reference_anchor_section() -> str:
             "'## Citation anchor check' section"
         )
     return match.group(0)
+
+
+def residue_rows() -> list[str]:
+    """The decline reasons the reference's residue table actually carries."""
+    rows = []
+    for line in reference_anchor_section().splitlines():
+        if not line.startswith("|"):
+            continue
+        cell = line.split("|")[1].strip()
+        if cell in ("Decline", "") or set(cell) <= {"-"}:
+            continue
+        rows.append(cell)
+    return rows
+
+
+def card_cite_tokens(text: str) -> list[str]:
+    """Every cite token in a card body, in order — the pass's own extractor."""
+    return CITE_TOKEN.findall(text)
 
 
 def git(repo: Path, *args: str) -> str:
@@ -455,8 +577,67 @@ def build_trivial_anchor_repo(repo: Path) -> None:
     git(repo, "commit", "-q", "-m", "grow the source; the cite rots unnoticed")
 
 
-def anchor_commit(repo: Path, cite_token: str, mode: str) -> str:
-    """Run the anchor rule `mode` names over the card's README history."""
+def write_two_cite_card(repo: Path, block: tuple[int, int], single: int) -> None:
+    (repo / card_readme()).write_text(
+        f"# {CARD}\n\n"
+        f"`{CITED_FILE}:{block[0]}-{block[1]}` is the block this card is about,\n"
+        f"and `{CITED_FILE}:{single}` is the helper it returns from.\n",
+        encoding="utf-8",
+    )
+
+
+def write_repeated_cite_card(repo: Path, line: int) -> None:
+    """The convergence shape: one token, two in-scope occurrences."""
+    (repo / card_readme()).write_text(
+        f"# {CARD}\n\n"
+        f"`{CITED_FILE}:{line}` is the helper this card is about.\n\n"
+        f"Its only caller is at `{CITED_FILE}:{line}` as well, since the last\n"
+        f"repair pass moved the two onto the same number.\n",
+        encoding="utf-8",
+    )
+
+
+def build_collision_repo(repo: Path) -> None:
+    """File a range and a single-line cite, grow the file, repair both, grow again.
+
+    The single-line cite is repaired ONTO a number the range spelled at the
+    filing commit, which is the whole coincidence: from that commit on, a
+    substring presence test can no longer see the single-line token turn
+    from absent to present.
+    """
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.email", "test@example.com")
+    git(repo, "config", "user.name", "Test")
+    (repo / CITED_FILE).parent.mkdir(parents=True)
+    (repo / card_readme()).parent.mkdir(parents=True)
+
+    write_source(repo, COLLIDE_V1)
+    write_two_cite_card(repo, COLLIDE_BLOCK_FILED, 4)  # both correct here
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "file the card citing src/app.py:6-8 and :4")
+
+    write_source(repo, COLLIDE_INSERT_1 + COLLIDE_V1)  # everything shifts +2
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the source; both cites rot")
+
+    write_two_cite_card(repo, COLLIDE_BLOCK_REPAIRED, COLLIDE_SINGLE_LINE)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "hygiene pass: repair both cites")
+
+    write_source(repo, COLLIDE_INSERT_2 + COLLIDE_INSERT_1 + COLLIDE_V1)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the source again; both cites rot again")
+
+
+def anchor_commit(
+    repo: Path, cite_token: str, mode: str, *, exact: bool = False
+) -> str:
+    """Run the anchor rule `mode` names over the card's README history.
+
+    `exact=False` is the presence test as it shipped — a substring search
+    over the README text. `exact=True` is the fixed rule: membership in
+    that version's own extracted cite tokens.
+    """
     history = git(
         repo, "log", "--follow", "--format=%H", "--", card_readme()
     ).split()
@@ -465,7 +646,12 @@ def anchor_commit(repo: Path, cite_token: str, mode: str) -> str:
         return history[0]
     intro, present_before = history[0], False
     for commit in history:
-        present = cite_token in git(repo, "show", f"{commit}:{card_readme()}")
+        version = git(repo, "show", f"{commit}:{card_readme()}")
+        present = (
+            cite_token in card_cite_tokens(version)
+            if exact
+            else cite_token in version
+        )
         if present and not present_before:
             intro = commit
         present_before = present
@@ -527,6 +713,29 @@ def repair(repo: Path, mode: str) -> int | None:
     cite_token = f"{CITED_FILE}:{cited_line}"
 
     commit = anchor_commit(repo, cite_token, mode)
+    anchored = git(repo, "show", f"{commit}:{CITED_FILE}").splitlines()
+    head = (repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+    return relocate(anchored, head, cited_line)
+
+
+def repair_token(repo: Path, cite_token: str, *, occurrence: bool):
+    """The recipe on ONE single-line cite token, occurrence rule on or off.
+
+    `occurrence=False` is the recipe as it shipped: a substring presence
+    test over the README text, with the cite identified by its token and
+    nothing else. `occurrence=True` adds the two rules the fixed prose
+    prescribes — presence is membership in the version's extracted cite
+    tokens, and a token the card holds at two or more in-scope
+    occurrences is DECLINED, since no walk can anchor them apart.
+
+    Returns the line number the pass would write, None where step 4
+    declines, or DECLINE_OCCURRENCE.
+    """
+    readme = (repo / card_readme()).read_text(encoding="utf-8")
+    cited_line = int(cite_token.rsplit(":", 1)[1])
+    if occurrence and card_cite_tokens(readme).count(cite_token) > 1:
+        return DECLINE_OCCURRENCE
+    commit = anchor_commit(repo, cite_token, AUTHORING, exact=occurrence)
     anchored = git(repo, "show", f"{commit}:{CITED_FILE}").splitlines()
     head = (repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
     return relocate(anchored, head, cited_line)
@@ -884,6 +1093,221 @@ class TrivialAnchorDecideTest(unittest.TestCase):
         self.assertTrue(trivial_anchor("        });"))
         self.assertTrue(trivial_anchor("    return 0"))
         self.assertFalse(trivial_anchor("def target(payload):"))
+
+
+class DocumentedOccurrenceRuleTest(unittest.TestCase):
+    """A cite is an occurrence in a card, not a token the card contains."""
+
+    def test_core_skill_anchors_per_occurrence(self) -> None:
+        self.assertEqual(
+            OCCURRENCE_GUARDED,
+            documented_occurrence_rule(skill_step_two()),
+            "refine-deck SKILL.md step 2 must test presence by MEMBERSHIP in "
+            "the version's extracted cite tokens (so `path:N` does not read "
+            "as present inside `path:N-M`) and must DECLINE a token the card "
+            "holds at two or more occurrences; without both, the walk hands a "
+            "cite an anchor decided by a different cite's history",
+        )
+
+    def test_reference_sibling_prescribes_the_same_rule(self) -> None:
+        self.assertEqual(
+            documented_occurrence_rule(skill_step_two()),
+            documented_occurrence_rule(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling anchor cites "
+            "differently; a pass following either would read a different "
+            "commit for the same cite",
+        )
+
+    def test_the_shipped_rule_this_replaced_is_classified_as_token_only(
+        self,
+    ) -> None:
+        # The classifier's own proof that it can fail: the sentence the recipe
+        # shipped from 2026-08-17 to 2026-09-14. It calls the token "exact",
+        # which is why it read as precise — the word modifies the token, while
+        # the test around it is still a substring search.
+        self.assertEqual(
+            TOKEN_WALK,
+            documented_occurrence_rule(
+                "Find it by walking the card's own history: list `git log "
+                "--follow --format=%H -- <deck>/<card>/README.md` oldest to "
+                "newest, read the README at each commit, and take the newest "
+                "commit at which the exact cite token turns from absent to "
+                "present."
+            ),
+        )
+
+    def test_prose_that_never_walks_the_history_is_unclassifiable(self) -> None:
+        self.assertIsNone(
+            documented_occurrence_rule(
+                "Resolve the path \u2014 cards write `engine.py:N` for "
+                "`goc/engine.py:N`; prefer a non-mirror match."
+            )
+        )
+
+    def test_a_range_token_does_not_contain_the_single_line_token(self) -> None:
+        # The substring half in one line: the same text answers the two
+        # presence tests differently, and only one of the answers is a cite.
+        prose = f"`{CITED_FILE}:6-8` is the block this card is about."
+        self.assertIn(COLLIDE_SINGLE_CITE, prose)
+        self.assertNotIn(COLLIDE_SINGLE_CITE, card_cite_tokens(prose))
+
+    def test_residue_table_carries_the_ambiguous_occurrence_decline(self) -> None:
+        rows = [row for row in residue_rows() if "ambiguous occurrence" in row]
+        self.assertEqual(
+            1,
+            len(rows),
+            "refine-deck reference.md \u00a7 Citation anchor check must carry "
+            "exactly one residue row for the repeated-token decline; a "
+            "decline absorbed back into a rewrite is the silence the anchored "
+            "recipe replaced",
+        )
+
+
+class ResidueAccountingTest(unittest.TestCase):
+    """Both surfaces must count the declines the table actually carries.
+
+    The core skill's summary line had been naming three reasons since the
+    range card added a fourth, which is the failure mode this guards: a
+    decline reason lands in the reference table and the surface an agent
+    reads never mentions it.
+    """
+
+    WORDS = {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7}
+
+    def test_reference_counts_its_own_residue_rows(self) -> None:
+        match = re.search(
+            r"declines split (\w+) ways", reference_anchor_section()
+        )
+        self.assertIsNotNone(
+            match,
+            "refine-deck reference.md \u00a7 Citation anchor check no longer "
+            "says how many ways the declines split",
+        )
+        self.assertEqual(
+            len(residue_rows()),
+            self.WORDS.get(match.group(1)),
+            "the reference's decline count and its residue table disagree",
+        )
+
+    def test_core_skill_names_every_decline_the_table_carries(self) -> None:
+        match = re.search(
+            r"Cites the recipe declines \u2014 (.+?) \u2014 are REPORTED",
+            skill_citation_section(),
+            re.S,
+        )
+        self.assertIsNotNone(
+            match,
+            "refine-deck SKILL.md no longer lists what the citation recipe "
+            "declines",
+        )
+        named = [part.strip() for part in match.group(1).split(",")]
+        self.assertEqual(
+            len(residue_rows()),
+            len(named),
+            "refine-deck SKILL.md names {} decline reasons while the "
+            "reference's residue table carries {}; an agent reads the core "
+            "skill and would never learn the missing one".format(
+                len(named), len(residue_rows())
+            ),
+        )
+
+
+class DocumentedIdempotenceCheckTest(unittest.TestCase):
+    """The only guard that sees the class rather than the instances."""
+
+    def test_core_skill_closes_the_step_with_a_re_run(self) -> None:
+        self.assertTrue(
+            documented_idempotence_check(skill_citation_section()),
+            "refine-deck SKILL.md \u00a7 Defunct file:line citations must end "
+            "by re-running the decision phase over what the pass just wrote "
+            "and asserting zero further repairs; every per-cite rule passes "
+            "on a pass repairing its own output",
+        )
+
+    def test_reference_sibling_prescribes_the_same_check(self) -> None:
+        self.assertEqual(
+            documented_idempotence_check(skill_citation_section()),
+            documented_idempotence_check(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling disagree on "
+            "whether the citation pass has to prove itself a fixed point",
+        )
+
+    def test_prose_without_the_re_run_is_classified_as_missing(self) -> None:
+        # The classifier's own proof that it can fail: the closing sentence
+        # the recipe shipped with, which stops at reporting the declines.
+        self.assertFalse(
+            documented_idempotence_check(
+                "Cites the recipe declines \u2014 trivial anchor, anchor gone, "
+                "ambiguous, incoherent pair \u2014 are REPORTED for a human to "
+                "read, never silently skipped."
+            )
+        )
+
+
+class CollidingCiteAnchorTest(unittest.TestCase):
+    """Two cites, one number: whose history decides the anchor?"""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_collision_repo(self.repo)
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_documented_recipe_repairs_the_cite_onto_the_code_it_named(
+        self,
+    ) -> None:
+        self.assertEqual(
+            OCCURRENCE_GUARDED,
+            documented_occurrence_rule(skill_step_two()),
+            "refine-deck SKILL.md step 2 no longer pins the walk to an "
+            "occurrence",
+        )
+        self.assertEqual(
+            ALPHA_LINE_IN_COLLIDE_HEAD,
+            repair_token(self.repo, COLLIDE_SINGLE_CITE, occurrence=True),
+            "the recipe refine-deck ships must anchor a cite on the commit "
+            "that wrote THAT cite, not on the older commit where a range in "
+            "the same card happened to spell its number",
+        )
+
+    def test_token_walk_moves_the_cite_onto_the_other_cites_code(self) -> None:
+        # Not a spec \u2014 the fixture's own proof that it exercises the defect.
+        # The substring walk anchors the helper cite at the filing commit,
+        # where line 6 held the target's `def`, and relocates it there:
+        # unique, confident, and the wrong function.
+        self.assertEqual(
+            TARGET_LINE_IN_COLLIDE_HEAD,
+            repair_token(self.repo, COLLIDE_SINGLE_CITE, occurrence=False),
+        )
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            "def target(payload):", head[TARGET_LINE_IN_COLLIDE_HEAD - 1]
+        )
+        self.assertEqual(
+            '    return "alpha sentinel value"',
+            head[ALPHA_LINE_IN_COLLIDE_HEAD - 1],
+        )
+
+    def test_a_token_the_card_holds_twice_is_declined(self) -> None:
+        # Convergence: a later pass lands the second cite on the same number.
+        # Both occurrences now share one history, so token-exactness buys
+        # nothing and the honest answer is a decline.
+        write_repeated_cite_card(self.repo, COLLIDE_SINGLE_LINE)
+        git(self.repo, "add", "-A")
+        git(self.repo, "commit", "-q", "-m", "a pass lands both cites on :6")
+        self.assertEqual(
+            DECLINE_OCCURRENCE,
+            repair_token(self.repo, COLLIDE_SINGLE_CITE, occurrence=True),
+            "the recipe refine-deck ships must DECLINE a token the card holds "
+            "at two or more in-scope occurrences and report it, rather than "
+            "rewrite both from one occurrence's history",
+        )
+        self.assertEqual(
+            TARGET_LINE_IN_COLLIDE_HEAD,
+            repair_token(self.repo, COLLIDE_SINGLE_CITE, occurrence=False),
+            "fixture check: the unguarded recipe rewrites both occurrences "
+            "and reports a successful repair",
+        )
 
 
 if __name__ == "__main__":
