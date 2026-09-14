@@ -1,21 +1,21 @@
 ---
 title: verbose-table-renders-a-multi-line-summary-raw-breaking-the-per-card-block
 summary: "goc -v prints a card's summary with a bare f-string, so a multi-line summary's continuation lines carry none of the four-space indent every other entry in the per-card detail block uses and read as new records. 43 of 757 cards in this deck have one. The sibling branch in _cmd_triage already clips a multi-line summary to its first line with a see-goc-show pointer; the table renderer's own -vv DoD dump already re-indents every line."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-09-14T05:39:04Z"
-closed_at: null
+closed_at: "2026-09-14T05:45:38Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits 1 against the current engine and 0 after the fix.
-  - [ ] TDD: a regression test asserts that `render_table(..., verbose=1)` on a card with a multi-line `summary` emits exactly one `summary:` line and that every non-blank detail line starts with the four-space block indent.
-  - [ ] TDD: the same test asserts a single-line summary renders byte-identically to today (no spurious clip indicator), and that the clipped form names the card so a reader can reach the full text.
-  - [ ] MECHANICAL: the clip matches the sibling convention already in `_cmd_triage` — first line, then an ellipsis and a `goc show <title>` pointer — rather than inventing a third preview style.
-  - [ ] MECHANICAL: `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes; `python scripts/sync_plugin_assets.py --check` clean.
+  - [x] TDD: `reproduce.py` exits 1 against the current engine and 0 after the fix.
+  - [x] TDD: a regression test asserts that `render_table(..., verbose=1)` on a card with a multi-line `summary` emits exactly one `summary:` line and that every non-blank detail line starts with the four-space block indent.
+  - [x] TDD: the same test asserts a single-line summary renders byte-identically to today (no spurious clip indicator), and that the clipped form names the card so a reader can reach the full text.
+  - [x] MECHANICAL: the clip matches the sibling convention already in `_cmd_triage` — first line, then an ellipsis and a `goc show <title>` pointer — rather than inventing a third preview style.
+  - [x] MECHANICAL: `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes; `python scripts/sync_plugin_assets.py --check` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 

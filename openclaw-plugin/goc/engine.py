@@ -3365,7 +3365,21 @@ def render_table(
             if why:
                 out_lines.append(f"    why: {why}")
             if t.summary:
-                out_lines.append(f"    summary: {t.summary}")
+                # Every entry in this block is one `    key: value` line, and
+                # the four-space indent is what marks a line as belonging to
+                # the row above rather than being a new record. A summary is
+                # a multi-line block scalar on 6% of this repo's own deck
+                # (`emit_frontmatter` writes any multi-line string that way,
+                # and `_apply_summary_rewrite` exists to produce them), so
+                # interpolating it whole would emit continuation lines at
+                # column zero. Clip to the first line and advertise the clip
+                # with a `goc show` pointer — the same convention the summary
+                # branch of `_cmd_triage` already follows.
+                summary_lines = t.summary.splitlines()
+                summary_text = (summary_lines[0] if summary_lines else "").rstrip()
+                if len(summary_lines) > 1:
+                    summary_text += f" … (see `goc show {t.title}`)"
+                out_lines.append(f"    summary: {summary_text}")
             # The impediment overlay is the HARD "cannot pull" axis, so it
             # reads above the advisory `awaiting:` line below — which says
             # "(you may start)" and would otherwise be the only
