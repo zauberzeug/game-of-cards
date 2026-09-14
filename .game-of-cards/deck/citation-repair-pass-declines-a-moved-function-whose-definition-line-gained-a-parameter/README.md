@@ -1,7 +1,7 @@
 ---
 title: citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter
 summary: "The citation anchor recipe relocates a defunct cite only on exact full-line equality, so any edit to the anchor line itself — a new keyword-only parameter, a changed return annotation, a reflowed signature — reads as 'anchor text absent' and the cite is declined for good even when the function it names is uniquely findable. Measured on this deck 2026-09-14: 12 declines across 9 open cards are def/class lines a unique-name match relocates, and one refactor adding a probe parameter to five install writers caused most of them."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-09-14T02:10:56Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" carries the definition-name relocation rule, stating both constraints (the range pair guard still decides emission; a non-unique name declines), and `SKILL.md`'s step 4 carries it in condensed form.
   - [ ] MECHANICAL: the residue table's `anchor text absent` row no longer tells the reader the code was refactored away as the only reading.
   - [ ] EMPIRICAL: the next `Skill(refine-deck)` pass after the rule lands repairs the 12 cites the transcript names, and its report shows the absent-decline count dropping by that amount.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Citation repair pass declines a moved function whose definition line gained a parameter
