@@ -1,7 +1,7 @@
 ---
 title: citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank
 summary: "The citation anchor recipe applies its non-triviality guard only when relocating a defunct cite, never when deciding whether the cite is defunct at all. The compare step tests raw line equality, so a cite whose anchor text is a bare brace, a blank line, or 'return 0' verdicts 'current' whenever HEAD happens to carry the same token at that offset — the silent false-clean the recipe was written to replace. Measured on this deck 2026-09-14: 46 of 413 'current' verdicts (11%), across 28 open cards, rest on such an anchor; two are provably wrong."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-14T02:10:56Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" applies the trivial-line predicate at the DECIDE step, not only at the relocate step, and `SKILL.md`'s condensed recipe carries the same clause at its step 3.
   - [ ] MECHANICAL: that section's residue table gains the new decline reason, so the shape is reported rather than absorbed into `current`.
   - [x] EMPIRICAL: the two cites named as provably wrong in the transcript above are re-derived from their own cards' prose, corrected, and the correction recorded in each card's `log.md`. Done 2026-09-14 in the pass that filed this card.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Citation repair pass calls a cite `current` when its anchor line is a brace or blank
