@@ -13,8 +13,8 @@ advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits non-zero (defect no longer fires — `goc decide` with empty `--decision` or empty `--because` is rejected before any state changes).
-  - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR before any mutation` (strict, mirrors the terminal-status guard at engine.py:4908) or `exit 0 + WARNING on stderr + still record` (lenient). Strict is the natural fit since the resulting body and log are not human-readable.
-  - [ ] MECHANICAL: `_cmd_decide` (engine.py:6791) validates that `args.decision.strip()` and `args.reasoning.strip()` are both non-empty before reading the README, with a single `ERROR: --decision and --because must be non-empty` message and exit 2 when either is blank.
+  - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR before any mutation` (strict, mirrors the terminal-status guard at engine.py:4909) or `exit 0 + WARNING on stderr + still record` (lenient). Strict is the natural fit since the resulting body and log are not human-readable.
+  - [ ] MECHANICAL: `_cmd_decide` (engine.py:6792) validates that `args.decision.strip()` and `args.reasoning.strip()` are both non-empty before reading the README, with a single `ERROR: --decision and --because must be non-empty` message and exit 2 when either is blank.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the empty-string case, separately for empty-`--decision`, empty-`--because`, and both.
   - [ ] PROCESS: `uv run goc validate` passes.
 ---
@@ -44,7 +44,7 @@ strings satisfy it. The downstream `_cmd_decide` then trusts the values
 unconditionally:
 
 ```python
-# goc/engine.py:6791
+# goc/engine.py:6792
 def _cmd_decide(args):
     """Record a decision in the body + log; lower the human gate to `none`."""
     title = args.title
@@ -139,7 +139,7 @@ modes:
    misfire, jq returning `null`, an LLM tool-call schema where the
    field defaulted to `""`) produces a commit named
    `decide: <title> — ` (the trailing dash is from
-   `f"decide: {title} — {decision_short}"` at engine.py:6873-6874).
+   `f"decide: {title} — {decision_short}"` at engine.py:6874-6875).
    The deck history records a decision that has no decision text;
    reviewers can't replay the call from log.md either, because the log
    entry's content boils down to ` — `.
@@ -167,8 +167,8 @@ command function performs the mutation without a precondition check.
 Two credible failure-mode shapes; pick one:
 
 1. **`exit 2 + ERROR before any mutation`** (strict). Mirrors the
-   existing terminal-status guard at `engine.py:4908` and the
-   already-`none` gate guard at `engine.py:6813`. The natural choice
+   existing terminal-status guard at `engine.py:4909` and the
+   already-`none` gate guard at `engine.py:6814`. The natural choice
    because the resulting body and log entry are not human-readable —
    there is no "lenient success" interpretation that produces a useful
    audit trail. Breaks no tooling that wasn't already producing

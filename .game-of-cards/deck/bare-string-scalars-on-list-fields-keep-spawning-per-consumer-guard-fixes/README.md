@@ -1,6 +1,6 @@
 ---
 title: bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
-summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:6268) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:3920) have now surfaced. A 2026-06-21 audit added a second failure mode in the same root cause — a non-string *scalar* on a field whose consumer assumes a string (`contribution: 42`; a non-string element in `tags`) crashes the queue/board renderer with a hard TypeError before validate runs, and `contribution` is a scalar field outside the five list-typed ones, so the family is broader than list fields alone. The family will keep recurring until the loader rejects/coerces the malformed shape at the source (approach A, generalized to all schema-typed fields) or every consumer routes through a shared shape-coercing helper."
+summary: "The loader tolerates bare-string scalars on list-typed frontmatter fields (`advances`, `advanced_by`, `supersedes`, `superseded_by`, `tags`). Each read-time consumer that forgets the `isinstance(..., list)` guard then iterates the string character-by-character or substring-matches via Python's string `in`. Six closed sibling cards have already patched specific consumers one at a time; a seventh unguarded site (`_remove_from_list_field`, engine.py:6269) and then an eighth (`render_table` verbose `-vv` raw-dump loop, engine.py:3920) have now surfaced. A 2026-06-21 audit added a second failure mode in the same root cause — a non-string *scalar* on a field whose consumer assumes a string (`contribution: 42`; a non-string element in `tags`) crashes the queue/board renderer with a hard TypeError before validate runs, and `contribution` is a scalar field outside the five list-typed ones, so the family is broader than list fields alone. The family will keep recurring until the loader rejects/coerces the malformed shape at the source (approach A, generalized to all schema-typed fields) or every consumer routes through a shared shape-coercing helper."
 status: open
 stage: null
 contribution: medium
@@ -88,7 +88,7 @@ That suggestion never got filed. This card is that filing.
 
 ## The latest unfixed sibling (the trigger to file the meta-fix)
 
-`goc/engine.py:6268` — `_remove_from_list_field`:
+`goc/engine.py:6269` — `_remove_from_list_field`:
 
 ```python
 def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
@@ -100,7 +100,7 @@ def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
     return emit_frontmatter(fm, body=body)
 ```
 
-Compare to the sibling `_add_to_list_field` at `engine.py:6255`,
+Compare to the sibling `_add_to_list_field` at `engine.py:6256`,
 which DOES carry the guard:
 
 ```python
@@ -200,7 +200,7 @@ argues against.
 
 ## Reachability path
 
-`_remove_from_list_field` is called from `_mutate_pair` (engine.py:6277),
+`_remove_from_list_field` is called from `_mutate_pair` (engine.py:6278),
 which is called by:
 
 - `_cmd_unadvance` — `goc unadvance <title> <advancer>` removes

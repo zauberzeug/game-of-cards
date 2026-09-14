@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-23T05:06:53Z"
 closed_at: "2026-05-26T19:56:31Z"
 human_gate: none
-advances: []
+advances:
+  - decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting
 advanced_by: []
 tags: [bug]
 definition_of_done: |

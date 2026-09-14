@@ -25,7 +25,7 @@ definition_of_done: |
 Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
 had drifted or died):
 
-- Filter: `goc/engine.py:4310` — now `live_impeded(t, include_drafts=...)`
+- Filter: `goc/engine.py:4311` — now `live_impeded(t, include_drafts=...)`
 - Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
 - Authoritative impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
 - Flag help text: `goc/engine.py:3912`
@@ -55,7 +55,7 @@ walks a matrix over BOTH overlay fields — quoting its docstring:
 > queue with no manual action — the elapsed-wait is then surfaced
 > separately by `validate_waiting_overlay` as an SLE escalation signal.
 
-**That code is gone.** `goc/engine.py:4310` now reads:
+**That code is gone.** `goc/engine.py:4311` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
@@ -169,7 +169,7 @@ and because it is the input shape a ratifying reader should re-run.
 Re-resolved at HEAD on 2026-08-24 (every number the original filing carried
 had drifted or died):
 
-- Filter: `goc/engine.py:4310` — now `live_impeded(t, include_drafts=...)`
+- Filter: `goc/engine.py:4311` — now `live_impeded(t, include_drafts=...)`
 - Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
 - Authoritative impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
 - Flag help text: `goc/engine.py:3912`
@@ -199,7 +199,7 @@ walks a matrix over BOTH overlay fields — quoting its docstring:
 > queue with no manual action — the elapsed-wait is then surfaced
 > separately by `validate_waiting_overlay` as an SLE escalation signal.
 
-**That code is gone.** `goc/engine.py:4310` now reads:
+**That code is gone.** `goc/engine.py:4311` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]
@@ -284,7 +284,7 @@ documentation — inherits the drift transitively. Two real symptoms:
 1. A card with `waiting_on: external, waiting_until: <past>` shows up
    under `goc --waiting`. A reader assumes it's still parked. Meanwhile
    `goc --ready` / `Skill(pull-card)` will autonomously grab it on the
-   next /loop tick because `card_is_ready` (`engine.py:1722`) returns
+   next /loop tick because `card_is_ready` (`goc/engine.py:2632`) returns
    True. The two flags lie about each other.
 2. A card with only `waiting_until: 2030-01-01` (a bare deferral, no
    reason) does NOT show up under `goc --waiting`. The card is hidden

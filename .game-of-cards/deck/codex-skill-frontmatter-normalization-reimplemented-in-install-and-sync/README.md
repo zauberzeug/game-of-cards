@@ -51,7 +51,7 @@ Two independent implementations of the same Codex SKILL.md transform:
       dst.write_text(codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body)
   ```
 
-- `scripts/sync_plugin_assets.py:344-362` — `_codex_skill_text`:
+- `scripts/sync_plugin_assets.py:350-368` — `_codex_skill_text`:
 
   ```python
   def _codex_skill_text(src: Path, *, skill_name: str) -> str:

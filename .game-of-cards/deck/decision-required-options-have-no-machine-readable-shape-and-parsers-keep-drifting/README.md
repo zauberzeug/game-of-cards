@@ -8,7 +8,11 @@ created: "2026-07-26T13:59:47Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - decide-misparses-fenced-double-hash-line-as-decision-section-terminator
+  - goc-decide-leaves-prior-decision-block-when-the-body-already-has-one
+  - decide-card-rephrases-and-reorders-the-cards-own-options
+  - decision-verdict-coherence-check-skips-rubric-derived-decision-headings
 tags: [meta-fix, api-contract, documentation]
 definition_of_done: |
   - [ ] PROCESS: decision recorded on which of the four option shapes is canonical, and whether nested sub-decisions are expressible at all (see `## Decision required`).

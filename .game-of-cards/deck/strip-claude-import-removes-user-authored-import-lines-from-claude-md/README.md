@@ -1,6 +1,6 @@
 ---
 title: strip-claude-import-removes-user-authored-import-lines-from-claude-md
-summary: "`_strip_claude_import` (run by `goc install`/`goc upgrade` with `--briefing-target CLAUDE.md`) deletes EVERY bare `@AGENTS.md` / `@CLAUDE.local.md` line from CLAUDE.md, not just the import GoC wrote — so a user whose pre-GoC CLAUDE.md imports their own AGENTS.md silently loses that import and Claude stops loading their guidance. Unverified: confirmed by code reading; no end-to-end reproduce.py yet."
+summary: "`_strip_claude_import` (run by `goc install`/`goc upgrade` with `--briefing-target CLAUDE.md`) deletes EVERY bare `@AGENTS.md` / `@CLAUDE.local.md` line from CLAUDE.md, not just the import GoC wrote — so a user whose pre-GoC CLAUDE.md imports their own AGENTS.md silently loses that import and Claude stops loading their guidance. Confirmed end-to-end on 2026-09-14: the recipe in this card ran against a temp repo and the user line was deleted."
 status: open
 stage: null
 contribution: low
@@ -9,10 +9,10 @@ closed_at: null
 human_gate: decision
 advances: []
 advanced_by: []
-tags: [bug, api-contract, unverified]
+tags: [bug, api-contract]
 definition_of_done: |
   - [ ] PROCESS: ownership rule for bare import lines decided and recorded (see Decision required).
-  - [ ] TDD: reproduce.py lands and exits zero after the fix (user-authored bare `@AGENTS.md` amid other CLAUDE.md content survives `goc install --briefing-target CLAUDE.md`); drop the `unverified` tag when it lands.
+  - [ ] TDD: the reproduction under `## Reproduction` lands as `reproduce.py` and exits zero after the fix (user-authored bare `@AGENTS.md` amid other CLAUDE.md content survives `goc install --briefing-target CLAUDE.md`).
   - [ ] TDD: regression test — a GoC-owned CLAUDE.md (sole bare import line, or marker-bounded import block) is still cleaned up per the chosen rule.
 ---
 
@@ -24,7 +24,7 @@ definition_of_done: |
 - `goc/install.py:1617` — sole caller, inside `_sync_methodology_blocks` when `briefing_target == "CLAUDE.md"`
 - `goc/install.py:246-283` — `_sync_claude_import`, which shows why ownership of bare lines is ambiguous
 
-## Hypothesis (unverified — code-reading evidence only)
+## Confirmed behaviour (reproduced end-to-end 2026-09-14)
 
 `_strip_claude_import`'s docstring promises "Remove GoC's Claude
 import pointer from CLAUDE.md, **preserving user text**", but after
@@ -64,26 +64,32 @@ briefing target to CLAUDE.md and upgrades). The failure is silent —
 no file disappears; an import line vanishes and Claude's behavior
 degrades without any error.
 
-## Why deferred this round
+## Reproduction
 
-Surfaced by the audit hunter alongside two higher-contribution
-findings that consumed the round's `reproduce.py` budget
-([sync-plugin-assets-deletes-user-authored-skills-and-hooks-from-dogfood-dirs](../sync-plugin-assets-deletes-user-authored-skills-and-hooks-from-dogfood-dirs/),
-[repair-edges-apply-writes-superseded-by-onto-non-superseded-cards](../repair-edges-apply-writes-superseded-by-onto-non-superseded-cards/)).
-The hunter reproduced this one at the function boundary only; the
-end-to-end install path is unexercised.
+The end-to-end install path — unexercised when this card was filed,
+which is why it carried `unverified` for 94 days — was run on
+2026-09-14 against engine `0.0.27.post1.dev402` and **confirms the
+hypothesis**. In a fresh temp git repo:
 
-## Falsification recipe
+```bash
+printf '# Notes\n\nMy own project notes that predate GoC.\n\n@AGENTS.md\n' > CLAUDE.md
+printf '# My AGENTS\n\nUser-authored agent guidance, no GoC markers.\n' > AGENTS.md
+git init -q . && git add -A && git commit -qm init
+goc install --briefing-target CLAUDE.md --agents claude   # exit 0
+grep -x '@AGENTS.md' CLAUDE.md                            # no match
+```
 
-In a temp git repo: write `CLAUDE.md` =
-`# Notes\n\nMy own project notes that predate GoC.\n\n@AGENTS.md\n`
-plus a user `AGENTS.md` with no GoC markers. Run
-`goc install --briefing-target CLAUDE.md --agents claude`. If the
-resulting CLAUDE.md still contains the `@AGENTS.md` line, the
-hypothesis is falsified (check whether `_sync_methodology_blocks`
-gates the strip on something the function-level call missed).
-If the line is gone, promote: drop `unverified`, land the recipe as
-`reproduce.py`.
+`goc install` exits 0 and prints its normal success banner. The
+resulting `CLAUDE.md` keeps the user's `# Notes` heading and prose and
+gains the marker-bounded GoC block, but the user's own `@AGENTS.md`
+line is gone — exactly the outcome the card's falsification recipe
+named as a promotion, not a refutation. The user's `AGENTS.md` file is
+untouched on disk; only the import that made Claude read it was
+deleted, which is what makes the failure silent.
+
+The `unverified` tag was dropped on the strength of this run. What
+remains open is the ownership decision below and landing this
+transcript as a `reproduce.py`.
 
 ## Decision required
 

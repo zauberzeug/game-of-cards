@@ -20,7 +20,7 @@ definition_of_done: |
 
 ## Hypothesis (file:line)
 
-- `_cmd_done` at `goc/engine.py:4803-4861` — flips status to `done`,
+- `_cmd_done` at `goc/engine.py:4804-4862` — flips status to `done`,
   sets `closed_at`, prints to stdout. No `log.md` mutation.
 - `_cmd_done_bundle` at `goc/engine.py:4939-4947` — for each bundled
   member, unconditionally appends `attestation_block + closure_entry`

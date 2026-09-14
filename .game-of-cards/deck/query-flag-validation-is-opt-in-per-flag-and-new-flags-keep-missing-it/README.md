@@ -41,9 +41,9 @@ output, exit 0.
 
 - `goc/engine.py:3009` — `filter_cards` `--advances` / `--advanced-by`
   membership tests (no existence check on the queried title)
-- `goc/engine.py:4316` — `_cmd_default` presentation dispatch
+- `goc/engine.py:4317` — `_cmd_default` presentation dispatch
   (`if args.board: ... elif args.as_json: ...`)
-- `goc/engine.py:4233` — status auto-extend for `--waiting` /
+- `goc/engine.py:4234` — status auto-extend for `--waiting` /
   `--closed-since` fires only when `--status` is unset; nothing checks
   the explicit-status or `--waiting`+`--closed-since` compositions
 
@@ -74,7 +74,7 @@ dangling `advances` edges in card frontmatter while the CLI filter for
 the same edge field stays silent.
 
 **2. `--board` silently overrides `--json` — GUARDED 2026-08-18, one-off.**
-The presentation dispatch (`goc/engine.py:4316`) was
+The presentation dispatch (`goc/engine.py:4317`) was
 `if args.board: ... elif args.as_json: ...`, so `goc --json --board`
 printed the ASCII kanban grid with exit 0 — a machine consumer expecting
 JSON got unparseable output. Fixed by
@@ -83,7 +83,7 @@ JSON got unparseable output. Fixed by
 predicted: a hand-written per-pair conflict check at
 `goc/engine.py:4213-4224`, spelled like
 `goc: error: pass only one of --done / --status` (exit 2,
-`goc/engine.py:4213`).
+`goc/engine.py:4217`).
 
 **That fix is evidence for this card, not a dent in it.** It was found by
 an independent audit pass that did not reach this card during dedup — the
@@ -100,7 +100,7 @@ no-op (its help text does say "With --json:", so that one is at least
 documented). `--max-rows` has the same shape against `--board`.
 
 **3. `--closed-since` composes into can-never-match queries.** The
-status auto-extend (`goc/engine.py:4233`) fires only when
+status auto-extend (`goc/engine.py:4234`) fires only when
 `args.status_flag is None`. With an explicit non-terminal status,
 `goc --status open --closed-since 7d` requires `closed_at` set on an
 open card — a state `goc validate` itself flags as incoherent — and

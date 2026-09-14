@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Hypothesis (file:line)
 
-`goc/engine.py:6483-6486` (the `goc wait` overlay setter):
+`goc/engine.py:6484-6487` (the `goc wait` overlay setter):
 
 ```python
 if new_reason is not None:
