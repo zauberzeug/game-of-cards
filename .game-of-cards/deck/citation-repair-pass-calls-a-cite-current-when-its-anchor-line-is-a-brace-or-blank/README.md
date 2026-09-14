@@ -137,8 +137,10 @@ wrong", after
 (scope), and
 [citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range](../citation-repair-pass-maps-range-endpoints-independently-and-corrupts-the-range/)
 (range pairing). All four fixed the relocate side. None looked at the decide
-side. Sibling filed the same round:
-[citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter](../citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter/).
+side. Two siblings filed the same round:
+[citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter](../citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter/)
+and
+[citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide](../citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide/).
 
 The addressing convention itself is a separate, gated question —
 [file-line-citations-drift-again-within-days-of-every-repair-pass](../file-line-citations-drift-again-within-days-of-every-repair-pass/)

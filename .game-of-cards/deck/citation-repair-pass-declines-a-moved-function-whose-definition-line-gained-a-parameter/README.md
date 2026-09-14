@@ -108,10 +108,12 @@ every future pass, the population grows with each signature-touching refactor,
 and 9 of the affected cards are gated at `human_gate: decision`, so the reader
 who eventually picks them up is the one who pays.
 
-Sibling filed the same round, and the pair interact:
+Two siblings filed the same round, and the three interact:
 [citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank](../citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank/)
-— that one is the decide step accepting evidence it should refuse, this one is
-the relocate step refusing evidence it should accept. Both come from the same
+is the decide step accepting evidence it should refuse, this one is the relocate
+step refusing evidence it should accept, and
+[citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide](../citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide/)
+is the anchor step attributing one cite's history to another. Both come from the same
 root: the recipe states its substance guard once, in one place, and never asks
 whether the same question arises at the other steps.
 
