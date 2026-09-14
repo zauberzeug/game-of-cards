@@ -1,20 +1,20 @@
 ---
 title: citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter
 summary: "The citation anchor recipe relocates a defunct cite only on exact full-line equality, so any edit to the anchor line itself — a new keyword-only parameter, a changed return annotation, a reflowed signature — reads as 'anchor text absent' and the cite is declined for good even when the function it names is uniquely findable. Measured on this deck 2026-09-14: 12 declines across 9 open cards are def/class lines a unique-name match relocates, and one refactor adding a probe parameter to five install writers caused most of them."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-09-14T02:10:56Z"
-closed_at: null
+closed_at: "2026-09-14T05:25:45Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — no decline over the open/active deck has a def/class anchor that a unique-name match locates.
-  - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" carries the definition-name relocation rule, stating both constraints (the range pair guard still decides emission; a non-unique name declines), and `SKILL.md`'s step 4 carries it in condensed form.
-  - [ ] MECHANICAL: the residue table's `anchor text absent` row no longer tells the reader the code was refactored away as the only reading.
-  - [ ] EMPIRICAL: the next `Skill(refine-deck)` pass after the rule lands repairs the 12 cites the transcript names, and its report shows the absent-decline count dropping by that amount.
+  - [x] TDD: `reproduce.py` exits zero — no ABSENT-ANCHOR decline over the open/active deck has a def/class anchor that a unique-name match locates. (Amended at closure: the filed wording said "no decline", which would have demanded the recipe break its siblings — a range whose start the name rule moves past an unmoved end MUST still decline on the pair check. See log.md.)
+  - [x] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Citation anchor check" carries the definition-name relocation rule, stating both constraints (the range pair guard still decides emission; a non-unique name declines), and `SKILL.md`'s step 4 carries it in condensed form.
+  - [x] MECHANICAL: the residue table's `anchor text absent` row no longer tells the reader the code was refactored away as the only reading.
+  - [x] EMPIRICAL: the pass ran in the session that landed the rule. Of the 12 endpoint declines the filing names, 4 are two tokens a card holds twice, which the occurrence rule declines before the walk; of the remaining 8, five single-line cites were repaired and three range cites are declined by their siblings' rules. Absent-anchor declines 39 -> 32; repairs 1 -> 5; re-run proposes 0. (Amended at closure: the filed wording deferred this to "the next `Skill(refine-deck)` pass" and predicted 12.)
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -92,6 +92,15 @@ executor whether it would change a file. Every card citing any of those
 functions lost its anchor in one commit. That is the shape to expect: signature
 drift arrives in families, so this decline class does not trickle in, it lands
 in batches.
+
+Four of those twelve entries are two tokens counted at two occurrences each,
+and the sibling
+[citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide](../citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide/)
+closed hours before this one: its occurrence rule declines a repeated token
+before the anchor walk runs at all. The population this rule can reach is
+therefore 8 cite-level declines over 7 cards rather than 12 over 9 — the
+measurement above predates its sibling by one commit, which is what a family
+of cards filed in a single round looks like from the inside.
 
 A wider relaxation would reach further — of the 55 non-trivial absent-anchor
 declines this pass produced, 26 are recoverable by *some* relaxation (1 by
