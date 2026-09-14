@@ -200,3 +200,42 @@ fix — but it should no longer be weighed as an *unguarded* hazard.
 What the fix explicitly does not settle: whether a bare line number should
 address code at all. The closed card holds only the narrower invariant, which
 any convention has to keep — a range must bound something — and says so.
+
+## 2026-09-14T05:20:00Z — Two more instances closed, and a cost the census never priced
+
+Two gaps in the same recipe closed today.
+`citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank`
+(`a0a09fef`) moved the non-triviality predicate ahead of the defunct/current
+comparison, reclassifying 46 of 413 `current` verdicts over 28 open cards from
+silence into the residue table.
+`citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide`
+(`6090f9a9`) pinned the anchor walk to an occurrence: presence is now set
+membership in the version's extracted cite tokens rather than a substring
+search, and a token a card holds at two or more in-scope occurrences is
+declined as a fifth residue reason.
+
+Bearing on the option pick, and this one is new. The entries above priced the
+bare-line-number form on a residue that stayed *flat* across four passes — four
+near-identical measurements of a permanent cost. The repeated-token decline is
+not flat: the repair passes manufacture it. Neighbouring cites drift by the
+same amount, so a pass corrects them together and lands one on a number another
+already held, after which the two occurrences share one history and no walk can
+anchor them apart even in principle. 63 open cards already hold an in-scope
+token at two or more occurrences. That population grows monotonically with
+every pass, and each entry into it is a cite that can never again be
+auto-repaired — so the bare-line-number form's cost is not a fixed tax but one
+its own maintenance compounds.
+
+This is a point FOR a self-anchoring form that the corpus census did not
+reach: a self-anchoring cite has no number to collide, so two cites naming the
+same code carry the same anchor text and their ambiguity is harmless rather
+than terminal. It does not settle the pick — the resolver question and the
+22-cites-into-one-266-line-function collapse are untouched — but the
+status-quo option should now be weighed as compounding rather than steady.
+
+Also relevant to how this card gets its future datapoints: the recipe now ends
+its citation step by re-running the decision phase and asserting zero further
+repairs. That re-run is what surfaced the colliding-anchor class — a pass
+following the recipe as written would have reported three successful repairs
+and left no trace of the three correct cites it moved — so later passes should
+report this family's gaps rather than absorb them.
