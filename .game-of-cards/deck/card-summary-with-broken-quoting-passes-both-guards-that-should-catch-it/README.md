@@ -1,6 +1,6 @@
 ---
 title: card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it
-summary: "The repo-local guard `scripts/check_card_frontmatter_yaml.py` skips every value that opens with a quote or a flow bracket, so a card whose quoting is itself malformed is invisible to it. Unescaping the interior quotes in a real card summary leaves `goc validate` OK and the guard reporting 'strict-YAML clean' while PyYAML raises ParserError — the exact divergence the guard was built to close. 105 live card summaries carry an emitter-escaped interior quote, so the hazard is one dropped backslash away."
+summary: "The repo-local guard `scripts/check_card_frontmatter_yaml.py` skips every value that opens with a quote or a flow bracket, so a card whose quoting is itself malformed is invisible to it. Unescaping the interior quotes in a real card summary leaves `goc validate` OK and the guard reporting 'strict-YAML clean' while PyYAML raises ParserError — the exact divergence the guard was built to close. The hazard stopped being hypothetical on 2026-08-31, when a card landed carrying exactly that shape and sat undetected for 16 days; it is repaired and the instance is tracked by `deck-ships-a-card-whose-frontmatter-no-standard-yaml-reader-can-parse`, but the blind spot this card names is still open."
 status: open
 stage: null
 contribution: medium
@@ -146,10 +146,11 @@ which is the only path this guard exists to cover, since
 
 Two concrete routes:
 
-1. **Retyping an escaped summary.** 105 of the deck's 732 summaries carry at
-   least one `\"`. Editing such a summary in place — rewording it, or pasting the
-   text from a rendered view where the backslashes are not visible — drops the
-   escape. `reproduce.py` Part 2 performs exactly this edit on a live card: the
+1. **Retyping an escaped summary.** 114 of the deck's 759 summaries carry at
+   least one `\"` (re-measured 2026-09-16; 105 of 732 when this card was filed).
+   Editing such a summary in place — rewording it, or pasting the text from a
+   rendered view where the backslashes are not visible — drops the escape. This
+   is the route the one live offender took. `reproduce.py` Part 2 performs exactly this edit on a live card: the
    result is a strict-YAML-refusing card that `goc validate` calls `OK` and the
    guard calls `strict-YAML clean`.
 2. **Following the guard's own remedy.** The guard's failure message and
@@ -174,10 +175,22 @@ made to readers who will use a real YAML parser. A guard that covers only plain
 scalars honours the promise for the value form the emitter never breaks and
 drops it for the form authors most often hand-edit.
 
-The severity is bounded and honest: the live deck is clean today (`reproduce.py`
-finds zero live offenders), the guard is repo-local and ships to no consumer, and
-the vendored parser keeps goc itself working. What is broken is the *guarantee* —
-the seam is reported closed and is not.
+The severity was bounded when this card was filed — `reproduce.py` found zero
+live offenders on 2026-08-23. It is not bounded any more. Route 1 below was taken
+on 2026-08-31: [`pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries`](../pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries/)
+was filed with a double-quoted summary holding unescaped interior quotes, PyYAML
+refused the whole block, and `goc validate`, this guard and CI all stayed green
+for 16 days. The instance is repaired and measured on
+[`deck-ships-a-card-whose-frontmatter-no-standard-yaml-reader-can-parse`](../deck-ships-a-card-whose-frontmatter-no-standard-yaml-reader-can-parse/),
+which also pins the double-quoted subset against `emit_frontmatter` so the next
+one turns the build red. That net is narrower than any of the three paths below:
+it covers `summary` on cards only, it is a test rather than the pre-commit guard,
+and it leaves `flag_frontmatter` untouched. The blind spot this card names is
+still open, and it is no longer theoretical.
+
+The rest of the framing stands: the guard is repo-local and ships to no consumer,
+and the vendored parser keeps goc itself working. What is broken is the
+*guarantee* — the seam is reported closed and is not.
 
 Related, no value-flow edge:
 

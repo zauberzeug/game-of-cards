@@ -21,8 +21,21 @@ quietly on a deck that happens to be clean.
 PyYAML is deliberately absent from this project's dependencies
 (`drop-third-party-runtime-dependencies-from-goc`), so the guard reproduces a
 strict-YAML verdict statically. The calibration that licenses that substitution
-lives in the card's `reproduce.py`, which runs the detector and PyYAML side by
-side across the whole deck: zero false positives, zero false negatives.
+lives in the card's `reproduce.py`, which ran the detector and PyYAML side by
+side across the deck as it stood on 2026-08-16: zero false positives, zero false
+negatives. That measurement is a snapshot, not a standing property, and it
+covers **plain scalars only** — `flag_frontmatter` skips any value that opens
+with a quote or a flow bracket, so a value whose quoting is itself malformed is
+invisible to it. On 2026-09-16 the same side-by-side run returned one false
+negative for exactly that reason
+(`deck-ships-a-card-whose-frontmatter-no-standard-yaml-reader-can-parse`), and
+whether the guard should stop skipping quoted values is parked on
+`card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it`.
+
+`CardSummaryQuotingIsEmitterCanonicalTest` below covers the double-quoted subset
+in the meantime, without a YAML dependency and without a fourth quote scanner:
+it asks `emit_frontmatter` — the only component in the tree that escapes
+interior quotes correctly — what it would write, and requires the deck to match.
 """
 
 from __future__ import annotations
@@ -30,6 +43,8 @@ from __future__ import annotations
 import importlib.util
 import unittest
 from pathlib import Path
+
+from goc import engine
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -255,6 +270,121 @@ class CardFrontmatterYamlPrecisionTest(unittest.TestCase):
         empty glob. Without this, moving or renaming the deck would turn
         `test_live_deck_is_strict_yaml_clean` into a vacuous pass."""
         self.assertGreater(len(list(guard.DECK_DIR.glob("*/README.md"))), 100)
+
+
+def _frontmatter_block(text: str) -> str | None:
+    """The raw text between the opening and closing `---` fences, or None."""
+    if not text.startswith("---\n"):
+        return None
+    parts = text.split("---\n", 2)
+    return parts[1] if len(parts) >= 3 else None
+
+
+def _summary_line(block: str) -> str | None:
+    for line in block.splitlines():
+        if line.startswith("summary:"):
+            return line
+    return None
+
+
+def _noncanonical_quoted_summaries(readme: Path) -> tuple[str, str] | None:
+    """`(on_disk, canonical)` when an already-quoted `summary:` is mis-quoted.
+
+    A scalar the emitter would write differently is a scalar whose quoting is
+    wrong — `emit_frontmatter` escapes interior `"` and `\\`, a hand-written
+    line does not. Returns None when the summary is unquoted (that is
+    `flag_frontmatter`'s plain-scalar territory) or already canonical.
+    """
+    text = readme.read_text(encoding="utf-8")
+    block = _frontmatter_block(text)
+    if block is None:
+        return None
+    on_disk = _summary_line(block)
+    if on_disk is None or not on_disk.split(":", 1)[1].strip().startswith('"'):
+        return None
+    fm, body = engine.parse_frontmatter(text)
+    canonical = _summary_line(_frontmatter_block(engine.emit_frontmatter(fm, body=body)) or "")
+    return None if canonical == on_disk else (on_disk, canonical or "")
+
+
+class CardSummaryQuotingIsEmitterCanonicalTest(unittest.TestCase):
+    """An already-quoted summary must be quoted the way the emitter quotes it.
+
+    `flag_frontmatter` skips quoted values wholesale, so the shape that actually
+    reached this deck — a double-quoted summary carrying unescaped interior
+    quotes, which PyYAML refuses outright — passed both `goc validate` and the
+    guard. The oracle here is `emit_frontmatter` itself rather than a new YAML
+    scanner, so this adds nothing to the set
+    `yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting`
+    was filed to bound.
+    """
+
+    #: The offender byte-for-byte, trimmed to the first interior quote pair. It
+    #: sat in the deck from 2026-08-31 to 2026-09-16 with every check green.
+    HISTORICAL_OFFENDER = (
+        'summary: "`pattern_generalization_check.py` reads the transcript '
+        'line-by-line. A line that parses to `"oops"` raises `AttributeError`."'
+    )
+
+    def test_flags_the_historical_offender(self) -> None:
+        """Sensitivity: prove the check catches an offender, not just a clean tree.
+
+        Required by `static-source-guards-never-prove-they-can-catch-an-offender`.
+        """
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            readme = Path(tmp) / "README.md"
+            readme.write_text(
+                "---\ntitle: a-card\n"
+                f"{self.HISTORICAL_OFFENDER}\n"
+                "---\n\n# body\n",
+                encoding="utf-8",
+            )
+            self.assertIsNotNone(
+                _noncanonical_quoted_summaries(readme),
+                "the exact line that sat in this deck must be flagged; if this "
+                "fails the check has stopped catching real offenders",
+            )
+
+    def test_quiet_on_a_correctly_escaped_summary(self) -> None:
+        """The 100+ deck summaries holding an emitter-escaped quote stay silent."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            readme = Path(tmp) / "README.md"
+            readme.write_text(
+                "---\ntitle: a-card\n"
+                'summary: "A line that parses to `\\"oops\\"` raises `AttributeError`."\n'
+                "---\n\n# body\n",
+                encoding="utf-8",
+            )
+            self.assertIsNone(_noncanonical_quoted_summaries(readme))
+
+    def test_live_deck_quoted_summaries_are_emitter_canonical(self) -> None:
+        offenders = {
+            readme.parent.name: mismatch
+            for readme in sorted(guard.DECK_DIR.glob("*/README.md"))
+            if (mismatch := _noncanonical_quoted_summaries(readme)) is not None
+        }
+        self.assertEqual(
+            {},
+            offenders,
+            "a double-quoted summary that `emit_frontmatter` would write "
+            "differently is mis-quoted, and strict YAML parsers refuse the whole "
+            "block. Re-emit the card through any goc verb to repair it.",
+        )
+
+    def test_live_deck_quoted_summaries_are_actually_being_scanned(self) -> None:
+        """Guard the guard: a clean result must come from real quoted summaries."""
+        quoted = [
+            readme
+            for readme in guard.DECK_DIR.glob("*/README.md")
+            if (block := _frontmatter_block(readme.read_text(encoding="utf-8")))
+            and (line := _summary_line(block))
+            and line.split(":", 1)[1].strip().startswith('"')
+        ]
+        self.assertGreater(len(quoted), 100)
 
 
 if __name__ == "__main__":

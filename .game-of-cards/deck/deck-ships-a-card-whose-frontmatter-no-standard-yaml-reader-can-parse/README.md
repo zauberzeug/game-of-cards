@@ -1,22 +1,22 @@
 ---
 title: deck-ships-a-card-whose-frontmatter-no-standard-yaml-reader-can-parse
-summary: "The latent hazard on `card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it` has landed: `pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries` carries a double-quoted summary with unescaped interior quotes, so PyYAML raises ParserError on it while `goc validate` and `scripts/check_card_frontmatter_yaml.py` both report clean. The suite docstring in `tests/test_card_frontmatter_yaml.py` still asserts a whole-deck calibration of zero false negatives, which is now false by measurement."
-status: active
+summary: "FIXED: the latent hazard on `card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it` had landed — `pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries` carried a double-quoted summary with unescaped interior quotes, so PyYAML refused the whole block for 16 days while `goc validate`, `scripts/check_card_frontmatter_yaml.py` and CI all reported clean. The card is repaired by re-emitting it, `CardSummaryQuotingIsEmitterCanonicalTest` now pins every already-quoted summary against `emit_frontmatter` (703 scanned, 0 mismatches) so the next one turns the build red, and the suite docstring no longer asserts an unqualified whole-deck zero-false-negative calibration."
+status: done
 stage: null
 contribution: medium
 created: "2026-09-16T04:37:13Z"
-closed_at: null
+closed_at: "2026-09-16T04:44:33Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, test, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — no already-double-quoted `summary:` in the deck differs from the line `emit_frontmatter` would write, and (when PyYAML is importable) no card's frontmatter block is refused by a strict parser while the repo-local guard reports it clean.
-  - [ ] MECHANICAL: `pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries` is repaired by re-emitting it through goc, so its interior quotes are emitter-escaped. Only its `summary:` quoting changes — the summary's text, the rest of its frontmatter, its body and its `log.md` stay as they are.
-  - [ ] TDD: a regression test in `tests/test_card_frontmatter_yaml.py` asserts the emitter-canonical invariant over the live deck, and demonstrates on a literal frontmatter block that it catches the offender's exact shape rather than only reporting a clean tree (`static-source-guards-never-prove-they-can-catch-an-offender`).
-  - [ ] MECHANICAL: the module docstring of `tests/test_card_frontmatter_yaml.py` no longer asserts an unqualified whole-deck "zero false positives, zero false negatives" calibration. It states when that calibration was taken, that it holds for plain scalars only, and names the card that owns the uncovered quoted-scalar class.
-  - [ ] MECHANICAL: `card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it` is amended in place — its body no longer calls the hazard latent — and carries a `log.md` entry recording the materialized instance. Its gate and its `## Decision required` section are left untouched.
-  - [ ] MECHANICAL: `uv run goc validate` clean, `uv run python scripts/check_card_frontmatter_yaml.py --check` clean, and `uv run python -m unittest discover -s tests` green.
+  - [x] TDD: `reproduce.py` exits zero — no already-double-quoted `summary:` in the deck differs from the line `emit_frontmatter` would write, and (when PyYAML is importable) no card's frontmatter block is refused by a strict parser while the repo-local guard reports it clean.
+  - [x] MECHANICAL: `pattern-generalization-check-jsonl-per-line-loader-trusts-non-dict-entries` is repaired by re-emitting it through goc, so its interior quotes are emitter-escaped. Only its `summary:` quoting changes — the summary's text, the rest of its frontmatter, its body and its `log.md` stay as they are.
+  - [x] TDD: a regression test in `tests/test_card_frontmatter_yaml.py` asserts the emitter-canonical invariant over the live deck, and demonstrates on a literal frontmatter block that it catches the offender's exact shape rather than only reporting a clean tree (`static-source-guards-never-prove-they-can-catch-an-offender`).
+  - [x] MECHANICAL: the module docstring of `tests/test_card_frontmatter_yaml.py` no longer asserts an unqualified whole-deck "zero false positives, zero false negatives" calibration. It states when that calibration was taken, that it holds for plain scalars only, and names the card that owns the uncovered quoted-scalar class.
+  - [x] MECHANICAL: `card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it` is amended in place — its body no longer calls the hazard latent — and carries a `log.md` entry recording the materialized instance. Its gate and its `## Decision required` section are left untouched.
+  - [x] MECHANICAL: `uv run goc validate` clean, `uv run python scripts/check_card_frontmatter_yaml.py --check` clean, and `uv run python -m unittest discover -s tests` green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -84,7 +84,7 @@ YAML and the sentence asserting it could not have kept reading true.
 
 ## Empirical evidence
 
-`python3 .game-of-cards/deck/deck-ships-a-card-whose-frontmatter-no-standard-yaml-reader-can-parse/reproduce.py`:
+Before the fix, `reproduce.py` failed both ways it can be run:
 
 ```
 Part 1 — already-double-quoted summaries scanned: 703
@@ -98,10 +98,33 @@ DEFECT STANDS: the deck holds frontmatter no strict YAML reader accepts,
 and every check this repo runs reports it clean.
 ```
 
+After the fix, both parts are clean and the script exits zero:
+
+```
+Part 1 — already-double-quoted summaries scanned: 703
+Part 1 — quoted summaries the emitter would write differently: 0
+Part 2 — cards scanned: 759
+Part 2 — PyYAML refuses but the guard reports clean: 0
+
+CLEAN: every quoted summary is in emitter-canonical form and PyYAML accepts every card
+```
+
 Under `uv run` (no PyYAML in the project environment) Part 2 skips itself and
-Part 1 alone still fails the run, so the check is reachable from the regression
-suite without taking the dependency
+Part 1 alone still decides the exit status, so the check is reachable from the
+regression suite without taking the dependency
 `drop-third-party-runtime-dependencies-from-goc` removed.
+
+The repair changed exactly one line. Re-emitting the offender through
+`emit_frontmatter` left every parsed frontmatter field, the summary's text and
+the body byte-identical, and both parsers then agree on the value:
+
+```
+yaml_lite summary unchanged: True
+all frontmatter fields unchanged: True
+body unchanged: True
+PyYAML accepts: True
+PyYAML summary == yaml_lite summary: True
+```
 
 ## Why it matters
 
@@ -119,29 +142,41 @@ the GitHub frontmatter renderer, a consumer's own tooling, an agent that reaches
 for `yaml.safe_load`. For them this card is not a card with a slightly wrong
 summary — the whole block fails to load.
 
-## Fix
+## What landed
 
-Two mechanical halves, no decision between them.
+Two mechanical halves, no decision between them — and deliberately nothing in
+`scripts/check_card_frontmatter_yaml.py`.
 
-1. **Repair the instance.** `AGENTS.md` § "Card authoring rules" already
-   prescribes it: "Re-emitting the card through any goc verb is the fix: the
+1. **The instance is repaired.** `AGENTS.md` § "Card authoring rules" already
+   prescribed it: "Re-emitting the card through any goc verb is the fix: the
    emitter consults the same set, so it quotes every shape the guard flags and
-   preserves a quote you added by hand." Verified — round-tripping the offender
-   through `emit_frontmatter` escapes the interior quotes and PyYAML then accepts
-   the block. Only the `summary:` line changes.
+   preserves a quote you added by hand." Round-tripping the offender through
+   `parse_frontmatter` / `emit_frontmatter` escaped the interior quotes; only the
+   `summary:` line changed.
 
-2. **Pin the invariant that catches this class without a new scanner.** A
-   frontmatter scalar that is *already* double-quoted on disk must be quoted
-   exactly the way `emit_frontmatter` would quote it. The oracle is the engine's
-   own emitter, so this adds no fourth quote scanner — the proliferation
+2. **The invariant is pinned** — `CardSummaryQuotingIsEmitterCanonicalTest` in
+   `tests/test_card_frontmatter_yaml.py`. A frontmatter scalar that is *already*
+   double-quoted on disk must be quoted exactly the way `emit_frontmatter` would
+   quote it. The oracle is the engine's own emitter, so this adds no fourth quote
+   scanner — the proliferation
    [`yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting`](../yaml-lite-quote-scanners-reimplement-the-same-state-machine-and-keep-drifting/)
-   is filed to prevent — and it needs no YAML dependency. Measured on the live
-   deck: 703 quoted summaries, exactly one mismatch, so the invariant holds at
-   zero false positives the moment the offender is repaired.
+   is filed to prevent — and needs no YAML dependency. Four tests: the live-deck
+   invariant (703 quoted summaries, 0 mismatches), a sensitivity case driving the
+   offender's exact shape as a literal block, a precision case on a correctly
+   escaped summary, and a non-vacuity check that the walk saw real cards.
+   Verified non-vacuous by reverting the repair: the live-deck test fails, and
+   passes again once the repair is restored.
 
-The remaining, broader question — whether
-`scripts/check_card_frontmatter_yaml.py` itself should stop skipping quoted
-values, and by which of three paths — stays parked on
-[`card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it`](../card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it/).
-This card deliberately leaves `scripts/check_card_frontmatter_yaml.py`
-unmodified.
+3. **The stale claim is corrected.** The module docstring of
+   `tests/test_card_frontmatter_yaml.py` no longer states an unqualified
+   whole-deck "zero false positives, zero false negatives". It dates the
+   calibration, scopes it to plain scalars, records the 2026-09-16 false
+   negative, and names the card that owns the uncovered quoted-scalar class.
+
+The broader question — whether `scripts/check_card_frontmatter_yaml.py` itself
+should stop skipping quoted values, and by which of three paths — stays parked on
+[`card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it`](../card-summary-with-broken-quoting-passes-both-guards-that-should-catch-it/),
+whose body and `log.md` are amended with the materialized instance. Its gate,
+its DoD and its `## Decision required` section are untouched. The net added here
+is narrower than any of its three paths on purpose: cards only, the `summary`
+field only, a regression test rather than the pre-commit guard.
