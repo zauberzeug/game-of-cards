@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-09-16T04:55:39Z"
 closed_at: "2026-09-16T05:02:42Z"
 human_gate: none
-advances: []
+advances:
+  - waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |

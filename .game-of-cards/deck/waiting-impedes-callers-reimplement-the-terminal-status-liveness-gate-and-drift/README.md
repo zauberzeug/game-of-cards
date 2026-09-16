@@ -12,6 +12,7 @@ advanced_by:
   - waiting-filter-shows-terminal-cards-with-stale-overlay
   - waiting-filter-surfaces-draft-scaffolds-as-active-impediments
   - ready-leverage-line-names-draft-scaffolds-as-the-highest-gated-card
+  - standup-impeded-section-omits-active-cards-carrying-a-waiting-overlay
 tags: [meta-fix, api-contract, infra]
 definition_of_done: |
   - [ ] PROCESS: decision recorded — pick the helper shape (single `active_impediment(card, *, queue_only=False)` vs a thin `live_impeded`/`queueable_impeded` pair); see "## Decision required"
@@ -42,10 +43,14 @@ phrasings:
 | `card_is_workable_for_scheduler` | `engine.py:2244-2248` | `if status in TERMINAL_STATUSES: return False` then `waiting_impedes` |
 | `card_is_ready` | `engine.py:2219-2223` | `if status != "open": return False` then `waiting_impedes` (stricter: open-only) |
 | gated-leverage line | `engine.py:3645-3650` | `status == "open" and ... and not waiting_impedes(t)` (open-only) |
+| standup Section 2 block | `goc/templates/skills/standup/SKILL.md:22` | `c['status'] not in ('done','disproved','superseded') and not c.get('draft')` (live variant, **outside Python**) |
 
 Two of these are the stricter open-only variant (`card_is_ready`,
-gated-leverage); three are the live variant (non-terminal, includes
+gated-leverage); the rest are the live variant (non-terminal, includes
 `active`). No single function owns the rule.
+
+The last row is the one that changes the shape of this card: it is not a
+Python caller. See "A caller no helper can reach" below.
 
 ## Why it matters — the drift already shipped
 
@@ -71,6 +76,32 @@ helper (Option A/B below) must therefore fold in the draft exclusion for
 the live variant, or the consolidation will leave `--waiting` /
 `card_cell` needing a separate hand-inlined `card_is_draft` clause that
 can drift a third time.
+
+## A caller no helper can reach
+
+[standup-impeded-section-omits-active-cards-carrying-a-waiting-overlay](../standup-impeded-section-omits-active-cards-carrying-a-waiting-overlay/)
+(done) added a **seventh** copy of the rule, and it is the first one that
+no consolidation inside `goc/engine.py` can retire. The standup skill's
+Section 2 Context block is a shell pipeline ending in `python3 -c`; it
+runs from an arbitrary working tree with no installed package, so it
+cannot import `goc.engine` and therefore cannot call `live_impeded`,
+`active_impediment`, or whatever Option A/B names. Its gate is hand-typed
+against the JSON payload:
+
+```python
+c.get('waiting_on') and c['status'] not in ('done','disproved','superseded') and not c.get('draft')
+```
+
+That widens the decision below. Options A and B both assume every caller
+is an importer; this one is not, and the SessionStart hook
+([session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting](../session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting/))
+is a second non-importer for the same reason. For those, the only way to
+inherit the gate is to **delegate to the CLI** — `goc --waiting --json`
+already computes exactly this predicate — rather than to re-derive it
+from the payload. Whichever helper shape wins, it is worth deciding
+explicitly whether the non-importing surfaces are in scope, or whether a
+separate rule ("read surfaces outside the package call the CLI, never
+re-derive") covers them.
 
 This is structurally identical to
 [renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift](../renderers-reimplement-the-dependency-advisory-liveness-gate-and-drift/)
