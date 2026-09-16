@@ -42,7 +42,7 @@ If the first Context block warns that local is **behind upstream**, say so at th
 
 !`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status active -v; else goc --status active -v; fi 2>&1 || true`
 
-!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --json --status open; else goc --json --status open; fi 2>/dev/null | python3 -c "import json,sys; cards=json.load(sys.stdin); impeded=[c for c in cards if c.get('waiting_on')]; print('\n'.join(f\"{c['title']} [waiting_on: {c['waiting_on']}{(' until ' + c['waiting_until']) if c.get('waiting_until') else ''}]: {(c.get('summary') or '(no summary)')[:80]}\" for c in impeded) or 'No impeded cards.')" 2>/dev/null || true`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --json --status all; else goc --json --status all; fi 2>/dev/null | python3 -c "import json,sys; cards=json.load(sys.stdin); impeded=[c for c in cards if c.get('waiting_on') and c['status'] not in ('done','disproved','superseded') and not c.get('draft')]; print('\n'.join(f\"{c['title']} [waiting_on: {c['waiting_on']}{(' until ' + c['waiting_until']) if c.get('waiting_until') else ''}]: {(c.get('summary') or '(no summary)')[:80]}\" for c in impeded) or 'No impeded cards.')" 2>/dev/null || true`
 
 !`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status open --json; else goc --status open --json; fi 2>&1 | head -60`
 
@@ -70,7 +70,9 @@ title, the `waiting_on` reason, the `waiting_until` date if any, and
 the body's `## Waiting` section (or the most recent `log.md` entry if
 no section exists). One line per card. A card may appear here even
 while `status: active` — the overlay is orthogonal to the progress
-status.
+status, which is why the Context block above queries `--status all`
+rather than the open queue and then drops terminal and draft cards by
+hand, mirroring the scope `engine.live_impeded` defines.
 
 ## Section 3 — Closed since yesterday
 

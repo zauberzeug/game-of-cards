@@ -1,21 +1,21 @@
 ---
 title: standup-impeded-section-omits-active-cards-carrying-a-waiting-overlay
 summary: "The standup skill's Impeded Context block queries `goc --json --status open`, so an `active` card carrying a live `waiting_on` overlay is dropped before the filter runs — contradicting the skill's own Section 2 prose, which states a card may appear there even while `status: active`. The engine settled this exact scope question for `goc --waiting` in the closed card goc-waiting-default-status-hides-active-impeded-cards; the skill body never got the equivalent update, and it hides one real card on this repo's deck today."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-09-16T04:55:39Z"
-closed_at: null
+closed_at: "2026-09-16T05:02:42Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits 1 on today's tree and 0 after the fix — the engine-impedes/standup-omits set is empty, and the terminal `c-done-impeded` cell stays out of the reported set so widening the scope does not start reporting closed cards.
-  - [ ] TDD: a regression test under `tests/` asserts the Section 2 Context block's query is not status-narrowed past the liveness scope `live_impeded` defines, and fails on today's template.
-  - [ ] MECHANICAL: `goc/templates/skills/standup/SKILL.md` Section 2 Context block updated at the source of truth; mirrors resynced via `pre-commit run --all-files` and the OpenClaw port re-run, with `python3 scripts/port_skills_to_openclaw.py --check` clean.
-  - [ ] MECHANICAL: the `waiting_on`-truthiness predicate is left untouched — the four-cell matrix belongs to the parked sibling `standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits`, and this card must not close it by side effect.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` green and `uv run goc validate` clean.
+  - [x] TDD: `reproduce.py` exits 1 on today's tree and 0 after the fix — the engine-impedes/standup-omits set is empty, and the terminal `c-done-impeded` cell stays out of the reported set so widening the scope does not start reporting closed cards.
+  - [x] TDD: a regression test under `tests/` asserts the Section 2 Context block's query is not status-narrowed past the liveness scope `live_impeded` defines, and fails on today's template.
+  - [x] MECHANICAL: `goc/templates/skills/standup/SKILL.md` Section 2 Context block updated at the source of truth; mirrors resynced via `pre-commit run --all-files` and the OpenClaw port re-run, with `python3 scripts/port_skills_to_openclaw.py --check` clean.
+  - [x] MECHANICAL: the `waiting_on`-truthiness predicate is left untouched — the four-cell matrix belongs to the parked sibling `standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits`, and this card must not close it by side effect.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` green and `uv run goc validate` clean.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -95,12 +95,16 @@ standup reports, engine does not: []
 DEFECT PRESENT — standup Section 2 disagrees with the engine.
 ```
 
-It also fires on this repo's own deck, unmodified, today. The Context
-block reports three impeded cards; `goc --waiting` reports four. The
-missing one is `openclaw-plugin-skills-force-repeated-reads-every-session`
+After the fix it exits 0 — both sets empty, and the terminal
+`c-done-impeded` cell still excluded.
+
+It also fired on this repo's own deck, unmodified. The Context block
+reported three impeded cards; `goc --waiting` reported four. The missing
+one was `openclaw-plugin-skills-force-repeated-reads-every-session`
 (`status: active`, `waiting_on: external`) — the same card the
 SessionStart hook announces on every session as
-`[GoC] Impeded active card(s) (waiting_on): ...`.
+`[GoC] Impeded active card(s) (waiting_on): ...`. The two views now
+return the same four titles.
 
 ## Why it matters
 
@@ -121,19 +125,28 @@ time and the agent reports its output verbatim as Section 2. No
 hand-editing or unusual card shape is required — any deck with an active
 card carrying an overlay reproduces it.
 
-## Fix
+## Fix (applied)
 
-In `goc/templates/skills/standup/SKILL.md:22`, widen the query to the
-scope `live_impeded` defines and re-narrow it with the same two liveness
+`goc/templates/skills/standup/SKILL.md:22` now queries the scope
+`live_impeded` defines and re-narrows it with the same two liveness
 conjuncts the engine applies:
 
-- query `--status all --json` instead of `--json --status open` (matching
-  `_cmd_default`'s `--waiting` widening);
-- keep the existing `c.get('waiting_on')` predicate untouched, and add
-  `c['status'] not in ('done', 'disproved', 'superseded')` and
-  `not c.get('draft')` — `live_impeded`'s two liveness clauses, needed
-  because `--status all` admits both terminal cards (whose overlay is
-  never cleared on close) and unauthored draft scaffolds.
+- the query is `--json --status all`, matching `_cmd_default`'s
+  `--waiting` widening;
+- the existing `c.get('waiting_on')` predicate is untouched;
+  `c['status'] not in ('done','disproved','superseded')` and
+  `not c.get('draft')` are added beside it — `live_impeded`'s two
+  liveness clauses, needed because `--status all` admits both terminal
+  cards (whose overlay is never cleared on close) and unauthored draft
+  scaffolds.
+
+Section 2's prose gained one sentence naming that scope, so the next
+reader does not narrow the query back to the open queue.
+
+`tests/test_standup_impeded_block_scope.py` pins it: three behavioural
+cases extract the `!`-block out of `SKILL.md` and execute it verbatim
+against a temp deck, and a fourth asserts the query text is not
+re-narrowed. Three of the four fail against the pre-fix template.
 
 ### Deliberately out of scope
 
