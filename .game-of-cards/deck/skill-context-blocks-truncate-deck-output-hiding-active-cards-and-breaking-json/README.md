@@ -8,7 +8,8 @@ created: "2026-08-11T05:48:53Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - standup-next-up-shows-two-cards-not-three-whenever-any-card-is-active
 tags: [bug, api-contract, infra, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: the `## Decision required` question below is answered and recorded via `Skill(decide-card)`, lowering the gate to `none`.

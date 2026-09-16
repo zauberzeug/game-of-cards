@@ -105,7 +105,7 @@ Show the top 3 open `human_gate: none` cards by value score (the cards
 the `pull-card` skill would pick next), as a forward look.
 
 ```bash
-goc --ready 2>/dev/null | head -5 || true
+goc --ready 2>/dev/null | grep -v '^ACTIVE:' | head -5 || true
 ```
 
 `--ready` is the engine's pull predicate (`status: open` ∧ not a draft ∧
@@ -115,6 +115,14 @@ conjuncts, and because the queue is value-sorted while gated epics carry
 the top values, it surfaces the *least* pullable cards in the deck. When
 `--ready` matches nothing, report that instead of omitting the section:
 an empty pull queue is the day's headline, and Section 4 is its cause.
+
+The `grep -v` drops the engine's `ACTIVE:` soft-lock banner, which goes
+to **stdout** and appears only when some card is claimed. Left in, it
+spends one of the five budgeted lines on chrome, so the block delivers
+two rows instead of the three promised above — keep it filtered, and keep
+the budget at 5. Nothing is lost: Section 1 already renders those active
+cards in full. The `No cards match` line does not start with `ACTIVE:`,
+so the empty-queue report still survives the filter.
 
 ## Output format
 
