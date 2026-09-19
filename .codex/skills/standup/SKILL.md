@@ -115,16 +115,28 @@ oldest first. These are parked cards where the agent hit the Andon cord
 and a human must lower the gate to unblock autonomous work.
 
 ```bash
-goc --json --status open 2>/dev/null | \
+goc --json --status all 2>/dev/null | \
   python3 -c "
 import json, sys
 cards = json.load(sys.stdin)
-waiting = [c for c in cards if c.get('human_gate') in ('decision', 'session')]
+waiting = [c for c in cards
+           if c.get('human_gate') in ('decision', 'session')
+           and c['status'] not in ('done', 'disproved', 'superseded')
+           and not c.get('draft')]
 waiting.sort(key=lambda c: c.get('created', ''))
 for c in waiting:
     print(f\"{c['title']} [{c['human_gate']}]: {c.get('summary', '(no summary)')[:80]}\")
 " 2>/dev/null || true
 ```
+
+Like the overlay in Section 2, the gate is orthogonal to the progress
+status: a card may appear here while `status: active`, because the
+ordinary Andon-cord shape is claim → work → hit a judgement call →
+raise the gate, which leaves the card parked at `active`. So the query
+spans `--status all` rather than the open queue, then drops by hand the
+two classes a widened scope would otherwise add — closing never lowers
+a gate, so a terminal card can carry a stale one, and `goc new` gates
+at `decision` by default, so every unauthored draft scaffold is gated.
 
 For each: show title, gate type, and the `## Decision required` section
 header if present. The human resolves these via `Skill(decide-card)`.

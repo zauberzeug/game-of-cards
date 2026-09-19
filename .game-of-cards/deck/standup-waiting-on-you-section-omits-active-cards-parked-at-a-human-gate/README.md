@@ -1,24 +1,24 @@
 ---
 title: standup-waiting-on-you-section-omits-active-cards-parked-at-a-human-gate
 summary: "The standup skill's Section 4 (\"Waiting on you\") promises \"all cards with human_gate: decision or session\" but runs `goc --json --status open`, so a card claimed and then parked behind a raised gate is dropped before the gate filter runs. On this repo's deck today that hides 5 of 197 live gated cards — every one of them a card an agent already tried and handed back to a human. Section 2 of the same file was fixed for the identical scope error on 2026-09-16 and now documents the principle Section 4 still violates."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-09-19T04:35:04Z"
-closed_at: null
+closed_at: "2026-09-19T04:40:06Z"
 human_gate: none
 advances:
   - active-state-conflates-being-worked-on-with-parked-at-human-gate
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — Section 4 reports `active-decision` and `active-session`, and still omits the ungated, terminal-stale-gate and draft controls.
-  - [ ] TDD: a regression test pins the Section 4 fenced block against the same (status x gate) grid, and statically asserts the block does not carry `--status open`, so the narrowing cannot return through a different status value. Mirrors `tests/test_standup_impeded_block_scope.py`, the Section 2 pin.
-  - [ ] MECHANICAL: the Section 4 command in `goc/templates/skills/standup/SKILL.md` queries `--status all` and re-narrows with the two liveness conjuncts Section 2 already applies (non-terminal, non-draft), so widening the scope does not start reporting stale gates on closed cards.
-  - [ ] MECHANICAL: Section 4's prose states that a card may appear there while `status: active`, the way Section 2's prose does — the reader learns the rule on both surfaces that depend on it.
-  - [ ] EMPIRICAL: re-running the shipped Section 4 command on this repo's deck surfaces all 197 live gated cards, not 192.
-  - [ ] MECHANICAL: plugin and dogfood skill mirrors re-synced (`scripts/sync_plugin_assets.py`, `scripts/port_skills_to_openclaw.py`) so the five copies of the skill stay identical.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+  - [x] TDD: `reproduce.py` exits zero — Section 4 reports `active-decision` and `active-session`, and still omits the ungated, terminal-stale-gate and draft controls.
+  - [x] TDD: a regression test pins the Section 4 fenced block against the same (status x gate) grid, and statically asserts the block does not carry `--status open`, so the narrowing cannot return through a different status value. Mirrors `tests/test_standup_impeded_block_scope.py`, the Section 2 pin.
+  - [x] MECHANICAL: the Section 4 command in `goc/templates/skills/standup/SKILL.md` queries `--status all` and re-narrows with the two liveness conjuncts Section 2 already applies (non-terminal, non-draft), so widening the scope does not start reporting stale gates on closed cards.
+  - [x] MECHANICAL: Section 4's prose states that a card may appear there while `status: active`, the way Section 2's prose does — the reader learns the rule on both surfaces that depend on it.
+  - [x] EMPIRICAL: re-running the shipped Section 4 command on this repo's deck surfaces all 197 live gated cards, not 192.
+  - [x] MECHANICAL: plugin and dogfood skill mirrors re-synced (`scripts/sync_plugin_assets.py`, `scripts/port_skills_to_openclaw.py`) so the five copies of the skill stay identical.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -163,27 +163,43 @@ Section 2 on
 and it lands the same way: fix the instance now, wire it to the root,
 leave the architecture to the human.
 
-## Fix
+## Fix (applied)
 
-In `goc/templates/skills/standup/SKILL.md` Section 4, mirror the shape
-Section 2 already ships:
+`goc/templates/skills/standup/SKILL.md:88-119` — Section 4 now spans
+every live status and re-narrows by hand, the shape Section 2 already
+ships:
 
-```bash
-goc --json --status all 2>/dev/null | \
-  python3 -c "
-import json, sys
-cards = json.load(sys.stdin)
-waiting = [c for c in cards
-           if c.get('human_gate') in ('decision', 'session')
-           and c['status'] not in ('done', 'disproved', 'superseded')
-           and not c.get('draft')]
-```
+- the query is `--json --status all`, not `--status open`;
+- the existing gate predicate is untouched;
+  `c['status'] not in ('done', 'disproved', 'superseded')` and
+  `not c.get('draft')` are added beside it. Both are required by the
+  widening, for reasons specific to the gate: closing a card never
+  lowers its gate, so a terminal card can carry a stale one, and
+  `goc new` gates at `decision` by default, so every unauthored
+  scaffold is gated and would otherwise flood the section.
 
-The two added conjuncts are not optional. `--status all` surfaces
-closed cards (closing never lowers a gate, so a `done` card can carry a
-stale `decision`) and draft scaffolds (`goc new` defaults to `--gate
-decision`, so every unauthored scaffold is gated) — both would be
-false positives, which is exactly why Section 2 drops them by hand.
+Section 4's prose gained a paragraph naming that scope and the
+Andon-cord shape it exists for, so the next reader does not narrow the
+query back to the open queue — the same sentence Section 2 carries,
+stated for the axis Section 4 reads.
 
-Then state the rule in the prose, the way Section 2 does, so the next
-reader of either section learns it once.
+`tests/test_standup_waiting_on_you_block_scope.py` pins it: three
+behavioural cases extract the fenced block out of `SKILL.md` and
+execute it verbatim against a temp deck covering the (status x gate)
+grid, and a fourth asserts the query text is not re-narrowed. Two of
+the four fail against the pre-fix template.
+
+### Deliberately out of scope
+
+`goc triage` — the engine's own version of this view — still carries
+the identical narrowing, tracked as
+[parked-active-cards-are-missing-from-goc-triage](../parked-active-cards-are-missing-from-goc-triage/)
+at gate `decision`. Section 4 is left as its own pipeline rather than
+delegated to `goc triage --json`, because delegating today would
+inherit that defect; once the root card is decided, collapsing the two
+is the natural follow-up.
+
+## Artifacts
+
+- `reproduce.py` — runs the shipped Section 4 block over the full
+  (status x gate) grid; exits 1 against the pre-fix template, 0 after.

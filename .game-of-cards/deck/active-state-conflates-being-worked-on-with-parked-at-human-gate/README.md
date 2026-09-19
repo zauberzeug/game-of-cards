@@ -12,6 +12,7 @@ advanced_by:
   - session-start-hook-shows-gated-active-cards-as-resumable
   - parked-active-cards-are-missing-from-goc-triage
   - parked-active-cards-are-missing-from-goc-ready-leverage-line
+  - standup-waiting-on-you-section-omits-active-cards-parked-at-a-human-gate
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: pick the architectural shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`). The pick determines DoD items below.
@@ -120,11 +121,37 @@ point-fix. The family:
    Andon-cord signal.
 4. **This card** — `render_active_notice` INCLUDES parked-active
    cards but mislabels them with `claimed` framing.
+5. [standup-waiting-on-you-section-omits-active-cards-parked-at-a-human-gate](../standup-waiting-on-you-section-omits-active-cards-parked-at-a-human-gate/)
+   (closed 2026-09-19) — the standup skill's Section 4 filtered its
+   gate predicate through `goc --json --status open`, hiding 5 of this
+   repo's 197 live gated cards from the one read designed to put
+   decisions in front of a human.
 
-Each instance is one consumer of the same missing predicate. The
-fix is a shared helper that distinguishes claimed-active from
-parked-active, applied to all four consumers (and the next one a
-reader adds).
+The first four are one consumer each of the same missing predicate.
+The fix for those is a shared helper that distinguishes
+claimed-active from parked-active, applied to all four.
+
+## A caller no helper can reach
+
+The 5th instance does not fit that fix, and is recorded here because
+the pending decision should account for it. `render_active_notice`,
+`_cmd_triage`, `render_leverage_line` and `deck_session_start.py` are
+all Python that imports `goc.engine`, so every option below retires
+them by construction. Standup Section 4 is a shell pipeline inside a
+markdown skill body, executed on a host with no installed package and
+no import path — no `is_parked_active`, no derived display state, and
+no status enum value reaches it. Its only available fix was to widen
+the query the skill ships, which is what closed it.
+
+That makes at least two classes of consumer, not one: importers, which
+a helper retires, and non-importing surfaces (skill bodies, and the
+hook scripts that run standalone), which inherit the rule only by
+delegating to a CLI flag that already encodes it. An option that ships
+a predicate and nothing else leaves the second class re-deriving the
+distinction by hand — which is how instance 5 happened *after* this
+card was filed. The same split was recorded three days earlier, for
+the impediment overlay, on
+[waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift](../waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/).
 
 ## Decision required
 
