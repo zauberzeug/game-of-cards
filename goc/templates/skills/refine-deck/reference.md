@@ -387,10 +387,9 @@ and `judgment`" for the three measurements.
 
 The optional `--llm` flag on `goc quality-pass` is a hook for a
 Sonnet-batched pass that extends the audit to summary quality +
-per-DoD-item issues. Currently a stub; the integration story is
-tracked in `deck/auto-validate-card-titles-summaries-and-dods/log.md`.
-The regex-only mode is sufficient as the always-on baseline; the
-batched LLM pass is a nice-to-have, not load-bearing.
+per-DoD-item issues. Currently a stub. The regex-only mode is
+sufficient as the always-on baseline; the batched LLM pass is a
+nice-to-have, not load-bearing.
 
 ## Example Step 4 output
 

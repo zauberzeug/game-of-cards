@@ -86,6 +86,3 @@ for the reconciliation contract.
 - **Versioned in git, kept in the repo root.** `.game-of-cards/` is
   intentionally not gitignored. Project-specific GoC configuration
   is project content; it ships with the repo.
-- **Sub-card 6 handles migration.** When phasor-agents migrates off
-  the vendored `deck.py`, this directory will be authored from the
-  audit catalogue (`deck/goc-package-pyproject-and-pypi-release/audit_catalogue.md`).

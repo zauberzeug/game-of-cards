@@ -28,6 +28,8 @@ advanced_by:
   - cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay
   - migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does
   - hook-catalogue-cites-an-audit-skill-section-that-never-existed
+  - installed-files-point-readers-at-a-deck-folder-install-never-creates
+  - shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
