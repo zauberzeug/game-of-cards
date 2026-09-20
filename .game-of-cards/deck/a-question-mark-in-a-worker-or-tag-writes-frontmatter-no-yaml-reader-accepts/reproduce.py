@@ -72,8 +72,9 @@ for label, line in (
     print(f"  {label}  {line!r}")
     print(f"      -> {verdict}: {detail}")
 print()
-print("  The last two lines are block context and are legal: the defect is")
-print("  confined to the two sites that splice into a flow collection.")
+print("  The last two lines are block context and are legal in every state of")
+print("  the code: the defect is confined to the sites that splice into a flow")
+print("  collection, so a fix that quotes them too would be over-broad.")
 print()
 
 print("=" * 72)
@@ -94,8 +95,11 @@ else:
                 offenders.append((ch, shape))
     chars = sorted({ch for ch, _ in offenders})
     print(f"  offending characters: {chars!r}  ({len(offenders)} shapes)")
-    print("  `,` `[` `]` `{` `}` are already quoted anywhere by _YAML_NEEDS_QUOTE;")
-    print("  `?` is the single character the block-context oracle lets through.")
+    if chars:
+        print("  `,` `[` `]` `{` `}` are quoted anywhere by _YAML_NEEDS_QUOTE, so")
+        print("  `?` is the single character the block-context oracle lets through.")
+    else:
+        print("  Empty: flow context now admits exactly what block context does.")
 print()
 
 print("=" * 72)
@@ -144,9 +148,15 @@ with tempfile.TemporaryDirectory() as tmp:
     print(f"  strict YAML reads : {'OK' if ok else ('SKIPPED' if ok is None else 'REJECT')}"
           f" -- {detail if not ok else 'parsed'}")
     print()
-    print("  Three readers, three answers. The card is committed to the deck in")
-    print("  a form no standard YAML reader can load -- and every later")
-    print("  full-frontmatter re-emit rewrites it the same way.")
+    if ok is False:
+        print("  Three readers, three answers. The card is committed to the deck")
+        print("  in a form no standard YAML reader can load -- and every later")
+        print("  full-frontmatter re-emit rewrites it the same way.")
+    else:
+        print("  All three readers agree. Note this path is `_auto_populate_worker`,")
+        print("  which carried its own copy of the flow-mapping construction: the")
+        print("  shared `_emit_worker` fix did not reach it until it was made to")
+        print("  delegate, so this section is the one that pins the claim verb.")
 
 print()
 print("=" * 72)
@@ -166,5 +176,8 @@ broken = (
 )
 findings = guard.flag_frontmatter(broken)
 print(f"  check_card_frontmatter_yaml.flag_frontmatter(...) -> {findings!r}")
-print("  No finding: the guard skips every value opening with `\"`, `'`, `[` or")
-print("  `{`, so the emitter's own flow-collection output is outside its reach.")
+print("  No finding, before the fix or after: the guard skips every value")
+print("  opening with `\"`, `'`, `[` or `{`, so the emitter's own flow-collection")
+print("  output is permanently outside its reach. That blind spot is tracked")
+print("  separately (card-summary-with-broken-quoting-passes-both-guards-that-")
+print("  should-catch-it); it is why this defect had to be fixed at the producer.")

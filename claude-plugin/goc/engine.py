@@ -224,7 +224,10 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@\t]")
 _YAML_INDICATORS = frozenset("-?:,[]{}#&*!|>'\"%@`")
 # `-`, `?` and `:` are indicators only when followed by whitespace or standing
 # alone: `-v` and `?query` are ordinary plain scalars, while `- v` is a sequence
-# entry, `? v` an explicit key, and a bare `-` an empty sequence entry.
+# entry, `? v` an explicit key, and a bare `-` an empty sequence entry. This
+# exemption holds in BLOCK context, which is where every caller but two puts a
+# scalar; inside a flow collection `?` binds unconditionally — see
+# `_YAML_FLOW_HAZARDS`.
 _YAML_SPACE_BOUND_INDICATORS = frozenset("-?:")
 # Every other indicator is illegal at position 0 whatever follows it. Several
 # members are already caught anywhere by `_YAML_NEEDS_QUOTE`; the set stays
@@ -242,6 +245,15 @@ _YAML_INDICATOR_FIRST = _YAML_INDICATORS - _YAML_SPACE_BOUND_INDICATORS
 # `yaml._BLOCK_INDICATOR_RE` / `yaml._FOLDED_INDICATOR_RE` so the emitter's
 # quote-trigger cannot drift from the parser's recognizers.
 _YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>\d*[-+]?)$")
+# YAML 1.2 §7.4 `c-flow-indicator` plus the flow-context key indicator: inside
+# a flow collection (`[a, b]`, `{who: a, where: b}`) a plain scalar may contain
+# none of these *anywhere*, not merely at position 0. `,[]{}` are already
+# quoted anywhere by `_YAML_NEEDS_QUOTE`, so the set adds exactly one character
+# — `?`, which `_YAML_SPACE_BOUND_INDICATORS` exempts because in block context
+# it binds only when space-bound. The set stays spec-complete rather than
+# minimized to `{"?"}` so it reads as "the flow-context rule" and survives any
+# future narrowing of `_YAML_NEEDS_QUOTE`.
+_YAML_FLOW_HAZARDS = frozenset(",[]{}?")
 
 
 def _contains_line_break(s: str) -> bool:
@@ -299,18 +311,32 @@ def _parser_coerces_scalar(s: str) -> bool:
     )
 
 
-def _yaml_inline(value) -> str:
+def _yaml_inline(value, *, flow: bool = False) -> str:
     """Render a scalar/list as inline YAML for flat-frontmatter use.
 
     Multi-line strings are NOT supported here — emit_frontmatter detects
     them and uses literal-block style (`|-`) instead.
+
+    `flow=True` says the rendered scalar is spliced into a YAML *flow*
+    collection rather than written as a block mapping value. Flow context
+    admits a strictly narrower plain scalar, so the quote trigger widens by
+    `_YAML_FLOW_HAZARDS`. Two call sites enter one: the list branch below
+    (which emits `[a, b]`) sets it on its own recursion, and `_emit_worker`
+    sets it for the `{who: …, where: …}` mapping. Callers writing an ordinary
+    block value must leave it False — widening unconditionally would quote
+    every `?`-bearing summary in a deck for no reason.
     """
     if value is None:
         return "null"
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, list):
-        return "[]" if not value else "[" + ", ".join(_yaml_inline(v) for v in value) + "]"
+        # The rendered form IS a flow sequence, so its elements are in flow
+        # context whatever context the list itself sits in.
+        return (
+            "[]" if not value
+            else "[" + ", ".join(_yaml_inline(v, flow=True) for v in value) + "]"
+        )
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
@@ -359,6 +385,7 @@ def _yaml_inline(value) -> str:
         or _parser_coerces_scalar(s)
         or bool(_YAML_BLOCK_HEADER_RE.match(s))
         or s != s.strip()
+        or (flow and not _YAML_FLOW_HAZARDS.isdisjoint(s))
     ):
         # Escape \ and " for safe inclusion in "..." YAML scalar.
         escaped = s.replace("\\", "\\\\").replace('"', '\\"')
@@ -415,6 +442,11 @@ def _emit_worker(value) -> str:
 
     Flat string (`worker: gpu-rig`) when only `who` is set; inline mapping
     (`worker: {who: gpu-rig, where: feature/foo}`) when both are set.
+
+    The mapping branch is a YAML *flow* collection, so both members render with
+    `flow=True`: a plain scalar there may not carry `,[]{}` or `?` anywhere.
+    The flat branch is an ordinary block mapping value and must NOT set it —
+    `worker: who?knows` is legal and quoting it would churn every such card.
     """
     if value is None:
         return "null"
@@ -424,7 +456,10 @@ def _emit_worker(value) -> str:
         who = value.get("who", "")
         where = value.get("where")
         if where:
-            return f"{{who: {_yaml_inline(who)}, where: {_yaml_inline(where)}}}"
+            return (
+                f"{{who: {_yaml_inline(who, flow=True)}, "
+                f"where: {_yaml_inline(where, flow=True)}}}"
+            )
         return _yaml_inline(who)
     return _yaml_inline(str(value))
 
@@ -5906,14 +5941,17 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     if not who:
         return text
 
-    # Build the YAML inline value and mutate the frontmatter line-anchored.
-    who_yaml = _yaml_inline(who)
+    # Render through `_emit_worker` — the same helper `emit_frontmatter` uses —
+    # rather than restating its flat-vs-mapping branch here. This path used to
+    # carry its own copy, which is how it kept emitting an unquoted flow mapping
+    # after `_emit_worker` learned that flow context needs `_YAML_FLOW_HAZARDS`:
+    # a claim by a git identity holding a `?` wrote frontmatter no strict YAML
+    # reader accepts. One renderer means the next quoting rule lands on every
+    # writer at once.
+    worker: dict = {"who": who}
     if where:
-        where_yaml = _yaml_inline(where)
-        worker_yaml = f"{{who: {who_yaml}, where: {where_yaml}}}"
-    else:
-        worker_yaml = who_yaml
-    return mutate_frontmatter_field(text, "worker", worker_yaml)
+        worker["where"] = where
+    return mutate_frontmatter_field(text, "worker", _emit_worker(worker))
 
 
 def _cmd_status(args):
