@@ -1,7 +1,7 @@
 ---
 title: a-question-mark-in-a-worker-or-tag-writes-frontmatter-no-yaml-reader-accepts
 summary: "The emitter's quote trigger reasons only about YAML block context, but `_yaml_inline` splices its own output into flow collections (`tags: [a, b]`) and `_emit_worker` splices it into a flow mapping (`worker: {who: x, where: y}`). In flow context the plain-scalar acceptance set is strictly narrower, and `?` is the one character block context admits mid-scalar that flow context refuses. So `goc status <card> active` on a machine whose git user.name holds a question mark writes `worker: {who: who?knows, where: main}` — reported OK by `goc validate`, read back correctly by yaml-lite, and rejected outright by PyYAML with a ParserError that takes the whole card's frontmatter with it."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-20T04:56:56Z"
@@ -10,13 +10,13 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: a regression test asserts `_yaml_inline(["a?b"])` and `_emit_worker({"who": "a?b", "where": "main"})` both emit the scalar double-quoted, and that the resulting `tags:` / `worker:` lines round-trip through `goc/_vendor/yaml_lite` unchanged. Fails before the fix.
   - [ ] TDD: the same test asserts block-context emission is UNCHANGED — `_yaml_inline("a?b")` and the flat `_emit_worker({"who": "a?b"})` stay bare — so the fix does not re-quote every `?`-bearing summary in the deck.
   - [ ] TDD: reproduce.py section 2 reports an empty offending-character set (no character is admitted by block context and refused by flow context).
   - [ ] MECHANICAL: the `_YAML_SPACE_BOUND_INDICATORS` comment stops claiming `?query` is an ordinary plain scalar without saying "in block context".
   - [ ] PROCESS: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green; `python scripts/sync_plugin_assets.py --check` green (the engine is mirrored into three plugin payloads).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # a `?` in a worker name or tag makes goc write frontmatter no YAML reader accepts
