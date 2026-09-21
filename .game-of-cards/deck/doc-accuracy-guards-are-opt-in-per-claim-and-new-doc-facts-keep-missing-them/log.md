@@ -187,3 +187,38 @@ Two things recorded in the dashboard above:
   card's own work.
 - **No decision recorded** — the gate stays `decision`; this entry adds evidence
   to the scope question, not an answer to it.
+
+## 2026-09-21 — twenty-third instance connected: the contributor on-ramp
+
+- **Instance**:
+  `contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions`
+  (closed 2026-09-21). `advances` edge wired; table row added
+  (`ContributorGuideAccuracyTest`); the count sentence rewritten in place
+  against `advanced_by`, and the two guard-class counts corrected — they said
+  nine in-file and two own-file while the tree carried eleven and four.
+- **Why it is not a duplicate**: same shape — seven groups of prose restating
+  tree state (a file count, a directory roster, a manifest list, a hook-id
+  list, a quote convention, a refresh mechanism, a conventions pointer), all
+  seven rotted, none guarded, caught by an audit pass rather than CI.
+- **What it adds**: the first *reader-facing on-ramp* surface. Every earlier
+  instance rotted where an agent or an existing contributor could route around
+  it; this one rots on the file GitHub links from the issue form, the
+  pull-request form and the repository sidebar — the first file an outside
+  contributor opens, and the audience the project says it wants but does not
+  have yet. Two commits had touched it in four months, one of them scoped to a
+  single section.
+- **A datum for the scope question**: this is the cheapest instance yet for
+  Option A. Five of the seven groups are one-line tree derivations, and the
+  sixth — the conventions pointer — turned out to be mechanical too once
+  restated as *does every document this guide links to have prose on the page*,
+  which catches the `@AGENTS.md` shim without knowing anything about that shim.
+  Only the seventh, how the guide chooses to *describe* AGENTS.md, needs a
+  human. So the "prose restating prose is unreachable" bound the ninth instance
+  set is narrower than it looked: a pointer claim looks like prose and grades
+  like a tree fact.
+- **Table drift recorded**: `advanced_by` held 23 edges against 15 table rows
+  before this entry, 16 after. Seven instances still carry the edge and no row;
+  named in the body rather than silently reconciled, since filling each row
+  needs that instance's guard class.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.

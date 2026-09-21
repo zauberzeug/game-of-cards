@@ -1,25 +1,25 @@
 ---
 title: contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions
 summary: "CONTRIBUTING.md routes human contributors to CLAUDE.md three times for project conventions, but CLAUDE.md is an 11-byte file holding one `@AGENTS.md` line — a Claude Code harness import that a human, a browser, or a non-Claude agent cannot follow, so the guide's central pointer lands on an empty page. Six more claim groups in the same file have drifted from the tree they describe: 4 source files (6), two plugin payloads (three; codex-plugin is never named), four release-rewritten manifests (five), a pre-commit set that omits the two card guards and claims a formatter that does not exist, `goc upgrade` named as the mirror-refresh mechanism when it writes into none of the three payloads, and a single-quote style rule the package violates in 94 percent of its string literals. CONTRIBUTING.md is the one reader-facing doc surface no accuracy guard has ever swept, and GitHub links it from every issue and pull-request form."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-09-21T01:18:50Z"
-closed_at: null
+closed_at: "2026-09-21T04:47:15Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — all seven claim groups agree with the tree; it exits 1 with eight FAIL lines before the fix.
-  - [ ] MECHANICAL: the three `CLAUDE.md` pointers (lines 6, 50, 74) name the file that actually carries the conventions, and the file-role line at 5-7 describes `AGENTS.md` as the conventions document rather than only "deck workflow".
-  - [ ] MECHANICAL: the tree-derived counts are corrected — source files under `goc/`, the plugin-payload roster (all three named at lines 16, 46 and 169-170), and the release-rewritten manifest count at 121.
-  - [ ] MECHANICAL: both `pre-commit run --all-files` comments (lines 42, 91) name the four hooks that actually run and drop the formatter claim.
-  - [ ] MECHANICAL: the coding-conventions bullets at 81-84 state the quote style the package uses and name the pre-commit sync hook — not `goc upgrade` — as the mirror-refresh mechanism.
-  - [ ] TDD: a guard pins the tree-derived claims so this surface cannot rot again silently, and is fed a historical clause verbatim to prove it fires.
-  - [ ] PROCESS: wired as a new instance row on [doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/) — the `advances` edge alone is not the table.
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] TDD: `reproduce.py` exits zero — all seven claim groups agree with the tree; it exits 1 with eight FAIL lines before the fix.
+  - [x] MECHANICAL: the three `CLAUDE.md` pointers (lines 6, 50, 74) name the file that actually carries the conventions, and the file-role line at 5-7 describes `AGENTS.md` as the conventions document rather than only "deck workflow".
+  - [x] MECHANICAL: the tree-derived counts are corrected — source files under `goc/`, the plugin-payload roster (all three named at lines 16, 46 and 169-170), and the release-rewritten manifest count at 121.
+  - [x] MECHANICAL: both `pre-commit run --all-files` comments (lines 42, 91) name the four hooks that actually run and drop the formatter claim.
+  - [x] MECHANICAL: the coding-conventions bullets at 81-84 state the quote style the package uses and name the pre-commit sync hook — not `goc upgrade` — as the mirror-refresh mechanism.
+  - [x] TDD: a guard pins the tree-derived claims so this surface cannot rot again silently, and is fed a historical clause verbatim to prove it fires.
+  - [x] PROCESS: wired as a new instance row on [doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/) — the `advances` edge alone is not the table.
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -148,57 +148,64 @@ now disagrees with it:
 walk, the payload roster, `sync_plugin_assets.SYNC_PAIRS`,
 `release_rewrite_versions.py`'s target list, `.pre-commit-config.yaml`'s
 hook ids, and a `tokenize` pass over the package — so it cannot itself
-go stale against a moving tree:
+go stale against a moving tree. It takes an optional path argument, so
+both directions stay runnable after the repair: the repo copy passes,
+the pre-fix copy still produces all eight findings.
 
 ```
 $ uv run python .game-of-cards/deck/contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/reproduce.py
-CONTRIBUTING.md routes the reader to CLAUDE.md at lines: [6, 50, 74]
+CONTRIBUTING.md routes the reader to CLAUDE.md at lines: []
 CLAUDE.md is 11 bytes: '@AGENTS.md\n'
   lines of prose in CLAUDE.md (excluding the @import): 0
 
-CONTRIBUTING.md:14 claims 4 source files under goc/
+CONTRIBUTING.md:17 claims 6 source files under goc/
   actual (6): goc/__init__.py, goc/_vendor/__init__.py, goc/_vendor/yaml_lite.py, goc/cli.py, goc/engine.py, goc/install.py
 
 plugin payloads in the tree (3): claude-plugin, codex-plugin, openclaw-plugin
-  named anywhere in CONTRIBUTING.md (2): claude-plugin, openclaw-plugin
-  CONTRIBUTING.md:16 says 'the two plugin payloads'
+  named anywhere in CONTRIBUTING.md (3): claude-plugin, codex-plugin, openclaw-plugin
+  CONTRIBUTING.md:19 says 'the three plugin payloads'
+  ...
+  CONTRIBUTING.md:-1 names `goc upgrade` as the refresh mechanism: False
 
-mirror destinations the sync hook regenerates (10):
-    .claude/hooks
-    .claude/skills
-    .claude/skills/_goc-bootstrap.sh
-    .codex/skills/_goc-bootstrap.sh
-    claude-plugin/goc
-    claude-plugin/hooks
-    claude-plugin/skills
-    codex-plugin/goc
-    codex-plugin/hooks
-    openclaw-plugin/goc
-  CONTRIBUTING.md:82 names `goc upgrade` as the refresh mechanism
-
-CONTRIBUTING.md:121 says the release rewrites '`goc/__init__.py` and the four plugin manifests'
+CONTRIBUTING.md:135 says the release rewrites '`goc/__init__.py` and the five plugin manifests'
   release_rewrite_versions.py rewrites 5 manifests: .claude-plugin/marketplace.json, claude-plugin/.claude-plugin/plugin.json, codex-plugin/.codex-plugin/plugin.json, openclaw-plugin/package-lock.json, openclaw-plugin/package.json
-  plus non-manifest targets: .game-of-cards/deck/.goc-version, AGENTS.md, goc/__init__.py
 
 .pre-commit-config.yaml hooks (4): sync-plugin-assets, goc-validate, card-language, card-frontmatter-yaml
-  CONTRIBUTING.md:42 describes it as: 'sync plugin assets + goc validate'
-  CONTRIBUTING.md:91 describes it as: 'formats, mirrors plugin assets, runs goc validate'
+  CONTRIBUTING.md:46 describes it as: 'sync-plugin-assets, goc-validate, card-language, card-frontmatter-yaml'
+  CONTRIBUTING.md:101 describes it as: 'sync-plugin-assets, goc-validate, card-language, card-frontmatter-yaml'
 
-CONTRIBUTING.md:81 states the style rule: 'Single quotes for strings; f-strings preferred.'
+CONTRIBUTING.md:86 states the style rule: 'Double quotes for strings; f-strings preferred.'
   single-quoted string literals under goc/: 126 (6%)
   double-quoted string literals under goc/: 2085 (94%)
 
+PASS: every checked CONTRIBUTING.md claim agrees with the tree.
+$ echo $?
+0
+```
+
+Against the pre-fix copy (`git show 79de4b8d:CONTRIBUTING.md`), the same
+detector still reports the original eight:
+
+```
+$ uv run python .game-of-cards/deck/.../reproduce.py /tmp/contributing_historical.md
 FAIL: CONTRIBUTING.md sends readers to CLAUDE.md for project conventions at 3 sites, but CLAUDE.md carries 0 lines of prose — it is a bare `@AGENTS.md` import a non-Claude reader cannot follow
 FAIL: claims 4 source files under goc/; the tree has 6
 FAIL: CONTRIBUTING.md calls the mirror set 'the two plugin payloads' and never names codex-plugin
-FAIL: CONTRIBUTING.md's coding-conventions bullet names `goc upgrade` as the mirror-refresh mechanism; `goc upgrade` plans no write into any *-plugin/ payload (it writes into a consuming repo), so it refreshes none of the three plugin mirror trees the same guide calls byte-for-byte
+FAIL: CONTRIBUTING.md's coding-conventions bullet names `goc upgrade` as the mirror-refresh mechanism; ...
 FAIL: claims the release rewrites 'four plugin manifests'; release_rewrite_versions.py rewrites 5
 FAIL: CONTRIBUTING.md says `pre-commit run --all-files` 'formats'; no hook in .pre-commit-config.yaml runs a formatter
-FAIL: both CONTRIBUTING.md descriptions of the pre-commit set omit card-language and card-frontmatter-yaml — the two hooks that reject a card a contributor just filed
+FAIL: 2 CONTRIBUTING.md description(s) of the pre-commit set omit card-language and card-frontmatter-yaml — the two hooks that reject a card a contributor just filed
 FAIL: states 'Single quotes for strings' while 94% of the package's string literals (2085 of 2211) are double-quoted
 
 8 finding(s) across 7 checked CONTRIBUTING.md claim groups.
+$ echo $?
+1
 ```
+
+One check as filed could not flip: the quote-style test asserted
+`double > single` against the tree alone and never read what the guide
+claimed, so it would have kept failing after the correction. Every check
+now grades the claim it parses out of the text.
 
 Supporting run, for the `goc upgrade` clause:
 
@@ -243,29 +250,44 @@ any repo whose briefing target is `CLAUDE.local.md` — `goc install`
 offers that as a `--briefing-target` choice — so the fix should name
 the conventions file, not patch a path.
 
-## Fix
+## Fix (applied)
 
-Mechanical, one file. Per group:
+One file rewritten, one guard added. Per group:
 
-1. `CONTRIBUTING.md:6` — describe `AGENTS.md` as the conventions and
-   deck-workflow document, and either drop the `CLAUDE.md` entry or
-   annotate it as the Claude Code import shim it is. Repoint `:50` and
-   `:74` at `AGENTS.md`.
-2. `:14` — 6 source files.
-3. `:16`, `:46`, `:169-170` — name all three payloads.
-4. `:42`, `:91` — "sync plugin assets + goc validate + card language +
-   card YAML" (the wording AGENTS.md already uses); drop "formats".
-5. `:81` — double quotes.
-6. `:82-84` — name the `sync-plugin-assets` pre-commit hook and the CI
-   `--check`; keep `goc upgrade` only for the consuming-repo case it
-   actually covers.
-7. `:121` — five plugin manifests plus `goc/__init__.py` and the two
-   dogfood surfaces.
+1. `:6` now routes conventions to `AGENTS.md` and names `CLAUDE.md` as
+   the `@`-import shim it is, not as a document; the `:50` and `:74`
+   pointers follow it.
+2. 6 source files.
+3. All three payloads named in § About the project, § Setting up your
+   environment and § For maintainers.
+4. Both `pre-commit run --all-files` comments carry the four hook ids
+   verbatim — `sync-plugin-assets, goc-validate, card-language,
+   card-frontmatter-yaml` — rather than AGENTS.md's prose form, because
+   the ids are what `pre-commit run <id>` takes and what a guard can
+   derive. "formats" is gone, and § Before submitting a pull request now
+   says the two card hooks fire on `goc new --commit` as well as in CI.
+5. Double quotes.
+6. The mirror-refresh bullet names the `sync-plugin-assets` hook, the
+   script behind it and the CI `--check`; `goc upgrade` survives only as
+   the consuming-repo verb it is.
+7. Five manifests, each path spelled out, plus `goc/__init__.py` and the
+   two dogfood surfaces.
 
-Then add the guard the DoD asks for. `tests/test_guidance_accuracy.py`
-is where this family's derive-from-tree assertions live; the five
-mechanical groups (2, 3, 4, 6, 7) each have a one-line tree
-derivation, which is why this instance is the cheapest yet to pin.
-Groups 1 and 5 are prose judgements and are out of a derive-from-tree
-guard's reach — note that in the closure entry rather than stretching
-the guard to cover them.
+`ContributorGuideAccuracyTest` in `tests/test_guidance_accuracy.py`
+pins all seven. The card predicted five would be mechanical and that
+groups 1 and 5 were out of a derive-from-tree guard's reach; both turned
+out to be reachable after restating them:
+
+- The conventions pointer grades as *does every document this guide
+  links to have prose on the page* — which catches the `@AGENTS.md` shim
+  without knowing anything about that shim, and would catch a
+  `CLAUDE.local.md` briefing target the same way.
+- The quote rule grades against the package's own majority (2085 of 2211
+  literals), so the guide and the code cannot disagree in either
+  direction.
+
+What stays unguarded, deliberately: how the guide *describes* AGENTS.md
+once it points there — a prose judgement no derivation reaches. Each
+check is exercised twice, against a single-claim mutation of the current
+file and against the pre-fix wording assembled verbatim under its real
+headings, so none of them can pass vacuously.

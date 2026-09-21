@@ -10,8 +10,10 @@ from __future__ import annotations
 import argparse
 import ast
 import importlib.util
+import io
 import re
 import sys
+import tokenize
 import unittest
 from pathlib import Path
 
@@ -1127,6 +1129,406 @@ class DeprecatedStatusGuidanceTest(unittest.TestCase):
                 f"goc.md never mentions {missing}, so a reader who finds the "
                 "deprecated status marked has no way to learn the replacement "
                 "from the CLI reference itself."
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# CONTRIBUTING.md — the contributor on-ramp
+# ---------------------------------------------------------------------------
+#
+# Every other surface in this file is read by an agent or an existing
+# contributor, who can route around a stale sentence. CONTRIBUTING.md is what
+# GitHub links from the issue form, the pull-request form and the repository
+# sidebar, so it is the first file an outside contributor opens — and until
+# `contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions`
+# no guard had ever swept it. Seven of its claim groups restate tree state, and
+# every one of them had drifted.
+#
+# The checks below take the guide's text as an argument instead of reading the
+# file, so the same logic can be run against the pre-fix wording
+# (`_HISTORICAL_CONTRIBUTING`) to prove none of them is vacuous.
+
+CONTRIBUTING = ROOT / "CONTRIBUTING.md"
+
+_NUMBER_WORDS = {
+    1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
+    7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
+}
+
+# Sections that must name every sync-owned plugin payload. Each tells the reader
+# something actionable about the set — what the surface area is, what the
+# byte-mirrors are, what never to hand-edit — so a payload missing from any one
+# of them reads as "that one is not a mirror". `codex-plugin/` was absent from
+# all three, and from the whole file, while CI failed on its drift like the rest.
+_PAYLOAD_ROSTER_SECTIONS = (
+    "## About the project",
+    "## Setting up your environment",
+    "## For maintainers",
+)
+
+# Words allowed in a `pre-commit run --all-files` comment beside the hook ids.
+# Deliberately tiny: the comment's job is to be the registered roster verbatim,
+# because that is the string `pre-commit run <id>` takes. Prose in its place is
+# what let one copy claim a formatter the hook set has never contained.
+_PRECOMMIT_COMMENT_CONNECTORS = frozenset({"and"})
+
+# The instruction shape the card found, not one day's phrasing of it: `goc
+# upgrade` offered as the way to refresh a mirror. It is the *consuming*-repo
+# verb and plans no write into any payload here.
+_UPGRADE_AS_REFRESH = re.compile(
+    r"(?:re-)?run\s+`goc upgrade`\s+(?:rather than|instead of)"
+)
+
+_CONTRIBUTING_CHECKS = (
+    "conventions-pointer",
+    "source-file-count",
+    "payload-roster",
+    "precommit-hook-set",
+    "mirror-refresh-mechanism",
+    "release-rewrite-targets",
+    "quote-style",
+)
+
+
+def _load_repo_script(stem: str):
+    """Import `scripts/<stem>.py` without putting scripts/ on sys.path."""
+    spec = importlib.util.spec_from_file_location(
+        f"_goc_doccheck_{stem}", ROOT / "scripts" / f"{stem}.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _section(text: str, heading: str) -> str:
+    """The body of one `## ` section, or "" if the heading is gone."""
+    start = text.find(heading)
+    if start == -1:
+        return ""
+    end = text.find("\n## ", start + 1)
+    return text[start:] if end == -1 else text[start:end]
+
+
+def _package_source_files() -> list[str]:
+    """The `goc/` package's own modules — the template payload is not source."""
+    return sorted(
+        p.relative_to(ROOT).as_posix()
+        for p in (ROOT / "goc").rglob("*.py")
+        if "templates" not in p.relative_to(ROOT / "goc").parts
+    )
+
+
+def _sync_owned_payloads() -> list[str]:
+    """Root-level `*-plugin/` payloads `scripts/sync_plugin_assets.py` regenerates."""
+    sync = _load_repo_script("sync_plugin_assets")
+    roots = {dst.relative_to(ROOT).parts[0] for _src, dst, _ex, _keep in sync.SYNC_PAIRS}
+    return sorted(r for r in roots if r.endswith("-plugin"))
+
+
+def _precommit_hook_ids() -> list[str]:
+    config = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+    return re.findall(r"^\s+- id: (\S+)$", config, re.MULTILINE)
+
+
+def _release_rewrite_targets() -> list[str]:
+    """Every repo path `scripts/release_rewrite_versions.py` writes a version into.
+
+    Read as `ROOT / "a" / "b"` path chains rather than a hand-kept list, so a
+    sixth manifest is covered the day it is added. Only maximal chains count —
+    `ast.walk` also yields the inner `ROOT / "a"` of every longer path.
+    """
+    src = ROOT / "scripts" / "release_rewrite_versions.py"
+    tree = ast.parse(src.read_text(encoding="utf-8"), filename=str(src))
+    divs = [n for n in ast.walk(tree) if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Div)]
+    nested = {id(n.left) for n in divs}
+    targets: set[str] = set()
+    for node in divs:
+        if id(node) in nested:
+            continue
+        parts: list[str] = []
+        cur: ast.expr = node
+        while isinstance(cur, ast.BinOp) and isinstance(cur.op, ast.Div):
+            if not isinstance(cur.right, ast.Constant) or not isinstance(cur.right.value, str):
+                parts = []
+                break
+            parts.insert(0, cur.right.value)
+            cur = cur.left
+        if parts and isinstance(cur, ast.Name) and cur.id == "ROOT":
+            targets.add("/".join(parts))
+    return sorted(targets)
+
+
+def _package_quote_counts() -> tuple[int, int]:
+    """(single, double) non-docstring string literals under `goc/`."""
+    single = double = 0
+    for path in (ROOT / "goc").rglob("*.py"):
+        if "templates" in path.relative_to(ROOT / "goc").parts:
+            continue
+        for tok in tokenize.tokenize(io.BytesIO(path.read_bytes()).readline):
+            if tok.type != tokenize.STRING:
+                continue
+            body = tok.string.lstrip("rbfuRBFU")
+            if body.startswith(('"""', "'''")):
+                continue
+            if body.startswith('"'):
+                double += 1
+            elif body.startswith("'"):
+                single += 1
+    return single, double
+
+
+def _contributing_findings(text: str) -> dict[str, str]:
+    """Grade the guide's tree-derived claims. Returns {check-id: what's wrong}."""
+    out: dict[str, str] = {}
+
+    # --- 1. the documents the guide routes readers to ---------------------
+    unreadable: list[str] = []
+    for target in re.findall(r"\]\((?!https?://|#)([^)\s]+)\)", text):
+        path = ROOT / target.split("#", 1)[0]
+        if not path.exists():
+            unreadable.append(f"{target} (no such file)")
+        elif path.suffix == ".md" and not [
+            ln
+            for ln in path.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.startswith("@")
+        ]:
+            unreadable.append(f"{target} (no prose — a bare `@` import)")
+    if unreadable:
+        out["conventions-pointer"] = (
+            "CONTRIBUTING.md links " + "; ".join(unreadable) + " as documents to "
+            "read. An `@`-import is expanded by exactly one of the four runtimes "
+            "this project ships for; a human, a browser and every non-Claude agent "
+            "get the literal line and no content. Link the file that carries the "
+            "prose, not the shim that imports it."
+        )
+
+    # --- 2. "(N source files under `goc/`)" -------------------------------
+    sources = _package_source_files()
+    about = _section(text, "## About the project")
+    claimed = re.search(r"\((\d+) source files under `goc/`\)", about)
+    if not claimed or int(claimed.group(1)) != len(sources):
+        out["source-file-count"] = (
+            f"§ About the project claims {claimed.group(1) if claimed else 'no'} "
+            f"source file(s) under `goc/`; the package has {len(sources)}: "
+            + ", ".join(sources)
+        )
+
+    # --- 3. the plugin-payload roster -------------------------------------
+    payloads = _sync_owned_payloads()
+    roster: list[str] = []
+    for heading in _PAYLOAD_ROSTER_SECTIONS:
+        absent = [p for p in payloads if f"{p}/" not in _section(text, heading)]
+        if absent:
+            roster.append(f"§ {heading.lstrip('# ')} omits {', '.join(absent)}")
+    counted = re.search(r"the (\w+) plugin payloads", text)
+    if counted and counted.group(1) != _NUMBER_WORDS.get(len(payloads)):
+        roster.append(
+            f"it calls them 'the {counted.group(1)} plugin payloads'"
+        )
+    if roster:
+        out["payload-roster"] = (
+            f"the sync hook regenerates {len(payloads)} payloads ("
+            + ", ".join(f"{p}/" for p in payloads)
+            + ") and CI fails on any of their drift, but "
+            + "; ".join(roster)
+            + ". A payload the guide never names reads as one a contributor may hand-edit."
+        )
+
+    # --- 4. what `pre-commit run --all-files` runs -------------------------
+    hook_ids = _precommit_hook_ids()
+    comments = [
+        (i, ln.split("#", 1)[1].strip())
+        for i, ln in enumerate(text.splitlines(), 1)
+        if "pre-commit run --all-files" in ln and "#" in ln
+    ]
+    hooks: list[str] = []
+    if not comments:
+        hooks.append("no `pre-commit run --all-files` line names the hook set at all")
+    for lineno, comment in comments:
+        absent = [h for h in hook_ids if h not in comment]
+        stray = [
+            tok
+            for tok in re.findall(r"[A-Za-z][A-Za-z-]*", comment)
+            if tok not in hook_ids and tok not in _PRECOMMIT_COMMENT_CONNECTORS
+        ]
+        if absent:
+            hooks.append(f"line {lineno} omits {', '.join(absent)}")
+        if stray:
+            hooks.append(f"line {lineno} says {comment!r}, which is not the roster")
+    if hooks:
+        out["precommit-hook-set"] = (
+            ".pre-commit-config.yaml registers " + ", ".join(hook_ids) + ", but "
+            + "; ".join(hooks)
+            + ". Name the ids verbatim — they are what `pre-commit run <id>` takes, "
+            "and the card hooks among them fire on `goc new --commit` too, so a "
+            "contributor meets them while filing, not only in CI."
+        )
+
+    # --- 5. what refreshes the mirrors ------------------------------------
+    conventions = _section(text, "## Coding conventions")
+    mechanism: list[str] = []
+    for token, present in (
+        ("scripts/sync_plugin_assets.py", (ROOT / "scripts" / "sync_plugin_assets.py").exists()),
+        ("sync-plugin-assets", "sync-plugin-assets" in hook_ids),
+    ):
+        if not present:
+            mechanism.append(f"{token} is gone from the tree")
+        elif token not in conventions:
+            mechanism.append(f"§ Coding conventions never names {token}")
+    if _UPGRADE_AS_REFRESH.search(text):
+        mechanism.append("it still offers `goc upgrade` as the way to refresh a mirror")
+    if mechanism:
+        out["mirror-refresh-mechanism"] = (
+            "; ".join(mechanism)
+            + ". The `sync-plugin-assets` pre-commit hook is what regenerates every "
+            "mirror in this tree; `goc upgrade` writes into a *consuming* repo and "
+            "plans no write into any payload here, so a contributor who runs it "
+            "expecting a refreshed mirror gets an unchanged one and fails CI."
+        )
+
+    # --- 6. what the release rewrites -------------------------------------
+    release = _section(text, "## Release process")
+    targets = _release_rewrite_targets()
+    manifests = [t for t in targets if t.endswith(".json")]
+    rewrite: list[str] = []
+    counted = re.search(r"the\s+(\w+)\s+plugin manifests", release)
+    if not counted or counted.group(1) != _NUMBER_WORDS.get(len(manifests)):
+        rewrite.append(
+            f"it calls them '{counted.group(1) if counted else 'no'} plugin "
+            f"manifests'; the script rewrites {len(manifests)}"
+        )
+    unnamed = [t for t in targets if t not in release]
+    if unnamed:
+        rewrite.append("it never names " + ", ".join(unnamed))
+    if rewrite:
+        out["release-rewrite-targets"] = (
+            "scripts/release_rewrite_versions.py rewrites " + ", ".join(targets)
+            + ", but " + "; ".join(rewrite)
+            + ". The paragraph below this list describes the tripwire that fails a "
+            "release on a human commit touching those files, so an undercount tells "
+            "a contributor some of them are still theirs to edit."
+        )
+
+    # --- 7. the stated quote convention -----------------------------------
+    single, double = _package_quote_counts()
+    majority = "double" if double > single else "single"
+    stated = re.search(r"\b(Single|Double) quotes for strings", conventions)
+    if not stated or stated.group(1).lower() != majority:
+        total = single + double
+        out["quote-style"] = (
+            "§ Coding conventions states "
+            + (f"'{stated.group(1)} quotes for strings'" if stated else "no quote rule")
+            + f", but {max(single, double)} of {total} string literals under `goc/` "
+            f"({max(single, double) / total:.0%}) are {majority}-quoted. A style rule "
+            "the package does not follow makes a contributor's first diff look wrong "
+            "in review."
+        )
+
+    return out
+
+
+# The seven claim groups exactly as CONTRIBUTING.md carried them before
+# `contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions`
+# (commit 79de4b8d), under their real headings. Feeding this to the same checks
+# is what proves each one fires — a derive-from-tree assertion that happens to
+# agree with a rewritten file, and would agree with anything, is the failure
+# mode this family already hit once
+# (`agents-md-miscounts-the-upgrade-no-op-guard-terms-and-mislabels-them-non-write`).
+_HISTORICAL_CONTRIBUTING = '''# Contributing to Game of Cards
+
+This page is the short version — the long-form context lives in
+[`README.md`](README.md) (methodology), [`AGENTS.md`](AGENTS.md) (deck workflow),
+[`CLAUDE.md`](CLAUDE.md) (project conventions), and the header comment of
+[`.github/workflows/release.yml`](.github/workflows/release.yml) (release machinery).
+
+## About the project
+
+The Python package is small (4 source files under `goc/`); most of the surface
+area is in the `goc/templates/` payload that `goc install` ships into
+consuming repos, and in the two plugin payloads (`claude-plugin/`,
+`openclaw-plugin/`) that mirror it.
+
+## Setting up your environment
+
+```bash
+pre-commit run --all-files                     # sync plugin assets + goc validate
+```
+
+The plugin payloads (`claude-plugin/`, `openclaw-plugin/`) are
+**byte-for-byte mirrors** of `goc/` and `goc/templates/`. A pre-commit
+hook regenerates them on every commit; CI fails the build if they
+drift. **Always edit the source under `goc/templates/` — never the
+mirrors directly.** Details in [`CLAUDE.md`](CLAUDE.md).
+
+## Coding conventions
+
+Project-specific conventions (template/mirror dogfooding, version
+literals, marker-bounded merges, etc.) are documented in
+[`CLAUDE.md`](CLAUDE.md). Read it before non-trivial changes — most
+"surprises" in the codebase are dogfooding side effects that the file
+already explains.
+
+General style:
+
+- Python 3.10+, type hints where they aid readability (not religiously).
+- Single quotes for strings; f-strings preferred.
+- Edit `goc/templates/...` and re-run `goc upgrade` rather than
+  editing `.claude/skills/...` directly (the latter is a consumer
+  copy of the former and gets overwritten on upgrade).
+
+## Before submitting a pull request
+
+```bash
+pre-commit run --all-files     # formats, mirrors plugin assets, runs goc validate
+```
+
+## Release process
+
+1. Rewrites the version literals in `goc/__init__.py` and the four
+   plugin manifests.
+
+## For maintainers
+
+- **Plugin asset mirrors** — auto-synced by `scripts/sync_plugin_assets.py`
+  via the pre-commit hook; CI fails on drift. Don't edit
+  `claude-plugin/` or `openclaw-plugin/goc/` directly.
+'''
+
+
+class ContributorGuideAccuracyTest(unittest.TestCase):
+    """CONTRIBUTING.md restates seven groups of tree state, and GitHub puts it in
+    front of every outside contributor. Derive each claim from the tree here so
+    the on-ramp cannot rot silently the way it did for four months.
+
+    What stays unguarded, deliberately: how the guide *describes* AGENTS.md (a
+    prose judgement no derivation reaches) and whether the CLAUDE.md shim is
+    explained or merely unlinked. The link-target check below pins the part that
+    is mechanical — that every document the guide sends a reader to has
+    something on the page.
+    """
+
+    def test_contributing_md_agrees_with_the_tree(self) -> None:
+        findings = _contributing_findings(CONTRIBUTING.read_text(encoding="utf-8"))
+        self.assertEqual(
+            {},
+            findings,
+            msg=(
+                "CONTRIBUTING.md has drifted from the tree it describes:\n\n"
+                + "\n\n".join(f"[{k}] {v}" for k, v in sorted(findings.items()))
+            ),
+        )
+
+    def test_every_check_fires_on_the_wording_the_card_found(self) -> None:
+        fired = sorted(_contributing_findings(_HISTORICAL_CONTRIBUTING))
+        self.assertEqual(
+            sorted(_CONTRIBUTING_CHECKS),
+            fired,
+            msg=(
+                "fed the pre-fix CONTRIBUTING.md verbatim, the guard reported "
+                f"{fired} instead of every check. A check that stays quiet on the "
+                "exact wording it was written for is pinning nothing — re-derive "
+                "it rather than deleting this fixture."
             ),
         )
 

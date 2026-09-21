@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Fourteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them. The fourteenth adds the first surface whose rot is executed rather than read — a skill body specifying a procedure an agent follows literally, which moved 165 correct citations onto unrelated code before it was caught — and it is guardable only by running the instruction against a fixture, which is neither option as written."
+summary: "tests/test_guidance_accuracy.py now holds twelve guard classes, plus four more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Fourteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them. The fourteenth adds the first surface whose rot is executed rather than read — a skill body specifying a procedure an agent follows literally, which moved 165 correct citations onto unrelated code before it was caught — and it is guardable only by running the instruction against a fixture, which is neither option as written."
 status: open
 stage: null
 contribution: medium
@@ -41,8 +41,8 @@ definition_of_done: |
 
 `tests/test_guidance_accuracy.py` is this repo's answer to doc drift: a test that
 pins a prose claim to the code or tree it describes. The mechanism works — but it
-is applied **one claim at a time, always after the fact**. Nine guard classes now
-live in that file (two further guards got their own files), and every one was written in
+is applied **one claim at a time, always after the fact**. Twelve guard classes now
+live in that file (four further guards got their own files), and every one was written in
 response to an already-rotted claim someone happened to notice. Nothing looks for
 the *unguarded* claims.
 
@@ -65,16 +65,23 @@ the *unguarded* claims.
 | *(no new class — four tests added to the existing `AgentsArchitectureAccuracyTest`)* | [agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/) | 2026-08-15 |
 | `DocumentedAnchorRuleTest` + `SecondRepairPassTest` (own file, `tests/test_refine_deck_citation_anchor.py`) | [second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/) | 2026-08-17 |
 | `MigrateListStyleKeyOrderScopeTest` (own file, `tests/test_migrate_list_style_key_order_scope.py`) | [migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does](../migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/) | 2026-09-07 |
+| `ContributorGuideAccuracyTest` | [contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions](../contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/) | 2026-09-21 |
 
-Eighteen instances across five months, each its own file → claim → fix → guard
-cycle. `advanced_by` is the authoritative count; the table above shows fifteen of
-them, because three closed instances carry the edge but no row yet
+Twenty-three instances across three months, each its own file → claim → fix →
+guard cycle. `advanced_by` is the authoritative count; the table above shows
+sixteen of them, because five closed instances and two still-open ones carry the
+edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
-[cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay](../cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay/)).
-That gap is this card's own thesis turned on itself for the second time: the
-table is a hand-maintained restatement of `advanced_by`, so it rots exactly the
-way every claim catalogued in it did.
+[cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay](../cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay/),
+[hook-catalogue-cites-an-audit-skill-section-that-never-existed](../hook-catalogue-cites-an-audit-skill-section-that-never-existed/),
+[installed-files-point-readers-at-a-deck-folder-install-never-creates](../installed-files-point-readers-at-a-deck-folder-install-never-creates/),
+[shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/),
+[shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/)).
+The gap is widening, not closing — it was three rows when this paragraph was
+last rewritten — and it is this card's own thesis turned on itself: the table is
+a hand-maintained restatement of `advanced_by`, so it rots exactly the way every
+claim catalogued in it did.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
