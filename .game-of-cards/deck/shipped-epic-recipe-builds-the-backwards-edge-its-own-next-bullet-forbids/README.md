@@ -1,23 +1,23 @@
 ---
 title: shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids
 summary: "The aggregation-epic recipe in `advance-card/reference.md` states the canonical encoding as `child.advances: [epic]` and then gives the verb as `goc advance <child> --by <epic>` — but `goc advance <title> --by <advancer>` writes `advancer.advances += title`, so running the recipe verbatim produces `epic.advances: [children]`, the exact shape the next bullet nine lines down calls Never and that `goc validate` flags as BACKWARDS_EPIC_EDGE. The correct verb is `goc advance <epic> --by <child>`. The line ships identically in all six skill trees (templates, the two dogfood mirrors, and the three plugin payloads), so every consumer repo that follows the documented recipe builds the inverted edge on its first epic and inherits the broken value chain and the spurious attest failures the same bullet warns about."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-09-21T01:21:37Z"
-closed_at: null
+closed_at: "2026-09-21T05:01:47Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the verb form extracted from the shipped text produces the canonical encoding the same file states, and `goc validate` stays silent; it exits 1 today.
-  - [ ] MECHANICAL: `goc/templates/skills/advance-card/reference.md:108` reads ``goc advance <epic> --by <child>``, and the five mirrors are regenerated (pre-commit `sync-plugin-assets` covers four; `python3 scripts/port_skills_to_openclaw.py` re-ports the OpenClaw copy).
-  - [ ] TDD: a guard asserts that every `goc advance` example in a shipped skill body, run against a scratch deck, produces the edge direction the surrounding prose claims — so the next swap is caught at test time rather than in a consumer's deck.
-  - [ ] MECHANICAL: the body of [auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft](../auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft/) is corrected where it repeats the swapped form as "the documented aggregation-epic wiring order" (lines 94 and 131).
-  - [ ] PROCESS: cross-referenced from [validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments](../validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments/) as the second site where shipped text gets this verb's argument order backwards, and wired as an instance row on [doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/).
-  - [ ] PROCESS: `uv run goc validate` passes, `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are green, and `uv run python -m unittest discover -s tests` is green.
+  - [x] TDD: `reproduce.py` exits zero — the verb form extracted from the shipped text produces the canonical encoding the same file states, and `goc validate` stays silent; it exits 1 today.
+  - [x] MECHANICAL: `goc/templates/skills/advance-card/reference.md:108` reads ``goc advance <epic> --by <child>``, and the five mirrors are regenerated (pre-commit `sync-plugin-assets` covers four; `python3 scripts/port_skills_to_openclaw.py` re-ports the OpenClaw copy).
+  - [x] TDD: a guard asserts that every `goc advance` example in a shipped skill body, run against a scratch deck, produces the edge direction the surrounding prose claims — so the next swap is caught at test time rather than in a consumer's deck.
+  - [x] MECHANICAL: the body of [auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft](../auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft/) is corrected where it repeats the swapped form as "the documented aggregation-epic wiring order" (lines 94 and 131).
+  - [x] PROCESS: cross-referenced from [validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments](../validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments/) as the second site where shipped text gets this verb's argument order backwards, and wired as an instance row on [doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/).
+  - [x] PROCESS: `uv run goc validate` passes, `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are green, and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -68,10 +68,11 @@ The prose and the verb in the same bullet disagree, so a reader who
 trusts the encoding is right and a reader who runs the command is
 wrong — and running the command is what the bullet asks for.
 
-## Empirical evidence
+## Empirical evidence (as filed)
 
 `reproduce.py` extracts the verb form from the shipped text itself (so it
-cannot drift from the doc), scaffolds a throwaway deck, and runs it:
+cannot drift from the doc), scaffolds a throwaway deck, and runs it. Against
+the pre-fix recipe it exited 1:
 
 ```
 $ uv run python .game-of-cards/deck/shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/reproduce.py
@@ -118,10 +119,12 @@ them to do the wrong thing, and no third one telling them otherwise.
 
 The recipe is read and reused, not skimmed past:
 [auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft](../auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft/)
-cites `goc advance <child> --by <epic>` twice as "the documented
-aggregation-epic wiring order" while reasoning about a different defect
-— the swapped form has already propagated out of the skill and into the
-deck's own record.
+cited `goc advance <child> --by <epic>` twice as "the documented
+aggregation-epic wiring order" while reasoning about a different defect —
+the swapped form had propagated out of the skill and into the deck's own
+record before anyone read it against the engine. Both citations are
+corrected; that card's defect is unaffected, since the epic is the draft
+endpoint under either argument order.
 
 It is also an instance of the executed-rather-than-read doc rot that
 [doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
@@ -130,22 +133,58 @@ agent follows literally. A derive-from-tree guard cannot catch it, but a
 *run-it-against-a-fixture* guard can, and the fixture is three cards —
 which is why this instance is worth pinning rather than just patching.
 
-## Fix
+## Fix (applied)
 
-One line in the template, then the mirrors:
+One line in the template, then the five mirrors:
 
 ```diff
 -  child: `goc advance <child> --by <epic>`.
 +  epic: `goc advance <epic> --by <child>`.
 ```
 
-(the label moves with the argument: the verb is now run naming the epic,
-so "Verb on the child" becomes "Verb on the epic"). Re-run the
-pre-commit sync for the four auto-synced trees and
-`python3 scripts/port_skills_to_openclaw.py` for the OpenClaw copy.
+The label moved with the argument: the verb is now run naming the epic,
+so "Verb on the child" became "Verb on the epic". The four auto-synced
+trees came from the pre-commit sync, the OpenClaw copy from
+`python3 scripts/port_skills_to_openclaw.py`.
 
-Then add the guard: walk every `goc advance` example in a shipped skill
-body, run it against a scratch deck, and assert the resulting edge
-direction matches the encoding the surrounding prose states. That is the
-only technique that would have caught this one, and it is the technique
-the root card is still missing.
+`reproduce.py` was re-derived rather than left as a defect witness: it
+now reads both the encoding *and* the verb out of the shipped text and
+asserts they agree, so it fails on a swap in either direction instead of
+on one hard-coded argument order. It exits 0:
+
+```
+--- running the shipped verb form verbatim: goc advance <epic> --by <child> ---
+    advance: ship-the-epic.advanced_by += child-one; child-one.advances += ship-the-epic
+    advance: ship-the-epic.advanced_by += child-two; child-two.advances += ship-the-epic
+
+    ship-the-epic.advances    = []
+    ship-the-epic.advanced_by = ['child-one', 'child-two']
+    child-one.advances        = ['ship-the-epic']
+    child-one.advanced_by     = []
+
+    goc validate: no BACKWARDS_EPIC_EDGE warning
+
+PASS: the documented verb `goc advance <epic> --by <child>` produces the documented
+encoding `child.advances: [epic]`, and goc validate emits no BACKWARDS_EPIC_EDGE.
+```
+
+The guard is `tests/test_skill_advance_example_direction.py`. It walks
+every `goc advance A --by B` occurrence in all six skill trees, pairs it
+with the `<role>.advances: [<role>]` encoding claim stated in the same
+markdown block, and *runs* it against a scratch deck — so the comparison
+is against the edge the engine actually builds, not against a second
+restatement of the doc. Three tests: the direction check itself; a
+vacuity check that fails if the covered set ever empties (an author who
+deletes an encoding claim is told which example sites went uncovered);
+and a fixture holding the pre-fix bullet verbatim, which the guard must
+reject, so it demonstrates catching its own offender rather than
+asserting it would.
+
+Two scope notes. Examples written with generic placeholders
+(`goc advance <title> --by <other>`) carry no role-named claim to compare
+against and are reported as uncovered rather than checked — the guard
+pins direction where the prose commits to one. And it reaches skill
+bodies only: `goc validate`'s own `BACKWARDS_EPIC_EDGE` remedy string is
+emitted from `engine.py` and has the same arguments swapped, which stays
+[validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments](../validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments/)'s
+to fix.

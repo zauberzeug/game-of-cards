@@ -66,21 +66,23 @@ the *unguarded* claims.
 | `DocumentedAnchorRuleTest` + `SecondRepairPassTest` (own file, `tests/test_refine_deck_citation_anchor.py`) | [second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/) | 2026-08-17 |
 | `MigrateListStyleKeyOrderScopeTest` (own file, `tests/test_migrate_list_style_key_order_scope.py`) | [migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does](../migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/) | 2026-09-07 |
 | `ContributorGuideAccuracyTest` | [contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions](../contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/) | 2026-09-21 |
+| `SkillAdvanceExampleDirectionTest` (own file, `tests/test_skill_advance_example_direction.py`) | [shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/) | 2026-09-21 |
 
 Twenty-three instances across three months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-sixteen of them, because five closed instances and two still-open ones carry the
-edge but no row yet
+seventeen of them, because five closed instances and one still-open one carry
+the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
 [cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay](../cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay/),
 [hook-catalogue-cites-an-audit-skill-section-that-never-existed](../hook-catalogue-cites-an-audit-skill-section-that-never-existed/),
 [installed-files-point-readers-at-a-deck-folder-install-never-creates](../installed-files-point-readers-at-a-deck-folder-install-never-creates/),
-[shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/),
-[shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/)).
-The gap is widening, not closing — it was three rows when this paragraph was
-last rewritten — and it is this card's own thesis turned on itself: the table is
-a hand-maintained restatement of `advanced_by`, so it rots exactly the way every
+[shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
+The gap ran three rows, then seven; the twenty-third instance is the first to
+arrive with its row already written, so it stands at six. That narrowing is not
+the process self-correcting — the row exists because that card's DoD named it as
+a closure item, one card at a time. Absent such an item the table is still a
+hand-maintained restatement of `advanced_by`, and it rots exactly the way every
 claim catalogued in it did.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
@@ -243,6 +245,24 @@ against a synthetic fixture, which is a third technique the decision should
 name. Third, its rot needed two hygiene passes to become visible at all, which
 puts a lower bound on how long an instruction-shaped defect can sit green: the
 sweep interval of whatever process executes it.
+
+The twenty-third is the second instance of that same executed-rather-than-read
+class, and it settles the "third technique" from hypothesis into precedent. The
+aggregation-epic recipe in `advance-card/reference.md` stated an encoding
+(`child.advances: [epic]`) and then gave a verb form that builds its inverse,
+so both halves read as correct English and no derivation over the tree could
+disagree with either
+([shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/),
+closed 2026-09-21). Its guard parses the example and the claim out of the skill
+body and runs the example against a scratch deck — the same technique the
+fourteenth described, now with two independent implementations
+(`tests/test_refine_deck_citation_anchor.py`,
+`tests/test_skill_advance_example_direction.py`). Two datums follow. The
+technique generalizes across unrelated recipes rather than fitting one, so
+naming it in the decision costs no new invention. And both instances shipped
+identically to all six skill trees before anyone read them closely, so the unit
+that needs sweeping is the *template*, not the surface count: one uncovered
+instruction in `goc/templates/skills/` is six consumer-visible defects.
 
 ## What's structurally wrong
 

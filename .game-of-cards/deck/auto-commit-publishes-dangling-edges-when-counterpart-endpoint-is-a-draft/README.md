@@ -91,7 +91,7 @@ deck that fails `goc validate` with `references unknown title`, and the
 referential-integrity invariant ("closed-card relationship edges are
 first-class; validate enforces both axes") is broken in the committed
 record. Reachability: `goc new <epic>` (default no-commit, born draft)
-followed by `goc advance <child> --by <epic>` is the documented
+followed by `goc advance <epic> --by <child>` is the documented
 aggregation-epic wiring order; with auto_commit on, the split commit
 happens on the standard path. Introduced by the fix for
 [placeholder-cards-superseded-before-they-are-authored](../placeholder-cards-superseded-before-they-are-authored/)
@@ -128,7 +128,7 @@ before writing either endpoint.
 - Pros: both invariants preserved; the error teaches the publish step;
   no placeholder ever ships.
 - Cons: breaks the documented epic-wiring flow (`goc new <epic>` then
-  `goc advance <child> --by <epic>` now requires an intervening publish);
+  `goc advance <epic> --by <child>` now requires an intervening publish);
   strictness applies even when auto_commit is off, where the split-commit
   problem does not exist — unless the refusal is conditioned on
   auto_commit, adding mode-dependent behavior.
