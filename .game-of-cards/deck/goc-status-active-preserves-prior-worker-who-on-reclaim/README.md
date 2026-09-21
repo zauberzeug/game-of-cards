@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` (refresh both sub-fields on re-claim, OR preserve both as a unit, OR keep current asymmetric behavior and document it as intentional).
   - [ ] TDD: reproduce.py exits zero (the chosen behavior matches expectation).
   - [ ] TDD: a unit test in `tests/` covers the re-claim path under a different `git config user.name`.
-  - [ ] MECHANICAL: `_auto_populate_worker` docstring at `goc/engine.py:5847` updated to match the chosen behavior.
+  - [ ] MECHANICAL: `_auto_populate_worker` docstring at `goc/engine.py:5896` updated to match the chosen behavior.
   - [ ] PROCESS: `uv run goc validate` passes.
 ---
 
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5860-5876` — `_auto_populate_worker`.
+`goc/engine.py:5909-5925` — `_auto_populate_worker`.
 
 ## What's broken
 
@@ -61,7 +61,7 @@ previous one.
 
 ## Reachability path
 
-Triggered from `_cmd_status` at `goc/engine.py:5999`, which calls
+Triggered from `_cmd_status` at `goc/engine.py:6051`, which calls
 `_auto_populate_worker` on every `open/blocked → active` transition. Any of
 the following flows surfaces it:
 

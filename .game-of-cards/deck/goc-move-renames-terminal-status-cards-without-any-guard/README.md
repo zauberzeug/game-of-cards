@@ -25,7 +25,7 @@ definition_of_done: |
 
 - `goc/engine.py:4780-4838` — `_cmd_move` (no terminal-status check at the entry point or before mutation)
 - `goc/engine.py:6546-6615` — `_move_text_rewrite` / `_move_rewrite_tracked_files` (repo-wide reference rewrite; runs unconditionally)
-- `goc/engine.py:4675-4688` — `_apply_verdict_interactive` shells out to `goc move` via `subprocess.run`, so the unguarded entry point is the seam through which the quality-pass LLM rewrite path also acts on terminal cards.
+- `goc/engine.py:4724-4737` — `_apply_verdict_interactive` shells out to `goc move` via `subprocess.run`, so the unguarded entry point is the seam through which the quality-pass LLM rewrite path also acts on terminal cards.
 
 ## What's broken
 
@@ -98,13 +98,13 @@ The cluster of unguarded mutation verbs has three documented fix shapes (see the
 
 Recommendation: **(c)** — reject by default with `--force` to bypass. The kanban record-axis defaults to immutability; deliberate retitles of closed cards (slug normalization sweeps, post-hoc clarifications) are rare enough that an explicit `--force` per call is the right ergonomic. Aligns with the `goc done --force` precedent for the orthogonal DoD-enforcement bypass.
 
-Independent of (a/b/c), record the chosen shape's interaction with the quality-pass subprocess (DoD step 4): does the new guard surface back through the subprocess exit code, and does `_apply_verdict_interactive`'s `r.returncode == 0` check at engine.py:4684 already DTRT (printing the failure to stderr and skipping the title-applied bookkeeping) or does it need its own log line clarifying that the closed-card path is the intended rejection rather than a generic move failure?
+Independent of (a/b/c), record the chosen shape's interaction with the quality-pass subprocess (DoD step 4): does the new guard surface back through the subprocess exit code, and does `_apply_verdict_interactive`'s `r.returncode == 0` check at engine.py:4733 already DTRT (printing the failure to stderr and skipping the title-applied bookkeeping) or does it need its own log line clarifying that the closed-card path is the intended rejection rather than a generic move failure?
 
 ## Sibling sweep
 
 The same root cause — mutation verb missing terminal-status guard — has cards in flight across the family:
 
-- [goc-decide-accepts-decisions-on-already-closed-cards](../goc-decide-accepts-decisions-on-already-closed-cards/) (closed) — guard added at engine.py:6814
+- [goc-decide-accepts-decisions-on-already-closed-cards](../goc-decide-accepts-decisions-on-already-closed-cards/) (closed) — guard added at engine.py:6866
 - [goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard](../goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard/) (open)
 - [goc-attest-mutates-log-md-on-already-closed-cards](../goc-attest-mutates-log-md-on-already-closed-cards/) (open)
 - [goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards](../goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards/) (open; parent card whose DoD step 4 commissioned this audit)

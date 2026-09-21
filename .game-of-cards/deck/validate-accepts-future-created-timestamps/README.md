@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:1864-1865` — `validate_card`'s `created` check:
+- `goc/engine.py:1899-1900` — `validate_card`'s `created` check:
 
   ```python
   if "created" in fm and not _is_iso_date(fm["created"]):

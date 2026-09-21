@@ -32,7 +32,7 @@ passes before and after — fully silent data loss, reachable from
 
 ## Location
 
-- `goc/engine.py:536-538` — the field-absent append:
+- `goc/engine.py:571-573` — the field-absent append:
 
   ```python
   if not pattern.search(fm_text):
@@ -82,7 +82,7 @@ Reachability: `goc status <title> active` on a card without a `worker`
 field appends one via `_auto_populate_worker` (`goc/engine.py:5902`) — the
 routine claim step every pull-card session performs. `goc done` /
 `goc status <t> disproved|superseded` append `closed_at` the same way on
-hand-authored cards lacking the key (`goc/engine.py:4856`, `5310`). The
+hand-authored cards lacking the key (`goc/engine.py:4905`, `5310`). The
 precondition — a `|+` keep scalar as the *final* frontmatter field — is the
 exact shape the closed cards
 [frontmatter-re-drops-trailing-blank-line-of-final-keep-block-scalar](../frontmatter-re-drops-trailing-blank-line-of-final-keep-block-scalar/)

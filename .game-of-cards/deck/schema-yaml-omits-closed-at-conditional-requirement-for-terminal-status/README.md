@@ -46,9 +46,9 @@ optional_fields:
   ...
 ```
 
-The validator iterates `required_fields` at `engine.py:1842-1844` and
+The validator iterates `required_fields` at `engine.py:1877-1879` and
 flags any field missing from frontmatter. `optional_fields` is loaded
-into the `Schema` dataclass (`engine.py:655-677`) but **never
+into the `Schema` dataclass (`engine.py:690-712`) but **never
 consulted** at validation time — it is purely documentary.
 
 Then `engine.py:1205-1215` applies an additional, hard-coded constraint
@@ -69,7 +69,7 @@ elif closed_at is not None:
 ```
 
 `TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})`
-(`engine.py:2524`).
+(`engine.py:2559`).
 
 So `closed_at` is in fact:
 

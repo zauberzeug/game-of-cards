@@ -25,7 +25,7 @@ full-frontmatter re-emit verb.
 
 ## Location
 
-`goc/engine.py:423-428` — `_emit_worker`:
+`goc/engine.py:455-463` — `_emit_worker`:
 
 ```python
 if isinstance(value, dict):
@@ -41,7 +41,7 @@ if isinstance(value, dict):
 When the worker value is a dict with a truthy `where` but an empty or missing
 `who`, the emitter defaults `who` to `""` and writes `{who: "", where: ...}`.
 On re-parse that is `who: ''`, which `validate_card`
-(`goc/engine.py:1951-1954`) rejects:
+(`goc/engine.py:1986-1989`) rejects:
 
 ```python
 if "who" not in worker:
@@ -76,10 +76,10 @@ line. But six verbs re-emit the **entire** frontmatter through
 `emit_frontmatter` → `_emit_worker`:
 
 - `goc wait` (`_cmd_wait`, engine.py:4957)
-- `goc decide` (`_cmd_decide`, engine.py:6833)
+- `goc decide` (`_cmd_decide`, engine.py:6885)
 - `goc advance` / `goc unadvance` (`_add_to_list_field` / `_remove_from_list_field`, engine.py:4767/4776)
 - `goc quality-pass` (`_apply_summary_rewrite` / `_apply_dod_rewrite`, engine.py:3553/3573)
-- `goc migrate-list-style` (`_cmd_migrate_list_style`, engine.py:7183)
+- `goc migrate-list-style` (`_cmd_migrate_list_style`, engine.py:7235)
 
 None of these validate the card before mutating, so a card hand-authored or
 migrated with `worker: {where: feature/x}` (a plausible shape — AGENTS.md

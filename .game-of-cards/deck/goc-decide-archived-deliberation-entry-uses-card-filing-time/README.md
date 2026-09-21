@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:6831-6859` — the `_cmd_decide` function, specifically
+`goc/engine.py:6883-6911` — the `_cmd_decide` function, specifically
 line 4593 (`filed = t.created or now`) and line 4595
 (`f"## {filed}: decision deliberation archived\n\n..."`).
 
@@ -58,7 +58,7 @@ log_path.write_text(existing.rstrip("\n") + sep + "\n\n".join(entries))
 Every other log writer in the engine uses the now-of-writing
 convention:
 
-- `_cmd_attest` (`engine.py:5757, 3898-3901`) — `today = _utc_now_iso()`
+- `_cmd_attest` (`engine.py:5806, 3898-3901`) — `today = _utc_now_iso()`
 - `_cmd_done` / `_cmd_done_bundle` (`engine.py:3260, 3283, 3344`) — `now = _utc_now_iso()`
 - `_cmd_move` (`engine.py:4547-4551`) — `now = _utc_now_iso()`
 - The sibling `decision recorded` entry one line below (line 4604)

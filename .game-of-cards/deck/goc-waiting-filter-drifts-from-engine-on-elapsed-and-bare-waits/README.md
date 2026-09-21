@@ -284,7 +284,7 @@ documentation — inherits the drift transitively. Two real symptoms:
 1. A card with `waiting_on: external, waiting_until: <past>` shows up
    under `goc --waiting`. A reader assumes it's still parked. Meanwhile
    `goc --ready` / `Skill(pull-card)` will autonomously grab it on the
-   next /loop tick because `card_is_ready` (`goc/engine.py:2632`) returns
+   next /loop tick because `card_is_ready` (`goc/engine.py:2667`) returns
    True. The two flags lie about each other.
 2. A card with only `waiting_until: 2030-01-01` (a bare deferral, no
    reason) does NOT show up under `goc --waiting`. The card is hidden

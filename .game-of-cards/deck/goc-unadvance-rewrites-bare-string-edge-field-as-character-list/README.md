@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — the corrupted character-list rewrite no longer fires
   - [ ] TDD: a regression test in tests/ covers _remove_from_list_field receiving a non-list value (bare string scalar) and asserts the chosen behaviour
   - [ ] PROCESS: decision recorded — per-site isinstance guard mirroring _add_to_list_field, OR rolled into the meta-fix bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes
-  - [ ] MECHANICAL: chosen guard / coercion lands at engine.py:6269 (or upstream in parse_frontmatter, per the decision above)
+  - [ ] MECHANICAL: chosen guard / coercion lands at engine.py:6321 (or upstream in parse_frontmatter, per the decision above)
   - [ ] PROCESS: log.md records which path was taken and why
 ---
 
@@ -66,7 +66,7 @@ When `cur` is a bare string scalar (e.g. `advances: othercard` rather than
 
 ## Reachability path
 
-The only caller is `_mutate_pair(..., add=False)` at `engine.py:6287`, which
+The only caller is `_mutate_pair(..., add=False)` at `engine.py:6339`, which
 runs `op` on both the child's and the parent's README. `_mutate_pair(add=False)`
 is reached exclusively from `_cmd_unadvance` (engine.py:6542) — the
 `goc unadvance <title> --by <advancer>` verb. The fields exercised are

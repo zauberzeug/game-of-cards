@@ -25,7 +25,7 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:6439` — `_cmd_wait`, the overlay setter.
-- `goc/engine.py:6478-6487` — the whole of `--until` validation, and the
+- `goc/engine.py:6530-6539` — the whole of `--until` validation, and the
   write that follows it:
 
   ```python
@@ -54,9 +54,9 @@ definition_of_done: |
   )
   ```
 
-- `goc/engine.py:2696-2742` — `waiting_impedes`, the read guard the write
+- `goc/engine.py:2731-2777` — `waiting_impedes`, the read guard the write
   never consults: `return until_dt > now`.
-- `goc/engine.py:1183` — `_waiting_until_instant`: a bare `YYYY-MM-DD`
+- `goc/engine.py:1218` — `_waiting_until_instant`: a bare `YYYY-MM-DD`
   becomes **midnight UTC** of that day.
 
 ## What's broken

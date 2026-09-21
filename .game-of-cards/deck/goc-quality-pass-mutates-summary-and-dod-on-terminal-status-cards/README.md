@@ -26,7 +26,7 @@ definition_of_done: |
 - `goc/engine.py:3132-3211` — `_cmd_quality_pass` (no terminal filter when `--status` selects terminal cards)
 - `goc/engine.py:4614-4625` — `_apply_summary_rewrite` (no terminal guard)
 - `goc/engine.py:3059-3076` — `_apply_dod_rewrite` (no terminal guard)
-- `goc/engine.py:4663-4713` — `_apply_verdict_interactive` (orchestrator; no terminal guard)
+- `goc/engine.py:4712-4762` — `_apply_verdict_interactive` (orchestrator; no terminal guard)
 - `goc/engine.py:2576` — argparser: `--status` default is `open` (safe); `all|done|disproved|superseded` open the hole
 
 ## What's broken
@@ -41,7 +41,7 @@ if status_flag != "all":
 ```
 
 ```python
-# goc/engine.py:4782-4793
+# goc/engine.py:4831-4842
 for verdict in verdicts:
     if _render_verdict(verdict):
         rewrite_count += 1
@@ -99,13 +99,13 @@ A closed card is the kanban system's durable artefact: it records the title, sum
 
 Reachability: a maintainer running `goc quality-pass --status all --llm --yes` to clean up jargon-titles project-wide will silently rewrite closed cards' summaries and DoD items along with the open ones. The Layer-1 antipattern scan (title check + missing-summary scan) is informational only and safe across all statuses; the Layer-2 LLM rewrite path is the unsafe one.
 
-`_cmd_move` (engine.py:6638) also lacks a terminal-status guard, so the title-rename branch in `_apply_verdict_interactive` (engine.py:4675-4688) would rename closed cards too — but that's a separate sibling defect (see DoD process step). The quality-pass entry point is the right place to gate Layer-2 LLM mutations.
+`_cmd_move` (engine.py:6638) also lacks a terminal-status guard, so the title-rename branch in `_apply_verdict_interactive` (engine.py:4724-4737) would rename closed cards too — but that's a separate sibling defect (see DoD process step). The quality-pass entry point is the right place to gate Layer-2 LLM mutations.
 
 ## Decision required
 
 The cluster of unguarded mutation verbs (`_cmd_quality_pass`, `_cmd_wait`, `_cmd_attest`) suggests two distinct fix shapes worth picking between:
 
-- **(a) Verb-level filter at quality-pass entry**: `_cmd_quality_pass` always filters terminal-status cards out of the *LLM sample* (the variable `sample` at engine.py:4767), regardless of `--status` value. Layer-1 antipattern/missing-summary scan continues to include terminal cards (read-only, useful for hygiene reporting). Layer-2 LLM rewrite path never sees them. Simple, defense at the boundary.
+- **(a) Verb-level filter at quality-pass entry**: `_cmd_quality_pass` always filters terminal-status cards out of the *LLM sample* (the variable `sample` at engine.py:4816), regardless of `--status` value. Layer-1 antipattern/missing-summary scan continues to include terminal cards (read-only, useful for hygiene reporting). Layer-2 LLM rewrite path never sees them. Simple, defense at the boundary.
 - **(b) Verb-level error**: `_cmd_quality_pass` rejects `--llm` combined with `--status all|done|disproved|superseded` with an explicit error message. Matches the `_cmd_decide` shape — fail loudly. Slightly less ergonomic if the user wanted Layer-1 hygiene reporting on terminal cards.
 - **(c) Helper-level guards**: `_apply_summary_rewrite` and `_apply_dod_rewrite` refuse with a `ValueError` when the card is terminal. Defense-in-depth: protects any future caller, not just quality-pass. Matches the post-fix `_cmd_decide` shape but applied to the helpers.
 

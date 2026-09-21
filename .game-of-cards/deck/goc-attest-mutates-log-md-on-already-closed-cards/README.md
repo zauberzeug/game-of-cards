@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] PROCESS: decision recorded in `## Decision required` — guard `goc attest` against terminal targets (the sibling-consistent option), allow with a "re-attest is a no-op echo of the original" semantic, or split (re-attest passes by reading the already-recorded block instead of mutating).
   - [ ] TDD: `reproduce.py` exits zero — running `goc attest` against a closed card no longer mutates `log.md` (or behaves per the recorded decision).
   - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` carries a `TERMINAL_STATUSES` guard mirroring `_cmd_decide` (engine.py:4909) and `_cmd_done` (engine.py:3243), with an error message naming the replacement path (re-open is forbidden; file a new card).
-  - [ ] MECHANICAL: the misleading `Next: goc done <title> to close once all DoD items are ticked.` print at `engine.py:5841` is dropped on terminal-card paths (or removed entirely if the guard short-circuits before it runs).
+  - [ ] MECHANICAL: the misleading `Next: goc done <title> to close once all DoD items are ticked.` print at `engine.py:5890` is dropped on terminal-card paths (or removed entirely if the guard short-circuits before it runs).
   - [ ] PROCESS: `uv run goc validate` clean; full regression suite green.
 ---
 
@@ -23,7 +23,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5737-5841` — `_cmd_attest`.
+`goc/engine.py:5786-5890` — `_cmd_attest`.
 
 The verb loads the card, iterates the configured layer-2 / layer-3
 checks, then unconditionally writes the `## Closure verification`

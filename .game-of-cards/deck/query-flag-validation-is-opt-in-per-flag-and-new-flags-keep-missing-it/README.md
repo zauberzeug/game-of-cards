@@ -68,7 +68,7 @@ if advances:
 The queried title is never checked against `by_title` (already threaded
 into `filter_cards` for the `ready` branch). A typo'd or since-renamed
 title yields "no results", indistinguishable from "no edges". Contrast
-`validate_tag_filters` (`goc/engine.py:3152`), which exits 2 with a
+`validate_tag_filters` (`goc/engine.py:3187`), which exits 2 with a
 remedy for an unknown tag — and `compute_values`, which stderr-WARNs on
 dangling `advances` edges in card frontmatter while the CLI filter for
 the same edge field stays silent.
@@ -83,7 +83,7 @@ JSON got unparseable output. Fixed by
 predicted: a hand-written per-pair conflict check at
 `goc/engine.py:4213-4224`, spelled like
 `goc: error: pass only one of --done / --status` (exit 2,
-`goc/engine.py:4217`).
+`goc/engine.py:4266`).
 
 **That fix is evidence for this card, not a dent in it.** It was found by
 an independent audit pass that did not reach this card during dedup — the

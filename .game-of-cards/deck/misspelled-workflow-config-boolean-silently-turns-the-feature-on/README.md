@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: Decision recorded in the body's `## Decision required` section (silent, matching `get_skills_source`, vs warn-once-per-key on stderr) and the gate lowered to `none`. The fall-back-to-default *direction* is already settled by precedent and is not re-litigated here.
   - [ ] TDD: `reproduce.py` exits zero — no misspelling in its table coerces to the opposite of the intent, and neither end-to-end symptom (armed `claim_push`, silently-still-on `auto_commit`) reproduces.
   - [ ] TDD: a regression test under `tests/` drives `_coerce_config_bool` over the recognized true set, the recognized false set, and at least three unrecognized scalars, asserting the chosen behaviour for each — including that `default=False` keys cannot be turned on by an unrecognized value.
-  - [ ] MECHANICAL: `_coerce_config_bool` returns the caller's `default` for an unrecognized value, matching `get_skills_source` (`goc/engine.py:5396`); if the decision picks warn-once, the diagnostic names the offending key and value (`workflow.claim_push`, `'nope'`), which means the three call sites at `goc/engine.py:5189`, `:5156` and `:5210` pass their key name in — no call site may report a bare "invalid boolean".
+  - [ ] MECHANICAL: `_coerce_config_bool` returns the caller's `default` for an unrecognized value, matching `get_skills_source` (`goc/engine.py:5445`); if the decision picks warn-once, the diagnostic names the offending key and value (`workflow.claim_push`, `'nope'`), which means the three call sites at `goc/engine.py:5189`, `:5156` and `:5210` pass their key name in — no call site may report a bare "invalid boolean".
   - [ ] MECHANICAL: non-string non-bool values (a list, a mapping, a float) reach the same path as an unrecognized string — the fallback must not stay `bool(value)` for them either; mirror `get_skills_source`'s `isinstance(value, str)` guard.
   - [ ] MECHANICAL: `goc/templates/game_of_cards/config.yaml` states the accepted spellings beside `auto_commit` (line 30) so the vocabulary is discoverable without reading the engine; this repo's own `.game-of-cards/config.yaml` is user-owned and is NOT rewritten by the fix.
   - [ ] TDD: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green.
@@ -24,10 +24,10 @@ definition_of_done: |
 
 ## Location
 
-- `_coerce_config_bool` — `goc/engine.py:5086-5097` (the fallback)
+- `_coerce_config_bool` — `goc/engine.py:5135-5146` (the fallback)
 - `auto_commit_enabled` — `goc/engine.py:5189` (`default=True`)
-- `_enforce_closure_on_integration_or_exit` — `goc/engine.py:5210` (`default=False`)
-- `claim_push_enabled` — `goc/engine.py:5264` (`default=False`)
+- `_enforce_closure_on_integration_or_exit` — `goc/engine.py:5259` (`default=False`)
+- `claim_push_enabled` — `goc/engine.py:5313` (`default=False`)
 - the "auto_commit is disabled" warning that never fires — `goc/engine.py:5193`
 - `get_skills_source` — `goc/engine.py:5396-5408`, the sibling config reader
   that answers the same question the other way (see the section below)
@@ -36,7 +36,7 @@ definition_of_done: |
 ## What's broken
 
 Every `workflow` boolean in `.game-of-cards/config.yaml` is read through one
-helper (`goc/engine.py:5086`):
+helper (`goc/engine.py:5135`):
 
 ```python
 def _coerce_config_bool(value, *, default: bool) -> bool:

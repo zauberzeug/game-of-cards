@@ -16,7 +16,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero. All three checks must flip, not just check A: the emitter sweep, the two end-to-end `goc status ... active` branch claims, and the shipped-deck date count (whose expected value depends on the decision above — 0 under Option B, unchanged and asserted-as-intended under Option A).
   - [ ] TDD: a regression test asserts the *oracle*, not a shape list — for a generated corpus of plain scalars it checks that `_yaml_inline` quotes exactly those a strict resolver retypes, so a resolver family nobody enumerated is covered the moment it is reachable. It must fail on today's tree.
   - [ ] TDD: `tests/test_emitter_strict_yaml_quoting.py` still passes, and the new term is added to the union in `_yaml_inline` (`goc/engine.py:346-363`) rather than folded into `_parser_coerces_scalar` — the two answer different questions and merging them is what hid this term for eight cards.
-  - [ ] MECHANICAL: the union comment at `goc/engine.py:346-355` and the "correct oracle" note at `goc/engine.py:218-223` both name three terms, not two, so the next reader cannot re-derive the two-term version. `_DATE_RE`'s exclusion note at `goc/engine.py:289-291` states which of the two oracles it is exempt from.
+  - [ ] MECHANICAL: the union comment at `goc/engine.py:372-381` and the "correct oracle" note at `goc/engine.py:218-223` both name three terms, not two, so the next reader cannot re-derive the two-term version. `_DATE_RE`'s exclusion note at `goc/engine.py:289-291` states which of the two oracles it is exempt from.
   - [ ] MECHANICAL: `scripts/check_card_frontmatter_yaml.py` either grows a retyping check or its docstring states that retyping is out of its scope and names this card — the guard currently reads as if it covers strict-reader safety in full.
   - [ ] PROCESS: `frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting` is amended with this card's constraint (deriving the trigger from `yaml_lite` alone cannot see any of the 20 shapes) so its parked decision is taken with it in hand.
   - [ ] MECHANICAL: mirrors re-synced (`pre-commit run --all-files`) and the OpenClaw port re-run; `python3 scripts/port_skills_to_openclaw.py --check` clean.
@@ -58,8 +58,8 @@ Supporting sites:
 | Site | Role |
 |---|---|
 | `goc/engine.py:214` | `_YAML_NEEDS_QUOTE` — character legality |
-| `goc/engine.py:265` | `_opens_with_yaml_indicator` — opening-character legality |
-| `goc/engine.py:282` | `_parser_coerces_scalar` — coercion, derived from `yaml_lite`'s recognizers |
+| `goc/engine.py:277` | `_opens_with_yaml_indicator` — opening-character legality |
+| `goc/engine.py:294` | `_parser_coerces_scalar` — coercion, derived from `yaml_lite`'s recognizers |
 | `goc/engine.py:427` | `_emit_worker` — the reachable caller (`worker.where`) |
 | `goc/_vendor/yaml_lite.py:43,51-53` | `_INT_RE`, `_NULL_SET`, `_TRUE_SET`, `_FALSE_SET` — the only recognizers the coercion term knows |
 
@@ -178,7 +178,7 @@ why the missing term has to be written by hand.
 
 **Reachability is the CLI, not a hand edit.** Check B does no hand-editing: it
 creates a branch, commits, and runs `goc status <title> active`. The engine's
-`_auto_populate_worker` (`goc/engine.py:5858`) reads
+`_auto_populate_worker` (`goc/engine.py:5893`) reads
 `git rev-parse --abbrev-ref HEAD` and stores it as `worker.where`, which
 `_emit_worker` (`goc/engine.py:427`) interpolates into a flow mapping through
 `_yaml_inline`. `1.5` is an ordinary version-branch name and `off` is an

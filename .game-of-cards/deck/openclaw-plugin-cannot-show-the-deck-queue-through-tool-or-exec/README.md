@@ -30,7 +30,7 @@ definition_of_done: |
   unconditionally.
 - `openclaw-plugin/dist/index.js:2406-2457` — the compiled artifact consumers
   actually load; identical on both points.
-- `goc/engine.py:4170-4171` — `if args.command is None: _cmd_default(args)`.
+- `goc/engine.py:4219-4220` — `if args.command is None: _cmd_default(args)`.
   The queue table, `--board`, `--ready`, `--json` and the leverage line all
   live behind that branch.
 - `scripts/port_skills_to_openclaw.py:106-107` — the porter's injected
@@ -45,7 +45,7 @@ definition_of_done: |
 The engine renders the deck only when argparse resolves **no subcommand**:
 
 ```python
-# goc/engine.py:4170
+# goc/engine.py:4219
     if args.command is None:
         _cmd_default(args)
 ```

@@ -40,9 +40,9 @@ release, and the prescribed remedy is a branch reset.
 - `_git_claim_push_with_retry` — `goc/engine.py:5267` (the function)
 - the collapsing branch — `goc/engine.py:5323` (`if rebase.returncode != 0:`)
 - the message and its remedy — `goc/engine.py:5345`
-- the rival-identity read — `goc/engine.py:5337` (`worker = fm.get("worker")`)
+- the rival-identity read — `goc/engine.py:5386` (`worker = fm.get("worker")`)
 - the caller that turns the verdict into `sys.exit(2)` — `goc/engine.py:6021`
-- the opt-in — `claim_push_enabled`, `goc/engine.py:5252`
+- the opt-in — `claim_push_enabled`, `goc/engine.py:5301`
 
 ## What's broken
 
@@ -117,7 +117,7 @@ Its fix separated the semantic answer from tool failure, and that function now
 reads:
 
 ```python
-if check.returncode == 1:          # goc/engine.py:5234 — genuinely not integrated
+if check.returncode == 1:          # goc/engine.py:5283 — genuinely not integrated
     ...
     sys.exit(2)
 if check.returncode != 0:          # goc/engine.py:5188 — git error
@@ -205,7 +205,7 @@ Coupled sub-question, whichever option wins: **the exit code.** Today any
 `False` return becomes `sys.exit(2)` (`goc/engine.py:6021`). `pull-card` runs
 `goc status <title> active` to claim, so exit 2 aborts the pull. If a non-race
 failure warns instead of aborting, the claim stands locally but unpublished —
-which is what the detached-HEAD branch (`goc/engine.py:5303`) already does,
+which is what the detached-HEAD branch (`goc/engine.py:5352`) already does,
 except that it too returns `False` and therefore exits 2 after printing the word
 "Warning". That inconsistency should be resolved in the same pass.
 
@@ -221,7 +221,7 @@ except that it too returns `False` and therefore exits 2 after printing the word
   cause" shape has exactly two instances in `engine.py`: the closed
   `closure_on_integration` card and this one. The remaining `returncode`
   sites either report git's own diagnostic (`goc/engine.py:5188`, `:4563`) or
-  fail toward surfacing the real error (`goc/engine.py:5063`, `:5052`). Two
+  fail toward surfacing the real error (`goc/engine.py:5112`, `:5052`). Two
   instances, one already fixed, is a concrete card — not an architectural
   umbrella.
 - **Not about `worker` persisting.** That the field outlives a claim is

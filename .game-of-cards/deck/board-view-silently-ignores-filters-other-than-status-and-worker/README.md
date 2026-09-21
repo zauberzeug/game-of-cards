@@ -22,14 +22,14 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4317-4318` — the `--board` branch of `_cmd_default`:
+- `goc/engine.py:4366-4367` — the `--board` branch of `_cmd_default`:
 
   ```python
   if args.board:
       board_cards = filtered if (status_filter_explicit or args.worker) else cards
   ```
 
-- `goc/engine.py:4252` — `status_filter_explicit = bool(args.done_flag or args.status_flag is not None)`.
+- `goc/engine.py:4301` — `status_filter_explicit = bool(args.done_flag or args.status_flag is not None)`.
 
 ## What's broken
 
@@ -85,7 +85,7 @@ Anyone who types `goc --ready --board` or `goc --tag <T> --board` —
 i.e. anyone wanting a kanban visualization of a filtered slice. The
 `pull-card` skill body explicitly recommends `goc --board` for capacity
 visibility (`Check goc --status active or goc --board before claiming
-new work` — engine.py:3701); a user combining `--board` with another
+new work` — engine.py:3750); a user combining `--board` with another
 filter expects the documented "filter then render" contract that the
 table view already provides.
 
@@ -158,7 +158,7 @@ renderer.
 ## Fix sketch (Option B)
 
 ```python
-# engine.py:4252 (replace)
+# engine.py:4301 (replace)
 status_filter_explicit = bool(args.done_flag or args.status_flag is not None)
 
 any_filter_explicit = (

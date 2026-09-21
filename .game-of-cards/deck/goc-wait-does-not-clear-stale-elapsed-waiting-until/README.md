@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Hypothesis (file:line)
 
-`goc/engine.py:6484-6487` (the `goc wait` overlay setter):
+`goc/engine.py:6536-6539` (the `goc wait` overlay setter):
 
 ```python
 if new_reason is not None:
@@ -32,7 +32,7 @@ if new_until is not None:
 
 `goc wait <title> --reason external` with no `--until` leaves `new_until`
 None, so a pre-existing `waiting_until` is untouched. If that stored date
-is already in the past, `waiting_impedes` (`goc/engine.py:2741-2742`)
+is already in the past, `waiting_impedes` (`goc/engine.py:2776-2777`)
 returns False:
 
 ```python

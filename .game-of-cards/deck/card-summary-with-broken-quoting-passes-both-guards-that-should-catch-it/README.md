@@ -139,7 +139,7 @@ goc validate exit: 0
 ## Reachability — who writes a broken quoted summary
 
 `emit_frontmatter` is not the culprit: `_yaml_inline`
-(`goc/engine.py:364`) escapes `"` to `\"` before wrapping, so every
+(`goc/engine.py:391`) escapes `"` to `\"` before wrapping, so every
 goc-*emitted* summary is well-formed. The exposed path is the hand-edit path —
 which is the only path this guard exists to cover, since
 `goc validate` already covers everything the emitter produces.

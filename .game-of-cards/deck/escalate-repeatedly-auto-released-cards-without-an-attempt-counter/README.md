@@ -47,8 +47,8 @@ built from the existing `waiting_on` / `waiting_until` overlay, with
 
 - `_cmd_status` — `goc/engine.py:5905` (the release transition to hook)
 - `waiting_impedes` — `goc/engine.py:2696` (the overlay predicate reused)
-- `validate_waiting_overlay` — `goc/engine.py:2236` (surfaces elapsed waits)
-- `card_is_ready` — `goc/engine.py:2632` (unchanged by this card)
+- `validate_waiting_overlay` — `goc/engine.py:2271` (surfaces elapsed waits)
+- `card_is_ready` — `goc/engine.py:2667` (unchanged by this card)
 
 ## What's broken
 
@@ -140,7 +140,7 @@ re-litigated from scratch:
   against AGENTS.md § Parallel-Agent Commit Safety — and costs a schema
   change plus migration for an advisory metric.
 - **Counting `## ` headings in `log.md`** has partial precedent (the
-  `log-md-closure-entry` derived check, `goc/engine.py:5653`), but that
+  `log-md-closure-entry` derived check, `goc/engine.py:5702`), but that
   is a *presence check for one well-known heading at one decision
   point*, not a tally over an open vocabulary. Heading formats are
   already heterogeneous — `goc decide` writes `## {ts}: decision

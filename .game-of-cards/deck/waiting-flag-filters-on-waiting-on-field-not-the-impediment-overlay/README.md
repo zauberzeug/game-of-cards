@@ -25,8 +25,8 @@ definition_of_done: |
 Re-resolved at HEAD on 2026-08-24; the cite this card was filed with is dead.
 
 - Filter: `goc/engine.py:4311` — now `live_impeded(t, include_drafts=...)`
-- Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
-- Impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
+- Live-impediment wrapper: `goc/engine.py:2780` (`live_impeded`)
+- Impedance predicate: `goc/engine.py:2731` (`waiting_impedes`)
 - Flag help text: `goc/engine.py:3912`
 - Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
 

@@ -34,7 +34,7 @@ reading the four edge fields straight from the parsed frontmatter
 with a falsy-fallback:
 
 ```python
-# goc/engine.py:3466-3469
+# goc/engine.py:3515-3518
 "advances": t.frontmatter.get("advances") or [],
 "advanced_by": t.frontmatter.get("advanced_by") or [],
 "supersedes": t.frontmatter.get("supersedes") or [],

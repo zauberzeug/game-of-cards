@@ -129,7 +129,7 @@ Three credible fix paths; the choice changes the engine/cli boundary:
 
 Add lightweight `subparsers.add_parser("install", help="...")` and
 `subparsers.add_parser("upgrade", help="...")` entries in
-`_build_parser` (`goc/engine.py:3936`) with the same flag set the cli.py
+`_build_parser` (`goc/engine.py:3985`) with the same flag set the cli.py
 intercept defines. The cli.py early-route keeps short-circuiting the
 actual invocation (so `install` / `upgrade` continue to bypass the
 engine's deck loader, which is appropriate — they run before a deck
