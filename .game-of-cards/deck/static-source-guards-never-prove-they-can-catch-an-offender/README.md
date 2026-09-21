@@ -56,6 +56,18 @@ table above — `assertEqual(engine, skill)` is fail-closed, so a dead read
 raises rather than passing empty. The citation is about the technique, not
 membership in the family.
 
+Four further surfaces have applied the technique since, each recorded in
+`log.md` rather than here. The newest, `ContributorGuideAccuracyTest`
+(2026-09-21), is the first to sit in `tests/test_guidance_accuracy.py`
+alongside three of the four offenders above, and the first to pair a verbatim
+historical fixture with per-check mutation isolation — the fixture alone
+cannot tell a check that fires from a check that fires for the wrong reason.
+Its entry also records a failure mode nothing in this card reaches: a check
+with two *failing* states rather than two passing ones. A known-caught control
+passes on it happily — firing is all such a check ever does — and only a
+control asserting it goes *green* against a repaired surface separates "the
+claim is wrong" from "the check never read the claim".
+
 ## What's broken
 
 A prohibition guard ends in some variant of

@@ -123,3 +123,49 @@ which is the expected outcome on a guard authored the same hour, and is why
 the cost of the technique is better measured here than on the retrofit cases.
 The four guards in this card's offender table are still unaddressed; nothing
 about this closure narrows them.
+
+## 2026-09-21T05:20:00Z — Seventh surface, and the two-failing-states mirror
+
+Connected from
+[contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions](../contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/)
+(closed 2026-09-21, commit `d79a7531`). The new
+`ContributorGuideAccuracyTest` lands in `tests/test_guidance_accuracy.py` —
+the file that holds three of the four guards in this card's offender table —
+and was written with sensitivity proof from the start, so the two shapes now
+sit side by side in one module for anyone weighing the scope question.
+
+Two controls, because the seven checks needed both directions:
+
+- **historical fixture** — the pre-fix `CONTRIBUTING.md` clauses, verbatim
+  under their real headings, fed to the same `_contributing_findings(text)`
+  the passing assertion calls. The test asserts *every* check id fires, not
+  that some list is non-empty, so one check going quiet is a failure rather
+  than a quieter pass.
+- **per-check mutation isolation** — each of the seven claims reintroduced
+  alone into the repaired file, asserting exactly that check fires and no
+  other. The fixture alone would not have caught a check that fires for the
+  wrong reason: three of `mirror-refresh-mechanism`'s clauses trip together
+  on the historical text.
+
+Taking the text as an argument rather than reading the file is what made both
+possible, and it cost nothing — the passing assertion reads the file and
+hands it over.
+
+**The new datum is the inverse failure.** This card's third entry recorded
+controls catching a check with two *passing* states (nothing drifted vs
+nothing ran). The card above hit the mirror: its filed `reproduce.py` graded
+the quote convention as `if double > single` — measured from the tree alone,
+never reading what the guide claimed — so it had two *failing* states, "the
+guide is wrong" and "the guide is right but the check never looked". It could
+not go green, and the DoD it was written for says it must. Three sibling
+checks in the same script were pinned to one day's wording the same way.
+
+That shape is invisible to everything this card proposes: a known-caught
+control confirms it fires, which it does, always. Only running it against the
+repaired surface distinguishes them — which for a card artifact means the
+closing session, the one session with an interest in the check being
+satisfiable. Whatever scope is picked, an artifact whose DoD promises it will
+exit zero is worth a *green* control as much as a red one.
+
+No decision recorded — the gate stays `decision`; the four guards in the
+offender table are still unaddressed.
