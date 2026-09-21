@@ -160,3 +160,17 @@ cleverer walk.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-09-14 — Closure' present
+
+## 2026-09-21 — post-close evidence: the re-run has a precondition
+
+The 2026-09-21 hygiene pass ran this card's idempotence check twice over one
+identical set of 269 repairs — before committing and after. Before: 3 repairs
+proposed, all false, each moving a cite the pass had just written correctly
+onto unrelated code. After: 0. The re-run reads committed history, so it
+cannot see its own pass's uncommitted writes.
+
+Not a defect in this card's fix, which holds: the three passed both guards
+shipped here (set-membership presence, ambiguous-occurrence decline) because
+the colliding occurrence is in the card's past, not its present. Forward
+pointer added to the README under "After closure"; new card filed at
+`citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits`.

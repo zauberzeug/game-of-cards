@@ -45,3 +45,19 @@ the script exits 1 with 24 unsurfaced candidates, which is the correct
 pre-fix state, and clearing them needs the mechanism the human picks. DoD 6
 (should the gate keep blocking `superseded`) is recorded with a recommendation
 to keep it, but the DoD asks for an explicit human ruling, not an agent's.
+
+## 2026-09-21 — refine-deck: deck-wide measurement of the parked cohort
+
+Supporting evidence from the 2026-09-21 hygiene pass, recorded here rather
+than filed as a new card because it is this card's thesis measured at deck
+scale, not a separate finding.
+
+Of 200 open cards, **127 (64%) have had no `log.md` (or, absent one, README)
+activity in 60+ days**. The tail is dominated by a single batch: roughly
+twenty `goc-*` verb cards filed together around 2026-05-29, every one still
+`human_gate: decision`, all untouched for ~115 days. Longest-parked open card
+is 129 days (`support-custom-frontmatter-fields-with-enum-and-required-when-rules`).
+
+This is the footprint the card predicts — parks accumulate because no pass can
+retire them and no human re-reads them — and it is why the hygiene pass files
+its own findings at `human_gate: none` where the evidence supports it.

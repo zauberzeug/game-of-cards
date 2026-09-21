@@ -197,3 +197,19 @@ exit 1.
   legitimate; the walk's inability to tell the occurrences apart is the defect.
 - Retro-auditing past passes for cites already moved this way. Worth doing, but
   it needs the fixed walk first to have anything trustworthy to compare against.
+
+## After closure
+
+The idempotence re-run this card installed (fourth DoD item) is valid only
+once the rewrites are **committed**. The walk reads `git log`, so an
+uncommitted rewrite is invisible to it and the just-written cite anchors on a
+*retired* occurrence — a number the card carried for a different cite before
+an earlier pass moved it. That shape passes both guards this card shipped:
+presence is already set membership, and the token occurs exactly once in the
+card, so the ambiguous-occurrence decline never fires.
+
+Measured by the 2026-09-21 hygiene pass over one identical set of 269
+repairs: 3 false repairs when the re-run ran before the commit, 0 after.
+Tracked by
+[citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits](../citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits/),
+which bounds this card's remedy rather than disputing it.
