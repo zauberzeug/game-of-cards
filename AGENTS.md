@@ -201,14 +201,23 @@ path) plus `claude-plugin/hooks/hooks.json` and
 default). They stay hand-written because a command is not derivable
 from a script name — Codex carries per-event `statusMessage` strings
 and a version-fallback shell wrapper, Claude a different root
-variable. `goc validate` covers all three: `validate_hook_registration`
-checks `GOC_CLAUDE_HOOKS`, and `validate_plugin_hook_registration`
-checks each payload's `hooks.json` against the scripts that payload
-ships — in both directions, so a script nothing registers (installed
-but never invoked) and a registration naming a script the payload no
-longer ships (fails on every fire) each turn the build red. The
-plugin check is gated on the payload root existing at the repo root,
-so it is inert in consuming repos. OpenClaw is out of scope for it:
+variable. `goc validate` covers all three, on both halves of a
+registration — which scripts, and which event each one fires on.
+`validate_hook_registration` checks `GOC_CLAUDE_HOOKS` against
+`templates/hooks/`, and `validate_plugin_hook_registration` checks each
+payload's `hooks.json` against the scripts that payload ships — in both
+directions, so a script nothing registers (installed but never invoked)
+and a registration naming a script the payload no longer ships (fails
+on every fire) each turn the build red. It then compares the *event*
+each payload binds a script to against `GOC_CLAUDE_HOOKS` as the
+reference mapping (both read it through one `claude_hook_bindings()`
+walk), so the session primer moved to `Stop` or the prompt router to
+`SessionStart` turns the build red too — that drift registers the right
+scripts and keeps exiting 0, so nothing else would notice. The
+comparison assumes the hosts share an event vocabulary, true of all
+three today; a host that renames an event needs a per-host alias map
+there. The plugin check is gated on the payload root existing at the
+repo root, so it is inert in consuming repos. OpenClaw is out of scope for it:
 it reimplements the deck hooks in TypeScript inside
 `openclaw-plugin/index.ts` and ships no `hooks.json`.
 

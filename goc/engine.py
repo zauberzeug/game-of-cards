@@ -1445,33 +1445,24 @@ def validate_hook_registration() -> list[str]:
     invoked), and the inverse where a registration points at a file that
     no longer exists.
     """
-    from goc.install import GOC_CLAUDE_HOOKS, _HOOK_FILE_RE, deck_hook_scripts
+    from goc.install import claude_hook_bindings, deck_hook_scripts
 
     templates = PACKAGE_DIR / "templates"
     if not (templates / "hooks").exists():
         return []
 
-    errors: list[str] = []
     scripts = set(deck_hook_scripts(templates))
+    bindings, errors = claude_hook_bindings()
 
-    registered: set[str] = set()
-    for event, command in GOC_CLAUDE_HOOKS.items():
-        m = _HOOK_FILE_RE.search(command)
-        if not m:
-            errors.append(
-                f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] command has no "
-                f"recognizable script path: {command!r}"
-            )
-            continue
-        name = Path(m.group(1)).name
-        registered.add(name)
+    for name, events in sorted(bindings.items()):
         if name not in scripts:
-            errors.append(
+            errors.extend(
                 f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] points to "
                 f"templates/hooks/{name} which does not exist"
+                for event in sorted(events)
             )
 
-    for name in sorted(scripts - registered):
+    for name in sorted(scripts - set(bindings)):
         errors.append(
             f"hook registration: templates/hooks/{name} has no event entry in "
             "GOC_CLAUDE_HOOKS — file would be copied to .claude/hooks/ but never "
@@ -1494,8 +1485,13 @@ _PLUGIN_HOOK_SCRIPT_RE = re.compile(r"[\w.-]+\.py")
 PLUGIN_HOOK_REGISTRIES = ("claude-plugin", "codex-plugin")
 
 
-def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]]:
-    """Script basenames every command in `registry` names, plus shape errors.
+def _plugin_registered_hook_bindings(registry: Path) -> tuple[set[tuple[str, str]], list[str]]:
+    """Every `(event, script basename)` pair `registry`'s commands bind, plus shape errors.
+
+    Both halves of the pair are part of the contract: which scripts a payload
+    invokes, and which event each one fires on. Returning the pair rather than
+    the basename alone is what lets the caller check the second half — a hook
+    bound to the wrong event exits 0 forever, so nothing downstream notices.
 
     Parsed defensively at each level. `hooks.json` is authored by hand, so a
     malformed one is a plausible input, and this repo has a standing family of
@@ -1515,7 +1511,7 @@ def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]
             "object; nothing can be registered from this shape"
         ]
 
-    names: set[str] = set()
+    bindings: set[tuple[str, str]] = set()
     errors: list[str] = []
     for event, groups in data["hooks"].items():
         if not isinstance(groups, list):
@@ -1540,12 +1536,15 @@ def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]
                         "without a string 'command'"
                     )
                     continue
-                names.update(_PLUGIN_HOOK_SCRIPT_RE.findall(command))
-    return names, errors
+                bindings.update(
+                    (event, name) for name in _PLUGIN_HOOK_SCRIPT_RE.findall(command)
+                )
+    return bindings, errors
 
 
 def validate_plugin_hook_registration() -> list[str]:
-    """Check each plugin payload's `hooks.json` against the scripts it ships.
+    """Check each plugin payload's `hooks.json` against the scripts it ships
+    and against the event every script is bound to.
 
     `validate_hook_registration` above enforces script ↔ registration parity for
     `GOC_CLAUDE_HOOKS`, which drives `.claude/settings.json` on the vendored
@@ -1562,15 +1561,38 @@ def validate_plugin_hook_registration() -> list[str]:
     that event. The sync produces the second shape on its own, since retiring a
     template prunes the mirrored file while leaving the registry untouched.
 
+    Which *event* a script fires on is the third silent failure, and the one
+    the script-set difference above cannot see: a payload binding the session
+    primer to `Stop` and the pattern check to `SessionStart` registers exactly
+    the right scripts. Both keep exiting 0 — the primer just reprints the
+    active-card reminder after every turn and the pattern check reminds nobody
+    — so the mis-binding surfaces as behaviour nobody attributes to a registry
+    typo. The event mapping is the half `AGENTS.md` says cannot be derived from
+    a script name, which makes it the half most likely to drift and the one
+    that has to be *compared* rather than generated.
+
+    `GOC_CLAUDE_HOOKS` is the reference mapping for that comparison. It carries
+    no more authority than the payloads do — a swap authored there surfaces as
+    every payload disagreeing with it — but it is the registry written in
+    Python rather than JSON, so it is the readable one to name in a diagnostic.
+    The comparison assumes the hosts share an event vocabulary, which they do
+    today (`SessionStart` / `UserPromptSubmit` / `Stop` in all three). A host
+    that renames an event needs a per-host alias map here; that is a deliberate
+    edit, which is the point — it is the silent drift this rules out.
+
     Gated on the payload roots existing at `REPO_ROOT`, like the mirror-parity
     check, so this is inert in consuming repos.
     """
-    from goc.install import deck_hook_scripts
+    from goc.install import claude_hook_bindings, deck_hook_scripts
 
     templates = PACKAGE_DIR / "templates"
     if not (templates / "hooks").exists():
         return []
     shipped_by_source = set(deck_hook_scripts(templates))
+
+    # Commands with no recognizable script path are `validate_hook_registration`'s
+    # diagnostic to report; this caller wants the bindings it could read.
+    reference, _ = claude_hook_bindings()
 
     errors: list[str] = []
     for plugin in PLUGIN_HOOK_REGISTRIES:
@@ -1578,8 +1600,9 @@ def validate_plugin_hook_registration() -> list[str]:
         registry = hooks_dir / "hooks.json"
         if not registry.exists():
             continue
-        registered, shape_errors = _plugin_registered_hook_scripts(registry)
+        bindings, shape_errors = _plugin_registered_hook_bindings(registry)
         errors.extend(shape_errors)
+        registered = {name for _, name in bindings}
         rel = _display_path(registry)
 
         # Compare against what the payload actually ships where present, and
@@ -1603,6 +1626,22 @@ def validate_plugin_hook_registration() -> list[str]:
                 f"{plugin}/hooks/ does not ship — the hook would fail with "
                 "'no such file' on every fire. Drop the entry or restore the script."
             )
+
+        # The event half, compared only for scripts both registries name. A
+        # script one side is missing entirely is the script half's finding,
+        # reported above and by `validate_hook_registration`; restating it here
+        # under a second diagnosis would only bury the one that names the fix.
+        for name in sorted(registered & set(reference)):
+            bound = {event for event, script in bindings if script == name}
+            if bound != reference[name]:
+                errors.append(
+                    f"hook registration: {rel} binds {name} to "
+                    f"{', '.join(sorted(bound))}, but GOC_CLAUDE_HOOKS binds it "
+                    f"to {', '.join(sorted(reference[name]))} — the event is "
+                    "hand-maintained in every registry and a hook on the wrong "
+                    "event still exits 0, so the mismatch is silent at runtime. "
+                    "Align the event in one registry or the other."
+                )
     return errors
 
 

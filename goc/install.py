@@ -602,6 +602,37 @@ GOC_CLAUDE_HOOKS: dict[str, str] = {
 _HOOK_FILE_RE = re.compile(r"\$\{CLAUDE_PROJECT_DIR\}/(.+?\.py)")
 
 
+def claude_hook_bindings() -> tuple[dict[str, set[str]], list[str]]:
+    """`GOC_CLAUDE_HOOKS` inverted to script basename → the events it is bound to.
+
+    Both hook validators read the registry through this one walk:
+    `validate_hook_registration` compares the scripts against
+    `templates/hooks/`, `validate_plugin_hook_registration` compares the
+    *events* against each payload's `hooks.json`. Keeping the command-to-script
+    parse in one place is deliberate — the second reader of a hand-maintained
+    registry is exactly where a divergent copy of the transform would otherwise
+    start.
+
+    A command with no recognizable script path is reported rather than dropped,
+    so the shared walk owes its callers the same diagnostics the single-caller
+    version produced. The mapping is script → *set* of events because one
+    script may legitimately be bound to several (`GOC_CLAUDE_HOOKS` is keyed by
+    event, so it can express that; the inverse cannot be a plain scalar).
+    """
+    bindings: dict[str, set[str]] = {}
+    errors: list[str] = []
+    for event, command in GOC_CLAUDE_HOOKS.items():
+        m = _HOOK_FILE_RE.search(command)
+        if not m:
+            errors.append(
+                f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] command has no "
+                f"recognizable script path: {command!r}"
+            )
+            continue
+        bindings.setdefault(Path(m.group(1)).name, set()).add(event)
+    return bindings, errors
+
+
 def _backup_unparseable_settings(settings_path: Path, original: str) -> Path:
     """Preserve an unparseable settings file's bytes in a timestamped sibling."""
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

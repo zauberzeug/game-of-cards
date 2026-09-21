@@ -1,33 +1,33 @@
 ---
 title: nothing-checks-which-event-a-hook-is-bound-to-across-the-three-registries
-summary: "AGENTS.md says the hook event mapping stays hand-written in three registries because a command is not derivable from a script name, and that `goc validate` covers all three. It covers only the script *set*: `_plugin_registered_hook_scripts` (engine.py:1520-1543) walks `data['hooks'].items()` but lets `event` reach error strings only, and the parity check at engine.py:1594-1604 compares name sets in both directions. So a script bound to the wrong event in one payload — the session primer on Stop, the prompt router on SessionStart — passes every tripwire and fails only at runtime, silently. Parked unverified: citations read and confirmed, no reproduce.py built this round."
-status: active
+summary: "CONFIRMED and FIXED. AGENTS.md said the hook event mapping stays hand-written in three registries because a command is not derivable from a script name, and that `goc validate` covers all three; it covered only the script *set*, so a script bound to the wrong event in one payload passed every tripwire and failed only at runtime, silently. `reproduce.py` drove three mis-bindings — a payload event swap, an event no registry knows, and a `GOC_CLAUDE_HOOKS` swap — and all three returned `[]` from both validators. The fix makes the event half part of the checked contract: `_plugin_registered_hook_bindings` returns `(event, script)` pairs and `validate_plugin_hook_registration` compares them against `GOC_CLAUDE_HOOKS`, read through one shared `claude_hook_bindings()` walk."
+status: done
 stage: null
 contribution: medium
 created: "2026-09-21T01:23:36Z"
-closed_at: null
+closed_at: "2026-09-21T05:31:48Z"
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, infra, api-contract, unverified]
+tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] EMPIRICAL: the falsification recipe below is run and its verdict recorded in `log.md` either way — swap two events in one `hooks.json` and report whether `validate_plugin_hook_registration` returns a non-empty error list.
-  - [ ] TDD: if the gap is confirmed, `reproduce.py` exits zero once a mis-bound event is detected, having exited 1 before the fix; the `unverified` tag is dropped at that point.
-  - [ ] MECHANICAL: the event half of the registration becomes part of the checked contract — `_plugin_registered_hook_scripts` returns `(event, script)` pairs and `validate_plugin_hook_registration` compares them against `GOC_CLAUDE_HOOKS` as the reference mapping.
-  - [ ] TDD: `tests/test_plugin_hook_json_registration.py` stops registering its fixture under synthetic `Event{i}` names for the assertions that now depend on the event, so the fixture exercises the contract rather than working around it.
-  - [ ] PROCESS: `AGENTS.md`'s claim that "`goc validate` covers all three" is narrowed or the code widened to match it — whichever the fix picks, the sentence and the code agree afterwards.
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] EMPIRICAL: the falsification recipe below is run and its verdict recorded in `log.md` either way — swap two events in one `hooks.json` and report whether `validate_plugin_hook_registration` returns a non-empty error list.
+  - [x] TDD: if the gap is confirmed, `reproduce.py` exits zero once a mis-bound event is detected, having exited 1 before the fix; the `unverified` tag is dropped at that point.
+  - [x] MECHANICAL: the event half of the registration becomes part of the checked contract — `_plugin_registered_hook_scripts` returns `(event, script)` pairs and `validate_plugin_hook_registration` compares them against `GOC_CLAUDE_HOOKS` as the reference mapping.
+  - [x] TDD: `tests/test_plugin_hook_json_registration.py` stops registering its fixture under synthetic `Event{i}` names for the assertions that now depend on the event, so the fixture exercises the contract rather than working around it.
+  - [x] PROCESS: `AGENTS.md`'s claim that "`goc validate` covers all three" is narrowed or the code widened to match it — whichever the fix picks, the sentence and the code agree afterwards.
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # Nothing checks which event a hook is bound to across the three registries
 
-**Parked `unverified`.** The cited code was read and confirmed in this repo;
-no `reproduce.py` was built this round. Surfaced by a hunter agent during an
-`Skill(audit-deck)` round, which reported a reproduction of its own (below) —
-that report is second-hand here and has not been re-run.
+**Confirmed, then fixed.** `reproduce.py` is the falsification run the card was
+filed without: three separately-planted mis-bindings, all three unreported by
+both validators before the fix, all three reported after. The card was filed
+`unverified` off a static read; the run confirmed the read exactly.
 
-## Hypothesis
+## The gap
 
 `AGENTS.md` states the contract:
 
@@ -37,72 +37,48 @@ that report is second-hand here and has not been re-run.
 > `claude-plugin/hooks/hooks.json` and `codex-plugin/hooks/hooks.json`. …
 > `goc validate` covers all three.
 
-The three registries do agree today. Nothing checks that they keep agreeing on
-the *event*.
+The three registries did agree. Nothing checked that they kept agreeing on the
+*event*. `_plugin_registered_hook_scripts` iterated the events and returned
+only script basenames — `event` reached the error strings for malformed shapes
+and nowhere else — and the parity check that consumed them was a two-way set
+difference over those names. So "every shipped script is registered somewhere,
+and every registration names a shipped script" was enforced; "this script is
+bound to the event it is written for" was not. `scripts/sync_plugin_assets.py`
+could not cover the gap either: `hooks.json` sits in that script's
+`preserve_files` set and is never compared.
 
-`goc/engine.py:1520-1543` — `_plugin_registered_hook_scripts` iterates the
-events but returns only script names:
-
-```python
-    for event, groups in data["hooks"].items():
-        ...
-            for entry in entries:
-                command = entry.get("command") if isinstance(entry, dict) else None
-                ...
-                names.update(_PLUGIN_HOOK_SCRIPT_RE.findall(command))
-    return names, errors
-```
-
-`event` appears only inside the error strings for malformed shapes. The parity
-check that consumes it, `goc/engine.py:1594-1604`, is a two-way set difference
-over those names:
-
-```python
-        for name in sorted(shipped - registered):
-            ...
-        for name in sorted(registered - shipped):
-```
-
-So "every shipped script is registered somewhere, and every registration names
-a shipped script" is enforced; "this script is bound to the event it is written
-for" is not. `scripts/sync_plugin_assets.py` cannot cover the gap either —
-`hooks.json` sits in that script's `preserve_files` set and is never compared.
-
-`tests/test_plugin_hook_json_registration.py:38-48` registers its fixture under
-synthetic `f"Event{i}"` names, which is the clearest statement that the event is
-outside the contract under test.
+`tests/test_plugin_hook_json_registration.py` registered its fixture under
+synthetic `Event{i}` names, which was the clearest statement that the event sat
+outside the contract under test — and the reason the rewrite of that fixture is
+its own DoD item rather than incidental churn.
 
 The script half of this contract was built deliberately and closed twice:
 [plugin-payload-hooks-json-never-registers-a-newly-added-hook-script](../plugin-payload-hooks-json-never-registers-a-newly-added-hook-script/)
 (done) added the two-way shipped-versus-registered difference, and
 [derive-claude-hook-manifest-from-templates](../derive-claude-hook-manifest-from-templates/)
 (done) made the *list* derived rather than restated. Both are scoped to which
-scripts exist. Neither touches which event a script is bound to — the one half
+scripts exist. Neither touched which event a script is bound to — the one half
 AGENTS.md says cannot be derived, and therefore the half that has to be checked
-rather than generated. This card is that gap, not a re-open of either.
+rather than generated.
 
-## Why deferred
+## Verdict
 
-Confirming the gap means mutating a shipped `hooks.json` and re-entering the
-validator, which is a fixture-and-temp-tree exercise rather than a read. The
-round's budget went to two confirmed defects. The static reading is
-unambiguous, but this card claims a *missing guard*, and a missing-guard claim
-is only worth its falsification run.
+`reproduce.py` builds a throwaway `REPO_ROOT`-shaped tree per case and runs
+`validate_hook_registration` + `validate_plugin_hook_registration` over it:
 
-## Falsification recipe
+| Case | Before | After |
+|---|---|---|
+| codex payload swaps `SessionStart` and `Stop` | both validators returned `[]` | 2 errors |
+| claude payload binds the primer to `Resume`, an event nothing else names | both returned `[]` | 1 error |
+| `GOC_CLAUDE_HOOKS` swaps the events both payloads agree on | both returned `[]` | 4 errors, one per payload per script |
 
-1. Copy `goc/templates/hooks/*.py` and `codex-plugin/hooks/hooks.json` into a
-   temp tree shaped like `REPO_ROOT`.
-2. Swap the `SessionStart` and `Stop` entries in that `hooks.json` — the
-   session primer now fires on `Stop`, the pattern check on `SessionStart`.
-3. Call `engine.validate_plugin_hook_registration()` and
-   `engine.validate_hook_registration()`.
+The third case is the recipe's control — it establishes that the vendored path
+was no stronger, and that after the fix a swap authored in *any* of the three
+registries surfaces, because the comparison is relative rather than
+authoritative. Only an identical simultaneous swap in all three is invisible,
+and that is a coordinated edit, not drift.
 
-If the invariant is guarded, at least one returns a non-empty error list. If
-the gap is real, both return `[]`. Repeat with `GOC_CLAUDE_HOOKS` mutated
-instead, to establish whether the vendored path is any stronger.
-
-## Why it would matter
+## Why it mattered
 
 A mis-bound hook is silent in exactly the way the hook system is designed not
 to be: `deck_session_start.py` bound to `Stop` prints the active-card reminder
@@ -110,4 +86,26 @@ after every turn instead of once at session start, and
 `pattern_generalization_check.py` bound to `SessionStart` blocks nothing and
 reminds nobody. Both keep exiting 0. The registries are hand-maintained
 precisely because the mapping is not derivable — which is also the reason it is
-the half most likely to drift, and the half nothing reads back.
+the half most likely to drift, and the half nothing read back.
+
+## Fix
+
+- `goc/install.py` gains `claude_hook_bindings()`: `GOC_CLAUDE_HOOKS` inverted
+  to script → the set of events it is bound to, with the unrecognizable-command
+  diagnostic it already produced. Both validators now read the registry through
+  that one walk — a second hand-rolled parse of a hand-maintained registry is
+  the shape this repo already has a card family about.
+- `_plugin_registered_hook_scripts` → `_plugin_registered_hook_bindings`,
+  returning `(event, script)` pairs. The rename is part of the fix: a function
+  named `..._scripts` that returns pairs is the next drift.
+- `validate_plugin_hook_registration` compares each payload's event set per
+  script against the reference, for scripts both registries name. A script one
+  side is missing entirely stays the *script* half's finding — restating it
+  under a second diagnosis would bury the one that names the fix.
+- `AGENTS.md`'s "covers all three" sentence now states both halves.
+
+The comparison assumes the hosts share an event vocabulary, which they do today
+(`SessionStart` / `UserPromptSubmit` / `Stop` in all three registries). A host
+that renames an event needs a per-host alias map in
+`validate_plugin_hook_registration`; that is a deliberate edit, which is the
+point — silent drift is what this rules out.
