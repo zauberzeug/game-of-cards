@@ -30,6 +30,7 @@ advanced_by:
   - hook-catalogue-cites-an-audit-skill-section-that-never-existed
   - installed-files-point-readers-at-a-deck-folder-install-never-creates
   - shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates
+  - contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
