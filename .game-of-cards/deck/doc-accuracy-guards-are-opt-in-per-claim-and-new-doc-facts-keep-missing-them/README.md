@@ -31,6 +31,7 @@ advanced_by:
   - installed-files-point-readers-at-a-deck-folder-install-never-creates
   - shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates
   - contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions
+  - shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
