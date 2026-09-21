@@ -1,7 +1,7 @@
 ---
 title: shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids
 summary: "The aggregation-epic recipe in `advance-card/reference.md` states the canonical encoding as `child.advances: [epic]` and then gives the verb as `goc advance <child> --by <epic>` — but `goc advance <title> --by <advancer>` writes `advancer.advances += title`, so running the recipe verbatim produces `epic.advances: [children]`, the exact shape the next bullet nine lines down calls Never and that `goc validate` flags as BACKWARDS_EPIC_EDGE. The correct verb is `goc advance <epic> --by <child>`. The line ships identically in all six skill trees (templates, the two dogfood mirrors, and the three plugin payloads), so every consumer repo that follows the documented recipe builds the inverted edge on its first epic and inherits the broken value chain and the spurious attest failures the same bullet warns about."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-21T01:21:37Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the body of [auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft](../auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft/) is corrected where it repeats the swapped form as "the documented aggregation-epic wiring order" (lines 94 and 131).
   - [ ] PROCESS: cross-referenced from [validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments](../validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments/) as the second site where shipped text gets this verb's argument order backwards, and wired as an instance row on [doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/).
   - [ ] PROCESS: `uv run goc validate` passes, `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are green, and `uv run python -m unittest discover -s tests` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The shipped epic recipe builds the backwards edge its own next bullet forbids
