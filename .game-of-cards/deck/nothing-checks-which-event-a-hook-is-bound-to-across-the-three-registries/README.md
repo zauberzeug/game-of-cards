@@ -71,6 +71,15 @@ for" is not. `scripts/sync_plugin_assets.py` cannot cover the gap either —
 synthetic `f"Event{i}"` names, which is the clearest statement that the event is
 outside the contract under test.
 
+The script half of this contract was built deliberately and closed twice:
+[plugin-payload-hooks-json-never-registers-a-newly-added-hook-script](../plugin-payload-hooks-json-never-registers-a-newly-added-hook-script/)
+(done) added the two-way shipped-versus-registered difference, and
+[derive-claude-hook-manifest-from-templates](../derive-claude-hook-manifest-from-templates/)
+(done) made the *list* derived rather than restated. Both are scoped to which
+scripts exist. Neither touches which event a script is bound to — the one half
+AGENTS.md says cannot be derived, and therefore the half that has to be checked
+rather than generated. This card is that gap, not a re-open of either.
+
 ## Why deferred
 
 Confirming the gap means mutating a shipped `hooks.json` and re-entering the
