@@ -1,34 +1,35 @@
 ---
 title: a-third-copy-of-the-codex-skill-transform-lives-inside-goc-validate
-summary: "The Codex SKILL.md normalization has three independent implementations, not the two the open consolidation card enumerates: `goc/install.py:1367` (the writer), `scripts/sync_plugin_assets.py:350` (the mirror generator), and a third nested inside `validate_plugin_mirror_parity` at `goc/engine.py:1780`. The third is also the one that missed two hardening fixes the other copies carry — it compares mirror siblings with `read_text()` where the sync script deliberately uses `read_bytes()` so newline skew stays CI-detectable, and it skips `dst_item.is_dir()` where the sync script flags empty orphan directories. The weaker of the two guards is the one that ships to consumers. Parked unverified: citations read and confirmed, no reproduce.py built this round."
-status: active
+summary: "The Codex SKILL.md normalization has three independent implementations, not the two the open consolidation card enumerates: `goc/install.py:1367` (the writer), `scripts/sync_plugin_assets.py:350` (the mirror generator), and a third nested inside `validate_plugin_mirror_parity` at `goc/engine.py:1780`. The third is also the one that missed two hardening fixes the other copies carry — it compares mirror siblings with `read_text()` where the sync script deliberately uses `read_bytes()` so newline skew stays CI-detectable, and it skips `dst_item.is_dir()` where the sync script flags empty orphan directories. The weaker of the two guards was the one that ships to consumers. Confirmed by `reproduce.py`; the engine now matches the sync check on both points, and `tests/test_codex_skill_transform_lockstep.py` pins all three copies to each other so the next hardening fix cannot reach two of three again. The duplication itself stays open on the consolidation card."
+status: done
 stage: null
 contribution: medium
 created: "2026-09-21T01:23:36Z"
-closed_at: null
+closed_at: "2026-09-21T05:19:26Z"
 human_gate: none
 advances:
   - codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync
 advanced_by: []
-tags: [infra, api-contract, meta-fix, unverified]
+tags: [infra, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] EMPIRICAL: the falsification recipe below is run and its verdict recorded in `log.md` either way — a CRLF sibling and an empty orphan subdirectory under `codex-plugin/skills/<skill>/`, with both guards' verdicts reported side by side.
-  - [ ] TDD: if the lag is confirmed, `reproduce.py` exits zero once `validate_plugin_mirror_parity` reports the same drift `scripts/sync_plugin_assets.py --check` reports, having exited 1 before the fix; the `unverified` tag is dropped at that point.
-  - [ ] MECHANICAL: the engine's mirror comparison at `goc/engine.py:1818-1826` compares siblings by bytes, and the orphan walk at `:1841-1842` stops skipping every directory so an empty orphan is reported.
-  - [ ] PROCESS: [codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync](../codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync/) is amended to enumerate three sites, not two — otherwise its consolidation leaves the engine copy standing.
-  - [ ] TDD: whichever consolidation lands, a guard asserts the copies stay in lockstep, so the next hardening fix cannot reach two of three again.
-  - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+  - [x] EMPIRICAL: the falsification recipe below is run and its verdict recorded in `log.md` either way — a CRLF sibling and an empty orphan subdirectory under `codex-plugin/skills/<skill>/`, with both guards' verdicts reported side by side.
+  - [x] TDD: if the lag is confirmed, `reproduce.py` exits zero once `validate_plugin_mirror_parity` reports the same drift `scripts/sync_plugin_assets.py --check` reports, having exited 1 before the fix; the `unverified` tag is dropped at that point.
+  - [x] MECHANICAL: the engine's mirror comparison at `goc/engine.py:1818-1826` compares siblings by bytes, and the orphan walk at `:1841-1842` stops skipping every directory so an empty orphan is reported.
+  - [x] PROCESS: [codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync](../codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync/) is amended to enumerate three sites, not two — otherwise its consolidation leaves the engine copy standing.
+  - [x] TDD: whichever consolidation lands, a guard asserts the copies stay in lockstep, so the next hardening fix cannot reach two of three again.
+  - [x] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # A third copy of the Codex skill transform lives inside `goc validate`
 
-**Parked `unverified`.** The cited code was read and confirmed in this repo; no
-`reproduce.py` was built this round. Surfaced by a hunter agent during an
-`Skill(audit-deck)` round, which reported reproductions of its own (below) —
-those are second-hand here and have not been re-run.
+**Confirmed.** `reproduce.py` in this directory builds a throwaway
+`REPO_ROOT`-shaped tree, plants a CRLF sibling and an empty orphan subdirectory
+in `codex-plugin/skills/`, and runs both guards over it. Before the fix the
+engine returned nothing for `codex-plugin/skills` while the sync check named
+both paths — the reading the card was filed on, verified. It now exits zero.
 
-## Hypothesis
+## Finding
 
 The Codex `SKILL.md` normalization exists in three independent implementations:
 
@@ -37,11 +38,14 @@ The Codex `SKILL.md` normalization exists in three independent implementations:
 - `goc/engine.py:1780` — `    def _codex_skill_text(src, *, skill_name) -> str`, nested inside `validate_plugin_mirror_parity`.
 
 [codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync](../codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync/)
-(open) names the first two and not the third, so a consolidation that follows
-its scope would merge two copies and leave a third behind.
+(open, `human_gate: decision`) named the first two and not the third, so a
+consolidation that followed its scope would have merged two copies and left a
+third behind. Its `## Location` section now enumerates all three.
 
 The third copy is also the one that missed two hardening fixes the sync script
-carries. Its sibling comparison, `goc/engine.py:1818-1826`:
+carries. Its sibling comparison used `read_text()`, which applies
+universal-newline translation, so a CRLF mirror copy read identical to its LF
+source:
 
 ```python
             expected = (
@@ -54,7 +58,7 @@ carries. Its sibling comparison, `goc/engine.py:1818-1826`:
             elif dst_item.read_text() != expected:
 ```
 
-against `scripts/sync_plugin_assets.py:447-451`, where the byte comparison is
+against `scripts/sync_plugin_assets.py`, where the byte comparison is
 deliberate and commented:
 
 ```python
@@ -69,8 +73,8 @@ That comment is the closure of
 (done), whose Location section cites `sync_plugin_assets.py` only — the engine
 copy was never in scope, so the fix reached one of the two readers.
 
-The same split shows in the orphan walk. `goc/engine.py:1841-1842` drops every
-directory:
+The same split showed in the orphan walk. The engine dropped every directory
+before testing it:
 
 ```python
         for dst_item in sorted(dst.rglob("*")):
@@ -78,17 +82,30 @@ directory:
                 continue
 ```
 
-while `scripts/sync_plugin_assets.py:458-466` explicitly reports an orphan
-directory that is empty.
+while `scripts/sync_plugin_assets.py` reports an orphan directory that is
+empty. git masks empty directories, so nothing else would have caught one.
 
-## Why deferred
+## What changed
 
-The round's budget went to two confirmed defects. This one needs a temp
-`codex-plugin/skills/` tree and two mutations to turn a reading into a verdict,
-and its blast radius is genuinely narrower than the other two — both guards run
-in this repo's CI, so the skew is caught today by the stronger one.
+`_validate_codex_skill_mirror` in `goc/engine.py` now matches the sync check on
+both points: non-`SKILL.md` siblings are compared with `read_bytes()`, and the
+destination walk tests directories instead of skipping them, reporting an
+orphan that is empty (a non-empty orphan still surfaces through its own files,
+so it is not double-counted). `SKILL.md` stays a text comparison — that is what
+the sync check does too, and the goal here is lockstep, not a third policy.
+
+`tests/test_codex_skill_transform_lockstep.py` is the guard. It pins the two
+directly-callable copies to each other over a corpus of awkward frontmatter
+shapes plus every shipped template, and pins the engine's nested third copy by
+behaviour: a mirror written by the real `_write_codex_skill` is drift-free to
+both readers, an untransformed one is drift to both, and the CRLF sibling and
+empty orphan dir are drift to both. The assertions are about output, not about
+how many functions produce it, so the guard keeps holding after the
+consolidation card lands.
 
 ## Falsification recipe
+
+Implemented as `reproduce.py` beside this README:
 
 1. Build a temp tree shaped like `REPO_ROOT` with one eligible skill mirrored
    into `codex-plugin/skills/`.
@@ -97,15 +114,16 @@ in this repo's CI, so the skew is caught today by the stronger one.
 4. Run `engine.validate_plugin_mirror_parity()` and
    `scripts/sync_plugin_assets.py`'s check for the same tree.
 
-If the two agree, both report the sibling and the orphan directory. If the lag
-is real, the engine returns `[]` for `codex-plugin/skills` in both cases while
-the sync check names the paths.
+Verdict recorded in `log.md`: before the fix the engine reported `[]` for
+`codex-plugin/skills` while the sync check named both paths; after, both name
+both.
 
-## Why it would matter
+## Why it matters
 
 `goc validate` is the guard that ships; `scripts/sync_plugin_assets.py` is
-repo-local and runs in this repo's CI only. If the weaker of the two is the one
-consumers get, a consuming repo that vendors a Codex payload has no check for
-the class of drift this repo considers CI-worthy. The duplication is the root
-cause and the lag is its first visible cost: three copies, and a hardening fix
-that reached two.
+repo-local and runs in this repo's CI only. The weaker of the two was the one
+consumers got, so a consuming repo that vendors a Codex payload had no check
+for the class of drift this repo considers CI-worthy. The duplication is the
+root cause and the lag was its first visible cost: three copies, and a
+hardening fix that reached two. The lag is closed; the duplication is still
+open on the consolidation card.

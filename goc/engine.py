@@ -1815,19 +1815,36 @@ def validate_plugin_mirror_parity() -> list[str]:
             if rel.parts[0] not in eligible:
                 continue
             dst_item = dst / rel
-            expected = (
-                _codex_skill_text(src_item, skill_name=rel.parts[0])
-                if src_item.name == "SKILL.md"
-                else src_item.read_text()
-            )
             if not dst_item.exists():
                 diffs.append(f"{rel.as_posix()} (missing)")
-            elif dst_item.read_text() != expected:
+            elif src_item.name == "SKILL.md":
+                expected = _codex_skill_text(src_item, skill_name=rel.parts[0])
+                if dst_item.read_text() != expected:
+                    diffs.append(f"{rel.as_posix()} (differs)")
+            # Siblings compared by bytes so install-vs-mirror newline skew is
+            # detectable here too. `read_text()` applies universal-newline
+            # translation, which reads a CRLF mirror copy as identical to its
+            # LF source — the blind spot `scripts/sync_plugin_assets.py --check`
+            # already closed with the same byte comparison.
+            elif dst_item.read_bytes() != src_item.read_bytes():
                 diffs.append(f"{rel.as_posix()} (differs)")
         for dst_item in sorted(dst.rglob("*")):
-            if "__pycache__" in dst_item.parts or dst_item.is_dir():
+            if "__pycache__" in dst_item.parts:
                 continue
             rel = dst_item.relative_to(dst)
+            if dst_item.is_dir():
+                # An EMPTY dir with no source counterpart is an orphan nothing
+                # else reports — git masks empty dirs, and the file walk above
+                # only sees files, so it rots in the payload silently. A
+                # non-empty orphan already surfaces through its own files.
+                is_orphan = (
+                    not rel.parts
+                    or rel.parts[0] not in eligible
+                    or not (src / rel).exists()
+                )
+                if is_orphan and not any(dst_item.iterdir()):
+                    diffs.append(f"{rel.as_posix()} (only in {dst_rel})")
+                continue
             if rel.as_posix() == "_goc-bootstrap.sh":
                 bootstrap_src = templates_root / "bootstrap" / "_goc-bootstrap.sh"
                 if not bootstrap_src.exists():
