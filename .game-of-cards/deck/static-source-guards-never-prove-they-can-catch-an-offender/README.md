@@ -56,17 +56,29 @@ table above — `assertEqual(engine, skill)` is fail-closed, so a dead read
 raises rather than passing empty. The citation is about the technique, not
 membership in the family.
 
-Four further surfaces have applied the technique since, each recorded in
-`log.md` rather than here. The newest, `ContributorGuideAccuracyTest`
-(2026-09-21), is the first to sit in `tests/test_guidance_accuracy.py`
-alongside three of the four offenders above, and the first to pair a verbatim
-historical fixture with per-check mutation isolation — the fixture alone
-cannot tell a check that fires from a check that fires for the wrong reason.
-Its entry also records a failure mode nothing in this card reaches: a check
-with two *failing* states rather than two passing ones. A known-caught control
-passes on it happily — firing is all such a check ever does — and only a
-control asserting it goes *green* against a repaired surface separates "the
-claim is wrong" from "the check never read the claim".
+Five further surfaces have applied the technique since, each recorded in
+`log.md` rather than here. `ContributorGuideAccuracyTest` (2026-09-21) is the
+first to sit in `tests/test_guidance_accuracy.py` alongside three of the four
+offenders above, and the first to pair a verbatim historical fixture with
+per-check mutation isolation — the fixture alone cannot tell a check that
+fires from a check that fires for the wrong reason. Its entry also records a
+failure mode nothing in this card reaches: a check with two *failing* states
+rather than two passing ones. A known-caught control passes on it happily —
+firing is all such a check ever does — and only a control asserting it goes
+*green* against a repaired surface separates "the claim is wrong" from "the
+check never read the claim".
+
+The newest, `SkillAdvanceExampleDirectionTest` (2026-09-21), is the first
+whose assertion is not a scan at all: it scans shipped skill bodies for
+`goc advance` examples, then *executes* each one against a scratch deck. That
+splits the two-passing-states problem in two, and only one half needs a
+fixture. A dead scanner still passes silently, so the offender fixture is
+required as ever — but the covered set is a value the guard can read directly,
+so emptiness is assertable without one, naming the example sites it found and
+could not cover. Where a prohibition guard can only ask "would I fire on a
+known offender?", an execution guard can also ask "what did I actually look
+at?" — a control that costs one assertion and no historical text, and that the
+offender table's four guards could each carry today.
 
 ## What's broken
 

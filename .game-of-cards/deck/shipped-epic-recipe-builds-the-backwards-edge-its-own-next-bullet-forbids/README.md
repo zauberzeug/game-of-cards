@@ -178,7 +178,12 @@ vacuity check that fails if the covered set ever empties (an author who
 deletes an encoding claim is told which example sites went uncovered);
 and a fixture holding the pre-fix bullet verbatim, which the guard must
 reject, so it demonstrates catching its own offender rather than
-asserting it would.
+asserting it would. The last two are this guard's compliance with
+[static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/)
+(open, gate `decision`), whose `log.md` records what the pair adds to
+that card: because the assertion here is an *execution* rather than a
+scan, the scanned set is a value the test can read, so "nothing ran" is
+assertable directly instead of only through a fixture.
 
 Two scope notes. Examples written with generic placeholders
 (`goc advance <title> --by <other>`) carry no role-named claim to compare

@@ -169,3 +169,44 @@ exit zero is worth a *green* control as much as a red one.
 
 No decision recorded — the gate stays `decision`; the four guards in the
 offender table are still unaddressed.
+
+## 2026-09-21T05:55:00Z — Eighth surface: an execution guard, which can assert its own coverage
+
+Connected from
+[shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/)
+(closed 2026-09-21, commit `b1b7ad8f`). The new
+`SkillAdvanceExampleDirectionTest`
+(`tests/test_skill_advance_example_direction.py`) walks every
+`goc advance A --by B` occurrence in all six shipped skill trees, pairs it
+with the `<role>.advances: [<role>]` encoding claim stated in the same
+markdown block, and runs it against a scratch deck — the defect it pins was a
+recipe whose stated encoding and given verb were both plausible English and
+disagreed only once something executed them.
+
+Written with sensitivity proof from the start, so this is a compliance datum
+rather than a retrofit. Two controls, and the second is a shape this card has
+not recorded:
+
+- **historical fixture** — the pre-fix aggregation-epic bullet verbatim, fed
+  to the same `_examples_in(text, source)` the passing assertion calls, with
+  the guard required to both read a claim out of it and reject the example.
+- **direct coverage assertion** — `test_the_covered_set_is_not_empty` reads
+  the scan result itself and fails if no example is paired with a claim,
+  reporting the example sites it saw but could not cover.
+
+The second control is available because the guard's assertion is an
+*execution*, not a scan: the scan is an intermediate value the test can
+inspect, where a prohibition guard's scan and assertion are the same
+expression. So the two-passing-states problem splits. A dead scanner still
+passes silently and still needs the fixture — but "nothing ran" is directly
+assertable, with no historical text to keep, and it degrades usefully: an
+author who deletes an encoding claim while editing a skill body is told which
+example sites went uncovered rather than watching the guard go quiet.
+
+Cheap enough to be non-optional. The four guards in this card's offender table
+each scan into a list before asserting it empty, so each could assert what it
+scanned in one more line — which narrows the cost objection under
+`## Decision required`, though it does not answer the scope question. Nothing
+about this entry addresses those four; they remain unaddressed, and the gate
+stays `decision`.
+
