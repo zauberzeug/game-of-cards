@@ -1,7 +1,7 @@
 ---
 title: a-third-copy-of-the-codex-skill-transform-lives-inside-goc-validate
 summary: "The Codex SKILL.md normalization has three independent implementations, not the two the open consolidation card enumerates: `goc/install.py:1367` (the writer), `scripts/sync_plugin_assets.py:350` (the mirror generator), and a third nested inside `validate_plugin_mirror_parity` at `goc/engine.py:1780`. The third is also the one that missed two hardening fixes the other copies carry — it compares mirror siblings with `read_text()` where the sync script deliberately uses `read_bytes()` so newline skew stays CI-detectable, and it skips `dst_item.is_dir()` where the sync script flags empty orphan directories. The weaker of the two guards is the one that ships to consumers. Parked unverified: citations read and confirmed, no reproduce.py built this round."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-21T01:23:36Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] PROCESS: [codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync](../codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync/) is amended to enumerate three sites, not two — otherwise its consolidation leaves the engine copy standing.
   - [ ] TDD: whichever consolidation lands, a guard asserts the copies stay in lockstep, so the next hardening fix cannot reach two of three again.
   - [ ] PROCESS: `uv run goc validate` passes and `uv run python -m unittest discover -s tests` is green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # A third copy of the Codex skill transform lives inside `goc validate`
