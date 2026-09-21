@@ -8,7 +8,8 @@ created: "2026-06-22T14:23:23Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - a-third-copy-of-the-codex-skill-transform-lives-inside-goc-validate
 tags: [infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: human picks the consolidation approach in `## Decision required` (single canonical text-producing helper in `goc/install.py` reused by both call sites / shared helper in a new module / leave duplicated with a parity test). Recorded inline + in log.md.

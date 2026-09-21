@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-09-21T01:23:36Z"
 closed_at: null
 human_gate: none
-advances: []
+advances:
+  - codex-skill-frontmatter-normalization-reimplemented-in-install-and-sync
 advanced_by: []
 tags: [infra, api-contract, meta-fix, unverified]
 definition_of_done: |
