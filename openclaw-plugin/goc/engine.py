@@ -2034,6 +2034,12 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
         errors.append(f"{t.title}: summary: missing — required on published cards")
 
     worker = fm.get("worker")
+    if status_value == "active" and worker is None:
+        errors.append(
+            f"{t.title}: worker: must be set when status=active "
+            f"(release with `goc status {t.title} open`, then reclaim with "
+            f"`goc status {t.title} active --worker-who <identity>`)"
+        )
     if worker is not None:
         if isinstance(worker, str):
             if not worker.strip():
@@ -4152,6 +4158,10 @@ def _build_parser() -> argparse.ArgumentParser:
                         "as an SLE escalation by goc validate.")
     p_wait.add_argument("--clear", action="store_true",
                         help="Drop both waiting_on and waiting_until.")
+    p_wait.add_argument("--keep-claim", action="store_true",
+                        help="Keep an active claim instead of releasing it. For a worker that stays "
+                             "on the card across a bounded wait and returns to it; the abandoned-claim "
+                             "shape this guards against is the one nobody comes back to.")
     p_wait.add_argument("--commit", action="store_true",
                         help="Force auto-commit for this overlay change.")
     p_wait.add_argument("--no-commit", action="store_true",
@@ -5950,9 +5960,11 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     """Populate the `worker` field on a card being claimed as active.
 
     If the card already has a worker.who (designation), preserve it and only
-    add/update `where`. If no prior worker, auto-detect `who` from git config
-    and `where` from the current branch. Explicit --worker-who / --worker-where
-    flags override auto-detection for either sub-field.
+    add/update `where`. If no prior worker, resolve `who` from the
+    `GOC_WORKER_WHO` environment variable and fall back to git config; `where`
+    resolves from `GOC_WORKER_WHERE` and falls back to the current branch.
+    Explicit --worker-who / --worker-where flags override both for either
+    sub-field.
     """
     existing = card.frontmatter.get("worker")
     if isinstance(existing, str):
@@ -5967,22 +5979,35 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     elif "who" in existing_dict:
         who = existing_dict["who"]
     else:
-        try:
-            r = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5)
-            who = r.stdout.strip() if r.returncode == 0 else ""
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            who = ""
+        # `GOC_WORKER_WHO` makes the claim identity a property of the execution
+        # environment instead of the caller remembering a flag. Containerised
+        # workers (CI images, agent sandboxes) routinely have no git identity at
+        # all — no repo-local config, no ~/.gitconfig, no /etc/gitconfig — so
+        # `git config user.name` is the last resort here, not the first. Without
+        # this fallback such a worker cannot claim a card at all, because
+        # `_cmd_status` refuses an identity-less claim.
+        who = os.environ.get("GOC_WORKER_WHO", "").strip()
+        if not who:
+            try:
+                r = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5)
+                who = r.stdout.strip() if r.returncode == 0 else ""
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                who = ""
 
     if worker_where is not None:
         where: str | None = worker_where
     else:
-        try:
-            r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5)
-            where = r.stdout.strip() if r.returncode == 0 else None
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            where = None
-        if where in ("", "HEAD"):
-            where = None
+        # Same reasoning as GOC_WORKER_WHO: an execution context without a git
+        # checkout can still name where the work runs (e.g. a sandbox or job id).
+        where = os.environ.get("GOC_WORKER_WHERE", "").strip() or None
+        if where is None:
+            try:
+                r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5)
+                where = r.stdout.strip() if r.returncode == 0 else None
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                where = None
+            if where in ("", "HEAD"):
+                where = None
         if where is None:
             # No detectable branch (detached HEAD / fresh checkout): preserve any
             # stored branch context rather than dropping it. A detectable branch
@@ -6105,10 +6130,24 @@ def _cmd_status(args):
         text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(_utc_now_iso()))
     if new_status == "active":
         text = _auto_populate_worker(text, t, worker_who, worker_where)
+        claimed_fm, _ = parse_frontmatter(text)
+        if claimed_fm.get("worker") is None:
+            print(
+                f"ERROR: {title}: cannot claim without a worker identity; "
+                f"git user.name is unavailable and the card has no existing worker. "
+                f"Pass --worker-who <identity>.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
         # Claiming a card proves it is authored: clear any draft flag so it
         # rejoins the queue and auto_commit will publish it (the guard above
         # already ensured we are not racing a terminal transition on a draft).
         text = remove_frontmatter_field(text, "draft")
+    elif new_status == "open":
+        # Re-queueing ends the live claim. Keeping the worker here makes an
+        # open card still look assigned and lets stale ownership survive every
+        # release/reclaim cycle. Terminal cards retain the worker as history.
+        text = remove_frontmatter_field(text, "worker")
     (card_dir / "README.md").write_text(text)
     if successor is not None:
         # Maintain typed bidirectional supersession link on both endpoints.
@@ -6547,9 +6586,11 @@ def _cmd_repair_edges(args):
 def _cmd_wait(args):
     """Set or clear the impediment overlay (`waiting_on` + `waiting_until`).
 
-    The overlay is orthogonal to `status` — a card may be active AND
-    impeded. `--clear` drops both fields; otherwise `--reason` and/or
-    `--until` set the overlay.
+    The overlay is orthogonal to `status`, so imported or hand-authored cards
+    may be active AND impeded. The writing command does not create that stale
+    shape by default: setting an overlay releases an active claim to open and
+    clears its worker. `--keep-claim` opts back in for a worker that stays on
+    the card across a bounded wait. `--clear` drops only the overlay.
     """
     _validate_commit_flags(args.commit, args.no_commit)
     title = args.title
@@ -6560,6 +6601,8 @@ def _cmd_wait(args):
     fm, body = parse_frontmatter(text)
     prior_reason = fm.get("waiting_on")
     prior_until = fm.get("waiting_until")
+    released_claim = False
+    kept_claim = False
     if args.clear:
         if prior_reason is None and prior_until is None:
             print(f"{title}: no waiting overlay to clear; nothing to do")
@@ -6593,6 +6636,12 @@ def _cmd_wait(args):
             fm["waiting_on"] = new_reason
         if new_until is not None:
             fm["waiting_until"] = new_until
+        if t.status == "active" and not args.keep_claim:
+            fm["status"] = "open"
+            fm.pop("worker", None)
+            released_claim = True
+        elif t.status == "active":
+            kept_claim = True
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     effective_reason = fm.get("waiting_on") or ("deferred" if fm.get("waiting_until") else None)
     if args.clear:
@@ -6606,6 +6655,8 @@ def _cmd_wait(args):
             f"waiting_until={fm.get('waiting_until')!r}"
             + (f" (no reason set; implied {effective_reason!r})"
                if fm.get("waiting_on") is None and effective_reason else "")
+            + ("; active claim released to open" if released_claim
+               else "; active claim kept (--keep-claim)" if kept_claim else "")
         )
     commit_policy = _commit_override(args.commit, args.no_commit)
     if auto_commit_enabled(commit_policy):
