@@ -1,7 +1,7 @@
 ---
 title: citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits
 summary: "refine-deck's citation recipe ends with an idempotence check — apply the rewrites, re-run the decision phase, assert zero repairs remain — but never says the repairs must be committed first. The anchor walk reads the card's history from git log, so an uncommitted rewrite is invisible and the just-written cite is anchored on a RETIRED occurrence: the number the card used to carry for a different cite before an earlier pass moved it. The 2026-09-21 pass ran the re-run both ways over the same 269 repairs — 3 false repairs before the commit, 0 after — so the check that exists to catch false repairs is itself the thing manufacturing them."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-21T02:09:06Z"
@@ -31,6 +31,7 @@ definition_of_done: |
         re-port (`python3 scripts/port_skills_to_openclaw.py`), whose
         `--check` mode and `tests/test_plugin_mirror_parity.py` must both be
         green afterwards.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Citation idempotence re-run reports false repairs until the pass commits
