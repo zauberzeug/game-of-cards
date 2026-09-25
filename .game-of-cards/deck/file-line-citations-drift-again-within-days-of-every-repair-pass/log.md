@@ -239,3 +239,26 @@ repairs. That re-run is what surfaced the colliding-anchor class — a pass
 following the recipe as written would have reported three successful repairs
 and left no trace of the three correct cites it moved — so later passes should
 report this family's gaps rather than absorb them.
+
+## 2026-09-25T04:56:48Z — The re-run instance closed; it bounds the check the entry above leaned on
+
+`citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits`
+closed in `676220e1`. The closing re-run the 2026-09-14 entry counted on to
+make later passes report this family's gaps reads `git log`, so when it ran
+before the pass committed, it anchored a just-written cite on a RETIRED
+occurrence — the number the card held for a different cite until an earlier
+pass moved it — and proposed moving a correct cite. Both refine-deck surfaces
+now commit the rewrites, then re-run, and the residue table names the shape
+as a sixth reason.
+
+Bearing on the option pick: small, and in the opposite direction from the
+repeated-token entry. The shape exists only because bare numbers get
+renumbered — a self-anchoring cite has no number to retire — but it does not
+compound: committing first removes it outright, and the corrected census
+found exactly the three cites one pass wrote, not the 21 first reported
+(that count was an artifact of the reproducer's history replay). It adds
+nothing to the status-quo option's compounding cost; it repairs the
+instrument this card reads its datapoints through.
+
+For those datapoints: a pass's re-run result is evidence only if it ran after
+that pass's commit.
