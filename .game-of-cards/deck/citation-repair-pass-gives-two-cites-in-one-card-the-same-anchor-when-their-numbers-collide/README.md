@@ -210,6 +210,8 @@ card, so the ambiguous-occurrence decline never fires.
 
 Measured by the 2026-09-21 hygiene pass over one identical set of 269
 repairs: 3 false repairs when the re-run ran before the commit, 0 after.
-Tracked by
-[citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits](../citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits/),
-which bounds this card's remedy rather than disputing it.
+Fixed by
+[citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits](../citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits/)
+(closed 2026-09-25), which bounds this card's remedy rather than disputing it:
+both refine-deck surfaces now commit the rewrites before the re-run, and the
+residue table names the retired-occurrence shape.

@@ -80,6 +80,18 @@ half — a card carrying a range and a single-line cite, where the two
 readings each produce a confident unique relocation onto a different
 line — and the decline is the second, because occurrence-awareness in
 the presence test cannot rescue a token the card holds twice.
+
+A later gap sits in no per-cite rule at all, but in WHEN the closing
+re-run runs:
+`citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits`
+found the fixed-point check reading the card's history out of `git log`
+while the rewrites it was checking sat uncommitted in the working tree. A
+cite the pass had just written therefore anchored on the last COMMITTED
+turn of its number — on a renumbering pass, a retired occurrence that
+named a different cite — and the check proposed moving a correct cite
+onto that cite's code: three such proposals over one pass's 269 repairs,
+and zero once the same pass had committed. The classifier pins the order
+and its reason, and the fixture replays that second pass both ways.
 """
 
 from __future__ import annotations
@@ -128,6 +140,13 @@ TOKEN_WALK = "substring-presence-on-a-bare-token"
 # the unit of identity even where the line is a definition.
 NAME_GUARDED = "definition-relocated-by-its-name"
 EXACT_LINE_ONLY = "exact-full-line-equality"
+
+# Re-run ordering verdicts. RERUN_UNORDERED is the recipe as it shipped from
+# 2026-09-14 to 2026-09-25: apply the rewrites, then re-run, with the commit
+# named nowhere — so a pass reading it literally re-runs over a working tree
+# the history walk cannot see.
+COMMIT_THEN_RERUN = "rewrites-committed-before-the-re-run"
+RERUN_UNORDERED = "re-run-with-the-commit-unplaced"
 
 # What the recipe answers about one cited line.
 CURRENT = "current"
@@ -292,6 +311,20 @@ SIG_RANGE_INSERT = ["import os", "import sys", "", "CONST_A = 1"]
 SIG_RANGE_CITED = (6, 8)
 SIG_RANGE_START_IN_HEAD = 10  # where the name rule maps the start
 SIG_RANGE_END_UNMOVED = 8  # line 8 in HEAD is the idiom from old line 4
+
+# The retired-occurrence fixture reuses V1 and INSERT_1. The card carries two
+# single-line cites, both correct when filed: `:6` on the target's `def` and
+# `:11` on the decoy's return. The file first grows BETWEEN them, so only the
+# decoy cite rots, and a first pass moves it to `:16` — retiring the token
+# `:11` from the card. The file then grows above both, and a second pass
+# repairs the target cite onto `:11`: correct, and the very number the decoy
+# cite carried two passes ago. Until that second pass commits, `:11`'s newest
+# absent-to-present turn is the FILING commit, where line 11 was the decoy.
+RETIRE_MID_INSERT = ["LIMIT_A = 1", "LIMIT_B = 2", "LIMIT_C = 3", "LIMIT_D = 4", ""]
+RETIRE_FILED = (6, 11)  # (target, decoy) at the filing commit
+RETIRE_PASS_1 = (6, 16)  # the first pass repairs the decoy cite only
+RETIRE_PASS_2 = (11, 21)  # the second pass: both correct in HEAD
+RETIRED_TOKEN = f"{CITED_FILE}:11"
 
 
 def documented_anchor(prose: str) -> str | None:
@@ -477,6 +510,35 @@ def documented_idempotence_check(prose: str) -> bool:
     return ("re-run" in flat or "re-running" in flat) and (
         "zero further repairs" in flat
     )
+
+
+def documented_rerun_order(prose: str) -> str | None:
+    """Does this stretch of skill prose commit the rewrites BEFORE re-running?
+
+    The re-run's anchor walk reads `git log`, so it sees a rewrite only once
+    the rewrite is committed. Re-run over the working tree instead and a cite
+    the pass has just written anchors on the last commit that carried its
+    number — on a renumbering pass, routinely a RETIRED occurrence that named
+    a different cite — so the fixed-point check proposes moving a correct cite
+    onto that cite's code. Two things have to be in the prose: the order
+    itself, commit and THEN re-run, and the reason for it, because a pass
+    holding the order without the reason has no ground to refuse a pre-commit
+    re-run that looks like extra diligence.
+
+    Prose with no re-run in it is not the idempotence rule and returns None.
+    Prose that re-runs without both is RERUN_UNORDERED — the shipped text this
+    was filed against, which reads as complete because the re-run IS in it,
+    and never says when.
+    """
+    if not documented_idempotence_check(prose):
+        return None
+    flat = _flat(prose)
+    ordered = (
+        re.search(r"\bcommit(?:ting)?(?: the rewrites)?, then re-run", flat)
+        is not None
+    )
+    reason = "git log" in flat and "uncommitted" in flat
+    return COMMIT_THEN_RERUN if ordered and reason else RERUN_UNORDERED
 
 
 def skill_citation_section() -> str:
@@ -778,6 +840,46 @@ def build_signature_range_repo(repo: Path) -> None:
     git(repo, "commit", "-q", "-m", "grow the file above the block; signature changes")
 
 
+def write_retire_card(repo: Path, target: int, decoy: int) -> None:
+    (repo / card_readme()).write_text(
+        f"# {CARD}\n\n"
+        f"`{CITED_FILE}:{target}` is the entry point this card is about,\n"
+        f"and `{CITED_FILE}:{decoy}` is the sentinel it must never return.\n",
+        encoding="utf-8",
+    )
+
+
+def build_retired_occurrence_repo(repo: Path) -> None:
+    """File two cites, repair one, then grow the file above both.
+
+    Ends at the second pass's INPUT state: the pass has not run yet, and the
+    token it is about to write for the target cite is one the card retired.
+    """
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.email", "test@example.com")
+    git(repo, "config", "user.name", "Test")
+    (repo / CITED_FILE).parent.mkdir(parents=True)
+    (repo / card_readme()).parent.mkdir(parents=True)
+
+    write_source(repo, V1)
+    write_retire_card(repo, *RETIRE_FILED)  # both correct at this commit
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "file the card citing src/app.py:6 and :11")
+
+    grown = V1[:8] + RETIRE_MID_INSERT + V1[8:]  # the decoy moves 11 -> 16
+    write_source(repo, grown)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the source between the two cites")
+
+    write_retire_card(repo, *RETIRE_PASS_1)  # `:11` leaves the card here
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "hygiene pass: repair the decoy cite to 16")
+
+    write_source(repo, INSERT_1 + grown)  # target 6 -> 11, decoy 16 -> 21
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the source above both cites")
+
+
 def anchor_commit(
     repo: Path, cite_token: str, mode: str, *, exact: bool = False
 ) -> str:
@@ -952,6 +1054,23 @@ def repair_range(
     if coherence and not coherent(new_start, new_end):
         return None  # both endpoints resolved, and together they bound nothing
     return new_start, new_end
+
+
+def cite_rewrites(repo: Path) -> dict[str, int]:
+    """One round of the decision phase over the card as it stands on disk.
+
+    Maps every single-line cite token the round would rewrite to the number
+    it would write. A cite verdicted current, or declined, proposes nothing.
+    The card is read from the working tree and its history from `git log`,
+    which is the whole defect: the two disagree until the pass commits.
+    """
+    readme = (repo / card_readme()).read_text(encoding="utf-8")
+    rewrites = {}
+    for token in card_cite_tokens(readme):
+        new = repair_token(repo, token, occurrence=True)
+        if isinstance(new, int) and new != int(token.rsplit(":", 1)[1]):
+            rewrites[token] = new
+    return rewrites
 
 
 class DocumentedAnchorRuleTest(unittest.TestCase):
@@ -1687,6 +1806,156 @@ class SignatureDriftRangeTest(unittest.TestCase):
             "fixture check: without the name rule the start never maps, so "
             "the same range declines one step earlier and for a reason that "
             "hides the moved function",
+        )
+
+
+class DocumentedRerunOrderTest(unittest.TestCase):
+    """The re-run reads history, so it has to come after the commit."""
+
+    # The closing paragraphs as they shipped from 2026-09-14: each re-runs,
+    # and neither says when the commit happens.
+    SHIPPED_SKILL = (
+        "End the step by RE-RUNNING the decision phase over the cards you just "
+        "wrote: a correctly repaired deck is a FIXED POINT, so it must propose "
+        "ZERO further repairs. A non-empty second round is a recipe defect to "
+        "file, not more rewrites to apply."
+    )
+    SHIPPED_REFERENCE = (
+        "**Close the step by re-running it.** After applying the rewrites, run "
+        "the decision phase again over the cards just written and assert it "
+        "proposes ZERO further repairs."
+    )
+
+    def test_core_skill_commits_before_it_re_runs(self) -> None:
+        self.assertEqual(
+            COMMIT_THEN_RERUN,
+            documented_rerun_order(skill_citation_section()),
+            "refine-deck SKILL.md § Defunct file:line citations must commit "
+            "the rewrites BEFORE re-running the decision phase, and say why: "
+            "the walk reads `git log`, so over an uncommitted rewrite the "
+            "re-run anchors a correct cite on a retired occurrence and "
+            "proposes moving it",
+        )
+
+    def test_reference_sibling_prescribes_the_same_order(self) -> None:
+        self.assertEqual(
+            documented_rerun_order(skill_citation_section()),
+            documented_rerun_order(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling disagree on "
+            "whether the rewrites are committed before the re-run",
+        )
+
+    def test_the_shipped_order_this_replaced_is_classified_as_unordered(
+        self,
+    ) -> None:
+        # The classifier's own proof that it can fail.
+        for prose in (self.SHIPPED_SKILL, self.SHIPPED_REFERENCE):
+            with self.subTest(prose=prose[:40]):
+                self.assertEqual(RERUN_UNORDERED, documented_rerun_order(prose))
+
+    def test_the_order_without_its_reason_is_classified_as_unordered(
+        self,
+    ) -> None:
+        self.assertEqual(
+            RERUN_UNORDERED,
+            documented_rerun_order(
+                "Commit the rewrites, then re-run the decision phase and "
+                "assert it proposes ZERO further repairs."
+            ),
+        )
+
+    def test_prose_without_a_re_run_is_unclassifiable(self) -> None:
+        self.assertIsNone(
+            documented_rerun_order(
+                "Commit the rewrites as a `chore(deck): hygiene pass` commit."
+            )
+        )
+
+    def test_residue_table_carries_the_retired_occurrence_decline(self) -> None:
+        rows = [row for row in residue_rows() if "retired occurrence" in row]
+        self.assertEqual(
+            1,
+            len(rows),
+            "refine-deck reference.md § Citation anchor check must carry "
+            "exactly one residue row for the retired-occurrence shape, so a "
+            "pass that meets one before its commit reads it as a known "
+            "decline rather than as a repair to apply",
+        )
+
+
+class RetiredOccurrenceRerunTest(unittest.TestCase):
+    """A second pass writes a number the card retired: when may it re-run?"""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_retired_occurrence_repo(self.repo)
+        self.addCleanup(self._tmp.cleanup)
+
+    def run_pass(self, *, commit_before_rerun: bool) -> dict[str, int]:
+        """Round one, apply it, commit or not, then return round two."""
+        self.assertEqual(
+            {
+                f"{CITED_FILE}:{RETIRE_PASS_1[0]}": RETIRE_PASS_2[0],
+                f"{CITED_FILE}:{RETIRE_PASS_1[1]}": RETIRE_PASS_2[1],
+            },
+            cite_rewrites(self.repo),
+            "fixture check: round one must repair both cites correctly, so "
+            "whatever round two proposes is the pass repairing its own output",
+        )
+        write_retire_card(self.repo, *RETIRE_PASS_2)
+        if commit_before_rerun:
+            git(self.repo, "add", "-A")
+            git(self.repo, "commit", "-q", "-m", "hygiene pass: repair both cites")
+        return cite_rewrites(self.repo)
+
+    def test_documented_order_re_runs_to_a_fixed_point(self) -> None:
+        order = documented_rerun_order(skill_citation_section())
+        self.assertIsNotNone(
+            order, "refine-deck SKILL.md no longer closes the step with a re-run"
+        )
+        self.assertEqual(
+            {},
+            self.run_pass(commit_before_rerun=order == COMMIT_THEN_RERUN),
+            "the re-run refine-deck ships must find a correctly repaired card "
+            "a fixed point; a proposal here moves a cite the pass just wrote "
+            "correctly onto the code of the cite that held its number before",
+        )
+
+    def test_re_run_before_the_commit_proposes_a_false_repair(self) -> None:
+        # Not a spec — the fixture's own proof that it exercises the defect.
+        # The fresh `:11` is right, and the proposal moves it onto the decoy:
+        # the sentinel the card's OTHER cite names, which is why it is unique.
+        self.assertEqual(
+            {RETIRED_TOKEN: RETIRE_PASS_2[1]},
+            self.run_pass(commit_before_rerun=False),
+        )
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual("def target(payload):", head[RETIRE_PASS_2[0] - 1])
+        self.assertEqual(
+            '    return "decoy sentinel that is long and unique"',
+            head[RETIRE_PASS_2[1] - 1],
+        )
+
+    def test_the_colliding_occurrence_is_in_the_cards_past(self) -> None:
+        # Neither occurrence guard can see it: the proposal came through the
+        # set-membership presence test, and the token occurs once in the card.
+        # The walk collides with the FILING commit, where `:11` was the decoy
+        # cite's number until the first pass moved it.
+        self.run_pass(commit_before_rerun=False)
+        readme = (self.repo / card_readme()).read_text(encoding="utf-8")
+        self.assertEqual(1, card_cite_tokens(readme).count(RETIRED_TOKEN))
+        history = git(self.repo, "log", "--format=%H", "--", card_readme()).split()
+        self.assertEqual(
+            history[-1],
+            anchor_commit(self.repo, RETIRED_TOKEN, AUTHORING, exact=True),
+        )
+        git(self.repo, "add", "-A")
+        git(self.repo, "commit", "-q", "-m", "hygiene pass: repair both cites")
+        self.assertEqual(
+            git(self.repo, "rev-parse", "HEAD").strip(),
+            anchor_commit(self.repo, RETIRED_TOKEN, AUTHORING, exact=True),
+            "once committed, the fresh cite anchors on the commit that wrote it",
         )
 
 

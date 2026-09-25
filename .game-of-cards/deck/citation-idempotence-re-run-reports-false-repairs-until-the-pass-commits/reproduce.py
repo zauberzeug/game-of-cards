@@ -23,8 +23,11 @@ cannot see it.
 
 Census, read-only: for every in-scope cite that occurs exactly once in an
 open/active card, compare the anchor the walk picks over the full history
-against the anchor it picks when the commit that wrote the token is withheld —
-which is exactly what the walk sees before the pass commits.  Reports the
+against the anchor it picks when the commit that wrote the token is withheld,
+together with every commit after it — which is exactly what the walk sees
+before the pass commits, since its history ends at the pass's input state.
+(Withholding the writing commit alone overcounts: on a card touched again
+later, the next commit reads as a fresh absent -> present turn.)  Reports the
 cites where the withheld-commit reading proposes a confident, unique repair
 while the full reading verdicts the cite current.
 
@@ -200,8 +203,11 @@ def main():
             if full is None:
                 continue
             checked += 1
-            # what the walk sees before the writing commit exists
-            pre = anchor_of(t, tok, [c for c in commits if c != full])
+            # what the walk sees before the writing commit exists: the history
+            # ENDS at the pass's input state, so every later commit is withheld
+            # too — dropping only `full` would let the next commit that touched
+            # the card read as a fresh absent -> present turn
+            pre = anchor_of(t, tok, commits[:commits.index(full)])
             if pre is None or pre == full:
                 continue
             t_full = line_at(full, path, start)

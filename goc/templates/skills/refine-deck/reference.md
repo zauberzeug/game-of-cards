@@ -310,7 +310,7 @@ produced. Non-Python definition forms — TypeScript `function` and
 `const … =>`, shell functions — stay out until a measurement asks for
 them.
 
-**The residue is output, not silence.** The declines split five ways
+**The residue is output, not silence.** The declines split six ways
 and each is reported for a human read:
 
 | Decline | What it usually means |
@@ -320,6 +320,7 @@ and each is reported for a human read:
 | ambiguous match (>1 hit in HEAD) | boilerplate, a repeated idiom, or a definition name HEAD holds more than once — an overload in a mirror tree, a method beside a module-level function; the card's surrounding text disambiguates, the matcher cannot |
 | anchor text absent | neither the anchor text nor — for a definition line — a unique `def`/`class` of that name is anywhere in HEAD; the code may have been refactored away, but it may equally have been renamed or split, so re-read the card before reading the decline as evidence the defect is gone, and close it per the core skill only if a refactor did fix it |
 | incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |
+| retired occurrence (re-run before the commit) | a second-round proposal on a cite this pass itself wrote, made while the rewrite was still uncommitted: the walk cannot see the rewrite, so it anchored on the last commit that carried the number — a different cite's, before an earlier pass moved it. The cite is not defunct and the proposal is not a repair; apply nothing that round proposed, commit, and re-run |
 
 A pass that printed only the cites it could auto-repair would report a
 shrinking problem while the unmappable majority rotted unseen — the
@@ -330,18 +331,43 @@ moving the trivial-anchor test ahead of the comparison reclassified 46
 cites on this deck from a silent `current` into the table above, none of
 which the pass before it had been entitled to certify.
 
-**Close the step by re-running it.** After applying the rewrites, run
-the decision phase again over the cards just written and assert it
-proposes ZERO further repairs. A correctly repaired deck is a fixed
-point, so any second-round proposal is the pass repairing its own
-output — and the per-cite rules cannot catch that, because each such
-proposal is individually well-formed: a real anchor, a unique match, a
-confident rewrite onto the wrong line. The colliding-anchor class above
-was found by exactly this re-run and by nothing else; a pass that had
-followed the recipe as written would have reported three successful
-repairs and left no trace of the three correct cites it moved. Treat a
-non-empty second round as a defect in the recipe to be filed, not as
-more work to apply.
+**Close the step by committing, then re-running it.** Commit the
+rewrites, then run the decision phase again over the cards just written
+and assert it proposes ZERO further repairs. A correctly repaired deck
+is a fixed point, so any second-round proposal is the pass repairing
+its own output — and the per-cite rules cannot catch that, because each
+such proposal is individually well-formed: a real anchor, a unique
+match, a confident rewrite onto the wrong line. The colliding-anchor
+class above was found by exactly this re-run and by nothing else; a
+pass that had followed the recipe as written would have reported three
+successful repairs and left no trace of the three correct cites it
+moved. Treat a non-empty second round as a defect in the recipe to be
+filed, not as more work to apply.
+
+**The commit comes first because the walk reads history.** Its input is
+`git log`, so a rewrite still uncommitted in the working tree is
+invisible to it. For a cite the pass has just written, the newest
+absent-to-present turn is then one from BEFORE this pass — on a
+renumbering pass, routinely a RETIRED occurrence: the number the card
+carried for a different cite until an earlier pass moved that cite
+elsewhere. The walk anchors the fresh cite on the retired occurrence's
+text, finds that text uniquely in HEAD, and proposes moving a correct
+cite onto it. Neither occurrence guard above sees it — presence is set
+membership already, and the token occurs once in the card — because
+the colliding occurrence is in the card's PAST, where no count of
+current occurrences reaches. Measured on this deck 2026-09-21: one pass
+re-ran over its identical 269 repairs twice, and proposed 3 further
+repairs before its commit, all three false, and 0 after it. So the
+re-run is only valid once the rewrites are committed, which a local
+commit satisfies; pushing can wait for the verdict. A pass that cannot
+commit yet — another agent holds the shared index — commits the
+rewrites in a throwaway worktree and re-runs there, or holds the step
+open until its own commit lands. It never re-runs over the working
+tree, and it applies nothing such a run proposes (the retired-occurrence
+row above). Reading the working-tree README as the walk's newest
+version would make the re-run valid at any point, but it would anchor
+cites on edits nobody has committed and redefine the walk every other
+rule here is built on, where the ordering costs one sentence.
 
 ## Tag sweeps
 

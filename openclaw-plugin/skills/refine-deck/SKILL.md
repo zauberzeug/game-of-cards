@@ -155,20 +155,21 @@ Per cite (long form: `reference.md` § Citation anchor check):
    decides what a range emits.
 
 Cites the recipe declines — ambiguous occurrence, trivial anchor,
-anchor gone, ambiguous match, incoherent pair — are REPORTED for a
-human to read, never silently skipped. Anchor text that exists nowhere,
-with no unique definition of its name either, usually means the cited
-code was refactored away: re-read the card and,
-if the refactor also fixed the defect, close via the `finish-card` skill
-with a note "fixed incidentally by <commit-hash>".
+anchor gone, ambiguous match, incoherent pair, retired
+occurrence — are REPORTED for a human to read, never silently skipped.
+Anchor text that exists nowhere, with no unique definition of its name
+either, usually means the cited code was refactored away: re-read the
+card and, if the refactor also fixed the defect, close via
+the `finish-card` skill with a note "fixed incidentally by <commit-hash>".
 
-End the step by RE-RUNNING the decision phase over the cards you just
-wrote: a correctly repaired deck is a FIXED POINT, so it must propose
-ZERO further repairs. Every per-cite rule passes on a second-round
-proposal — real anchor, unique match, confident rewrite onto the wrong
-line — so the re-run is the only thing that catches a pass repairing
-its own output. A non-empty second round is a recipe defect to file,
-not more rewrites to apply.
+End the step by COMMITTING the rewrites, then RE-RUNNING the decision
+phase over the cards just written — the walk reads `git log`, so an
+uncommitted cite anchors on a RETIRED occurrence. A correctly repaired
+deck is a FIXED POINT, so it must propose ZERO further repairs. Every
+per-cite rule passes on a second-round proposal — real anchor, unique
+match, confident rewrite onto the wrong line — so the re-run is the
+only thing that catches a pass repairing its own output. A non-empty
+second round is a recipe defect to file, not more rewrites to apply.
 
 ### Missing summaries
 
