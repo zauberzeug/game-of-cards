@@ -541,6 +541,26 @@ def documented_rerun_order(prose: str) -> str | None:
     return COMMIT_THEN_RERUN if ordered and reason else RERUN_UNORDERED
 
 
+def documented_decline_count(prose: str) -> str | None:
+    """The word this prose uses for how many ways the declines split.
+
+    Read through `_flat` like every rule above: the phrase runs through
+    hard-wrapped prose, and a line break inside it is still the same claim.
+    """
+    match = re.search(r"declines split (\w+) ways", _flat(prose))
+    return match.group(1) if match else None
+
+
+def documented_decline_names(prose: str) -> list[str] | None:
+    """The decline reasons the core skill's summary sentence names, in order."""
+    match = re.search(
+        r"cites the recipe declines — (.+?) — are reported", _flat(prose)
+    )
+    if match is None:
+        return None
+    return [part.strip() for part in match.group(1).split(",")]
+
+
 def skill_citation_section() -> str:
     """The core skill's § Defunct file:line citations, that subsection only."""
     body = SKILL.read_text(encoding="utf-8")
@@ -1475,32 +1495,25 @@ class ResidueAccountingTest(unittest.TestCase):
     WORDS = {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7}
 
     def test_reference_counts_its_own_residue_rows(self) -> None:
-        match = re.search(
-            r"declines split (\w+) ways", reference_anchor_section()
-        )
+        word = documented_decline_count(reference_anchor_section())
         self.assertIsNotNone(
-            match,
+            word,
             "refine-deck reference.md \u00a7 Citation anchor check no longer "
             "says how many ways the declines split",
         )
         self.assertEqual(
             len(residue_rows()),
-            self.WORDS.get(match.group(1)),
+            self.WORDS.get(word),
             "the reference's decline count and its residue table disagree",
         )
 
     def test_core_skill_names_every_decline_the_table_carries(self) -> None:
-        match = re.search(
-            r"Cites the recipe declines \u2014 (.+?) \u2014 are REPORTED",
-            skill_citation_section(),
-            re.S,
-        )
+        named = documented_decline_names(skill_citation_section())
         self.assertIsNotNone(
-            match,
+            named,
             "refine-deck SKILL.md no longer lists what the citation recipe "
             "declines",
         )
-        named = [part.strip() for part in match.group(1).split(",")]
         self.assertEqual(
             len(residue_rows()),
             len(named),
@@ -1510,6 +1523,50 @@ class ResidueAccountingTest(unittest.TestCase):
                 len(named), len(residue_rows())
             ),
         )
+
+    def test_both_reads_survive_a_rewrap(self) -> None:
+        # A line break is whitespace to every reader of this markdown. Turn
+        # every space of the two paragraphs carrying the claims into one, and
+        # both reads must still return what they return on the shipped text
+        # rather than report the claim gone.
+        def rewrapped(section: str, opening: str) -> str:
+            start = section.index(opening)
+            end = section.find("\n\n", start)
+            end = len(section) if end == -1 else end
+            return (
+                section[:start]
+                + section[start:end].replace(" ", "\n")
+                + section[end:]
+            )
+
+        reference = reference_anchor_section()
+        skill = skill_citation_section()
+        self.assertEqual(
+            documented_decline_count(reference),
+            documented_decline_count(
+                rewrapped(reference, "**The residue is output, not silence.**")
+            ),
+        )
+        self.assertEqual(
+            documented_decline_names(skill),
+            documented_decline_names(rewrapped(skill, "Cites the recipe declines")),
+        )
+
+    def test_reads_report_what_the_prose_says(self) -> None:
+        # The reads' own proof that they read rather than recite: a sentence
+        # of another length comes back at its own length, and prose that
+        # never makes the claim comes back None, which the tests above report.
+        self.assertEqual(
+            "four", documented_decline_count("The declines split four ways:")
+        )
+        self.assertEqual(
+            ["a", "b", "c"],
+            documented_decline_names(
+                "Cites the recipe declines — a, b, c — are REPORTED."
+            ),
+        )
+        self.assertIsNone(documented_decline_count("Declines are reported."))
+        self.assertIsNone(documented_decline_names("Declines are reported."))
 
 
 class DocumentedIdempotenceCheckTest(unittest.TestCase):

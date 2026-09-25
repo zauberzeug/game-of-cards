@@ -1,26 +1,26 @@
 ---
 title: refine-deck-decline-count-test-fails-when-the-prose-is-only-rewrapped
 summary: "Two reads in ResidueAccountingTest (tests/test_refine_deck_citation_anchor.py) find the refine-deck decline count and decline list with regexes holding literal single spaces, so moving one line break inside 'declines split six ways' or '— are REPORTED' fails the guard with a false diagnosis: that SKILL.md 'no longer lists what the citation recipe declines'. The same file ships _flat precisely so its rules survive rewrapping; these two reads skip it. Harmless while nobody rewraps, but the SKILL.md body sits 2 bytes under its size cap, so the next edit to that paragraph will be a rewrap."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-09-25T04:51:36Z"
-closed_at: null
+closed_at: "2026-09-25T04:55:18Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, test]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `ResidueAccountingTest` passes over
+  - [x] TDD: `reproduce.py` exits zero — `ResidueAccountingTest` passes over
         copies of SKILL.md and reference.md in which one space inside
         "declines split N ways" or "— are REPORTED" has become a line break,
         as it does over the shipped files.
-  - [ ] TDD: `tests/test_refine_deck_citation_anchor.py` gains a test that
+  - [x] TDD: `tests/test_refine_deck_citation_anchor.py` gains a test that
         runs both decline-accounting reads over the citation sections with
         every space of the two carrying paragraphs turned into a line break,
         and asserts they return what they return on the shipped text; it
         fails against the whitespace-literal reads.
-  - [ ] MECHANICAL: both reads go through `_flat`, the file's existing
+  - [x] MECHANICAL: both reads go through `_flat`, the file's existing
         rewrap-proof normalizer, rather than a second one.
 worker: {who: "claude[bot]", where: main}
 ---
@@ -29,14 +29,14 @@ worker: {who: "claude[bot]", where: main}
 
 ## Location
 
-- `tests/test_refine_deck_citation_anchor.py:1479` —
+- `tests/test_refine_deck_citation_anchor.py:1497` —
   `ResidueAccountingTest.test_reference_counts_its_own_residue_rows`.
-- `tests/test_refine_deck_citation_anchor.py:1494` —
+- `tests/test_refine_deck_citation_anchor.py:1510` —
   `ResidueAccountingTest.test_core_skill_names_every_decline_the_table_carries`.
 
-## What's broken
+## What was broken
 
-Both reads match a phrase that runs through hard-wrapped markdown with a
+Both reads matched a phrase that runs through hard-wrapped markdown with a
 regex that spells the spaces literally:
 
 ```python
@@ -47,7 +47,7 @@ regex that spells the spaces literally:
 
 ```python
         match = re.search(
-            r"Cites the recipe declines — (.+?) — are REPORTED",
+            r"Cites the recipe declines \u2014 (.+?) \u2014 are REPORTED",
             skill_citation_section(),
             re.S,
         )
@@ -62,10 +62,10 @@ def _flat(prose: str) -> str:
     """Hard-wrapped prose as one lowercase line, so rules survive rewrapping."""
 ```
 
-These two reads predate that convention or skipped it. On a rewrap they
-return `None`, and each test then reports the prose as gone — "SKILL.md no
-longer lists what the citation recipe declines" — when it is present word
-for word. The fix is correct only by accident of the current fill column.
+These two reads predated that convention or skipped it. On a rewrap they
+returned `None`, and each test then reported the prose as gone — "SKILL.md
+no longer lists what the citation recipe declines" — when it was present
+word for word. The guard held only by accident of the current fill column.
 
 ## Empirical evidence
 
@@ -103,10 +103,17 @@ decline-list sentence is the paragraph such edits grow.
 
 ## Fix
 
-Route both reads through `_flat` (lowercasing their patterns to match), and
-lift them into two module-level helpers beside the file's other
-`documented_*` classifiers so the new test and the existing ones share one
-read instead of restating the regex.
+Both reads now go through `_flat`, their patterns lowercased to match, and
+live in two module-level helpers beside the file's other `documented_*`
+classifiers — `documented_decline_count` (`tests/test_refine_deck_citation_anchor.py:544`)
+and `documented_decline_names` (`:554`) — so the tests share one read
+instead of restating the regex. Two tests guard them:
+`test_both_reads_survive_a_rewrap` (`:1527`) turns every space of the two
+carrying paragraphs into a line break and asserts both reads return what
+they return on the shipped text (against the old reads it fails,
+`'six' != None`), and `test_reads_report_what_the_prose_says` (`:1555`)
+proves the reads return what the prose says rather than a fixed answer.
+`reproduce.py` now reports `rewraps the guard rejects: 0 of 2`.
 
 ## Out of scope
 
