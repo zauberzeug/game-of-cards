@@ -1,7 +1,7 @@
 ---
 title: goc-finds-the-deck-from-a-subdirectory-but-attests-validates-and-installs-there
 summary: "The deck lookup walks up from a subdirectory to the root deck, but every other notion of the project root is still the current directory: `REPO_ROOT = Path.cwd()` in the engine, `target = Path.cwd()` in `goc install` / `goc upgrade`, and the hook input's cwd in both runtime hooks. Run from a subdirectory, `goc attest` executes the project's closure checks there and records a PASS the root run fails, `goc validate` skips its skill-parity and plugin-mirror checks and exits 0, and the session-start hook stays silent about active cards that `goc` lists from the same directory. `goc upgrade` there reports no install and points at `goc install`, which scaffolds a stray nested deck that then hides the real one from everything below it."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-28T01:20:21Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] TDD: a parity test pins the hooks' project-dir walk to `engine._resolve_deck_root` over the layouts in `tests/test_subdirectory_deck_resolution.py`
   - [ ] MECHANICAL: the `REPO_ROOT` comment (`goc/engine.py:37`) and the `_resolve_deck_root` docstring describe the single derivation, and `goc.md:70`'s "any nested directory" promise covers attest, validate, upgrade and install (or names the exception)
   - [ ] MECHANICAL: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` clean
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc finds the deck from a subdirectory, but attests, validates and installs there
