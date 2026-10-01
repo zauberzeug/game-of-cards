@@ -1,7 +1,7 @@
 ---
 title: deciding-a-card-parked-while-active-strands-it-outside-the-pull-queue
 summary: "UNVERIFIED. Skill(pull-card) claims a card before it can hit a judgement call, so the Andon cord leaves the card parked at status active behind a raised gate; goc decide then lowers the gate but never touches status. The result, active plus human_gate none, is what a live agent claim looks like, so the decided card is missing from goc, goc --ready and the pull-card workflow's launch count, while decide-card, deck and the verb's own Next line promise it is back in the queue."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-28T01:32:05Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py claims a card, raises its gate by hand (the pull-card Andon step), runs `goc decide`, and asserts the card is reachable by the next `pull-card` (listed by `goc --ready --json`) — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] TDD: a regression test pins the chosen round trip: claim → raise gate → `goc decide` → the card is pullable again, and `goc decide`'s `Next:` line tells the truth about it
   - [ ] MECHANICAL: `decide-card/SKILL.md` (lines 16-17, 51, 139), `deck/SKILL.md:167-168` and `deck/reference.md:79-80` describe what happens to a card decided while `active`; drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Deciding a card parked while active strands it outside the pull queue
