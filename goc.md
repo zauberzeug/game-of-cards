@@ -67,7 +67,7 @@ uv run goc install --agents codex
 Once `goc install` has scaffolded the substrate, the deck is empty. Two ways to seed it:
 
 - **Ask your coding agent.** Say "audit the deck" (or "find issues to file as cards"). This triggers the `audit-deck` skill, which audits the repo for previously-undocumented defects, doc drift, missing tests, or architectural smells, and files each finding as a card via `goc new`. Re-invoke until the queue is the size you want.
-- **By hand.** `goc new rename-the-export-button` scaffolds a single card with valid frontmatter and a placeholder Definition of Done that `goc done` will refuse to close until you fill it in. You may run it from any nested directory: GoC walks upward to the nearest existing `.game-of-cards/` root. If none exists, it refuses and points back to `goc install` instead of creating a stray deck.
+- **By hand.** `goc new rename-the-export-button` scaffolds a single card with valid frontmatter and a placeholder Definition of Done that `goc done` will refuse to close until you fill it in. You may run it from any nested directory: GoC walks upward to the nearest existing `.game-of-cards/` root. If none exists, it refuses and points back to `goc install` instead of creating a stray deck. Every other verb treats that same root as the project root, so from a subdirectory `goc attest` runs the closure checks at the root, `goc validate` checks the whole install, `goc upgrade` upgrades the enclosing install, and `goc install` refuses as already installed. Under shared-deck worktree mode the project root is the linked worktree's own checkout, while the deck stays in the primary tree.
 
 ## Upgrade an install
 

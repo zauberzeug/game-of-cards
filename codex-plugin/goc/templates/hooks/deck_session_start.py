@@ -271,6 +271,27 @@ def _is_impeded(readme: Path) -> bool:
     return until_future
 
 
+def _find_project_dir(start: str) -> Path:
+    """Return the nearest ancestor of `start` holding `.game-of-cards/`.
+
+    The walk never crosses into a different git working tree, and falls back
+    to `start` itself when no ancestor holds a deck. This is a mirror of the
+    walk in `goc.engine._resolve_deck_root` — hooks import nothing from the
+    package — pinned to it by tests/test_project_root_from_subdirectory.py.
+    """
+    start_path = Path(start).resolve()
+    own_tree_root_passed = False
+    for candidate in (start_path, *start_path.parents):
+        has_git = (candidate / ".git").exists()
+        if own_tree_root_passed and has_git:
+            break
+        if (candidate / ".game-of-cards").is_dir():
+            return candidate
+        if has_git:
+            own_tree_root_passed = True
+    return start_path
+
+
 def _project_dir_from_hook_input() -> str:
     try:
         data = json.load(sys.stdin)
@@ -286,7 +307,7 @@ def _project_dir_from_hook_input() -> str:
 
 
 def main() -> int:
-    project_dir = _project_dir_from_hook_input()
+    project_dir = _find_project_dir(_project_dir_from_hook_input())
     deck_dir = Path(project_dir) / ".game-of-cards" / "deck"
     if not deck_dir.is_dir():
         legacy = Path(project_dir) / "deck"

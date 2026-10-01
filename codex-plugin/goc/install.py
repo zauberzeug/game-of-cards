@@ -507,6 +507,18 @@ def _detect_existing(deck_dir: Path) -> str | None:
     return sentinel.read_text().strip()
 
 
+def _project_target() -> Path:
+    """Return the project `install` / `upgrade` act on — the engine's
+    `REPO_ROOT`, derived by the same upward walk from cwd. From a
+    subdirectory of an installed repo that is the enclosing install, so
+    `upgrade` upgrades it and `install` refuses instead of scaffolding a stray
+    nested deck. With no enclosing deck it is cwd, the "run `goc install` at
+    the intended project root" contract."""
+    from goc.engine import _resolve_project_roots
+
+    return _resolve_project_roots(Path.cwd().resolve())[0]
+
+
 def _find_installed_deck_dir(target: Path) -> Path | None:
     """Return the path of an existing GoC install (new or legacy), or None."""
     new = target / ".game-of-cards" / "deck"
@@ -1824,7 +1836,7 @@ def install(
         print(_LOCAL_SKILLS_PLUGIN_REFUSAL, file=sys.stderr)
         sys.exit(2)
 
-    target = Path.cwd().resolve()
+    target = _project_target()
     deck_dir = target / ".game-of-cards" / "deck"
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
@@ -1994,7 +2006,7 @@ def upgrade(
         print(_KEEP_LOCAL_SKILLS_PLUGIN_REFUSAL, file=sys.stderr)
         sys.exit(2)
 
-    target = Path.cwd().resolve()
+    target = _project_target()
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
 

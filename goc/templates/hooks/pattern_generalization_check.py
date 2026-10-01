@@ -89,6 +89,27 @@ REMINDER = (
 )
 
 
+def _find_project_dir(start: str) -> Path:
+    """Return the nearest ancestor of `start` holding `.game-of-cards/`.
+
+    The walk never crosses into a different git working tree, and falls back
+    to `start` itself when no ancestor holds a deck. This is a mirror of the
+    walk in `goc.engine._resolve_deck_root` — hooks import nothing from the
+    package — pinned to it by tests/test_project_root_from_subdirectory.py.
+    """
+    start_path = Path(start).resolve()
+    own_tree_root_passed = False
+    for candidate in (start_path, *start_path.parents):
+        has_git = (candidate / ".git").exists()
+        if own_tree_root_passed and has_git:
+            break
+        if (candidate / ".game-of-cards").is_dir():
+            return candidate
+        if has_git:
+            own_tree_root_passed = True
+    return start_path
+
+
 def _enabled(project_dir: str) -> bool:
     """Opt-in (default off): run only when config explicitly enables the hook.
 
@@ -213,8 +234,15 @@ def main() -> int:
     if data.get("stop_hook_active"):
         return 0
 
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or "."
-    if not _enabled(project_dir):
+    # Same input precedence as the session-start hook: the hook input's cwd
+    # first, then the host's project-dir variable.
+    project_dir = _find_project_dir(
+        data.get("cwd")
+        or os.environ.get("CLAUDE_PROJECT_DIR")
+        or os.environ.get("CODEX_PROJECT_DIR")
+        or "."
+    )
+    if not _enabled(str(project_dir)):
         return 0
 
     transcript_path = data.get("transcript_path", "")

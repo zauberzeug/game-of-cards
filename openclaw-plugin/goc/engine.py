@@ -34,7 +34,6 @@ from goc._vendor import yaml_lite as yaml
 # Paths
 
 PACKAGE_DIR = Path(__file__).resolve().parent  # installed package dir (goc/)
-REPO_ROOT = Path.cwd()  # project being managed (consuming repo's root)
 
 
 _DUAL_TREE_CONFLICT: bool = False
@@ -70,6 +69,58 @@ def _detect_worktree_common_root(cwd: Path) -> Path | None:
     return common_path.parent
 
 
+def _shared_worktree_deck_root(cwd: Path) -> Path | None:
+    """Return the primary working tree root when cwd is in a linked git
+    worktree that opted into worktree_deck=shared, else None."""
+    common_root = _detect_worktree_common_root(cwd)
+    if common_root is None:
+        return None
+    # Env var wins without requiring the config to exist yet.
+    if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
+        return common_root
+    config_path = common_root / ".game-of-cards" / "config.yaml"
+    if config_path.exists():
+        try:
+            cfg = yaml.safe_load(config_path.read_text()) or {}
+            if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
+                return common_root
+        except Exception:
+            pass
+    return None
+
+
+def _git_toplevel(cwd: Path) -> Path | None:
+    """Return the top level of the git working tree holding cwd, else None."""
+    try:
+        r = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, cwd=str(cwd), timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode != 0 or not r.stdout.strip():
+        return None
+    return Path(r.stdout.strip())
+
+
+def _resolve_project_roots(cwd: Path) -> tuple[Path, Path]:
+    """Return `(repo_root, deck_root)` for cwd — the one derivation of both.
+
+    `deck_root` is `_resolve_deck_root(cwd)`. `repo_root` is the project being
+    managed: the root that attest checks run in, validate's parity checks
+    read, and `goc install` / `goc upgrade` write. It IS `deck_root`, from cwd
+    or any nested directory, except under the shared-deck worktree redirect:
+    there `deck_root` is the primary tree, while the code being worked on is
+    the linked worktree's own checkout, so `repo_root` is that tree's top
+    level (cwd when git cannot name it). With no deck found, both are cwd.
+    """
+    shared_root = _shared_worktree_deck_root(cwd)
+    if shared_root is not None:
+        return _git_toplevel(cwd) or cwd, shared_root
+    deck_root = _walk_to_deck_root(cwd)
+    return deck_root, deck_root
+
+
 def _resolve_deck_root(cwd: Path) -> Path:
     """Return the root for deck and config file resolution.
 
@@ -86,22 +137,17 @@ def _resolve_deck_root(cwd: Path) -> Path:
     tree) is opt-in via worktree_deck=shared, never implied by nesting.
     Falling back to cwd keeps read-only commands useful before installation;
     mutating creation commands must reject that fallback instead of silently
-    scaffolding a second deck.
+    scaffolding a second deck. `REPO_ROOT` is derived from this same result
+    by `_resolve_project_roots`, so every root reader follows the walk too.
+    The runtime hooks carry a mirror of the walk (`_find_project_dir`), pinned
+    to this function by tests/test_project_root_from_subdirectory.py.
     """
-    common_root = _detect_worktree_common_root(cwd)
-    if common_root is not None:
-        # Env var wins without requiring the config to exist yet.
-        if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
-            return common_root
-        config_path = common_root / ".game-of-cards" / "config.yaml"
-        if config_path.exists():
-            try:
-                cfg = yaml.safe_load(config_path.read_text()) or {}
-                if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
-                    return common_root
-            except Exception:
-                pass
+    return _resolve_project_roots(cwd)[1]
 
+
+def _walk_to_deck_root(cwd: Path) -> Path:
+    """The nearest-ancestor walk of `_resolve_deck_root`, without the
+    shared-deck worktree redirect."""
     own_tree_root_passed = False
     for candidate in (cwd, *cwd.parents):
         has_git = (candidate / ".git").exists()
@@ -143,7 +189,9 @@ def _resolve_deck_dir(repo_root: Path) -> Path:
     return canonical
 
 
-DECK_ROOT = _resolve_deck_root(REPO_ROOT)
+# REPO_ROOT: project being managed (consuming repo's root), derived with
+# DECK_ROOT from one walk, so it names the root from any nested directory.
+REPO_ROOT, DECK_ROOT = _resolve_project_roots(Path.cwd())
 DECK_DIR = _resolve_deck_dir(DECK_ROOT)
 SCHEMA_FILE = PACKAGE_DIR / "schema.yaml"
 GAME_OF_CARDS_CONFIG_FILE = DECK_ROOT / ".game-of-cards" / "config.yaml"

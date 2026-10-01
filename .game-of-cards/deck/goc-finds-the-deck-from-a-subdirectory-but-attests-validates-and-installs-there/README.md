@@ -1,23 +1,23 @@
 ---
 title: goc-finds-the-deck-from-a-subdirectory-but-attests-validates-and-installs-there
 summary: "The deck lookup walks up from a subdirectory to the root deck, but every other notion of the project root is still the current directory: `REPO_ROOT = Path.cwd()` in the engine, `target = Path.cwd()` in `goc install` / `goc upgrade`, and the hook input's cwd in both runtime hooks. Run from a subdirectory, `goc attest` executes the project's closure checks there and records a PASS the root run fails, `goc validate` skips its skill-parity and plugin-mirror checks and exits 0, and the session-start hook stays silent about active cards that `goc` lists from the same directory. `goc upgrade` there reports no install and points at `goc install`, which scaffolds a stray nested deck that then hides the real one from everything below it."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-09-28T01:20:21Z"
-closed_at: null
+closed_at: "2026-10-01T04:38:00Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, infra, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `uv run python .game-of-cards/deck/goc-finds-the-deck-from-a-subdirectory-but-attests-validates-and-installs-there/reproduce.py` exits zero (every surface run from `src/pkg/` agrees with the root run)
-  - [ ] TDD: a regression test runs `goc attest` from a subdirectory and asserts the automated check runs in the project root; the same test, under shared-deck worktree mode, asserts it runs in the linked worktree's root, not the primary tree
-  - [ ] TDD: a regression test asserts `goc validate` from a subdirectory reports the same vendored skill-parity error as the root run
-  - [ ] TDD: a regression test asserts `goc install` from a subdirectory of an installed repo refuses and writes nothing, and `goc upgrade` from there acts on the enclosing install
-  - [ ] TDD: a parity test pins the hooks' project-dir walk to `engine._resolve_deck_root` over the layouts in `tests/test_subdirectory_deck_resolution.py`
-  - [ ] MECHANICAL: the `REPO_ROOT` comment (`goc/engine.py:37`) and the `_resolve_deck_root` docstring describe the single derivation, and `goc.md:70`'s "any nested directory" promise covers attest, validate, upgrade and install (or names the exception)
-  - [ ] MECHANICAL: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` clean
+  - [x] TDD: `uv run python .game-of-cards/deck/goc-finds-the-deck-from-a-subdirectory-but-attests-validates-and-installs-there/reproduce.py` exits zero (every surface run from `src/pkg/` agrees with the root run)
+  - [x] TDD: a regression test runs `goc attest` from a subdirectory and asserts the automated check runs in the project root; the same test, under shared-deck worktree mode, asserts it runs in the linked worktree's root, not the primary tree
+  - [x] TDD: a regression test asserts `goc validate` from a subdirectory reports the same vendored skill-parity error as the root run
+  - [x] TDD: a regression test asserts `goc install` from a subdirectory of an installed repo refuses and writes nothing, and `goc upgrade` from there acts on the enclosing install
+  - [x] TDD: a parity test pins the hooks' project-dir walk to `engine._resolve_deck_root` over the layouts in `tests/test_subdirectory_deck_resolution.py`
+  - [x] MECHANICAL: the `REPO_ROOT` comment (`goc/engine.py:37`) and the `_resolve_deck_root` docstring describe the single derivation, and `goc.md:70`'s "any nested directory" promise covers attest, validate, upgrade and install (or names the exception)
+  - [x] MECHANICAL: `uv run goc validate` clean; `python scripts/sync_plugin_assets.py --check` clean
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -236,6 +236,22 @@ from a subdirectory of an installed repo: an agent session launched there, a
 `goc upgrade` from wherever their terminal happens to be.
 
 ## Fix
+
+**Applied.** `goc/engine.py` now computes both roots in one call,
+`REPO_ROOT, DECK_ROOT = _resolve_project_roots(Path.cwd())`.
+`_resolve_deck_root` is a thin wrapper over that call. The
+shared-worktree redirect moved out into `_shared_worktree_deck_root`, and the
+walk moved into `_walk_to_deck_root`. `goc install` and `goc upgrade` resolve
+`target` through `install._project_target()`, which reads the same
+derivation. Both hooks route their input through a mirrored
+`_find_project_dir` walk, and both now use the session-start precedence:
+hook input `cwd`, then `CLAUDE_PROJECT_DIR`, then `CODEX_PROJECT_DIR`.
+`tests/test_project_root_from_subdirectory.py` pins every row of the table
+above. One deviation from step 2 below: the installer targets `REPO_ROOT`,
+not `DECK_ROOT`. The two differ only under the shared-deck redirect. There,
+`install` / `upgrade` write the linked worktree's own tracked files
+(`AGENTS.md`, `.claude/`) instead of the primary tree's checkout. The plan
+below is kept as the rationale.
 
 **1. One derivation of the project root in the engine.** Compute `DECK_ROOT`
 from `Path.cwd()` first, then derive `REPO_ROOT` from it:
