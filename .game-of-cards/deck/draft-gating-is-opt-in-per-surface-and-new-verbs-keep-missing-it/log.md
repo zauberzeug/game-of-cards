@@ -81,3 +81,27 @@ condition under which the question is meaningful. Three sites means three
 conditions a reader can confuse for the predicate's — and the confusion is
 invisible, because the wrong guard produces a plausible sentence rather than a
 crash. No DoD item ticked and no gate change; evidence for whoever picks.
+
+## 2026-10-01T04:55:01Z — evidence added: decide's claim fails on two more ready conjuncts (connect, not duplicate)
+
+Recorded while closing
+`deciding-a-card-parked-while-active-strands-it-outside-the-pull-queue`.
+`goc decide`'s `Next:` line says "any agent can now claim this card"
+without deriving it from `card_is_ready`. The draft instance above is one
+conjunct where that claim fails. Two more have since been measured:
+
+- **status**: a card parked while `active` came out `active` +
+  `none`, which no queue lists. It is now fixed at the call site:
+  `_cmd_decide` releases the card to `open`, so that conjunct holds by
+  construction.
+- **impediment overlay**: still open, verified 2026-10-01 on a scratch
+  deck. Deciding an `open` card that carries `waiting_on: external`
+  prints the same claim while the card stays absent from
+  `goc --ready --json`.
+
+Same "decided but nothing pulls it" confusion, reached through a
+different conjunct of the predicate. Whichever mechanism is picked here,
+decide's `Next:` line should come from `card_is_ready` on the
+post-mutation card. That covers draft, status and overlay in one place,
+instead of a per-site fix for each conjunct. No DoD item ticked and no
+gate change; evidence for whoever picks.
