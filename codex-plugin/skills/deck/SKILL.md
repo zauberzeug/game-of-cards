@@ -187,8 +187,9 @@ One skill per job; compose, don't bundle.
   only — `human_gate` is `decide-card`'s responsibility.
 - `Skill(decide-card)` — the human's Andon-cord lowering action.
   Records `<decision> + <because>` on a parked card and flips gate
-  `decision`/`session` → `none`. Status stays `open` so the next
-  `pull-card` claims and implements per the recorded decision.
+  `decision`/`session` → `none`. The card comes out `open` (one parked
+  while `active` is released) so the next `pull-card` claims and
+  implements per the recorded decision.
 - `Skill(finish-card)` — close a card: tick DoD, append closure log,
   run `goc done <title>`, then run any project-specific post-close or
   commit handoff defined by the consuming repo's hook.

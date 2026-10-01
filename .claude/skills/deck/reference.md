@@ -75,7 +75,8 @@ Three operating modes coexist:
   card. `Skill(scan-deck)` surfaces parked cards (triage default
   on bare invocation or "what's up?"); `Skill(scan-deck) decisions
   to make` walks each decision-gated card via `AskUserQuestion`
-  and calls `Skill(decide-card)` per answer. Gate lowered → next
+  and calls `Skill(decide-card)` per answer. Gate lowered (a card
+  parked while `active` is released back to `open`) → next
   `pull-card` claims and implements per the recorded decision.
   Lean's pulled-cord pattern: humans resolve the cause, agents
   restart the line.

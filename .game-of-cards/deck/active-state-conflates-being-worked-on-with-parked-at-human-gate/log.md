@@ -16,3 +16,18 @@ reached it. Recorded as family entry 5 plus a "A caller no helper can
 reach" body section so the pending decision can weigh the
 non-importing surfaces. The DoD is left untouched — revising it is part
 of the decision, not of recording the evidence.
+
+## 2026-10-01T04:53:10Z — Post-decision half handled by a sibling (no status or gate change)
+
+`deciding-a-card-parked-while-active-strands-it-outside-the-pull-queue`
+closed today. `goc decide` now returns a card parked while `active` to
+`open` in the same write as the gate flip. Before, it left `active` +
+`human_gate: none`, which every queue view and pull-card's soft-lock rule
+read as a live claim. That card covers what becomes of a parked-`active`
+card after the decision. This card's question, how such cards are labelled
+while still gated, is unchanged.
+
+One input for the pending decision: Option C's list of status-flip sites
+already names `goc decide`, and `goc decide` now has a status transition
+of its own (`active → open`). Under Option C it would become
+`parked-active → open`.

@@ -6949,15 +6949,21 @@ def _cmd_decide(args):
     """Record a decision in the body + log; lower the human gate to `none`.
 
     On a non-terminal card this is the normal Andon-cord lowering — a
-    parked card becomes pullable. On a *terminal* card with a still-raised
-    gate it is the **repair** path for the `status: terminal` +
-    `human_gate != none` contradiction the validator flags. A cleanly
-    closed card always carries `gate: none` (the close-time verbs enforce
-    it), so the only terminal cards that get past the "gate already none"
-    guard below are the broken ones — older closures that predate the
-    gate guard, hand-edits, or `goc migrate` imports — whose dangling gate
-    must be cleared for `goc validate` to pass. The card stays closed; the
-    decision block documents the resolution for the record axis.
+    parked card becomes pullable. A card parked while `active` is also
+    returned to `open`. Pull-card claims before it can hit the judgement
+    call that raises the gate, so lowering the gate alone would leave
+    `active` + `none`, the shape of a live agent claim, and every queue
+    view and pull-card's soft-lock rule would skip the decided card.
+
+    On a *terminal* card with a still-raised gate it is the **repair** path
+    for the `status: terminal` + `human_gate != none` contradiction the
+    validator flags. A cleanly closed card always carries `gate: none` (the
+    close-time verbs enforce it), so the only terminal cards that get past
+    the "gate already none" guard below are the broken ones — older
+    closures that predate the gate guard, hand-edits, or `goc migrate`
+    imports — whose dangling gate must be cleared for `goc validate` to
+    pass. The card stays closed; the decision block documents the
+    resolution for the record axis.
     """
     title = args.title
     decision = args.decision
@@ -6974,6 +6980,7 @@ def _cmd_decide(args):
         )
         sys.exit(2)
     is_terminal = t.status in TERMINAL_STATUSES
+    releases_claim = t.status == "active"
     prior_gate = t.human_gate
     # Resolved from the pre-mutation card: the gate flip does not touch
     # `advanced_by`, but the notice belongs to the card as the deciding
@@ -6988,6 +6995,10 @@ def _cmd_decide(args):
     body = replace_or_append_decision(body, decision, reasoning, now)
     text = emit_frontmatter(fm, body=body)
     text = mutate_frontmatter_field(text, "human_gate", "none")
+    if releases_claim:
+        # Same release as `goc status <title> open`: `worker` stays as the
+        # designation, and the next claim re-stamps `where`.
+        text = mutate_frontmatter_field(text, "status", "open")
     (card_dir / "README.md").write_text(text)
     log_path = card_dir / "log.md"
     existing = log_path.read_text() if log_path.exists() else ""
@@ -7004,6 +7015,11 @@ def _cmd_decide(args):
             f"{archived}\n"
         )
     recorded_note = f"{decision} — {reasoning}. Gate {prior_gate} → none."
+    if releases_claim:
+        recorded_note += (
+            " Status active → open — the claim parked behind the gate is "
+            "released, so the next pull-card claims the card per this decision."
+        )
     if is_terminal:
         recorded_note += (
             f" (Post-closure gate repair on a {t.status} card — the card "
@@ -7016,10 +7032,17 @@ def _cmd_decide(args):
     if prereq_notice:
         print(prereq_notice, file=sys.stderr)
     print(f"{title}: decision recorded; gate {prior_gate} → none")
+    if releases_claim:
+        print(f"{title}: active → open (the claim parked behind the gate is released)")
     if is_terminal:
         print(
             f"Next: gate cleared on a {t.status} card — record-axis repair; "
             f"the card stays closed and `goc validate` now passes."
+        )
+    elif releases_claim:
+        print(
+            "Next: gate lowered to none — any agent can now claim this card. goc to see "
+            f"the queue; to keep working it in this session, goc status {title} active."
         )
     else:
         print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
