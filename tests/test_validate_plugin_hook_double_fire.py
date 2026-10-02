@@ -54,6 +54,11 @@ class PluginHookDoubleFireTest(unittest.TestCase):
         # remediation names both escape hatches
         self.assertIn("false", w.detail)
         self.assertIn("skills_source: plugin", w.detail)
+        # ...and the switch runs through `goc upgrade`'s cleanup: deleting
+        # .claude/hooks/ by hand leaves the settings.json registrations
+        # pointing at missing scripts, and the pin alone removes nothing.
+        self.assertIn("goc upgrade", w.detail)
+        self.assertNotIn("remove .claude/hooks", w.detail)
 
     # --- silent cases -------------------------------------------------------
     def test_plugin_disabled_is_silent(self):

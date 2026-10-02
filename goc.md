@@ -154,12 +154,19 @@ Skills from the plugin are namespaced as `game-of-cards:<skill>` in the UI but s
 
 ### Coexistence with the repo-local harness
 
-When a consuming repo was previously set up with `goc install --agents claude`, it has `.claude/skills/` and `.claude/hooks/` checked in and hook entries in `.claude/settings.json`. The plugin and the repo-local harness can coexist:
+A repo installed with `goc install --local-skills` — or with `goc install --agents claude` before the plugin became the Claude default — has the GoC skills checked in under `.claude/skills/`, the GoC hook scripts under `.claude/hooks/`, GoC hook entries in `.claude/settings.json`, and `skills_source: vendored` pinned in `.game-of-cards/config.yaml`. The plugin and that repo-local harness can coexist:
 
 - **Skills** — the plugin's skills take precedence over repo-local `.claude/skills/` skills of the same name.
-- **Hooks** — both `settings.json` hooks and plugin `hooks.json` hooks fire; avoid duplicates by removing the GoC entries from `settings.json` once you switch to the plugin.
+- **Hooks** — both `settings.json` hooks and plugin `hooks.json` hooks fire, so every GoC hook runs twice until the repo is switched to the plugin.
 
-To clean up a previous repo-local harness installation, remove `.claude/skills/`, `.claude/hooks/`, and the GoC hook entries from `.claude/settings.json`, then rely on the plugin entirely.
+To switch the repo to the plugin, let `goc upgrade` remove the vendored layout:
+
+1. Set `skills_source: plugin` in `.game-of-cards/config.yaml`.
+2. Run `goc upgrade` and answer `y` when it offers to remove the leftover vendored layout (`echo y | goc upgrade` when scripting it).
+
+The cleanup removes only what GoC installed — its skill directories, its hook scripts, and its entries in `.claude/settings.json` — and leaves the repo's own skills, hook scripts, and settings in place. Run the switch with the standalone `goc` command (see [Install the command](#install-the-command)), not the engine bundled in the plugin, which is what a bare `goc` runs inside a Claude Code session with the plugin enabled: the bundled engine ships no skill templates, so its cleanup cannot tell GoC's skill directories from the repo's own and leaves every one of them in place.
+
+Do not hand-delete `.claude/skills/` instead. That deletes the repo's own skills along with GoC's, and because `skills_source` is still `vendored`, the next `goc upgrade` re-vendors every GoC skill, hook script, and settings entry, so the hooks fire twice again.
 
 ## Codex plugin
 

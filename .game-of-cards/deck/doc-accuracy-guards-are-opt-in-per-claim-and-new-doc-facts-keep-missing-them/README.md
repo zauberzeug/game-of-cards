@@ -68,10 +68,11 @@ the *unguarded* claims.
 | `MigrateListStyleKeyOrderScopeTest` (own file, `tests/test_migrate_list_style_key_order_scope.py`) | [migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does](../migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/) | 2026-09-07 |
 | `ContributorGuideAccuracyTest` | [contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions](../contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/) | 2026-09-21 |
 | `SkillAdvanceExampleDirectionTest` (own file, `tests/test_skill_advance_example_direction.py`) | [shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/) | 2026-09-21 |
+| `PluginSwitchRecipeTest` (own file, `tests/test_plugin_switch_recipe.py`) | [cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it](../cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it/) | 2026-10-02 |
 
-Twenty-three instances across three months, each its own file → claim → fix →
+Twenty-four instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-seventeen of them, because five closed instances and one still-open one carry
+eighteen of them, because five closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
@@ -80,7 +81,8 @@ the edge but no row yet
 [installed-files-point-readers-at-a-deck-folder-install-never-creates](../installed-files-point-readers-at-a-deck-folder-install-never-creates/),
 [shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
 The gap ran three rows, then seven; the twenty-third instance is the first to
-arrive with its row already written, so it stands at six. That narrowing is not
+arrive with its row already written, and the twenty-fourth did the same, so it
+stands at six. That narrowing is not
 the process self-correcting — the row exists because that card's DoD named it as
 a closure item, one card at a time. Absent such an item the table is still a
 hand-maintained restatement of `advanced_by`, and it rots exactly the way every
@@ -264,6 +266,21 @@ naming it in the decision costs no new invention. And both instances shipped
 identically to all six skill trees before anyone read them closely, so the unit
 that needs sweeping is the *template*, not the surface count: one uncovered
 instruction in `goc/templates/skills/` is six consumer-visible defects.
+
+The twenty-fourth is the third instance of the executed class and the first on
+a human-facing page rather than a skill body. `goc.md`'s vendored → plugin
+switch told the reader to hand-delete `.claude/skills/`, which took the repo's
+own skills with it and was undone by the next `goc upgrade`, because the recipe
+never touched the `skills_source` pin
+([cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it](../cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it/),
+closed 2026-10-02). Its guard (`tests/test_plugin_switch_recipe.py`) reads the
+numbered steps out of the page, runs them against a scratch install, and runs
+the page's two warnings both ways, so it fails when either the doc or the engine
+moves. Grepping for the same claim turned up a second copy in an engine string:
+`goc validate`'s double-fire remedy said to remove `.claude/hooks/`, which
+leaves the settings registrations pointing at deleted scripts. That is Option
+B's claim-keyed sweep, applied by hand, finding a copy no doc-surface sweep
+would have reached.
 
 ## What's structurally wrong
 

@@ -5732,7 +5732,10 @@ def validate_plugin_hook_double_fire(
         f"are also vendored in .claude/ ({', '.join(vendored)}); each fires "
         f"twice per turn. Resolve by disabling the plugin for this repo "
         f"(set \"{key}\": false under enabledPlugins, or run /plugin) OR switch "
-        f"to skills_source: plugin and remove .claude/hooks/.",
+        f"the repo to the plugin: set skills_source: plugin in "
+        f".game-of-cards/config.yaml, then run `goc upgrade` and accept its "
+        f"cleanup, which removes only GoC's skills, hook scripts and settings "
+        f"entries.",
     )]
 
 
