@@ -1,7 +1,7 @@
 ---
 title: cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it
 summary: "UNVERIFIED. goc.md:162 tells a vendored repo moving to the plugin to delete .claude/skills/, .claude/hooks/ and the GoC settings entries by hand, which also deletes every non-GoC skill the repo keeps there and leaves skills_source pinned to vendored. The next routine goc upgrade then re-vendors every GoC skill, hook and settings entry, restoring the duplicate hook firing the same section warns about, while the supported switch in AGENTS.md (edit skills_source: plugin, then goc upgrade) is documented nowhere a consumer reads."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-28T01:34:17Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py follows the `goc.md:162` recipe on a scratch `--local-skills` install holding one user-authored skill, then runs `goc upgrade`, and asserts the repo ends in plugin mode with the user skill intact — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] MECHANICAL: `goc.md`'s coexistence section gives the supported switch (`skills_source: plugin` in `.game-of-cards/config.yaml`, then `goc upgrade` and accept the cleanup) instead of a hand-delete of `.claude/skills/`, and says the cleanup preserves non-GoC skills
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands; the correction carries a derive-from-tree guard or is listed on `doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them`
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The CLI reference's plugin-switch recipe deletes user skills, and the next upgrade reverts it
