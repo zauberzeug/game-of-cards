@@ -32,6 +32,7 @@ advanced_by:
   - shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates
   - contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions
   - shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids
+  - cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
