@@ -14,16 +14,18 @@ advanced_by:
   - repair-edges-dry-run-overstates-fixable-edges-that-apply-refuses
   - dry-run-plan-promises-full-install-that-the-real-run-refuses-as-already-installed
   - upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict
+  - upgrade-re-offers-the-plugin-cleanup-on-every-run-when-the-repo-keeps-its-own-skills
 tags: [meta-fix, infra, api-contract]
 summary: |
   `goc install/upgrade/migrate --dry-run` maintains a hand-written preview
   (`_plan_writes` / migrate's preview branch) that re-enumerates conditionals
   the real executor applies independently. The two code paths drift: every
   time an executor grows a guard, the plan must be patched to match by hand,
-  and when it isn't, the dry-run lies. Six instances have surfaced (all
-  fixed one-by-one, the latest the un-planned skill-tree prune in
-  `upgrade`); this card proposes one architectural fix so the plan derives
-  from the executor instead of re-listing its decisions.
+  and when it isn't, the dry-run lies. Seven instances have surfaced (all
+  fixed one-by-one, the latest `upgrade`'s plugin-cleanup offer, which
+  restated its executor as a directory test); this card proposes one
+  architectural fix so the plan derives from the executor instead of
+  re-listing its decisions.
 definition_of_done: |
   - [ ] PROCESS: decision recorded (see `## Decision required`) — pick the unification mechanism (plan-derived-from-executor, shared predicate table, or property-test that asserts plan/executor parity over a matrix of environments)
   - [ ] TDD: a single parity harness asserts dry-run plan == real executor effects across the environment matrix (git/non-git, identical-only migrate tree, hook-present/absent), failing if any future executor guard is not mirrored in the plan
@@ -49,11 +51,12 @@ contract.
 
 ## The instances so far
 
-Six separate cards. The first three were each fixed by patching the plan to
+Seven separate cards. The first three were each fixed by patching the plan to
 re-mirror one executor conditional; the fourth, in a different verb, by
 unifying its two passes into one incremental classifier; the fifth by ordering
 the shared guard ahead of the preview; the sixth by planning the one operation
-the plan had no template to derive it from:
+the plan had no template to derive it from; the seventh by asking the executor,
+in probe mode, instead of restating it:
 
 1. [goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run](../goc-upgrade-omits-pre-commit-hook-append-promised-by-dry-run/)
    — git-repo case: dry-run promised the pre-commit append, real upgrade
@@ -89,6 +92,16 @@ the plan had no template to derive it from:
    un-mirrored executor decision is a *deletion* rather than a guard on a
    write. Fixed by asking the pruning executor, in probe mode, which paths it
    would remove and planning one `skill-prune` entry per path.
+7. [upgrade-re-offers-the-plugin-cleanup-on-every-run-when-the-repo-keeps-its-own-skills](../upgrade-re-offers-the-plugin-cleanup-on-every-run-when-the-repo-keeps-its-own-skills/)
+   — `upgrade`: the plugin-mode cleanup offer drives both the `--dry-run`
+   note and the `pending_cleanup` term of the no-op verdict. It restated
+   `_strip_claude_vendored_harness` as "`.claude/skills/` exists", but that
+   executor keeps the repo's own skills and also removes GoC hooks and
+   settings entries. So the offer drifted both ways: it was re-offered on
+   every run after a finished switch, and never offered for GoC hooks left
+   without a skills dir. The first instance in one of the non-plan terms
+   beside the verdict rather than in the plan itself. Fixed by asking the
+   cleanup, in probe mode, whether it has GoC content to remove.
 
 Instances 1 and 3 are the *same conditional* (`.git` presence around the
 pre-commit append) drifting in opposite directions across two code paths —
