@@ -33,6 +33,7 @@ advanced_by:
   - contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions
   - shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids
   - cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it
+  - install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
@@ -69,10 +70,11 @@ the *unguarded* claims.
 | `ContributorGuideAccuracyTest` | [contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions](../contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/) | 2026-09-21 |
 | `SkillAdvanceExampleDirectionTest` (own file, `tests/test_skill_advance_example_direction.py`) | [shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/) | 2026-09-21 |
 | `PluginSwitchRecipeTest` (own file, `tests/test_plugin_switch_recipe.py`) | [cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it](../cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it/) | 2026-10-02 |
+| `InstallDocClaimsTest` (own file, `tests/test_install_doc_claims.py`) | [install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/) | 2026-10-03 |
 
-Twenty-four instances across five months, each its own file → claim → fix →
+Twenty-five instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-eighteen of them, because five closed instances and one still-open one carry
+nineteen of them, because five closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
@@ -81,8 +83,8 @@ the edge but no row yet
 [installed-files-point-readers-at-a-deck-folder-install-never-creates](../installed-files-point-readers-at-a-deck-folder-install-never-creates/),
 [shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
 The gap ran three rows, then seven; the twenty-third instance is the first to
-arrive with its row already written, and the twenty-fourth did the same, so it
-stands at six. That narrowing is not
+arrive with its row already written, and the twenty-fourth and twenty-fifth did
+the same, so it stands at six. That narrowing is not
 the process self-correcting — the row exists because that card's DoD named it as
 a closure item, one card at a time. Absent such an item the table is still a
 hand-maintained restatement of `advanced_by`, and it rots exactly the way every
@@ -281,6 +283,31 @@ moves. Grepping for the same claim turned up a second copy in an engine string:
 leaves the settings registrations pointing at deleted scripts. That is Option
 B's claim-keyed sweep, applied by hand, finding a copy no doc-surface sweep
 would have reached.
+
+The twenty-fifth is the first instance where a guard protected the false claim.
+`test_claude_skill_count_matches_payload` is cited below as a model guard because
+it derives its count from `claude-plugin/skills/`. Its regex also required the
+words beside the count, "(same as `goc install --agents claude`)", verbatim. That
+clause had been false since 2026-05-07, when the plugin became the Claude
+default, and the guard that pinned it was written on 2026-07-26. Correcting the
+page would have turned CI red
+([install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/),
+closed 2026-10-03).
+
+This is the thirteenth instance's lesson in a stronger form. There, a guard missed
+the other claims in its sentence; here, it required one of them. That gives the
+decision a cheap rule: **a guard's pattern should contain only the value it
+derives.** Any other literal text in the pattern is a claim nobody checks, and the
+guard turns its correction into a CI failure. The repair kept only the count in
+the regex and checked the clause by running it. The instance also extends the
+run-it technique from recipes to descriptions. "Flag X writes Y" is guardable by
+installing with X, and the new guard does that for every harness bullet. Its
+flag check is the claim-keyed sweep Option B describes, applied to one claim
+shape: every `goc install` / `goc upgrade` flag named in any doc or shipped
+template must appear in that verb's `--help` usage. It sweeps every one of them
+with no false positives. The removed `--no-harness` had survived five months in
+`ABOUT.md` because the card that removed it listed which docs to update, and
+`ABOUT.md` was not on the list.
 
 ## What's structurally wrong
 

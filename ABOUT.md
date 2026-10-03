@@ -71,13 +71,13 @@ That means it can sit underneath other tools. It does not choose your planning m
 
 Harness selection controls which runtime affordances are installed:
 
-- `--agents claude` writes `.claude/skills/`, `.claude/hooks/` (one script per file under `goc/templates/hooks/`), and `CLAUDE.md`.
+- `--agents claude` writes `CLAUDE.md` and no skills or hooks: Claude Code loads those from the [GoC plugin](goc.md#claude-code-plugin).
+- `--agents claude --local-skills` vendors them into the repo as well: `.claude/skills/`, `.claude/hooks/` (one script per file under `goc/templates/hooks/`), and their entries in `.claude/settings.json`. Use it where the plugin is not available, such as CI or another agent runtime.
 - `--agents codex` writes Codex-readable skills under `.codex/skills/`, without Claude-only hooks.
-- `--no-harness` installs project state and guidance only — no skills, no hooks, no agent-specific files.
 
-Detection is intentionally simple: Claude markers such as `CLAUDE.md` or `.claude/` select the Claude harness; Codex markers such as `AGENTS.md` or `.codex/` select the Codex harness; both marker families install both harnesses. Explicit `--agents`, `--claude`, `--codex`, and `--no-harness` flags override detection for scripted installs.
+Detection is intentionally simple: Claude markers such as `CLAUDE.md` or `.claude/` select the Claude harness; Codex markers such as `AGENTS.md` or `.codex/` select the Codex harness; both marker families install both harnesses. Explicit `--agents`, `--claude`, and `--codex` flags override detection for scripted installs.
 
-OpenCode is a free path: it already reads `.claude/skills/`, so `goc install --agents claude` gives OpenCode the skill files without a separate OpenCode shim. The Claude `UserPromptSubmit` hook is not part of that compatibility path; hooks remain Claude Code-specific.
+OpenCode is a free path: it already reads `.claude/skills/`, so `goc install --agents claude --local-skills` gives OpenCode the skill files without a separate OpenCode shim. A plain `goc install` does not, because it leaves Claude's skills to the plugin. The vendored hook scripts are not part of that compatibility path; hooks remain Claude Code-specific.
 
 [OpenClaw](https://openclaw.ai) is the other supported runtime, but it sits beside the `--agents` matrix rather than inside it. OpenClaw plugins are TypeScript entry points that register typed tools and event handlers — there is no shell-PATH binary, no auto-discovered `.claude/skills/` directory, and no `goc install` step on the consumer side. So OpenClaw ships as a separate plugin payload (`openclaw-plugin/`) that bundles the goc engine inside the npm package and registers `goc` as an OpenClaw tool. Skills are workspace-tier `SKILL.md` directories ported once via `scripts/port_skills_to_openclaw.py`; the three Claude lifecycle hooks (`SessionStart`, `UserPromptSubmit`, `Stop`-equivalent) are reimplemented as TypeScript event handlers registered via `api.on()`. Consumers install with `openclaw skills install game-of-cards`; the only host prerequisite is `python3` (3.10+).
 

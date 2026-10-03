@@ -104,6 +104,8 @@ goc install
 
 This creates `.game-of-cards/deck/`, `.game-of-cards/config.yaml`, and merges GoC guidance into `AGENTS.md` / `CLAUDE.md`.
 
+It writes no skill files for Claude Code, which loads them from the plugin. For OpenCode or another runtime that reads skills from `.claude/skills/`, run `goc install --agents claude --local-skills` instead to vendor them there.
+
 Full CLI reference: https://game-of-cards.com/goc/
 
 ## Key concepts

@@ -551,9 +551,13 @@ class GocMdPluginReferenceAccuracyTest(unittest.TestCase):
         )
 
     def test_claude_skill_count_matches_payload(self) -> None:
+        # Only the count is pinned here. The invocation beside it is checked by
+        # running it (tests/test_install_doc_claims.py) — this regex once required
+        # "(same as `goc install --agents claude`)" verbatim, and that install
+        # vendors no skills.
         m = re.search(
-            r"\*\*(\d+) GoC skills\*\* \(same as `goc install --agents claude`\)",
-            GOC_MD.read_text(),
+            r"\*\*(\d+) GoC skills\*\*",
+            self._claude_section("## Claude Code plugin", "## Codex plugin"),
         )
         self.assertIsNotNone(m, msg="goc.md lost its Claude plugin skill-count bullet.")
         self.assertEqual(

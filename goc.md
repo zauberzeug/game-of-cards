@@ -56,6 +56,12 @@ goc install --agents codex
 goc install --agents claude,codex
 ```
 
+What each harness writes into the repo:
+
+- `--agents claude` writes `CLAUDE.md` and no skills or hooks: Claude Code loads those from the [Claude Code plugin](#claude-code-plugin).
+- `--agents claude --local-skills` vendors them as well — `.claude/skills/`, `.claude/hooks/`, and their entries in `.claude/settings.json` — for CI, or for an agent runtime such as OpenCode that reads skills from `.claude/skills/`.
+- `--agents codex` writes Codex-readable skills under `.codex/skills/`.
+
 Repo-local development form:
 
 ```bash
@@ -86,7 +92,7 @@ The `claude-plugin/` directory at the root of the `game-of-cards` repository is 
 
 ### What the plugin provides
 
-- **16 GoC skills** (same as `goc install --agents claude`) — auto-discoverable by Claude Code when the plugin is loaded.
+- **16 GoC skills** (the set `goc install --agents claude --local-skills` vendors into `.claude/skills/`) — auto-discoverable by Claude Code when the plugin is loaded.
 - **SessionStart hook** — prints an active-card reminder at session start.
 - **UserPromptSubmit hook** — detects work-initiating prompts and injects a deck-first reminder.
 - **Stop hook** — prompts a pattern-generalization self-assessment after code-mutating turns.

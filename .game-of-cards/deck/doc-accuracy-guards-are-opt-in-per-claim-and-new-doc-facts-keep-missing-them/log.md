@@ -222,3 +222,32 @@ Two things recorded in the dashboard above:
   needs that instance's guard class.
 - **No decision recorded** — the gate stays `decision`; this entry adds evidence
   to the scope question, not an answer to it.
+
+## 2026-10-03 — twenty-fifth instance connected: a guard that required the false clause
+
+- **Instance**:
+  `install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag`
+  (closed 2026-10-03). `advances` edge wired, table row added
+  (`InstallDocClaimsTest`, own file), count sentence rewritten in place against
+  `advanced_by` (25 edges, 19 rows, gap still six).
+- **Why it is not a duplicate**: same shape. Three reader-facing pages restated
+  the install model (a flag set and what each flag writes). That model changed
+  on 2026-05-07, and the pages kept the old one for five months: a removed
+  `--no-harness`, `--agents claude` vendoring skills, and OpenCode routed to
+  installs that vendor none.
+- **What it adds**: the first instance where a guard *protected* the false
+  claim. `test_claude_skill_count_matches_payload`, which the body cites as a
+  model derive-from-tree guard, matched the goc.md count with a regex that also
+  required the clause beside it verbatim. That clause was already false when
+  the guard was written on 2026-07-26, so correcting the page would have
+  failed CI.
+- **A datum for the scope question**: a cheap, decidable rule falls out — a
+  guard's pattern holds only the value it derives, and any other literal text
+  in it is an unchecked claim that the guard defends against correction. The
+  instance also shows the run-it technique reaching descriptions, not just
+  recipes: "flag X writes Y" is checked by installing with X. And it shows a
+  precise claim-keyed sweep (Option B) for one claim shape: every
+  `goc install` / `goc upgrade` flag named in any doc or shipped template must
+  appear in that verb's `--help` usage.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.
