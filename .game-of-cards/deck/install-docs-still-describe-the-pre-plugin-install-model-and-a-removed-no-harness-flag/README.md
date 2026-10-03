@@ -1,7 +1,7 @@
 ---
 title: install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag
 summary: "UNVERIFIED. ABOUT.md documents a --no-harness flag that goc install now rejects (exit 2) and says --agents claude writes .claude/skills/ and gives OpenCode the skill files, while README.md:46 sends OpenCode users to plain goc install; since the plugin became the Claude default, neither invocation vendors any skill. goc.md:89 repeats the old model, and tests/test_guidance_accuracy.py:555 requires that false parenthetical, so correcting it turns the guard red."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-28T01:34:50Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py extracts every install flag and per-flag effect `ABOUT.md` (lines 72-80), `README.md:46` and `goc.md:89` state, runs each against a scratch repo, and reports the claims the installer contradicts — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] MECHANICAL: the three surfaces describe the plugin-default model: `--agents claude` writes no skills unless `--local-skills` is passed, `--no-harness` is gone, and OpenCode / generic-runner users are told which invocation actually vendors skill files
   - [ ] TDD: `tests/test_guidance_accuracy.py`'s `test_claude_skill_count_matches_payload` no longer requires the false "(same as `goc install --agents claude`)" parenthetical to match; drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Install docs still describe the pre-plugin install model and a removed `--no-harness` flag
