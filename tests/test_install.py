@@ -18,10 +18,15 @@ SKILL_NAMES = tuple(
     sorted(p.name for p in (ROOT / "goc" / "templates" / "skills").iterdir() if (p / "SKILL.md").is_file())
 )
 CLAUDE_SHIPPED_SKILLS = tuple(name for name in SKILL_NAMES if skill_for_agent(name, "claude"))
+# The plugin-mode cleanup prompt's intro line. Its y/N question is not echoed
+# when stdin is not a TTY, so this is what marks an offer in captured output.
+CLEANUP_OFFER = "from a prior vendored install"
 
 
 class ClaudeHarnessInstallTest(unittest.TestCase):
-    def run_goc(self, cwd: Path, *args: str, env: dict | None = None) -> subprocess.CompletedProcess[str]:
+    def run_goc(
+        self, cwd: Path, *args: str, env: dict | None = None, input: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
         if args and args[0] == "new":
             (cwd / ".game-of-cards" / "deck").mkdir(parents=True, exist_ok=True)
         base_env = os.environ.copy()
@@ -33,6 +38,7 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             [sys.executable, "-m", "goc.cli", *args],
             cwd=cwd,
             env=base_env,
+            input=input,
             text=True,
             capture_output=True,
             check=False,
@@ -503,6 +509,179 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
             # Authored content is never destroyed when GoC-owned names are unknown.
             self.assertTrue(user_skill.exists())
             self.assertTrue(goc_skill.exists())
+
+    @staticmethod
+    def _switch_config_to_plugin(cwd: Path) -> None:
+        config_path = cwd / ".game-of-cards" / "config.yaml"
+        config_path.write_text(
+            config_path.read_text().replace("skills_source: vendored", "skills_source: plugin")
+        )
+
+    @staticmethod
+    def _goc_settings_commands(cwd: Path) -> list[str]:
+        from goc.install import GOC_CLAUDE_HOOKS
+
+        settings_path = cwd / ".claude" / "settings.json"
+        settings = json.loads(settings_path.read_text()) if settings_path.is_file() else {}
+        return [
+            h.get("command")
+            for groups in settings.get("hooks", {}).values()
+            for group in groups
+            for h in group.get("hooks", [])
+            if h.get("command") in GOC_CLAUDE_HOOKS.values()
+        ]
+
+    def test_upgrade_does_not_reoffer_cleanup_once_only_repo_owned_skills_remain(self) -> None:
+        """A finished switch is not a leftover just because `.claude/skills/` survives it.
+
+        The cleanup keeps the repo's own skills, so after it ran the directory
+        belongs to the repo. The next upgrade must not offer the cleanup again,
+        must reach its already-at-version verdict, and must not announce the
+        cleanup under --dry-run even when a version bump gets it past that
+        verdict.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            own_skill = cwd / ".claude" / "skills" / "my-own-skill" / "SKILL.md"
+            own_skill.parent.mkdir()
+            own_skill.write_text("# mine\n")
+            self._switch_config_to_plugin(cwd)
+
+            switch = self.run_goc(cwd, "upgrade", input="y\n")
+            self.assert_goc_ok(switch)
+            self.assertIn(CLEANUP_OFFER, switch.stdout)
+            self.assertEqual(["my-own-skill"], sorted(p.name for p in (cwd / ".claude" / "skills").iterdir()))
+
+            routine = self.run_goc(cwd, "upgrade", input="")
+            self.assert_goc_ok(routine)
+            self.assertNotIn(CLEANUP_OFFER, routine.stdout)
+            self.assertNotIn("Skipping cleanup", routine.stdout)
+            self.assertIn("nothing to do", routine.stdout)
+
+            (cwd / ".game-of-cards" / "deck" / ".goc-version").write_text("0.0.0\n")
+            dry = self.run_goc(cwd, "upgrade", "--dry-run")
+            self.assert_goc_ok(dry)
+            self.assertIn("would sync 0.0.0", dry.stdout)
+            self.assertNotIn("cleanup", dry.stdout)
+
+            bumped = self.run_goc(cwd, "upgrade", input="")
+            self.assert_goc_ok(bumped)
+            self.assertNotIn(CLEANUP_OFFER, bumped.stdout)
+            self.assertTrue(own_skill.is_file())
+
+    def test_upgrade_offers_cleanup_for_goc_hooks_left_without_a_skills_dir(self) -> None:
+        """GoC hook scripts and settings entries are leftovers with or without `.claude/skills/`.
+
+        A partial hand cleanup that removed the skills dir leaves hooks that
+        fire beside the plugin's; `goc validate`'s double-fire warning sends
+        the user to this cleanup, so it has to be offered and has to remove
+        them.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            shutil.rmtree(cwd / ".claude" / "skills")
+            self._switch_config_to_plugin(cwd)
+            self.assertTrue((cwd / ".claude" / "hooks" / "deck_session_start.py").is_file())
+            self.assertTrue(self._goc_settings_commands(cwd))
+
+            dry = self.run_goc(cwd, "upgrade", "--dry-run")
+            self.assert_goc_ok(dry)
+            self.assertIn("cleanup", dry.stdout)
+
+            result = self.run_goc(cwd, "upgrade", input="y\n")
+            self.assert_goc_ok(result)
+            self.assertIn(CLEANUP_OFFER, result.stdout)
+            self.assertFalse((cwd / ".claude" / "hooks").exists())
+            self.assertEqual([], self._goc_settings_commands(cwd))
+
+    def test_strip_vendored_harness_probe_reports_pending_removal_without_touching_disk(self) -> None:
+        """`probe=True` answers "is there GoC content to remove?" and writes nothing.
+
+        `goc upgrade` offers the cleanup on this answer, so it must be true for
+        each kind of GoC leftover on its own, false once only the repo's own
+        files remain, and side-effect free (no removal, no settings rewrite).
+        """
+        from goc.install import _strip_claude_vendored_harness, _templates_root
+
+        templates = _templates_root()
+
+        def snapshot(root: Path) -> dict[str, bytes | None]:
+            return {
+                str(p.relative_to(root)): p.read_bytes() if p.is_file() else None
+                for p in sorted(root.rglob("*"))
+            }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp) / "repo"
+            cwd.mkdir()
+            self.assert_goc_ok(self.run_goc(cwd, "install", "--local-skills"))
+            own_skill = cwd / ".claude" / "skills" / "my-own-skill" / "SKILL.md"
+            own_skill.parent.mkdir()
+            own_skill.write_text("# mine\n")
+            vendored = Path(tmp) / "vendored"
+            shutil.copytree(cwd, vendored)
+            self.assertTrue(self._goc_settings_commands(vendored))
+
+            before = snapshot(cwd)
+            self.assertTrue(_strip_claude_vendored_harness(cwd, templates, probe=True))
+            self.assertEqual(before, snapshot(cwd))
+
+            self.assertTrue(_strip_claude_vendored_harness(cwd, templates))
+            self.assertTrue(own_skill.is_file())
+            self.assertFalse(_strip_claude_vendored_harness(cwd, templates, probe=True))
+            self.assertFalse(_strip_claude_vendored_harness(cwd, templates))
+
+            # Each kind of GoC leftover, restored alone into the cleaned repo,
+            # is pending on its own.
+            for kind, rel in [
+                ("skill dir", ".claude/skills/deck"),
+                ("bootstrap shim", ".claude/skills/_goc-bootstrap.sh"),
+                ("hook script", ".claude/hooks/deck_session_start.py"),
+                ("settings entries", ".claude/settings.json"),
+            ]:
+                with self.subTest(kind=kind):
+                    repo = Path(tmp) / kind.replace(" ", "-")
+                    shutil.copytree(cwd, repo)
+                    src, dst = vendored / rel, repo / rel
+                    if src.is_dir():
+                        shutil.copytree(src, dst)
+                    else:
+                        dst.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(src, dst)
+                    before = snapshot(repo)
+                    self.assertTrue(_strip_claude_vendored_harness(repo, templates, probe=True))
+                    self.assertEqual(before, snapshot(repo))
+
+    def test_strip_goc_settings_entries_probe_writes_and_warns_nothing(self) -> None:
+        """The settings strip's probe reports the pending change but leaves bytes and stderr alone."""
+        import contextlib
+        import io
+
+        from goc.install import GOC_CLAUDE_HOOKS, _strip_goc_settings_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings_path = Path(tmp) / "settings.json"
+            original = json.dumps(
+                {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": GOC_CLAUDE_HOOKS["SessionStart"]}]}]}}
+            )
+            settings_path.write_text(original)
+            self.assertTrue(_strip_goc_settings_entries(settings_path, probe=True))
+            self.assertEqual(original, settings_path.read_text())
+            self.assertTrue(_strip_goc_settings_entries(settings_path))
+            self.assertFalse(_strip_goc_settings_entries(settings_path, probe=True))
+
+            settings_path.write_text("{not json")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertFalse(_strip_goc_settings_entries(settings_path, probe=True))
+            self.assertEqual("", stderr.getvalue())
+            with contextlib.redirect_stderr(stderr):
+                self.assertFalse(_strip_goc_settings_entries(settings_path))
+            self.assertIn("not valid JSON", stderr.getvalue())
 
     def test_upgrade_keep_local_skills_preserves_vendored_layout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -292,11 +292,12 @@ which destination files its wipe-and-recopy would remove and plans one
 deletion, not a new term beside the guard
 (`upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict`).
 The three remaining terms next to the plan cover work the plan does not
-model: the interactive vendored-cleanup prompt, the legacy-briefing strip,
-and the `skills_source` pin — the one surviving `pending_*` term that does
-gate a write, kept honest by asking `_write_skills_source` in `probe=True`
-mode rather than restating what it would do, and a holdover rather than a
-shape to copy.
+model: the interactive vendored-cleanup prompt (offered when
+`_strip_claude_vendored_harness` in `probe=True` mode finds GoC content to
+remove), the legacy-briefing strip, and the `skills_source` pin — the one
+surviving `pending_*` term that does gate a write, kept honest by asking
+`_write_skills_source` in `probe=True` mode rather than restating what it
+would do, and a holdover rather than a shape to copy.
 
 ### `skills_source` — which install path owns `.claude/skills/`
 
@@ -312,10 +313,15 @@ the per-repo signal that says where Claude Code's GoC skills come from:
 
 Switching modes is a manual config edit. To move a vendored repo to
 plugin mode: edit `skills_source: plugin` in
-`.game-of-cards/config.yaml`, then `goc upgrade` — which detects the
-leftover `.claude/skills/` and prompts for cleanup. The cleanup only
-removes GoC-managed skill directories, hook files, and settings
-entries; non-GoC skills in `.claude/skills/` are preserved. Declining
+`.game-of-cards/config.yaml`, then `goc upgrade` — which prompts for
+cleanup whenever GoC-owned leftovers remain: GoC-named skill
+directories, the `_goc-bootstrap.sh` shim, GoC hook scripts, or GoC
+entries in `.claude/settings.json`. The detection keys on that GoC
+content, not on whether `.claude/skills/` exists: it asks the cleanup
+itself in probe mode, so a `.claude/skills/` holding only the repo's
+own skills is not re-offered on every later upgrade, and GoC hooks
+left without one still are. The cleanup only removes that GoC
+content; non-GoC skills in `.claude/skills/` are preserved. Declining
 the cleanup is a strict no-op (the buggy "decline re-vendors and
 deletes user skills" path that motivated this design is gone).
 
