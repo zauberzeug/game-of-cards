@@ -109,5 +109,15 @@ Related:
 (decision-gated) is about what the report says, not whether it is
 printed.
 
+Family:
+[goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version](../goc-upgrade-cannot-repair-a-damaged-install-at-the-same-version/)
+(done, meta-fix) is the root for "something below the same-version
+short-circuit is unreachable". This is a new kind of member. Its root
+fix derives the verdict from the write plan, which covers writes, and
+`_plan_skill_prunes` covers deletions. A read-only output owed on
+*every* run is neither: planning it, or adding a guard term for it,
+would make every run effecting and retire the no-op. So it is printed
+on the short-circuit path as well.
+
 Surfaced by: general-purpose audit hunter (shipped skills vs CLI
 contract), 2026-09-28.

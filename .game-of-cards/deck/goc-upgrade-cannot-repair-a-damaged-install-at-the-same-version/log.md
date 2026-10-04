@@ -56,3 +56,14 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 8/8 ticked
 - [x] log-md-closure-entry — '## 2026-09-01 — Closure' present
+
+## 2026-10-04 — Forward pointer: a new kind of member in the family
+
+[upgrade-skill-cannot-reach-the-divergence-report-once-the-version-is-current](../upgrade-skill-cannot-reach-the-divergence-report-once-the-version-is-current/)
+(done) found one more thing below the short-circuit that the same-version
+run never reached: the divergence report `Skill(upgrade)` reads. It is not
+a repair, so the plan-derived verdict this card installed was right to call
+the run a no-op. Planning the report, or adding a guard term for it, would
+make every run effecting. Instead it is printed on the short-circuit path
+too. Take that shape for the next read-only output a consumer needs on every
+run: emit it on both paths, and do not register it as work.
