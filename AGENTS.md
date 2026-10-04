@@ -38,7 +38,9 @@ with `uv run python -m unittest discover -s tests`; it also passes under
 pytest). `.github/workflows/ci.yml` is a build + console-script +
 regression-test + `goc validate` matrix on Python 3.10-3.13: the
 `Run regression tests` step (`uv run python -m unittest discover -s
-tests`) gates code correctness, and the validation step gates
+tests`) gates code correctness — and, through
+`tests/test_wheel_package_parity.py`, which runs `uv build`, that the
+wheel ships every tracked `goc/` file — and the validation step gates
 card-frontmatter drift.
 
 Releases publish to three registries — PyPI, npm, ClawHub — all via

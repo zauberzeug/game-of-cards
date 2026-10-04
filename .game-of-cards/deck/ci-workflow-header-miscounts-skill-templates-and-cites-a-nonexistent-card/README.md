@@ -99,8 +99,15 @@ no-op. The two cards touch the same file and should probably land together.
 
 Rewrite `ci.yml:1-11`. Drop the hard-coded count in favour of the invariant
 ("every skill template under `goc/templates/skills/` ships as importable
-package data" — which is what the step checks), and replace the
-"Once … ships" paragraph with a present-tense description of the validate step.
+package data"), and replace the "Once … ships" paragraph with a present-tense
+description of the validate step.
+
+Credit that invariant to `tests/test_wheel_package_parity.py`, not to the
+`Verify package data ships templates` step. The test builds the wheel and
+checks it. The step reads the editable source tree back, so it passes on a
+wheel that ships no skills.
+[ci-package-data-step-reports-skills-ship-without-looking-at-a-wheel](../ci-package-data-step-reports-skills-ship-without-looking-at-a-wheel/)
+deletes or rewires the step, and belongs in the same `ci.yml` session.
 
 **Gate is `session`, not `none`, because the file is under
 `.github/workflows/`** — the autonomous bot's `GITHUB_TOKEN` cannot write there
