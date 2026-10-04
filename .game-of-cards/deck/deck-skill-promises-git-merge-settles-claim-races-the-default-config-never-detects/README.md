@@ -1,7 +1,7 @@
 ---
 title: deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects
 summary: "The shipped deck skill (SKILL.md and reference.md) and ABOUT.md say git's merge handles a simultaneous claim race, whichever commits first wins. Under the default config a claim never leaves the claimer's clone, so both racing claims succeed and git meets them only when the second worker integrates its finished work; under one shared worker identity the claim commits are identical, so integrating them raises nothing. Every consuming agent loads this reassurance, so multi-agent setups are told parallel claiming is safe without workflow.claim_push."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-10-04T06:13:07Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the three passages state the shipped behavior — by default a claim stays in the claimer's clone, so a race surfaces at the earliest when the second worker integrates, as a conflict over the claim under distinct identities and only through the finished work under one shared identity; `workflow.claim_push: true` pushes the claim and refuses a later conflicting claimer — and point at `DECK_LOCATION.md`'s claim table for the detail
   - [ ] TDD: a regression guard in `tests/` fails when any doc or shipped skill template says git's merge handles or settles a claim race while a default claim does not push
   - [ ] MECHANICAL: mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) and OpenClaw skills re-ported (`python3 scripts/port_skills_to_openclaw.py --check` green)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The deck skill promises git's merge settles claim races the default config never detects
