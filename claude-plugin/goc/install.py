@@ -2130,6 +2130,13 @@ def upgrade(
         and not pending_skills_source
     ):
         print(f"already at goc {__version__} — nothing to do.")
+        # The report is still owed: a diverged evolving file is `preserved` (a
+        # no-op to the plan) yet is exactly what `Skill(upgrade)` reconciles
+        # from this report, and the skill's run is often the second one at a
+        # version. Read-only, so the dry-run preview prints it too.
+        _emit_divergence_report(
+            _user_owned_classifications(target, templates), templates / "game_of_cards"
+        )
         return
 
     if dry_run:

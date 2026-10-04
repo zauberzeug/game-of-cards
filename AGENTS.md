@@ -274,7 +274,14 @@ agent is present. The new `Skill(upgrade)` runs the engine and then
 reads the engine's machine-readable divergence report (printed after
 the sentinel `GoC project-state divergence report (JSON):`) to drive
 LLM reconciliation of the *evolving* files where real upstream
-changes need a judgment call. Headless / CI / scripted upgrades
+changes need a judgment call. The engine prints that report on every
+run except an effecting `--dry-run` (which prints its plan instead),
+the `already at goc X — nothing to do.` short-circuit included:
+a diverged evolving file is `preserved`, a no-op to the write plan,
+so a report gated on writes would vanish whenever the version is
+already current — the usual state by the time the skill runs
+(`upgrade-skill-cannot-reach-the-divergence-report-once-the-version-is-current`).
+Headless / CI / scripted upgrades
 (e.g., the `--keep-local-skills` path) preserve content with no agent
 in the loop.
 

@@ -43,7 +43,12 @@ the user knows what new behavior the agents will now follow.
 
 1. **Run `goc upgrade` and capture stdout.** The engine emits a
    sentinel-marked JSON divergence report after its normal upgrade
-   output:
+   output. Plain `goc upgrade` is the whole invocation: the report
+   follows on every run, including one that answers
+   `already at goc X — nothing to do.` because the version is
+   already current (someone ran `goc upgrade` in a terminal first,
+   or an earlier session stopped after this step). A diverged file
+   gives the engine nothing to write, but it is still in the report:
 
    ```
    GoC project-state divergence report (JSON):
@@ -128,13 +133,16 @@ of upstream changes to the two evolving files. The local copies stay
 exactly as the user left them; the upstream changes sit in the
 template payload until the next time someone runs this skill (or
 manually diffs `.game-of-cards/README.md` against
-`<templates_root>/README.md`).
+`<templates_root>/README.md`). That holds after the version is
+already current too, because the engine's no-op run still prints
+the report.
 
 ## What this skill does NOT do
 
 - Does NOT re-run `goc upgrade`. The engine has already done its
   work by the time this skill is reading the report. Re-running
-  would be a no-op (version is now current).
+  would write nothing (version is now current) and print the same
+  report again.
 - Does NOT overwrite user-owned content stubs or workflow hooks. The
   templates are blank by design — there is nothing upstream to
   bring across, so the reconcile pass for those files is purely a
