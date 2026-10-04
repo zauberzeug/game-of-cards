@@ -1,7 +1,7 @@
 ---
 title: upgrade-skill-cannot-reach-the-divergence-report-once-the-version-is-current
 summary: "UNVERIFIED. Skill(upgrade) reads only the engine's sentinel-marked divergence report, but goc upgrade prints it only on a run with effecting writes: at the current version it returns early with 'already at goc X — nothing to do.' and no report, and a diverged evolving file counts as a no-op. So the skill's promised catch-up (the upstream changes wait until the next time someone runs this skill) is unreachable whenever someone ran goc upgrade first, as the install output tells them to."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:33:12Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py upgrades a scratch install to the current version, diverges `.game-of-cards/README.md` from its template, then runs `goc upgrade` again and asserts the divergence report is printed — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] TDD: a regression test pins that the report is reachable at the current version (a `goc upgrade` that is otherwise a no-op still prints it, or a flag the skill uses does)
   - [ ] MECHANICAL: `upgrade/SKILL.md` names the invocation that yields the report on a no-op upgrade, and its "next time someone runs this skill" promise (line 130) holds; drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The upgrade skill cannot reach the divergence report once the version is current
