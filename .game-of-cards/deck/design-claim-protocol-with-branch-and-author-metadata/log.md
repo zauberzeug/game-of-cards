@@ -15,3 +15,12 @@ reconciled in merge commit `5316ebd`. Both enforcement mechanisms this
 card landed (`workflow.claim_push`, `workflow.closure_on_integration`)
 were still commented out in this repo's own config. Follow-on decision
 card: [parallel-agents-double-close-cards-because-claim-protections-are-disabled](../parallel-agents-double-close-cards-because-claim-protections-are-disabled/).
+
+## 2026-10-04T06:11:06Z — Post-close amendment
+
+Extended by [`deck-location-doc-says-claims-push-by-default-and-last-writer-wins`](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/)
+— the Decision's "last-writer-wins on claim push" names the reverse of what
+`_git_claim_push_with_retry` does: the later claimer's rebase conflicts and it
+is refused with exit 2, so the first claim stays. `DECK_LOCATION.md` had
+restated the Decision's wording, plus a default push that `claim_push`
+(off by default) never makes.

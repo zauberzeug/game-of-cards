@@ -251,3 +251,29 @@ Two things recorded in the dashboard above:
   appear in that verb's `--help` usage.
 - **No decision recorded** — the gate stays `decision`; this entry adds evidence
   to the scope question, not an answer to it.
+
+## 2026-10-04 — twenty-sixth and twenty-seventh instances connected: a page faithful to a wrong decision record
+
+- **Instances**:
+  `deck-location-doc-says-claims-push-by-default-and-last-writer-wins`
+  (closed 2026-10-04) and
+  `deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects`
+  (filed open the same day from its claim-keyed sweep). Both `advances` edges
+  wired, table rows added (`DeckLocationClaimRowsTest`, own file; *none yet —
+  open*), count sentence rewritten in place against `advanced_by` (27 edges,
+  21 rows, gap still six).
+- **Why they are not duplicates**: same shape. Reader-facing pages restated
+  the claim protocol with a default push and a race resolution the engine does
+  not perform.
+- **What it adds**: the first instance whose false claim was faithful to the
+  source it cited. The recorded decision on
+  `design-claim-protocol-with-branch-and-author-metadata` says last-writer-wins,
+  and the same card's DoD shipped first-writer-wins. Citing a decision does not
+  check a claim; only the implementation can.
+- **A datum for the scope question**: a page that documents a known,
+  decision-gated defect needs its guard in both directions. The new guard
+  checks the page against live observations and against every observation
+  flipped, so the card that closes the identical-claim hole turns it red until
+  the page stops describing the hole.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.

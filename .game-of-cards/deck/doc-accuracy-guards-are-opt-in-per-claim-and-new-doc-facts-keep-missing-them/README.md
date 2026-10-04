@@ -73,10 +73,12 @@ the *unguarded* claims.
 | `SkillAdvanceExampleDirectionTest` (own file, `tests/test_skill_advance_example_direction.py`) | [shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/) | 2026-09-21 |
 | `PluginSwitchRecipeTest` (own file, `tests/test_plugin_switch_recipe.py`) | [cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it](../cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it/) | 2026-10-02 |
 | `InstallDocClaimsTest` (own file, `tests/test_install_doc_claims.py`) | [install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/) | 2026-10-03 |
+| `DeckLocationClaimRowsTest` (own file, `tests/test_deck_location_claim_rows.py`) | [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/) | 2026-10-04 |
+| *(none yet — open)* | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | — |
 
-Twenty-five instances across five months, each its own file → claim → fix →
+Twenty-seven instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-nineteen of them, because five closed instances and one still-open one carry
+twenty-one of them, because five closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
@@ -85,8 +87,8 @@ the edge but no row yet
 [installed-files-point-readers-at-a-deck-folder-install-never-creates](../installed-files-point-readers-at-a-deck-folder-install-never-creates/),
 [shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
 The gap ran three rows, then seven; the twenty-third instance is the first to
-arrive with its row already written, and the twenty-fourth and twenty-fifth did
-the same, so it stands at six. That narrowing is not
+arrive with its row already written, and the twenty-fourth through
+twenty-seventh did the same, so it stands at six. That narrowing is not
 the process self-correcting — the row exists because that card's DoD named it as
 a closure item, one card at a time. Absent such an item the table is still a
 hand-maintained restatement of `advanced_by`, and it rots exactly the way every
@@ -310,6 +312,31 @@ template must appear in that verb's `--help` usage. It sweeps every one of them
 with no false positives. The removed `--no-harness` had survived five months in
 `ABOUT.md` because the card that removed it listed which docs to update, and
 `ABOUT.md` was not on the list.
+
+The twenty-sixth is the first whose false claim was faithful to its source.
+`DECK_LOCATION.md`'s claim table said a claim race is settled last-writer-wins
+"per the recorded decision" on
+[design-claim-protocol-with-branch-and-author-metadata](../design-claim-protocol-with-branch-and-author-metadata/).
+The decision does say that, but the same card's DoD shipped the reverse: a
+stale claimer whose rebase conflicts is refused, so the first claim stays. The
+row also presented a push that only the opt-in `workflow.claim_push` makes as
+the default
+([deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/),
+closed 2026-10-04). Two datums. A recorded decision is prose like any other,
+and a page that cites one inherits its errors, so the derivation has to reach
+the implementation: the guard (`tests/test_deck_location_claim_rows.py`) runs
+the protocol against scratch remotes instead of reading the decision. And the
+fixed row documents a known, decision-gated defect (an identical racing claim
+reports success), so the guard runs every check both ways and fails when an
+observation flips. The card that closes that hole cannot leave the page
+describing it.
+
+The twenty-seventh came out of the same session. Grepping the claim rather
+than the file found the same reassurance, that git's merge handles a claim
+race, in `ABOUT.md` and in the shipped deck skill
+([deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/),
+open). That is Option B's claim-keyed sweep applied by hand once more, and it
+reached copies a guard on `DECK_LOCATION.md` alone never would.
 
 ## What's structurally wrong
 
