@@ -1,7 +1,7 @@
 ---
 title: deck-location-doc-says-claims-push-by-default-and-last-writer-wins
 summary: "UNVERIFIED. DECK_LOCATION.md:44 says goc status active autocommits and pushes and that last-writer-wins resolves a claim race, but claim_push is off by default (engine.py:5369) so a default claim only commits locally, and with claim_push on the first writer wins while the later claimer is refused. The page that defines the claim model therefore tells multi-agent setups the defaults are safe for parallel claiming."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-28T01:35:19Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py sets up a bare remote with two clones and asserts what `DECK_LOCATION.md:44` claims: a default-config `goc status <title> active` pushes, and a second racing claim is resolved last-writer-wins — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] MECHANICAL: the Same-repo row states the shipped protocol: claims commit locally and push only when `workflow.claim_push: true`; with it set, the later claimer is refused with the racing worker's identity (first writer wins); without it, nothing detects the race
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The deck-location doc says claims push by default and last-writer-wins
