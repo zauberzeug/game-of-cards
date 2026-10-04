@@ -1,7 +1,7 @@
 ---
 title: ci-package-data-check-reads-back-the-source-tree-it-lists-so-it-cannot-fail
 summary: "UNVERIFIED. ci.yml installs the package editable, then checks that every skill listed from goc/templates/skills exists under files('goc.templates'), which under an editable install is that same directory, so no packaging change can turn the step red; ci.yml never builds the wheel its header says builds cleanly. A hatch exclude that ships a wheel with zero skills passes CI and the whole suite, while goc install --local-skills from that wheel crashes."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-09-28T01:38:09Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py adds a wheel-level exclude of `goc/templates/skills` in a scratch clone, runs the `Verify package data ships templates` step body verbatim under the editable install, then builds the wheel and counts its `SKILL.md` members — asserting the step fails when the wheel ships none, or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] MECHANICAL: the package-data check inspects a built artifact (e.g. `uv build --wheel` then list the wheel's members, or install the wheel into a clean venv and resolve `files('goc.templates')` there) instead of the editable source tree; the `ci.yml` header's "Package builds cleanly with hatchling" claim is true of some step (requires a HUMAN commit — the bot's GITHUB_TOKEN cannot modify `.github/workflows/`)
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The CI package-data check reads back the source tree it lists, so it cannot fail
