@@ -36,6 +36,7 @@ advanced_by:
   - install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag
   - deck-location-doc-says-claims-push-by-default-and-last-writer-wins
   - deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects
+  - shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
