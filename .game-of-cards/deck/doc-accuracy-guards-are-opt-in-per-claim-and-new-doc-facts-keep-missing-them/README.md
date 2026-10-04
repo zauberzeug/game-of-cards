@@ -35,6 +35,7 @@ advanced_by:
   - cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it
   - install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag
   - deck-location-doc-says-claims-push-by-default-and-last-writer-wins
+  - deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
