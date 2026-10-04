@@ -299,3 +299,18 @@ Two things recorded in the dashboard above:
   absolute URL too.
 - **No decision recorded** — the gate stays `decision`; this entry adds evidence
   to the scope question, not an answer to it.
+
+## 2026-10-04 — twenty-eighth instance connected: pre-package residue in the deck skill
+
+- **Instance**:
+  `shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced`
+  (filed open, gate none, surfaced while closing the twenty-seventh). Edge
+  wired at filing; *none yet — open* row added; count sentence rewritten in
+  place against `advanced_by` (28 edges, 22 rows, gap still six).
+- **Why it is not a duplicate**: `shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates`
+  owns the `deck/` root spelling; this card owns the files listed under that
+  root, which are wrong under either spelling.
+- **What it adds**: the ground truth is an install, not a file in this tree.
+  Its reproduce.py runs `goc install --local-skills` into a scratch repo and
+  checks the installed skills against what was written.
+- **No decision recorded** — the gate stays `decision`.

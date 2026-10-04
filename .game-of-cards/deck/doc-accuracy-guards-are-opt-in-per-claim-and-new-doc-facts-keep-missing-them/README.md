@@ -76,10 +76,11 @@ the *unguarded* claims.
 | `InstallDocClaimsTest` (own file, `tests/test_install_doc_claims.py`) | [install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/) | 2026-10-03 |
 | `DeckLocationClaimRowsTest` (own file, `tests/test_deck_location_claim_rows.py`) | [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/) | 2026-10-04 |
 | `ClaimRaceReassuranceTest` (own file, `tests/test_claim_race_reassurance.py`) | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | 2026-10-04 |
+| *(none yet — open)* | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | — |
 
-Twenty-seven instances across five months, each its own file → claim → fix →
+Twenty-eight instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-twenty-one of them, because five closed instances and one still-open one carry
+twenty-two of them, because five closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
@@ -89,7 +90,7 @@ the edge but no row yet
 [shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
 The gap ran three rows, then seven; the twenty-third instance is the first to
 arrive with its row already written, and the twenty-fourth through
-twenty-seventh did the same, so it stands at six. That narrowing is not
+twenty-eighth did the same, so it stands at six. That narrowing is not
 the process self-correcting — the row exists because that card's DoD named it as
 a closure item, one card at a time. Absent such an item the table is still a
 hand-maintained restatement of `advanced_by`, and it rots exactly the way every
@@ -347,6 +348,16 @@ restate it, as the ninth instance's lesson prescribes, but that page does not
 ship, so a shipped skill naming it by filename would dangle in every consuming
 repo. The pointer is an absolute URL. Any scope this card settles on should say
 how a shipped surface cites a repo-only document.
+
+The twenty-eighth came out of the twenty-seventh's closure, from the same skill
+body
+([shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/),
+open). The deck skill's layout block still lists a `SCHEMA.md` and a `deck.py`
+inside the deck, and refine-deck still schedules a new tag as "a SCHEMA.md PR":
+pre-package residue that two earlier repairs removed from the engine docstring
+and the installed project README without reaching these copies. A
+derive-from-tree guard is cheap here, because a fresh `goc install` is the
+ground truth for which files a consumer has.
 
 ## What's structurally wrong
 
