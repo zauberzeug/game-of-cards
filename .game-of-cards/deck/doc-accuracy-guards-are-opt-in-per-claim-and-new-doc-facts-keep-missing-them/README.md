@@ -74,7 +74,7 @@ the *unguarded* claims.
 | `PluginSwitchRecipeTest` (own file, `tests/test_plugin_switch_recipe.py`) | [cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it](../cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it/) | 2026-10-02 |
 | `InstallDocClaimsTest` (own file, `tests/test_install_doc_claims.py`) | [install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/) | 2026-10-03 |
 | `DeckLocationClaimRowsTest` (own file, `tests/test_deck_location_claim_rows.py`) | [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/) | 2026-10-04 |
-| *(none yet — open)* | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | — |
+| `ClaimRaceReassuranceTest` (own file, `tests/test_claim_race_reassurance.py`) | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | 2026-10-04 |
 
 Twenty-seven instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
@@ -335,8 +335,17 @@ The twenty-seventh came out of the same session. Grepping the claim rather
 than the file found the same reassurance, that git's merge handles a claim
 race, in `ABOUT.md` and in the shipped deck skill
 ([deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/),
-open). That is Option B's claim-keyed sweep applied by hand once more, and it
-reached copies a guard on `DECK_LOCATION.md` alone never would.
+closed 2026-10-04). That is Option B's claim-keyed sweep applied by hand once
+more, and it reached copies a guard on `DECK_LOCATION.md` alone never would. The
+repair made the sweep mechanical for this one claim: its guard
+(`tests/test_claim_race_reassurance.py`) reads every tracked file outside the
+deck and the tests, mirrors and plugin payloads included, while a scratch-remote
+claim shows the default does not push. It also hit a constraint a page-local
+guard never meets. The fix wanted to point at `DECK_LOCATION.md` rather than
+restate it, as the ninth instance's lesson prescribes, but that page does not
+ship, so a shipped skill naming it by filename would dangle in every consuming
+repo. The pointer is an absolute URL. Any scope this card settles on should say
+how a shipped surface cites a repo-only document.
 
 ## What's structurally wrong
 

@@ -277,3 +277,25 @@ Two things recorded in the dashboard above:
   the page stops describing the hole.
 - **No decision recorded** — the gate stays `decision`; this entry adds evidence
   to the scope question, not an answer to it.
+
+## 2026-10-04 — twenty-seventh instance closed: a pointer a shipped surface cannot follow
+
+- **Instance**:
+  `deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects`
+  (closed 2026-10-04). Its row now names `ClaimRaceReassuranceTest` (own file,
+  `tests/test_claim_race_reassurance.py`); the count sentence is unchanged
+  (27 edges, 21 rows, gap still six).
+- **What it adds**: the first guard written as a claim-keyed sweep from the
+  start. It reads every tracked file outside the deck and the tests while a
+  scratch-remote claim shows the default does not push, so the five mirror
+  trees and the plugin payloads are covered without being listed.
+- **A datum for the scope question**: "point, don't restate" (the ninth
+  instance's lesson) meets a wall when the owning document does not ship.
+  `DECK_LOCATION.md` lives at this repo's root, so a shipped skill citing it by
+  filename dangles in every consuming repo; the fix used an absolute URL, and
+  the size-capped skill core reached it through its `reference.md` sibling.
+  The rendered site has a narrower version of the same gap: `pages.yml`
+  rewrites a fixed list of repo-relative links, so `ABOUT.md` needed the
+  absolute URL too.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.

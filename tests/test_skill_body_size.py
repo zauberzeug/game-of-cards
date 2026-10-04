@@ -141,6 +141,18 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # failed on the fourth through seventh raises, with one twist of its own: the
 # decline is honest OUTPUT, so a pass carrying only a pointer reads a
 # well-formed refusal and has no reason to suspect a rule is missing behind it.
+#
+# deck was raised on 2026-10-04 by the card
+# `deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects`:
+# its parallel-sessions sentence said git's merge settles a simultaneous claim
+# race, whichever commits first wins. By default a claim stays in the
+# claimer's clone, so two clones both claim one card and nothing merges at
+# claim time; the protection exists only as the opt-in `workflow.claim_push`.
+# The integration behavior per identity setup went to the reference sibling.
+# What stayed in the core is the default and the opt-in's name, because the
+# old sentence was itself the false reassurance: a core that only points at
+# the sibling still tells a reader who stops there nothing about claim_push.
+# The skill had 35 bytes of headroom.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -149,7 +161,7 @@ BODY_CAPS = {
     "next-card": 10_000,
     "pull-card": 10_000,
     "card-schema": 12_800,
-    "deck": 10_000,
+    "deck": 10_100,
     "refine-deck": 14_200,
     "kickoff": 11_000,
     "audit-deck": 10_000,

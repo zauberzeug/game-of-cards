@@ -68,8 +68,10 @@ situation actually calls for it:
   the gate, the next pull resumes the work.
 
 Multiple sessions work cards in parallel. `status: active` is the
-soft lock; git's merge handles the rare simultaneous-claim race
-(whichever commits first wins).
+soft lock, but by default a claim stays in your clone, so two clones
+can both claim one card; `workflow.claim_push: true` pushes the claim
+and refuses a later conflicting one (`reference.md` § Game of Cards
+as the runtime).
 
 ## What this looks like in practice
 

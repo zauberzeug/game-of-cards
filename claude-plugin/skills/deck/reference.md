@@ -82,11 +82,21 @@ Three operating modes coexist:
   restart the line.
 
 Multiple Claude sessions on the same project work cards in parallel.
-The `status: active` field is the soft lock; git's merge handles
-the rare race when two sessions claim the same card simultaneously
-(whichever commits first wins). The user can have N parallel chats
-going while M scheduled agents work the deck — they ride the events
-as they occur, present or absent as resources allow.
+The `status: active` field is the soft lock, and sessions sharing a
+checkout see a claim at once. By default a claim stays in the
+claimer's clone (`goc status <title> active` commits it without
+pushing), so two clones can both claim the same card and both
+succeed. The race surfaces at the earliest when the second worker
+integrates: as a conflict over the card's claim under distinct
+identities, and under one shared identity only through the two
+workers' finished work, because the two claims are identical and
+integrate cleanly. Setting `workflow.claim_push: true` in
+`.game-of-cards/config.yaml` pushes each claim as it is made and
+refuses a later conflicting claimer; the claim table in
+[`DECK_LOCATION.md`](https://github.com/zauberzeug/game-of-cards/blob/main/DECK_LOCATION.md#claim-and-sync-semantics)
+has the detail. The user can have N parallel chats going while M
+scheduled agents work the deck — they ride the events as they occur,
+present or absent as resources allow.
 
 ## The worldview: Game of Cards
 
