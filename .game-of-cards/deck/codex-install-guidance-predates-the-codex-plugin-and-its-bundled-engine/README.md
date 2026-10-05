@@ -1,7 +1,7 @@
 ---
 title: codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
 summary: "The Codex plugin shipped on 2026-05-18 and gained a bundled goc helper on 2026-06-09, but seven guidance sites never caught up: the game-of-cards.com home page and PERSONAS.md list three delivery channels without Codex, `goc install --help` and a docstring say Codex has no plugin yet, kickoff names no codex-kickoff complement, and goc.md and site/llms.txt tell plugin users to pipx-install a CLI the plugin already bundles. The follow-up the closed claude-install-defaults-to-plugin-path promised for the day the plugin shipped, revisiting the Codex install default, was never filed, so every Codex install still vendors skills on that false premise. No guard derives the channel set from the plugin manifests, so only the surfaces the two plugin commits touched moved."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-10-05T01:25:32Z"
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] PROCESS: the Codex install-default follow-up that `claude-install-defaults-to-plugin-path` promised is filed as its own card, cross-linked with `codex-only-install-pins-skills-source-to-plugin-skipping-parity-check` and `codex-install-from-plugin-payload-vendors-skills-and-crashes-on-omitted-templates-skills`, and both closed cards that promised a filing carry a post-close pointer to it
   - [ ] PROCESS: this card's row in the umbrella's instance table names its guard and closure date
   - [ ] MECHANICAL: mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green), OpenClaw skills re-ported (`python3 scripts/port_skills_to_openclaw.py --check` green), `uv run goc validate` and `uv run python -m unittest discover -s tests` pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Codex install guidance predates the Codex plugin and its bundled engine
