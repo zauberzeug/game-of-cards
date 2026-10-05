@@ -20,6 +20,8 @@ worker: {who: "claude[bot]", where: main}
 
 # Install docs still describe the pre-plugin install model and a removed `--no-harness` flag
 
+> Later evidence: the `--local-skills` help-text card this closure says was "Filed separately" was never filed — see [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/).
+
 ## What was broken
 
 Three reader-facing pages described `goc install` as it worked before

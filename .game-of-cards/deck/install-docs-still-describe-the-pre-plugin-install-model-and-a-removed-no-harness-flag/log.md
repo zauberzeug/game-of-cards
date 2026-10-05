@@ -80,3 +80,11 @@ Two findings came out of the reading:
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-10-03 — Closure' present
+
+## 2026-10-05T01:30:56Z — Post-close amendment
+
+Extended by [`codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine`](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/)
+— the `--local-skills` "Default for Codex (no plugin yet)" help text this
+closure said would be "filed and fixed through" was never filed. It is site 3
+of the new card, beside six other Codex surfaces that predate the plugin or
+its bundled helper.

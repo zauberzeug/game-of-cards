@@ -37,6 +37,7 @@ advanced_by:
   - deck-location-doc-says-claims-push-by-default-and-last-writer-wins
   - deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects
   - shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced
+  - codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
@@ -77,10 +78,11 @@ the *unguarded* claims.
 | `DeckLocationClaimRowsTest` (own file, `tests/test_deck_location_claim_rows.py`) | [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/) | 2026-10-04 |
 | `ClaimRaceReassuranceTest` (own file, `tests/test_claim_race_reassurance.py`) | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | 2026-10-04 |
 | *(none yet — open)* | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | — |
+| *(none yet — open)* | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | — |
 
-Twenty-eight instances across five months, each its own file → claim → fix →
+Twenty-nine instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-twenty-two of them, because five closed instances and one still-open one carry
+twenty-three of them, because five closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
@@ -90,7 +92,7 @@ the edge but no row yet
 [shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
 The gap ran three rows, then seven; the twenty-third instance is the first to
 arrive with its row already written, and the twenty-fourth through
-twenty-eighth did the same, so it stands at six. That narrowing is not
+twenty-ninth did the same, so it stands at six. That narrowing is not
 the process self-correcting — the row exists because that card's DoD named it as
 a closure item, one card at a time. Absent such an item the table is still a
 hand-maintained restatement of `advanced_by`, and it rots exactly the way every

@@ -314,3 +314,27 @@ Two things recorded in the dashboard above:
   Its reproduce.py runs `goc install --local-skills` into a scratch repo and
   checks the installed skills against what was written.
 - **No decision recorded** — the gate stays `decision`.
+
+## 2026-10-05 — twenty-ninth instance connected: Codex guidance that predates the Codex plugin
+
+- **Instance**:
+  `codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine`
+  (filed open, gate none, by an audit-deck pass). Edge wired at filing; *none
+  yet — open* row added; count sentence rewritten in place against
+  `advanced_by` (29 edges, 23 rows, gap still six).
+- **Why it is not a duplicate**: no card names the channel count, the
+  `no plugin yet` help text, or the Codex sections of `goc.md` /
+  `site/llms.txt`. `cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships`
+  swept `goc.md`'s Claude Code and OpenClaw sections only.
+- **What it adds**: a datum against Option D. Its stale claims are negatives
+  ("no plugin yet"; three channels) that the plugin landing in the tree
+  falsified. They had owners: the help text's rationale was tied to
+  `publish-codex-plugin`, and the closed `claude-install-defaults-to-plugin-path`
+  named a follow-up card for the day it shipped. Closing the owner revisited
+  nothing, and the named follow-up was never filed. A slug requirement gives a
+  promise an owner, but nothing makes closing the owner re-read the claim. A
+  second datum on the same page, not filed: `PERSONAS.md:74-76` lists
+  multi-human + multi-agent claim metadata as not yet shipped and cites
+  `design-claim-protocol-with-branch-and-author-metadata`, closed 2026-05-09,
+  as the card that covers it.
+- **No decision recorded** — the gate stays `decision`.

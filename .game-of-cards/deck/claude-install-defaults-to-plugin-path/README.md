@@ -32,6 +32,8 @@ definition_of_done: |
 
 # Claude install defaults to the plugin path
 
+> Later evidence: the Codex follow-up promised below was never filed after `publish-codex-plugin` shipped — see [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/).
+
 ## Why
 
 The existing `goc install --agents claude` flow checks the entire methodology framework into the consuming repo's source control: 11 skill directories under `.claude/skills/`, 3 hook scripts under `.claude/hooks/`, and hook registrations in `.claude/settings.json`. That's the architecture from before the Claude plugin existed.
