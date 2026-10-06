@@ -55,6 +55,9 @@ class DraftGuardAndLifecycleTest(unittest.TestCase):
             "- [ ] (replace with real criteria)", "- [x] MECHANICAL: real criterion met"
         )
         text = text.replace("(write the design doc here)", "Real authored body.")
+        # Releasing a draft needs a summary (draft-clearing-verbs-release-summary-less-cards-into-a-validate-red-deck).
+        if "\nsummary:" not in text:
+            text = text.replace(f"title: {title}\n", f"title: {title}\nsummary: Authored card summary.\n", 1)
         path.write_text(text)
 
     def test_new_stamps_draft_true(self) -> None:
@@ -114,7 +117,8 @@ class DraftGuardAndLifecycleTest(unittest.TestCase):
     def test_status_active_auto_clears_draft(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
-            self.assert_ok(self.run_goc(cwd, "new", "card-a", "--gate", "none", "--tag", "story"))
+            self.assert_ok(self.run_goc(cwd, "new", "card-a", "--gate", "none", "--tag", "story",
+                                        "--summary", "Claimable card."))
             self.assert_ok(self.run_goc(cwd, "status", "card-a", "active", "--no-commit"))
             self.assertNotIn("draft:", self.readme(cwd, "card-a"))
 

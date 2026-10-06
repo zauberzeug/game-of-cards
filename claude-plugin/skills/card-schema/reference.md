@@ -60,7 +60,9 @@ Absent means authored (every card predating the flag is authored).
 **Lifecycle:** `goc new` stamps it; it clears automatically on claim
 or close (`goc status <title> active`, `goc done`), and explicitly
 via `goc publish <title>` — which refuses on a pure placeholder
-(nothing to publish until body and DoD are written).
+(nothing to publish until body and DoD are written). All three verbs
+refuse to release a draft without a valid `summary`, the rule
+`goc validate` applies to every published card.
 
 **What the flag suppresses** — so unauthored work cannot be acted on
 by automation (the dedup/supersede race that motivated it):

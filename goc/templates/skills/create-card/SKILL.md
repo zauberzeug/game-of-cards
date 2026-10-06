@@ -139,7 +139,8 @@ project-local tags register in `.game-of-cards/canonical-tags.md`
 - **The scaffold is born `draft: true`** — hidden from queues until
   authored (Steps 5–7). Claiming or closing clears the flag;
   `goc publish <title>` releases an authored-but-unclaimed card
-  (`reference.md` § Draft contract).
+  (`reference.md` § Draft contract). All three need a `summary:`
+  (Step 5).
 
 ## Step 5 — write the body (the dashboard)
 
