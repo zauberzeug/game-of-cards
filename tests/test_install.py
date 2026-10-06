@@ -2020,7 +2020,8 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
 
             self.assert_goc_ok(self.run_goc(cwd, "install"))
             self.assert_goc_ok(
-                self.run_goc(cwd, "new", "commit-card", "--gate", "none", "--tag", "story", "--allow-jargon")
+                self.run_goc(cwd, "new", "commit-card", "--gate", "none", "--tag", "story", "--allow-jargon",
+                             "--summary", "Card whose claim is auto-committed.")
             )
             subprocess.run(["git", "add", "."], cwd=cwd, check=True)
             subprocess.run(["git", "commit", "-m", "initial"], cwd=cwd, check=True, capture_output=True)
@@ -2347,13 +2348,15 @@ class ClaudeHarnessInstallTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
 
-            self.assert_goc_ok(self.run_goc(cwd, "new", "open-card", "--gate", "none", "--tag", "story"))
+            self.assert_goc_ok(self.run_goc(cwd, "new", "open-card", "--gate", "none", "--tag", "story",
+                                            "--summary", "Open card."))
             # A fresh `goc new` card is a draft (hidden from the queue until
             # authored); claim-and-release clears the draft flag so it surfaces
             # as a normal open card for the queue assertions below.
             self.assert_goc_ok(self.run_goc(cwd, "status", "open-card", "active", "--no-commit"))
             self.assert_goc_ok(self.run_goc(cwd, "status", "open-card", "open", "--no-commit"))
-            self.assert_goc_ok(self.run_goc(cwd, "new", "active-card", "--gate", "none", "--tag", "story"))
+            self.assert_goc_ok(self.run_goc(cwd, "new", "active-card", "--gate", "none", "--tag", "story",
+                                            "--summary", "Active card."))
             self.assert_goc_ok(
                 self.run_goc(
                     cwd,

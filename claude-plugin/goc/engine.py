@@ -2108,18 +2108,13 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             f" (status={status_value!r}, closed_at={closed_at!r})"
         )
 
-    summary_value = fm.get("summary")
-    if summary_value is not None:
-        if not isinstance(summary_value, str):
-            errors.append(f"{t.title}: summary: must be a string")
-        elif not summary_value.strip():
-            errors.append(f"{t.title}: summary: must not be empty or whitespace-only")
-    elif not t.draft:
+    summary_error = summary_problem(fm)
+    if summary_error is not None and (fm.get("summary") is not None or not t.draft):
         # Absent key is the same defect as present-but-blank, one door over:
         # triage views render a blank row either way. Draft scaffolds are
-        # unauthored by definition — flagging them would make every fresh
-        # `goc new` red before authoring starts.
-        errors.append(f"{t.title}: summary: missing — required on published cards")
+        # unauthored by definition — flagging an ABSENT summary on them would
+        # make every fresh `goc new` red before authoring starts.
+        errors.append(f"{t.title}: summary: {summary_error}")
 
     worker = fm.get("worker")
     if worker is not None:
@@ -2821,6 +2816,43 @@ def card_is_draft(card: Card) -> bool:
 # is the one table that lists drafts, and it is the view create-card dedups
 # against with `grep`, so the mark sits on the row itself at every verbosity.
 DRAFT_MARKER = "✎"
+
+
+def summary_problem(frontmatter: dict) -> str | None:
+    """Why `summary` fails the published-card contract, or None when it holds.
+
+    The single rule behind `validate`'s summary errors AND the draft-release gate
+    of `publish` / `status active` / `done` — defined once, so a verb can never
+    release a card that the next `goc validate` rejects.
+    """
+    value = frontmatter.get("summary")
+    if value is None:
+        return "missing — required on published cards"
+    if not isinstance(value, str):
+        return "must be a string"
+    if not value.strip():
+        return "must not be empty or whitespace-only"
+    return None
+
+
+def summary_release_error(card: Card) -> str | None:
+    """Refusal text when releasing this card from draft would leave it without a
+    valid summary; None when the card is no draft or its summary holds.
+
+    Only the draft → published transition is gated: the verb must not create a
+    validate-red card. Cards that never were drafts (hand-written) keep
+    `validate` as their net instead of becoming unclaimable here.
+    """
+    if not card_is_draft(card):
+        return None
+    problem = summary_problem(card.frontmatter)
+    if problem is None:
+        return None
+    return (
+        f"ERROR: {card.title}: summary: {problem}. Releasing the card from draft "
+        f"would leave `goc validate` red — add a one-line `summary:` (what + why) "
+        f"to the frontmatter first."
+    )
 
 
 def card_is_ready(card: Card, by_title: dict[str, Card], *, include_drafts: bool = False) -> bool:
@@ -4264,7 +4296,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p_new.add_argument("--gate", choices=schema.human_gate_values, default=schema.human_gate_default)
     p_new.add_argument("--summary", default=None,
                        help="Triage summary (≤ 3 sentences, what + why). Optional at scaffold "
-                            "time, but validate requires it once the card leaves draft.")
+                            "time; publish, status active and done refuse to release the "
+                            "card from draft without it.")
     # --tag, --worker share `dest` with global filters; SUPPRESS lets the
     # parent value flow through when the subparser flag isn't passed.
     p_new.add_argument("--tag", dest="tags", action="append", default=argparse.SUPPRESS,
@@ -5127,6 +5160,10 @@ def _cmd_done(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    release_error = summary_release_error(t)
+    if release_error:
+        print(release_error, file=sys.stderr)
+        sys.exit(2)
     _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -5211,6 +5248,10 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
                 f"to lower the gate before closing.",
                 file=sys.stderr,
             )
+            sys.exit(2)
+        release_error = summary_release_error(t)
+        if release_error:
+            print(f"{release_error} Refusing bundled close.", file=sys.stderr)
             sys.exit(2)
         plan.append((title, card_dir, t.status, t))
     for title, _, _, _ in plan:
@@ -6275,6 +6316,11 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if new_status == "active":
+        release_error = summary_release_error(t)
+        if release_error:
+            print(release_error, file=sys.stderr)
+            sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
     if new_status in TERMINAL_STATUSES:
@@ -6330,6 +6376,10 @@ def _cmd_publish(args):
             f"releases authored work, it does not author it.",
             file=sys.stderr,
         )
+        sys.exit(2)
+    release_error = summary_release_error(t)
+    if release_error:
+        print(release_error, file=sys.stderr)
         sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = remove_frontmatter_field(text, "draft")
