@@ -1,7 +1,7 @@
 ---
 title: goc-validate-crashes-in-a-repo-that-has-its-own-plugin-folder
 summary: "UNVERIFIED. goc validate's plugin-mirror check treats any project root holding a claude-plugin/ or codex-plugin/ folder as the goc source tree and iterates <root>/goc/templates/skills, which no consuming repo has, so a repo that keeps its own plugin under one of those names gets an uncaught FileNotFoundError and exit 1. The installed pre-commit hook runs goc validate on every commit, while AGENTS.md and the check's docstring both say it is inert in consuming repos."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-10-05T01:32:49Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py runs `goc install --agents claude` in a scratch git repo, adds `claude-plugin/.claude-plugin/plugin.json` (then, separately, only `codex-plugin/skills/<x>/SKILL.md`), and asserts `goc validate` exits 0 with no traceback — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] TDD: a regression test pins that `validate_plugin_mirror_parity` and `validate_plugin_hook_registration` stay silent in a consuming repo that has a payload-named folder but no goc source tree, beside the existing absent-folder case in `tests/test_plugin_hook_json_registration.py`
   - [ ] MECHANICAL: both checks tell the goc source tree from a consuming repo by something other than a folder name, so the "inert in consuming repos" sentences in `AGENTS.md` and `goc/engine.py` hold; drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc validate crashes in a repo that has its own plugin folder
