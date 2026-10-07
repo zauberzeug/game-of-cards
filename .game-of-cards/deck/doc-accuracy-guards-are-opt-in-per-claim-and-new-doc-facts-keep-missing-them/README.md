@@ -38,6 +38,7 @@ advanced_by:
   - deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects
   - shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced
   - codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
+  - agents-md-says-goc-validate-checks-hook-entries-in-claude-settings
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
