@@ -24,6 +24,12 @@ clearest statement that the event sat outside the contract under test.
 Per `static-source-guards-never-prove-they-can-catch-an-offender`, a guard must
 demonstrate it catches an offender rather than merely reporting a clean tree:
 every offender case below is driven, not asserted-clean.
+
+The consuming-repo cases cover `validate_plugin_mirror_parity` as well, because
+both checks share one gate: a consuming repo may keep its own plugin under
+`claude-plugin/` or `codex-plugin/`, so the gate is the goc source tree rather
+than the folder (card
+`goc-validate-crashes-in-a-repo-that-has-its-own-plugin-folder`).
 """
 
 from __future__ import annotations
@@ -49,6 +55,27 @@ PATTERN = "pattern_generalization_check.py"
 #: added to `templates/hooks/` before its event mapping is written.
 PROBE = "probe_new_hook.py"
 PROBE_EVENT = "PreToolUse"
+
+#: A consuming repo's own Claude Code plugin under the folder name GoC uses for
+#: its payload: one hook that imports a helper module beside it, and a
+#: SessionStart command running a script kept outside `hooks/`. Valid for its
+#: author; held to GoC's one-script-per-hook layout it is two errors.
+CONSUMER_PLUGIN = {
+    "claude-plugin/.claude-plugin/plugin.json": '{"name": "my-plugin", "version": "1.0.0"}',
+    "claude-plugin/hooks/format_on_save.py": "import _util\n",
+    "claude-plugin/hooks/_util.py": "X = 1\n",
+    "claude-plugin/scripts/warm_cache.py": "pass\n",
+    "claude-plugin/hooks/hooks.json": json.dumps({"hooks": {
+        "PostToolUse": [{"matcher": "Edit|Write", "hooks": [{
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/format_on_save.py",
+        }]}],
+        "SessionStart": [{"hooks": [{
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/warm_cache.py",
+        }]}],
+    }}),
+}
 
 
 def _reference_event(name: str) -> str:
@@ -78,6 +105,13 @@ def _write_registry(hooks_dir: Path, bindings: list[tuple[str, str]]) -> None:
         }]})
     hooks_dir.mkdir(parents=True, exist_ok=True)
     (hooks_dir / "hooks.json").write_text(json.dumps({"hooks": hooks}))
+
+
+def _write_tree(root: Path, files: dict[str, str]) -> None:
+    for rel, text in files.items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
 
 
 class PluginHookRegistrationTest(unittest.TestCase):
@@ -221,9 +255,56 @@ class PluginHookRegistrationTest(unittest.TestCase):
         self.assertEqual([], engine.validate_plugin_hook_registration())
 
     def test_absent_payload_root_is_inert(self) -> None:
-        """Consuming repos have no `claude-plugin/`; the check must not fire."""
+        """No payload root, no registry to check, even in the goc source tree."""
         self._templates(ROUTER)
         self.assertEqual([], engine.validate_plugin_hook_registration())
+
+    def test_consuming_repo_with_its_own_plugin_folder_is_inert(self) -> None:
+        """A payload-named folder does not make a repo the goc source tree.
+
+        Gated on the folder, the mirror walk raised `FileNotFoundError` on the
+        consumer's missing `goc/templates/skills`, and the hook check reported
+        the consumer's helper module and its out-of-`hooks/` script.
+        `PACKAGE_DIR` keeps its hook templates, as a consumer's installed goc
+        does, so only the project-side gate can keep both checks silent.
+        """
+        self._templates(ROUTER)
+        consumer = self.tmp / "consumer"
+        engine.REPO_ROOT = consumer  # setUp's cleanup restores the original
+        layouts = {
+            "claude manifest only": {
+                "claude-plugin/.claude-plugin/plugin.json": '{"name": "my-plugin"}',
+            },
+            "codex skill only": {"codex-plugin/skills/foo/SKILL.md": "x\n"},
+            "claude plugin with its own hooks": CONSUMER_PLUGIN,
+        }
+        for label, files in layouts.items():
+            with self.subTest(layout=label):
+                shutil.rmtree(consumer, ignore_errors=True)
+                _write_tree(consumer, files)
+                self.assertEqual([], engine.validate_plugin_mirror_parity())
+                self.assertEqual([], engine.validate_plugin_hook_registration())
+
+    def test_the_same_plugin_folder_is_checked_in_the_goc_source_tree(self) -> None:
+        """Control for the case above: the gate is the tree, not the fixture.
+
+        The consumer's plugin, unchanged, draws errors from both checks once
+        the tree carries `goc/templates/`, so the silence above is the gate's
+        doing rather than a fixture that happens to be clean.
+        """
+        self._templates(ROUTER)
+        (self.tmp / "goc" / "templates" / "skills").mkdir()
+        _write_tree(self.tmp, CONSUMER_PLUGIN)
+        self.assertTrue(
+            any(e.startswith("plugin mirror") and "claude-plugin" in e
+                for e in engine.validate_plugin_mirror_parity()),
+            msg="the mirror check no longer compares claude-plugin/ in a source tree",
+        )
+        errors = engine.validate_plugin_hook_registration()
+        self.assertTrue(any("_util.py" in e and "never invoked" in e for e in errors),
+                        msg=errors)
+        self.assertTrue(any("warm_cache.py" in e and "does not ship" in e for e in errors),
+                        msg=errors)
 
     def test_malformed_registries_are_reported_not_raised(self) -> None:
         """`hooks.json` is authored by hand, so every level can be the wrong shape."""
@@ -256,6 +337,11 @@ class PluginHookRegistrationTest(unittest.TestCase):
         pointing them back at the repo here is safe.
         """
         engine.PACKAGE_DIR, engine.REPO_ROOT = ROOT / "goc", ROOT
+        self.assertTrue(
+            engine._is_goc_source_tree(),
+            msg="the source-tree gate is off for this repo, so the check below "
+                "passes without comparing anything",
+        )
         self.assertEqual(
             [],
             engine.validate_plugin_hook_registration(),

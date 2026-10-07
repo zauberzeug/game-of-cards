@@ -122,6 +122,16 @@ class PluginMirrorParityTest(unittest.TestCase):
         errors = _check(ROOT)
         self.assertEqual([], errors, msg=f"plugin mirror drift in the repo itself: {errors}")
 
+    def test_real_repo_is_the_goc_source_tree(self) -> None:
+        """The check is inert outside the goc source tree, so
+        `test_real_repo_passes` is evidence only while the gate holds here."""
+        old = eng.REPO_ROOT
+        try:
+            eng.REPO_ROOT = ROOT
+            self.assertTrue(eng._is_goc_source_tree())
+        finally:
+            eng.REPO_ROOT = old
+
     def test_same_length_same_mtime_drift_is_detected(self) -> None:
         """Regression: a hand-edit that preserves length and mtime must still
         be flagged. `filecmp.dircmp`'s default `shallow=True` would report
@@ -256,21 +266,24 @@ class OpenClawPluginMirrorTest(unittest.TestCase):
     the engine mirror but ignore everything else.
     """
 
+    @staticmethod
+    def _engine_pair(cwd: Path) -> None:
+        """`goc/` and its OpenClaw mirror, in sync. `goc/templates/` is what
+        marks `cwd` as the goc source tree; without it the check is inert."""
+        for base in (cwd / "goc", cwd / "openclaw-plugin" / "goc"):
+            (base / "templates").mkdir(parents=True, exist_ok=True)
+            (base / "__init__.py").write_text("# goc package\n")
+
     def test_in_sync_openclaw_engine_produces_no_errors(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
-            package_init = "# goc package\n"
-            for base in (cwd / "goc", cwd / "openclaw-plugin" / "goc"):
-                base.mkdir(parents=True, exist_ok=True)
-                (base / "__init__.py").write_text(package_init)
+            self._engine_pair(cwd)
             self.assertEqual([], _check(cwd))
 
     def test_drifted_openclaw_engine_is_detected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
-            for base in (cwd / "goc", cwd / "openclaw-plugin" / "goc"):
-                base.mkdir(parents=True, exist_ok=True)
-                (base / "__init__.py").write_text("# goc package\n")
+            self._engine_pair(cwd)
             # Drift the openclaw mirror.
             (cwd / "openclaw-plugin" / "goc" / "__init__.py").write_text("# drifted\n")
             errors = _check(cwd)

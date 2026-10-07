@@ -21,6 +21,8 @@ definition_of_done: |
 
 # A new hook script ships into both plugin payloads without ever being registered
 
+> Later evidence: see [goc-validate-crashes-in-a-repo-that-has-its-own-plugin-folder](../goc-validate-crashes-in-a-repo-that-has-its-own-plugin-folder/). The claim below that the check is inert in consuming repos "which have no `claude-plugin/` directory" was false: a consuming repo may keep its own plugin there, and the check then reported that plugin's `hooks.json` against GoC's layout. Both plugin checks are now gated on the goc source tree (`goc/templates/`), not on the payload folder.
+
 ## Location
 
 - `goc/engine.py:1351` — `validate_hook_registration`, the guard that

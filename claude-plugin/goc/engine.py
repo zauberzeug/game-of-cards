@@ -1590,6 +1590,21 @@ def _plugin_registered_hook_bindings(registry: Path) -> tuple[set[tuple[str, str
     return bindings, errors
 
 
+def _is_goc_source_tree() -> bool:
+    """True when `REPO_ROOT` is the goc source tree the plugin payloads are built from.
+
+    Both plugin checks below hold `claude-plugin/`, `codex-plugin/` and
+    `openclaw-plugin/` against `goc/templates/` and `goc/`, so the tree the
+    payloads are generated from is what tells this repo from a consuming one.
+    A payload-named folder cannot: a consuming repo may keep its own Claude Code
+    or Codex plugin under the conventional name. Gated on that folder, the
+    mirror walk raised `FileNotFoundError` on the consumer's missing
+    `goc/templates/skills`, and the hook check held the consumer's own
+    `hooks.json` to GoC's one-script-per-hook layout.
+    """
+    return (REPO_ROOT / "goc" / "templates").is_dir()
+
+
 def validate_plugin_hook_registration() -> list[str]:
     """Check each plugin payload's `hooks.json` against the scripts it ships
     and against the event every script is bound to.
@@ -1628,11 +1643,14 @@ def validate_plugin_hook_registration() -> list[str]:
     that renames an event needs a per-host alias map here; that is a deliberate
     edit, which is the point — it is the silent drift this rules out.
 
-    Gated on the payload roots existing at `REPO_ROOT`, like the mirror-parity
-    check, so this is inert in consuming repos.
+    Gated on `_is_goc_source_tree()`, like the mirror-parity check, so this is
+    inert in consuming repos, including one whose own plugin keeps a
+    `hooks.json` under `claude-plugin/` or `codex-plugin/`.
     """
     from goc.install import claude_hook_bindings, deck_hook_scripts
 
+    if not _is_goc_source_tree():
+        return []
     templates = PACKAGE_DIR / "templates"
     if not (templates / "hooks").exists():
         return []
@@ -1724,9 +1742,11 @@ class _DeepDircmp(filecmp.dircmp):
 def validate_plugin_mirror_parity() -> list[str]:
     """Check that plugin/ mirrors match their source-of-truth trees byte-for-byte.
 
-    Covers `claude-plugin/`, `codex-plugin/`, and `openclaw-plugin/` when present. Only the
-    pairs whose plugin root actually exists at REPO_ROOT are checked, so this
-    works in both the goc source repo and downstream consumers.
+    Covers `claude-plugin/`, `codex-plugin/`, and `openclaw-plugin/` when present,
+    and only in the goc source tree (`_is_goc_source_tree()`): the source side of
+    every pair lives under `goc/`, which a consuming repo does not have, while a
+    payload-named folder it may — its own plugin. Within the source tree, only
+    the pairs whose plugin root exists at REPO_ROOT are checked.
 
     Drift means a source-of-truth file was edited without updating the plugin
     mirror; fix is to run `python scripts/sync_plugin_assets.py` and commit
@@ -1751,6 +1771,8 @@ def validate_plugin_mirror_parity() -> list[str]:
         deck_hook_scripts,
         skill_for_agent,
     )
+    if not _is_goc_source_tree():
+        return []
     claude_plugin_root = REPO_ROOT / "claude-plugin"
     codex_plugin_root = REPO_ROOT / "codex-plugin"
     openclaw_plugin_root = REPO_ROOT / "openclaw-plugin"

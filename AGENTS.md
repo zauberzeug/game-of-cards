@@ -218,10 +218,13 @@ walk), so the session primer moved to `Stop` or the prompt router to
 scripts and keeps exiting 0, so nothing else would notice. The
 comparison assumes the hosts share an event vocabulary, true of all
 three today; a host that renames an event needs a per-host alias map
-there. The plugin check is gated on the payload root existing at the
-repo root, so it is inert in consuming repos. OpenClaw is out of scope for it:
-it reimplements the deck hooks in TypeScript inside
-`openclaw-plugin/index.ts` and ships no `hooks.json`.
+there. The plugin check runs only in the goc source tree, recognized by
+`goc/templates/` at the repo root (the tree the payloads are built
+from) rather than by a payload folder, which a consuming repo may have
+for its own plugin. It and `validate_plugin_mirror_parity`, which shares
+the gate, are therefore inert in consuming repos. OpenClaw is out of
+scope for the hook check: it reimplements the deck hooks in TypeScript
+inside `openclaw-plugin/index.ts` and ships no `hooks.json`.
 
 ### Skill and hook files have two copies — edit the template, sync handles the rest
 
