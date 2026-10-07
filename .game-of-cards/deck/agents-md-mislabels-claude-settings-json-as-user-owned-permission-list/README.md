@@ -21,6 +21,8 @@ worker: {who: "claude[bot]", where: main}
 
 # AGENTS.md calls `.claude/settings.json` a per-repo permission allow-list; goc writes hook registrations into it
 
+> Later evidence: see [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/). The claim below that `goc validate` enforces registration parity is false: no validate step checks the settings entries for parity with `GOC_CLAUDE_HOOKS`, and the "and `goc validate` enforces the parity" clause this fix added to AGENTS.md has been rewritten.
+
 ## Location
 
 `AGENTS.md:201-207`, the closing paragraph of

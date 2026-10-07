@@ -66,6 +66,7 @@ the *unguarded* claims.
 | `GocMdPluginReferenceAccuracyTest` | [cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships](../cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships/) | 2026-07-26 |
 | *(none yet — open)* | [ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/) | — |
 | `CliFrameworkPointerAccuracyTest` | [openclaw-verb-mirror-comment-names-click-in-an-argparse-cli](../openclaw-verb-mirror-comment-names-click-in-an-argparse-cli/) | 2026-07-26 |
+| `ClaudeSettingsOwnershipAccuracyTest` | [agents-md-mislabels-claude-settings-json-as-user-owned-permission-list](../agents-md-mislabels-claude-settings-json-as-user-owned-permission-list/) | 2026-07-26 |
 | *(none — not guardable by the technique; see below)* | [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/) | 2026-07-27 |
 | `test_no_shipped_skill_body_links_into_a_deck` (own file, `tests/test_skill_template_deck_links.py`) | [card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/) | 2026-07-29 |
 | *(none yet — open)* | [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/) | — |
@@ -81,10 +82,11 @@ the *unguarded* claims.
 | `ClaimRaceReassuranceTest` (own file, `tests/test_claim_race_reassurance.py`) | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | 2026-10-04 |
 | *(none yet — open)* | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | — |
 | `DeliveryChannelSurfacesTest` + `PreFixTextFiresTest` (own file, `tests/test_delivery_channel_surfaces.py`) | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | 2026-10-07 |
+| `ClaudeSettingsHookEditClaimsTest` (own file, `tests/test_claude_settings_hook_edit_claims.py`) | [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/) | 2026-10-07 |
 
-Twenty-nine instances across five months, each its own file → claim → fix →
+Thirty-one instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-twenty-three of them, because five closed instances and one still-open one carry
+twenty-five of them, because five closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
@@ -94,7 +96,8 @@ the edge but no row yet
 [shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
 The gap ran three rows, then seven; the twenty-third instance is the first to
 arrive with its row already written, and the twenty-fourth through
-twenty-ninth did the same, so it stands at six. That narrowing is not
+thirtieth did the same, so it stands at six. The thirty-first closed in
+July and was linked late, with its row (see the thirtieth below). That narrowing is not
 the process self-correcting — the row exists because that card's DoD named it as
 a closure item, one card at a time. Absent such an item the table is still a
 hand-maintained restatement of `advanced_by`, and it rots exactly the way every
@@ -362,6 +365,24 @@ pre-package residue that two earlier repairs removed from the engine docstring
 and the installed project README without reaching these copies. A
 derive-from-tree guard is cheap here, because a fresh `goc install` is the
 ground truth for which files a consumer has.
+
+The thirtieth repeats the thirteenth's lesson in the same file.
+[agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/)
+found `AGENTS.md` telling contributors that `goc validate` enforces parity for
+the goc-owned hook entries in `.claude/settings.json`. No validate step reads
+those entries for parity, so a dropped or repointed registration passes. The
+clause was written on 2026-07-26 (`8a89f791`) by the repair of
+[agents-md-mislabels-claude-settings-json-as-user-owned-permission-list](../agents-md-mislabels-claude-settings-json-as-user-owned-permission-list/),
+in the parenthetical that repair added. The guard written the same day pinned
+the two names in that parenthetical, `GOC_CLAUDE_HOOKS` and `goc/install.py`,
+but not the clause beside them. Two datums. First, the repair's own body called
+it an instance of this card, but it never got the edge. It is linked now as the
+thirty-first, so `advanced_by`, the count this card calls authoritative, was
+opt-in too and was missing an instance. Second, the new guard
+(`tests/test_claude_settings_hook_edit_claims.py`) makes the hand edit in a
+scratch install and checks both ways every clause the rewritten sentence states.
+For which files `goc validate` covers, the sentence points at the registry list
+earlier in `AGENTS.md` instead of restating it.
 
 ## What's structurally wrong
 

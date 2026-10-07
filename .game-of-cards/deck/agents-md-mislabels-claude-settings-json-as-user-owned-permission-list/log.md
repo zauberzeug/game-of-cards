@@ -31,3 +31,14 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-07-26 — Closure' present
+
+## 2026-10-07T04:49:14Z — Post-close amendment
+
+Extended by [`agents-md-says-goc-validate-checks-hook-entries-in-claude-settings`](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/)
+— the "and `goc validate` enforces the parity" clause this closure added to
+AGENTS.md was false. `validate_hook_registration` never reads
+`.claude/settings.json`, so a dropped or repointed registration passes. The
+README's "Why it matters" claim that validate reports such an edit was wrong for
+the same reason. This card also called itself an instance of
+[`doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them`](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+but had no edge to it. The edge was added on this date.

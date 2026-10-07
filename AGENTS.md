@@ -247,10 +247,16 @@ it is a *merge* target rather than a mirrored file: `goc install` /
 plugin-mode cleanup strips those same entries back out. So its
 ownership is shared — the `hooks` entries whose command matches
 `GOC_CLAUDE_HOOKS` are goc-owned (change them in `goc/install.py`, not
-in `.claude/settings.json`, and `goc validate` enforces the parity);
-any other key the repo adds is yours. goc writes no `permissions`
-block there — the `Bash(goc:*)` grant is a human step, documented in
-`Skill(claude-kickoff)`.
+in `.claude/settings.json`); any other key the repo adds is yours.
+The file is not one of the three hook registries `goc validate`
+covers (above), so a hand edit that drops or repoints a goc-owned
+registration passes `goc validate`. The merge is what repairs it: a
+vendored-mode `goc upgrade` re-adds every `GOC_CLAUDE_HOOKS` entry the
+file lacks, even at the same version, but a repointed entry no longer
+matches, so it stays behind beside the re-added one
+(`goc-upgrade-leaves-stale-prior-version-hook-registrations-in-claude-settings`).
+goc writes no `permissions` block there — the `Bash(goc:*)` grant is a
+human step, documented in `Skill(claude-kickoff)`.
 
 The `<!-- BEGIN GOC vX.Y.Z -->` marker in `AGENTS.md` and
 the `.goc-version` sentinel are rewritten by the release workflow
