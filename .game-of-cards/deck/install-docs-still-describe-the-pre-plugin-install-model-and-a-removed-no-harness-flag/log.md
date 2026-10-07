@@ -88,3 +88,11 @@ Extended by [`codex-install-guidance-predates-the-codex-plugin-and-its-bundled-e
 closure said would be "filed and fixed through" was never filed. It is site 3
 of the new card, beside six other Codex surfaces that predate the plugin or
 its bundled helper.
+
+## 2026-10-07T04:45:00Z — Post-close: the promised filing landed elsewhere
+
+This card's log said the `LOCAL_SKILLS_HELP` "no plugin yet" finding would be
+filed and fixed through after closure. Nothing was filed. `codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine` fixed the
+help text and docstring, and filed the underlying Codex install-default
+decision as `codex-install-defaults-to-plugin-path`. A `## Post-close follow-up` pointer was added to this
+card's README.

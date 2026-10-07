@@ -338,3 +338,14 @@ Two things recorded in the dashboard above:
   `design-claim-protocol-with-branch-and-author-metadata`, closed 2026-05-09,
   as the card that covers it.
 - **No decision recorded** — the gate stays `decision`.
+
+## 2026-10-07T04:45:00Z — Instance closed: codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
+
+Guarded by `tests/test_delivery_channel_surfaces.py`. It derives the channel
+set from the plugin payload manifests plus the PyPI package, and computes the
+count word instead of writing it into a pattern. It fails when an enumerating
+surface omits a channel or states another count, when a doc or help line
+pairs a shipped host with "no plugin", or when a Codex run-goc section skips
+the bundled helper. On the pre-fix tree (`f510cbe1`) it fires on all seven
+sites. It also confirms this card's Option D datum: the "no plugin yet" promise
+had owners, and closing them revisited nothing.

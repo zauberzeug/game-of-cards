@@ -96,3 +96,12 @@ These are settled (recorded with this card filing, no separate decision step):
 - For Codex: when `publish-codex-plugin` ships, file a follow-up `codex-install-defaults-to-plugin-path` card. Do not bundle Codex into this card — different runtime, different timeline.
 - The four install-mode test matrix (default-claude, --local-skills, --agents codex, --agents claude,codex) doubles as documentation for AGENTS.md / `goc.md`.
 - This card supersedes `--no-harness` semantics. The flag was added in the same release sequence; removing it is a clean break, not a long-tail deprecation.
+
+## Post-close follow-up
+
+The Codex follow-up promised in § Notes and in the `--agents codex` DoD item
+was never filed when `publish-codex-plugin` closed on 2026-05-18. It is now
+filed as [codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/), decision-gated: whether Codex installs should defer to the
+Codex plugin the way this card made Claude installs defer to theirs. Until it
+is decided, every Codex install still vendors `.codex/skills/`. The help text
+and docstring now state that rule without the "no plugin yet" premise.

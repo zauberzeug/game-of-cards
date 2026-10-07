@@ -121,3 +121,11 @@ directory, and `skills_source: plugin`. On the fixed tree the script checks
   the deck as `deck/`. Left alone: whether that short form stays is the open
   decision on
   [shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/).
+
+## Post-close follow-up
+
+The § Surfaced while fixing finding on `LOCAL_SKILLS_HELP`'s "no plugin yet"
+said a card would be filed, and none was. The stale help text and docstring
+were fixed by
+[codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/),
+and the Codex install-default question behind them is filed as [codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/).

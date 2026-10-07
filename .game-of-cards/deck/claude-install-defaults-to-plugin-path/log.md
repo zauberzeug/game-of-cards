@@ -6,3 +6,10 @@ the day `publish-codex-plugin` shipped was never filed. `publish-codex-plugin`
 closed 2026-05-18, and `goc install --help` still says Codex has "no plugin
 yet". The new card's DoD files the follow-up and corrects the help text
 meanwhile.
+
+## 2026-10-07T04:45:00Z — Post-close: promised Codex follow-up filed
+
+The follow-up this card promised for the day `publish-codex-plugin` shipped
+(`codex-install-defaults-to-plugin-path`) was never filed. `codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine` found the
+gap and filed it as `codex-install-defaults-to-plugin-path`, gate decision. A `## Post-close follow-up` pointer
+was added to this card's README.

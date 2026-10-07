@@ -78,7 +78,7 @@ the *unguarded* claims.
 | `DeckLocationClaimRowsTest` (own file, `tests/test_deck_location_claim_rows.py`) | [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/) | 2026-10-04 |
 | `ClaimRaceReassuranceTest` (own file, `tests/test_claim_race_reassurance.py`) | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | 2026-10-04 |
 | *(none yet — open)* | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | — |
-| *(none yet — open)* | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | — |
+| `DeliveryChannelSurfacesTest` + `PreFixTextFiresTest` (own file, `tests/test_delivery_channel_surfaces.py`) | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | 2026-10-07 |
 
 Twenty-nine instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
