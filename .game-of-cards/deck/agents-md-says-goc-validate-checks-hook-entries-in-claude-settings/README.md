@@ -1,7 +1,7 @@
 ---
 title: agents-md-says-goc-validate-checks-hook-entries-in-claude-settings
 summary: "UNVERIFIED. AGENTS.md tells contributors to change GoC hook entries in goc/install.py, not in .claude/settings.json, because goc validate enforces the parity, but validate_hook_registration only compares the package's hook templates with GOC_CLAUDE_HOOKS and never reads settings.json. A hand-dropped or renamed registration therefore passes validate, contrary to the doc and to the closed card that wrote the sentence."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-10-05T01:32:49Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py runs `goc install --agents claude --local-skills` in a scratch repo, drops the `Stop` registration from `.claude/settings.json`, renames the `SessionStart` script in its command, runs `goc validate`, and fails while `AGENTS.md` still credits `goc validate` with enforcing that parity and validate exits 0 — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] MECHANICAL: `AGENTS.md:248-250` no longer says `goc validate` enforces the parity; it names what does keep the GoC entries in line (the `goc install` / `goc upgrade` merge from `GOC_CLAUDE_HOOKS`), as `tests/test_precommit_hook_reachability.py:74-80` already describes
   - [ ] PROCESS: the closed `agents-md-mislabels-claude-settings-json-as-user-owned-permission-list` gets a post-close pointer to this card; drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # AGENTS.md says goc validate checks the hook entries in `.claude/settings.json`
