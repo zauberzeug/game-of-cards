@@ -599,8 +599,9 @@ _KEEP_LOCAL_SKILLS_PLUGIN_REFUSAL = (
 def _should_use_local_skills(agent: str, *, local_skills: bool) -> bool:
     """True if this agent should use the vendored skills layout (vs the plugin path).
 
-    Codex always uses vendored layout (no plugin yet).
     Claude defaults to the plugin path; --local-skills opts in to vendored.
+    Every Codex install vendors `.codex/skills/` whatever the flag says —
+    the Codex plugin ships, but this rule has not been revisited for it.
     """
     return agent != "claude" or local_skills
 
@@ -1743,7 +1744,8 @@ UPGRADE_AGENTS_HELP = (
 )
 LOCAL_SKILLS_HELP = (
     "Vendor skills, hooks, and settings entries into source control. "
-    "Default for Codex (no plugin yet); opt-in for Claude. "
+    "Opt-in for Claude, whose default is the plugin path. "
+    "Codex installs always vendor .codex/skills/; this flag does not change that. "
     "Use for CI environments without plugin support, or repos that fork/template GoC. "
     "Requires a pipx install of game-of-cards — refused when running under the GoC plugin."
 )

@@ -209,7 +209,7 @@ Codex plugin hooks are opt-in in the current runtime. To enable the GoC hook set
 plugin_hooks = true
 ```
 
-Codex does not currently document plugin `bin/` auto-PATH behavior. The plugin ships `bin/goc` and the bundled engine for plugin-aware launchers, but skill instructions still assume `goc` is callable in the project environment. In this source repo, use `uv run goc ...`; in consumer repos, install the CLI with `pipx install game-of-cards` or `uv tool install game-of-cards` if bare `goc` is missing.
+Codex does not currently document plugin `bin/` auto-PATH behavior. The plugin therefore ships `skills/_goc-bootstrap.sh`, which invokes the bundled engine through the sibling `bin/goc` wrapper, and every Codex skill carries a `## Codex GoC Command` block that resolves `goc` through it. In this source repo, use `uv run goc ...`; in plugin-only consumer repos, run `<plugin-root>/skills/_goc-bootstrap.sh <verb>` (the helper sits under `~/.codex/plugins/cache/` when the plugin root is not obvious from the loaded skill path). Install `game-of-cards` with `pipx` or `uv tool` only when using vendored Codex skills without the plugin payload.
 
 ### Versioning and release
 

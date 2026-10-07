@@ -66,10 +66,16 @@ active-card reminder, prompt router, and pattern-generalization check, add:
 plugin_hooks = true
 ```
 
-Codex does not currently document plugin `bin/` auto-PATH behavior. If bare
-`goc` is not available in a consumer repo, install the CLI with `pipx install
-game-of-cards` or `uv tool install game-of-cards`; inside this source repo,
-translate bare `goc ...` examples to `uv run goc ...`.
+Codex does not currently document plugin `bin/` auto-PATH behavior, so bare
+`goc` is not on PATH in a plugin-only install. The plugin ships
+`skills/_goc-bootstrap.sh`, which runs the bundled engine — in a plugin-only
+consumer repo, run `<plugin-root>/skills/_goc-bootstrap.sh <verb>`. If the
+plugin root is not obvious from the loaded skill path, find the helper with
+`find "$HOME/.codex/plugins/cache" -path '*/game-of-cards/*/skills/_goc-bootstrap.sh' -type f -perm -111`.
+Install the CLI with `pipx install game-of-cards` or `uv tool install
+game-of-cards` only when using vendored Codex skills without the plugin
+payload; inside this source repo, translate bare `goc ...` examples to
+`uv run goc ...`.
 
 ## Install (OpenClaw)
 

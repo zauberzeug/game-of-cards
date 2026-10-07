@@ -83,7 +83,7 @@ The on-ramps share the use case and the deck. They differ only in *what makes Go
 
 These are choices any of the three on-ramps can make independently. They don't define a different audience or use case; they shape the install and the day-to-day experience.
 
-- **Runtime channel.** Claude Code (via plugin or pipx), [OpenClaw](https://openclaw.ai) (via ClawHub plugin), or the generic `goc` CLI from PyPI for any other agent runtime, CI, or no agent at all. The deck and the skills are the same across channels; only the integration shape differs (typed tool vs PATH binary vs shell call).
+- **Runtime channel.** Claude Code (via plugin or pipx), Codex (via the Codex plugin), [OpenClaw](https://openclaw.ai) (via ClawHub plugin), or the generic `goc` CLI from PyPI for any other agent runtime, CI, or no agent at all. The deck and the skills are the same across channels; only the integration shape differs (typed tool vs PATH binary vs shell call).
 - **Deck visibility.** Checked into the repo (default — agents and reviewers see card state in git history) or gitignored (local-only — no PR-diff noise, no cross-collaborator visibility). See [`DECK_LOCATION.md`](DECK_LOCATION.md) for the four configurations and their trade-offs.
 - **Single vs many agents.** A solo developer with one agent assistant and a multi-agent coordinator with three parallel sessions run the same engine. Autocommit and claim discipline scale up; nothing else changes.
 

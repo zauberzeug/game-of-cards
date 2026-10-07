@@ -243,7 +243,8 @@ absence is what makes the next kickoff re-ask. Stage 0 detects the
 written key on re-run and skips this stage.
 
 If the host has its own kickoff complement (Claude Code ships
-`claude-kickoff`, OpenClaw ships its own equivalent when present),
+`claude-kickoff`, Codex ships `codex-kickoff`, OpenClaw ships its own
+equivalent when present),
 invite the user to run it now — the complement provides the
 host-specific recipe for the chosen mode (e.g., wiring `/loop`,
 suggesting a cron line, or scaffolding a workflow file). Otherwise
