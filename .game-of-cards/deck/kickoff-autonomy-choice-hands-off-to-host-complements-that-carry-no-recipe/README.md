@@ -1,7 +1,7 @@
 ---
 title: kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe
 summary: "UNVERIFIED. Kickoff Stage 6 records an autonomy mode (loop, cron, action) and tells the user the host complement provides the host-specific recipe, but none of claude-kickoff, codex-kickoff or openclaw-kickoff mentions autonomy, /loop, cron or a workflow file, and no code reads the recorded key. Picking a mode therefore sets nothing up, contrary to the 2026-05-10 decision on kickoff-offers-autonomy-setup-options that complements carry the recipes."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:33:42Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py scans the shipped host complements (`claude-kickoff`, `codex-kickoff`, `openclaw-kickoff`) for a recipe per `autonomy:` mode and asserts every mode kickoff Stage 6 offers has one — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] MECHANICAL: each host complement carries the recipe for every mode Stage 6 offers (`loop`, `cron`, `action`) on that host, or kickoff Stage 6 stops promising one and states what the recorded `autonomy:` key does
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands; append a post-close pointer to `kickoff-offers-autonomy-setup-options/log.md`
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Kickoff's autonomy choice hands off to host complements that carry no recipe
