@@ -1,26 +1,26 @@
 ---
 title: codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
 summary: "The Codex plugin shipped on 2026-05-18 and gained a bundled goc helper on 2026-06-09, but seven guidance sites never caught up: the game-of-cards.com home page and PERSONAS.md list three delivery channels without Codex, `goc install --help` and a docstring say Codex has no plugin yet, kickoff names no codex-kickoff complement, and goc.md and site/llms.txt tell plugin users to pipx-install a CLI the plugin already bundles. The follow-up the closed claude-install-defaults-to-plugin-path promised for the day the plugin shipped, revisiting the Codex install default, was never filed, so every Codex install still vendors skills on that false premise. No guard derives the channel set from the plugin manifests, so only the surfaces the two plugin commits touched moved."
-status: active
+status: done
 stage: null
 contribution: high
 created: "2026-10-05T01:25:32Z"
-closed_at: null
+closed_at: "2026-10-07T04:39:34Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation, api-contract]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits 0 — every surface names the Codex plugin, none says Codex has no plugin, and every Codex install section names the bundled helper
-  - [ ] MECHANICAL: `site/index.html` § Install paths gains a Codex plugin bullet and states the channel count `README.md` § Install paths states; `PERSONAS.md` § Runtime channel names the Codex plugin
-  - [ ] MECHANICAL: `LOCAL_SKILLS_HELP` and the `_should_use_local_skills` docstring (`goc/install.py`) state the shipped rule — every Codex install vendors `.codex/skills/` and no flag turns that off — without the "no plugin yet" premise
-  - [ ] MECHANICAL: `goc.md` § Codex plugin and `site/llms.txt` § Install (Codex) send a plugin-only user to `<plugin-root>/skills/_goc-bootstrap.sh`, as `codex-plugin/README.md` and `Skill(codex-kickoff)` do, and keep `pipx` / `uv tool` for vendored skills without the plugin; `goc.md` drops the claim that skill instructions assume `goc` is callable
-  - [ ] MECHANICAL: `Skill(kickoff)` Stage 6's host-complement example names `codex-kickoff`
-  - [ ] TDD: a guard in `tests/` derives the channel set from the plugin manifests in the tree and fails when a surface that enumerates delivery channels (`README.md`, `site/index.html`, `PERSONAS.md`, `site/llms.txt`) omits one or states another count, or when a doc or help string says a host whose payload ships has no plugin; fed the pre-fix text, it fires
-  - [ ] PROCESS: the Codex install-default follow-up that `claude-install-defaults-to-plugin-path` promised is filed as its own card, cross-linked with `codex-only-install-pins-skills-source-to-plugin-skipping-parity-check` and `codex-install-from-plugin-payload-vendors-skills-and-crashes-on-omitted-templates-skills`, and both closed cards that promised a filing carry a post-close pointer to it
-  - [ ] PROCESS: this card's row in the umbrella's instance table names its guard and closure date
-  - [ ] MECHANICAL: mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green), OpenClaw skills re-ported (`python3 scripts/port_skills_to_openclaw.py --check` green), `uv run goc validate` and `uv run python -m unittest discover -s tests` pass
+  - [x] TDD: reproduce.py exits 0 — every surface names the Codex plugin, none says Codex has no plugin, and every Codex install section names the bundled helper
+  - [x] MECHANICAL: `site/index.html` § Install paths gains a Codex plugin bullet and states the channel count `README.md` § Install paths states; `PERSONAS.md` § Runtime channel names the Codex plugin
+  - [x] MECHANICAL: `LOCAL_SKILLS_HELP` and the `_should_use_local_skills` docstring (`goc/install.py`) state the shipped rule — every Codex install vendors `.codex/skills/` and no flag turns that off — without the "no plugin yet" premise
+  - [x] MECHANICAL: `goc.md` § Codex plugin and `site/llms.txt` § Install (Codex) send a plugin-only user to `<plugin-root>/skills/_goc-bootstrap.sh`, as `codex-plugin/README.md` and `Skill(codex-kickoff)` do, and keep `pipx` / `uv tool` for vendored skills without the plugin; `goc.md` drops the claim that skill instructions assume `goc` is callable
+  - [x] MECHANICAL: `Skill(kickoff)` Stage 6's host-complement example names `codex-kickoff`
+  - [x] TDD: a guard in `tests/` derives the channel set from the plugin manifests in the tree and fails when a surface that enumerates delivery channels (`README.md`, `site/index.html`, `PERSONAS.md`, `site/llms.txt`) omits one or states another count, or when a doc or help string says a host whose payload ships has no plugin; fed the pre-fix text, it fires
+  - [x] PROCESS: the Codex install-default follow-up that `claude-install-defaults-to-plugin-path` promised is filed as its own card, cross-linked with `codex-only-install-pins-skills-source-to-plugin-skipping-parity-check` and `codex-install-from-plugin-payload-vendors-skills-and-crashes-on-omitted-templates-skills`, and both closed cards that promised a filing carry a post-close pointer to it
+  - [x] PROCESS: this card's row in the umbrella's instance table names its guard and closure date
+  - [x] MECHANICAL: mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green), OpenClaw skills re-ported (`python3 scripts/port_skills_to_openclaw.py --check` green), `uv run goc validate` and `uv run python -m unittest discover -s tests` pass
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -247,7 +247,14 @@ and a named follow-up — and closing the owner revisited nothing.
 
 ## Fix
 
-Not applied here — this card files the defect.
+Applied 2026-10-07 in `27db384e` (sites 1-7, mirrors, OpenClaw port) and
+`0f2f8455` (guard), following the plan below. Two parts differ from the plan
+as filed. Sites 3 and 4 state the current rule, that every Codex install
+vendors `.codex/skills/` and `--local-skills` is Claude's opt-in, rather than
+an opt-out that does not exist. The guard is
+`tests/test_delivery_channel_surfaces.py`. It fires on all seven sites when
+run against the pre-fix tree (`f510cbe1`), and its `PreFixTextFiresTest` pins
+that on excerpts of the pre-fix text.
 
 1. **Sites 1, 2.** `site/index.html:140-163`: add a Codex plugin `<li>` matching
    `README.md:44` and change "three … All three" to the README's count.
