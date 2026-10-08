@@ -166,9 +166,10 @@ after close. Filter with `goc --worker <X>` or `GOC_WORKER`.
 
 Boolean overlay marking an unauthored scaffold. `goc new` stamps it;
 clears on claim or close, or via `goc publish <title>`. While set:
-hidden from queues (visible under `--status all`, `✎` on the board),
-protected from supersede/disprove closes, skipped by auto-commit; may
-not be terminal. Details: `reference.md` § Draft contract.
+hidden from queues (visible under `--status all`, marked `✎` after the
+title there and on the board), protected from supersede/disprove
+closes, skipped by auto-commit; may not be terminal. Details:
+`reference.md` § Draft contract.
 
 ### `advances` / `advanced_by` — value-flow axis
 

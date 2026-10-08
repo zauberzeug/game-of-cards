@@ -66,8 +66,10 @@ via `goc publish <title>` — which refuses on a pure placeholder
 by automation (the dedup/supersede race that motivated it):
 
 - Hidden from the default queue (`goc`, `goc --ready`, `card_is_ready`)
-  and the scheduler; surfaced only under `goc --status all`, marked
-  `✎` on the board.
+  and the scheduler; surfaced only under `goc --status all` and on the
+  board. Both mark it `✎` after the title, and `--json` carries
+  `draft: true`, so a title match in the `goc --status all | grep`
+  dedup view shows whether it is an unauthored placeholder.
 - `goc status <title> {superseded,disproved}` refuses on a draft — a
   title-only placeholder must not be closed as a "duplicate."
 - goc's auto-commit skips draft cards, so an unauthored scaffold

@@ -131,7 +131,8 @@ you claim the card (`goc status <title> active`, the usual next step)
 or close it; release an authored-but-unclaimed card to the queue
 explicitly with `goc publish <title>`. This closes the window where a
 half-written scaffold could be superseded as a "duplicate" on its
-title alone. See `Skill(card-schema)` "Draft" for the full contract.
+title alone. In the dedup view (`goc --status all`) a draft's title
+carries `✎`. See `Skill(card-schema)` "Draft" for the full contract.
 
 ## Reachability
 

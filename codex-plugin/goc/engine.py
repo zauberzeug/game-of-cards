@@ -2778,8 +2778,8 @@ def card_is_draft(card: Card) -> bool:
 
     The single "not yet real" predicate consulted by the terminal-transition
     guard (`_cmd_status`), the auto_commit filter (`_git_auto_commit`), and the
-    queue / scheduler / board / json surfaces — so the rule is defined once and
-    cannot drift per call site, exactly like `waiting_impedes`.
+    queue / scheduler / table / board / json surfaces — so the rule is defined
+    once and cannot drift per call site, exactly like `waiting_impedes`.
 
     Keyed on the flag ALONE, deliberately NOT on `is_placeholder_scaffold`: a
     card that is claimed (`active`) or closed before its body is filled in has
@@ -2788,6 +2788,15 @@ def card_is_draft(card: Card) -> bool:
     placeholder check instead guards `goc publish` (refusing to release an empty
     card), which is a different question than "is this queue/commit visible."""
     return card.draft
+
+
+# The mark a draft carries after its title in both human views: the table's
+# TITLE cell and the board's card cell. Both key it on `card_is_draft` alone,
+# the predicate behind the `--json` `draft` field, so a card is marked in one
+# view iff it is marked in the other and flagged in JSON. `goc --status all`
+# is the one table that lists drafts, and it is the view create-card dedups
+# against with `grep`, so the mark sits on the row itself at every verbosity.
+DRAFT_MARKER = "✎"
 
 
 def card_is_ready(card: Card, by_title: dict[str, Card], *, include_drafts: bool = False) -> bool:
@@ -3518,11 +3527,12 @@ def render_table(
         dod = "prose" if t.dod_freeform else f"{t.dod_done}/{t.dod_done + t.dod_open}"
         v_score, _ = values.get(t.title, (0.0, []))
         value_str = _format_value(v_score)
+        title = f"{t.title} {DRAFT_MARKER}" if card_is_draft(t) else t.title
         if verbose >= 1:
             stage = str(t.stage) if t.stage is not None else "-"
-            rows.append((t.title, t.status, stage, t.contribution, value_str, t.human_gate, t.created, tags, dod))
+            rows.append((title, t.status, stage, t.contribution, value_str, t.human_gate, t.created, tags, dod))
         else:
-            rows.append((t.title, t.status, t.contribution, value_str, t.human_gate, tags, dod))
+            rows.append((title, t.status, t.contribution, value_str, t.human_gate, tags, dod))
     widths = [
         max(_display_width(h), max((_display_width(r[i]) for r in rows), default=0))
         for i, h in enumerate(headers)
@@ -3760,13 +3770,17 @@ def render_board(
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
         live = t.status not in TERMINAL_STATUSES
-        # A draft (unauthored scaffold) gets a distinct ✎ marker — the board's
-        # "not yet real, do not pull" signal — shown instead of the ⏳ not-ready
-        # glyph. A draft is hidden from the queue for a different reason than a
-        # gate/impediment, so a distinct mark reads clearer.
-        is_draft = live and card_is_draft(t)
+        # A draft (unauthored scaffold) gets a distinct `DRAFT_MARKER` — the
+        # board's "not yet real, do not pull" signal — shown instead of the ⏳
+        # not-ready glyph. A draft is hidden from the queue for a different
+        # reason than a gate/impediment, so a distinct mark reads clearer.
+        # Not gated on `live`, so the board agrees with the table and `--json`
+        # even on a terminal card still flagged draft (`goc validate` rejects
+        # that), which `--done` hides as a draft too. `not_ready` below stays
+        # live-gated on its own.
+        is_draft = card_is_draft(t)
         if is_draft:
-            marker += " ✎"
+            marker += f" {DRAFT_MARKER}"
         # Mark a card not-pullable on the board whenever any queue-hiding
         # axis fires. This mirrors `card_is_ready` /
         # `card_is_workable_for_scheduler`: a human_gate parks an open card
