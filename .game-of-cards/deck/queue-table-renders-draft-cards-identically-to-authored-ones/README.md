@@ -1,7 +1,7 @@
 ---
 title: queue-table-renders-draft-cards-identically-to-authored-ones
 summary: "UNVERIFIED. goc --status all is the only table that lists draft scaffolds, and the docs name it as where drafts appear, but the table's rows carry no draft cell at any verbosity, while the board marks drafts with a pencil glyph and JSON carries draft: true. A reader deduping against goc --status all, as create-card instructs, cannot tell that a matching title is an unauthored placeholder."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:36:46Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py renders `goc --status all` (at `-v` 0, 1 and 2) over a deck holding one draft and one authored open card and asserts the table tells them apart — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] TDD: a regression test pins a draft marker in the table (the board's `✎`, in the title cell or a column), consistent with the board and the JSON `draft` field
   - [ ] MECHANICAL: `card-schema/SKILL.md:146` and `card-schema/reference.md:67-69` name the table marker next to the board's; drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The queue table renders draft cards identically to authored ones
