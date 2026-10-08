@@ -1,7 +1,7 @@
 ---
 title: ready-leverage-line-compares-a-worker-scoped-pick-against-every-workers-gated-cards
 summary: "UNVERIFIED. On a runner with GOC_WORKER set, the --ready leverage line takes its 'Pulling' half from the worker-scoped queue but its 'Highest gated card' half from every worker's parked cards (render_leverage_line is passed the whole deck), while the ACTIVE banner and goc triage in the same invocation are worker-scoped. A scoped runner is told to ping a human about a card it could never pull, and its own parked card is never named."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:36:15Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py builds a deck with one ready and one gated card per worker, runs `GOC_WORKER=<a> goc --ready`, and asserts the leverage line's gated half names only worker `<a>`'s cards — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] TDD: a regression test pins that the leverage line's gated pool is scoped by the same filters as its "Pulling" half (at least `--worker` / `GOC_WORKER`, matching the ACTIVE banner and `goc triage`)
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The `--ready` leverage line compares a worker-scoped pick against every worker's gated cards
