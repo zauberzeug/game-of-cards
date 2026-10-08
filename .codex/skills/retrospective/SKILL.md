@@ -60,17 +60,18 @@ A closure is any card in a **terminal status** — `done`, `disproved`,
 *or* `superseded`. `--status done` would hide the last two, which are
 the very cards Step 3 asks about, so scope to `all` and narrow on the
 terminal set. (Draft scaffolds ride along under `--status all` but
-carry `closed_at: null`, so the closure filter drops them.)
+carry `closed_at: null`, so the closure filter drops them.) The engine
+lists closed cards after the live ones, most recently closed first, so
+the first N that survive the filter are the last N closures.
 
 ```bash
-# Read the last N closed cards (every terminal status) sorted by closed_at
+# Read the last N closed cards (every terminal status), newest first
 goc --status all --json 2>/dev/null | \
   python3 -c "
 import json, sys
 TERMINAL = {'done', 'disproved', 'superseded'}
 cards = json.load(sys.stdin)
 closed = [c for c in cards if c.get('closed_at') and c.get('status') in TERMINAL]
-closed.sort(key=lambda c: c.get('closed_at', ''), reverse=True)
 n = int('$ARGUMENTS'.strip() or '10')
 for c in closed[:n]:
     print(json.dumps({'title': c['title'], 'closed_at': c['closed_at'],

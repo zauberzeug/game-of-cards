@@ -58,7 +58,7 @@ uniformly covers `done` / `disproved` / `superseded`.
 ```bash
 goc --json --closed-since 24h --slim 2>/dev/null | python3 -c "
 import json, sys
-cards = sorted(json.load(sys.stdin), key=lambda c: c.get('closed_at') or '')
+cards = json.load(sys.stdin)
 for c in cards:
     print(f\"{c['title']}: {c['status']}\")
 print(f\"({len(cards)} closed in last 24h)\" if cards else 'Nothing closed in the last 24h.')
@@ -68,11 +68,12 @@ print(f\"({len(cards)} closed in last 24h)\" if cards else 'Nothing closed in th
 `--closed-since 24h` does the date-window filter inside the engine
 (reading the structured `closed_at` record, not file mtime — a
 pull/merge/clone writes every `log.md` at one instant and a
-`-newer`-mtime scan falsely reports "Nothing closed"). `--slim` strips
-body/large fields so the Context block ships kilobytes instead of the
-multi-hundred-KB full-deck JSON. The title-by-status output is enough
-for the standup format; expand the window or drop `--slim` if you need
-summaries.
+`-newer`-mtime scan falsely reports "Nothing closed") and lists the
+closures most recently closed first, so the snippet prints them as
+they come. `--slim` strips body/large fields so the Context block
+ships kilobytes instead of the multi-hundred-KB full-deck JSON. The
+title-by-status output is enough for the standup format; expand the
+window or drop `--slim` if you need summaries.
 
 If none match, report "Nothing closed in the last 24h." When the count
 is large (a batch sync), summarize by theme rather than listing every

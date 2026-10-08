@@ -3310,6 +3310,23 @@ def _closed_at_instant(value: object) -> datetime | None:
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
 
+def _closed_recency_key(t: Card) -> tuple[int, float, str]:
+    """Sort key putting the most recently closed card first.
+
+    `closed_at` descending, read through `_closed_at_instant` so a date-only
+    legacy stamp and a `...Z` datetime compare on one timeline (the date-only
+    stamp counts as that day's midnight UTC). A card whose `closed_at` is
+    missing or unparseable — `goc validate` flags both on a terminal card —
+    sorts after every dated one. The title breaks ties, so closures sharing
+    an instant (a batch closed in one second, several date-only stamps on one
+    day) keep an order that does not depend on the input order.
+    """
+    dt = _closed_at_instant(t.closed_at)
+    if dt is None:
+        return (1, 0.0, t.title)
+    return (0, -dt.timestamp(), t.title)
+
+
 def validate_tag_filters(tags: list[str]) -> list[str] | None:
     if not tags:
         return None
@@ -3329,7 +3346,10 @@ def sort_default(
     values: dict[str, tuple[float, list[str]]] | None = None,
     by_title: dict[str, Card] | None = None,
 ) -> list[Card]:
-    """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
+    """Live cards by GRPW-computed value, then closed cards by recency.
+
+    Live cards (status outside `TERMINAL_STATUSES`) come first, sorted by
+    value with a ToC-style near-term-flow tiebreak.
 
     Key tuple: (-value, -live_direct_advances_count, age_days)
     - primary: highest computed value first (graph-amplified contribution)
@@ -3357,6 +3377,18 @@ def sort_default(
     `by_title` is omitted it is built from `cards`, which is only correct
     when `cards` IS the full deck; callers that sort a subset must thread
     the full-deck lookup (every renderer already holds one as `full_by_title`).
+
+    Terminal cards follow the live ones, most recently closed first
+    (`_closed_recency_key`). Value is a scheduler-axis number — the walk
+    prunes terminal descendants because completed work can no longer be
+    unblocked — so it ranks nothing once a card is closed. Ranking closures
+    by it froze every closed-card view on the oldest high-contribution
+    closures: the board's DONE / DISPROVED / SUPERSEDED columns under their
+    row cap, `--done`, and `--closed-since` all listed the newest closure
+    last. Recency is the order those views are read in. Splitting here,
+    not at each caller, keeps every listing on one rule: a single-status set
+    (a board column, `--done`) is one partition, and `--status all` reads as
+    the queue followed by the record.
     """
     if values is None:
         values = compute_values(cards)
@@ -3383,7 +3415,9 @@ def sort_default(
         v, _ = values.get(t.title, (0.0, []))
         return (-v, -live_direct(t), t.created)
 
-    return sorted(cards, key=key)
+    live = [t for t in cards if t.status not in TERMINAL_STATUSES]
+    closed = [t for t in cards if t.status in TERMINAL_STATUSES]
+    return sorted(live, key=key) + sorted(closed, key=_closed_recency_key)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -3717,6 +3751,8 @@ def render_board(
         by_status[t.status].append(t)
     hidden_by_status: dict[str, int] = {}
     for c in columns:
+        # A terminal column comes back most recently closed first, so the
+        # row cap trims the oldest closures rather than the newest.
         sorted_col = sort_default(by_status[c], values=values, by_title=by_title)
         hidden_by_status[c] = max(0, len(sorted_col) - max_rows)
         by_status[c] = sorted_col[:max_rows]
