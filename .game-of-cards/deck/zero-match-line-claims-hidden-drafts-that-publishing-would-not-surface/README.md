@@ -9,6 +9,7 @@ closed_at: "2026-08-11T05:32:24Z"
 human_gate: none
 advances:
   - query-flag-validation-is-opt-in-per-flag-and-new-flags-keep-missing-it
+  - query-views-each-decide-by-hand-which-filters-apply-and-keep-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

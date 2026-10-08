@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-09-28T01:36:15Z"
 closed_at: "2026-10-08T05:15:05Z"
 human_gate: none
-advances: []
+advances:
+  - query-views-each-decide-by-hand-which-filters-apply-and-keep-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
