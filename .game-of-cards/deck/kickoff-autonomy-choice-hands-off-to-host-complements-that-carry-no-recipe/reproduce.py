@@ -17,7 +17,16 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+def _repo_root() -> Path:
+    p = Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / "pyproject.toml").exists():
+            return p
+        p = p.parent
+    raise RuntimeError("repo root (pyproject.toml) not found")
+
+
+ROOT = _repo_root()
 SKILLS = ROOT / "goc" / "templates" / "skills"
 
 
