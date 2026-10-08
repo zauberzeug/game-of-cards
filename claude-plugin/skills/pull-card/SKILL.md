@@ -181,7 +181,7 @@ what happened. The report is the index, not the story.
 
 ## Pairs naturally with
 
-- `/loop pull-card 30m` — drains the queue while the user works in
+- `/loop 30m /pull-card` — drains the queue while the user works in
   another session.
 - `/schedule pull-card weekday 09:00` — opens the day with one card
   closed.

@@ -1,19 +1,19 @@
 ---
 title: loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse
-summary: "The pull-card skill and the deck skill's reference show `/loop pull-card 30m`, but Claude Code's documented /loop grammar accepts an interval only as a leading bare token (`/loop 30m /pull-card`) or as a trailing clause (`every 2 hours`). The example therefore sits outside the documented grammar, and it now contradicts the interval-first form that kickoff and claude-kickoff show."
-status: active
+summary: "FIXED. The pull-card skill and the deck skill's reference showed `/loop pull-card 30m`, but Claude Code's documented /loop grammar accepts an interval only as a leading bare token (`/loop 30m /pull-card`) or as a trailing clause (`every 2 hours`). That put the example outside the documented grammar and contradicted the interval-first form kickoff and claude-kickoff show. Both now read `/loop 30m /pull-card`, and tests/test_loop_examples_lead_with_the_interval.py guards every shipped template."
+status: done
 stage: null
 contribution: low
 created: "2026-10-08T04:45:19Z"
-closed_at: null
+closed_at: "2026-10-08T04:47:59Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — no shipped template under `goc/templates/` shows a backticked `/loop` example whose interval trails as a bare token
-  - [ ] MECHANICAL: `pull-card/SKILL.md` "Pairs naturally with" and `deck/reference.md` use the documented interval-first form `/loop 30m /pull-card`; plugin and dogfood mirrors regenerated
-  - [ ] TDD: a regression test under `tests/` fails on a trailing-bare-interval `/loop` example in any shipped template
+  - [x] TDD: reproduce.py exits zero — no shipped template under `goc/templates/` shows a backticked `/loop` example whose interval trails as a bare token
+  - [x] MECHANICAL: `pull-card/SKILL.md` "Pairs naturally with" and `deck/reference.md` use the documented interval-first form `/loop 30m /pull-card`; plugin and dogfood mirrors regenerated
+  - [x] TDD: a regression test under `tests/` fails on a trailing-bare-interval `/loop` example in any shipped template
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -53,7 +53,7 @@ the one command they recommend for a supervised drain.
 
 `reproduce.py` scans every `.md` / `.yaml` file under `goc/templates/` for
 backticked `/loop …` examples whose first argument is not an interval
-while a bare interval token trails. Before the fix it printed:
+while a bare interval token trails. Before the fix it printed (exit 1):
 
 ```
 trailing bare interval: goc/templates/skills/deck/reference.md:67: `/loop pull-card 30m`
@@ -66,10 +66,18 @@ one, is inferred from the documented grammar. It was not observed: a
 headless session cannot exercise `/loop` without scheduling real
 recurring work.
 
-## Fix
+## Fix (applied)
 
-Rewrite both examples to `/loop 30m /pull-card`, regenerate the mirrors
-with `scripts/sync_plugin_assets.py` and `scripts/port_skills_to_openclaw.py`,
-and add a regression test that applies the same scan to every shipped
-template. `/schedule pull-card weekday 09:00` is left alone because
-`/schedule` takes a natural-language description, not the `/loop` grammar.
+- Both examples now read `/loop 30m /pull-card`
+  (`goc/templates/skills/pull-card/SKILL.md:184`,
+  `goc/templates/skills/deck/reference.md:67`). Mirrors were regenerated
+  by `scripts/sync_plugin_assets.py` and `scripts/port_skills_to_openclaw.py`.
+- `tests/test_loop_examples_lead_with_the_interval.py` applies the
+  reproduce.py scan to every `.md` / `.yaml` file under `goc/templates/`.
+  It also pins the detector on five literal cases: it flags
+  `pull-card 30m` and `/pull-card 30m`, and passes `30m /pull-card`,
+  `check the build every 2 hours` and `stop`.
+- After the fix, `reproduce.py` prints "every shipped /loop example leads
+  with its interval or has none" and exits 0.
+- `/schedule pull-card weekday 09:00` is unchanged because `/schedule`
+  takes a natural-language description, not the `/loop` grammar.

@@ -64,7 +64,7 @@ Three operating modes coexist:
   silently while answering. Card operations are NEVER announced
   unless the user explicitly asks to see the deck.
 - **Autonomous mode.** No human is steering. `Skill(pull-card)`
-  runs on `/loop pull-card 30m` or `/schedule pull-card
+  runs on `/loop 30m /pull-card` or `/schedule pull-card
   weekday 09:00`, draining the `human_gate: none` queue.
   `Skill(audit-deck)` runs on a slower cadence to keep the queue
   fed. The deck advances overnight. The human wakes up to commits
