@@ -1,7 +1,7 @@
 ---
 title: engine-comments-claim-unflagged-placeholder-cards-count-as-drafts
 summary: "Three goc/engine.py comments say card_is_draft also catches a card that still carries both goc new placeholders but no draft flag. card_is_draft keys on the flag alone, deliberately, as its own docstring and the maintainer decision on placeholder-cards-superseded-before-they-are-authored record, so such a card is listed, pullable and supersedable like any other. The false claim has already been copied into a test docstring and a closed card's reproduce.py."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-10-08T05:40:20Z"
@@ -10,11 +10,11 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
-draft: true
 definition_of_done: |
   - [ ] TDD: reproduce.py exits 0, so no comment in `goc/engine.py`, `tests/test_empty_query_result_line.py` or the closed zero-match card's `reproduce.py` claims the draft gate catches an unflagged placeholder scaffold, while `card_is_draft` still reads the flag alone
   - [ ] TDD: a regression test pins the flag-only contract on an unflagged placeholder scaffold, which is not a draft (`card_is_draft` false, `draft: false` in `--json`, no `✎` in the table or on the board), is listed by `goc` and `goc --ready`, and gets the not-a-draft note from `goc publish`
   - [ ] MECHANICAL: the corrected `is_placeholder_scaffold` docstring names `goc publish` as its only consumer, and the closed zero-match card's `log.md` carries a forward pointer to this card
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Engine comments claim unflagged placeholder cards count as drafts
