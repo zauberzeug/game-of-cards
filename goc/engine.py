@@ -3837,9 +3837,10 @@ def render_board(
 
 def render_leverage_line(
     ready: list[Card],
-    all_cards: list[Card],
+    cards: list[Card],
     *,
     values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
 ) -> str:
     """One-line leverage comparison after a pull-card pick.
 
@@ -3848,13 +3849,21 @@ def render_leverage_line(
     gated card exists outside the ready set (per the spec, the line is
     omitted when there's nothing to compare against) or when the ready
     set is itself empty (no pick to announce).
+
+    `cards` is the pool the gated half is drawn from. `_cmd_default` scopes
+    it by the same query filters as `ready`, so both halves describe one
+    queue. Thread `by_title` and `values` from the full deck, as
+    `render_active_notice` does. When omitted they are built from `cards`,
+    which is correct only when `cards` is the full deck.
     """
     if not ready:
         return ""
     if values is None:
-        values = compute_values(all_cards)
+        values = compute_values(cards)
+    if by_title is None:
+        by_title = {t.title: t for t in cards}
     open_gated = [
-        t for t in all_cards
+        t for t in cards
         if t.status == "open"
         and not card_is_draft(t)
         and t.human_gate in ("decision", "session")
@@ -3862,9 +3871,7 @@ def render_leverage_line(
     ]
     if not open_gated:
         return ""
-    gated_top = sort_default(
-        open_gated, values=values, by_title={t.title: t for t in all_cards}
-    )[0]
+    gated_top = sort_default(open_gated, values=values, by_title=by_title)[0]
     pulled = ready[0]
     pulled_value = values.get(pulled.title, (0.0, []))[0]
     gated_value = values.get(gated_top.title, (0.0, []))[0]
@@ -4468,6 +4475,18 @@ def _cmd_default(args):
     stages = parse_stage_filter(args.stage_flag)
     tag_filters = validate_tag_filters(args.tags)
     full_by_title = {t.title: t for t in cards}
+    # The query's scope: which cards the reader is looking at. It is kept
+    # apart from the lifecycle conjuncts (status, gate, readiness, closure
+    # date) because the `--ready` leverage line draws its gated half from this
+    # same scope (see below). A scope filter added here reaches both halves.
+    scope = {
+        "stages": stages,
+        "contribution": args.contribution,
+        "tags": tag_filters,
+        "advances": args.advances,
+        "advanced_by": args.advanced_by,
+        "worker": args.worker,
+    }
 
     def run_query(*, include_drafts: bool = False) -> list[Card]:
         """Apply the whole query predicate, not just its first stage.
@@ -4491,17 +4510,12 @@ def _cmd_default(args):
         rows = filter_cards(
             cards,
             status=status,
-            stages=stages,
-            contribution=args.contribution,
             human_gate=args.human_gate,
-            tags=tag_filters,
             since=since,
-            advances=args.advances,
-            advanced_by=args.advanced_by,
-            worker=args.worker,
             ready=args.ready,
             by_title=full_by_title,
             include_drafts=include_drafts,
+            **scope,
         )
         if closed_since_threshold is not None:
             rows = [
@@ -4582,8 +4596,23 @@ def _cmd_default(args):
             if args.worker else cards
         )
         active_notice = render_active_notice(notice_cards, values=full_values, by_title=full_by_title) if status == "open" else ""
+        # The leverage line's gated half asks the same query as its "Pulling"
+        # half with the gate conjunct inverted: which card would this query
+        # pull if a human lowered its gate? So it takes the whole `scope`, not
+        # only --worker as the banner does. A gated card outside the scope is
+        # one this puller could not pull even once ungated. Drawing from the
+        # whole deck made a GOC_WORKER-scoped runner ping a human about
+        # another worker's card. Only the scope is applied here
+        # (`status=None`), not `run_query`: the lifecycle conjuncts are what
+        # separate the two halves, and `render_leverage_line` applies the
+        # gated half's own: open, gated, unimpeded.
         leverage = (
-            render_leverage_line(filtered, cards, values=full_values)
+            render_leverage_line(
+                filtered,
+                filter_cards(cards, status=None, **scope),
+                values=full_values,
+                by_title=full_by_title,
+            )
             if args.ready else ""
         )
         # `out` is now always non-empty (a table, or the empty-result line),

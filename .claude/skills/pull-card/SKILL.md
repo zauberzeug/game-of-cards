@@ -43,13 +43,16 @@ from the queue):
 
 The last line of `goc --ready` is a **leverage comparison**:
 `Pulling <title> (value N). Highest gated card: <title> (value M, gate <kind>).`
+The gated card is drawn from the same scope as the pick (`--worker` /
+`GOC_WORKER`, `--tag`, and the other query filters). It is the card
+this queue would pull if a human lowered its gate.
 When `M >> N` (≥3× higher value), the autonomous puller is about to
 work a small card while a much higher-value card sits parked behind a
 human gate — that's a signal to ping the human to lower the gate
 (`decide-card` for `decision`, the human's session for `session`)
 *before* draining low-value queue items. When the leverage is close,
-just pull. The line is omitted when no gated cards exist or the queue
-is empty.
+just pull. The line is omitted when no gated card exists in that scope
+or the queue is empty.
 
 Then:
 
