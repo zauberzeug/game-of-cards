@@ -40,6 +40,7 @@ advanced_by:
   - codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
   - agents-md-says-goc-validate-checks-hook-entries-in-claude-settings
   - agents-md-mislabels-claude-settings-json-as-user-owned-permission-list
+  - kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
