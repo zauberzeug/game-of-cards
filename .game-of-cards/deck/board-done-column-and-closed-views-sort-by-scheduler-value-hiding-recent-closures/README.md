@@ -1,7 +1,7 @@
 ---
 title: board-done-column-and-closed-views-sort-by-scheduler-value-hiding-recent-closures
 summary: "UNVERIFIED. Every closed-card view (the board's DONE, DISPROVED and SUPERSEDED columns, --done, --closed-since) is ordered by sort_default's scheduler key, value then oldest-created, a score the engine itself defines as meaningless for terminal cards. With the default 20-row cap the board's DONE column is frozen on the oldest high-value closures: in this repo the newest closure ranks 556 of 556, so standup and retrospective re-sort by closed_at in Python while the board cannot."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:35:52Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py builds a deck with more than `--max-rows` older high-contribution closures plus a few recent ones, and asserts the recent closures appear in the board's DONE column and lead `goc --closed-since 7d` — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] TDD: a regression test pins the terminal-status order chosen for the board's terminal columns and the `--done` / `--closed-since` tables (most recent `closed_at` first is the order `standup` and `retrospective` already re-sort into)
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands; the `standup` / `retrospective` Python re-sorts are either kept deliberately or removed
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The board's DONE column and the closed-card views sort by scheduler value, hiding recent closures
