@@ -226,7 +226,7 @@ Otherwise, ask the user **one question**:
 >
 > 1. **Manual** — you file cards and work them by hand. No setup.
 > 2. **Supervised loop** — your host runs `pull-card` on a timer inside
->    a session you watch (e.g. `/loop /pull-card 30m` on Claude Code).
+>    a session you watch (e.g. `/loop 30m /pull-card` on Claude Code).
 >    Best for trying GoC before automating further.
 > 3. **Local cron** — a cron job runs `pull-card` unattended on your
 >    machine. Best for solo workflows that trust the agent to drain
@@ -242,13 +242,13 @@ Record the answer in `.game-of-cards/config.yaml` as a top-level
 absence is what makes the next kickoff re-ask. Stage 0 detects the
 written key on re-run and skips this stage.
 
-If the host has its own kickoff complement (Claude Code ships
-`claude-kickoff`, Codex ships `codex-kickoff`, OpenClaw ships its own
-equivalent when present),
-invite the user to run it now — the complement provides the
-host-specific recipe for the chosen mode (e.g., wiring `/loop`,
-suggesting a cron line, or scaffolding a workflow file). Otherwise
-recommend the next step:
+The key is a record, not a setup: no goc command reads it (only Stage
+0's re-run check does), so `loop`, `cron` or `action` drains nothing
+until a scheduler is wired. If the host has its own kickoff complement
+(Claude Code ships `claude-kickoff`, Codex `codex-kickoff`, OpenClaw
+`openclaw-kickoff`), invite the user to run it now — its autonomy
+recipes wire each mode on that host, and say so where the host has
+none. Otherwise recommend the next step:
 
 ```
 What should the first card be?

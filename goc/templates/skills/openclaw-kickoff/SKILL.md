@@ -101,6 +101,10 @@ hunting for a Claude Code-style analog:
 
 ## Stage 3 — confirm ready
 
+If `.game-of-cards/config.yaml` records `autonomy:` as `loop`, `cron`
+or `action`, first show the user that mode's entry from § Reference:
+autonomy recipes — kickoff recorded the choice, nothing has wired it.
+
 Report to the user:
 
 ```
@@ -111,3 +115,28 @@ What should the first card be?
 
 The deck is now live. The agent can invoke any GoC skill (`scan-deck`,
 `create-card`, `pull-card`, …) immediately — no further kickoff needed.
+
+---
+
+## Reference: autonomy recipes
+
+One entry per mode kickoff Stage 6 records. Each recipe starts one
+`pull-card` run per tick and leaves the repetition to the scheduler.
+
+- **`loop`** — in the chat, `/loop 30m Run the pull-card skill once.`
+  (OpenClaw 2026.8.1 or later; owner-only). `/loop stop` ends it.
+- **`cron`** — an automation runs a fresh isolated agent turn on a
+  schedule inside the Gateway, which must stay running:
+
+  ```bash
+  openclaw automations create "*/30 * * * *" "Run the pull-card skill once." --name pull-card --agent <agent>
+  ```
+
+  The turn works in its agent's workspace, so pick an agent whose
+  workspace is this repo:
+  `openclaw agents add <agent> --workspace /path/to/repo`. A run past
+  the scheduler's 60-minute watchdog is killed mid-card unless
+  `--timeout-seconds` raises it.
+- **`action`** — no recipe ships: OpenClaw has no official GitHub
+  Action, and whether the `goc` tool loads under the headless
+  `openclaw agent exec` is unverified.

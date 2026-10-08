@@ -10,3 +10,17 @@ Q1: Stage 6 covers four modes (loop, cron, GitHub Action, manual) with an explic
 - **Project impact**: Surfaces GoC's primary differentiator (autonomous queue drain) at onboarding instead of relying on accidental discovery via `Skill(pull-card)`.
 - **Tests**: no automated test suite — validation gating via `goc validate` and the plugin-asset parity tripwire.
 - **Bundled with**: none
+
+## 2026-10-08 — Post-close amendment
+
+The 2026-05-10 decision said host complements provide the host-specific
+recipes, but no DoD item covered them, so for five months none of
+`claude-kickoff`, `codex-kickoff` or `openclaw-kickoff` carried any.
+Picking `loop`, `cron` or `action` in Stage 6 recorded the key and set
+nothing up. Closed by
+[`kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe`](../kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe/):
+each complement now has a `## Reference: autonomy recipes` section with
+one entry per mode, saying so where the host has no recipe. Stage 6 now
+states that the key is a record only, and
+`tests/test_kickoff_autonomy_recipes.py` keeps the coverage from
+drifting.

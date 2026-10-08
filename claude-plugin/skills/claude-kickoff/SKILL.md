@@ -148,6 +148,10 @@ so a restart never destroys work already done.
 
 ## Stage 4 — confirm ready
 
+If `.game-of-cards/config.yaml` records `autonomy:` as `loop`, `cron`
+or `action`, first show the user that mode's entry from § Reference:
+autonomy recipes — kickoff recorded the choice, nothing has wired it.
+
 Report to the user:
 
 ```
@@ -158,6 +162,38 @@ What should the first card be?
 
 The deck is now live. `Skill(create-card)`, `Skill(scan-deck)`, and all
 other GoC skills work immediately — no further kickoff needed.
+
+---
+
+## Reference: autonomy recipes
+
+One entry per mode kickoff Stage 6 records. Each recipe starts one
+`pull-card` per session and leaves the repetition to the scheduler, so
+every card gets a fresh context.
+
+- **`loop`** — in a session you keep open, run `/loop 30m /pull-card`.
+  It fires only while that session stays open, and a recurring loop
+  expires after 7 days; re-issue it to continue.
+- **`cron`** — a crontab entry starts one headless session per tick
+  (cron's `PATH` is minimal; give the absolute path to `claude` if it
+  is not found):
+
+  ```cron
+  */30 * * * * cd /path/to/repo && claude -p "Run Skill(pull-card) once, then exit." --permission-mode acceptEdits --allowedTools "Bash(goc:*)" "Bash(git:*)" >> /tmp/pull-card.log 2>&1
+  ```
+
+  A headless session cannot answer a permission prompt, so whatever it
+  is not pre-approved for is denied — add the commands your cards need,
+  such as the test runner.
+- **`action`** — a scheduled GitHub Actions workflow runs
+  `anthropics/claude-code-action@v1` with the same prompt and a
+  `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` secret. The runner
+  needs the skills (vendored `.claude/skills/`, or the plugin through
+  the action's `plugin_marketplaces` and `plugins` inputs) and a `goc`
+  it can run. GoC's own
+  [`pull-card.yml`](https://github.com/zauberzeug/game-of-cards/blob/main/.github/workflows/pull-card.yml)
+  is a worked example: it skips the agent while no card is pullable and
+  re-dispatches itself while cards remain.
 
 ---
 
