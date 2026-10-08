@@ -7,7 +7,8 @@ contribution: low
 created: "2026-10-08T04:45:19Z"
 closed_at: "2026-10-08T04:47:59Z"
 human_gate: none
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
