@@ -16,3 +16,16 @@ is a policy call, not a mechanical fix. Deduped against
 which owns the truncation half and not the contradiction, and against the
 three closed session-start-hook resumability cards, which fixed the
 closed, gated and impeded buckets but not this one.
+
+## 2026-10-09T04:54:45Z — Pattern check: adjacent to the hook-drift roots, not an instance
+
+The two META-FIX roots for the hook,
+`session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting`
+and `openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting`,
+catalogue copies of engine predicates that already exist (the wait
+overlay, frontmatter scalars) and drift from them. This card has no
+engine predicate to drift from: the engine has no notion of who may
+resume a claim. So no `advances` edge was added. Option 3 would create
+such a predicate and with it a new copy for those roots to guard, so the
+Decision section cross-references both roots. No other root covers two
+shipped surfaces giving contradictory instructions about the same card.

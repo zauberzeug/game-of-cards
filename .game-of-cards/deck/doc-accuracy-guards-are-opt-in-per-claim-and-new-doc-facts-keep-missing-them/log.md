@@ -349,3 +349,26 @@ pairs a shipped host with "no plugin", or when a Codex run-goc section skips
 the bundled helper. On the pre-fix tree (`f510cbe1`) it fires on all seven
 sites. It also confirms this card's Option D datum: the "no plugin yet" promise
 had owners, and closing them revisited nothing.
+
+## 2026-10-09T04:54:45Z — Instance connected: engine comments that misstated a predicate and were copied twice
+
+[engine-comments-claim-unflagged-placeholder-cards-count-as-drafts](../engine-comments-claim-unflagged-placeholder-cards-count-as-drafts/)
+(done) adds two data points.
+
+- **False from birth, not rotted.** Three `goc/engine.py` comments said
+  `card_is_draft` also catches a card that keeps the `goc new`
+  placeholders but has no draft flag. They described an earlier
+  iteration of the commit that introduced the flag. `card_is_draft`'s
+  own docstring, sixteen lines below one of them, stated the shipped
+  rule correctly the whole time. So the shape also covers claims that
+  were never true, which no "re-check when the code changes" mechanism
+  would catch.
+- **Copied before anyone caught it.** A regression test's docstring and a
+  closed card's `reproduce.py` each restated the claim as the reason for
+  their own fixtures. As with the eighth instance, a false claim reaches
+  new surfaces faster than per-claim guards get added.
+
+The fix corrected all five texts and pinned the behavior, not the prose
+(`tests/test_unflagged_placeholder_scaffold_is_not_a_draft.py`). A comment
+that restates a predicate's semantics is prose about code, and a
+behavioral test is the closest tree-derived guard that reaches it.

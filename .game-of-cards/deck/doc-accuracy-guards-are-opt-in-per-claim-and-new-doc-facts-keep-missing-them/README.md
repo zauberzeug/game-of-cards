@@ -42,6 +42,7 @@ advanced_by:
   - agents-md-mislabels-claude-settings-json-as-user-owned-permission-list
   - kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe
   - loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse
+  - engine-comments-claim-unflagged-placeholder-cards-count-as-drafts
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)

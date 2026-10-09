@@ -180,7 +180,14 @@ and which surface owns it? Credible options:
    and the skills then read that one predicate, the way `card_is_draft`
    and `waiting_impedes` own their rules. This is the most robust
    option, at the cost of a schema field, a config default and a
-   rendering change, and existing active cards have no claim time.
+   rendering change, and existing active cards have no claim time. It
+   also adds one more engine predicate that the dependency-free hook and
+   the OpenClaw port must each copy by hand. That is the drift
+   [session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting](../session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting/)
+   and
+   [openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting](../openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting/)
+   track, so their parity guard should cover the new predicate from the
+   start.
 4. **The consuming repo owns the policy.** The shipped surfaces stop
    contradicting each other (option 1) and point to
    `.game-of-cards/hooks/pull-card.md` as the place a repo writes its
