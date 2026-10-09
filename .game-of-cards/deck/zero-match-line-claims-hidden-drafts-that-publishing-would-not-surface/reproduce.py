@@ -65,8 +65,9 @@ def _card(deck: Path, title: str, *, extra: str = "", status: str = "open",
           closed_at: str = "null", draft: bool = True) -> None:
     """Write an *authored* card (real DoD, real body) that is optionally a draft.
 
-    Authored on purpose: `card_is_draft` also fires on a surviving placeholder
-    scaffold, and the point here is the explicit `draft: true` flag alone.
+    Authored on purpose, so each draft is one `goc publish` would actually
+    release. What makes a fixture a draft is the explicit `draft: true` flag
+    alone, which is all `card_is_draft` reads.
     """
     card = deck / title
     card.mkdir(parents=True)

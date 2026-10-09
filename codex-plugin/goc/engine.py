@@ -1013,8 +1013,8 @@ class Card:
         cleared by `goc publish`, `goc status active`, or `goc done`. Absent =
         authored (the default for every card predating this flag). Orthogonal to
         `status`: a draft card is still `status: open`; the flag is a "not yet
-        real" overlay, like `waiting_on`. See `card_is_draft` for the composite
-        predicate that also catches flagless legacy scaffolds."""
+        real" overlay, like `waiting_on`. `card_is_draft`, the predicate every
+        draft-gated surface consults, reads this flag and nothing else."""
         v = self.frontmatter.get("draft")
         return v if isinstance(v, bool) else False
 
@@ -2763,9 +2763,15 @@ SCAFFOLD_BODY_PLACEHOLDER = "(write the design doc here)"
 
 def is_placeholder_scaffold(card: Card) -> bool:
     """True iff the card still carries BOTH generated scaffold placeholders — the
-    `goc new` DoD stub AND body stub. The flagless backstop in `card_is_draft`:
-    catches legacy / hand-made scaffolds authored before the `draft` flag, and
-    scaffolds whose flag was hand-stripped without authoring."""
+    `goc new` DoD stub AND body stub.
+
+    Its one consumer is `goc publish` (`_cmd_publish`), which asks it only of a
+    card `card_is_draft` has already flagged and refuses to release a draft that
+    is still a pure placeholder. It is not part of the draft gate: `card_is_draft`
+    reads the flag alone (its docstring says why). So an unflagged card that
+    still carries both placeholders — scaffolded before the flag existed, or
+    with the flag stripped by hand — is ordinary queue work: listed, pullable
+    and supersedable like any authored card."""
     dod = card.frontmatter.get("definition_of_done", "")
     dod_str = dod if isinstance(dod, str) else ""
     return SCAFFOLD_DOD_PLACEHOLDER in dod_str and SCAFFOLD_BODY_PLACEHOLDER in card.body
@@ -3152,11 +3158,11 @@ def filter_cards(
         out = [t for t in out if t.status in statuses]
     elif status is not None and status != "all":
         out = [t for t in out if t.status == status]
-    # Unauthored scaffolds (draft flag or surviving placeholder) are hidden from
-    # every listing except `--status all`: a draft is not yet real work and must
-    # not appear as queueable. The board path renders the full deck (not this
-    # filtered set) and marks drafts instead. `card_is_draft` is the shared
-    # not-yet-real predicate (also enforced in `card_is_ready`).
+    # Draft scaffolds (the explicit `draft: true` flag) are hidden from every
+    # listing except `--status all`: a draft is not yet real work and must not
+    # appear as queueable. The board marks the drafts it shows. `card_is_draft`
+    # is the shared not-yet-real predicate (also enforced in `card_is_ready`);
+    # it reads the flag alone, so a surviving placeholder body hides nothing.
     #
     # `include_drafts` suppresses only this conjunct, so a caller can recover
     # how many cards the draft filter alone removed without restating the rest
