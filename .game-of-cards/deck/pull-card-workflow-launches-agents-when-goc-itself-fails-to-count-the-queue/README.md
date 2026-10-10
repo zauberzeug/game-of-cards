@@ -1,7 +1,7 @@
 ---
 title: pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue
 summary: "UNVERIFIED. pull-card.yml counts the queue with count=$(uv run goc ... --json | jq 'length') under GitHub's default bash -e without pipefail, so when goc exits non-zero jq sees empty input, exits 0, and the count is empty. The step succeeds, the condition count != '0' holds, and the Opus agent session launches and re-triggers, failing open exactly when the engine is broken."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:38:32Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py runs the `Check autonomous queue` step body under `bash -e` with a `goc` stand-in that exits non-zero, and asserts the step fails (or reports a zero count) instead of emitting an empty count that launches the agent — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] MECHANICAL: both count sites in `.github/workflows/pull-card.yml` (`:63`, `:107`) fail closed when `goc` fails — `shell: bash` (which adds `-o pipefail`) or an explicit exit-status check — and the launch / re-trigger conditions treat a non-numeric count as "do not launch" (requires a HUMAN commit — the bot's GITHUB_TOKEN cannot modify `.github/workflows/`)
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands; cross-check the fix against `pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty`'s proposed count line, which keeps the same pipe
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The pull-card workflow launches agents when `goc` itself fails to count the queue
