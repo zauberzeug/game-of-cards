@@ -29,3 +29,14 @@ released. The remaining DoD item is the workflow edit, which the bot's
 token cannot push. One human edit closes this card and
 `pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty`
 together. That card's Fix section now points here.
+
+## 2026-10-10T04:59:30Z — The non-UTF-8 trigger used as real-engine evidence is fixed
+
+The real-engine run above used a card holding one non-UTF-8 byte to make
+goc exit 1. That crash was filed and fixed through this session as
+`card-with-non-utf-8-bytes-crashes-validate-and-every-deck-view-without-naming-it`
+(`988a982b`): the card is now skipped with a warning, and `goc --json`
+exits 0. This card's defect is unchanged. Any other non-zero exit still
+leaves an empty count, and `reproduce.py`'s stand-in run, which does not
+depend on that trigger, still exits 1. The README's Defect and Evidence
+sections now say so.

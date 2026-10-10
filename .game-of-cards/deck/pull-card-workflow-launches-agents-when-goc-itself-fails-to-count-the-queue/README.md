@@ -43,8 +43,8 @@ worker: {who: "claude[bot]", where: main}
 ## Defect
 
 When `goc` exits non-zero, the step does not notice. Causes include an
-engine regression pushed by a pull-card session, a renamed flag, or a
-card whose bytes are not valid UTF-8. The pipe's status is `jq`'s, and
+engine regression pushed by a pull-card session, a renamed flag, or any
+uncaught engine crash. The pipe's status is `jq`'s, and
 `jq` on empty input prints nothing and exits 0. So `count` is empty, the
 step succeeds, and `'' != '0'` launches the Opus max-effort agent
 session. The re-trigger step then does the same, up to `MAX_ITERATIONS`.
@@ -84,14 +84,18 @@ body is run faithfully. Then the stand-ins exit 2. At HEAD:
 It exits 1 while the defect is present, 0 once every count step fails
 closed, and 2 when the workflow shape or a control does not hold.
 
-The real engine fails the same way. In a scratch deck, a card holding
-one Latin-1 byte (`caf\xe9`) makes `goc --status open --human-gate none
---json` exit 1 on a `UnicodeDecodeError`. The live `Check autonomous
-queue` body, run against that engine under `bash -e`, printed
-`Pullable cards (status=open, human_gate=none): ` and `[: : integer
-expression expected`, wrote `count=` to `GITHUB_OUTPUT`, and exited 0.
-Under `bash --noprofile --norc -eo pipefail` the same body exited 1 and
-wrote nothing.
+The real engine failed the same way. At d84a9b38, a scratch deck holding
+a card with one Latin-1 byte (`caf\xe9`) made `goc --status open
+--human-gate none --json` exit 1 on a `UnicodeDecodeError`. The live
+`Check autonomous queue` body, run against that engine under `bash -e`,
+printed `Pullable cards (status=open, human_gate=none): ` and `[: :
+integer expression expected`, wrote `count=` to `GITHUB_OUTPUT`, and
+exited 0. Under `bash --noprofile --norc -eo pipefail` the same body
+exited 1 and wrote nothing. That particular crash is gone since
+`988a982b`
+([card-with-non-utf-8-bytes-crashes-validate-and-every-deck-view-without-naming-it](../card-with-non-utf-8-bytes-crashes-validate-and-every-deck-view-without-naming-it/)):
+the card is now skipped with a warning. Any other non-zero exit still
+reaches the same fail-open path, which is what the stand-in run shows.
 
 ## Fix
 
