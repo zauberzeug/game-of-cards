@@ -100,7 +100,7 @@ engine the exact question the picker asks.
 ## Fix
 
 One-line change at each of the two count sites in
-`.github/workflows/pull-card.yml` (lines 63 and 106):
+`.github/workflows/pull-card.yml` (lines 63 and 107):
 
 ```bash
 count="$(uv run goc --ready --json | jq 'length')"
@@ -108,6 +108,15 @@ count="$(uv run goc --ready --json | jq 'length')"
 
 and update the adjacent echo labels accordingly. `--ready --json`
 already works (verified above).
+
+**Land it with pipefail.** This line keeps the unguarded pipe: when
+`goc` itself fails, `jq` still exits 0 and the empty count launches the
+agent
+([pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue](../pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue/),
+whose `reproduce.py` still fails on this line alone). That card's
+`pull-card-yml.patch` applies this fix together with a workflow-level
+`shell: bash` and `count > 0` gates, so one human edit closes both
+cards.
 
 **Why the session gate:** the fix is determined, but the autonomous
 bot cannot land it — GitHub rejects pushes from the workflow's token

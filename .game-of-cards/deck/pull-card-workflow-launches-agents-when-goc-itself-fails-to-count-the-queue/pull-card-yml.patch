@@ -1,0 +1,64 @@
+diff --git a/.github/workflows/pull-card.yml b/.github/workflows/pull-card.yml
+index c4b2f98..8098fa0 100644
+--- a/.github/workflows/pull-card.yml
++++ b/.github/workflows/pull-card.yml
+@@ -37,6 +37,14 @@ concurrency:
+ env:
+   MAX_ITERATIONS: '4'
+ 
++# Every `run:` step runs as `bash --noprofile --norc -eo pipefail`. The
++# runner default, `bash -e`, has no pipefail: a goc failure inside
++# `goc ... | jq` is masked by jq's exit 0, and the empty count it leaves
++# would launch the agent.
++defaults:
++  run:
++    shell: bash
++
+ jobs:
+   pull-card:
+     name: Pull one card (iteration ${{ github.event.inputs.iteration || '1' }})
+@@ -60,15 +68,15 @@ jobs:
+       - name: Check autonomous queue
+         id: queue
+         run: |
+-          count="$(uv run goc --status open --human-gate none --json | jq 'length')"
++          count="$(uv run goc --ready --json | jq 'length')"
+           echo "count=$count" >> "$GITHUB_OUTPUT"
+-          echo "Pullable cards (status=open, human_gate=none): $count"
++          echo "Ready cards (goc --ready): $count"
+           if [ "$count" -eq 0 ]; then
+             echo "::notice::Queue is empty — skipping the LLM agent step."
+           fi
+ 
+       - name: Pull one card
+-        if: steps.queue.outputs.count != '0'
++        if: steps.queue.outputs.count > 0
+         uses: anthropics/claude-code-action@v1
+         with:
+           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+@@ -104,13 +112,13 @@ jobs:
+       - name: Re-check queue
+         id: post
+         run: |
+-          count="$(uv run goc --status open --human-gate none --json | jq 'length')"
++          count="$(uv run goc --ready --json | jq 'length')"
+           echo "count=$count" >> "$GITHUB_OUTPUT"
+-          echo "Remaining pullable cards: $count"
++          echo "Remaining ready cards: $count"
+ 
+       - name: Re-trigger workflow if cards remain
+         if: |
+-          steps.post.outputs.count != '0' &&
++          steps.post.outputs.count > 0 &&
+           fromJSON(github.event.inputs.iteration || '1') < fromJSON(env.MAX_ITERATIONS)
+         env:
+           GH_TOKEN: ${{ github.token }}
+@@ -122,7 +130,7 @@ jobs:
+ 
+       - name: Note when iteration cap is hit with cards remaining
+         if: |
+-          steps.post.outputs.count != '0' &&
++          steps.post.outputs.count > 0 &&
+           fromJSON(github.event.inputs.iteration || '1') >= fromJSON(env.MAX_ITERATIONS)
+         run: |
+           echo "::notice::Reached MAX_ITERATIONS=$MAX_ITERATIONS with ${{ steps.post.outputs.count }} cards still pullable. Cron will resume next tick."
