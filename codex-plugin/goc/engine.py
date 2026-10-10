@@ -253,6 +253,23 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return data, m.group(3) or ""
 
 
+def read_card_text(readme: Path) -> str:
+    """Read a card's README.md, raising FrontmatterError if its bytes do not decode.
+
+    `UnicodeDecodeError` is a `ValueError` but not a `FrontmatterError`, so a
+    bare `read_text()` let one undecodable card past every broken-card handler
+    (`load_all_cards`' warn-and-skip, `validate_deck_directories`' ERROR line,
+    `load_card_or_exit`'s diagnostic) and crash the whole deck view with a
+    traceback naming no file. Undecodable bytes can only be rejected, never
+    repaired, so they take the corrupt-card path. Which codec cards are read in
+    is a separate question (`goc-crashes-on-hosts-whose-default-encoding-is-not-utf-8`).
+    """
+    try:
+        return readme.read_text()
+    except UnicodeDecodeError as exc:
+        raise FrontmatterError(f"README.md is not decodable text: {exc}") from exc
+
+
 # Characters that force a quoted scalar wherever in the value they appear.
 # TAB is in the class because it is illegal ANYWHERE in a YAML plain scalar —
 # a strict reader refuses `summary: column<TAB>separated` with "while scanning
@@ -1067,13 +1084,14 @@ def load_card(card_dir: Path) -> Card | None:
     """Load a card; return None if the directory has no card-shaped README.md.
 
     Raises `FrontmatterError` if README.md exists with an opening `---` but
-    no matching closer (or YAML inside is unparseable). Callers that want
-    a uniform exit-with-diagnostic should use `load_card_or_exit` instead.
+    no matching closer (or YAML inside is unparseable), or if its bytes do
+    not decode. Callers that want a uniform exit-with-diagnostic should use
+    `load_card_or_exit` instead.
     """
     readme = card_dir / "README.md"
     if not readme.exists():
         return None
-    fm, body = parse_frontmatter(readme.read_text())
+    fm, body = parse_frontmatter(read_card_text(readme))
     if not fm:
         return None
     dod_field = fm.get("definition_of_done", "")
@@ -1427,7 +1445,7 @@ def validate_deck_directories() -> list[str]:
                 errors.append(f"{sub.name}: card directory missing README.md")
             continue
         try:
-            fm, _body = parse_frontmatter(readme.read_text())
+            fm, _body = parse_frontmatter(read_card_text(readme))
         except FrontmatterError as exc:
             errors.append(f"{sub.name}: {exc}")
             continue
@@ -7258,7 +7276,14 @@ def _cmd_show(args):
     if not p.exists():
         print(f"ERROR: {p} not found", file=sys.stderr)
         sys.exit(2)
-    text = p.read_text()
+    problem: FrontmatterError | None = None
+    try:
+        text = read_card_text(p)
+    except FrontmatterError as exc:
+        # Print it anyway, U+FFFD marking each undecodable byte. `show` never
+        # writes, so the replacement cannot destroy the card's bytes.
+        text = p.read_text(errors="replace")
+        problem = exc
     print(text)
     artifacts = sorted(
         f.name for f in card_dir.iterdir()
@@ -7272,10 +7297,13 @@ def _cmd_show(args):
     # `show` stays read-everything (the broken card is the one you most want
     # to inspect), but surface parse problems via stderr so the inconsistency
     # with `validate` / `done` becomes visible at the same call site.
-    try:
-        parse_frontmatter(text)
-    except FrontmatterError as exc:
-        print(f"WARNING: {title}: {exc}", file=sys.stderr)
+    if problem is None:
+        try:
+            parse_frontmatter(text)
+        except FrontmatterError as exc:
+            problem = exc
+    if problem is not None:
+        print(f"WARNING: {title}: {problem}", file=sys.stderr)
 
 
 def _cmd_migrate(args):
@@ -7461,8 +7489,8 @@ def _cmd_migrate_list_style(args):
         readme = card_dir / "README.md"
         if not readme.exists():
             continue
-        original = readme.read_text()
         try:
+            original = read_card_text(readme)
             fm, body = parse_frontmatter(original)
         except FrontmatterError as exc:
             print(f"WARNING: {card_dir.name}: {exc}", file=sys.stderr)
