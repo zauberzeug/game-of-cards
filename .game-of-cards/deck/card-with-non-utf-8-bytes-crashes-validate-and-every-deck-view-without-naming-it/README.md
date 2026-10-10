@@ -1,7 +1,7 @@
 ---
 title: card-with-non-utf-8-bytes-crashes-validate-and-every-deck-view-without-naming-it
 summary: "A card README whose bytes do not decode (one Latin-1 byte such as 0xE9 is enough) crashes goc validate, the bare queue, --json, --board, triage and show with a raw UnicodeDecodeError traceback that names no card. load_card and validate_deck_directories catch only FrontmatterError, and UnicodeDecodeError is a ValueError that escapes it, so the one-broken-card-does-not-blank-the-queue design never engages and nothing tells the user which card to fix. Routing decode failures into FrontmatterError reuses the existing warn-and-skip, ERROR and diagnostic paths."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-10T04:49:33Z"
@@ -10,13 +10,13 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — `validate`, the bare queue, `--json`, `--board`, `triage` and `show bad-bytes` each finish without a traceback and name the undecodable card; `validate` exits non-zero and the deck views still list the healthy card
   - [ ] TDD: a regression test in `tests/` drives those commands against a scratch deck holding a card with one undecodable byte (UTF-8 mode forced) and fails against the pre-fix engine
   - [ ] MECHANICAL: the deck-wide README reads in `goc/engine.py` (`load_card`, `validate_deck_directories`, `_cmd_migrate_list_style`) go through one helper that raises `FrontmatterError` naming the codec, byte and offset; `_cmd_show` still prints the card, with U+FFFD marking each undecodable byte, and warns on stderr
   - [ ] MECHANICAL: plugin mirrors regenerated — `python scripts/sync_plugin_assets.py --check` is clean
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # A card whose bytes do not decode crashes validate and every deck view without naming the card
