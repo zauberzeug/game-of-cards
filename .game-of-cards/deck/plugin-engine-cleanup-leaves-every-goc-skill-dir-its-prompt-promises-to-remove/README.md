@@ -1,7 +1,7 @@
 ---
 title: plugin-engine-cleanup-leaves-every-goc-skill-dir-its-prompt-promises-to-remove
 summary: "Run through the Claude Code plugin's bundled engine (what a bare goc runs inside a Claude Code session with the plugin enabled), the vendored-to-plugin cleanup promises to remove GoC-managed skill directories, then removes hooks and settings entries but keeps all 16 GoC skill dirs. The bundled engine omits templates/skills/, the only source the cleanup reads GoC's skill names from, yet the payload's own skills/ directory holds exactly that set. goc.md now has to tell users to run the switch with the standalone goc instead."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-02T04:45:41Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: when no source of GoC skill names is available, the prompt says it will leave the skill directories rather than promising to remove them
   - [ ] MECHANICAL: `goc.md` § "Coexistence with the repo-local harness" drops its standalone-`goc` caveat; `tests/test_plugin_switch_recipe.py::test_bundled_engine_caveat_matches_its_cleanup` fails until it does
   - [ ] PROCESS: `uv run python -m unittest discover -s tests`, `uv run goc validate` and `python scripts/sync_plugin_assets.py --check` pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The plugin engine's cleanup keeps every GoC skill dir its prompt promises to remove
