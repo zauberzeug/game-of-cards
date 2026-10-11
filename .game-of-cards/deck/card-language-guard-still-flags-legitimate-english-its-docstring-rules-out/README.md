@@ -1,7 +1,7 @@
 ---
 title: card-language-guard-still-flags-legitimate-english-its-docstring-rules-out
 summary: "UNVERIFIED. scripts/check_card_language.py says every marker word is never legitimate English, that eight of its nine German suffixes have no English collision, and that no future prefix can create a new -ung false positive; yet flag_text flags seven common English words (listed in the body, not here, because this field is scanned): four marker-list homographs, one word on a supposedly collision-free suffix, and two -ung words whose prefix the enumerated prefix set lacks. The guard runs as a pre-commit hook and in CI, so an English card title can fail the build."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:39:06Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py feeds `flag_text` the seven English words quoted in this card's Hypothesis section and asserts none is flagged — or the run disproves the hypothesis and the card flips to `disproved`
   - [ ] TDD: `tests/test_card_authoring_rules.py` asserts clean verdicts for English words outside the guard's own prefix × stem literals (at least one prefix not in `ENGLISH_UNG_PREFIXES`, one word on a suffix the docstring calls collision-free, one marker-list homograph), so the property the docstrings claim is tested rather than restated
   - [ ] MECHANICAL: the docstring claims at `scripts/check_card_language.py:49-50`, `:101-104`, `:147-148` and `:160-162` match the guard's actual behavior; drop the `unverified` tag once reproduce.py lands; append a post-close pointer to `card-language-guard-flags-legitimate-english-as-non-english/log.md`
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The card-language guard still flags legitimate English its docstring rules out
