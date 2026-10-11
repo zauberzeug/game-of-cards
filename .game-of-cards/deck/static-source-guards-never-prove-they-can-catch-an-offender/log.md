@@ -210,3 +210,16 @@ scanned in one more line — which narrows the cost objection under
 about this entry addresses those four; they remain unaddressed, and the gate
 stays `decision`.
 
+
+## 2026-10-11T04:53:33Z — Connected: a clean sample must not come from the scanner's literals
+
+From `card-language-guard-still-flags-legitimate-english-its-docstring-rules-out`
+(closed). The first connected instance's fix included a known-clean check,
+`test_exemption_composes_beyond_the_source_literals`, which multiplied the
+guard's listed `-ung` prefixes by its listed stems. The guard then flagged
+`hamstrung` and `underhung`, built on prefixes the list lacked, and that test
+could not see them because its sample came from the list. The README's
+clean-sample paragraph now carries the constraint: the near-miss has to come
+from a population the scanner does not define. The successor used a hunspell
+dictionary sweep and first elements absent from the guard's source text.
+Evidence only; the gate stays `decision`.

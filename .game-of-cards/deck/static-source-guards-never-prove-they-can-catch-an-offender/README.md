@@ -284,7 +284,13 @@ for matches and finding none — a real measurement that was nonetheless against
 the wrong population, because it can only surface false positives the current
 corpus already triggers. A registered clean sample has to be a *near-miss the
 corpus does not contain* (there `sprung`, `strung`, `des`), not a sample of
-present data, or it reproduces the same blind spot with more ceremony.
+present data, or it reproduces the same blind spot with more ceremony. Nor may
+it be generated from the scanner's own literals. That fix shipped a clean-side
+test that multiplied the guard's listed prefixes by its listed stems, and the
+next defect was an unlisted prefix
+([card-language-guard-still-flags-legitimate-english-its-docstring-rules-out](../card-language-guard-still-flags-legitimate-english-its-docstring-rules-out/)).
+A sample the scanner defines cannot see what the scanner omits; the successor
+draws its clean side from hunspell's en_US dictionary instead.
 
 ## A fourth surface: closure verifications, which no option below reaches
 
