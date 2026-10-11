@@ -38,21 +38,26 @@ not this guard's, and one bad card must not cost every other card's verdict.
 
 Detection is **precision-first**, in two layers:
 
-1. `MARKER_WORDS` — words that are common in another European language and are
-   not English words, English acronyms, or technical tokens. Ambiguous
-   homographs are deliberately absent: German `die`/`war`/`hat`/`tag`/`fast`,
+1. `MARKER_WORDS` — words that are common in another European language and
+   that an English engineering card has no reason to use. Homographs a card
+   *would* use are deliberately absent: German `die`/`war`/`hat`/`tag`/`fast`,
    Spanish `con`/`sin`/`todo`, Italian `per`/`non`/`come`, French `pour`/`sans`
    and Portuguese `com` all read as ordinary English in a card and are NOT
-   markers. French/German `des` was removed for the same reason: it lowercases
-   the cipher acronym DES (and 3DES), which is exactly the "English acronym"
-   category this layer is supposed to keep out.
-2. `MARKER_SUFFIXES` — German derivational endings, eight of which have no
-   English collision at any length. Slug titles drop articles, so a purely
-   content-word slug like the historical offender carries no function words at
-   all; the suffix layer is what catches the nouns and verbs a function-word
-   list alone would miss. The ninth ending, `-ung`, does collide, and its
-   English side is exempted by *derivation* rather than by enumeration — see
-   `ENGLISH_UNG_STEMS`.
+   markers. So are `algo` (engineering shorthand for algorithm), `nada`, `tout`
+   and `nouveau` (the Linux driver for NVIDIA GPUs), which were markers until a
+   card showed each one blocking English prose. French/German `des` was removed
+   because it lowercases the cipher acronym DES (and 3DES). The criterion is
+   register, not the dictionary: some entries are dictionary English too, and
+   "Known false positives" below names them.
+2. `MARKER_SUFFIXES` — German derivational endings. Slug titles drop articles,
+   so a purely content-word slug like the historical offender carries no
+   function words at all; the suffix layer is what catches the nouns and verbs
+   a function-word list alone would miss. Only `-ung` collides with native
+   English, and that side is exempted by *derivation* rather than by
+   enumeration — see `ENGLISH_UNG_STEMS`. The other endings meet English only
+   in words borrowed from German and in names. One of those is everyday
+   English, the temperature scale `fahrenheit`, and it is exempted by exact
+   match (`ENGLISH_MARKER_SUFFIX_WORDS`).
 
 Both layers read tokens through `_UMLAUT_FOLD`, which rewrites `ä ö ü ß` as the
 ASCII digraphs the German marker block is spelled in, so German written with
@@ -74,6 +79,30 @@ The price of precision is recall, and two gaps are known:
 
 What this guard does is raise the floor from "nothing checks" to "the realistic
 cases fail CI".
+
+## Known false positives
+
+Precision is not total either. Of the 128,165 distinct words hunspell's en_US
+dictionary yields with its affix rules applied, the guard flags 47 — every one
+of them in these two groups:
+
+- marker entries whose English sense is archaic or specialist (`avoir`, `doit`,
+  `muss`, `para`, `seine`, `tutti`), and names a slug splits into a marker
+  token (Los Angeles, Las Vegas, the Oder);
+- on the suffix layer, German loanwords (`gesundheit`, `gesellschaft`,
+  `schlieren`, `weltanschauung`), Germanic names (Heimlich, Nibelung), and
+  romanized Asian names ending in `-ung` (Samsung, Kaohsiung, `shantung`).
+
+The reproduce.py of the card
+`card-language-guard-still-flags-legitimate-english-its-docstring-rules-out`
+re-runs that sweep (`--dictionary /usr/share/hunspell/en_US.dic`).
+
+They stay flagged. The marker entries carry the French, Spanish and Portuguese
+recall cases. A loanword or a name has no family to derive an exemption from,
+and enumerating names is open-ended. A card that needs one of them in its
+English sense is the real false positive that earns the word a place: a
+homograph goes into the exclusion list above, a suffixed word into
+`ENGLISH_MARKER_SUFFIX_WORDS`.
 
 Usage:
     python scripts/check_card_language.py           # report findings
@@ -98,10 +127,12 @@ DECK_DIR = ROOT / ".game-of-cards" / "deck"
 # module docstring.
 SCANNED_FIELDS = ("title", "summary", "definition_of_done")
 
-# Words common in another European language that are NOT English words, English
-# acronyms, or technical tokens. Every entry is a claim that its appearance in a
-# card is a language slip and never legitimate English — homographs belong in
-# the docstring's exclusion list, not here.
+# Words common in another European language that an English engineering card has
+# no reason to use. Every entry is a bet that its appearance in a card is a
+# language slip; a homograph that card prose does use belongs in the docstring's
+# exclusion list, not here. The bet is on register, not on the dictionary —
+# hunspell lists `doit`, `seine` and `tutti`, and `los` opens Los Angeles — and
+# the docstring's "Known false positives" names the entries known to lose it.
 MARKER_WORDS_BY_LANGUAGE = {
     "German": """
         und oder nicht kein keine keinen keiner auch noch schon sehr mehr
@@ -117,14 +148,14 @@ MARKER_WORDS_BY_LANGUAGE = {
         kleine schnell langsam richtig falsch moeglich notwendig wichtig
     """,
     "French": """
-        les une dans avec mais tout tous toute toutes cette ces sont etre
-        avoir faire peut doit quand parce ainsi aussi alors chaque aucun leur
-        notre votre celui comme toujours jamais rien quelque plusieurs erreur
-        fichier nouveau ancien
+        les une dans avec mais tous toute toutes cette ces sont etre avoir
+        faire peut doit quand parce ainsi aussi alors chaque aucun leur notre
+        votre celui comme toujours jamais rien quelque plusieurs erreur fichier
+        ancien
     """,
     "Spanish or Portuguese": """
         los las una unos unas para por pero sobre entre cuando donde porque
-        siempre nunca cada algo nada muy este esta esto esos aquel hacer tiene
+        siempre nunca cada muy este esta esto esos aquel hacer tiene
         tienen puede pueden debe deben archivo arquivo fallo erro nuevo nueva
         novo antiguo despues tambien uma nao tudo
     """,
@@ -144,39 +175,61 @@ MARKER_WORDS = {
     for word in block.split()
 }
 
-# German derivational endings. Eight of the nine have no English collision at
-# any length; `-ung` does, and `_is_english_ung_word` handles that side. The
+# German derivational endings. Only `-ung` collides with native English, and
+# `_is_english_ung_word` handles that side; the other eight meet English only in
+# German loanwords and in names (module docstring, "Known false positives"). The
 # length floor keeps the shortest English `-ung` words ("sung", "rung", "flung")
 # out of reach without needing the stem check at all.
 MARKER_SUFFIXES = ("ungen", "ierung", "ung", "keit", "heit", "schaft", "lich", "isch", "ieren")
 MIN_SUFFIX_TOKEN_LEN = 6
 
+# English words that end in a marker suffix and belong to no family a rule could
+# derive. Matched exactly, never as a tail: German `Unerfahrenheit`
+# (inexperience) ends in `fahrenheit`.
+ENGLISH_MARKER_SUFFIX_WORDS = frozenset({"fahrenheit"})
+
 # The English side of the `-ung` collision. These are a *family*, not a list: a
-# strong-verb participle stem, optionally carrying a prefix. The predecessor
-# guard enumerated members instead of deriving the rule, and so exempted
-# `unsprung`, `unstrung`, `restrung` and `highstrung` while still flagging
-# `sprung` and `strung` — the bare stems those four are built from — plus
-# `unhung`, `unslung`, `resprung`, `overhung`, `overstrung`, `outflung` and
-# `upswung`. Deriving converges where enumerating cannot: English has no
-# productive `-ung` suffix, so the stem set is closed in a way a word list is
-# not, and no future prefix combination can become a new false positive.
+# strong-verb participle stem (or `dung`, `lung`, `young`), optionally preceded
+# by a prefix or a compounding word. The predecessor guard enumerated members
+# instead of deriving the rule, and so exempted `unsprung`, `unstrung`,
+# `restrung` and `highstrung` while still flagging `sprung` and `strung` — the
+# bare stems those four are built from — plus `unhung`, `unslung`, `resprung`,
+# `overhung`, `overstrung`, `outflung` and `upswung`. English has no productive
+# `-ung` suffix, so the stem set is closed in a way a word list is not.
+#
+# The first elements are not closed (`hamstrung`, `underslung`), and only some
+# stems can take an arbitrary one. Nine stems also end German `-ung` nouns —
+# `Regelung` ends in `lung`, `Änderung` in `rung`, `Lösung` in `sung`,
+# `Bildung` in `dung`, `Beziehung` in `hung`, `Leistung` in `stung`,
+# `Verzweiflung` in `flung`, `Abwechslung` in `slung`, `Ursprung` in `sprung` —
+# so exempting them as a tail would exempt those nouns too. They take only a
+# listed first element, and `ENGLISH_UNG_PREFIXES` carries every one hunspell's
+# en_US dictionary attests on them. An English compound on an unlisted element
+# is still a false positive there; adding the element costs no recall, because
+# the remainder must still be an exact stem. The other five,
+# `TAIL_SAFE_UNG_STEMS`, end no German noun: one would need a verb stem ending
+# in `cl`, `str`, `sw`, `wr` or `yo`, and German has none (an `-ern` verb keeps
+# its `e`, as in `Polsterung`). They take any first element, so on them no
+# future compound can become a false positive.
 ENGLISH_UNG_STEMS = frozenset({
     "hung", "rung", "sung", "dung", "lung", "clung", "flung", "slung",
     "stung", "strung", "sprung", "swung", "wrung", "young",
 })
-ENGLISH_UNG_PREFIXES = ("un", "re", "over", "out", "up", "down", "high")
+TAIL_SAFE_UNG_STEMS = ("clung", "strung", "swung", "wrung", "young")
+ENGLISH_UNG_PREFIXES = ("un", "re", "over", "under", "out", "up", "down", "high", "aqua")
 
 
 def _is_english_ung_word(token: str) -> bool:
     """True iff `token` is an English `-ung` word rather than a German noun.
 
-    The remainder after an optional prefix must be an *exact* member of
-    `ENGLISH_UNG_STEMS`, which is what preserves German recall: `Regelung`
-    splits to `re` + `gelung` and `Rechnung` to `re` + `chnung`, neither of
-    which is a stem, so both still fire. Only `-ung` needs this — the other
-    eight `MARKER_SUFFIXES` have no English member to exempt.
+    A token ending in a `TAIL_SAFE_UNG_STEMS` stem is English whatever precedes
+    the stem. For any other stem, the remainder after an optional prefix must
+    be an *exact* member of `ENGLISH_UNG_STEMS`, which is what preserves German
+    recall: `Regelung` splits to `re` + `gelung` and `Rechnung` to `re` +
+    `chnung`, neither of which is a stem, so both still fire. Only `-ung` has a
+    family to derive; `ENGLISH_MARKER_SUFFIX_WORDS` covers the other endings.
     """
-    if token in ENGLISH_UNG_STEMS:
+    if token in ENGLISH_UNG_STEMS or token.endswith(TAIL_SAFE_UNG_STEMS):
         return True
     return any(
         token.startswith(prefix) and token[len(prefix) :] in ENGLISH_UNG_STEMS
@@ -209,7 +262,11 @@ def flag_text(text: str) -> list[str]:
         if language:
             reasons.add(f"{language} marker word {token!r}")
             continue
-        if len(token) < MIN_SUFFIX_TOKEN_LEN or _is_english_ung_word(token):
+        if (
+            len(token) < MIN_SUFFIX_TOKEN_LEN
+            or token in ENGLISH_MARKER_SUFFIX_WORDS
+            or _is_english_ung_word(token)
+        ):
             continue
         for suffix in MARKER_SUFFIXES:
             if token.endswith(suffix):

@@ -22,6 +22,8 @@ worker: {who: "claude[bot]", where: main}
 
 # card-language-guard-flags-legitimate-english-as-non-english
 
+> Later evidence: see [card-language-guard-still-flags-legitimate-english-its-docstring-rules-out](../card-language-guard-still-flags-legitimate-english-its-docstring-rules-out/) — the "eight endings have no English collision" claim and the decision to keep `nada` below did not hold.
+
 The English-only card guard rejects English words as non-English at two
 independent sites, so a legitimate card can be blocked at pre-commit and turn
 CI red with a language violation it does not have.
