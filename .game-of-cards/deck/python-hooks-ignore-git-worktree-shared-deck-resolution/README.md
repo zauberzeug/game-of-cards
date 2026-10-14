@@ -1,7 +1,7 @@
 ---
 title: python-hooks-ignore-git-worktree-shared-deck-resolution
 summary: "UNVERIFIED. The Python SessionStart and Stop hooks find the deck with a copy of the engine's upward walk but not its worktree_deck: shared redirect, so in a linked worktree they read the worktree's own checkout instead of the shared deck goc uses. The session-start reminder then stays silent about active cards goc lists, and the Stop hook reads the wrong config — the Python sibling of the open OpenClaw resolveDeckDir card."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-05T01:32:49Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: `tests/test_project_root_from_subdirectory.py` gains a shared-deck worktree layout, so the hook-versus-engine agreement test covers the redirect and not only the walk
   - [ ] MECHANICAL: both Python hooks resolve the shared deck the way `goc.engine._resolve_deck_root` does (env var and common-root config), and their docstrings stop calling the walk alone a mirror of `_resolve_deck_root`; mirrors re-synced; drop the `unverified` tag once reproduce.py lands
   - [ ] PROCESS: connected to `session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting` and cross-linked with `openclaw-resolve-deck-dir-ignores-git-worktree-shared-deck-resolution`
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Python hooks ignore git-worktree shared-deck resolution
