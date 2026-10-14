@@ -1,7 +1,7 @@
 ---
 title: session-start-hook-crashes-on-a-card-whose-bytes-do-not-decode
 summary: "The SessionStart hook (goc/templates/hooks/deck_session_start.py, shipped in the Claude Code and Codex plugin payloads and the vendored install) reads every card's README with encoding='utf-8' but catches only OSError, so one card holding bytes that do not decode makes the hook exit 1 with a UnicodeDecodeError traceback. No reminder prints at all, so the session starts without the active, parked and impeded card lists the hook exists to show."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-10T04:51:12Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the four README readers in `goc/templates/hooks/deck_session_start.py` (`_card_status`, `_card_human_gate`, `_card_waiting_on`, `_card_waiting_until`) treat a decode failure the way they treat an unreadable file
   - [ ] MECHANICAL: mirrors regenerated — `python scripts/sync_plugin_assets.py --check` is clean
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The SessionStart hook crashes on a card whose bytes do not decode
