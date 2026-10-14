@@ -16,3 +16,11 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-10-14 — Closure' present
+
+## 2026-10-14T05:03:56Z — Surfaced finding routed
+
+The `_enabled` over-match named under **Surfaced** in the closure entry is
+not a new card. It is the open
+`pattern-generalization-opt-out-regex-matches-anywhere-in-the-file` (gate
+decision), filed when the hook was opt-out. The opt-in measurement and the
+structural-reader option are appended to that card's log.
