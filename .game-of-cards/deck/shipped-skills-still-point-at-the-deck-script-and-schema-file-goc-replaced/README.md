@@ -149,6 +149,13 @@ The full suite passes (1308 tests), `goc validate` exits 0, and both
 `sync_plugin_assets.py --check` and `port_skills_to_openclaw.py --check` are
 green.
 
+## Follow-up
+
+The repo-wide grep behind this closure found the same two names twice more,
+in `goc/engine.py` (the quality-pass prompt and the frontmatter-parser banner),
+outside the template trees this card's guard sweeps. Tracked by
+[engine-still-names-the-deck-script-and-schema-file-goc-replaced](../engine-still-names-the-deck-script-and-schema-file-goc-replaced/).
+
 ## Artifacts
 
 - reproduce.py

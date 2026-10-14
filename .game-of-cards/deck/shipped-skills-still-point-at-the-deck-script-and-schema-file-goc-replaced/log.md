@@ -30,3 +30,10 @@ what install writes.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-10-14 — Closure' present
+
+## 2026-10-14T04:46:13Z — Forward pointer
+
+The engine residue named under **Surfaced** in the closure entry is filed as
+`engine-still-names-the-deck-script-and-schema-file-goc-replaced` (9faaa750,
+gate none, advancing the same doc-accuracy umbrella). README gained a
+`## Follow-up` section pointing at it.
