@@ -782,3 +782,68 @@ class SessionStartHookWaitingOnTest(unittest.TestCase):
             "---\nstatus: active\nwaiting_on: external\n---\nbody\n", encoding="utf-8"
         )
         self.assertTrue(self.hook._is_impeded(p))
+
+
+class SessionStartHookUndecodableCardTest(unittest.TestCase):
+    """One card whose bytes do not decode must not stop the hook.
+
+    The readers open cards with `encoding="utf-8"`. A README holding a byte
+    that is not UTF-8 raises `UnicodeDecodeError`, a `ValueError` that the
+    readers' `except OSError` let through. `main` asks every card for its
+    status, so one such card anywhere in the deck, at any status, made the
+    hook exit 1 before it printed any reminder.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _write_card(self, deck_dir: Path, name: str, frontmatter: str) -> None:
+        card = deck_dir / name
+        card.mkdir(parents=True)
+        body = f"---\n{frontmatter.strip()}\n---\nbody\n"
+        # Latin-1 turns a non-ASCII character into one byte UTF-8 rejects.
+        (card / "README.md").write_bytes(body.encode("latin-1"))
+
+    def _run_hook(self, project_dir: Path) -> str:
+        buf = io.StringIO()
+        stdin = io.StringIO(json.dumps({"cwd": str(project_dir)}))
+        with mock.patch.object(sys, "stdin", stdin), redirect_stdout(buf):
+            rc = self.hook.main()
+        self.assertEqual(rc, 0)
+        return buf.getvalue()
+
+    def test_readers_treat_undecodable_bytes_like_an_unreadable_file(self):
+        """Each reader returns what it returns for a README it cannot open.
+
+        Every field carries a non-default value, so a reader that decoded
+        past the bad byte instead would not match the fallback.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            undecodable = Path(tmp) / "README.md"
+            undecodable.write_bytes(
+                b"---\nstatus: active\nhuman_gate: decision\n"
+                b"waiting_on: external\nwaiting_until: 2999-01-01\n"
+                b"summary: caf\xe9\n---\nbody\n"
+            )
+            missing = Path(tmp) / "missing" / "README.md"
+            for reader in (
+                self.hook._card_status,
+                self.hook._card_human_gate,
+                self.hook._card_waiting_on,
+                self.hook._card_waiting_until,
+            ):
+                with self.subTest(reader=reader.__name__):
+                    self.assertEqual(reader(undecodable), reader(missing))
+
+    def test_undecodable_card_does_not_stop_the_reminder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            deck = project / ".game-of-cards" / "deck"
+            self._write_card(deck, "claimed-card", "status: active\nhuman_gate: none")
+            self._write_card(deck, "bad-bytes", "status: open\nsummary: caf\xe9")
+            out = self._run_hook(project)
+        resumable = [line for line in out.splitlines() if "resume or close" in line]
+        self.assertEqual(len(resumable), 1, out)
+        self.assertIn("claimed-card", resumable[0])
+        self.assertNotIn("bad-bytes", out)

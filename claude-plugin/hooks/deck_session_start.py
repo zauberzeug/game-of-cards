@@ -113,7 +113,10 @@ def _card_status(readme: Path) -> str | None:
     """Return the frontmatter `status` value, or None if unreadable."""
     try:
         text = readme.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
+        # A decode failure is a ValueError, not an OSError. `main` asks every
+        # card for its status, so letting one escape would stop the hook on
+        # a single card before it printed any reminder.
         return None
     m = _FRONTMATTER_RE.match(text)
     if not m:
@@ -128,7 +131,7 @@ def _card_human_gate(readme: Path) -> str:
     """Return the frontmatter `human_gate` value, defaulting to 'none'."""
     try:
         text = readme.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return "none"
     m = _FRONTMATTER_RE.match(text)
     if not m:
@@ -155,7 +158,7 @@ def _card_waiting_on(readme: Path) -> str | None:
     """
     try:
         text = readme.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
     m = _FRONTMATTER_RE.match(text)
     if not m:
@@ -188,7 +191,7 @@ def _card_waiting_until(readme: Path) -> str | None:
     """Return the frontmatter `waiting_until` raw value, or None if absent."""
     try:
         text = readme.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
     m = _FRONTMATTER_RE.match(text)
     if not m:

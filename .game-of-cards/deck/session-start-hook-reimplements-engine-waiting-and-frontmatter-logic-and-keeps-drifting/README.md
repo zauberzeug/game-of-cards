@@ -50,6 +50,9 @@ The predicates currently re-derived by hand:
   and, byte-identical, by the Stop hook `pattern_generalization_check.py`: the
   deck walk plus the shared-deck worktree redirect, whose
   `workflow.worktree_deck` read is a hand-rolled reading of yaml_lite
+- the `_card_*` readers' file read ⟷ `goc.engine.read_card_text` plus
+  `load_all_cards`' warn-and-skip: a card whose bytes do not decode is
+  corrupt and left out of the deck view
 
 Each cell has drifted and been fixed as its own one-off card, never caught by a
 guard derived from the engine:
