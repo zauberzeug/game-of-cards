@@ -9,6 +9,7 @@ closed_at: "2026-10-14T05:15:38Z"
 human_gate: none
 advances:
   - session-start-hook-reimplements-engine-waiting-and-frontmatter-logic-and-keeps-drifting
+  - hook-scripts-keep-spawning-one-crash-fix-per-malformed-input-shape
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |

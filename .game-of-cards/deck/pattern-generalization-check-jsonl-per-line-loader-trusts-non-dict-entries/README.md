@@ -9,6 +9,7 @@ closed_at: null
 human_gate: decision
 advances:
   - unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes
+  - hook-scripts-keep-spawning-one-crash-fix-per-malformed-input-shape
 advanced_by: []
 tags: [bug, infra, api-contract, meta-fix]
 definition_of_done: |
