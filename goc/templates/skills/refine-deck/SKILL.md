@@ -234,10 +234,10 @@ What it surfaces:
 
 When a coherent body of work emerges that isn't covered by an
 existing tag (e.g., a sprint of 6 cards all about a specific
-research front), file via `Skill(create-card)` a card whose DoD is
-the SCHEMA.md PR adding the new tag + its predicate. Adding the
-tag itself remains a SCHEMA.md PR per the schema's "Adding new
-tags" rule; the filing that schedules that PR is imperative. Like
+research front), file via `Skill(create-card)` a card whose DoD
+adds the new tag + its predicate per `Skill(card-schema)`'s
+`reference.md` § Adding new tags. This pass never adds the tag
+itself; filing the card that does is imperative. Like
 every other structural finding, the candidate either becomes a
 card here, gets disproved (the proposed predicate doesn't fire on
 a sufficient set), or parks `--tag unverified` per Step 4.5 — not

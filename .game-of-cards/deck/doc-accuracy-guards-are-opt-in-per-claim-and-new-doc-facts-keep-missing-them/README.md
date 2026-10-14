@@ -83,7 +83,7 @@ the *unguarded* claims.
 | `InstallDocClaimsTest` (own file, `tests/test_install_doc_claims.py`) | [install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/) | 2026-10-03 |
 | `DeckLocationClaimRowsTest` (own file, `tests/test_deck_location_claim_rows.py`) | [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/) | 2026-10-04 |
 | `ClaimRaceReassuranceTest` (own file, `tests/test_claim_race_reassurance.py`) | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | 2026-10-04 |
-| *(none yet — open)* | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | — |
+| `retired_files` sweep + `DeckLayoutBlockTest` (widened `tests/test_skill_template_deck_links.py`) | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | 2026-10-14 |
 | `DeliveryChannelSurfacesTest` + `PreFixTextFiresTest` (own file, `tests/test_delivery_channel_surfaces.py`) | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | 2026-10-07 |
 | `ClaudeSettingsHookEditClaimsTest` (own file, `tests/test_claude_settings_hook_edit_claims.py`) | [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/) | 2026-10-07 |
 
@@ -362,12 +362,16 @@ how a shipped surface cites a repo-only document.
 The twenty-eighth came out of the twenty-seventh's closure, from the same skill
 body
 ([shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/),
-open). The deck skill's layout block still lists a `SCHEMA.md` and a `deck.py`
-inside the deck, and refine-deck still schedules a new tag as "a SCHEMA.md PR":
-pre-package residue that two earlier repairs removed from the engine docstring
-and the installed project README without reaching these copies. A
-derive-from-tree guard is cheap here, because a fresh `goc install` is the
-ground truth for which files a consumer has.
+closed 2026-10-14). The deck skill's layout block listed a `SCHEMA.md` and a
+`deck.py` inside the deck, and refine-deck scheduled a new tag as "a SCHEMA.md
+PR": pre-package residue that two earlier repairs removed from the engine
+docstring and the installed project README without reaching these copies. A
+derive-from-tree guard was cheap here, because a fresh `goc install` is the
+ground truth for which files a consumer has, and the repair took it alongside a
+name ban: the ban covers the two retired names in every shipped template tree,
+while the layout block's third phantom entry, a deck-root `README.md`, carries
+a name legal for every card, so only comparing the block against a real
+install catches it.
 
 The thirtieth repeats the thirteenth's lesson in the same file.
 [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/)

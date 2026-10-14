@@ -1,10 +1,12 @@
-"""Regression guard: no shipped template cites a card in goc's own deck.
+"""Regression guard: no shipped template names a file a consuming repo never has.
 
-Two predicates enforce one rule. `deck_links` catches a markdown link whose
+Four checks enforce one rule. `deck_links` catches a markdown link whose
 target routes through `.game-of-cards/deck/`; `card_paths` catches a `deck/`
 path that names a concrete card directory and promises a file inside it, in
-any syntax. Both sweep the six skill trees and the four project-state template
-trees.
+any syntax; `retired_files` catches the two files goc's pre-package layout kept
+in the deck directory. All three sweep the six skill trees and the four
+project-state template trees. The fourth, `layout_root_entries`, holds the deck
+skill's layout block to the deck directory a real `goc install` leaves behind.
 
 `goc/templates/skills/` is package data. `goc install --local-skills` copies it
 into a consuming repo's `.claude/skills/`, and the Claude, Codex and OpenClaw
@@ -54,11 +56,29 @@ The rule has no false-positive surface to trade against: goc's cards are goc's,
 so there is no consuming repo in which such a citation could be correct. Cite a
 decision by its bare backticked title instead — the convention
 `card-schema/reference.md` already uses eight lines below the offender.
+
+`shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced`
+is why the last two checks exist. Before goc was a package, a vendored
+`deck.py` script and a `SCHEMA.md` file sat inside the deck directory; the
+`goc` CLI and `goc/schema.yaml` replaced them, and install writes neither into
+a consuming repo. Three passages outlived them: the deck skill's layout block,
+`deck/reference.md` calling `deck.py` the engine, and refine-deck scheduling a
+new tag as "the SCHEMA.md PR". The last is executed rather than read — an agent
+following it writes a DoD for a file it cannot edit. Neither name is legal in
+any shipped template, so `retired_files` matches them anywhere. The same layout
+block also listed a deck-root `README.md` that install never writes, and no
+name predicate can flag that without flagging every card's README; so the
+block is compared against a real install instead of a list of banned names,
+which also catches the next file install starts or stops writing there.
 """
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -123,6 +143,42 @@ HISTORICAL_CARD_PATH_OFFENDERS = (
     "tracked in `deck/auto-validate-card-titles-summaries-and-dods/log.md`.",
 )
 
+# A file the pre-package layout kept in the deck directory: the vendored
+# `deck.py` script, now the `goc` CLI, and `SCHEMA.md`, now `goc/schema.yaml`.
+# Case-sensitive, so `schema.yaml` and the word "schema" stay legal.
+RETIRED_FILE_RE = re.compile(r"\b(deck\.py|SCHEMA\.md)\b")
+
+# The five lines naming one, verbatim as they shipped, with the name each yields.
+HISTORICAL_RETIRED_FILE_OFFENDERS = (
+    ("  SCHEMA.md                 # canonical schema (frontmatter IS the schema)", "SCHEMA.md"),
+    ("  deck.py                   # CLI; computes filtered views from frontmatter", "deck.py"),
+    ("write-ahead logs happen invisibly. Our cards are the rows; deck.py", "deck.py"),
+    ("the SCHEMA.md PR adding the new tag + its predicate. Adding the", "SCHEMA.md"),
+    ("tag itself remains a SCHEMA.md PR per the schema's \"Adding new", "SCHEMA.md"),
+)
+
+# The deck skill's layout block as it shipped until that card closed.
+HISTORICAL_LAYOUT_BLOCK = """\
+```
+deck/
+  SCHEMA.md                 # canonical schema (frontmatter IS the schema)
+  README.md                 # navigation + conventions
+  deck.py                   # CLI; computes filtered views from frontmatter
+  <title>/                   # one dir per card; never moves on state change
+    README.md               # frontmatter + dashboard body — latest knowledge + current state
+    log.md                  # append-only journal — history, details, decisions, flow
+    reproduce.py            # OPTIONAL — declared in DoD when present
+    [other validation scripts]
+```
+"""
+
+# A layout block's root line. Either spelling counts, so the check survives
+# the decision-gated question of how shipped docs should abbreviate the path.
+LAYOUT_ROOT_RE = re.compile(r"(?:\.game-of-cards/)?deck/")
+
+# The block's stand-in for every card directory; a fresh install has none.
+CARD_DIR_PLACEHOLDER = "<title>/"
+
 
 def card_paths(text: str) -> list[str]:
     """Return every concrete `deck/<slug>/<file>` citation in `text`."""
@@ -134,7 +190,33 @@ def deck_links(text: str) -> list[str]:
     return [t for t in DECK_LINK_RE.findall(text) if not _URL_SCHEME_RE.match(t)]
 
 
-def sweep() -> list[tuple[str, int, str]]:
+def retired_files(text: str) -> list[str]:
+    """Return every name in `text` of a deck file goc no longer has."""
+    return RETIRED_FILE_RE.findall(text)
+
+
+def layout_root_entries(text: str) -> list[str]:
+    """Return what the fenced layout block in `text` lists directly under its root.
+
+    A direct child sits at a two-space indent; deeper lines describe a card
+    directory, which `goc new` fills, not install. Returns [] when `text`
+    holds no such block.
+    """
+    entries: list[str] = []
+    in_fence = in_block = False
+    for line in text.splitlines():
+        if line.startswith("```"):
+            if in_block:
+                break
+            in_fence = not in_fence
+        elif in_fence and LAYOUT_ROOT_RE.fullmatch(line):
+            in_block = True
+        elif in_block and re.match(r"  \S", line):
+            entries.append(line.split()[0])
+    return entries
+
+
+def sweep(predicates=(deck_links, card_paths)) -> list[tuple[str, int, str]]:
     """Return (repo-relative path, line number, target) for every citation."""
     hits: list[tuple[str, int, str]] = []
     for tree in SWEPT_TREES:
@@ -149,8 +231,9 @@ def sweep() -> list[tuple[str, int, str]]:
             except (OSError, UnicodeDecodeError):
                 continue
             for lineno, line in enumerate(text.splitlines(), 1):
-                for target in deck_links(line) + card_paths(line):
-                    hits.append((str(path.relative_to(ROOT)), lineno, target))
+                for predicate in predicates:
+                    for target in predicate(line):
+                        hits.append((str(path.relative_to(ROOT)), lineno, target))
     return hits
 
 
@@ -244,6 +327,29 @@ class SkillTemplateDeckLinkSensitivityTest(unittest.TestCase):
             with self.subTest(case=label):
                 self.assertEqual(card_paths(line), [], f"{label}: {line!r} must stay clean")
 
+    def test_retired_file_predicate_flags_every_historical_offender(self) -> None:
+        """Each line that shipped a retired deck file's name must fire."""
+        for line, name in HISTORICAL_RETIRED_FILE_OFFENDERS:
+            with self.subTest(line=line[:48]):
+                self.assertEqual(
+                    retired_files(line),
+                    [name],
+                    "the guard must flag the exact line this repo shipped; if "
+                    "this fails the retired-deck-file rule is unenforced again",
+                )
+
+    def test_retired_file_predicate_leaves_the_replacements_alone(self) -> None:
+        """Precision: naming what replaced the retired files is legal."""
+        for label, line in (
+            ("engine", "Our cards are the rows; the `goc` CLI is the engine"),
+            ("packaged schema", "the schema ships inside the package as `goc/schema.yaml`"),
+            ("skill sibling", "`schema.yaml` sits beside `SKILL.md` in the skill dir"),
+            ("card readme", "    README.md               # frontmatter + dashboard body"),
+            ("new tag", "per `Skill(card-schema)`'s `reference.md` § Adding new tags"),
+        ):
+            with self.subTest(case=label):
+                self.assertEqual(retired_files(line), [], f"{label}: {line!r} must stay clean")
+
     def test_card_slugs_are_hyphenated(self) -> None:
         """Re-derive the discriminator `CARD_PATH_RE` rests on from the deck.
 
@@ -294,6 +400,71 @@ class SkillTemplateDeckLinkTest(unittest.TestCase):
             "consuming repo has none of goc's cards, so the citation is dead on "
             f"install. Cite the card by bare backticked title instead. Found: {hits}",
         )
+
+    def test_no_shipped_template_names_a_retired_deck_file(self) -> None:
+        hits = sweep((retired_files,))
+        self.assertEqual(
+            hits,
+            [],
+            "shipped templates must not name `deck.py` or `SCHEMA.md` — the "
+            "`goc` CLI and `goc/schema.yaml` replaced them, and install writes "
+            f"neither into a consuming repo. Found: {hits}",
+        )
+
+
+class DeckLayoutBlockTest(unittest.TestCase):
+    """The deck skill's layout block lists what install puts in the deck."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        drop = ("CLAUDE", "GIT_", "GOC_")
+        env = {k: v for k, v in os.environ.items() if not k.startswith(drop)}
+        env["PYTHONPATH"] = str(ROOT)
+        with tempfile.TemporaryDirectory(prefix="goc-deck-layout-") as tmp:
+            subprocess.run(["git", "init", "-q", tmp], check=True, env=env)
+            done = subprocess.run(
+                [sys.executable, "-m", "goc.cli", "install", "--agents", "claude"],
+                cwd=tmp, env=env, capture_output=True, text=True,
+            )
+            if done.returncode != 0:
+                raise AssertionError(f"goc install failed:\n{done.stdout}{done.stderr}")
+            deck = Path(tmp) / ".game-of-cards" / "deck"
+            # Dot files (the `.goc-version` sentinel) are left out, as a
+            # directory listing leaves them out.
+            installed = [
+                p.name + ("/" if p.is_dir() else "")
+                for p in deck.iterdir()
+                if not p.name.startswith(".")
+            ]
+        cls.expected = sorted(installed + [CARD_DIR_PLACEHOLDER])
+
+    def test_install_writes_something_into_the_deck(self) -> None:
+        """Guard the guard: an empty install would make any block look wrong."""
+        self.assertGreater(len(self.expected), 1, "install left the deck empty")
+
+    def test_check_fires_on_the_historical_block(self) -> None:
+        entries = layout_root_entries(HISTORICAL_LAYOUT_BLOCK)
+        self.assertEqual(entries, ["SCHEMA.md", "README.md", "deck.py", CARD_DIR_PLACEHOLDER])
+        self.assertNotEqual(
+            sorted(entries),
+            self.expected,
+            "the pre-fix block listed three files install never writes; if it "
+            "now matches, the layout check is unenforced again",
+        )
+
+    def test_every_shipped_deck_skill_lists_what_install_writes(self) -> None:
+        for tree in SHIPPED_SKILL_TREES:
+            path = ROOT / tree / "deck" / "SKILL.md"
+            with self.subTest(tree=tree):
+                entries = layout_root_entries(path.read_text(encoding="utf-8"))
+                self.assertTrue(entries, f"{path}: no layout block found — check would be vacuous")
+                self.assertEqual(
+                    sorted(entries),
+                    self.expected,
+                    f"{path.relative_to(ROOT)}: the layout block must list exactly "
+                    "what `goc install` writes into the deck directory, plus the "
+                    f"`{CARD_DIR_PLACEHOLDER}` card placeholder",
+                )
 
 
 if __name__ == "__main__":

@@ -102,10 +102,8 @@ live in `.game-of-cards/canonical-tags.md`.
 
 ```
 deck/
-  SCHEMA.md                 # canonical schema (frontmatter IS the schema)
-  README.md                 # navigation + conventions
-  deck.py                   # CLI; computes filtered views from frontmatter
-  <title>/                   # one dir per card; never moves on state change
+  log.md                    # deck-level journal (sprint notes, schema bumps)
+  <title>/                  # one dir per card; never moves on state change
     README.md               # frontmatter + dashboard body — latest knowledge + current state
     log.md                  # append-only journal — history, details, decisions, flow
     reproduce.py            # OPTIONAL — declared in DoD when present

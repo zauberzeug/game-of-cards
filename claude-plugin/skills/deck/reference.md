@@ -54,8 +54,8 @@ This separates the methodology's **rigor** (machine-checkable DoDs,
 audit-trail commits, supersession chains, hook-enforced routing)
 from its **visibility** (zero by default). Same principle as a
 database engine: the user writes SQL; transactions, locks, and
-write-ahead logs happen invisibly. Our cards are the rows; deck.py
-is the engine; the skills are the query interface.
+write-ahead logs happen invisibly. Our cards are the rows; the
+`goc` CLI is the engine; the skills are the query interface.
 
 Three operating modes coexist:
 
