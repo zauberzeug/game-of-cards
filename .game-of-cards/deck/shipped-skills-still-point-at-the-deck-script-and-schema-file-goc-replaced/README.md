@@ -1,7 +1,7 @@
 ---
 title: shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced
 summary: "The shipped deck skill's layout block lists SCHEMA.md, README.md and deck.py as files in the deck directory, deck/reference.md calls deck.py the engine, and refine-deck tells agents to schedule a new tag as a SCHEMA.md PR. A fresh goc install creates none of these files: the schema ships inside the package, the CLI is goc, and project tags go in .game-of-cards/canonical-tags.md. The sentences are pre-package residue that install and every plugin payload copy into consuming repos."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-04T07:03:17Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the deck skill's layout block lists what a deck directory holds after install (the deck-level `log.md` and one directory per card); `deck/reference.md` names the `goc` engine; `refine-deck` Step 3 sends a new tag to the place `card-schema/reference.md` § Adding new tags names, by pointing at that section rather than restating it
   - [ ] TDD: a regression guard in `tests/` fails when any shipped skill template names `deck.py` or `SCHEMA.md`, and is fed the pre-fix lines verbatim to prove it fires
   - [ ] MECHANICAL: mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green) and OpenClaw skills re-ported (`python3 scripts/port_skills_to_openclaw.py --check` green)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Shipped skills still point at the deck script and schema file goc replaced
