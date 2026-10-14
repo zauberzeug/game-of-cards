@@ -1,7 +1,7 @@
 ---
 title: pattern-generalization-stop-hook-crashes-on-a-config-or-transcript-that-does-not-decode
 summary: "The pattern-generalization Stop hook reads .game-of-cards/config.yaml and the session transcript in the host's default encoding and catches only OSError, so a config the host cannot decode makes it exit 1 at every turn end, even with the hook off: one Latin-1 byte does it on a UTF-8 host, and the shipped template's em dash does it where the default encoding is ASCII or a CJK code page. With the hook on, a UTF-8 transcript holding an emoji crashes it there too. The same file already reads config.yaml with encoding='utf-8' and treats a decode failure as absent, in _shared_worktree_deck_root."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-14T05:18:20Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_enabled` and `_had_code_mutation` in `goc/templates/hooks/pattern_generalization_check.py` read with `encoding="utf-8"` and treat a decode failure the way they treat an unreadable file, as `_shared_worktree_deck_root` in the same file already does
   - [ ] MECHANICAL: mirrors regenerated — `python scripts/sync_plugin_assets.py --check` is clean
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The pattern-generalization Stop hook crashes on a config or transcript that does not decode
