@@ -17,6 +17,7 @@ worktree's own checkout, not the primary tree that holds the deck.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -24,6 +25,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -167,9 +169,11 @@ class InstalledRepoFromSubdirectoryTest(_Fixture):
 
 
 class HookProjectDirWalkTest(_Fixture):
-    """The hooks import nothing from the package, so their project-dir walk is
-    a mirror of the engine's. Pin it over the layouts of
-    tests/test_subdirectory_deck_resolution.py."""
+    """The hooks import nothing from the package, so their deck-root
+    resolution is a mirror of the engine's: the shared-deck worktree redirect,
+    then the walk. Pin the walk over the layouts of
+    tests/test_subdirectory_deck_resolution.py and the redirect over a linked
+    worktree with and without the opt-in."""
 
     HOOK_NAMES = ("deck_session_start", "pattern_generalization_check")
 
@@ -202,6 +206,97 @@ class HookProjectDirWalkTest(_Fixture):
                 with self.subTest(hook=name, start=str(start.relative_to(self.tmp))):
                     self.assertEqual(engine_root, hook._find_project_dir(str(start)))
 
+    def linked_worktree(self) -> Path:
+        """A linked worktree of `self.repo`, whose committed config carries the
+        template's commented-out `worktree_deck` line. The checkout holds its
+        own `.game-of-cards/`, so the walk alone stops there."""
+        self.init_repo(self.repo)
+        (self.repo / ".game-of-cards" / "deck").mkdir(parents=True)
+        config = self.repo / ".game-of-cards" / "config.yaml"
+        config.write_text("workflow:\n  auto_commit: true\n  # worktree_deck: shared\n")
+        self.git(self.repo, "add", ".game-of-cards/config.yaml")
+        self.git(self.repo, "commit", "-q", "-m", "fixture")
+        linked = self.tmp / "linked"
+        self.git(self.repo, "worktree", "add", "-q", "-b", "feature", str(linked))
+        (linked / "src" / "pkg").mkdir(parents=True)
+        return linked
+
+    def test_hook_walks_agree_with_the_engine_in_a_linked_worktree(self) -> None:
+        linked = self.linked_worktree()
+        config = self.repo / ".game-of-cards" / "config.yaml"
+        hooks = {name: _load_hook(name) for name in self.HOOK_NAMES}
+
+        def agree(case: str, expected: Path) -> None:
+            for start in (linked, linked / "src" / "pkg"):
+                engine_root = engine._resolve_deck_root(start)
+                self.assertEqual(expected, engine_root, msg=f"fixture drift: {case} at {start}")
+                for name, hook in hooks.items():
+                    with self.subTest(hook=name, case=case, start=str(start.relative_to(self.tmp))):
+                        self.assertEqual(engine_root, hook._find_project_dir(str(start)))
+
+        with mock.patch.dict(os.environ):
+            os.environ.pop("GOC_WORKTREE_DECK", None)
+            agree("no opt-in", linked)
+            os.environ["GOC_WORKTREE_DECK"] = "Shared"
+            agree("env opt-in", self.repo)
+            del os.environ["GOC_WORKTREE_DECK"]
+            config.write_text("workflow:\n  auto_commit: true\n  worktree_deck: shared\n")
+            agree("config opt-in", self.repo)
+
+    def test_hook_config_reading_agrees_with_the_engine(self) -> None:
+        """The hooks read `workflow.worktree_deck` without yaml_lite. Pin their
+        reading to the engine's over the shapes the opt-in can take."""
+        template_file = ROOT / "goc" / "templates" / "game_of_cards" / "config.yaml"
+        template = template_file.read_text(encoding="utf-8")
+        uncommented = template.replace("  # worktree_deck: shared", "  worktree_deck: shared", 1)
+        self.assertNotEqual(template, uncommented, msg="the template lost its shared line")
+        configs = {
+            "template as shipped": (template, False),
+            "template line uncommented": (uncommented, True),
+            "double-quoted": ('workflow:\n  worktree_deck: "shared"\n', True),
+            "single-quoted, comments": ("workflow:  # c\n  worktree_deck: 'shared'  # c\n", True),
+            "among other keys": (
+                "layer_2_project_dod:\n  - name: x\n    kind: automated\n"
+                "workflow:\n  auto_commit: true\n  worktree_deck: shared\n"
+                "hooks:\n  pattern_generalization_check: false\n", True),
+            "indented document": ("  workflow:\n    worktree_deck: shared\n", True),
+            "hash without a space": ("workflow:\n  worktree_deck: shared#x\n", False),
+            "hash inside quotes": ('workflow:\n  worktree_deck: "shared # x"\n', False),
+            "other case": ("workflow:\n  worktree_deck: Shared\n", False),
+            "other value": ("workflow:\n  worktree_deck: isolated\n", False),
+            "empty value": ("workflow:\n  worktree_deck:\n", False),
+            "space before the colon": ("workflow:\n  worktree_deck : shared\n", False),
+            "top level": ("worktree_deck: shared\n", False),
+            "under another key": ("hooks:\n  worktree_deck: shared\n", False),
+            "under a longer key": ("workflows:\n  worktree_deck: shared\n", False),
+            "nested deeper": ("workflow:\n  nested:\n    worktree_deck: shared\n", False),
+            "second workflow block": (template + "workflow:\n  worktree_deck: shared\n", False),
+            "repeated key": (
+                "workflow:\n  worktree_deck: shared\n  worktree_deck: shared\n", False),
+            "tab indentation": ("workflow:\n\tworktree_deck: shared\n", False),
+        }
+        # Every reader is told cwd sits in a linked worktree of `primary`, so
+        # the config text alone decides.
+        primary = self.tmp / "primary"
+        config = primary / ".game-of-cards" / "config.yaml"
+        config.parent.mkdir(parents=True)
+        hooks = {name: _load_hook(name) for name in self.HOOK_NAMES}
+
+        def shared_root(module) -> Path | None:
+            with mock.patch.object(module, "_detect_worktree_common_root", return_value=primary):
+                return module._shared_worktree_deck_root(self.repo)
+
+        with mock.patch.dict(os.environ):
+            os.environ.pop("GOC_WORKTREE_DECK", None)
+            for case, (text, shared) in configs.items():
+                config.write_text(text, encoding="utf-8")
+                engine_root = shared_root(engine)
+                self.assertEqual(primary if shared else None, engine_root,
+                                 msg=f"fixture drift: {case}")
+                for name, hook in hooks.items():
+                    with self.subTest(hook=name, case=case):
+                        self.assertEqual(engine_root, shared_root(hook))
+
     def test_session_start_hook_from_a_subdirectory_names_the_active_card(self) -> None:
         self.init_repo(self.repo)
         self.make_deck_with_check(self.repo)
@@ -212,6 +307,37 @@ class HookProjectDirWalkTest(_Fixture):
             env=self.env, capture_output=True, text=True,
         )
         self.assertIn(CARD, r.stdout)
+
+    def test_hooks_in_a_shared_deck_worktree_read_the_primary_deck_and_config(self) -> None:
+        linked = self.linked_worktree()
+        config = self.repo / ".game-of-cards" / "config.yaml"
+        config.write_text(
+            "workflow:\n  auto_commit: true\n  worktree_deck: shared\n"
+            "hooks:\n  pattern_generalization_check: true\n"
+        )
+        self.assert_ok(self.goc(linked, "new", CARD, "--summary", "Fixture card.",
+                                "--gate", "none", "--no-commit"))
+        self.assert_ok(self.goc(linked, "status", CARD, "active", "--no-commit"))
+        self.assertFalse((linked / ".game-of-cards" / "deck" / CARD).exists(),
+                         msg="fixture: goc must write the card to the primary deck")
+
+        def hook(name: str, **payload: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                [sys.executable, str(HOOKS / f"{name}.py")],
+                input=json.dumps({"cwd": str(linked / "src" / "pkg"), **payload}),
+                env=self.env, capture_output=True, text=True,
+            )
+
+        self.assertIn(CARD, hook("deck_session_start", hook_event_name="SessionStart").stdout)
+        # The linked checkout's own config leaves the Stop hook off; the
+        # primary's, which goc reads, turns it on.
+        transcript = self.tmp / "transcript.jsonl"
+        transcript.write_text(json.dumps(
+            {"role": "assistant", "content": [{"type": "tool_use", "name": "Edit", "input": {}}]}
+        ) + "\n")
+        r = hook("pattern_generalization_check", hook_event_name="Stop",
+                 transcript_path=str(transcript))
+        self.assertEqual(2, r.returncode, msg=r.stderr)
 
 
 if __name__ == "__main__":

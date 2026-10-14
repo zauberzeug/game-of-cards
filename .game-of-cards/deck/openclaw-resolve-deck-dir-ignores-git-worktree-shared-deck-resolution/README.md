@@ -108,6 +108,15 @@ drifts by omitting whole engine behaviors, and it is not covered by the
 hand-maintained `isImpeded` matrix test. It is filed as a concrete instance and
 as new evidence for that meta-fix.
 
+The Python hooks had the same redirect gap, closed by
+[python-hooks-ignore-git-worktree-shared-deck-resolution](../python-hooks-ignore-git-worktree-shared-deck-resolution/).
+They could not delegate (they import nothing from the package), so they mirror
+`_detect_worktree_common_root` / `_shared_worktree_deck_root` and read
+`workflow.worktree_deck` with a block-layout reader, pinned to the engine by
+`tests/test_project_root_from_subdirectory.py`. That block in
+`goc/templates/hooks/deck_session_start.py` is the scope Option A below would
+port to TypeScript.
+
 ## Decision required
 
 The fix mechanism is entangled with the parity-mechanism decision pending on

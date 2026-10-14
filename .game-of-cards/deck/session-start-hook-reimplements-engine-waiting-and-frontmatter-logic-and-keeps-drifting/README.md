@@ -45,6 +45,10 @@ The predicates currently re-derived by hand:
 - `_parse_waiting_until` ⟷ `goc.engine._waiting_until_instant` (+ ISO regexes)
 - `_frontmatter_tail` / `_scalar_or_none` ⟷ `goc._vendor.yaml_lite` scalar,
   inline-comment, quote, and `_NULL_SET` resolution
+- `_find_project_dir` ⟷ `goc.engine._resolve_deck_root` — carried by this hook
+  and, byte-identical, by the Stop hook `pattern_generalization_check.py`: the
+  deck walk plus the shared-deck worktree redirect, whose
+  `workflow.worktree_deck` read is a hand-rolled reading of yaml_lite
 
 Each cell has drifted and been fixed as its own one-off card, never caught by a
 guard derived from the engine:

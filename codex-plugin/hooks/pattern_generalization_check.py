@@ -27,6 +27,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 from pathlib import Path
 
@@ -89,15 +90,124 @@ REMINDER = (
 )
 
 
-def _find_project_dir(start: str) -> Path:
-    """Return the nearest ancestor of `start` holding `.game-of-cards/`.
+# The line `worktree_deck: shared` as the engine's yaml_lite reads it: the bare
+# or quoted word, then at most a whitespace-led trailing comment.
+_SHARED_DECK_LINE_RE = re.compile(
+    r"""worktree_deck:[ \t]+(?:shared|"shared"|'shared')(?:[ \t]+#.*)?$"""
+)
 
-    The walk never crosses into a different git working tree, and falls back
-    to `start` itself when no ancestor holds a deck. This is a mirror of the
-    walk in `goc.engine._resolve_deck_root` — hooks import nothing from the
-    package — pinned to it by tests/test_project_root_from_subdirectory.py.
+
+def _detect_worktree_common_root(cwd: Path) -> Path | None:
+    """Return the primary working tree root if `cwd` is inside a linked git
+    worktree, else None. Mirror of `goc.engine._detect_worktree_common_root`:
+    there `git rev-parse --git-common-dir` differs from `--git-dir`.
+    """
+    try:
+        r_git = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            capture_output=True, text=True, cwd=str(cwd), timeout=5,
+        )
+        r_common = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            capture_output=True, text=True, cwd=str(cwd), timeout=5,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        # No git, or a hook-input cwd that is gone or not a directory.
+        return None
+    if r_git.returncode != 0 or r_common.returncode != 0:
+        return None
+    git_dir = r_git.stdout.strip()
+    common_dir = r_common.stdout.strip()
+    if git_dir == common_dir:
+        return None  # primary working tree, not a worktree
+    common_path = Path(common_dir)
+    if not common_path.is_absolute():
+        common_path = (cwd / common_path).resolve()
+    return common_path.parent
+
+
+def _config_shares_the_deck(text: str) -> bool:
+    """Whether a config.yaml text sets `workflow.worktree_deck` to `shared`.
+
+    The engine parses the file with yaml_lite and compares the value to
+    `"shared"`. This reads the block layout the config template ships: the
+    key one level under the top-level `workflow:` key, with comment lines
+    skipped, so the template's commented-out line stays off. A flow-style
+    `workflow: {...}` is not read. Where yaml_lite refuses the file, the
+    engine leaves the redirect off, and so does this for the refusals within
+    reach: a tab in the indentation, a repeated top-level or `workflow` key.
+    """
+    top_indent: int | None = None
+    child_indent: int | None = None
+    top_keys: set[str] = set()
+    child_keys: set[str] = set()
+    in_workflow = False
+    shared = False
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        bare = line.lstrip()
+        if not bare or bare.startswith("#"):
+            continue
+        indent = len(line) - len(bare)
+        if "\t" in line[:indent]:
+            return False
+        if top_indent is None:
+            top_indent = indent
+        key = bare.split(":", 1)[0]
+        if indent <= top_indent:
+            if key in top_keys:
+                return False
+            top_keys.add(key)
+            in_workflow = re.match(r"workflow:(?:[ \t]+#.*)?$", bare) is not None
+            continue
+        if not in_workflow:
+            continue
+        if child_indent is None:
+            child_indent = indent
+        if indent == child_indent:
+            if key in child_keys:
+                return False
+            child_keys.add(key)
+            if key == "worktree_deck":
+                shared = _SHARED_DECK_LINE_RE.match(bare) is not None
+    return shared
+
+
+def _shared_worktree_deck_root(cwd: Path) -> Path | None:
+    """Return the primary working tree root when `cwd` is in a linked git
+    worktree that opted into `worktree_deck: shared`, else None. Mirror of
+    `goc.engine._shared_worktree_deck_root`.
+    """
+    common_root = _detect_worktree_common_root(cwd)
+    if common_root is None:
+        return None
+    # Env var wins without requiring the config to exist yet.
+    if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
+        return common_root
+    config_path = common_root / ".game-of-cards" / "config.yaml"
+    try:
+        text = config_path.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return None
+    return common_root if _config_shares_the_deck(text) else None
+
+
+def _find_project_dir(start: str) -> Path:
+    """Return the deck root `goc` resolves from `start`.
+
+    A mirror of `goc.engine._resolve_deck_root` — hooks import nothing from
+    the package — pinned to it by tests/test_project_root_from_subdirectory.py.
+    In a linked git worktree that opted into `worktree_deck: shared` (the
+    `GOC_WORKTREE_DECK=shared` env var, or the key in the primary tree's
+    config), that is the primary working tree. Otherwise it is the nearest
+    ancestor of `start` holding `.game-of-cards/`: the walk never crosses into
+    a different git working tree, and falls back to `start` itself when no
+    ancestor holds a deck.
     """
     start_path = Path(start).resolve()
+    shared_root = _shared_worktree_deck_root(start_path)
+    if shared_root is not None:
+        return shared_root
     own_tree_root_passed = False
     for candidate in (start_path, *start_path.parents):
         has_git = (candidate / ".git").exists()

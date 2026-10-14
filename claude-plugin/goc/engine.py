@@ -139,8 +139,9 @@ def _resolve_deck_root(cwd: Path) -> Path:
     mutating creation commands must reject that fallback instead of silently
     scaffolding a second deck. `REPO_ROOT` is derived from this same result
     by `_resolve_project_roots`, so every root reader follows the walk too.
-    The runtime hooks carry a mirror of the walk (`_find_project_dir`), pinned
-    to this function by tests/test_project_root_from_subdirectory.py.
+    The runtime hooks carry a mirror of this resolution, the shared-deck
+    redirect and the walk both (`_find_project_dir`), pinned to this function
+    by tests/test_project_root_from_subdirectory.py.
     """
     return _resolve_project_roots(cwd)[1]
 

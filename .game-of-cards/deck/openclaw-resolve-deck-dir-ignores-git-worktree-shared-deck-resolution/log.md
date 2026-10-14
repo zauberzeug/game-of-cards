@@ -21,3 +21,12 @@ outer `goc/engine.py:44-143` (`def _detect_worktree_common_root` through
 `return canonical`), `_detect_worktree_common_root` / `_resolve_deck_root` at
 44-118, `_resolve_deck_dir` at 121-143. The recipe gap is filed as
 [citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank](../citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank/).
+
+## 2026-10-14 — Python sibling fixed
+
+`python-hooks-ignore-git-worktree-shared-deck-resolution` gave both Python
+hooks the shared-deck redirect, mirrored from the engine because the hooks
+cannot import it, with an engine-derived agreement test over a linked worktree
+and 19 config shapes. Behavior 1 above is now an OpenClaw-only gap; the README
+names the Python block as the reference for Option A. The decision itself is
+untouched.
