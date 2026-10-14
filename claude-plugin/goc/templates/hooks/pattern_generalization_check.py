@@ -226,18 +226,21 @@ def _enabled(project_dir: str) -> bool:
     Returns True iff `.game-of-cards/config.yaml` sets
     `pattern_generalization_check` to any YAML-true spelling in
     :data:`_TRUE_SET` (`true`, `True`, `TRUE`, `yes`, `Yes`, `YES`). Absent
-    config, absent key, `false`, or any other value leaves the hook disabled.
+    config, absent key, `false`, or any other value leaves the hook disabled,
+    and so does a config that cannot be read or decoded.
     """
     config = Path(project_dir) / ".game-of-cards" / "config.yaml"
     if not config.exists():
         return False
     try:
-        m = re.search(
-            r"pattern_generalization_check\s*:\s*(\S+)", config.read_text()
-        )
-        return bool(m and m.group(1) in _TRUE_SET)
-    except OSError:
+        text = config.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        # Read as absent, the way `_shared_worktree_deck_root` above and the
+        # engine's `load_deck_config` read a config that does not decode.
+        # This runs on every Stop event, so a raise here fails every turn end.
         return False
+    m = re.search(r"pattern_generalization_check\s*:\s*(\S+)", text)
+    return bool(m and m.group(1) in _TRUE_SET)
 
 
 def _extract_tool_names(entry: dict) -> list[str]:
@@ -299,8 +302,9 @@ def _had_code_mutation(transcript_path: str) -> bool:
     if not path.is_file():
         return False
     try:
-        lines = path.read_text().splitlines()
-    except OSError:
+        # Hosts write the transcript as UTF-8 JSONL, whatever the locale.
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, ValueError):
         return False
 
     found_assistant = False
