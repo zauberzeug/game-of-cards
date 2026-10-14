@@ -43,6 +43,7 @@ advanced_by:
   - kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe
   - loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse
   - engine-comments-claim-unflagged-placeholder-cards-count-as-drafts
+  - engine-still-names-the-deck-script-and-schema-file-goc-replaced
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
