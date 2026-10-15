@@ -199,7 +199,7 @@ GAME_OF_CARDS_CONFIG_FILE = DECK_ROOT / ".game-of-cards" / "config.yaml"
 LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"
 
 # ────────────────────────────────────────────────────────────────────────────
-# Frontmatter parser — used for SCHEMA.md AND every card's README.md
+# Frontmatter parser — used for every card's README.md
 
 # The `(\n+)` group captures the blank line(s) between the last frontmatter
 # field and the closing `---` so that yaml_lite — not the delimiter — decides
@@ -4789,7 +4789,7 @@ Evaluate three dimensions per card:
    understand what the card is about WITHOUT opening the body.
    - Bad: "pong-late-hr-stuck-below-50-after-bug-140-path-2"
      (engineer's-jargon: rN refs, path-N, bug-N, math symbols, _md_/_py_,
-     camelCase tokens — same antipattern set as deck.py `new` rejects)
+     camelCase tokens — all rejected by `goc new`)
    - Good: "pong-cannot-recover-prior-task-performance"
    Verdict {{ok: true}} if PO-readable; {{ok: false, rewrite: "...", reason: "..."}} otherwise.
 

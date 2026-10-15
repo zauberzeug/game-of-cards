@@ -372,3 +372,21 @@ The fix corrected all five texts and pinned the behavior, not the prose
 (`tests/test_unflagged_placeholder_scaffold_is_not_a_draft.py`). A comment
 that restates a predicate's semantics is prose about code, and a
 behavioral test is the closest tree-derived guard that reaches it.
+
+## 2026-10-15T04:52:00Z — Instance closed: engine-still-names-the-deck-script-and-schema-file-goc-replaced
+
+[engine-still-names-the-deck-script-and-schema-file-goc-replaced](../engine-still-names-the-deck-script-and-schema-file-goc-replaced/)
+(done) is the twenty-eighth instance's residue, one directory over. That
+repair banned `deck.py` and `SCHEMA.md` from every shipped template tree, but
+two `goc/engine.py` lines kept the names. One was in the prompt
+`goc quality-pass --llm` sends a model, so it was executed rather than read.
+The other was a code comment. The datum for the scope question: the ban was
+scoped by *where docs live*, and the prompt was doc text living in code, in
+the one tree the ban skipped. The repair stopped choosing the directory. The
+`retired_files` sweep now covers the whole `goc/` package, since neither name
+is right in any file.
+
+Housekeeping, not reconciled here: the README's running count ("Thirty-one
+instances") and its guard table (25 rows) trail `advanced_by`, which now
+lists 35 edges. The four latest connections each added an edge but no row or
+paragraph.

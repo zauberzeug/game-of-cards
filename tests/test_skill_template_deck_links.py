@@ -5,8 +5,9 @@ target routes through `.game-of-cards/deck/`; `card_paths` catches a `deck/`
 path that names a concrete card directory and promises a file inside it, in
 any syntax; `retired_files` catches the two files goc's pre-package layout kept
 in the deck directory. All three sweep the six skill trees and the four
-project-state template trees. The fourth, `layout_root_entries`, holds the deck
-skill's layout block to the deck directory a real `goc install` leaves behind.
+project-state template trees, and `retired_files` also sweeps the rest of the
+`goc/` package. The fourth, `layout_root_entries`, holds the deck skill's
+layout block to the deck directory a real `goc install` leaves behind.
 
 `goc/templates/skills/` is package data. `goc install --local-skills` copies it
 into a consuming repo's `.claude/skills/`, and the Claude, Codex and OpenClaw
@@ -70,6 +71,15 @@ block also listed a deck-root `README.md` that install never writes, and no
 name predicate can flag that without flagging every card's README; so the
 block is compared against a real install instead of a list of banned names,
 which also catches the next file install starts or stops writing there.
+
+`engine-still-names-the-deck-script-and-schema-file-goc-replaced` is why
+`retired_files` reaches past the template trees. Two `goc/engine.py` lines kept
+both names after the templates lost them: the prompt `goc quality-pass --llm`
+sends a model attributed its title antipatterns to `deck.py`, and the
+frontmatter parser's banner said it read `SCHEMA.md`. Neither line sat in a
+swept tree. Neither name is right in any file, so the predicate now sweeps the
+whole package. The three plugin payloads' `goc/` copies are held byte-identical
+to it by `sync_plugin_assets.py --check`, so sweeping the source covers them.
 """
 
 from __future__ import annotations
@@ -106,6 +116,14 @@ PROJECT_STATE_TREES = (
 )
 
 SWEPT_TREES = SHIPPED_SKILL_TREES + PROJECT_STATE_TREES
+
+# The whole package, which the wheel and all three plugin payloads ship. It
+# holds both template trees above plus the engine, whose prompts and comments
+# the template trees miss; `swept_files` reads each nested file once.
+PACKAGE_TREE = "goc"
+
+# What `retired_files` sweeps: neither retired name is right in any file.
+RETIRED_FILE_TREES = SWEPT_TREES + (PACKAGE_TREE,)
 
 # A markdown link whose target routes through a `.game-of-cards/deck/` path.
 # Anchored on the link syntax `](…)` rather than the bare path so that prose,
@@ -148,13 +166,16 @@ HISTORICAL_CARD_PATH_OFFENDERS = (
 # Case-sensitive, so `schema.yaml` and the word "schema" stay legal.
 RETIRED_FILE_RE = re.compile(r"\b(deck\.py|SCHEMA\.md)\b")
 
-# The five lines naming one, verbatim as they shipped, with the name each yields.
+# The lines naming one, verbatim as they shipped, with the name each yields:
+# five from the skill templates, then the two `goc/engine.py` lines.
 HISTORICAL_RETIRED_FILE_OFFENDERS = (
     ("  SCHEMA.md                 # canonical schema (frontmatter IS the schema)", "SCHEMA.md"),
     ("  deck.py                   # CLI; computes filtered views from frontmatter", "deck.py"),
     ("write-ahead logs happen invisibly. Our cards are the rows; deck.py", "deck.py"),
     ("the SCHEMA.md PR adding the new tag + its predicate. Adding the", "SCHEMA.md"),
     ("tag itself remains a SCHEMA.md PR per the schema's \"Adding new", "SCHEMA.md"),
+    ("# Frontmatter parser — used for SCHEMA.md AND every card's README.md", "SCHEMA.md"),
+    ("     camelCase tokens — same antipattern set as deck.py `new` rejects)", "deck.py"),
 )
 
 # The deck skill's layout block as it shipped until that card closed.
@@ -216,24 +237,32 @@ def layout_root_entries(text: str) -> list[str]:
     return entries
 
 
-def sweep(predicates=(deck_links, card_paths)) -> list[tuple[str, int, str]]:
-    """Return (repo-relative path, line number, target) for every citation."""
-    hits: list[tuple[str, int, str]] = []
-    for tree in SWEPT_TREES:
+def swept_files(trees=SWEPT_TREES) -> list[Path]:
+    """Return every file under `trees`, once each even where the trees nest."""
+    files: dict[Path, None] = {}
+    for tree in trees:
         base = ROOT / tree
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*")):
             if path.is_dir() or "__pycache__" in path.parts:
                 continue
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
-            for lineno, line in enumerate(text.splitlines(), 1):
-                for predicate in predicates:
-                    for target in predicate(line):
-                        hits.append((str(path.relative_to(ROOT)), lineno, target))
+            files.setdefault(path)
+    return list(files)
+
+
+def sweep(predicates=(deck_links, card_paths), trees=SWEPT_TREES) -> list[tuple[str, int, str]]:
+    """Return (repo-relative path, line number, target) for every citation."""
+    hits: list[tuple[str, int, str]] = []
+    for path in swept_files(trees):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            for predicate in predicates:
+                for target in predicate(line):
+                    hits.append((str(path.relative_to(ROOT)), lineno, target))
     return hits
 
 
@@ -346,6 +375,8 @@ class SkillTemplateDeckLinkSensitivityTest(unittest.TestCase):
             ("skill sibling", "`schema.yaml` sits beside `SKILL.md` in the skill dir"),
             ("card readme", "    README.md               # frontmatter + dashboard body"),
             ("new tag", "per `Skill(card-schema)`'s `reference.md` § Adding new tags"),
+            ("parser banner", "# Frontmatter parser — used for every card's README.md"),
+            ("quality-pass prompt", "     camelCase tokens — all rejected by `goc new`)"),
         ):
             with self.subTest(case=label):
                 self.assertEqual(retired_files(line), [], f"{label}: {line!r} must stay clean")
@@ -388,6 +419,18 @@ class SkillTemplateDeckLinkSensitivityTest(unittest.TestCase):
                 self.assertGreater(
                     len(list(base.rglob("*"))), 10, f"{tree} holds too few shipped files"
                 )
+        files = swept_files(RETIRED_FILE_TREES)
+        with self.subTest(tree=PACKAGE_TREE):
+            self.assertIn(
+                ROOT / PACKAGE_TREE / "engine.py",
+                files,
+                "the engine is outside the retired-file sweep — its quality-pass "
+                "prompt would go unchecked",
+            )
+            skill = ROOT / "goc/templates/skills/deck/SKILL.md"
+            self.assertEqual(
+                files.count(skill), 1, "a file under two swept trees must be read once"
+            )
 
 
 class SkillTemplateDeckLinkTest(unittest.TestCase):
@@ -402,13 +445,13 @@ class SkillTemplateDeckLinkTest(unittest.TestCase):
         )
 
     def test_no_shipped_template_names_a_retired_deck_file(self) -> None:
-        hits = sweep((retired_files,))
+        hits = sweep((retired_files,), RETIRED_FILE_TREES)
         self.assertEqual(
             hits,
             [],
-            "shipped templates must not name `deck.py` or `SCHEMA.md` — the "
-            "`goc` CLI and `goc/schema.yaml` replaced them, and install writes "
-            f"neither into a consuming repo. Found: {hits}",
+            "shipped templates and the goc package must not name `deck.py` or "
+            "`SCHEMA.md` — the `goc` CLI and `goc/schema.yaml` replaced them, and "
+            f"install writes neither into a consuming repo. Found: {hits}",
         )
 
 
