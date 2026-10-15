@@ -901,13 +901,34 @@ def _strip_goc_settings_entries(settings_path: Path, *, probe: bool = False) -> 
     return changed
 
 
+def _goc_skill_names(templates: Path, agent: str) -> frozenset[str] | None:
+    """Names of the skills GoC ships for `agent`, or None when no skill tree is at hand.
+
+    `templates/skills/` holds them wherever it ships (the wheel, the source
+    tree). A plugin payload omits that tree and carries the same skills flat
+    at `<payload>/skills/`, beside its bundled `goc/` package, so they are read
+    from there. The fallback keys on that tree rather than on
+    `_is_plugin_context()`, whose directory-name test misses the versioned
+    roots of marketplace installs. Only directories holding a `SKILL.md`
+    count. A caller that deletes by these names must keep everything on None.
+    """
+    for skills_src in (templates / "skills", templates.parent.parent / "skills"):
+        if skills_src.is_dir():
+            return frozenset(
+                p.name
+                for p in skills_src.iterdir()
+                if (p / "SKILL.md").is_file() and skill_for_agent(p.name, agent)
+            )
+    return None
+
+
 def _strip_claude_vendored_harness(target: Path, templates: Path, *, probe: bool = False) -> bool:
     """Remove GoC-managed vendored files from a Claude install.
 
-    Removes only the skill directories whose names match GoC templates,
-    the hook files registered in the manifest and settings, and strips
-    GoC entries from .claude/settings.json. User-authored skills with
-    other names in `.claude/skills/` are preserved.
+    Removes only the skill directories `_goc_skill_names` lists (none when
+    it has no skill tree to read), the hook files registered in the manifest
+    and settings, and strips GoC entries from .claude/settings.json.
+    User-authored skills with other names in `.claude/skills/` are preserved.
 
     Returns whether any of that GoC content was there to remove;
     `probe=True` answers the same question without touching anything.
@@ -920,15 +941,10 @@ def _strip_claude_vendored_harness(target: Path, templates: Path, *, probe: bool
     skills_dir = target / shim.skills.target if shim.skills else None
     goc_skill_dirs: list[Path] = []
     if skills_dir is not None and skills_dir.is_dir():
-        skills_src = templates / "skills"
-        # The bundled plugin engine omits templates/skills/, so the set of
-        # GoC-owned skill names cannot be derived there. Skip skill-dir
-        # removal in that case (never destroy authored content) and let the
-        # hook-file and settings-entry cleanup below proceed.
-        goc_owned = {
-            p.name for p in skills_src.iterdir()
-            if p.is_dir() and skill_for_agent(p.name, "claude")
-        } if skills_src.is_dir() else set()
+        # With no skill tree to name GoC's skills, skip skill-dir removal
+        # (never destroy authored content) and let the hook-file and
+        # settings-entry cleanup below proceed. `goc upgrade`'s prompt says so.
+        goc_owned = _goc_skill_names(templates, "claude") or frozenset()
         goc_skill_dirs = [
             child for child in skills_dir.iterdir() if child.is_dir() and child.name in goc_owned
         ]
@@ -2159,11 +2175,23 @@ def upgrade(
     if needs_vendored_cleanup:
         print(
             "This repo is configured for plugin-mode skills (skills_source: plugin)\n"
-            "but GoC files from a prior vendored install were found.\n"
-            "Cleanup removes GoC-managed skill directories, GoC hook files, and\n"
-            "GoC entries in .claude/settings.json. Non-GoC skills in .claude/skills/\n"
-            "are preserved."
+            "but GoC files from a prior vendored install were found."
         )
+        # Promise only what the cleanup will do: without GoC's skill names it
+        # keeps every skill dir.
+        if _goc_skill_names(templates, "claude") is None:
+            print(
+                "Cleanup removes GoC hook files and GoC entries in .claude/settings.json,\n"
+                "but leaves every skill directory in .claude/skills/ in place: this goc\n"
+                "ships no skill tree to tell GoC's skills from the repo's own. To remove\n"
+                "them too, rerun the upgrade with goc from `pipx install game-of-cards`."
+            )
+        else:
+            print(
+                "Cleanup removes GoC-managed skill directories, GoC hook files, and\n"
+                "GoC entries in .claude/settings.json. Non-GoC skills in .claude/skills/\n"
+                "are preserved."
+            )
         confirmed = _confirm("Remove leftover vendored layout?", default=False)
         if confirmed:
             _strip_claude_vendored_harness(target, templates)

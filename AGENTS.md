@@ -389,9 +389,14 @@ templates — the bundled engine derives its hook list from
 omits** `templates/skills/`: the bundled
 engine refuses `--local-skills` on `goc install` and `--keep-local-skills`
 on `goc upgrade` (see `_is_plugin_context` in `goc/install.py`), so
-the skill templates are never read from inside the plugin payload. To
-vendor skills into source control, install via `pipx install
-game-of-cards` instead — that path keeps the full template tree.
+the skill templates are never read from inside the plugin payload. The
+one thing the engine still needs from them, the names of GoC's skills
+(so the vendored→plugin cleanup in `goc upgrade` can tell GoC's skill
+directories from a repo's own), it reads from the payload's flat
+`skills/` tree beside its `goc/` (`_goc_skill_names` in
+`goc/install.py`). To vendor skills into source control, install via
+`pipx install game-of-cards` instead — that path keeps the full
+template tree.
 
 **Do not edit `claude-plugin/` or `codex-plugin/` directly.** The `sync-plugin-assets`
 pre-commit hook (`scripts/sync_plugin_assets.py`) auto-regenerates those

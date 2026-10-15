@@ -11,10 +11,13 @@ A recipe is an instruction the reader executes, so no derive-from-tree check
 can tell whether it works — running it can. These tests read the numbered
 steps out of the section and run them against a scratch `--local-skills`
 install that also holds a skill, a hook script and settings of the repo's own.
-The section's two warnings (hand-deleting gets re-vendored; the plugin's
-bundled engine leaves GoC's skill directories behind) are run against the same
-fixture and compared both ways, so a behavior change on either side turns the
-build red instead of leaving the page wrong again.
+The section's warning that the next upgrade re-vendors a hand-deleted layout
+is run against the same fixture and compared both ways, and so is the caveat
+that told readers to run the switch with the standalone `goc`. That caveat
+stood while the plugin's bundled engine left GoC's skill directories behind
+(`plugin-engine-cleanup-leaves-every-goc-skill-dir-its-prompt-promises-to-remove`)
+and is gone now that it removes them. A behavior change on either side turns
+the build red instead of leaving the page wrong again.
 """
 
 from __future__ import annotations
