@@ -1,7 +1,7 @@
 ---
 title: engine-still-names-the-deck-script-and-schema-file-goc-replaced
 summary: "goc/engine.py still names the two files the move to a package retired. The quality-pass prompt sent to the model says its title antipatterns are the set that deck.py new rejects, so the model is briefed on a script no install has; the frontmatter-parser banner comment says the parser reads SCHEMA.md, while load_schema reads schema.yaml through yaml_lite. The retired-name sweep added by shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced stops at the template trees, so nothing catches either line."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-10-14T04:44:48Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_QUALITY_PROMPT_TEMPLATE` attributes the listed title antipatterns to `goc new`; the frontmatter-parser banner comment in `goc/engine.py` names what the parser reads (card READMEs) instead of `SCHEMA.md`
   - [ ] TDD: `test_no_shipped_template_names_a_retired_deck_file` in `tests/test_skill_template_deck_links.py` also sweeps the `goc/` package outside its template trees, and `retired_files` is fed both pre-fix engine lines verbatim to prove it fires
   - [ ] MECHANICAL: plugin engine mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The engine still names the deck script and schema file goc replaced
