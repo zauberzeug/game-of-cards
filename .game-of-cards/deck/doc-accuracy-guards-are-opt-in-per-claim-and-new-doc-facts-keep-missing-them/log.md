@@ -390,3 +390,26 @@ Housekeeping, not reconciled here: the README's running count ("Thirty-one
 instances") and its guard table (25 rows) trail `advanced_by`, which now
 lists 35 edges. The four latest connections each added an edge but no row or
 paragraph.
+
+## 2026-10-16T04:58:00Z — Two instances connected: a recipe that assumes this repo, and a manifest that kept a retired claim
+
+- [reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/)
+  (open). `Skill(create-card)` Step 6 ships a repo-root walk keyed on
+  `pyproject.toml`. That is this repo's marker; the engine walks to
+  `.game-of-cards/`. It is the fourteenth instance's surface class again: a
+  procedure agents run literally, guardable only by running it against a
+  fixture. It crashes in a repo without a `pyproject.toml`, and it silently
+  picks the wrong root under a workspace that has one. The fact restated is
+  the engine's definition of the project root, so a guard can derive it from
+  `_walk_to_deck_root` rather than restate it.
+- [plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped](../plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped/)
+  (open). This is the third shipped surface to carry "goc needs click" after
+  the second instance (`AGENTS.md`, `goc/cli.py`) and the eighth (an OpenClaw
+  TypeScript comment). This time it sits in a package manifest and lockfile
+  that the plugin wrapper stopped reading in May. It adds to the eighth
+  instance's datum: a guard keyed to the claim reaches surfaces that a
+  per-file or per-doc-set guard never scans, including machine-readable ones.
+
+The README's running count and guard table are not reconciled here. Both
+new cards name their row as a closure item, as the twenty-third through
+thirtieth did.

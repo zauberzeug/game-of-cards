@@ -44,6 +44,8 @@ advanced_by:
   - loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse
   - engine-comments-claim-unflagged-placeholder-cards-count-as-drafts
   - engine-still-names-the-deck-script-and-schema-file-goc-replaced
+  - reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml
+  - plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
