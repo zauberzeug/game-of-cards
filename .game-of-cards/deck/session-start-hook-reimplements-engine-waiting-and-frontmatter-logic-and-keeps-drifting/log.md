@@ -35,3 +35,21 @@ compares which cards each side lists, not only the parsed fields. Known
 residue: the engine reads cards in the host's default encoding and the hook
 in UTF-8, so on a non-UTF-8 host they can disagree about which cards decode
 at all (`goc-crashes-on-hosts-whose-default-encoding-is-not-utf-8`).
+
+## 2026-10-16T04:44:34Z — A shared defect in the `_find_project_dir` cell (not drift)
+
+`shared-deck-mode-treats-primary-checkout-subdirectories-as-linked-worktrees`
+(a8eaff59) fixed `_detect_worktree_common_root`, the worktree probe inside the
+`_find_project_dir` ⟷ `_resolve_deck_root` cell. The engine and both Python
+hooks compared the raw text of `git rev-parse --git-dir` and
+`--git-common-dir`. That misread every subdirectory of the primary checkout
+as a linked worktree. The copies never drifted: all three agreed and were
+wrong together, so the existing agreement test
+(`tests/test_project_root_from_subdirectory.py`, hooks against the engine)
+passed throughout. The fix had to land in lockstep in three files.
+
+This bears on the decision. Option 1 (an engine-derived parity test) treats
+the engine as ground truth, so it cannot see a defect the engine shares with
+its mirrors. Only the new test against real git caught this one. Options 2 and
+3 would have made the fix a single edit. Not wired as `advances`: this is not
+a drift instance.
