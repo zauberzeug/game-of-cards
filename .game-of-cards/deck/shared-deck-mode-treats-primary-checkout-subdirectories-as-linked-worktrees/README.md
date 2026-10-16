@@ -1,7 +1,7 @@
 ---
 title: shared-deck-mode-treats-primary-checkout-subdirectories-as-linked-worktrees
 summary: "From any subdirectory of the primary checkout, git prints --git-dir as an absolute path and --git-common-dir as a relative one, and _detect_worktree_common_root compares the raw strings, so it reads the primary checkout as a linked worktree. With the shared-deck opt-in on (workflow.worktree_deck or GOC_WORKTREE_DECK), deck resolution then jumps to the git top level: goc new from a nested deck silently files into the top-level deck, goc install in a sub-project scaffolds the top level, and a workspace deck above the repo vanishes from subdirectories while the top level still sees it. The engine and both Python hook mirrors share the comparison; comparing the resolved paths is the fix."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-16T04:33:56Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: a regression test pins the user-visible symptom with the shared-deck opt-in on: `goc new` run beside a nested deck in the primary checkout files into that nested deck, and `goc install` run in a deck-less subdirectory of the primary checkout scaffolds that directory
   - [ ] MECHANICAL: the engine and both hook copies carry the same resolved-path comparison, and the plugin mirrors are regenerated (`python scripts/sync_plugin_assets.py --check` green)
   - [ ] EMPIRICAL: full regression suite passes (`uv run python -m unittest discover -s tests`)
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Shared-deck mode treats primary-checkout subdirectories as linked worktrees
