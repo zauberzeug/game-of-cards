@@ -340,5 +340,51 @@ class HookProjectDirWalkTest(_Fixture):
         self.assertEqual(2, r.returncode, msg=r.stderr)
 
 
+class PrimaryCheckoutIsNotALinkedWorktreeTest(_Fixture):
+    """From a subdirectory of the primary checkout git prints `--git-dir`
+    absolute and `--git-common-dir` relative. Compared as printed, the two
+    differed, so every such subdirectory read as a linked worktree and the
+    shared-deck opt-in sent it to the git top level
+    (shared-deck-mode-treats-primary-checkout-subdirectories-as-linked-worktrees)."""
+
+    def test_only_a_linked_worktree_reports_a_primary_root(self) -> None:
+        self.init_repo(self.repo)
+        self.git(self.repo, "commit", "-q", "--allow-empty", "-m", "init")
+        linked = self.tmp / "linked"
+        self.git(self.repo, "worktree", "add", "-q", "--detach", str(linked))
+        (linked / "src" / "pkg").mkdir(parents=True)
+        readers = {"engine": engine}
+        readers.update((name, _load_hook(name)) for name in HookProjectDirWalkTest.HOOK_NAMES)
+        cases = {
+            self.repo: None,
+            self.sub: None,
+            linked: self.repo,
+            linked / "src" / "pkg": self.repo,
+        }
+        for start, expected in cases.items():
+            for name, module in readers.items():
+                with self.subTest(reader=name, start=str(start.relative_to(self.tmp))):
+                    self.assertEqual(expected, module._detect_worktree_common_root(start))
+
+    def test_new_beside_a_nested_deck_files_into_it_under_the_config_opt_in(self) -> None:
+        self.init_repo(self.repo)
+        service = self.repo / "service"
+        for root in (self.repo, service):
+            (root / ".game-of-cards" / "deck").mkdir(parents=True)
+        (self.repo / ".game-of-cards" / "config.yaml").write_text(
+            "workflow:\n  auto_commit: false\n  worktree_deck: shared\n"
+        )
+        self.assert_ok(self.goc(service, "new", CARD, "--summary", "Fixture card.", "--no-commit"))
+        self.assertTrue((service / ".game-of-cards" / "deck" / CARD).is_dir())
+        self.assertFalse((self.repo / ".game-of-cards" / "deck" / CARD).exists())
+
+    def test_install_in_a_subdirectory_scaffolds_it_under_the_env_opt_in(self) -> None:
+        self.init_repo(self.repo)
+        env = _env(self.home, GOC_WORKTREE_DECK="shared")
+        self.assert_ok(self.goc(self.sub, "install", "--agents", "codex", env=env))
+        self.assertTrue((self.sub / ".game-of-cards" / "deck").is_dir())
+        self.assertFalse((self.repo / ".game-of-cards").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

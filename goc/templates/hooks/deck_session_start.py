@@ -285,7 +285,9 @@ _SHARED_DECK_LINE_RE = re.compile(
 def _detect_worktree_common_root(cwd: Path) -> Path | None:
     """Return the primary working tree root if `cwd` is inside a linked git
     worktree, else None. Mirror of `goc.engine._detect_worktree_common_root`:
-    there `git rev-parse --git-common-dir` differs from `--git-dir`.
+    there `git rev-parse --git-common-dir` differs from `--git-dir`, compared
+    as resolved paths because git prints one absolute and the other relative
+    from a subdirectory of the primary working tree.
     """
     try:
         r_git = subprocess.run(
@@ -301,13 +303,11 @@ def _detect_worktree_common_root(cwd: Path) -> Path | None:
         return None
     if r_git.returncode != 0 or r_common.returncode != 0:
         return None
-    git_dir = r_git.stdout.strip()
-    common_dir = r_common.stdout.strip()
-    if git_dir == common_dir:
+    # `cwd / p` is `p` itself when git printed an absolute path.
+    git_dir = (cwd / r_git.stdout.strip()).resolve()
+    common_path = (cwd / r_common.stdout.strip()).resolve()
+    if git_dir == common_path:
         return None  # primary working tree, not a worktree
-    common_path = Path(common_dir)
-    if not common_path.is_absolute():
-        common_path = (cwd / common_path).resolve()
     return common_path.parent
 
 

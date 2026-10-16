@@ -30,3 +30,12 @@ cannot import it, with an engine-derived agreement test over a linked worktree
 and 19 config shapes. Behavior 1 above is now an OpenClaw-only gap; the README
 names the Python block as the reference for Option A. The decision itself is
 untouched.
+
+## 2026-10-16 — Reference block corrected
+
+`shared-deck-mode-treats-primary-checkout-subdirectories-as-linked-worktrees` fixed
+`_detect_worktree_common_root` in the engine and in the Python hook block that Option A
+names as the code to port. git prints `--git-dir` absolute and `--git-common-dir`
+relative from a subdirectory of the primary checkout, and the old raw-string
+comparison read that as a linked worktree. A TypeScript port must compare the two as
+resolved paths, the way the Python block now does. The decision itself is untouched.
