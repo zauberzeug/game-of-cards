@@ -1,7 +1,7 @@
 ---
 title: reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml
 summary: "The reproduce.py repo-root recipe that Skill(create-card) ships to every consuming repo walks up to the nearest pyproject.toml, while the engine finds the project root by the nearest .game-of-cards/ directory. In a repo without a pyproject.toml (JS/TS, Go, Rust, the Node-based OpenClaw ecosystem) the recipe raises RuntimeError; in a repo nested inside a workspace whose parent has one, it silently returns the workspace instead of the project, so the evidence script imports or inspects the wrong tree."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-16T04:52:10Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: a regression test runs the recipe extracted from `goc/templates/skills/create-card/SKILL.md` in fixture repos and asserts it prints the same root as `goc.engine._walk_to_deck_root`; fed the pre-fix `pyproject.toml` recipe verbatim, the same check fails, so the guard is proven able to fire.
   - [ ] MECHANICAL: Step 6 of `goc/templates/skills/create-card/SKILL.md` keys the walk on `.game-of-cards/` — the marker the engine walks to — in the code, the error message, and the prose around it; the generated mirrors are regenerated (`python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` green).
   - [ ] PROCESS: the meta card's instance list gains this card's row (guard class, close date) and its `log.md` an entry; `uv run goc validate` clean; full `unittest` suite green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The shipped reproduce.py recipe crashes in repos without a pyproject.toml
