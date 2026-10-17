@@ -1,6 +1,6 @@
 ---
 title: session-start-hook-says-resume-active-cards-that-pull-card-says-to-leave-alone
-summary: "The SessionStart reminder tells every new session to resume or close any active card with no gate and no wait, while pull-card and next-card tell the same session to treat every active card as a soft lock unless the user asks to continue it. Nothing tells an agent when a claim is orphaned rather than held by a live session, and a claim records no time, so the two instructions cannot be reconciled from the card. Autonomous runs have resolved orphaned claims by hand three times, each a day late, and in a multi-session repo the reminder points one session at another's live claim."
+summary: "The SessionStart reminder tells every new session to resume or close any active card with no gate and no wait, while pull-card and next-card tell the same session to treat every active card as a soft lock unless the user asks to continue it. Nothing tells an agent when a claim is orphaned rather than held by a live session, and a claim records no time, so the two instructions cannot be reconciled from the card. Autonomous runs have resolved orphaned claims by hand four times, each a day late, and in a multi-session repo the reminder points one session at another's live claim."
 status: open
 stage: null
 contribution: medium
@@ -117,7 +117,7 @@ card itself can.
 
 ### The orphaned case in this repo
 
-This repo's daily Pull Card workflow has orphaned a claim three times.
+This repo's daily Pull Card workflow has orphaned a claim four times.
 Each time its last iteration claimed a card and then died, and each time
 the next day's first run resumed the claim. That run reasoned past the
 skills' rule using facts only the CI setup supplies, and wrote its
@@ -128,13 +128,15 @@ justification into the card's `log.md`:
 | [citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits](../citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits/) | 2026-09-24T04:29Z | 2026-09-25T04:47Z |
 | [kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe](../kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe/) | 2026-10-07T05:07Z, turn cap | 2026-10-08 |
 | [engine-comments-claim-unflagged-placeholder-cards-count-as-drafts](../engine-comments-claim-unflagged-placeholder-cards-count-as-drafts/) | 2026-10-08T05:41Z, agent step failed | 2026-10-09T04:37Z |
+| [reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/) | 2026-10-16T04:56Z, 30-minute job timeout | 2026-10-17T04:27Z |
 
 The facts used were: the same `who`, local `main` equal to `origin/main`
 with a clean tree, no commit since the claim, and Pull Card's single
 concurrency group. None of them is on the card, and none is available
-to a consuming repo that runs sessions differently. In the third case
-the soft-lock table in `pull-card` did not even list the orphan. It was
-the seventh active card, and the block's `head -20` cut it (tracked by
+to a consuming repo that runs sessions differently. In the third and
+fourth cases the soft-lock table in `pull-card` did not even list the
+orphan. Each time it was the seventh active card, and the block's
+`head -20` cut it (tracked by
 [skill-context-blocks-truncate-deck-output-hiding-active-cards-and-breaking-json](../skill-context-blocks-truncate-deck-output-hiding-active-cards-and-breaking-json/)).
 The hook was the only surface that named it.
 
