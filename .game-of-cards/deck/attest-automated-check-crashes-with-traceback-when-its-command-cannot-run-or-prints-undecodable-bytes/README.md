@@ -1,7 +1,7 @@
 ---
 title: attest-automated-check-crashes-with-traceback-when-its-command-cannot-run-or-prints-undecodable-bytes
 summary: "goc attest runs each kind: automated check through _run_automated_check, which turns only subprocess.TimeoutExpired and FileNotFoundError into a FAIL row. A check script missing its executable bit (PermissionError), one missing its shebang line (OSError Exec format error), or a check whose output holds bytes that do not decode (UnicodeDecodeError from text=True) instead kills the verb with a raw traceback and exit 1. No closure-verification block is written and the remaining checks never run, where the contract is a FAIL row in log.md and exit 2."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-17T05:00:26Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: undecodable output no longer decides the verdict — a check exiting 0 while printing undecodable bytes passes and one exiting non-zero fails, with the offending bytes rendered as visible ASCII escapes in the summary.
   - [ ] MECHANICAL: the `FileNotFoundError` branch and its `command not found: {cmd[0]}` message are unchanged — the `cmd` shape contract they sit on belongs to attest-cmd-as-string-fails-with-misleading-single-character-not-found-error.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` is green, `uv run goc validate` is clean, and `python scripts/sync_plugin_assets.py --check` passes after the mirrors regenerate.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc attest` crashes with a traceback when an automated check cannot run or prints undecodable bytes
