@@ -61,3 +61,26 @@ is 129 days (`support-custom-frontmatter-fields-with-enum-and-required-when-rule
 This is the footprint the card predicts — parks accumulate because no pass can
 retire them and no human re-reads them — and it is why the hygiene pass files
 its own findings at `human_gate: none` where the evidence supports it.
+
+## 2026-10-17T05:00:00Z — Instance connected: a decision option resting on a premise false at filing
+
+[pattern-generalization-opt-out-regex-misses-quoted-yaml-values](../pattern-generalization-opt-out-regex-misses-quoted-yaml-values/)
+(open, `decision`, filed 2026-05-29). Its Option 3 weighs replacing the
+hook's regex with `yaml.safe_load` on the premise that "the engine already
+requires PyYAML". The engine dropped PyYAML in `d490d6d1` on 2026-05-09,
+twenty days before the card was filed. That understates the option's cost:
+it would add goc's only third-party import. The card now carries a
+`## Staleness re-check` entry (`d821a2f1`); its gate and options are
+untouched.
+
+Two datums for the decision. First, Option C's closer sweep is what found
+it. The closure of
+`plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped`
+grepped open cards for the package names its fix touched. That fix did not
+fix this card's defect, but the shared symbol surfaced a stale premise
+anyway, so the sweep reaches further than "cards your fix also fixed".
+Second, neither Option A nor B's as-filed anchor scan would fire here. The
+claim was false when written, not made false by later work, and it is prose
+("requires PyYAML"), not a cited anchor that stopped resolving. Option D's
+framing, that a parked card's claims hold as of its filing date, needs the
+same caveat: a claim can already be stale at filing.
