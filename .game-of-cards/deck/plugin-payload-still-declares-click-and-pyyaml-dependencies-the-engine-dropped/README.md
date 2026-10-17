@@ -1,7 +1,7 @@
 ---
 title: plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped
 summary: "claude-plugin/ still ships the pyproject.toml and uv.lock that existed only so the old bin/goc wrapper could run uv run --project against them; they declare click and pyyaml (and lock colorama) as the plugin engine's dependencies. The wrapper stopped using uv in May, the engine imports neither package, and the root package declares no dependencies, so every marketplace install carries a manifest and lockfile that contradict the pure-stdlib contract the plugin README states."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-10-16T04:54:13Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `claude-plugin/pyproject.toml` and `claude-plugin/uv.lock` are removed (nothing in the payload or the release flow reads them), and the `scripts/sync_plugin_assets.py` docstring stops listing `claude-plugin/pyproject.toml` as a hand-maintained plugin file.
   - [ ] TDD: a regression test fails if any plugin payload (`claude-plugin/`, `codex-plugin/`, `openclaw-plugin/`) tracks a Python dependency manifest or lockfile that declares a package the bundled `goc/` does not import. Fed the pre-fix `pyproject.toml` verbatim, the test fails, so it is proven able to fire.
   - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` green, `uv run goc validate` clean, full `unittest` suite green; the meta card's instance list gains this card's row.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The plugin payload still declares click and pyyaml dependencies the engine dropped
