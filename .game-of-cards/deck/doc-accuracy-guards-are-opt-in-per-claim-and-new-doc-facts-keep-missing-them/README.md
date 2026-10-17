@@ -89,6 +89,7 @@ the *unguarded* claims.
 | `retired_files` sweep + `DeckLayoutBlockTest` (widened `tests/test_skill_template_deck_links.py`) | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | 2026-10-14 |
 | `DeliveryChannelSurfacesTest` + `PreFixTextFiresTest` (own file, `tests/test_delivery_channel_surfaces.py`) | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | 2026-10-07 |
 | `ClaudeSettingsHookEditClaimsTest` (own file, `tests/test_claude_settings_hook_edit_claims.py`) | [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/) | 2026-10-07 |
+| `ShippedRecipeTest` + `PreFixRecipeFiresTest` (own file, `tests/test_reproduce_recipe_root.py`) | [reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/) | 2026-10-17 |
 
 Thirty-one instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows

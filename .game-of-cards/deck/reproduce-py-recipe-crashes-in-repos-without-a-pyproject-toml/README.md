@@ -1,21 +1,21 @@
 ---
 title: reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml
-summary: "The reproduce.py repo-root recipe that Skill(create-card) ships to every consuming repo walks up to the nearest pyproject.toml, while the engine finds the project root by the nearest .game-of-cards/ directory. In a repo without a pyproject.toml (JS/TS, Go, Rust, the Node-based OpenClaw ecosystem) the recipe raises RuntimeError; in a repo nested inside a workspace whose parent has one, it silently returns the workspace instead of the project, so the evidence script imports or inspects the wrong tree."
-status: active
+summary: "FIXED: the reproduce.py repo-root recipe that Skill(create-card) ships to every consuming repo walked up to the nearest pyproject.toml, while the engine finds the project root by the nearest .game-of-cards/ directory. In a repo without a pyproject.toml (JS/TS, Go, Rust, the Node-based OpenClaw ecosystem) the recipe raised RuntimeError; in a repo nested inside a workspace whose parent has one, it silently returned the workspace. Step 6 now walks to .game-of-cards/ in code, error message and prose, and tests/test_reproduce_recipe_root.py runs the shipped recipe in fixture repos against _walk_to_deck_root."
+status: done
 stage: null
 contribution: medium
 created: "2026-10-16T04:52:10Z"
-closed_at: null
+closed_at: "2026-10-17T04:31:32Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the recipe extracted from the shipped template resolves the engine's project root in all four fixtures (JS repo, Go repo, repo nested in a pyproject workspace, Python repo).
-  - [ ] TDD: a regression test runs the recipe extracted from `goc/templates/skills/create-card/SKILL.md` in fixture repos and asserts it prints the same root as `goc.engine._walk_to_deck_root`; fed the pre-fix `pyproject.toml` recipe verbatim, the same check fails, so the guard is proven able to fire.
-  - [ ] MECHANICAL: Step 6 of `goc/templates/skills/create-card/SKILL.md` keys the walk on `.game-of-cards/` — the marker the engine walks to — in the code, the error message, and the prose around it; the generated mirrors are regenerated (`python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` green).
-  - [ ] PROCESS: the meta card's instance list gains this card's row (guard class, close date) and its `log.md` an entry; `uv run goc validate` clean; full `unittest` suite green.
+  - [x] TDD: `reproduce.py` exits zero — the recipe extracted from the shipped template resolves the engine's project root in all four fixtures (JS repo, Go repo, repo nested in a pyproject workspace, Python repo).
+  - [x] TDD: a regression test runs the recipe extracted from `goc/templates/skills/create-card/SKILL.md` in fixture repos and asserts it prints the same root as `goc.engine._walk_to_deck_root`; fed the pre-fix `pyproject.toml` recipe verbatim, the same check fails, so the guard is proven able to fire.
+  - [x] MECHANICAL: Step 6 of `goc/templates/skills/create-card/SKILL.md` keys the walk on `.game-of-cards/` — the marker the engine walks to — in the code, the error message, and the prose around it; the generated mirrors are regenerated (`python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` green).
+  - [x] PROCESS: the meta card's instance list gains this card's row (guard class, close date) and its `log.md` an entry; `uv run goc validate` clean; full `unittest` suite green.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -23,17 +23,17 @@ worker: {who: "claude[bot]", where: main}
 
 ## Location
 
-- `goc/templates/skills/create-card/SKILL.md:183-204` — Step 6, the
+- `goc/templates/skills/create-card/SKILL.md:183-205` — Step 6, the
   repo-root recipe every bug-class `reproduce.py` is told to start with.
   Generated copies ship in `claude-plugin/skills/`, `codex-plugin/skills/`,
   `openclaw-plugin/skills/` and every vendored `.claude/skills/`.
 - `goc/engine.py:150-166` — `_walk_to_deck_root`, the walk every goc verb
   uses to find the same project.
 
-## What's broken
+## What was broken
 
-Step 6 tells the author to find the repo root with the "parent-walk
-pattern" and ships this block for agents to copy:
+Step 6 told the author to find the repo root with the "parent-walk
+pattern" and shipped this block for agents to copy:
 
 ```python
 def _repo_root() -> Path:
@@ -55,7 +55,7 @@ the directory goc itself installs:
             return candidate
 ```
 
-So the recipe and the engine disagree whenever the nearest
+So the recipe and the engine disagreed whenever the nearest
 `pyproject.toml` is not the directory holding `.game-of-cards/`:
 
 1. **No `pyproject.toml` at all** — a JS/TS, Go or Rust repo, or any repo
@@ -80,7 +80,9 @@ source repo itself.
 `uv run python .game-of-cards/deck/reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/reproduce.py`
 extracts the recipe from the template verbatim, writes it into fixture
 repos as `.game-of-cards/deck/some-bug/reproduce.py`, runs it, and
-compares its answer with `_walk_to_deck_root` on the same directory:
+compares its answer with `_walk_to_deck_root` on the same directory.
+
+Before the fix (exit 1):
 
 ```text
 [FAIL] JS repo (package.json, no pyproject.toml)
@@ -99,8 +101,24 @@ compares its answer with `_walk_to_deck_root` on the same directory:
 3 of 4 fixtures: the shipped recipe disagrees with the engine's root
 ```
 
-Exit status 1. The recipe only works where the repo happens to look like
-this one.
+After the fix (exit 0):
+
+```text
+[OK] JS repo (package.json, no pyproject.toml)
+       engine root : <tmp>/app
+       recipe says : <tmp>/app
+[OK] Go repo (go.mod, no pyproject.toml)
+       engine root : <tmp>/app
+       recipe says : <tmp>/app
+[OK] repo nested in a workspace whose root has pyproject.toml
+       engine root : <tmp>/app
+       recipe says : <tmp>/app
+[OK] Python repo (pyproject.toml at the repo root)
+       engine root : <tmp>/app
+       recipe says : <tmp>/app
+
+0 of 4 fixtures: the shipped recipe disagrees with the engine's root
+```
 
 ## Why it matters
 
@@ -124,27 +142,25 @@ The closest sibling is
 [card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/):
 a shipped surface that assumes the consuming repo is this one.
 
-## Fix
+## What changed
 
-Key the walk on `.game-of-cards/`, the directory the engine walks to and
-`goc install` creates in every consuming repo:
-
-```python
-def _repo_root() -> Path:
-    p = Path(__file__).resolve().parent
-    while p != p.parent:
-        if (p / ".game-of-cards").is_dir():
-            return p
-        p = p.parent
-    raise RuntimeError("repo root (.game-of-cards/) not found")
-```
-
-Say so in the prose too: the root is the directory holding
-`.game-of-cards/`, the same one goc resolves. The marker is set by the
-engine's own definition, not chosen by taste, which is why this card is
-gate-free. Then regenerate the mirrors and add a regression test that
-runs the template's recipe against fixtures and compares it with
-`_walk_to_deck_root`.
+- `goc/templates/skills/create-card/SKILL.md` Step 6: the walk keys on
+  `.game-of-cards/` (`is_dir()`), the error message names that marker, and
+  the prose asks for "the repo root holding `.game-of-cards/`". The marker
+  is the engine's own definition, not a taste call. The prose stays one
+  clause because the skill sat 16 bytes under its hot-path cap in
+  `tests/test_skill_body_size.py`; the why lives on this card. The four
+  generated copies
+  (`.claude/`, `.codex/`, `claude-plugin/`, `codex-plugin/`) are re-synced
+  and `openclaw-plugin/skills/` is re-ported.
+- `tests/test_reproduce_recipe_root.py`: `ShippedRecipeTest` extracts the
+  python block after "parent-walk pattern" from the template and runs it in
+  four fixture repos (JS, Go, a repo nested in a pyproject workspace,
+  Python). It compares each answer with `_walk_to_deck_root` and checks that
+  every shipped copy carries the template's recipe. `PreFixRecipeFiresTest`
+  feeds the old `pyproject.toml` walk verbatim through the same check, which
+  reports the JS, Go and workspace fixtures. So the guard is proven able to
+  fire.
 
 **Out of scope:** the `uv run python deck/<title>/reproduce.py` line under
 the recipe. Its bare `deck/` path is tracked by the decision-gated

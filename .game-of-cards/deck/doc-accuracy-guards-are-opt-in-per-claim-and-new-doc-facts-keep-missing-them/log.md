@@ -413,3 +413,26 @@ paragraph.
 The README's running count and guard table are not reconciled here. Both
 new cards name their row as a closure item, as the twenty-third through
 thirtieth did.
+
+## 2026-10-17T04:32:00Z — Instance closed: reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml
+
+[reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/)
+(done). `Skill(create-card)` Step 6 now walks to `.game-of-cards/`, the marker
+`_walk_to_deck_root` resolves, in the code, the error message and the prose.
+The guard is `tests/test_reproduce_recipe_root.py`. It runs the template's
+recipe in four fixture repos (JS, Go, a repo nested in a pyproject workspace,
+Python) and compares the answer with `_walk_to_deck_root` on the same
+directory. It also checks that every shipped copy carries the template's
+recipe. `PreFixRecipeFiresTest` feeds the old `pyproject.toml` walk through
+the same check, and it misses the root in three of the four fixtures.
+
+The datum for the scope question: this belongs to the executed class
+the README records for the fourteenth, twenty-third and twenty-fourth
+instances. Like them, it needed a fixture run rather than a text match.
+Here the ground truth was an engine function, so the guard derives the
+expected answer from the engine instead of restating it.
+A procedure that restates an engine definition can be guarded at the cost of
+one fixture harness. Prose that restates prose cannot.
+
+The row is added to the guard table. The running count is still not
+reconciled with `advanced_by`.
