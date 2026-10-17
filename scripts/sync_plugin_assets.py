@@ -58,7 +58,7 @@ def _build_sync_pairs() -> list[SyncPair]:
     """Compute (src, dst, excludes, preserve_files) pairs by deriving the hook list from templates/hooks/.
 
     Plugin-specific files NOT touched by this sync (`claude-plugin/bin/`,
-    `claude-plugin/pyproject.toml`, `codex-plugin/.codex-plugin/plugin.json`,
+    `claude-plugin/.claude-plugin/plugin.json`, `codex-plugin/.codex-plugin/plugin.json`,
     `codex-plugin/bin/`, `openclaw-plugin/index.ts`, `openclaw-plugin/package.json`,
     `openclaw-plugin/skills/`, etc.) are not in the pair list and stay untouched.
     The hand-maintained `hooks.json` inside `claude-plugin/hooks/` and

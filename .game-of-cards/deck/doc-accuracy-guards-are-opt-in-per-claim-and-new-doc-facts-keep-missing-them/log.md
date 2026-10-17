@@ -436,3 +436,36 @@ one fixture harness. Prose that restates prose cannot.
 
 The row is added to the guard table. The running count is still not
 reconciled with `advanced_by`.
+
+## 2026-10-17T04:50:00Z — Instance closed: plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped
+
+[plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped](../plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped/)
+(done). `claude-plugin/pyproject.toml` and `claude-plugin/uv.lock` are
+deleted. Nothing read them after the wrapper dropped uv on 2026-05-09. The
+guard is `tests/test_plugin_payload_dependency_manifests.py`. It derives
+both sides of the claim: a payload is any tracked directory bundling
+`<dir>/goc/`, the import set comes from an `ast` walk of that copy, and the
+declared set from each Python manifest or lockfile the payload tracks.
+`PreFixManifestFiresTest` feeds the pre-fix `pyproject.toml` (verbatim) and
+`uv.lock` through the same check against the real bundled engine, and both
+are flagged for click and pyyaml.
+
+The datum for the scope question: this is the eleventh instance's
+machine-readable-manifest class, carrying the eighth's claim ("goc needs
+click") on a third surface. As the eleventh found, a manifest is the cheap
+case for Option A, because both sides of the claim are data: the
+declarations parse and so do the imports. The guard keys on the claim
+(declared against imported), not on the file, so it covers every payload,
+including one added later. Its one judgment call is about scope, not
+technique. A lockfile's transitive pins and a build backend are
+declarations too, but not claims about what the engine imports, and
+counting them would turn a legitimate future manifest red. That is the
+twenty-fifth instance's lesson applied in advance: the guard should check
+only the claim it derives.
+
+The row is added to the guard table, and the running count is reconciled
+in place with `advanced_by`: 37 edges, 27 rows, a gap of ten. The six
+rowless instances the paragraph already named are joined by four linked
+between 2026-10-08 and 2026-10-14, none of whose DoDs named a row. The
+frontmatter summary still narrates the instances only up to the fourteenth
+and is not touched here.

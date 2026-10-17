@@ -90,25 +90,32 @@ the *unguarded* claims.
 | `DeliveryChannelSurfacesTest` + `PreFixTextFiresTest` (own file, `tests/test_delivery_channel_surfaces.py`) | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | 2026-10-07 |
 | `ClaudeSettingsHookEditClaimsTest` (own file, `tests/test_claude_settings_hook_edit_claims.py`) | [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/) | 2026-10-07 |
 | `ShippedRecipeTest` + `PreFixRecipeFiresTest` (own file, `tests/test_reproduce_recipe_root.py`) | [reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/) | 2026-10-17 |
+| `PayloadManifestTest` + `PreFixManifestFiresTest` + `ManifestFormatTest` (own file, `tests/test_plugin_payload_dependency_manifests.py`) | [plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped](../plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped/) | 2026-10-17 |
 
-Thirty-one instances across five months, each its own file → claim → fix →
+Thirty-seven instances across five months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-twenty-five of them, because five closed instances and one still-open one carry
+twenty-seven of them, because nine closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
 [cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay](../cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay/),
 [hook-catalogue-cites-an-audit-skill-section-that-never-existed](../hook-catalogue-cites-an-audit-skill-section-that-never-existed/),
 [installed-files-point-readers-at-a-deck-folder-install-never-creates](../installed-files-point-readers-at-a-deck-folder-install-never-creates/),
-[shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/)).
+[shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/),
+[kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe](../kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe/),
+[loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse](../loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse/),
+[engine-comments-claim-unflagged-placeholder-cards-count-as-drafts](../engine-comments-claim-unflagged-placeholder-cards-count-as-drafts/),
+[engine-still-names-the-deck-script-and-schema-file-goc-replaced](../engine-still-names-the-deck-script-and-schema-file-goc-replaced/)).
 The gap ran three rows, then seven; the twenty-third instance is the first to
 arrive with its row already written, and the twenty-fourth through
-thirtieth did the same, so it stands at six. The thirty-first closed in
-July and was linked late, with its row (see the thirtieth below). That narrowing is not
-the process self-correcting — the row exists because that card's DoD named it as
-a closure item, one card at a time. Absent such an item the table is still a
-hand-maintained restatement of `advanced_by`, and it rots exactly the way every
-claim catalogued in it did.
+thirtieth did the same, so it held at six. The thirty-first closed in
+July and was linked late, with its row (see the thirtieth below). Between
+2026-10-08 and 2026-10-14 four more were linked, none of them with a DoD
+naming a row, and none got one, so the gap stands at ten. The narrowing was
+never the process self-correcting — a row exists only where that card's DoD
+named it as a closure item, one card at a time. Absent such an item the table
+is still a hand-maintained restatement of `advanced_by`, and it rots exactly
+the way every claim catalogued in it did.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
