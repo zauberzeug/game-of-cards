@@ -95,6 +95,18 @@ picked below, the load-time validation it implies should require
 `name` + `kind` on every entry (and `cmd` for `kind: automated`), not
 only normalize `cmd`'s type.
 
+A list-shaped `cmd` can be malformed too (2026-10-17). A non-string
+element (`cmd: ["sleep", 5]`, which yaml-lite parses as an int) raises
+`TypeError: expected str, bytes or os.PathLike object, not int`, and an
+empty `cmd: []` raises `IndexError` — both from the `subprocess.run`
+call, both as raw tracebacks. Option A's "non-empty list of strings"
+check covers both. Option B's `shlex.split` handles only the scalar
+string, so B still needs a separate element check. A well-shaped
+`cmd` that cannot be *executed* (no executable bit, no shebang) or
+that prints undecodable bytes is a different defect and is already
+fixed:
+[attest-automated-check-crashes-with-traceback-when-its-command-cannot-run-or-prints-undecodable-bytes](../attest-automated-check-crashes-with-traceback-when-its-command-cannot-run-or-prints-undecodable-bytes/).
+
 ## Empirical evidence
 
 `reproduce.py` (verbatim output today):
