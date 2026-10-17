@@ -5934,6 +5934,12 @@ def _run_automated_check(check: dict) -> tuple[bool, str]:
             cmd,
             capture_output=True,
             text=True,
+            # A check prints arbitrary tool output; a strict decode raised
+            # UnicodeDecodeError after the check had already finished, so the
+            # exit code never got to decide the verdict. The escapes are ASCII:
+            # the summary stays printable and writable to log.md under any host
+            # codec, which "replace" (U+FFFD) would not guarantee.
+            errors="backslashreplace",
             timeout=timeout_seconds,
             cwd=str(REPO_ROOT),
             check=False,
@@ -5942,6 +5948,14 @@ def _run_automated_check(check: dict) -> tuple[bool, str]:
         return False, f"TIMEOUT (>{timeout_seconds}s)"
     except FileNotFoundError:
         return False, f"command not found: {cmd[0]}"
+    except OSError as exc:
+        # The command exists but could not be started: EACCES for a script
+        # without the executable bit, ENOEXEC for one without a shebang line
+        # (subprocess calls execve directly, with no /bin/sh fallback). Like a
+        # missing command, that is a failed check, not a crash. `Popen` sets
+        # `filename` to the executable it tried, so `cmd` is never indexed.
+        program = exc.filename if exc.filename is not None else cmd
+        return False, f"cannot run {program}: {exc.strerror or exc}"
     if result.returncode == 0:
         stdout_tail = (result.stdout or "").strip().split("\n")[-1]
         return True, (stdout_tail[:120] if stdout_tail else "OK")
