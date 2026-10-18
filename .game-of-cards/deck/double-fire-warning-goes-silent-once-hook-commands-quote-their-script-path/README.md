@@ -1,7 +1,7 @@
 ---
 title: double-fire-warning-goes-silent-once-hook-commands-quote-their-script-path
 summary: "The plugin-plus-vendored hook double-fire warning learns GoC's hook script names from _goc_hook_basenames, which splits each GOC_CLAUDE_HOOKS command on '/' instead of reading it through claude_hook_bindings, the single walk that registry's own docstring mandates. Quoting the registry path — the fix the open spaces-in-path card prescribes — leaves a trailing quote on every name, so the warning never fires again while its regression test, built on a hardcoded unquoted fixture, stays green."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-18T04:32:56Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: `tests/test_validate_plugin_hook_double_fire.py` gains a case that writes the vendored registrations through `_merge_claude_settings` under a quoted `GOC_CLAUDE_HOOKS` and asserts the warning fires — red on the current parse, green after the fix
   - [ ] TDD: a test pins `engine._goc_hook_basenames()` to the script names `install.claude_hook_bindings()` yields, so a second command parse cannot return
   - [ ] MECHANICAL: `_goc_hook_basenames` reads the registry through `claude_hook_bindings` (no command parse of its own left in `goc/engine.py`); plugin mirrors synced; full regression suite and `goc validate` green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The hook double-fire warning goes silent once hook commands quote their script path
