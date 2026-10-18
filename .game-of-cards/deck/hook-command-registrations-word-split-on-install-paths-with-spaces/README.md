@@ -8,7 +8,8 @@ created: "2026-07-09T01:13:57Z"
 closed_at: null
 human_gate: decision
 advances: []
-advanced_by: []
+advanced_by:
+  - double-fire-warning-goes-silent-once-hook-commands-quote-their-script-path
 tags: [bug, infra]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero — every GOC_CLAUDE_HOOKS command succeeds under a project path containing a space
