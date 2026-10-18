@@ -618,13 +618,16 @@ _HOOK_FILE_RE = re.compile(r"\$\{CLAUDE_PROJECT_DIR\}/(.+?\.py)")
 def claude_hook_bindings() -> tuple[dict[str, set[str]], list[str]]:
     """`GOC_CLAUDE_HOOKS` inverted to script basename → the events it is bound to.
 
-    Both hook validators read the registry through this one walk:
+    Every hook validator reads the registry through this one walk:
     `validate_hook_registration` compares the scripts against
     `templates/hooks/`, `validate_plugin_hook_registration` compares the
-    *events* against each payload's `hooks.json`. Keeping the command-to-script
-    parse in one place is deliberate — the second reader of a hand-maintained
-    registry is exactly where a divergent copy of the transform would otherwise
-    start.
+    *events* against each payload's `hooks.json`, and
+    `validate_plugin_hook_double_fire` (via `engine._goc_hook_basenames`)
+    looks the script names up in the repo's vendored settings. Keeping the
+    command-to-script parse in one place is deliberate — the second reader of
+    a hand-maintained registry is exactly where a divergent copy of the
+    transform would otherwise start, and the double-fire check's own
+    split-on-"/" copy did diverge: it kept the closing quote of a quoted path.
 
     A command with no recognizable script path is reported rather than dropped,
     so the shared walk owes its callers the same diagnostics the single-caller

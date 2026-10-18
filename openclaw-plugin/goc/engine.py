@@ -5849,10 +5849,19 @@ def _enabled_goc_plugin_key(repo_root: Path, home: Path) -> str | None:
 
 
 def _goc_hook_basenames() -> set[str]:
-    """The GoC lifecycle-hook script basenames, derived from the registry."""
-    from goc.install import GOC_CLAUDE_HOOKS
+    """The GoC lifecycle-hook script basenames, derived from the registry.
 
-    return {command.split("/")[-1].strip() for command in GOC_CLAUDE_HOOKS.values()}
+    Read through `claude_hook_bindings`, the registry's one command-to-script
+    walk, rather than a parse of its own. The split-on-"/" this replaced kept
+    whatever followed the script name, so the shell-safe quoted command form
+    (`python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/x.py"`) left a `"` on every
+    name and the double-fire check matched nothing. A command with no
+    recognizable script path is `validate_hook_registration`'s finding.
+    """
+    from goc.install import claude_hook_bindings
+
+    bindings, _ = claude_hook_bindings()
+    return set(bindings)
 
 
 def _vendored_goc_hooks_registered(repo_root: Path) -> list[str]:
