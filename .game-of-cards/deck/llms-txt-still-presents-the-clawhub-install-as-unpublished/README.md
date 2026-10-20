@@ -22,6 +22,8 @@ worker: {who: "claude[bot]", where: main}
 
 # llms.txt still presents the live ClawHub install as unpublished
 
+> Later evidence: see [website-never-redeploys-after-bot-pushes-so-doc-fixes-stay-unpublished](../website-never-redeploys-after-bot-pushes-so-doc-fixes-stay-unpublished/). The fix below landed in `site/llms.txt` on `main` but never reached game-of-cards.com, because the Pages workflow has not run since 2026-07-15. The live `/llms.txt` still carries both pending-publish lines this card removed.
+
 ## Location
 
 `site/llms.txt:78` and `site/llms.txt:86` — the `## Install (OpenClaw)`

@@ -46,3 +46,7 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-08-01 — Closure' present
+
+## 2026-10-20T04:40:13Z — Post-close amendment
+
+Extended by [`website-never-redeploys-after-bot-pushes-so-doc-fixes-stay-unpublished`](../website-never-redeploys-after-bot-pushes-so-doc-fixes-stay-unpublished/). This card's fix (`b3ccda2d`) changed `site/llms.txt` on `main`, but `pages.yml` deploys only on `push` and the bot's `GITHUB_TOKEN` pushes start no workflow run. The site has not deployed since 2026-07-15, so on 2026-10-20 `https://game-of-cards.com/llms.txt` is still byte-identical to the pre-fix file and still reads "Once the plugin is published, install via ClawHub:". The DoD was met as written, since every check read the repo file, so the card is not reopened.

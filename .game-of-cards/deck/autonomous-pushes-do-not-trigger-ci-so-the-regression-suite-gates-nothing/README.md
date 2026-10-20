@@ -176,3 +176,10 @@ be trusted to mean the recorded work also built.
 Whichever is picked, the blind window since 2026-08-01 needs reconciling
 separately: current `main` has never been checked by the gate, so restoring
 the gate may surface breakage that predates the fix.
+
+The same rule also freezes the public website. `pages.yml` deploys only on
+`push`, so no bot-authored doc fix has reached game-of-cards.com since
+2026-07-15
+([website-never-redeploys-after-bot-pushes-so-doc-fixes-stay-unpublished](../website-never-redeploys-after-bot-pushes-so-doc-fixes-stay-unpublished/)).
+Only option C fixes both. A, B and D restore CI and leave the site frozen, so
+the two decisions are best taken together.
