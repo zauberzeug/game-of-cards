@@ -1,12 +1,12 @@
 ---
 title: goc-tool-files-cards-into-wrong-agents-deck-on-multi-agent-gateways
-summary: The goc tool's cwd fallback uses one global sessionProjectDir, so on multi-agent gateways cards land in whichever agent's session started last.
+summary: "The goc tool's cwd fallback uses one global sessionProjectDir, so on multi-agent gateways cards land in whichever agent's session started last."
 status: open
 stage: null
 contribution: medium
 created: "2026-06-12T03:44:12Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
@@ -63,4 +63,10 @@ configured workspace, never to another session's value.
   (vendored package, operates on `/workspace` = always the agent's own deck).
 - AGENTS.md per agent: when using the first-class tool, ALWAYS pass
   `cwd: /var/lib/openclaw/workspace-<id>`.
+
+## Decision
+
+*Resolved 2026-10-22T05:56:37Z:* Replace the gate with an external wait: reproducing needs a two-agent gateway, not a decision
+
+*Reasoning:* Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none
 
