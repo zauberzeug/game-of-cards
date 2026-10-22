@@ -1,7 +1,7 @@
 ---
 title: denied-preamble-block-aborts-skill-load-before-the-preflight-routes-to-kickoff
 summary: "Release smoke Path B fails deterministically on the v0.0.28 tag: when Claude Code denies a skill's goc preamble block, it aborts the whole skill load, so the preflight that should route to kickoff never reaches the agent, and kickoff no longer carries the permission remediation. Fresh Claude Code installs without Bash(goc:*) get a bare permission error, and v0.0.28 stays unpublished."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-10-14T13:06:23Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: Path B passes on main in a workflow run (dry-run release or equivalent)
   - [ ] MECHANICAL: the next release is published to PyPI, npm and ClawHub
   - [ ] MECHANICAL: `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: worktree-agent-a5b14c91dd90c4511}
 ---
 
 # A denied preamble block aborts the skill load before the preflight can route to kickoff
