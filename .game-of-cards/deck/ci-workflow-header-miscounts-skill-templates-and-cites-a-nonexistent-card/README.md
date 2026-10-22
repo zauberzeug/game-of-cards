@@ -1,7 +1,7 @@
 ---
 title: ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card
 summary: "The `ci.yml` header comment states \"All 11 skill templates ship as importable package data\" (there are 18) and says the deck-validation step becomes load-bearing \"Once `goc-install-command-scaffolds-repo` (sub-card 2) ships\" — a card title that has never existed (the real card, `install-command-scaffolds-repo`, closed long ago). Both claims mislead a reader auditing what CI actually covers."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-07-26T08:09:35Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the `ci.yml` header no longer hard-codes a skill count — it either states the invariant without a number, or the number matches `ls -1d goc/templates/skills/*/ | wc -l` at the time of the edit.
   - [ ] MECHANICAL: the stale forward-looking sentence is rewritten to describe what the step does today, and any card it cites resolves to a real deck directory.
   - [ ] PROCESS: decide whether a hard-coded count belongs in a comment at all, or whether the "Verify package data ships templates" step (which already derives the list from the filesystem) makes the number redundant.
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # The CI header comment miscounts skill templates and cites a card that never existed
