@@ -28,3 +28,7 @@ PASS — no axiom touched. Pure infra: markdown template authoring + idempotent 
 ## 2026-07-13 — Deck hygiene pass
 
 Stale-open review (60d+ without log activity): 4/6 DoD items already checked and all three children are wired. Likely closable in a short human session — the two open items are the remaining scope. `human_gate: session`; no status change.
+
+## 2026-10-22T05:12:47Z: decision recorded
+
+Close as done: production use on Claude Code, Codex and OpenClaw counts as the three-runtime validation; strike the OpenCode-specific round-trip item — The maintainer decided in a human session on 2026-10-22 that the runtimes the deck actually runs on are the validation that matters; OpenCode is not a supported target (OpenClaw, a different product, is). Gate session → none.

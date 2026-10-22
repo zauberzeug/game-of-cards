@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-03
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
 advanced_by:
@@ -81,3 +81,10 @@ The implementation is shipped (goc commit `df473f7` in `~/Projects/game-of-cards
 2. **DoD-6** — In a freshly-installed repo, `rm CLAUDE.md`, open with OpenCode (or another non-Claude runtime), and confirm a full card lifecycle (`goc new` → edit DoD → `goc done`) works end-to-end with only AGENTS.md present.
 
 I cannot drive non-Claude runtimes from this Claude Code session, so the gate is raised to `session` until a human runs the cross-runtime check.
+
+## Decision
+
+*Resolved 2026-10-22T05:12:47Z:* Close as done: production use on Claude Code, Codex and OpenClaw counts as the three-runtime validation; strike the OpenCode-specific round-trip item
+
+*Reasoning:* The maintainer decided in a human session on 2026-10-22 that the runtimes the deck actually runs on are the validation that matters; OpenCode is not a supported target (OpenClaw, a different product, is)
+
