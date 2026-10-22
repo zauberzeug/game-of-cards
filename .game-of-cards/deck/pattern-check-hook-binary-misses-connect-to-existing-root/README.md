@@ -9,7 +9,7 @@ summary: |-
   exceeds deciding") and `create-card`'s dedup step warn against. Fix: reword the REMINDER to a
   three-branch form (no / dedup-then-connect / file) and sync the ~9 duplicated copies across host
   ports, then release.
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-06T06:54:29Z"
