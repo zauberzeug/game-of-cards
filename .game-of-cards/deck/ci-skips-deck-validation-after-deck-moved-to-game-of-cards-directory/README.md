@@ -1,7 +1,7 @@
 ---
 title: ci-skips-deck-validation-after-deck-moved-to-game-of-cards-directory
 summary: "CI's final step guards on `if [ -d deck ]`, but the canonical deck moved to `.game-of-cards/deck/` (commit 9fa3a24). Root `deck/` no longer exists, so CI silently takes the `No deck/ directory yet — skipping validation` branch and never runs `goc validate` on the real 224-card deck. The frontmatter-drift gate that AGENTS.md calls load-bearing is dead in CI; only the local pre-commit hook still catches drift."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-27T00:53:41Z"
