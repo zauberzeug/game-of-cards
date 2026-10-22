@@ -1,7 +1,7 @@
 ---
 title: publish-openclaw-plugin
 summary: "Publish the Game of Cards OpenClaw plugin/runtime package once `provide-openclaw-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to OpenClaw."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-06
