@@ -1,7 +1,7 @@
 ---
 title: ship-game-of-cards-as-cross-agent-cli
 summary: "Ship Game of Cards as a standalone, cross-agent CLI (`goc`) installable from PyPI, with durable project state under `.game-of-cards` and agent runtime affordances supplied optionally or through plugins. The CLI remains the engine; Claude Code, Codex, and later OpenClaw plugins provide skills/hooks without requiring consuming repos to check generated runtime files into source control."
-status: open
+status: active
 stage: null
 contribution: high
 created: 2026-05-03
@@ -34,6 +34,7 @@ definition_of_done: |
   - [ ] phasor-agents repo itself runs on PATH-resolved `goc`, vendored `.claude/skills/deck/deck.py` removed (tracked in phasor-agents: `goc-migrate-phasor-agents-off-vendored-deckpy`)
   - [ ] One external repo (any Zauberzeug project or volunteer) successfully runs `pipx install game-of-cards && goc install` end-to-end with no manual fix-up
   - [ ] README on the new repo explains the cross-agent positioning (substrate beneath Spec-Kit/BMAD; not another spec-driven framework)
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Ship Game of Cards as a cross-agent CLI
