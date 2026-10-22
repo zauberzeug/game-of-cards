@@ -1,7 +1,7 @@
 ---
 title: pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue
 summary: "pull-card.yml counts the queue with count=$(uv run goc ... --json | jq 'length') under GitHub's default bash -e, which has no pipefail. When goc exits non-zero, jq sees empty input and exits 0, so the step succeeds with an empty count and the count != '0' gates launch the Opus agent session and the self re-trigger. Confirmed: reproduce.py shows both count steps failing open, and a real engine crash does the same. pull-card-yml.patch fixes it together with the sibling --ready card. Parked at session because only a human commit can change .github/workflows/."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-09-28T01:38:32Z"
