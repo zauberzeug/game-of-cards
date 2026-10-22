@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: "2026-05-27T14:02:43Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, unverified]
@@ -61,3 +61,10 @@ and **empty** `advanced_by` on all three. Assert:
 If both report the cycle, the hypothesis is disproved — flip to `disproved`.
 
 Surfaced by: general-purpose audit hunter (engine seam), 2026-05-27.
+
+## Decision
+
+*Resolved 2026-10-22T05:56:36Z:* Lower the gate: verify the hypothesis with a reproduce.py first, then make both cycle walkers read one edge field
+
+*Reasoning:* Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none
+

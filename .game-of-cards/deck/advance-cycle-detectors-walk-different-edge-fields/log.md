@@ -41,3 +41,7 @@ gating validator walks `advanced_by`, the live guard walks `advances`. No
 `reproduce.py` this round — the fixture needs a half-edged deck that
 `goc validate` rejects and no goc verb can produce, which is part of what
 the parked decision has to weigh.
+
+## 2026-10-22T05:56:36Z: decision recorded
+
+Lower the gate: verify the hypothesis with a reproduce.py first, then make both cycle walkers read one edge field — Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none. Gate decision → none.
