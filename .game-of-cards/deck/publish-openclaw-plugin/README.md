@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-06
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - support-external-game-of-cards-state-location
 advanced_by:
@@ -55,8 +55,9 @@ Both channels publish from the same artifact; npm doubles as a name-claiming ste
 
 - `provide-openclaw-plugin-for-skills-and-hooks` (implementation; gate now `none`, pullable when its turn comes)
 
-## Decision required (2026-05-09)
+## Decision
 
-Blocked by `provide-openclaw-plugin-for-skills-and-hooks` which is parked at gate:session pending human decisions about the wrapper pattern and external publishing accounts.
+*Resolved 2026-10-22T05:10:47Z:* Close as done: both channels are live (npm game-of-cards 0.0.7-0.0.27, ClawHub via the OIDC release leg); strike the per-channel smoke item
 
-This card requires: (1) the parent card to land, (2) ClawHub and npm publishing credentials available to the executor, (3) human-verified smoke test. All three items require human action. Raising gate to session until the parent is resolved.
+*Reasoning:* The maintainer approved the retirement in a human session on 2026-10-22 after a code and registry check showed every publication item met; the 2026-07-13 hygiene note claiming publish never happened was wrong
+
