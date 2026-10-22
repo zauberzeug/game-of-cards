@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: "2026-07-23T01:11:06Z"
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate
 advanced_by: []
@@ -125,3 +125,10 @@ create or update workflow ... without `workflows` permission"; the
 same rejection is documented first-hand on
 [pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate](../pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate/)).
 A human session must apply the two-line edit.
+
+## Decision
+
+*Resolved 2026-10-22T03:17:04Z:* Count the queue with goc --ready in both pull-card.yml count steps, landed together with the fail-closed patch of the pipefail sibling
+
+*Reasoning:* Maintainer approved switching pull-card.yml to goc --ready in a human session on 2026-10-22; the fix was already determined and only needed a human commit, since the bot token cannot push .github/workflows/
+
