@@ -13,7 +13,7 @@ advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits non-zero (defect no longer fires — running `goc advance` on a pre-existing edge produces a distinct signal from creating a new edge).
-  - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("edge already exists")`. Match whichever shape the resolved sibling `goc-unadvance-claims-success-when-removing-a-non-existent-edge` picks for analogous non-mutating verb calls.
+  - [x] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("edge already exists")`. Match whichever shape the resolved sibling `goc-unadvance-claims-success-when-removing-a-non-existent-edge` picks for analogous non-mutating verb calls. — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
   - [ ] MECHANICAL: `_cmd_advance` (engine.py:6565) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_advance` honors before printing the success line and entering the auto-commit branch.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the already-existing-edge case.
   - [ ] PROCESS: `uv run goc validate` passes.

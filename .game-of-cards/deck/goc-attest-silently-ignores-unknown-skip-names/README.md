@@ -12,7 +12,7 @@ advances:
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: human picks Option A (strict reject) or Option B (warn-continue); decision recorded with `goc decide`.
+  - [x] PROCESS: human picks Option A (strict reject) or Option B (warn-continue); decision recorded with `goc decide`. — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
   - [ ] TDD: `reproduce.py` exits zero (typo is rejected/warned per chosen option, no longer silently dropped).
   - [ ] TDD: regression test under `tests/` covers (a) the unknown-skip rejection/warning path and (b) the all-valid-skips happy path.
   - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` validates `args.skips` against the configured check inventory before the per-check loop.

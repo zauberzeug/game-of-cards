@@ -13,7 +13,7 @@ advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero (defect no longer fires — running `goc unadvance` on a non-existent edge produces a distinct signal from removing a real edge).
-  - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("no edge to remove")`. Match whichever shape the rest of the engine uses for analogous non-mutating verb calls (e.g. `goc wait --clear` on a card without a wait).
+  - [x] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("no edge to remove")`. Match whichever shape the rest of the engine uses for analogous non-mutating verb calls (e.g. `goc wait --clear` on a card without a wait). — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
   - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:6535) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_unadvance` honors before printing the success line and entering the auto-commit branch.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the missing-edge case.
   - [ ] PROCESS: `uv run goc validate` passes.

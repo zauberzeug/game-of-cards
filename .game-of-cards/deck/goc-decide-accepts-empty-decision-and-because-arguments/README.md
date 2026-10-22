@@ -13,7 +13,7 @@ advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits non-zero (defect no longer fires — `goc decide` with empty `--decision` or empty `--because` is rejected before any state changes).
-  - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR before any mutation` (strict, mirrors the terminal-status guard at engine.py:4909) or `exit 0 + WARNING on stderr + still record` (lenient). Strict is the natural fit since the resulting body and log are not human-readable.
+  - [x] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR before any mutation` (strict, mirrors the terminal-status guard at engine.py:4909) or `exit 0 + WARNING on stderr + still record` (lenient). Strict is the natural fit since the resulting body and log are not human-readable. — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
   - [ ] MECHANICAL: `_cmd_decide` (engine.py:6844) validates that `args.decision.strip()` and `args.reasoning.strip()` are both non-empty before reading the README, with a single `ERROR: --decision and --because must be non-empty` message and exit 2 when either is blank.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the empty-string case, separately for empty-`--decision`, empty-`--because`, and both.
   - [ ] PROCESS: `uv run goc validate` passes.

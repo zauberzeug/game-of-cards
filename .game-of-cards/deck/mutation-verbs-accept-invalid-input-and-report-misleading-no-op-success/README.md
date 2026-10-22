@@ -20,7 +20,7 @@ advanced_by:
 tags: [epic, meta-fix, api-contract]
 summary: "Aggregation epic for a family of `goc` mutation verbs that accept redundant, empty, conflicting, or otherwise invalid input and — instead of rejecting it — perform a misleading no-op or silently drop the input, reporting exit 0 / a success line. Nine open sibling cards (filed 2026-05-29..2026-08-26, each carrying its own `human_gate: decision`) share this shape across `advance`, `unadvance`, `decide`, `attest`, `status`, and `wait`. They cross-referenced each other in prose (the `goc <verb> accepts unwanted input` family named in `goc-decide-accepts-empty…`) but carried no schema edges, so the family was invisible to the scheduler/record axes and recurred as zero-edge `meta-fix` noise in every refine-deck orphan-dependency pass. Distinct from the `terminal-status-guard-missing-across-mutation-verbs` epic, which targets mutation of cards whose *status* is terminal regardless of input validity."
 definition_of_done: |
-  - [ ] PROCESS: A shared validation-failure shape is decided and recorded in this card's `log.md` — strict-refuse (exit 2, no mutation) vs. exit-0-with-stderr-WARNING vs. distinct no-op success message — and whether a reusable helper or per-verb inline checks are the right factoring. Note that the two no-op-success siblings (`advance`/`unadvance` redundant edge) explicitly want one shape applied to BOTH directions symmetrically.
+  - [x] PROCESS: A shared validation-failure shape is decided and recorded in this card's `log.md` — strict-refuse (exit 2, no mutation) vs. exit-0-with-stderr-WARNING vs. distinct no-op success message — and whether a reusable helper or per-verb inline checks are the right factoring. Note that the two no-op-success siblings (`advance`/`unadvance` redundant edge) explicitly want one shape applied to BOTH directions symmetrically. — decided 2026-10-22: 1. Strict-refuse with a one-line shared emission helper and per-verb predicates.
   - [ ] PROCESS: All nine open child cards are closed or superseded under the agreed shape; this epic's `advanced_by` roster is all terminal.
   - [ ] TDD: A regression test asserts each guarded verb rejects (or honestly signals the no-op for) its invalid-input case — redundant edge add/remove, self-target unadvance, empty `--decision`/`--because`, unknown `--skip` name, worker-override on a non-active transition, `--clear` combined with `--reason`/`--until`, and `--by` on an already-superseded target.
   - [ ] MECHANICAL: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green after each child closes.
@@ -53,6 +53,19 @@ input-validation guard checks the *arguments*.
 *Resolved 2026-10-22T05:20:21Z:* 1. Strict-refuse: invalid input exits 2 with a goc error on stderr and mutates nothing; factoring per the card's recommendation, a one-line shared helper for the message and exit with the precondition predicates inline per verb
 
 *Reasoning:* The maintainer accepted the card's recommendation in a human session on 2026-10-22; strict-refuse is the precondition-failure shape the engine already uses (exit 2) and the only one that protects --commit-driven scripts and agents
+
+### How the decision reached the children
+
+Five children asked exactly the shape question this card decided, so they carry a "Decided via parent" record and are pullable at `human_gate: none`: the redundant-edge pair (`goc-advance-claims-success-…`, `goc-unadvance-claims-success-…`), `goc-decide-accepts-empty-…`, `goc-attest-silently-ignores-unknown-skip-names` and `goc-wait-with-a-past-until-date-…`.
+
+Four stay gated, because each asks a question the shape does not settle:
+
+- `goc-unadvance-with-self-target-leaves-card-in-half-edge-state` — whether the guard sits in `_cmd_unadvance` (Option A) or inside `_mutate_pair` so that other callers such as `repair-edges` are covered too (Option B).
+- `goc-status-silently-drops-worker-overrides-on-non-active-transitions` — whether the worker overrides should be honored on every transition (Option A) or refused (Option B).
+- `goc-wait-clear-silently-discards-reason-and-until-set-in-same-call` — whether `--clear` combined with a set is refused (Option A) or means clear-then-set (Option B).
+- `goc-status-superseded-discards-by-override-when-target-already-superseded` — whether a second `--by` redirects the supersession (option 1) or is refused (option 2).
+
+If one of them is answered with "refuse", strict-refuse applies, with this card's shared emission helper.
 
 ## Family roster (open children, wired via `advanced_by`)
 
