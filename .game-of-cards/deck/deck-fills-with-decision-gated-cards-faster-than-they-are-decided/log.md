@@ -195,3 +195,15 @@ of those 103 have never had a log entry at all.
 No claim in the README changed, so nothing there was rewritten; this is the
 outlet-side trend the parked decision needs, recorded so the next reader has
 three measurements rather than two.
+
+## 2026-10-22T06:05:50Z — Bulk rule approved in a human session; steps 1, 2 and 4 executed
+
+The maintainer approved a five-step bulk rule for the gated backlog (204 of 209 live cards gated, 185 of them filed by the audit bot):
+
+1. Decide the hub epics first; each child that asks exactly the hub's question inherits the decision ("Decided via parent …").
+2. Stale sweep over the cards whose cited code anchors vanished; retire only the ones that are fixed.
+3. Cards that name their own recommendation: accept it, after a one-line-per-card veto list for the maintainer.
+4. Lower decision-gated cards that carry no written question to gate none.
+5. Going forward, audit-deck files fixes that follow an established convention at gate none, and raises decision only with a written question plus a recommendation.
+
+Executed the same day: step 1 for terminal-status-guard-missing-across-mutation-verbs (4 children) and mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success (5 children; 4 kept their own question). Step 2: 37 of the 38 anchor-stale cards still reproduce — anchors moved through refactors — so a vanished anchor is no evidence of a fix; three cards were closed with evidence (goc-waiting-filter-drifts-…, standup-impeded-filter-drifts-…, ci-workflow-header-miscounts-…). Step 4: five cards lowered, one turned into an external wait. Step 3 is waiting on the maintainer's veto pass (53 cards); this card itself is on that list, because its own recommendation (C for question 1, option 2 as the cleanup, B alongside) is close to but not the same as the approved rule. Step 5 is not implemented yet.
