@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: "2026-10-14T13:06:23Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
@@ -78,3 +78,10 @@ Found while updating an OpenClaw deployment to v0.0.28. The OpenClaw plugin has 
 not affected; that deployment runs the plugin from the `v0.0.28` tag, unpublished, to get the summary
 gate from #12. This card blocks only the publish. Related:
 `local-release-smoke-script-no-longer-mirrors-the-ci-smoke-job` (the local mirror of the same smoke).
+
+## Decision
+
+*Resolved 2026-10-22T05:39:15Z:* Fix shape (a)+(b)+(c): every goc-preamble skill pre-approves its own render-time blocks with one exact Bash(<block>) allowed-tools entry each; the Preflight and kickoff route a denied goc call to the host complement claude-kickoff; goc names a missing deck; the smoke allows the namespaced plugin skills
+
+*Reasoning:* Countercheck on Claude Code 2.1.303: any denied render-time block aborts the whole skill load, v0.0.27's plain goc block included, so this is a Claude Code behavior change rather than f20a8920; the documented Bash(goc:*) grant does not cover f20a8920's compound block while it covers v0.0.27's, so main as-is would regress every granted user; exact allowed-tools entries load the body
+
