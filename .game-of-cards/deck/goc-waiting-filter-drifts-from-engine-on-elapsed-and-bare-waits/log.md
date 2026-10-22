@@ -71,3 +71,90 @@ Corrected to `goc/engine.py:2632`, the definition of `card_is_ready` in HEAD.
 The recipe gap that hid it is filed as
 [citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank](../citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank/),
 which carries this cite as its worked example.
+
+## 2026-05-29T11:35:23Z: decision deliberation archived
+
+Archived from the README's `## Decision required` section by `goc decide` before it was replaced with the resolved `## Decision` block — README is the dashboard, log.md is the journal. This preserves the options and recommendation that produced the decision below.
+
+**Reduced to a ratification on 2026-08-24.** The code already implements
+Option A: the filter calls the predicate and the help text describes an
+active impediment overlay. Nothing here is undecided in the engine — what is
+missing is a human's name on the semantics that shipped, which DoD item 3
+requires and which no autonomous pass may supply (`goc status ... superseded`
+refuses while `human_gate: decision`, pointing at `goc decide`).
+
+The one action left: `goc decide` this card in favour of Option A, then close
+it — or, since a later card actually delivered the fix, supersede it via
+`goc status <this card> superseded --by goc-waiting-flag-omits-deferral-cards-it-hides-from-the-queue`.
+Option B remains on the record below only so that ratifying A is a choice
+rather than a default.
+
+Two credible fixes existed; they differed on what `--waiting` *means*.
+
+### Option A — Align with `waiting_impedes` (impedance semantics)
+
+The flag is a query for "what's currently impeded by an overlay." The
+filter and the help text both follow `waiting_impedes`:
+
+```python
+if getattr(args, "waiting", False):
+    filtered = [t for t in filtered if waiting_impedes(t)]
+```
+
+Help text becomes something like:
+
+> Filter to cards with an active impediment overlay (waiting_on or
+> deferred `waiting_until`).
+
+Pros: the engine speaks with one voice — `--waiting`, `--ready`, board
+markers, and `card_is_ready` all agree. Skill bodies that grep
+`--waiting` for "what's parked" get the right answer. The bare-deferral
+case becomes visible (it currently is invisible everywhere except the
+board's ⏳ marker).
+
+Cons: cards with elapsed `waiting_until` drop out of `--waiting`,
+which a reader looking for "show me my stale overlays" will miss. The
+SLE escalation surface (`validate_waiting_overlay`) handles that view,
+but it's a separate flow.
+
+### Option B — Keep the literal field filter, rename for clarity
+
+The flag is a query for "what cards have a `waiting_on` field set."
+The code stays, the help text is sharpened to explicitly describe a
+field filter:
+
+> Filter to cards with a `waiting_on` overlay set (regardless of
+> whether `waiting_until` has elapsed). For currently-impeded cards
+> use `--impeded` (a new flag aligned with `waiting_impedes`).
+
+Then add a separate `--impeded` flag whose body is `[t for t in
+filtered if waiting_impedes(t)]`.
+
+Pros: backward-compatible for any script that already shells out to
+`--waiting` and expects field-set semantics. Both views are
+addressable.
+
+Cons: introduces a new flag for a semantic that arguably should have
+been the meaning of the existing one. Users have to remember which is
+which.
+
+### Option C — Same as A, plus retain elapsed-overlay surfacing
+
+Align `--waiting` with `waiting_impedes` (as Option A), AND add an
+explicit `--waiting-stale` flag (or fold this into `--waiting -v`)
+that lists cards whose `waiting_until` has elapsed — the SLE
+escalation view, but in CLI flag form rather than via `goc validate`.
+
+### Recommendation
+
+Option A, and it is what shipped. The help text at filing reflected a stale
+framing of "what an overlay is" (the original implementation predated the
+`waiting_until` addition); commit `91d40320` replaced both the filter and the
+help text with the predicate reading. The breaking risk this card flagged as
+unknown has since been absorbed in production for 61 days with no reported
+fallout, and `tests/test_waiting_filter_status_scope.py` pins the semantics.
+
+
+## 2026-10-22T06:00:43Z: decision recorded
+
+Option A — Align with waiting_impedes (impedance semantics), ratified as shipped in 91d40320 — Stale sweep under the bulk rule the maintainer approved in a human session on 2026-10-22: the card was reduced to a ratification of the shipped Option A; principle: a CLI view must ask the engine predicate (waiting_impedes via live_impeded) instead of re-deriving it from one field. Gate decision → none.
