@@ -348,6 +348,12 @@ def _sync_file(src: Path, dst: Path) -> list[Path]:
 
 
 def _codex_skill_text(src: Path, *, skill_name: str) -> str:
+    """The Codex mirror of a skill: frontmatter rebuilt from name + description.
+
+    Every other key stays behind on purpose. `allowed-tools` holds Claude Code
+    permission rules for the skill's `!` blocks, which Codex neither runs nor
+    reads; handing it the Claude rule syntax would only invite a misread.
+    """
     text = src.read_text()
     if not text.startswith("---\n"):
         return text

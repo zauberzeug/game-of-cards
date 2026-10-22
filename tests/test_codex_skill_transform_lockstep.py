@@ -41,6 +41,10 @@ CORPUS: dict[str, str] = {
     "quotes-and-unicode": '---\nname: quotes\ndescription: "he said \\"go\\" — ünïcode"\n---\nbody\n',
     "dashes-in-description": '---\nname: dashes\ndescription: "a --- b"\n---\nbody\n',
     "no-description": "---\nname: nodesc\n---\nbody\n",
+    "allowed-tools": (
+        "---\nname: tools\ndescription: \"pre-approved\"\nallowed-tools:\n"
+        "  - 'Bash(goc --ready 2>&1 || true)'\n---\n\n!`goc --ready 2>&1 || true`\n"
+    ),
 }
 
 
@@ -79,6 +83,16 @@ class CodexTransformLockstepTest(unittest.TestCase):
                         msg="goc/install.py and scripts/sync_plugin_assets.py "
                             "render this SKILL.md differently",
                     )
+
+    def test_claude_allowed_tools_stay_behind(self) -> None:
+        # Claude Code permission rules for a skill's `!` blocks mean nothing to
+        # Codex: the mirror's frontmatter is rebuilt from name + description.
+        for skill in sorted(TEMPLATE_SKILLS.iterdir()):
+            if not (skill.is_dir() and skill_for_agent(skill.name, "codex")):
+                continue
+            rendered = self.sync._codex_skill_text(skill / "SKILL.md", skill_name=skill.name)
+            with self.subTest(skill=skill.name):
+                self.assertNotIn("allowed-tools", rendered.split("\n---\n", 1)[0])
 
     def test_shipped_templates_render_identically(self) -> None:
         skills = [

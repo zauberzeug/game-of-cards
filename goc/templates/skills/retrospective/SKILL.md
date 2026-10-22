@@ -2,6 +2,8 @@
 name: retrospective
 description: Backwards analysis of the last N closed cards — recurring failure modes, generalization candidates, rough velocity feel. Read-only; never files cards. AUTO-INVOKE on "what have we learned", "retro", "any patterns lately", "what keeps going wrong".
 argument-hint: N = number of recent closed cards to analyse (default 10)
+allowed-tools:
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --closed-since 90d --json; else goc --closed-since 90d --json; fi 2>&1 | head -100)'
 ---
 
 ## When to invoke
@@ -10,7 +12,7 @@ Invoke when the user says "what have we learned", "review recent work", "any pat
 
 ## Preflight
 
-If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff finds the missing setup step (CLI not installed, deck not scaffolded); a denied `goc` call goes to `Skill(claude-kickoff)` on Claude Code. Re-invoke this skill only after kickoff completes.
 
 ## Context
 
