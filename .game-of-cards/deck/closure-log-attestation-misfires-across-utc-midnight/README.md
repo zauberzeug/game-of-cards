@@ -6,7 +6,7 @@ stage: null
 contribution: low
 created: "2026-05-27T08:02:35Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, unverified]
@@ -62,3 +62,10 @@ consumed this audit round's verification budget.
    is real → promote (drop `unverified`, add a working `reproduce.py`).
 4. If closure-write and attest are provably always the same invocation/day,
    disprove.
+
+## Decision
+
+*Resolved 2026-10-22T05:56:37Z:* Lower the gate: verify, then make the closure-entry match tolerate the UTC day boundary
+
+*Reasoning:* Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none
+

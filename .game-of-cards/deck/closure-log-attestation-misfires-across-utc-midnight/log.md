@@ -14,3 +14,7 @@ ways to do that — injecting `today` (the parameter exists, so the test would
 prove the predicate rather than the shipped path) or freezing time around the
 subprocess — differ in what they license the card to claim. Picking between
 them is a design question the parked decision should answer first.
+
+## 2026-10-22T05:56:37Z: decision recorded
+
+Lower the gate: verify, then make the closure-entry match tolerate the UTC day boundary — Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none. Gate decision → none.
