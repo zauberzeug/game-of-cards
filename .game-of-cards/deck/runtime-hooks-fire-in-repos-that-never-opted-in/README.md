@@ -1,7 +1,7 @@
 ---
 title: runtime-hooks-fire-in-repos-that-never-opted-in
 summary: "deck_prompt_router.py is the only runtime hook that never checks for a deck, so a globally enabled plugin claims \"runtime active\" and drives the silent card pipeline in repos that never opted in. Gate it on `.game-of-cards/deck/` the way deck_session_start.py already does."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-13T06:55:08Z"
@@ -10,12 +10,12 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
-draft: false
 definition_of_done: |
   - [ ] TDD: deck_prompt_router.py exits 0 with no output on a work-shaped prompt when the invoking repo has no `.game-of-cards/deck/` directory; a test drives the hook over its stdin contract from a project dir without a deck
   - [ ] TDD: with a deck present, behavior is unchanged (existing router tests stay green)
   - [ ] MECHANICAL: the guard is identical in every shipped copy of the router (claude-plugin, codex-plugin, templates, .claude dogfood dir) per the repo's sync convention
   - [ ] MECHANICAL: docs state the rule — runtime hooks are inert outside opted-in repos; `Skill(kickoff)` / `goc install` remain the only opt-in path
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Runtime hooks fire in repos that never opted in
