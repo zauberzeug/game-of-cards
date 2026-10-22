@@ -14,3 +14,7 @@ release pass happens.
 ## 2026-07-13 — Deck hygiene pass
 
 Stale-open review (60d+ without log activity): lead still real — 18 children advance this epic and several remain open. Card is `human_gate: session` by design; no status change. Staleness clock reset.
+
+## 2026-10-22T05:13:40Z: decision recorded
+
+Close as done: 15 of 18 children are closed, the maintainer confirmed DoD 6/7 (phasor-agents and an external repo run goc end-to-end), DoD 8 is struck as superseded by the personas positioning, and the three open roadmap children are detached and stay parked — The maintainer decided in a human session on 2026-10-22; the ship-v1 scope is delivered, and the open children are roadmap design sessions rather than shipping work. Gate session → none.

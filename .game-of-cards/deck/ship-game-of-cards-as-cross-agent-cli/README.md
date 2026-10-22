@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: 2026-05-03
 closed_at: null
-human_gate: session
+human_gate: none
 advances: []
 advanced_by:
   - package-pyproject-and-pypi-release
@@ -99,3 +99,10 @@ The initial work split into these in-repo streams, plus one phasor-agents dogfoo
 - Schema versioning: `.claude/skills/card-schema/schema.yaml` (`schema_version: 3`) — the PyPI package's pinned schema with migration-on-upgrade.
 - Peer landscape: Spec-Kit (github/spec-kit), BMAD-METHOD (bmadcode/BMAD-METHOD), Agent OS (buildermethods/agent-os), Ruler (intellectronica/ruler), claude-flow (ruvnet/claude-flow), AGENTS.md (agents.md, Linux Foundation).
 - OpenCode skill compatibility: sst/opencode reads `.claude/skills/` natively with v1+v2 plugin format translation; hooks do NOT port.
+
+## Decision
+
+*Resolved 2026-10-22T05:13:40Z:* Close as done: 15 of 18 children are closed, the maintainer confirmed DoD 6/7 (phasor-agents and an external repo run goc end-to-end), DoD 8 is struck as superseded by the personas positioning, and the three open roadmap children are detached and stay parked
+
+*Reasoning:* The maintainer decided in a human session on 2026-10-22; the ship-v1 scope is delivered, and the open children are roadmap design sessions rather than shipping work
+
