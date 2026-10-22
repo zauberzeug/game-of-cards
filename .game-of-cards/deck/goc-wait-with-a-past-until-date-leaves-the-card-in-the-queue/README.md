@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: "2026-08-26T04:40:53Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 advanced_by: []
@@ -189,3 +189,10 @@ on the post-write card.
   and its epic
   [terminal-status-guard-missing-across-mutation-verbs](../terminal-status-guard-missing-across-mutation-verbs/)
   guard on the *card's status*; this one guards on the *argument*.
+
+## Decision
+
+*Resolved 2026-10-22T05:20:23Z:* Decided via parent mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success: strict-refuse — goc wait with an --until instant that has already elapsed exits 2 and writes nothing, judged by the engine's own waiting read guard
+
+*Reasoning:* The maintainer decided the parent's shared validation-failure shape (1. Strict-refuse) in a human session on 2026-10-22, which answers exactly this card's question; this card's DoD defers the shape to the parent
+
