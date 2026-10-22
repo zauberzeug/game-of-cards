@@ -19,6 +19,8 @@ definition_of_done: |
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 waiting_on: external
+supersedes:
+  - openclaw-subagent-spawn-doesnt-project-plugin-tools
 ---
 
 # OpenClaw subagent plugin tools `alsoAllow` ignored

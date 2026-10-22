@@ -1,11 +1,11 @@
 ---
 title: openclaw-subagent-spawn-doesnt-project-plugin-tools
 summary: "Plugin-registered tools (e.g. `goc` from the GoC OpenClaw plugin) do not appear in subagent toolsets even with the most permissive operator config: `tools.profile: \"full\"` plus an explicit `tools.subagents.tools.alsoAllow: [\"goc\"]`. Runtime inspect (`openclaw plugins inspect game-of-cards --runtime --json`) confirms the plugin is loaded, imported, and the tool is registered (`toolNames: [\"goc\"]`, `tools: [{names: [\"goc\"], optional: false}]`, `diagnostics: []`). Yet a spawned subagent reports `goc tool not available` and only sees built-in tools (exec, read, write, Trello/Odoo/Web/Image, etc.). Either an OpenClaw subagent tool-projection bug, an undocumented additional config layer, or a doc gap. Filed as a follow-up to `openclaw-plugin-release-smoke-blockers-build-and-spawn-api` once that smoke card's plugin-side issues were all confirmed fixed."
-status: open
+status: superseded
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
+closed_at: "2026-10-22T05:09:51Z"
 human_gate: none
 advances:
   - provide-openclaw-plugin-for-skills-and-hooks
@@ -22,6 +22,8 @@ definition_of_done: |
   - [ ] Smoke retest with whatever fix lands: subagent invocation in a clean session sees and successfully calls `goc` (e.g., a `goc show <title>` or `goc validate` returns the expected output)
   - [ ] `uv run goc validate` passes
 worker: null
+superseded_by:
+  - openclaw-subagent-plugin-tools-alsoallow-ignored
 ---
 
 # OpenClaw subagent spawn doesn't project plugin tools
