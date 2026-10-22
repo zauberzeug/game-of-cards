@@ -16,7 +16,7 @@ definition_of_done: |
   - [ ] TDD: Path B passes on main in a workflow run (dry-run release or equivalent)
   - [ ] MECHANICAL: the next release is published to PyPI, npm and ClawHub
   - [x] MECHANICAL: `uv run goc validate` passes
-worker: {who: Rodja Trappe, where: worktree-agent-a5b14c91dd90c4511}
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # A denied preamble block aborts the skill load before the preflight can route to kickoff
