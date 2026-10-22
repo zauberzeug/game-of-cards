@@ -29,3 +29,7 @@ required" note.
 
 Parked at `human_gate: session`. A maintainer with `workflows` push
 permission should apply the documented diff and push.
+
+## 2026-10-22T05:07:53Z: decision recorded
+
+Apply the documented ci.yml fix from a human session: guard the validate step on .game-of-cards/deck with the legacy deck/ fallback and refresh the stale header comment — The maintainer approved it in a human session on 2026-10-22; the fix was fully specified and only needed a human commit, since the bot token cannot push .github/workflows/. Gate session → none.

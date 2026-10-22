@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: "2026-05-27T00:53:41Z"
 closed_at: null
-human_gate: session
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
@@ -133,3 +133,10 @@ Then refresh the stale `ci.yml` header comment (skill count, deck path) and
 correct the AGENTS.md "No pytest suite exists yet" line (and its
 `goc/templates/AGENTS_GOC.md` source if the text lives there) to reflect the
 real `tests/` suite that CI already runs.
+
+## Decision
+
+*Resolved 2026-10-22T05:07:53Z:* Apply the documented ci.yml fix from a human session: guard the validate step on .game-of-cards/deck with the legacy deck/ fallback and refresh the stale header comment
+
+*Reasoning:* The maintainer approved it in a human session on 2026-10-22; the fix was fully specified and only needed a human commit, since the bot token cannot push .github/workflows/
+
