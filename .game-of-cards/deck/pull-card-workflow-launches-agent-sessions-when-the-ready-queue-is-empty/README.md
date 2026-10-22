@@ -1,21 +1,21 @@
 ---
 title: pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty
-summary: "`.github/workflows/pull-card.yml` gates the LLM agent step on `goc --status open --human-gate none --json | jq length`, but the `Skill(pull-card)` it launches selects via `goc --ready`, which additionally excludes cards with an active `waiting_on`/`waiting_until` overlay. When only impeded cards remain, the workflow counts >0, launches a full agent session that finds nothing to pull, then the identical post-check re-triggers the workflow — up to MAX_ITERATIONS wasted sessions per cron tick. Live on this repo today: the workflow predicate counts 3, `goc --ready` counts 0."
-status: active
+summary: "`.github/workflows/pull-card.yml` gated the LLM agent step on `goc --status open --human-gate none --json | jq length`, but the `Skill(pull-card)` it launches selects via `goc --ready`, which additionally excludes cards with an active `waiting_on`/`waiting_until` overlay. When only impeded cards remained, the workflow counted >0, launched a full agent session that found nothing to pull, and the identical post-check re-triggered it — up to MAX_ITERATIONS wasted sessions per cron tick. Fixed: both count steps now count `goc --ready --json`, landed together with the fail-closed pipefail patch of the sibling card."
+status: done
 stage: null
 contribution: high
 created: "2026-07-23T01:11:06Z"
-closed_at: null
+closed_at: "2026-10-22T03:22:19Z"
 human_gate: none
 advances:
   - extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate
 advanced_by: []
 tags: [bug, infra, meta-fix]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the workflow's queue-count steps no longer use the `--status open --human-gate none` predicate that diverges from `goc --ready`
-  - [ ] MECHANICAL: both count sites in `.github/workflows/pull-card.yml` (`Check autonomous queue`, `Re-check queue`) count `uv run goc --ready --json | jq 'length'`, and the printed label says "ready" instead of "Pullable cards (status=open, human_gate=none)" — requires a HUMAN commit (the bot's GITHUB_TOKEN cannot modify `.github/workflows/`)
-  - [ ] PROCESS: cross-referenced as a fourth pull-readiness copy on [extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate](../extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate/)
-  - [ ] PROCESS: `uv run goc validate` passes
+  - [x] TDD: `reproduce.py` exits zero — the workflow's queue-count steps no longer use the `--status open --human-gate none` predicate that diverges from `goc --ready`
+  - [x] MECHANICAL: both count sites in `.github/workflows/pull-card.yml` (`Check autonomous queue`, `Re-check queue`) count `uv run goc --ready --json | jq 'length'`, and the printed label says "ready" instead of "Pullable cards (status=open, human_gate=none)" — requires a HUMAN commit (the bot's GITHUB_TOKEN cannot modify `.github/workflows/`)
+  - [x] PROCESS: cross-referenced as a fourth pull-readiness copy on [extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate](../extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate/)
+  - [x] PROCESS: `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -100,32 +100,31 @@ engine the exact question the picker asks.
 
 ## Fix
 
-One-line change at each of the two count sites in
-`.github/workflows/pull-card.yml` (lines 63 and 107):
+Applied: both count sites in `.github/workflows/pull-card.yml`
+(`Check autonomous queue`, `Re-check queue`) now ask the engine the
+exact question the picker asks:
 
 ```bash
 count="$(uv run goc --ready --json | jq 'length')"
 ```
 
-and update the adjacent echo labels accordingly. `--ready --json`
-already works (verified above).
+with the labels `Ready cards (goc --ready)` and `Remaining ready
+cards`. `reproduce.py` exits zero: the scratch deck's impeded card
+counts 1 under the old predicate and 0 under `--ready`, and the
+workflow no longer uses the old predicate.
 
-**Land it with pipefail.** This line keeps the unguarded pipe: when
-`goc` itself fails, `jq` still exits 0 and the empty count launches the
-agent
-([pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue](../pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue/),
-whose `reproduce.py` still fails on this line alone). That card's
-`pull-card-yml.patch` applies this fix together with a workflow-level
-`shell: bash` and `count > 0` gates, so one human edit closes both
-cards.
+It landed together with the sibling's fail-closed patch
+([pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue](../pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue/)):
+the `--ready` line alone keeps the unguarded pipe, so a failing `goc`
+would still leave an empty count that launches the agent. The shared
+`pull-card-yml.patch` adds a workflow-level `shell: bash` (pipefail) and
+`count > 0` gates.
 
-**Why the session gate:** the fix is determined, but the autonomous
-bot cannot land it — GitHub rejects pushes from the workflow's token
-that modify `.github/workflows/` ("refusing to allow a GitHub App to
-create or update workflow ... without `workflows` permission"; the
-same rejection is documented first-hand on
+The fix needed a human commit: GitHub rejects pushes from the
+workflow's token that modify `.github/workflows/` ("refusing to allow a
+GitHub App to create or update workflow ... without `workflows`
+permission"; documented first-hand on
 [pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate](../pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate/)).
-A human session must apply the two-line edit.
 
 ## Decision
 

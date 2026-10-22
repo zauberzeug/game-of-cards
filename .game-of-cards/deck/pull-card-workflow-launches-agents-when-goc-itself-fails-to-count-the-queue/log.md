@@ -44,3 +44,24 @@ sections now say so.
 ## 2026-10-22T03:17:04Z: decision recorded
 
 Apply pull-card-yml.patch as-is from a human session: workflow-level shell bash for pipefail, > 0 launch gates, goc --ready counts — Maintainer approved the workflow fix in a human session on 2026-10-22; the patch is verified by both reproducers and is the one human edit that closes this card and its --ready sibling. Gate session → none.
+
+## 2026-10-22T03:22:19Z — Closure
+
+- **What changed**: `.github/workflows/pull-card.yml` — `pull-card-yml.patch` applied unchanged from a human session: workflow-level `defaults: run: shell: bash` (pipefail), `count > 0` gates on the agent launch, the re-trigger and the iteration-cap notice, and both counts via `uv run goc --ready --json`.
+- **Verification**: `reproduce.py` → both count steps `[CLOSED]` under `bash --noprofile --norc -eo pipefail {0}` (exit 2, count=''; the steps reading it skip), exit 0. The sibling's `reproduce.py` also exits 0.
+- **Audit**: no rubric configured; mechanical fix.
+- **Project impact**: a failing `goc` now turns the pull-card job red instead of launching an Opus max-effort session and its self re-trigger.
+- **Tests**: 1339 passed / 0 failed (`uv run python -m unittest discover -s tests`).
+- **Bundled with**: pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty
+
+## Closure verification (2026-10-22T03:22:19Z) — bundled
+
+- Bundle members:
+  - pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue
+  - pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty
+- DoD enforcement: PASS — per-card unchecked-box count was 0 for every member.
+- Closed via: `goc done --bundle`
+
+## 2026-10-22T03:22:19Z — Closure (bundled)
+
+- **Bundled with**: pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty

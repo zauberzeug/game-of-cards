@@ -1,29 +1,29 @@
 ---
 title: pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue
-summary: "pull-card.yml counts the queue with count=$(uv run goc ... --json | jq 'length') under GitHub's default bash -e, which has no pipefail. When goc exits non-zero, jq sees empty input and exits 0, so the step succeeds with an empty count and the count != '0' gates launch the Opus agent session and the self re-trigger. Confirmed: reproduce.py shows both count steps failing open, and a real engine crash does the same. pull-card-yml.patch fixes it together with the sibling --ready card. Parked at session because only a human commit can change .github/workflows/."
-status: active
+summary: "pull-card.yml counted the queue with count=$(uv run goc ... --json | jq 'length') under GitHub's default bash -e, which has no pipefail. When goc exited non-zero, jq saw empty input and exited 0, so the step succeeded with an empty count and the count != '0' gates launched the Opus agent session and the self re-trigger. Fixed by pull-card-yml.patch, applied from a human session: a workflow-level shell bash fails the count steps closed, > 0 gates never launch on a non-numeric count, and both counts use goc --ready (the sibling card's fix)."
+status: done
 stage: null
 contribution: medium
 created: "2026-09-28T01:38:32Z"
-closed_at: null
+closed_at: "2026-10-22T03:22:19Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
   - [x] TDD: a reproduce.py runs the `Check autonomous queue` step body under `bash -e` with a `goc` stand-in that exits non-zero, and asserts the step fails (or reports a zero count) instead of emitting an empty count that launches the agent — or the run disproves the hypothesis and the card flips to `disproved`
-  - [ ] MECHANICAL: both count sites in `.github/workflows/pull-card.yml` (`:63`, `:107`) fail closed when `goc` fails — `shell: bash` (which adds `-o pipefail`) or an explicit exit-status check — and the launch / re-trigger conditions treat a non-numeric count as "do not launch" (requires a HUMAN commit — the bot's GITHUB_TOKEN cannot modify `.github/workflows/`)
+  - [x] MECHANICAL: both count sites in `.github/workflows/pull-card.yml` (`:63`, `:107`) fail closed when `goc` fails — `shell: bash` (which adds `-o pipefail`) or an explicit exit-status check — and the launch / re-trigger conditions treat a non-numeric count as "do not launch" (requires a HUMAN commit — the bot's GITHUB_TOKEN cannot modify `.github/workflows/`)
   - [x] MECHANICAL: drop the `unverified` tag once reproduce.py lands; cross-check the fix against `pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty`'s proposed count line, which keeps the same pipe
 worker: {who: "claude[bot]", where: main}
 ---
 
 # The pull-card workflow launches agents when `goc` itself fails to count the queue
 
-> **Confirmed 2026-10-10.** `reproduce.py` runs both count steps the way
-> GitHub would, and both fail open. A real engine crash fails open too.
-> The fix is `pull-card-yml.patch`, verified on a scratch copy. The card
-> is parked at `session` because only a human commit can change
-> `.github/workflows/` (see "Why the session gate").
+> **Fixed 2026-10-22.** `pull-card-yml.patch` is applied to
+> `.github/workflows/pull-card.yml` from a human session. `reproduce.py`
+> now reports both count steps `[CLOSED]` under
+> `bash --noprofile --norc -eo pipefail` and exits 0. The sections below
+> describe the defect as found.
 
 ## Location
 
@@ -135,20 +135,16 @@ unguarded pipe. But `goc --version` on the line above already fails the
 step when the console script is missing, so only a help-rendering crash
 slips through.
 
-## Why the session gate
+## Why it needed a human commit
 
 GitHub rejects pushes from the workflow's token that modify
 `.github/workflows/` ("refusing to allow a GitHub App to create or
 update workflow ... without `workflows` permission", recorded first-hand
 on
 [pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate](../pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate/)),
-so the bot cannot land the patch. A human session:
-
-1. `git apply .game-of-cards/deck/pull-card-workflow-launches-agents-when-goc-itself-fails-to-count-the-queue/pull-card-yml.patch`
-2. Runs this card's `reproduce.py` and the sibling's `reproduce.py`;
-   both exit 0.
-3. Commits and pushes from a human account, then ticks the MECHANICAL
-   item on both cards and closes them with `goc done`.
+so the bot could not land the patch. The card was parked at `session`
+until a human session applied `pull-card-yml.patch` unchanged, ran both
+reproducers (each exits 0) and pushed the workflow edit.
 
 ## Artifacts
 
