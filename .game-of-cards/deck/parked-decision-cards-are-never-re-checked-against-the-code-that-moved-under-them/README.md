@@ -1,12 +1,12 @@
 ---
 title: parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them
 summary: "Nothing re-checks a human_gate: decision card against the code it cites, so a parked card whose defect is fixed by later work keeps advertising a live defect indefinitely. Two measured instances: goc-waiting-filter-drifts-from-engine-on-elapsed-and-bare-waits and waiting-flag-filters-on-waiting-on-field-not-the-impediment-overlay both described a --waiting drift that commit 91d40320 fixed on 2026-06-24 while closing a third, gate-free card filed for the same defect the same day — no reference, no supersession edge, 61 days parked. The engine also makes this irreducible: goc status ... superseded refuses while the gate is up, so no autonomous pass can retire a stale park."
-status: active
+status: open
 stage: null
 contribution: high
 created: "2026-08-24T02:32:11Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
@@ -208,72 +208,11 @@ distinct harms, in increasing order of cost:
    argument that rests on the size of that pile — including the outlet
    argument in the sibling card — rests on a number nobody has verified.
 
-## Decision required
+## Decision
 
-**Option C is done** — it was the one option the DoD marks unconditional, so
-this session implemented it rather than asking. What is left is narrower than
-the card was filed with, and the measurement above moves it: the question is
-who runs an **as-filed** anchor scan over the 24 remaining candidates, given
-that the pass which would naturally host it destroys its own input.
+*Resolved 2026-10-22T05:26:19Z:* Option B — a Skill(refine-deck) category runs the as-filed anchor scan over gated cards before the citation-repair step, re-runs each candidate's reproduce.py and re-anchors live defects; the human gate keeps blocking superseded
 
-**Option A — a `goc` check.** Extend `goc validate` (advisory) or add a verb
-that, for each non-terminal card, extracts cited anchors and reports the ones
-absent from the tree.
-
-- *For:* the only option that fires without a human or a hygiene pass in the
-  loop, and it ships to every consumer. It is also the only home immune to
-  the erasure problem, because it would anchor from history rather than from
-  whatever the last repair pass wrote.
-- *Against:* `goc validate` does not read card bodies today, and giving it a
-  citation parser is a real surface addition. Cost is now known rather than
-  guessed — `reproduce.py` is the working implementation, ~230 lines, one
-  `git log --follow` plus one `git cat-file --batch` per card, whole-deck run
-  in well under a minute. It remains bounded by
-  [file-line-citations-drift-again-within-days-of-every-repair-pass](../file-line-citations-drift-again-within-days-of-every-repair-pass/):
-  the scan is only as good as the citation form, and that form is itself
-  parked on a decision.
-
-**Option B — a `Skill(refine-deck)` category.** Make "stale parks" a named
-sub-section beside "Stale unverified parks".
-
-- *For:* still the cheapest, and it is where the finding was made. Ships to
-  consumers with the skill.
-- *Against:* **the "free by-product" argument does not survive the
-  measurement.** The pass computes *post-repair* anchors, which caught 0 of 2
-  known instances; the category needs a second, as-filed anchoring pass, and
-  it must run before the repair step or there is nothing left to find. That
-  is a real change to the recipe, not a report over data in hand. It also
-  only fires when someone runs the pass, and it can only report.
-
-**Option D — accept it, and say so.** Document that a parked card's claims
-are as of its filing date and must be re-verified before deciding.
-
-- *For:* honest, and free. The re-verification cost lands on the reader who
-  is already reading the card, which is the cheapest possible moment. C plus
-  the `Staleness re-check` marker already covers every *new* instance, so D
-  concedes only the 24 standing candidates.
-- *Against:* the reader is precisely who has not shown up for 101 of these
-  cards in 60+ days.
-
-**Revised recommendation, not binding: A, or D.** B was the recommendation
-when the pass looked free; it no longer is, and a second anchoring pass
-bolted into a hygiene skill is most of A's cost in a home that only fires by
-hand. If the 24 candidates are worth clearing, `reproduce.py` is already the
-mechanism — promoting it to a `goc` verb is mostly relocation. If they are
-not, say so under D and let C hold the line going forward. The sibling
-outlet card's option C (a working `goc triage`) should carry the staleness
-signal if it lands, since a decision queue that presents stale cards as live
-is the harm restated one layer up.
-
-### Second question — should the gate keep blocking `superseded`?
-
-Unchanged, and the recommendation is still **keep it**. An agent that could
-clear human gates to tidy the board would be worse than the rot. This session
-is the evidence that the refusal is survivable: the two known stale parks were
-marked with a machine-readable `## Staleness re-check` entry and left at their
-gate, which is a better note without being an unauthorized decision. Record
-the rejection explicitly when deciding — the DoD asks for that, not for
-silence.
+*Reasoning:* The maintainer chose B in a human session on 2026-10-22 over the card's revised A-or-D recommendation, keeping the mechanism in the hygiene pass; loosening the superseded gate is rejected, because an agent that clears human gates to tidy the board would be worse than the rot
 
 ## Non-goals
 
