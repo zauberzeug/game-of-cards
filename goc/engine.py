@@ -4499,6 +4499,22 @@ def cli(argv=None):
         sys.exit(1)
 
 
+# The phrase every skill Preflight matches to route a repo without a deck to
+# Skill(kickoff). Without it a missing deck reads exactly like an empty queue
+# ("No cards match"), and the skills' `!` preambles carry no other signal.
+MISSING_DECK_PHRASE = "no such file or directory: .game-of-cards/deck/"
+
+
+def _missing_deck_message() -> str:
+    """The one wording for "no deck here": `goc new` errors with it, the read
+    views print it as a notice."""
+    return (
+        f"no Game of Cards deck found from {REPO_ROOT} upward "
+        f"({MISSING_DECK_PHRASE}). Run `goc install` at the intended project "
+        "root first (agents: invoke Skill(kickoff))."
+    )
+
+
 def _cmd_default(args):
     # Flag conflicts are refused before `load_all_cards()`: a usage error must
     # not first pay for a full deck walk.
@@ -4518,6 +4534,11 @@ def _cmd_default(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    # On stderr only: exit 0 and the `--json` stdout stay as they are, so a
+    # script counting the queue is unaffected. DECK_DIR is the resolved deck,
+    # so a legacy `deck/` or a shared worktree deck suppresses the notice.
+    if not DECK_DIR.exists():
+        print(f"goc: {_missing_deck_message()}", file=sys.stderr)
     cards = load_all_cards()
     closed_since_threshold = parse_closed_since(getattr(args, "closed_since", None))
     if args.done_flag:
@@ -6485,11 +6506,7 @@ def _validate_new_edge_flags(
 def _cmd_new(args):
     """Scaffold a new card dir with valid frontmatter and empty log.md."""
     if not DECK_DIR.is_dir():
-        print(
-            f"ERROR: no Game of Cards deck found from {REPO_ROOT} upward. "
-            "Run `goc install` at the intended project root first.",
-            file=sys.stderr,
-        )
+        print(f"ERROR: {_missing_deck_message()}", file=sys.stderr)
         sys.exit(2)
     title = args.title
     schema = load_schema()

@@ -51,6 +51,12 @@ Route on the results:
 - **`DECK_EXISTS` without `AUTONOMY_SET`** → install completed previously
   but the autonomy question was deferred. Skip Stages 1–5 and jump
   directly to Stage 6 so the user can pick a mode now.
+- **The sweep, or a later `goc` call, is denied by the host's permission
+  check** ("Permission to use Bash has been denied", "requires approval")
+  → `goc` may be installed, just not allowed; do not report it missing.
+  Invoke the host's kickoff complement for the grant — `claude-kickoff`
+  adds `Bash(goc:*)` to `permissions.allow` in its Stage 3 — then re-run
+  kickoff.
 - **`goc_missing`** → halt at this stage. Tell the user: "`goc` CLI is
   not installed. Install it (e.g. `pipx install game-of-cards`, or use
   whatever plugin/runtime ships goc for your host) and re-run kickoff."

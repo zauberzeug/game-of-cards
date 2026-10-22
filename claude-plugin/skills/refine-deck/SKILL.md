@@ -1,6 +1,11 @@
 ---
 name: refine-deck
 description: Deck hygiene pass — retag stale cards, prune 90-day unverified parks, surface defunct references, orphaned dependencies, and jargon titles. AUTO-INVOKE on "tidy up the deck", "hygiene pass", "clean up the queue", or /refine-deck. The board itself gets refactored each iteration.
+allowed-tools:
+  - 'Bash(cat .game-of-cards/hooks/refine-deck.md 2>/dev/null || true)'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b validate; else goc validate; fi 2>&1 || echo "[refine-deck] validate found rot; the skill body below will route you through fixing it")'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --tag unverified -v; else goc --tag unverified -v; fi 2>&1 || true)'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status open --json; else goc --status open --json; fi 2>&1 | head -100)'
 ---
 
 ## When to invoke
@@ -9,7 +14,7 @@ Invoke when the user says "tidy up the deck", "check for stale cards", "hygiene 
 
 ## Preflight
 
-If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff finds the missing setup step (CLI not installed, deck not scaffolded); a denied `goc` call goes to `Skill(claude-kickoff)` on Claude Code. Re-invoke this skill only after kickoff completes.
 
 ## Context (project-local extension)
 

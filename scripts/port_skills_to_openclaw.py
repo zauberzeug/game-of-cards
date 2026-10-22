@@ -9,7 +9,8 @@ Performs mechanical Claude-→-host-neutral transformations:
   - Drops the `## Context` section's `!` block embedded execution
     (Claude Code's pre-fetch syntax). Replaces with a note that the
     agent can call the goc tool to obtain that context.
-  - Removes Claude-specific `argument-hint` / `$ARGUMENTS` references.
+  - Removes Claude-specific `argument-hint` / `$ARGUMENTS` references and
+    the `allowed-tools` frontmatter that pre-approves the `!` blocks.
 
 The port is deterministic: re-running it must reproduce the committed
 `openclaw-plugin/skills/` byte-for-byte. `--check` asserts exactly that
@@ -122,6 +123,13 @@ BOOTSTRAP_ROUTED_RE = re.compile(
 )
 
 
+# Claude Code's `allowed-tools` frontmatter pre-approves each `!` block by its
+# exact command. OpenClaw runs no `!` blocks, so the entries would advertise
+# shell rules for commands the port removes. Stripped before the bootstrap
+# unwrap below, which would otherwise rewrite the entries' text first.
+ALLOWED_TOOLS_RE = re.compile(r"^allowed-tools:\n(?:[ \t]+- .*\n)+", re.MULTILINE)
+
+
 # Inline `!`backtick`` blocks scattered through the body (outside ## Context).
 # Claude Code pre-executes these and embeds the output; OpenClaw has no
 # equivalent. Convert to a plain backticked example so the skill body still
@@ -177,6 +185,9 @@ def _sibling_trailer(skill_dir: Path) -> str:
 def render_skill(src: Path) -> str:
     """Return the host-neutral port of a source skill (pure — no I/O)."""
     text = src.read_text(encoding="utf-8")
+
+    # Drop the Claude-only `allowed-tools` frontmatter block.
+    text = ALLOWED_TOOLS_RE.sub("", text, count=1)
 
     # Drop the `## Preflight` block entirely.
     text = PREFLIGHT_RE.sub("", text, count=1)
