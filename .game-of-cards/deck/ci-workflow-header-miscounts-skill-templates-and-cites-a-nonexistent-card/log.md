@@ -31,3 +31,19 @@ unchanged.
 ## 2026-10-22T06:00:43Z: decision recorded
 
 No hard-coded skill count in the ci.yml header: it states the invariant and the package-data step derives the list from the filesystem — Workflow chore under the bulk rule the maintainer approved in a human session on 2026-10-22; b81ab4ab already rewrote the header this way. Gate session → none.
+
+## 2026-10-22T06:01:12Z — Closure
+
+- **What changed**: `.github/workflows/ci.yml` header (b81ab4ab, the C1 fix) — it now lists what the workflow confirms without a hard-coded skill count ("Every skill template under goc/templates/skills/ ships as importable package data") and cites no card.
+- **Verification**: `sed -n '1,12p' .github/workflows/ci.yml` — no number, no forward-looking sentence, no card reference.
+- **Audit**: no rubric configured; mechanical fix.
+- **Project impact**: n/a
+- **Tests**: n/a (comment-only change).
+
+## Closure verification (2026-10-22T06:01:12Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 3/3 ticked
+- [x] log-md-closure-entry — '## 2026-10-22 — Closure' present

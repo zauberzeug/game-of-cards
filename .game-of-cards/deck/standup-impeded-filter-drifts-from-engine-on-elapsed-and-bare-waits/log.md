@@ -52,3 +52,19 @@ No status or gate change: the predicate choice is still the human's call.
 ## 2026-10-22T06:00:43Z: decision recorded
 
 Fixed by 6291964e: the standup Section 2 block now asks goc --waiting, the engine's impediment view — Stale sweep under the bulk rule the maintainer approved in a human session on 2026-10-22: the drift no longer reproduces, so the remaining possible fixes are moot. Gate decision → none.
+
+## 2026-10-22T06:01:12Z — Closure
+
+- **What changed**: `goc/templates/skills/standup/SKILL.md` (6291964e, the denied-preamble fix) — the Section 2 block asks `goc --waiting -v`, the engine's impediment view, instead of filtering `--json` with `c.get('waiting_on')`; mirrors are in sync. `reproduce.py` now reads the live block from the template and exits 0 when the standup view equals the engine across the matrix.
+- **Verification**: `reproduce.py` → block asks `goc --waiting`: True; false-positive and false-negative sets empty; exit 0. Control: the pre-fix template (af6ce90d) has no `--waiting` block, so the reproducer fails on it. `tests/test_standup_impeded_block_scope.py` pins the block to the engine view, and `tests/test_waiting_filter_status_scope.py` pins the matrix of that view.
+- **Audit**: no rubric configured; mechanical fix.
+- **Project impact**: n/a
+- **Tests**: 1349 passed / 0 failed on the merged main (2026-10-22).
+
+## Closure verification (2026-10-22T06:01:12Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 4/4 ticked
+- [x] log-md-closure-entry — '## 2026-10-22 — Closure' present

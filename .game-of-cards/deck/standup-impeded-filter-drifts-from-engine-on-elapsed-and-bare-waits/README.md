@@ -1,20 +1,20 @@
 ---
 title: standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits
-summary: "The `standup` skill's Context block filters impeded cards with `[c for c in cards if c.get('waiting_on')]`. The engine's `waiting_impedes` predicate evaluates a four-cell matrix over `waiting_on` x `waiting_until`. The skill drifts from the engine in two cells: (1) `waiting_on` set with elapsed `waiting_until` is engine-NOT-impeded (the card has re-entered the queue) but the skill still lists it as impeded; (2) a bare future `waiting_until` (no reason) is engine-IMPEDED (deferred wait) but the skill omits it. Same drift class as the recent session-start `_is_impeded` precision fix — a hook re-implementing the engine predicate from one of its two inputs."
-status: active
+summary: "FIXED (6291964e): the Section 2 block now asks `goc --waiting`, the engine's own impediment view. As filed: the `standup` skill's Context block filters impeded cards with `[c for c in cards if c.get('waiting_on')]`. The engine's `waiting_impedes` predicate evaluates a four-cell matrix over `waiting_on` x `waiting_until`. The skill drifts from the engine in two cells: (1) `waiting_on` set with elapsed `waiting_until` is engine-NOT-impeded (the card has re-entered the queue) but the skill still lists it as impeded; (2) a bare future `waiting_until` (no reason) is engine-IMPEDED (deferred wait) but the skill omits it. Same drift class as the recent session-start `_is_impeded` precision fix — a hook re-implementing the engine predicate from one of its two inputs."
+status: done
 stage: null
 contribution: low
 created: "2026-05-29T11:27:22Z"
-closed_at: null
+closed_at: "2026-10-22T06:01:12Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] EMPIRICAL: Standup Context block's impeded filter agrees with the engine's `waiting_impedes` / `card_is_ready` across the four-cell `waiting_on` x `waiting_until` matrix, including the bare-deferral case (`waiting_until` set with no `waiting_on`).
-  - [ ] TDD: `reproduce.py` (in this card's directory) exits 0 — false-positive and false-negative sets both empty — and a unittest under `tests/` exercises the same matrix so a future template edit cannot reintroduce the drift silently.
-  - [ ] MECHANICAL: Skill source-of-truth at `goc/templates/skills/standup/SKILL.md` updated and `.claude/skills/standup/SKILL.md` resynced (per AGENTS.md "Skill and hook files have two copies" — edit the template, pre-commit sync mirrors).
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] EMPIRICAL: Standup Context block's impeded filter agrees with the engine's `waiting_impedes` / `card_is_ready` across the four-cell `waiting_on` x `waiting_until` matrix, including the bare-deferral case (`waiting_until` set with no `waiting_on`).
+  - [x] TDD: `reproduce.py` (in this card's directory) exits 0 — false-positive and false-negative sets both empty — and a unittest under `tests/` exercises the same matrix so a future template edit cannot reintroduce the drift silently.
+  - [x] MECHANICAL: Skill source-of-truth at `goc/templates/skills/standup/SKILL.md` updated and `.claude/skills/standup/SKILL.md` resynced (per AGENTS.md "Skill and hook files have two copies" — edit the template, pre-commit sync mirrors).
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 worker: {who: Rodja Trappe, where: main}
 ---
 

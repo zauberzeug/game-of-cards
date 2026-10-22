@@ -1,21 +1,21 @@
 ---
 title: goc-waiting-filter-drifts-from-engine-on-elapsed-and-bare-waits
-summary: "FIXED IN CODE, AWAITING RATIFICATION. `goc --waiting` used to filter with `t.waiting_on is not None`, disagreeing with the engine's `waiting_impedes` predicate in two cells of the four-cell overlay matrix. Commit 91d40320 (2026-06-24) aligned the flag with the predicate while closing a later, gate-free card for the same defect; commit fd34c7cc then routed it through `live_impeded`. Re-measured 2026-08-24: this card's own reproduce.py now reports zero false positives and zero false negatives, and tests/test_waiting_filter_status_scope.py pins the matrix against the CLI. What remains is only the record — the shipped semantics are this card's Option A, which the card recommended. The gate blocks any autonomous close, so a human `goc decide` is the one action left."
-status: active
+summary: "FIXED AND RATIFIED (Option A, 2026-10-22). `goc --waiting` used to filter with `t.waiting_on is not None`, disagreeing with the engine's `waiting_impedes` predicate in two cells of the four-cell overlay matrix. Commit 91d40320 (2026-06-24) aligned the flag with the predicate while closing a later, gate-free card for the same defect; commit fd34c7cc then routed it through `live_impeded`. Re-measured 2026-08-24: this card's own reproduce.py now reports zero false positives and zero false negatives, and tests/test_waiting_filter_status_scope.py pins the matrix against the CLI. What remains is only the record — the shipped semantics are this card's Option A, which the card recommended. The gate blocks any autonomous close, so a human `goc decide` is the one action left."
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T11:35:23Z"
-closed_at: null
+closed_at: "2026-10-22T06:01:12Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — `goc --waiting` output matches `{t.title for t in cards if waiting_impedes(t)}` across the four-cell `waiting_on` x `waiting_until` matrix.
-  - [ ] TDD: a unittest under `tests/` exercises the same matrix against the CLI flag so a future refactor cannot reintroduce the drift silently.
-  - [ ] EMPIRICAL: the chosen interpretation (see "## Decision required") is recorded in `log.md` with the principle invoked.
-  - [ ] MECHANICAL: `--waiting` help text in `_build_parser` (`engine.py:2545-2546`) reads consistently with the chosen interpretation.
-  - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+  - [x] TDD: `reproduce.py` exits zero — `goc --waiting` output matches `{t.title for t in cards if waiting_impedes(t)}` across the four-cell `waiting_on` x `waiting_until` matrix.
+  - [x] TDD: a unittest under `tests/` exercises the same matrix against the CLI flag so a future refactor cannot reintroduce the drift silently.
+  - [x] EMPIRICAL: the chosen interpretation (see "## Decision required") is recorded in `log.md` with the principle invoked.
+  - [x] MECHANICAL: `--waiting` help text in `_build_parser` (`engine.py:2545-2546`) reads consistently with the chosen interpretation.
+  - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 worker: {who: Rodja Trappe, where: main}
 ---
 

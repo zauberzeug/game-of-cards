@@ -158,3 +158,19 @@ fallout, and `tests/test_waiting_filter_status_scope.py` pins the semantics.
 ## 2026-10-22T06:00:43Z: decision recorded
 
 Option A — Align with waiting_impedes (impedance semantics), ratified as shipped in 91d40320 — Stale sweep under the bulk rule the maintainer approved in a human session on 2026-10-22: the card was reduced to a ratification of the shipped Option A; principle: a CLI view must ask the engine predicate (waiting_impedes via live_impeded) instead of re-deriving it from one field. Gate decision → none.
+
+## 2026-10-22T06:01:12Z — Closure
+
+- **What changed**: no engine change — Option A shipped in 91d40320 and was routed through `live_impeded` in fd34c7cc; this closure ratifies it. `reproduce.py` now encodes the post-fix contract (exit 0 when `--waiting` equals `waiting_impedes` across the matrix) instead of exiting 0 only while the drift fires. The README body is repaired: the 2026-08-24 hygiene pass had split it at the `## Decision required` text inside the frontmatter's DoD line, leaving a stale second copy of the old body (155 lines) after a glued DoD fragment; that block is removed and the ratification section kept.
+- **Verification**: `reproduce.py` → both difference sets empty, exit 0. `tests/test_waiting_filter_status_scope.py::test_waiting_matches_impedes_predicate` pins the matrix against the CLI flag. The `--waiting` help text reads "an active impediment overlay (a waiting_on reason or an unelapsed waiting_until)", which matches Option A.
+- **Audit**: no rubric configured; principle invoked: a CLI view asks the engine predicate instead of re-deriving it from one field.
+- **Project impact**: n/a
+- **Tests**: 1349 passed / 0 failed on the merged main (2026-10-22).
+
+## Closure verification (2026-10-22T06:01:12Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-10-22 — Closure' present

@@ -142,12 +142,13 @@ def main() -> int:
     print("false-positive (--waiting includes, engine has resurfaced):", only_cli)
     print("false-negative (engine impedes, --waiting omits)         :", only_engine)
 
-    expected_fp = ["a-elapsed-with-reason"]
-    expected_fn = ["b-future-bare-deferral"]
-    drift_as_predicted = (only_cli, only_engine) == (expected_fp, expected_fn)
+    # Post-fix contract (Option A, shipped in 91d40320): `--waiting` IS the
+    # engine predicate, so both difference sets must be empty. Exit 0 when
+    # they are; exit 1 while either drift cell still fires.
+    drift = bool(only_cli or only_engine)
     print()
-    print("DRIFT REPRODUCED" if drift_as_predicted else "(unexpected — investigate)")
-    return 0 if drift_as_predicted else 1
+    print("DRIFT REPRODUCED" if drift else "OK: --waiting matches waiting_impedes across the matrix")
+    return 1 if drift else 0
 
 
 if __name__ == "__main__":

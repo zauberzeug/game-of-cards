@@ -1,20 +1,20 @@
 ---
 title: ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card
-summary: "The `ci.yml` header comment states \"All 11 skill templates ship as importable package data\" (there are 18) and says the deck-validation step becomes load-bearing \"Once `goc-install-command-scaffolds-repo` (sub-card 2) ships\" — a card title that has never existed (the real card, `install-command-scaffolds-repo`, closed long ago). Both claims mislead a reader auditing what CI actually covers."
-status: active
+summary: "FIXED (b81ab4ab): the header states the invariant without a count and cites no card. As filed: The `ci.yml` header comment states \"All 11 skill templates ship as importable package data\" (there are 18) and says the deck-validation step becomes load-bearing \"Once `goc-install-command-scaffolds-repo` (sub-card 2) ships\" — a card title that has never existed (the real card, `install-command-scaffolds-repo`, closed long ago). Both claims mislead a reader auditing what CI actually covers."
+status: done
 stage: null
 contribution: low
 created: "2026-07-26T08:09:35Z"
-closed_at: null
+closed_at: "2026-10-22T06:01:13Z"
 human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
-  - [ ] MECHANICAL: the `ci.yml` header no longer hard-codes a skill count — it either states the invariant without a number, or the number matches `ls -1d goc/templates/skills/*/ | wc -l` at the time of the edit.
-  - [ ] MECHANICAL: the stale forward-looking sentence is rewritten to describe what the step does today, and any card it cites resolves to a real deck directory.
-  - [ ] PROCESS: decide whether a hard-coded count belongs in a comment at all, or whether the "Verify package data ships templates" step (which already derives the list from the filesystem) makes the number redundant.
+  - [x] MECHANICAL: the `ci.yml` header no longer hard-codes a skill count — it either states the invariant without a number, or the number matches `ls -1d goc/templates/skills/*/ | wc -l` at the time of the edit.
+  - [x] MECHANICAL: the stale forward-looking sentence is rewritten to describe what the step does today, and any card it cites resolves to a real deck directory.
+  - [x] PROCESS: decide whether a hard-coded count belongs in a comment at all, or whether the "Verify package data ships templates" step (which already derives the list from the filesystem) makes the number redundant.
 worker: {who: Rodja Trappe, where: main}
 ---
 

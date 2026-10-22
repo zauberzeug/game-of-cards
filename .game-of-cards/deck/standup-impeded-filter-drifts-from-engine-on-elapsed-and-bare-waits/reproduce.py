@@ -1,7 +1,11 @@
 """Reproduce the standup-skill impeded-filter drift.
 
-The standup skill's Context block filters impeded cards with
-`[c for c in cards if c.get('waiting_on')]`. The engine predicate
+Exits 0 once the standup Section 2 block shows exactly what the engine
+impedes, and 1 while it drifts. It reads the live block from the
+template; since the denied-preamble fix that block asks `goc --waiting`.
+
+The defect as filed: the standup skill's Context block filtered impeded
+cards with `[c for c in cards if c.get('waiting_on')]`. The engine predicate
 `waiting_impedes` evaluates a four-cell matrix over `waiting_on` x
 `waiting_until`, so the skill drifts from the engine in two cells:
 
@@ -62,9 +66,30 @@ def write_card(deck_dir: Path, title: str, *, waiting_on: str | None, waiting_un
     (card_dir / "log.md").write_text("")
 
 
-def standup_impeded_filter(cards: list[dict]) -> list[str]:
-    """The filter the standup skill applies (verbatim from SKILL.md line 18)."""
-    return [c["title"] for c in cards if c.get("waiting_on")]
+SKILL = ROOT / "goc" / "templates" / "skills" / "standup" / "SKILL.md"
+
+
+def standup_block_uses_engine_view() -> bool:
+    """True when the template's live Section 2 block asks `goc --waiting`.
+
+    The block used to re-derive the impediment scope with its own
+    `c.get('waiting_on')` filter, which is what drifted. Since the
+    denied-preamble fix it delegates to the engine's `--waiting` view.
+    """
+    for line in SKILL.read_text(encoding="utf-8").splitlines():
+        if line.startswith("!`") and "--waiting" in line:
+            return True
+    return False
+
+
+def standup_impeded_filter(cwd: Path, env: dict) -> list[str]:
+    """What the standup skill's Section 2 block shows: `goc --waiting`."""
+    import json
+    result = subprocess.run(
+        [sys.executable, "-m", "goc.cli", "--waiting", "--json"],
+        cwd=cwd, env=env, capture_output=True, text=True, check=True,
+    )
+    return sorted(c["title"] for c in json.loads(result.stdout))
 
 
 def engine_impeded(cards: list[dict]) -> list[str]:
@@ -99,9 +124,11 @@ def main() -> int:
             return 1
         cards = json.loads(result.stdout)
         cards.sort(key=lambda c: c["title"])
+        skill_says = standup_impeded_filter(cwd, env)
 
-    skill_says = standup_impeded_filter(cards)
     engine_says = engine_impeded(cards)
+    uses_engine = standup_block_uses_engine_view()
+    print("standup Section 2 block asks goc --waiting:", uses_engine)
 
     print("standup-skill impeded filter      :", skill_says)
     print("engine waiting_impedes / not-ready:", engine_says)
@@ -112,12 +139,13 @@ def main() -> int:
     print("false-positive (skill says impeded, engine has resurfaced):", only_skill)
     print("false-negative (engine impedes, skill omits)              :", only_engine)
 
-    expected_fp = ["a-elapsed-with-reason"]
-    expected_fn = ["b-future-bare-deferral"]
-    drift = (only_skill, only_engine) != (expected_fp, expected_fn)
+    # Post-fix contract: the block delegates to the engine, so both
+    # difference sets are empty. Exit 0 then; exit 1 while the template
+    # re-derives the scope itself or either drift cell still fires.
+    drift = bool(only_skill or only_engine) or not uses_engine
     print()
-    print("DRIFT REPRODUCED" if not drift else "(unexpected — investigate)")
-    return 0 if not drift else 1
+    print("DRIFT REPRODUCED" if drift else "OK: standup's impeded view matches the engine across the matrix")
+    return 1 if drift else 0
 
 
 if __name__ == "__main__":
