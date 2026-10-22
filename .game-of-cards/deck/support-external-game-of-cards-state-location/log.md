@@ -5,3 +5,7 @@
 ## 2026-05-07: worker field migrated
 
 Set worker: {who: "claude[bot]", where: main} — card was active before the worker field was introduced; migrated by hand per add-worker-field-and-filter-to-cards DoD.
+
+## 2026-10-22T05:11:45Z: decision recorded
+
+Close as done: the last open item, Codex skills/hooks via a plugin path, landed with provide-codex-plugin-for-skills-and-hooks and publish-codex-plugin (both done 2026-05-18) — The maintainer approved the retirement in a human session on 2026-10-22; every advanced_by prerequisite is closed and codex-plugin/.codex-plugin/plugin.json plus .agents/plugins/marketplace.json ship the Codex path. Gate session → none. Status active → open — the claim parked behind the gate is released, so the next pull-card claims the card per this decision.

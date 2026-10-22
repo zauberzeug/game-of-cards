@@ -1,12 +1,12 @@
 ---
 title: support-external-game-of-cards-state-location
 summary: "Track the repo-footprint redesign: GoC project state should live under `.game-of-cards` and generated runtime affordances should not have to be checked into consuming repositories. The direction is `.game-of-cards/deck` plus the existing `.game-of-cards/config.yaml`, optional skill/hook installation, and agent plugins for Claude Code, Codex, and later OpenClaw."
-status: active
+status: open
 stage: null
 contribution: high
 created: 2026-05-04
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
 advanced_by:
@@ -84,3 +84,10 @@ The key invariant: queue safety, validation, and DoD closure must not depend on 
 ## Session required
 
 8 of 9 DoD items are now checked. The remaining item — Codex skills/hooks via a comparable plugin path — is tracked by `provide-codex-plugin-for-skills-and-hooks`, which is parked at `human_gate: session`. Lower the gate on that card to unblock this epic's final closure.
+
+## Decision
+
+*Resolved 2026-10-22T05:11:45Z:* Close as done: the last open item, Codex skills/hooks via a plugin path, landed with provide-codex-plugin-for-skills-and-hooks and publish-codex-plugin (both done 2026-05-18)
+
+*Reasoning:* The maintainer approved the retirement in a human session on 2026-10-22; every advanced_by prerequisite is closed and codex-plugin/.codex-plugin/plugin.json plus .agents/plugins/marketplace.json ship the Codex path
+
