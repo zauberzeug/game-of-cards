@@ -24,7 +24,6 @@ advanced_by:
   - make-claude-md-and-agents-md-merge-opt-in-via-skill
   - support-worktrees-and-multi-agent-deck-sync
   - define-personas-and-use-cases-for-game-of-cards
-  - explore-saas-deck-hosting-with-optional-tracker-sync
 tags: [epic, infra, meta-fix]
 definition_of_done: |
   - [ ] `game-of-cards` package published on PyPI; `pipx install game-of-cards` puts `goc` on PATH (sub-card: package-pyproject-and-pypi-release)
