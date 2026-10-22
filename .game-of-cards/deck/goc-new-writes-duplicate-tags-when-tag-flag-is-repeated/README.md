@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: "2026-05-30T06:30:27Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
@@ -122,3 +122,10 @@ A `goc validate` rule that flags duplicate entries in `tags` on
 pre-existing duplicates in the deck and require an explicit migration
 or autofix flag. Leaving that out of scope here keeps the fix
 mechanical; the DoD's PROCESS box records the decision.
+
+## Decision
+
+*Resolved 2026-10-22T05:56:36Z:* Lower the gate: dedupe repeated --tag values the way advances are deduped
+
+*Reasoning:* Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none
+
