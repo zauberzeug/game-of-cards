@@ -27,3 +27,7 @@ links
 [ci-package-data-step-reports-skills-ship-without-looking-at-a-wheel](../ci-package-data-step-reports-skills-ship-without-looking-at-a-wheel/),
 which removes or rewires the step and needs the same human session. The DoD is
 unchanged.
+
+## 2026-10-22T06:00:43Z: decision recorded
+
+No hard-coded skill count in the ci.yml header: it states the invariant and the package-data step derives the list from the filesystem — Workflow chore under the bulk rule the maintainer approved in a human session on 2026-10-22; b81ab4ab already rewrote the header this way. Gate session → none.

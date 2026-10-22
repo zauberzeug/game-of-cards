@@ -6,7 +6,7 @@ stage: null
 contribution: low
 created: "2026-07-26T08:09:35Z"
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
@@ -114,3 +114,10 @@ deletes or rewires the step, and belongs in the same `ci.yml` session.
 (the same constraint recorded in `AGENTS.md`, which is why the OpenClaw porter
 drift guard lives in a test rather than a `ci.yml` step). A `pull-card` session
 that claimed this at gate `none` would do the work and then fail to commit it.
+
+## Decision
+
+*Resolved 2026-10-22T06:00:43Z:* No hard-coded skill count in the ci.yml header: it states the invariant and the package-data step derives the list from the filesystem
+
+*Reasoning:* Workflow chore under the bulk rule the maintainer approved in a human session on 2026-10-22; b81ab4ab already rewrote the header this way
+
