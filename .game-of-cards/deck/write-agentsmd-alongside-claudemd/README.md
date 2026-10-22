@@ -1,7 +1,7 @@
 ---
 title: write-agentsmd-alongside-claudemd
 summary: "AGENTS.md is the Linux-Foundation-stewarded shared-substrate convention read by Codex, Cursor, Copilot's coding agent, OpenCode, and Aider. Claude Code does NOT read AGENTS.md by default — it reads CLAUDE.md, and the official guidance is to either import AGENTS.md into CLAUDE.md via `@AGENTS.md` syntax or symlink CLAUDE.md → AGENTS.md. `goc install` should write/merge an `AGENTS.md` block (so the methodology is visible to the five non-Claude agent runtimes) AND ensure CLAUDE.md actually pulls AGENTS.md content into Claude's context — today's slimmed `CLAUDE_GOC.md` uses a plain markdown link `[AGENTS.md](AGENTS.md)`, which does not import. Same marker-bounded merge pattern as CLAUDE.md (so `goc upgrade` can re-sync without clobbering user content)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: 2026-05-03
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] Validated on at least three agent runtimes: Claude Code, OpenCode, and one of {Codex, Cursor, Copilot} — agent reads AGENTS.md and recognizes the deck-first mode
   - [x] CLAUDE.md sections become a "Claude-specific delta" (silent runtime via UserPromptSubmit hook) — overlap with AGENTS.md is removed; cross-link from CLAUDE.md → AGENTS.md for shared content
   - [ ] Test: in a freshly-installed repo, removing CLAUDE.md and using only AGENTS.md, an OpenCode session can still file/advance/finish a card via `goc` verbs
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Write AGENTS.md alongside CLAUDE.md
