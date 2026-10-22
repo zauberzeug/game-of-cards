@@ -31,3 +31,21 @@ This card requires: (1) the parent card to land, (2) ClawHub and npm publishing 
 ## 2026-10-22T05:10:47Z: decision recorded
 
 Close as done: both channels are live (npm game-of-cards 0.0.7-0.0.27, ClawHub via the OIDC release leg); strike the per-channel smoke item — The maintainer approved the retirement in a human session on 2026-10-22 after a code and registry check showed every publication item met; the 2026-07-13 hygiene note claiming publish never happened was wrong. Gate session → none.
+
+## 2026-10-22T05:11:18Z — Closure
+
+- **What changed**: no code — the card is retired against the registries. Recorded the chosen package id (`game-of-cards` on both ClawHub and npm) and the evidence in the README's new "## Outcome" section; `openclaw-plugin/README.md` § Install drops the stale "Once published to ClawHub:" framing.
+- **Verification**: npm registry lists 21 versions, 0.0.7 (2026-05-10) to 0.0.27 (2026-07-14); release run 29305647155 on `v0.0.27` reports `publish-clawhub / publish: success`; `uv run goc validate` exit 0.
+- **Audit**: no rubric configured; mechanical fix.
+- **Project impact**: the deck stops advertising an unpublished OpenClaw plugin; `support-external-game-of-cards-state-location` loses its last open prerequisite.
+- **Tests**: no code touched; the full suite runs at the end of this batch.
+- **Struck**: DoD 7 (per-channel smoke) — no such step exists and the registries plus a production deployment verify publication.
+- **Correction**: the 2026-07-13 hygiene entry ("publish itself has not happened") was wrong; npm had carried the package since 2026-05-10.
+
+## Closure verification (2026-10-22T05:11:19Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — all 7 closed
+- [x] dod-100-percent — 8/8 ticked
+- [x] log-md-closure-entry — '## 2026-10-22 — Closure' present

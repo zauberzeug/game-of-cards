@@ -1,11 +1,11 @@
 ---
 title: publish-openclaw-plugin
-summary: "Publish the Game of Cards OpenClaw plugin/runtime package once `provide-openclaw-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to OpenClaw."
-status: active
+summary: "Publish the Game of Cards OpenClaw plugin/runtime package once `provide-openclaw-plugin-for-skills-and-hooks` lands. Distribution-only work scoped to OpenClaw. Done: npm `game-of-cards` carries 0.0.7–0.0.27 (since 2026-05-10) and ClawHub publishes from the same release run via OIDC, both versioned from the git tag like PyPI."
+status: done
 stage: null
 contribution: medium
 created: 2026-05-06
-closed_at: null
+closed_at: "2026-10-22T05:11:22Z"
 human_gate: none
 advances:
   - support-external-game-of-cards-state-location
@@ -19,14 +19,14 @@ advanced_by:
   - clawhub-publish-fails-with-package-belongs-to-another-publisher
 tags: [story, infra]
 definition_of_done: |
-  - [ ] Plugin published on ClawHub (<https://clawhub.ai>) such that consumers can install via `openclaw skills install <id>`; chosen package id recorded in this card's log
-  - [ ] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09); both channels live
-  - [ ] Versioning policy documented relative to the `game-of-cards` PyPI package (single source of truth — npm and ClawHub track PyPI version)
-  - [ ] Release workflow or manual checklist exists for OpenClaw artifacts (covers ClawHub + npm)
-  - [ ] Published artifact installable by a fresh consumer environment with `python3` (3.10+) on PATH (no `uv` and no `pipx` step required; the plugin vendors the goc engine and uses a `bin/goc` python3 wrapper, parallel to the Claude plugin after `plugin-wrapper-drops-uv`)
-  - [ ] Docs link users to both install paths (ClawHub primary; npm as alternative)
-  - [ ] Smoke test or release-verification step covers both channels
-  - [ ] `uv run goc validate` passes
+  - [x] Plugin published on ClawHub (<https://clawhub.ai>) such that consumers can install via `openclaw skills install <id>`; chosen package id recorded in this card's log
+  - [x] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09); both channels live
+  - [x] Versioning policy documented relative to the `game-of-cards` PyPI package (single source of truth — npm and ClawHub track PyPI version)
+  - [x] Release workflow or manual checklist exists for OpenClaw artifacts (covers ClawHub + npm)
+  - [x] Published artifact installable by a fresh consumer environment with `python3` (3.10+) on PATH (no `uv` and no `pipx` step required; the plugin vendors the goc engine and uses a `bin/goc` python3 wrapper, parallel to the Claude plugin after `plugin-wrapper-drops-uv`)
+  - [x] Docs link users to both install paths (ClawHub primary; npm as alternative)
+  - [x] ~~Smoke test or release-verification step covers both channels~~ — **struck**: no per-channel post-publish smoke exists (the release smoke exercises the Claude plugin path); publication is verified by the registries themselves (npm lists every version, ClawHub's `publish-clawhub / publish` job reports success) and by a production OpenClaw deployment consuming the plugin. File a smoke card only if an install regression ever shows up.
+  - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 supersedes:
   - publish-game-of-cards-agent-plugins
@@ -53,7 +53,34 @@ Both channels publish from the same artifact; npm doubles as a name-claiming ste
 
 ## Depends on
 
-- `provide-openclaw-plugin-for-skills-and-hooks` (implementation; gate now `none`, pullable when its turn comes)
+- `provide-openclaw-plugin-for-skills-and-hooks` (implementation; done)
+
+## Outcome
+
+Both channels are live and track PyPI from the same git tag:
+
+- **npm** — package `game-of-cards`, 21 versions from 0.0.7
+  (2026-05-10) to 0.0.27 (2026-07-14), published by the `publish-npm`
+  job of `.github/workflows/release.yml` (`npm publish --provenance
+  --access public`).
+- **ClawHub** — package id `game-of-cards`, installed with
+  `openclaw skills install game-of-cards` (README.md:45). Published by
+  the `publish-clawhub` leg via OIDC trusted publishing, re-dispatched
+  on the release tag (v0.0.27: run 29305647155, `publish-clawhub /
+  publish: success`).
+- **Versioning** — `scripts/release_rewrite_versions.py` rewrites
+  `openclaw-plugin/package.json` from the release version, so npm and
+  ClawHub carry the PyPI version (AGENTS.md, release section).
+- **Install prerequisite** — only `python3` (3.10+): the tool handler
+  runs the bundled engine as `python3 -m goc.cli` with `PYTHONPATH` on
+  the vendored package (`openclaw-plugin/index.ts`), documented in
+  `openclaw-plugin/README.md` § Prerequisite.
+- **Docs** — `openclaw-plugin/README.md` § Install names ClawHub first
+  and npm as the alternative.
+
+The per-channel smoke item is struck (see the DoD). The 2026-07-13
+hygiene note that "publish itself has not happened" was wrong: npm
+had carried the package since 2026-05-10.
 
 ## Decision
 
