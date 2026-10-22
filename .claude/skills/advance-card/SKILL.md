@@ -59,7 +59,7 @@ overlay (Step 6) or rely on derived readiness instead
 
 | transition | CLI | notes |
 |---|---|---|
-| `open → active` | `goc status <title> active` | "claiming" the card; also clears `draft: true` |
+| `open → active` | `goc status <title> active` | "claiming" the card; also clears `draft: true`. Needs a worker identity: `--worker-who`, else `$GOC_WORKER_WHO`, else git `user.name`; with none the claim is refused before the write — set `GOC_WORKER_WHO` where no git identity exists (CI images, agent sandboxes) |
 | `active → open` | `goc status <title> open` | release the claim (re-queue) when stepping away mid-flight without disproving the work |
 | `* → open` | `goc status <title> open` | re-queue (rare) |
 | `* → disproved` | `goc status <title> disproved` | populate rebuttal first; CLI stamps `closed_at` |
@@ -164,7 +164,8 @@ value-law reasoning, and the retraction contract: `reference.md`
 ## Worker field
 
 `goc status <title> active` auto-populates `worker` with the current
-identity at claim time. Free-form: flat string (`worker: rodja`) or
+identity at claim time (`GOC_WORKER_WHO` / `GOC_WORKER_WHERE` name it
+in environments without git). Free-form: flat string (`worker: rodja`) or
 mapping (`worker: {who: rodja, where: feature/foo}`). Filter queue
 views with `goc --worker <X>` or the `GOC_WORKER` env var. Details:
 `reference.md` § Worker field.

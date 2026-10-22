@@ -46,3 +46,7 @@ site this fix does not touch.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-06-06 — Closure' present
+
+## 2026-10-22T05:20:16Z — Post-close amendment
+
+Superseded in part by [`claims-without-a-git-identity-leave-active-cards-no-one-is-named-for`](../claims-without-a-git-identity-leave-active-cards-no-one-is-named-for/). This card's fix let the claim succeed without a worker stamp when no identity resolves. A claim with no resolvable identity is now refused (exit 2, card unwritten), and `GOC_WORKER_WHO` / `GOC_WORKER_WHERE` supply the identity in environments without git. The "never stamp `{who: ""}`" guard in `_auto_populate_worker` stands unchanged.

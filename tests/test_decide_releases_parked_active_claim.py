@@ -55,7 +55,8 @@ class DecideReleasesParkedActiveClaimTest(unittest.TestCase):
         env = os.environ.copy()
         pythonpath = env.get("PYTHONPATH")
         env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
-        env.pop("GOC_WORKER", None)
+        for key in ("GOC_WORKER", "GOC_WORKER_WHO", "GOC_WORKER_WHERE"):
+            env.pop(key, None)
         return subprocess.run(
             [sys.executable, "-m", "goc.cli", *args],
             cwd=cwd, env=env, text=True, capture_output=True, check=False,

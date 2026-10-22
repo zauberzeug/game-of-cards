@@ -47,7 +47,9 @@ class WorkerFlagValidationTest(unittest.TestCase):
         env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
         # The global --worker filter defaults to $GOC_WORKER and shares a dest
         # with `new --worker`; an ambient value would mask what these assert.
-        env.pop("GOC_WORKER", None)
+        # The claim identity reads $GOC_WORKER_WHO / $GOC_WORKER_WHERE first.
+        for key in ("GOC_WORKER", "GOC_WORKER_WHO", "GOC_WORKER_WHERE"):
+            env.pop(key, None)
         return subprocess.run(
             [sys.executable, "-m", "goc.cli", *args],
             cwd=cwd,

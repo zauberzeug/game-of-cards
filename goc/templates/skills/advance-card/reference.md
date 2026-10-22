@@ -170,3 +170,16 @@ field persists after close as a historical record.
 - `goc --worker <X>` — limit listings to cards owned by `X`.
 - Set the `GOC_WORKER` env var so a runner sees only its own queue
   without typing the flag every time.
+
+**Claim identity:** `goc status <title> active` resolves `who` from
+`--worker-who`, else the card's existing designation, else the
+`GOC_WORKER_WHO` env var, else `git config user.name`; `where` from
+`--worker-where`, else `GOC_WORKER_WHERE`, else the current branch
+(a detached HEAD keeps a stored `where`). When no source names a
+`who`, the claim is refused with exit 2 before the card is written —
+an active card nobody is named for is a claim no queue view can
+attribute. Containerised workers (CI images, agent sandboxes) often
+have no git identity at all, so set `GOC_WORKER_WHO` (and optionally
+`GOC_WORKER_WHERE`, e.g. a job id) in their environment instead of
+relying on every caller to pass the flag. `GOC_WORKER` is unrelated:
+it only filters queue views and never names a claim.
