@@ -1,7 +1,7 @@
 ---
 title: pull-card-workflow-launches-agent-sessions-when-the-ready-queue-is-empty
 summary: "`.github/workflows/pull-card.yml` gates the LLM agent step on `goc --status open --human-gate none --json | jq length`, but the `Skill(pull-card)` it launches selects via `goc --ready`, which additionally excludes cards with an active `waiting_on`/`waiting_until` overlay. When only impeded cards remain, the workflow counts >0, launches a full agent session that finds nothing to pull, then the identical post-check re-triggers the workflow — up to MAX_ITERATIONS wasted sessions per cron tick. Live on this repo today: the workflow predicate counts 3, `goc --ready` counts 0."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-07-23T01:11:06Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: both count sites in `.github/workflows/pull-card.yml` (`Check autonomous queue`, `Re-check queue`) count `uv run goc --ready --json | jq 'length'`, and the printed label says "ready" instead of "Pullable cards (status=open, human_gate=none)" — requires a HUMAN commit (the bot's GITHUB_TOKEN cannot modify `.github/workflows/`)
   - [ ] PROCESS: cross-referenced as a fourth pull-readiness copy on [extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate](../extend-pull-readiness-coupling-invariant-to-the-board-not-ready-predicate/)
   - [ ] PROCESS: `uv run goc validate` passes
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # pull-card workflow launches agent sessions when the ready queue is empty
