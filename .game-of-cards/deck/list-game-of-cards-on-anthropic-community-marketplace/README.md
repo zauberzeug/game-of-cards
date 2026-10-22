@@ -1,12 +1,12 @@
 ---
 title: list-game-of-cards-on-anthropic-community-marketplace
 summary: "Submit the Game of Cards Claude Code plugin to Anthropic's community marketplace (`anthropics/claude-plugins-community` or the equivalent submission form at `clau.de/plugin-directory-submission`) so a broader audience discovers it without first finding the zauberzeug GitHub repo. The technical work that produces a marketplace-ready plugin lives in other cards (bundle, README, skill renames); this card tracks the manual submission action itself — the PR or form submission Rodja makes, the review back-and-forth, and the post-merge documentation update."
-status: active
+status: open
 stage: null
 contribution: high
 created: 2026-05-08
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by:
   - add-readme-to-claude-code-plugin
@@ -122,3 +122,10 @@ until Rodja claims it explicitly.
   marketplace add zauberzeug/game-of-cards` → `/plugin install` →
   prompt → card created), since the marketplace path is interactive-
   only and not headlessly testable in CI.
+
+## Decision
+
+*Resolved 2026-10-22T05:14:48Z:* Close: the listing exists; move the re-pin, the fresh-machine smoke and the docs update into a follow-up card
+
+*Reasoning:* The maintainer decided in a human session on 2026-10-22; GitHub issue #6 from the community-marketplace maintainers confirms game-of-cards is listed, but the entry is frozen on 4e4c5a1, so the remaining work waits on a re-pin rather than on acceptance
+
