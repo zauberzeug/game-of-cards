@@ -1,7 +1,7 @@
 ---
 title: runtime-hooks-fire-in-repos-that-never-opted-in
 summary: "deck_prompt_router.py is the only runtime hook that never checks for a deck, so a globally enabled plugin claims \"runtime active\" and drives the silent card pipeline in repos that never opted in. Gate it on `.game-of-cards/deck/` the way deck_session_start.py already does."
-status: active
+status: open
 stage: null
 contribution: high
 created: "2026-08-13T06:55:08Z"
