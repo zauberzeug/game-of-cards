@@ -1,6 +1,6 @@
 ---
 title: denied-preamble-block-aborts-skill-load-before-the-preflight-routes-to-kickoff
-summary: "Release smoke Path B fails deterministically on the v0.0.28 tag: when Claude Code denies a skill's goc preamble block, it aborts the whole skill load, so the preflight that should route to kickoff never reaches the agent, and kickoff no longer carries the permission remediation. Fresh Claude Code installs without Bash(goc:*) get a bare permission error, and v0.0.28 stays unpublished."
+summary: "Release smoke Path B failed deterministically on the v0.0.28 tag: current Claude Code aborts the whole skill load on any denied render-time block (v0.0.27's plain one included), and the documented Bash(goc:*) grant does not cover the compound preamble f20a8920 introduced, so main's goc-preamble skills would not load even for granted users. Fixed by exact allowed-tools entries per block, Preflight and kickoff routing a denied goc call to claude-kickoff, a missing-deck notice in goc, and a smoke that allows the namespaced plugin skills. Open: the CI dry-run and the release itself."
 status: active
 stage: null
 contribution: high
@@ -11,11 +11,11 @@ advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] PROCESS: fix shape decided and recorded in this card — e.g. (a) carry the kickoff routing where a denied block cannot hide it (skill description, a hook, or a preamble that needs no permission), (b) give the generic preflight a route to the host complement `claude-kickoff`, or put the permission remediation back into kickoff, (c) align Path B's expectations with the current skills and Claude Code behavior
-  - [ ] EMPIRICAL: countercheck recorded — Path B with v0.0.27's skills under current Claude Code, which decides between f20a8920 and a Claude Code behavior change
+  - [x] PROCESS: fix shape decided and recorded in this card — e.g. (a) carry the kickoff routing where a denied block cannot hide it (skill description, a hook, or a preamble that needs no permission), (b) give the generic preflight a route to the host complement `claude-kickoff`, or put the permission remediation back into kickoff, (c) align Path B's expectations with the current skills and Claude Code behavior
+  - [x] EMPIRICAL: countercheck recorded — Path B with v0.0.27's skills under current Claude Code, which decides between f20a8920 and a Claude Code behavior change
   - [ ] TDD: Path B passes on main in a workflow run (dry-run release or equivalent)
   - [ ] MECHANICAL: the next release is published to PyPI, npm and ClawHub
-  - [ ] MECHANICAL: `uv run goc validate` passes
+  - [x] MECHANICAL: `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: worktree-agent-a5b14c91dd90c4511}
 ---
 
@@ -65,13 +65,40 @@ Two separate gaps meet in Path B:
    write the rule into the project's `.claude/settings.json` itself. Path B still expects kickoff to
    show the user the rule to add to `~/.claude/settings.json`.
 
-## What this run does not decide
+## Attribution (countercheck, Claude Code 2.1.303)
 
-`.github/workflows/release.yml` has not changed since v0.0.27, whose smoke passed on 2026-07-14. The
-audit-deck preamble did change: f20a8920 (2026-07-15) replaced `` !`goc` `` with the compound call
-through `_goc-bootstrap.sh`. Whether the whole-skill abort comes from that change (a compound command
-checked as one pattern) or from a newer Claude Code that aborts on any denied preamble is open. The
-countercheck is Path B with v0.0.27's skills under today's Claude Code.
+Both candidates were measured, not argued (runs isolated from user settings; key lines in `log.md`):
+
+- **The abort is a Claude Code behavior change, not f20a8920.** Path B with v0.0.27's skills aborts
+  identically on its plain `` !`goc` `` block. v0.0.27's 2026-07-14 pass is not reproducible today.
+- **f20a8920 adds a second break on top.** A user who granted the documented `Bash(goc:*)` loads
+  v0.0.27's skills, but not main's: prefix rules do not match the compound bootstrap routing, whether
+  granted by flag or settings file. Shipping main as-is would have locked out every granted user.
+  Release smoke Path A allows blanket `Bash`, so it could not catch this.
+- **A skill can pre-approve its own blocks.** An exact `Bash(<block>)` entry in the skill's
+  `allowed-tools` frontmatter loads the body even without any user grant. Claude Code refuses to
+  pre-approve command substitution (`$(...)`) and the old standup `python3 -c` filter even with an
+  exact rule.
+- **Without a deck, goc gave the Preflight nothing to route on.** `goc` printed only `No cards match`,
+  the same line as an empty queue.
+
+## Fix
+
+- **(a)** audit-deck, pull-card, next-card, refine-deck, retrospective and standup carry one exact
+  `'Bash(<block>)'` entry per `!` block in `allowed-tools`, a YAML single-quoted scalar each.
+  standup's branch line now comes from `git status -sb` and its impediment view from
+  `goc --waiting`, replacing the two blocks Claude Code would not pre-approve.
+  `tests/test_skill_preamble_blocks.py` pins block/entry parity.
+- **(b)** The shared Preflight and kickoff Stage 0 route a denied `goc` call to the host complement
+  (`claude-kickoff`, which adds `Bash(goc:*)` to `permissions.allow`). goc's read views name a
+  missing deck on stderr with the Preflight's `no such file or directory: .game-of-cards/deck/`, and
+  `goc new` shares that wording.
+- **(c)** The release smoke allows the skills by their namespaced plugin name, which Claude Code
+  requires once a skill declares `allowed-tools`. Path B checks that the remediation arrives through
+  the kickoff → claude-kickoff hand-off.
+
+Verified locally with this branch's plugin under CI-like conditions: Path A and Path B pass, and the
+granted-user run loads the audit-deck body. The CI dry-run and the publish remain.
 
 ## Context
 
