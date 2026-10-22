@@ -1,7 +1,7 @@
 ---
 title: standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits
 summary: "The `standup` skill's Context block filters impeded cards with `[c for c in cards if c.get('waiting_on')]`. The engine's `waiting_impedes` predicate evaluates a four-cell matrix over `waiting_on` x `waiting_until`. The skill drifts from the engine in two cells: (1) `waiting_on` set with elapsed `waiting_until` is engine-NOT-impeded (the card has re-entered the queue) but the skill still lists it as impeded; (2) a bare future `waiting_until` (no reason) is engine-IMPEDED (deferred wait) but the skill omits it. Same drift class as the recent session-start `_is_impeded` precision fix — a hook re-implementing the engine predicate from one of its two inputs."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-29T11:27:22Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` (in this card's directory) exits 0 — false-positive and false-negative sets both empty — and a unittest under `tests/` exercises the same matrix so a future template edit cannot reintroduce the drift silently.
   - [ ] MECHANICAL: Skill source-of-truth at `goc/templates/skills/standup/SKILL.md` updated and `.claude/skills/standup/SKILL.md` resynced (per AGENTS.md "Skill and hook files have two copies" — edit the template, pre-commit sync mirrors).
   - [ ] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
+worker: {who: Rodja Trappe, where: main}
 ---
 
 # Standup impeded filter drifts from the engine on elapsed and bare waits
