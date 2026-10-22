@@ -6,14 +6,14 @@ stage: null
 contribution: medium
 created: "2026-05-29T19:53:19Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits non-zero (defect no longer fires — `goc decide` with empty `--decision` or empty `--because` is rejected before any state changes).
-  - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR before any mutation` (strict, mirrors the terminal-status guard at engine.py:4909) or `exit 0 + WARNING on stderr + still record` (lenient). Strict is the natural fit since the resulting body and log are not human-readable.
+  - [x] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR before any mutation` (strict, mirrors the terminal-status guard at engine.py:4909) or `exit 0 + WARNING on stderr + still record` (lenient). Strict is the natural fit since the resulting body and log are not human-readable. — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
   - [ ] MECHANICAL: `_cmd_decide` (engine.py:6844) validates that `args.decision.strip()` and `args.reasoning.strip()` are both non-empty before reading the README, with a single `ERROR: --decision and --because must be non-empty` message and exit 2 when either is blank.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the empty-string case, separately for empty-`--decision`, empty-`--because`, and both.
   - [ ] PROCESS: `uv run goc validate` passes.
@@ -162,27 +162,11 @@ the other `goc <verb> accepts unwanted input` family
 each is one CLI verb whose argparse layer accepts the input and whose
 command function performs the mutation without a precondition check.
 
-## Decision required
+## Decision
 
-Two credible failure-mode shapes; pick one:
+*Resolved 2026-10-22T05:20:22Z:* Decided via parent mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success: option 1, exit 2 + ERROR before any mutation for an empty --decision or --because
 
-1. **`exit 2 + ERROR before any mutation`** (strict). Mirrors the
-   existing terminal-status guard at `engine.py:4909` and the
-   already-`none` gate guard at `engine.py:6866`. The natural choice
-   because the resulting body and log entry are not human-readable —
-   there is no "lenient success" interpretation that produces a useful
-   audit trail. Breaks no tooling that wasn't already producing
-   corrupt output.
-2. **`exit 0 + WARNING on stderr + still record`** (lenient). Keeps
-   the option open for tooling that wants to record a "decided but
-   undocumented" state for later annotation. Less appealing — the
-   README block and log entry are equally corrupt either way, and a
-   "WARNING then succeed" path is the harder-to-discover variant of
-   the same broken contract.
-
-Strict (option 1) is the natural sibling of the existing guards in
-the same function. Adopt strict unless a concrete tooling use case
-appears for the lenient form.
+*Reasoning:* The maintainer decided the parent's shared validation-failure shape (1. Strict-refuse) in a human session on 2026-10-22, which answers exactly this card's question
 
 ## Fix
 

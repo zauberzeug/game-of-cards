@@ -53,13 +53,13 @@ is bundled inside the npm payload — the only host prerequisite is
 
 ## Install
 
-> Once published to ClawHub:
->
-> ```sh
-> openclaw skills install game-of-cards
-> ```
->
-> The plugin is also published on npm as `game-of-cards`.
+From ClawHub:
+
+```sh
+openclaw skills install game-of-cards
+```
+
+The plugin is also published on npm as `game-of-cards`.
 
 ### Prerequisite
 

@@ -1,12 +1,12 @@
 ---
 title: support-external-game-of-cards-state-location
 summary: "Track the repo-footprint redesign: GoC project state should live under `.game-of-cards` and generated runtime affordances should not have to be checked into consuming repositories. The direction is `.game-of-cards/deck` plus the existing `.game-of-cards/config.yaml`, optional skill/hook installation, and agent plugins for Claude Code, Codex, and later OpenClaw."
-status: active
+status: done
 stage: null
 contribution: high
 created: 2026-05-04
-closed_at: null
-human_gate: session
+closed_at: "2026-10-22T05:12:06Z"
+human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
 advanced_by:
@@ -30,7 +30,7 @@ definition_of_done: |
   - [x] Runtime-neutral config remains under `.game-of-cards` (currently `.game-of-cards/config.yaml`) and all docs use one spelling
   - [x] Skill/hook installation is optional and users can install CLI-only GoC without generated agent files
   - [x] Claude Code skills/hooks are available through a plugin path rather than only checked-in repo files
-  - [ ] Codex skills/hooks are available through a comparable plugin path
+  - [x] Codex skills/hooks are available through a comparable plugin path
   - [x] OpenClaw plugin direction supersedes the blocked OpenClaw harness card
   - [x] Plugin publication is tracked as explicit release work
   - [x] README/AGENTS guidance explains what is project state, what is runtime installation, and what should be checked in
@@ -81,6 +81,13 @@ The key invariant: queue safety, validation, and DoD closure must not depend on 
 
 *Reasoning:* Anchors every child card to one consistent stance: the deck is project planning history (so checked-in is the team default), one config spelling avoids surface-area drift, and dropping the CI-must-work constraint unblocks the gitignore-friendly path without inventing branch/issue-sync machinery. Reusing the existing marker block avoids a second discovery mechanism.
 
-## Session required
+## Outcome
 
-8 of 9 DoD items are now checked. The remaining item — Codex skills/hooks via a comparable plugin path — is tracked by `provide-codex-plugin-for-skills-and-hooks`, which is parked at `human_gate: session`. Lower the gate on that card to unblock this epic's final closure.
+All nine DoD items are met. The last one, Codex skills/hooks via a comparable plugin path, landed with `provide-codex-plugin-for-skills-and-hooks` and `publish-codex-plugin` (both closed 2026-05-18): `codex-plugin/.codex-plugin/plugin.json` ships the payload and `.agents/plugins/marketplace.json` lists it. The epic waited at `human_gate: session` for five more months only because nothing re-checked it after that card closed. Every `advanced_by` prerequisite is now closed, the last being `publish-openclaw-plugin` on 2026-10-22.
+
+## Decision
+
+*Resolved 2026-10-22T05:11:45Z:* Close as done: the last open item, Codex skills/hooks via a plugin path, landed with provide-codex-plugin-for-skills-and-hooks and publish-codex-plugin (both done 2026-05-18)
+
+*Reasoning:* The maintainer approved the retirement in a human session on 2026-10-22; every advanced_by prerequisite is closed and codex-plugin/.codex-plugin/plugin.json plus .agents/plugins/marketplace.json ship the Codex path
+

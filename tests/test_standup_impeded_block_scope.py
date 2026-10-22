@@ -9,16 +9,12 @@ impossible: `filter_cards` drops every active card before the block's own
 
 `goc --waiting` had exactly this defect and it was fixed engine-side by
 auto-extending the default status to `all` and re-narrowing with
-`live_impeded`'s two liveness conjuncts (non-terminal, non-draft). These
-tests pin the same scope for the skill body, which cannot import the engine
-and so runs the query through the CLI.
-
-Scope only: every fixture below uses an open-ended `waiting_on` with no
-`waiting_until`, the one cell where the block's hand-rolled truthiness test
-and the engine's `waiting_impedes` matrix agree. The matrix drift itself is
-`deck/standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits/`,
-a separate decision-gated card — these tests must not start passing or
-failing on its outcome.
+`live_impeded`'s two liveness conjuncts (non-terminal, non-draft). The block
+used to re-derive that scope with a `python3 -c` filter over `--json`; it now
+asks for `goc --waiting` itself, because Claude Code refuses to pre-approve
+that filter as a skill `allowed-tools` entry (card
+`denied-preamble-block-aborts-skill-load-before-the-preflight-routes-to-kickoff`).
+These tests pin that the block is the engine's view and keeps its scope.
 """
 
 from __future__ import annotations
@@ -42,7 +38,7 @@ TERMINAL_STATUSES = ("done", "disproved", "superseded")
 def section2_block() -> str:
     """The live `!`-block that feeds standup Section 2, read from the template."""
     for line in SKILL.read_text(encoding="utf-8").splitlines():
-        if line.startswith("!`") and "impeded" in line:
+        if line.startswith("!`") and "--waiting" in line:
             return line
     raise AssertionError("standup Section 2 Context block not found in SKILL.md")
 
@@ -53,8 +49,8 @@ def block_command(block: str) -> str:
     The template's fallback arm (`else goc <args>; fi`) is what runs when no
     vendored `_goc-bootstrap.sh` is present; the tests have no `goc` on PATH,
     so the bare verb is replaced with the module invocation. Everything after
-    it — the pipe, the `python3 -c` filter — is executed verbatim, which is
-    the point: the predicate under test is the one the skill ships.
+    it — the flags and the trailing pipe — is executed verbatim, which is the
+    point: the query under test is the one the skill ships.
     """
     inner = block[2:].rstrip("`")
     inner = re.sub(r"^.*?;\s*else\s+goc\s+", "", inner, count=1)
@@ -116,8 +112,14 @@ class StandupImpededBlockScopeTest(unittest.TestCase):
             capture_output=True,
             check=False,
         ).stdout
+        # `-v` table rows start at column 0; header, rule, detail lines
+        # (indented) and the zero-match line are not rows.
         return {
-            line.split(" [", 1)[0] for line in out.splitlines() if " [waiting_on:" in line
+            line.split()[0]
+            for line in out.splitlines()
+            if line
+            and not line[0].isspace()
+            and not line.startswith(("TITLE", "---", "No cards match", "ACTIVE:"))
         }
 
     def waiting_titles(self, cwd: Path) -> set[str]:
@@ -178,11 +180,14 @@ class StandupImpededBlockScopeTest(unittest.TestCase):
 
         The behavioural tests above catch a re-narrowing today, but only while
         a fixture happens to cover the dropped cell. This pins the query text
-        so the regression cannot come back through a different status value.
+        so the regression cannot come back through a different status value,
+        or through a hand-rolled filter piped behind the engine's view.
         """
         block = section2_block()
-        self.assertNotIn("--status open", block)
-        self.assertIn("--status all", block)
+        self.assertNotIn("--status", block)
+        self.assertIn("--waiting", block)
+        for refilter in ("python", "jq", "grep"):
+            self.assertNotIn(refilter, block)
 
 
 if __name__ == "__main__":

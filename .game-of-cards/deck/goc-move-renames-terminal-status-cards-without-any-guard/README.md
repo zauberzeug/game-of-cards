@@ -6,13 +6,13 @@ stage: null
 contribution: medium
 created: "2026-06-01T05:26:39Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - terminal-status-guard-missing-across-mutation-verbs
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: pick the guard shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`).
+  - [x] PROCESS: pick the guard shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`). — decided 2026-10-22 via the parent epic: (c), reject unless `--force`.
   - [ ] TDD: reproduce.py exits zero — a two-card fixture (one `done`, one `open`) runs `goc move <done> <new>` and the chosen guard either rejects with a non-zero exit + clear error (option a) or refuses to write while letting Layer-1 prose stay legible (option b); the done card's directory is unchanged on disk; the open-card rename path remains green via a paired positive case.
   - [ ] MECHANICAL: implement the chosen guard in `goc/engine.py` (`_cmd_move`, line 4780) and re-sync plugin mirrors via `python scripts/sync_plugin_assets.py`.
   - [ ] PROCESS: sibling sweep — confirm `_apply_verdict_interactive` (engine.py:4675-4688) inherits the new guard via its `goc move` subprocess call (defense-in-depth — the parent quality-pass card has its own entry-point guard but the move subprocess hop is a second seam); add a regression test if the inheritance is not obvious from code reading.
@@ -88,17 +88,11 @@ The same principle was codified in `closed-cards-stay-editable-with-cross-refere
 
 Reachability: the most concerning path is the quality-pass subprocess hop (above). A maintainer who runs `goc quality-pass --status all --llm --yes` to clean up jargon-titles project-wide, after the parent card lands its entry-point filter for summary/DoD, would still silently rename closed cards through the `move` subprocess unless this card lands its guard too.
 
-## Decision required
+## Decision
 
-The cluster of unguarded mutation verbs has three documented fix shapes (see the sibling cards' decision sections). For `_cmd_move` specifically:
+*Resolved 2026-10-22T05:17:58Z:* Decided via parent terminal-status-guard-missing-across-mutation-verbs: (c) — reject terminal targets by default with a --force escape hatch; the quality-pass move subprocess inherits the rejection via the exit code
 
-- **(a) Verb-level error**: `_cmd_move` loads the card via `load_card_or_exit`, checks `t.status in TERMINAL_STATUSES`, and rejects with a clear message pointing to the supersede workflow. Matches the post-fix `_cmd_decide` shape — fail loudly. Cost: a `goc move` on a closed card during a legitimate batch retitle (e.g. a deck-wide slug normalization) becomes a per-card override.
-- **(b) Verb-level warning + `--force`**: `_cmd_move` warns when the target is terminal but proceeds, with a `--force` flag to silence the warning. Cost: defaulting to `proceed` keeps the silent-mutation hazard; the warning lives only in the operator's terminal scrollback.
-- **(c) Verb-level error with `--force` escape hatch**: `_cmd_move` rejects on terminal status by default and accepts `--force` to bypass. Combines (a)'s defense-in-depth with (b)'s ergonomic escape for the deck-wide-rename case. Matches the `goc done` shape (`--force` bypasses DoD-checkbox enforcement for free-form DoD cards).
-
-Recommendation: **(c)** — reject by default with `--force` to bypass. The kanban record-axis defaults to immutability; deliberate retitles of closed cards (slug normalization sweeps, post-hoc clarifications) are rare enough that an explicit `--force` per call is the right ergonomic. Aligns with the `goc done --force` precedent for the orthogonal DoD-enforcement bypass.
-
-Independent of (a/b/c), record the chosen shape's interaction with the quality-pass subprocess (DoD step 4): does the new guard surface back through the subprocess exit code, and does `_apply_verdict_interactive`'s `r.returncode == 0` check at engine.py:4733 already DTRT (printing the failure to stderr and skipping the title-applied bookkeeping) or does it need its own log line clarifying that the closed-card path is the intended rejection rather than a generic move failure?
+*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide has stopped refusing terminal cards
 
 ## Sibling sweep
 

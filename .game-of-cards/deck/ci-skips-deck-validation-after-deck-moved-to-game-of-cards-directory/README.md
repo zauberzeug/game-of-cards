@@ -1,42 +1,32 @@
 ---
 title: ci-skips-deck-validation-after-deck-moved-to-game-of-cards-directory
-summary: "CI's final step guards on `if [ -d deck ]`, but the canonical deck moved to `.game-of-cards/deck/` (commit 9fa3a24). Root `deck/` no longer exists, so CI silently takes the `No deck/ directory yet — skipping validation` branch and never runs `goc validate` on the real 224-card deck. The frontmatter-drift gate that AGENTS.md calls load-bearing is dead in CI; only the local pre-commit hook still catches drift."
-status: open
+summary: "CI's final step guarded on `if [ -d deck ]`, but the canonical deck moved to `.game-of-cards/deck/` (commit 9fa3a24). Root `deck/` no longer exists, so CI silently took the `No deck/ directory yet — skipping validation` branch and never ran `goc validate` on the real deck — the frontmatter-drift gate was dead in CI, which let a summary-less card keep `goc validate` red on main from 2026-08-13 to 2026-10-22. Fixed from a human session: the step now guards on `.game-of-cards/deck` (legacy `deck/` fallback kept) and the stale header comment is refreshed."
+status: done
 stage: null
 contribution: high
 created: "2026-05-27T00:53:41Z"
-closed_at: null
-human_gate: session
+closed_at: "2026-10-22T05:09:05Z"
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero — the CI deck-validate step's path guard resolves to the canonical deck directory and would invoke `goc validate` on the real deck.
-  - [ ] MECHANICAL: `.github/workflows/ci.yml` "Validate deck" step guards on `.game-of-cards/deck` (with legacy `deck/` fallback if desired), so `goc validate` actually runs on this repo's own deck in CI.
-  - [ ] MECHANICAL: the stale `ci.yml` header comment is refreshed — it still says "All 11 skill templates" (there are 17) and refers to "the repo's own `deck/` directory" / the old scaffolding card; reword to match the `.game-of-cards/deck/` reality.
-  - [ ] MECHANICAL: AGENTS.md line "No pytest suite exists yet" is corrected — `tests/` has 16 files / 159 passing tests, and CI already runs them via `uv run python -m unittest discover -s tests`. Re-sync `goc/templates/AGENTS_GOC.md` if the corrected text lives there. Plugin mirrors synced; `uv run goc validate` clean.
+  - [x] TDD: reproduce.py exits zero — the CI deck-validate step's path guard resolves to the canonical deck directory and would invoke `goc validate` on the real deck.
+  - [x] MECHANICAL: `.github/workflows/ci.yml` "Validate deck" step guards on `.game-of-cards/deck` (with legacy `deck/` fallback if desired), so `goc validate` actually runs on this repo's own deck in CI.
+  - [x] MECHANICAL: the stale `ci.yml` header comment is refreshed — it still says "All 11 skill templates" (there are 17) and refers to "the repo's own `deck/` directory" / the old scaffolding card; reword to match the `.game-of-cards/deck/` reality.
+  - [x] ~~MECHANICAL: AGENTS.md line "No pytest suite exists yet" is corrected — `tests/` has 16 files / 159 passing tests, and CI already runs them via `uv run python -m unittest discover -s tests`. Re-sync `goc/templates/AGENTS_GOC.md` if the corrected text lives there. Plugin mirrors synced; `uv run goc validate` clean.~~ — **moot**: commit 99c58114 (2026-05-27, `agents-md-claims-no-test-suite-but-ci-runs-regression-tests`) already replaced the line with a description of the `tests/` regression suite; `uv run goc validate` is clean and the mirrors are in sync.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # CI silently skips `goc validate` on the real deck after the deck move
 
-## Handoff required (2026-05-27)
-
-The autonomous drain bot implemented the fix below and verified it
-(reproduce.py exit 0, `goc validate` clean, plugin-sync clean), but
-**could not ship it**: the change touches `.github/workflows/ci.yml`,
-and the bot's GitHub App token lacks the `workflows` permission
-(`remote rejected … refusing to allow a GitHub App to create or update
-workflow … without workflows permission`). This is the same structural
-limit AGENTS.md documents ("the autonomous bot's `GITHUB_TOKEN` cannot
-edit files under `.github/workflows/`").
-
-The bot reverted its uncommitted ci.yml + AGENTS.md edits to keep the
-shared `main` push path clean, and parked this card at `human_gate:
-session`. **A maintainer with `workflows` push permission must apply
-the ready-to-paste diff in the "## Fix" section below and the AGENTS.md
-correction, then push.** No code investigation is needed — the fix is
-fully specified.
+> **Fixed 2026-10-22** from a human session. The autonomous drain bot
+> had implemented and verified the fix on 2026-05-27 but could not ship
+> it: the bot's GitHub App token lacks the `workflows` permission
+> (`remote rejected … refusing to allow a GitHub App to create or update
+> workflow … without workflows permission`), so the card waited at
+> `human_gate: session` until a maintainer applied the "## Fix" below.
+> The sections up to "## Fix" describe the defect as found.
 
 ## Location
 
@@ -116,8 +106,8 @@ correction plus refreshing the surrounding stale comments.
 
 ## Fix
 
-In `.github/workflows/ci.yml`, point the guard at the canonical path (keeping a
-legacy fallback is optional since the engine still has one):
+Applied: `.github/workflows/ci.yml` now guards the step on the canonical
+path, with the legacy fallback kept because the engine still has one:
 
 ```yaml
 - name: Validate deck
@@ -129,7 +119,20 @@ legacy fallback is optional since the engine still has one):
     fi
 ```
 
-Then refresh the stale `ci.yml` header comment (skill count, deck path) and
-correct the AGENTS.md "No pytest suite exists yet" line (and its
-`goc/templates/AGENTS_GOC.md` source if the text lives there) to reflect the
-real `tests/` suite that CI already runs.
+The header comment no longer counts skill templates ("All 11" had
+drifted to 18) and names `.game-of-cards/deck/` and the regression
+suite. The AGENTS.md "No pytest suite exists yet" line was already
+corrected by 99c58114, so that DoD item is struck as moot.
+
+Turning the step back on needed a green deck first: `goc validate`
+had been red on main since 2026-08-13 because
+`runtime-hooks-fire-in-repos-that-never-opted-in` carried no summary,
+and nothing in CI noticed. That card got its summary in 494291ff,
+right before this fix.
+
+## Decision
+
+*Resolved 2026-10-22T05:07:53Z:* Apply the documented ci.yml fix from a human session: guard the validate step on .game-of-cards/deck with the legacy deck/ fallback and refresh the stale header comment
+
+*Reasoning:* The maintainer approved it in a human session on 2026-10-22; the fix was fully specified and only needed a human commit, since the bot token cannot push .github/workflows/
+

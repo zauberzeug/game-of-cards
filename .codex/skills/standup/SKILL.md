@@ -32,17 +32,17 @@ Invoke when the user says "what's up", "where do we stand", "what's blocked", "w
 
 ## Preflight
 
-If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff finds the missing setup step (CLI not installed, deck not scaffolded); a denied `goc` call goes to `Skill(claude-kickoff)` on Claude Code. Re-invoke this skill only after kickoff completes.
 
-If the first Context block warns that local is **behind upstream**, say so at the top of your report and treat every section below as possibly stale — closures and status changes pushed to the remote will not appear until the user pulls.
+If the first Context block's branch line shows `[behind N]`, local is **behind upstream**: say so at the top of your report and treat every section below as possibly stale — closures and status changes pushed to the remote will not appear until the user pulls.
 
 ## Context
 
-!`git fetch --quiet 2>/dev/null; behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo 0); [ "${behind:-0}" -gt 0 ] && echo "⚠️ Local is $behind commit(s) behind upstream — pull before trusting the deck view below; closures landed on the remote will not appear." || echo "✓ Local is current with upstream (or no upstream configured)."`
+!`git fetch --quiet 2>/dev/null; git status -sb 2>/dev/null | head -1`
 
 !`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status active -v; else goc --status active -v; fi 2>&1 || true`
 
-!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --json --status all; else goc --json --status all; fi 2>/dev/null | python3 -c "import json,sys; cards=json.load(sys.stdin); impeded=[c for c in cards if c.get('waiting_on') and c['status'] not in ('done','disproved','superseded') and not c.get('draft')]; print('\n'.join(f\"{c['title']} [waiting_on: {c['waiting_on']}{(' until ' + c['waiting_until']) if c.get('waiting_until') else ''}]: {(c.get('summary') or '(no summary)')[:80]}\" for c in impeded) or 'No impeded cards.')" 2>/dev/null || true`
+!`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --waiting -v; else goc --waiting -v; fi 2>&1 | head -60`
 
 !`b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status open --json; else goc --status open --json; fi 2>&1 | head -60`
 
@@ -70,9 +70,9 @@ title, the `waiting_on` reason, the `waiting_until` date if any, and
 the body's `## Waiting` section (or the most recent `log.md` entry if
 no section exists). One line per card. A card may appear here even
 while `status: active` — the overlay is orthogonal to the progress
-status, which is why the Context block above queries `--status all`
-rather than the open queue and then drops terminal and draft cards by
-hand, mirroring the scope `engine.live_impeded` defines.
+status, which is why the Context block above asks for the engine's own
+impediment view, `goc --waiting`: every status, minus terminal and draft
+cards (`engine.live_impeded`), never just the open queue.
 
 ## Section 3 — Closed since yesterday
 
@@ -170,7 +170,7 @@ so the empty-queue report still survives the filter.
 ## Output format
 
 ```
-⚠️ Behind upstream by <N> — pull first; view may be stale.   (only if the sync check warned)
+⚠️ Behind upstream by <N> — pull first; view may be stale.   (only if the branch line shows [behind N])
 
 ## In flight
 - <title> (claimed by <worker>, <N>h): <one-line summary>

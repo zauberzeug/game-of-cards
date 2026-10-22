@@ -13,6 +13,7 @@ the sibling, not the core.
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -20,7 +21,25 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 
-# Bytes of SKILL.md (frontmatter + body). The capped set is the hot path
+# The frontmatter's `allowed-tools` block is not part of the tax: Claude Code
+# loads the body without its frontmatter, and the entries are verbatim copies
+# of the skill's own `!` fences (pinned by tests/test_skill_preamble_blocks.py).
+# Counting them would charge every pre-approved fence twice against the cap.
+_ALLOWED_TOOLS_BLOCK = re.compile(r"^allowed-tools:\n(?:[ \t]+- .*\n)+", re.MULTILINE)
+
+
+def taxed_size(path: Path) -> int:
+    """Bytes of SKILL.md minus its frontmatter `allowed-tools` block."""
+    text = path.read_text(encoding="utf-8")
+    size = len(text.encode("utf-8"))
+    if text.startswith("---\n") and "\n---\n" in text[4:]:
+        frontmatter = text[: text.index("\n---\n", 4) + 1]
+        for block in _ALLOWED_TOOLS_BLOCK.findall(frontmatter):
+            size -= len(block.encode("utf-8"))
+    return size
+
+
+# Bytes of SKILL.md (frontmatter + body, minus `allowed-tools`). The capped set is the hot path
 # (the per-card-cycle verbs plus the cross-referenced schema skill) and the
 # occasional skills that got the same progressive-disclosure split later.
 # kickoff's cap is higher because its body is mostly verbatim dialog text
@@ -182,7 +201,7 @@ class SkillBodySizeTest(unittest.TestCase):
         over_cap: list[str] = []
         for name, cap in sorted(BODY_CAPS.items()):
             path = TEMPLATE_SKILLS / name / "SKILL.md"
-            size = path.stat().st_size
+            size = taxed_size(path)
             if size > cap:
                 rel = path.relative_to(ROOT)
                 over_cap.append(f"{rel}: {size} > {cap}")

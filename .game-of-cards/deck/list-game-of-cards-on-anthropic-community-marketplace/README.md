@@ -1,12 +1,12 @@
 ---
 title: list-game-of-cards-on-anthropic-community-marketplace
-summary: "Submit the Game of Cards Claude Code plugin to Anthropic's community marketplace (`anthropics/claude-plugins-community` or the equivalent submission form at `clau.de/plugin-directory-submission`) so a broader audience discovers it without first finding the zauberzeug GitHub repo. The technical work that produces a marketplace-ready plugin lives in other cards (bundle, README, skill renames); this card tracks the manual submission action itself — the PR or form submission Rodja makes, the review back-and-forth, and the post-merge documentation update."
-status: active
+summary: "Submit the Game of Cards Claude Code plugin to Anthropic's community marketplace (`anthropics/claude-plugins-community` or the equivalent submission form at `clau.de/plugin-directory-submission`) so a broader audience discovers it without first finding the zauberzeug GitHub repo. Done: submitted via the form on 2026-05-09 and listed (GitHub issue #6), but the entry is frozen on the May commit 4e4c5a10 — unfreezing it, the fresh-machine smoke and the install-docs update continue in community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation."
+status: done
 stage: null
 contribution: high
 created: 2026-05-08
-closed_at: null
-human_gate: decision
+closed_at: "2026-10-22T05:16:34Z"
+human_gate: none
 advances: []
 advanced_by:
   - add-readme-to-claude-code-plugin
@@ -22,14 +22,14 @@ advanced_by:
   - community-marketplace-pin-drifts-silently-behind-releases
 tags: [story, infra, documentation]
 definition_of_done: |
-  - [ ] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README)
+  - [x] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README) — done 2026-05-08, as are all eleven `advanced_by` cards.
   - [x] Decision recorded on submission channel: PR to `anthropics/claude-code-plugins` (or current canonical name) vs. form at `clau.de/plugin-directory-submission` vs. both. Capture the URL and current submission policy at decision time, since Anthropic's process may change between when the card was filed and when it's worked.
-  - [ ] Fresh-machine smoke test passes: a clean environment with no prior `game-of-cards` install runs `/plugin marketplace add` (community marketplace) → `/plugin install game-of-cards@…` → prompts agent → agent creates a card. Zero global package installs required. Captured as a screen recording or written reproduction so the submission PR can link to it.
+  - [x] ~~Fresh-machine smoke test passes: a clean environment with no prior `game-of-cards` install runs `/plugin marketplace add` (community marketplace) → `/plugin install game-of-cards@…` → prompts agent → agent creates a card. Zero global package installs required. Captured as a screen recording or written reproduction so the submission PR can link to it.~~ — **moved** to [community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation](../community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation/): a smoke against today's frozen May pin would only re-confirm the known breakage, so it runs once the pin moves.
   - [x] Version bumped intentionally if appropriate. Pre-1.0 (`0.0.x`) is acceptable for community marketplace; document the choice. If 1.0.0 is the chosen stake-in-the-ground, bump pyproject.toml + plugin.json + marketplace.json in lockstep (the existing CI tripwire enforces this).
   - [x] Submission opened (PR or form). Card transitions to `active` at this point; the worker field captures the URL of the submission.
-  - [ ] Submission accepted / merged. Card transitions to `done`.
-  - [ ] Post-merge documentation updated: README install path, `llms.txt`, `CLAUDE_GOC.md` template, and homepage all mention the community marketplace as the canonical install path. The existing zauberzeug-claude private marketplace and direct-install fallback remain documented as alternatives.
-  - [ ] `uv run goc validate` passes
+  - [x] Submission accepted / merged. Card transitions to `done`. — accepted: GitHub issue #6 (2026-07-06), opened by the community-marketplace maintainers, refers to game-of-cards as listed there, pinned to `4e4c5a10`.
+  - [x] ~~Post-merge documentation updated: README install path, `llms.txt`, `CLAUDE_GOC.md` template, and homepage all mention the community marketplace as the canonical install path. The existing zauberzeug-claude private marketplace and direct-install fallback remain documented as alternatives.~~ — **moved** to [community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation](../community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation/): naming the community marketplace as the canonical path would send users to the frozen pin, whose skills fail `claude plugin validate`.
+  - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -54,8 +54,8 @@ in their own cards:
 
 - `bundle-goc-engine-inside-plugin-payload` (done) — plugin is now
   self-contained; install no longer requires `pipx install`.
-- `add-readme-to-claude-code-plugin` (active, gate=session) — the
-  marketplace-grade README; text written, awaiting Rodja's sign-off.
+- `add-readme-to-claude-code-plugin` (done 2026-05-08) — the
+  marketplace-grade README.
 - `align-skill-names-with-agile-vocabulary` (done 2026-05-08) — the
   skill names a reviewer and a fresh installer will see. Landing the
   rename *before* a broad-audience listing avoided forcing every
@@ -64,7 +64,19 @@ in their own cards:
 This card tracks what those other cards don't: the manual submission
 action.
 
-## Why human_gate=decision
+## Outcome
+
+Submitted via the form on 2026-05-09 and listed: GitHub issue #6
+(2026-07-06), opened by the community-marketplace maintainers, refers
+to game-of-cards as listed there. But the entry pins `4e4c5a10`
+(2026-05-11), which predates the frontmatter fix `2f1ba0a5`, so the
+listed build fails `claude plugin validate`. It has not followed any
+release since; GitHub issue #8 tracks the lag. The card closed on
+2026-10-22. Unfreezing the pin, the fresh-machine smoke and the
+install-docs update continue in
+[community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation](../community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation/).
+
+## Why human_gate=decision (while open)
 
 The submission itself is a user action — Rodja decides on the channel
 (PR vs form) at submission time, opens it, and shepherds the review.
@@ -90,8 +102,8 @@ until Rodja claims it explicitly.
   submission as option A in its decision section ("pursue
   Anthropic-official marketplace later"); this card is that
   deferred half.
-- `add-readme-to-claude-code-plugin` (active, gate=session) — hard
-  prereq; text written, awaits Rodja's sign-off.
+- `add-readme-to-claude-code-plugin` (done 2026-05-08) — hard
+  prereq.
 - `align-skill-names-with-agile-vocabulary` (done 2026-05-08) — hard
   prereq (transitively, via the README), now satisfied.
 
@@ -122,3 +134,10 @@ until Rodja claims it explicitly.
   marketplace add zauberzeug/game-of-cards` → `/plugin install` →
   prompt → card created), since the marketplace path is interactive-
   only and not headlessly testable in CI.
+
+## Decision
+
+*Resolved 2026-10-22T05:14:48Z:* Close: the listing exists; move the re-pin, the fresh-machine smoke and the docs update into a follow-up card
+
+*Reasoning:* The maintainer decided in a human session on 2026-10-22; GitHub issue #6 from the community-marketplace maintainers confirms game-of-cards is listed, but the entry is frozen on 4e4c5a1, so the remaining work waits on a re-pin rather than on acceptance
+

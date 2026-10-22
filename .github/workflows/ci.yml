@@ -3,12 +3,12 @@
 # Confirms:
 #   - Package builds cleanly with hatchling
 #   - `goc --version` reports correctly via the console-script entry point
-#   - `goc validate` passes on the repo's own deck (once a deck exists)
-#   - All 11 skill templates ship as importable package data
-#
-# Once `goc-install-command-scaffolds-repo` (sub-card 2) ships and the
-# repo's own `deck/` directory contains cards, the `goc validate` step
-# becomes the gate that keeps card frontmatter consistent.
+#   - The regression suite under `tests/` passes
+#   - Every skill template under `goc/templates/skills/` ships as
+#     importable package data
+#   - `goc validate` passes on the repo's own deck at
+#     `.game-of-cards/deck/` — the gate that keeps card frontmatter
+#     consistent
 
 name: CI
 
@@ -83,11 +83,10 @@ jobs:
       - name: Verify plugin assets match goc/ byte-for-byte
         run: uv run python scripts/sync_plugin_assets.py --check
 
-      - name: Validate deck (if exists)
+      - name: Validate deck
         run: |
-          if [ -d deck ]; then
+          if [ -d .game-of-cards/deck ] || [ -d deck ]; then
             goc validate
           else
-            echo "No deck/ directory yet — skipping validation."
-            echo "(once goc install scaffolds the repo, this step becomes load-bearing)"
+            echo "No deck directory yet — skipping validation."
           fi

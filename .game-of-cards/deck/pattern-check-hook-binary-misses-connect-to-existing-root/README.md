@@ -9,12 +9,12 @@ summary: |-
   exceeds deciding") and `create-card`'s dedup step warn against. Fix: reword the REMINDER to a
   three-branch form (no / dedup-then-connect / file) and sync the ~9 duplicated copies across host
   ports, then release.
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-06-06T06:54:29Z"
-closed_at: null
-human_gate: session
+closed_at: "2026-10-22T05:12:31Z"
+human_gate: none
 advances:
   - single-source-pattern-check-reminder-across-host-ports
 advanced_by: []
@@ -23,8 +23,8 @@ definition_of_done: |
   - [x] MECHANICAL: the REMINDER string is reworded to a THREE-branch form — (a) NO pattern → "no generalization needed" + stop; (b) YES but a root/generalization card already exists → CONNECT this instance (cross-reference or `advances` edge) and name it, do NOT duplicate; (c) YES and none exists → file via `Skill(create-card)`. The YES path leads with a dedup step (scan the deck). Proposed wording is in the body ("Proposed REMINDER") — keep it ~the same length as today (it is injected on every code-mutating Stop).
   - [x] MECHANICAL: ALL copies of the REMINDER are synced (grep `pattern-check. Before yielding` across the repo). Known sites: `claude-plugin/hooks/pattern_generalization_check.py`, `claude-plugin/goc/templates/hooks/...`, `codex-plugin/hooks/...`, `codex-plugin/goc/templates/hooks/...`, `.claude/hooks/...` (dogfood), top-level `goc/templates/hooks/...`, and the openclaw TypeScript port `openclaw-plugin/index.ts` (then rebuild `openclaw-plugin/dist/index.js` + `.map`). Re-grep after editing → zero stale copies.
   - [x] TDD: any test asserting the REMINDER text is updated to the new wording and asserts the three-branch structure. No prior test asserted the REMINDER text, so a new `ReminderWordingTest` was added to `tests/test_pattern_generalization_hook.py` asserting the no / connect-to-existing / file-only-if-none branches and the dedup-first step.
-  - [ ] MECHANICAL: version bump + release so downstream repos (e.g. phasor-agents, currently on cached v0.0.23) pick up the new wording on the next `goc upgrade`.
-  - [ ] PROCESS: (stretch — or file separately) the REMINDER is hand-synced across ~9 copies, a DRY smell; consider single-sourcing it (one module/const imported by every host port) so future wording changes touch one place. If deferred, file a follow-on card and cross-reference it here.
+  - [x] MECHANICAL: version bump + release so downstream repos (e.g. phasor-agents, currently on cached v0.0.23) pick up the new wording on the next `goc upgrade`. — released: ced3cd0e is contained in v0.0.25 (2026-06-26), v0.0.26 and v0.0.27, all published.
+  - [x] PROCESS: (stretch — or file separately) the REMINDER is hand-synced across ~9 copies, a DRY smell; consider single-sourcing it (one module/const imported by every host port) so future wording changes touch one place. If deferred, file a follow-on card and cross-reference it here. — deferred to [single-source-pattern-check-reminder-across-host-ports](../single-source-pattern-check-reminder-across-host-ports/) (filed 2026-06-09, linked via `advances`).
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -89,28 +89,9 @@ Same shape/length as today; preserves the opt-out phrase and the detection logic
 Prompt-wording + propagation only. The detection logic (which turns fire the hook, the
 `stop_hook_active` re-block guard, the broad-git-mutation matcher) is correct and out of scope.
 
-## Decision required
+## Decision
 
-The reword work (DoD 1–3) is **complete, tested, and committed to `main`** — all 7 Python
-copies, the openclaw TS port, and the rebuilt openclaw bundle now carry the three-branch
-REMINDER, and `ReminderWordingTest` guards it. The full regression suite (413 tests) and both
-sync/porter drift checks pass.
+*Resolved 2026-10-22T05:12:16Z:* Close as done: the reword shipped in v0.0.25-v0.0.27 and the single-sourcing stretch item is deferred to its follow-on card
 
-Only **DoD item 4 — version bump + release** remains. That is a maintainer call rather than an
-autonomous-puller action: it cuts a fresh public version published irreversibly to PyPI, npm,
-and ClawHub, and the choice of whether to cut a release *now* for this one wording change versus
-letting it ride the next accumulated release is a release-cadence decision. The deck is also
-carrying several `session`-gated cards, suggesting the maintainer is steering outward/release
-actions directly at the moment.
+*Reasoning:* The maintainer approved the retirement in a human session on 2026-10-22; ced3cd0e is contained in the v0.0.25, v0.0.26 and v0.0.27 releases, and single-source-pattern-check-reminder-across-host-ports exists as the DoD 5 follow-on
 
-**To resolve:** either
-
-- dispatch a patch release so downstream repos (e.g. phasor-agents, on cached v0.0.23) pick up
-  the wording on next `goc upgrade` — `gh workflow run release.yml -f version=X.Y.Z` (next patch
-  is `0.0.25`), record the run id in `log.md`, tick DoD 4, then `goc done` this card; **or**
-- decide the reword rides the next routine release — drop DoD item 4 to a follow-on
-  release-propagation card (the established pattern, cf. closed
-  `release-fixed-skill-frontmatter-to-codex-plugin-cache`) and close this one.
-
-DoD item 5 (single-sourcing the ~9 REMINDER copies) is deferred to follow-on card
-[single-source-pattern-check-reminder-across-host-ports](../single-source-pattern-check-reminder-across-host-ports/).

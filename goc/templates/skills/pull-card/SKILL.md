@@ -1,11 +1,15 @@
 ---
 name: pull-card
 description: "Pull the highest-leverage `human_gate: none` open card off the queue, claim it, work it, close it, commit. AUTO-INVOKE when the user says \"drain the queue\", \"pull a card\", \"let the agents work\", \"autonomous mode\", \"make progress\", or when invoked via /loop or /schedule."
+allowed-tools:
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status active -v; else goc --status active -v; fi 2>&1 | head -20)'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --ready -v; else goc --ready -v; fi 2>&1 | head -22)'
+  - 'Bash(cat .game-of-cards/hooks/pull-card.md 2>/dev/null || true)'
 ---
 
 ## Preflight
 
-If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff finds the missing setup step (CLI not installed, deck not scaffolded); a denied `goc` call goes to `Skill(claude-kickoff)` on Claude Code. Re-invoke this skill only after kickoff completes.
 
 # Pull a card
 

@@ -6,13 +6,13 @@ stage: null
 contribution: medium
 created: "2026-05-29T18:59:23Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - terminal-status-guard-missing-across-mutation-verbs
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: pick the guard shape — (a) `_cmd_quality_pass` filters terminal-status cards out of the LLM sample regardless of `--status` value (Layer-1 antipattern scan still runs over them; Layer-2 LLM rewrites do not), OR (b) `_cmd_quality_pass` errors when `--llm` is combined with a `--status` value that selects terminal cards, OR (c) the mutation helpers (`_apply_summary_rewrite`, `_apply_dod_rewrite`) refuse with a clear error when the target card is terminal. Record the choice + reasoning in `## Decision required` (see body).
+  - [x] PROCESS: pick the guard shape — (a) `_cmd_quality_pass` filters terminal-status cards out of the LLM sample regardless of `--status` value (Layer-1 antipattern scan still runs over them; Layer-2 LLM rewrites do not), OR (b) `_cmd_quality_pass` errors when `--llm` is combined with a `--status` value that selects terminal cards, OR (c) the mutation helpers (`_apply_summary_rewrite`, `_apply_dod_rewrite`) refuse with a clear error when the target card is terminal. Record the choice + reasoning in `## Decision required` (see body). — decided 2026-10-22 via the parent epic: (a) + (c) combined.
   - [ ] TDD: reproduce.py exits zero — a two-card deck (one open, one done) runs `goc quality-pass --status all --llm --yes` with a stub Sonnet response that proposes summary + DoD rewrites for both cards; the open card is rewritten, the done card's `summary` and `definition_of_done` are unchanged on disk.
   - [ ] MECHANICAL: implement the chosen guard in `goc/engine.py` and re-sync plugin mirrors via `python scripts/sync_plugin_assets.py`.
   - [ ] PROCESS: sibling sweep — confirm `_cmd_move` (engine.py:6638) does or does not need its own terminal-status guard; file a follow-up card if the audit reveals `goc move` standalone is also unguarded (the quality-pass path invokes `move` via subprocess and would benefit from defense-in-depth).
@@ -101,15 +101,11 @@ Reachability: a maintainer running `goc quality-pass --status all --llm --yes` t
 
 `_cmd_move` (engine.py:6638) also lacks a terminal-status guard, so the title-rename branch in `_apply_verdict_interactive` (engine.py:4724-4737) would rename closed cards too — but that's a separate sibling defect (see DoD process step). The quality-pass entry point is the right place to gate Layer-2 LLM mutations.
 
-## Decision required
+## Decision
 
-The cluster of unguarded mutation verbs (`_cmd_quality_pass`, `_cmd_wait`, `_cmd_attest`) suggests two distinct fix shapes worth picking between:
+*Resolved 2026-10-22T05:17:58Z:* Decided via parent terminal-status-guard-missing-across-mutation-verbs: (a) + (c) combined — filter terminal cards out of the Layer-2 LLM sample regardless of --status, and guard _apply_summary_rewrite / _apply_dod_rewrite
 
-- **(a) Verb-level filter at quality-pass entry**: `_cmd_quality_pass` always filters terminal-status cards out of the *LLM sample* (the variable `sample` at engine.py:4816), regardless of `--status` value. Layer-1 antipattern/missing-summary scan continues to include terminal cards (read-only, useful for hygiene reporting). Layer-2 LLM rewrite path never sees them. Simple, defense at the boundary.
-- **(b) Verb-level error**: `_cmd_quality_pass` rejects `--llm` combined with `--status all|done|disproved|superseded` with an explicit error message. Matches the `_cmd_decide` shape — fail loudly. Slightly less ergonomic if the user wanted Layer-1 hygiene reporting on terminal cards.
-- **(c) Helper-level guards**: `_apply_summary_rewrite` and `_apply_dod_rewrite` refuse with a `ValueError` when the card is terminal. Defense-in-depth: protects any future caller, not just quality-pass. Matches the post-fix `_cmd_decide` shape but applied to the helpers.
-
-Recommendation: **(a) + (c) combined** — filter at the verb so the common path silently does the right thing, and guard the helpers so any new caller (a future `goc rewrite-summary` verb, an internal tool) inherits the protection.
+*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide has stopped refusing terminal cards
 
 ## Sibling sweep
 

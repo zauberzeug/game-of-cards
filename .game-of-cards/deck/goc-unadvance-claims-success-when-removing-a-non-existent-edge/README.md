@@ -6,14 +6,14 @@ stage: null
 contribution: medium
 created: "2026-05-29T19:29:58Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances:
   - mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: reproduce.py exits zero (defect no longer fires — running `goc unadvance` on a non-existent edge produces a distinct signal from removing a real edge).
-  - [ ] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("no edge to remove")`. Match whichever shape the rest of the engine uses for analogous non-mutating verb calls (e.g. `goc wait --clear` on a card without a wait).
+  - [x] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("no edge to remove")`. Match whichever shape the rest of the engine uses for analogous non-mutating verb calls (e.g. `goc wait --clear` on a card without a wait). — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
   - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:6535) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_unadvance` honors before printing the success line and entering the auto-commit branch.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the missing-edge case.
   - [ ] PROCESS: `uv run goc validate` passes.
@@ -118,26 +118,11 @@ The asymmetry with `_cmd_advance` (which DOES check preconditions before
 mutating) is the api-contract inconsistency: removing-a-thing should give
 the same level of feedback as adding-a-thing.
 
-## Decision required
+## Decision
 
-Three credible failure modes; the engine has analogues for all three and the
-project hasn't settled on a convention for "non-mutating verb call":
+*Resolved 2026-10-22T05:20:22Z:* Decided via parent mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success: option 1, exit 2 + ERROR on stderr — removing a non-existent edge is refused, symmetric with the advance sibling
 
-1. **`exit 2 + ERROR on stderr`** — matches `_cmd_advance`'s self-edge and
-   cycle handling (engine.py:6573, 4393). Strictest: a no-op verb call is a
-   user error, surface it.
-2. **`exit 0 + WARNING on stderr + no success message`** — least disruptive
-   to scripts that call `unadvance` defensively; still distinguishable from
-   a real removal. Matches the "advisory" tone of the `STALE_BLOCKED` /
-   `ORPHAN_BLOCKED` validators.
-3. **`exit 0 + "no edge to remove" success line`** — silent acceptance of
-   the idempotent shape. Matches `_remove_from_list_field`'s own no-op
-   return (engine.py:6324). Least intrusive but loses information.
-
-Whichever shape the implementer picks should also cover the analogous
-`goc wait --clear` on a card without a wait (currently unverified — check
-`_cmd_wait` for the same pattern when implementing) so the convention
-applies consistently across the verb set.
+*Reasoning:* The maintainer decided the parent's shared validation-failure shape (1. Strict-refuse) in a human session on 2026-10-22, which answers exactly this card's question
 
 ## Fix
 

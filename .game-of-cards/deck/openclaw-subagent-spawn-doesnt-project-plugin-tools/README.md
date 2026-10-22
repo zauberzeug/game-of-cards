@@ -1,12 +1,12 @@
 ---
 title: openclaw-subagent-spawn-doesnt-project-plugin-tools
 summary: "Plugin-registered tools (e.g. `goc` from the GoC OpenClaw plugin) do not appear in subagent toolsets even with the most permissive operator config: `tools.profile: \"full\"` plus an explicit `tools.subagents.tools.alsoAllow: [\"goc\"]`. Runtime inspect (`openclaw plugins inspect game-of-cards --runtime --json`) confirms the plugin is loaded, imported, and the tool is registered (`toolNames: [\"goc\"]`, `tools: [{names: [\"goc\"], optional: false}]`, `diagnostics: []`). Yet a spawned subagent reports `goc tool not available` and only sees built-in tools (exec, read, write, Trello/Odoo/Web/Image, etc.). Either an OpenClaw subagent tool-projection bug, an undocumented additional config layer, or a doc gap. Filed as a follow-up to `openclaw-plugin-release-smoke-blockers-build-and-spawn-api` once that smoke card's plugin-side issues were all confirmed fixed."
-status: open
+status: superseded
 stage: null
 contribution: medium
 created: 2026-05-09
-closed_at: null
-human_gate: session
+closed_at: "2026-10-22T05:09:51Z"
+human_gate: none
 advances:
   - provide-openclaw-plugin-for-skills-and-hooks
   - publish-openclaw-plugin
@@ -22,6 +22,8 @@ definition_of_done: |
   - [ ] Smoke retest with whatever fix lands: subagent invocation in a clean session sees and successfully calls `goc` (e.g., a `goc show <title>` or `goc validate` returns the expected output)
   - [ ] `uv run goc validate` passes
 worker: null
+superseded_by:
+  - openclaw-subagent-plugin-tools-alsoallow-ignored
 ---
 
 # OpenClaw subagent spawn doesn't project plugin tools
@@ -118,3 +120,10 @@ A repro this would file directly upstream at <https://github.com/openclaw/opencl
 
 - The tester's reproduction environment is `/tmp/goc-release-smoke/` with the OpenClaw runtime installed. They've been running retests #1–#5 of the smoke card on that setup; the same setup applies here.
 - If this turns out to be (c), an upstream issue is still useful to file even if we can't fix it ourselves — it documents the gap for other plugin authors and gives OpenClaw maintainers a concrete repro.
+
+## Decision
+
+*Resolved 2026-10-22T05:09:51Z:* Supersede by openclaw-subagent-plugin-tools-alsoallow-ignored, which traced the same symptom to upstream openclaw#23359 / PR #51388
+
+*Reasoning:* The maintainer approved retiring the duplicate in a human session on 2026-10-22; both cards describe goc missing from spawned-subagent toolsets despite tools.subagents.tools.alsoAllow, and the 05-10 card carries the diagnosis and the external wait
+

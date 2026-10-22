@@ -71,7 +71,7 @@ CI smoke test, Path A. Test directory: $workdir (fresh empty git repo).
 " \
         --plugin-dir "$PLUGIN_DIR" \
         --permission-mode dontAsk \
-        --allowedTools "Read,Write,Edit,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(goc:*),Bash(git:*),Bash(which:*),Skill(kickoff),Skill(audit-deck)" \
+        --allowedTools "Read,Write,Edit,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(goc:*),Bash(git:*),Bash(which:*),Skill(game-of-cards:kickoff),Skill(game-of-cards:audit-deck)" \
         --max-turns 30 )
 
     test -d "$workdir/.game-of-cards/deck" || { echo "FAIL Path A: deck dir not created"; exit 1; }
@@ -90,16 +90,18 @@ CI smoke test, Path B. Test directory: $workdir (fresh empty git repo).
 goc is NOT in the allowlist this run, simulating a fresh consumer install
 where Bash(goc:*) has not yet been granted.
 
-1. Invoke Skill(audit-deck). !-blocks calling goc will be denied.
+1. Invoke Skill(audit-deck). It pre-approves its own !-blocks, so it
+   loads; they report that this repo has no deck.
 2. Per the preflight section, invoke Skill(kickoff).
-3. Kickoff should surface verbatim remediation text telling the user
-   to add 'Bash(goc:*)' to permissions.allow in ~/.claude/settings.json.
-4. After confirming the remediation text is emitted, write 'B:passed'
-   to result.txt. Do NOT attempt to install goc or modify settings.
+3. goc is not allowed here, so follow kickoff's route for a denied goc
+   call: invoke Skill(claude-kickoff) for the permission grant.
+4. After confirming the hand-off surfaced 'Bash(goc:*)' and
+   permissions.allow, write 'B:passed' to result.txt. Do NOT attempt to
+   install goc or modify settings.
 " \
         --plugin-dir "$PLUGIN_DIR" \
         --permission-mode dontAsk \
-        --allowedTools "Read,Write,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(which:*),Skill(kickoff),Skill(audit-deck)" \
+        --allowedTools "Read,Write,Bash(cd:*),Bash(ls:*),Bash(pwd:*),Bash(which:*),Skill(game-of-cards:kickoff),Skill(game-of-cards:audit-deck),Skill(game-of-cards:claude-kickoff)" \
         --max-turns 20 )
 
     grep -q '^B:passed' "$workdir/result.txt" || { echo "FAIL Path B: result.txt missing"; exit 1; }

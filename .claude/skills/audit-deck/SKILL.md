@@ -2,6 +2,13 @@
 name: audit-deck
 description: Hunt for one previously-undocumented defect, doc drift, missing test, or inconsistency; file it via Skill(create-card). AUTO-INVOKE on "find me a bug", "audit X", "check for inconsistencies", or /audit-deck. Inconsistencies are the primary lead.
 argument-hint: optional area filter within the project (consuming repo defines its default scope in `.game-of-cards/hooks/audit-deck.md`)
+allowed-tools:
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b; else goc; fi 2>&1 || true)'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --done; else goc --done; fi 2>&1 || true)'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status disproved; else goc --status disproved; fi 2>&1 || true)'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --tag unverified; else goc --tag unverified; fi 2>&1 || true)'
+  - 'Bash(cat .game-of-cards/hooks/audit-deck.md 2>/dev/null || true)'
+  - 'Bash(cat .game-of-cards/tooling-conventions.md 2>/dev/null || true)'
 ---
 
 ## When to invoke
@@ -10,7 +17,7 @@ Invoke when the user says "find me a bug", "audit X", "check for inconsistencies
 
 ## Preflight
 
-If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff finds the missing setup step (CLI not installed, deck not scaffolded); a denied `goc` call goes to `Skill(claude-kickoff)` on Claude Code. Re-invoke this skill only after kickoff completes.
 
 ## Context (read but distrust — these are hypotheses, not ground truth)
 

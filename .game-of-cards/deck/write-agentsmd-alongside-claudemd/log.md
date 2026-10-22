@@ -28,3 +28,23 @@ PASS — no axiom touched. Pure infra: markdown template authoring + idempotent 
 ## 2026-07-13 — Deck hygiene pass
 
 Stale-open review (60d+ without log activity): 4/6 DoD items already checked and all three children are wired. Likely closable in a short human session — the two open items are the remaining scope. `human_gate: session`; no status change.
+
+## 2026-10-22T05:12:47Z: decision recorded
+
+Close as done: production use on Claude Code, Codex and OpenClaw counts as the three-runtime validation; strike the OpenCode-specific round-trip item — The maintainer decided in a human session on 2026-10-22 that the runtimes the deck actually runs on are the validation that matters; OpenCode is not a supported target (OpenClaw, a different product, is). Gate session → none.
+
+## 2026-10-22T05:13:07Z — Closure
+
+- **What changed**: no code — DoD-4 ticked as amended by the 2026-10-22 decision (Claude Code, Codex and OpenClaw in production count as the three runtimes), DoD-6 (OpenCode-only round-trip) struck; the "Validation required" section now records the resolution.
+- **Verification**: this repo's `CLAUDE.md` is exactly `@AGENTS.md`; `codex-plugin/` ships the Codex payload that reads AGENTS.md; `openclaw-plugin/` runs in a production deployment; `uv run goc validate` exit 0.
+- **Audit**: no rubric configured; mechanical fix.
+- **Project impact**: one fewer session-gated card; the AGENTS.md block stays the cross-runtime briefing.
+- **Tests**: no code touched; the full suite runs at the end of this batch.
+
+## Closure verification (2026-10-22T05:13:07Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — all 3 closed
+- [x] dod-100-percent — 6/6 ticked
+- [x] log-md-closure-entry — '## 2026-10-22 — Closure' present

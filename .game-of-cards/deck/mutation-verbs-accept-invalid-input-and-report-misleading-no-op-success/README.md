@@ -5,7 +5,7 @@ stage: null
 contribution: medium
 created: "2026-06-25T01:36:42Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by:
   - goc-advance-claims-success-when-adding-an-already-existing-edge
@@ -20,7 +20,7 @@ advanced_by:
 tags: [epic, meta-fix, api-contract]
 summary: "Aggregation epic for a family of `goc` mutation verbs that accept redundant, empty, conflicting, or otherwise invalid input and — instead of rejecting it — perform a misleading no-op or silently drop the input, reporting exit 0 / a success line. Nine open sibling cards (filed 2026-05-29..2026-08-26, each carrying its own `human_gate: decision`) share this shape across `advance`, `unadvance`, `decide`, `attest`, `status`, and `wait`. They cross-referenced each other in prose (the `goc <verb> accepts unwanted input` family named in `goc-decide-accepts-empty…`) but carried no schema edges, so the family was invisible to the scheduler/record axes and recurred as zero-edge `meta-fix` noise in every refine-deck orphan-dependency pass. Distinct from the `terminal-status-guard-missing-across-mutation-verbs` epic, which targets mutation of cards whose *status* is terminal regardless of input validity."
 definition_of_done: |
-  - [ ] PROCESS: A shared validation-failure shape is decided and recorded in this card's `log.md` — strict-refuse (exit 2, no mutation) vs. exit-0-with-stderr-WARNING vs. distinct no-op success message — and whether a reusable helper or per-verb inline checks are the right factoring. Note that the two no-op-success siblings (`advance`/`unadvance` redundant edge) explicitly want one shape applied to BOTH directions symmetrically.
+  - [x] PROCESS: A shared validation-failure shape is decided and recorded in this card's `log.md` — strict-refuse (exit 2, no mutation) vs. exit-0-with-stderr-WARNING vs. distinct no-op success message — and whether a reusable helper or per-verb inline checks are the right factoring. Note that the two no-op-success siblings (`advance`/`unadvance` redundant edge) explicitly want one shape applied to BOTH directions symmetrically. — decided 2026-10-22: 1. Strict-refuse with a one-line shared emission helper and per-verb predicates.
   - [ ] PROCESS: All nine open child cards are closed or superseded under the agreed shape; this epic's `advanced_by` roster is all terminal.
   - [ ] TDD: A regression test asserts each guarded verb rejects (or honestly signals the no-op for) its invalid-input case — redundant edge add/remove, self-target unadvance, empty `--decision`/`--because`, unknown `--skip` name, worker-override on a non-active transition, `--clear` combined with `--reason`/`--until`, and `--by` on an already-superseded target.
   - [ ] MECHANICAL: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green after each child closes.
@@ -48,65 +48,24 @@ of the target's status. The two families overlap conceptually (both are
 their fix: a terminal-status guard checks `card.status`, an
 input-validation guard checks the *arguments*.
 
-## Decision required
+## Decision
 
-This epic cannot be drained by an autonomous puller: its DoD requires a
-shared validation-failure-shape decision (DoD item 1) **and** closing
-all nine children — each of which carries its own `human_gate:
-decision` per-verb option menu. The gate was raised here (by a
-2026-06-25 pull-card pass) precisely to record the shared-shape bundle
-before authorising a single implementation series, exactly as the
-original scope note anticipated. A human (or a session with authority
-to make API-contract taste calls) needs to pick **one** shared shape so
-the nine children stop re-deriving it nine ways.
+*Resolved 2026-10-22T05:20:21Z:* 1. Strict-refuse: invalid input exits 2 with a goc error on stderr and mutates nothing; factoring per the card's recommendation, a one-line shared helper for the message and exit with the precondition predicates inline per verb
 
-### The three candidate shapes (DoD item 1)
+*Reasoning:* The maintainer accepted the card's recommendation in a human session on 2026-10-22; strict-refuse is the precondition-failure shape the engine already uses (exit 2) and the only one that protects --commit-driven scripts and agents
 
-1. **Strict-refuse** — print `goc: error: <reason>` (or `ERROR: …`) to
-   stderr, mutate nothing, `sys.exit(2)`.
-2. **Exit-0-with-stderr-WARNING** — perform/skip as today but emit a
-   `WARNING:` line to stderr; exit stays 0.
-3. **Distinct no-op success message** — exit 0, but the stdout line
-   honestly states no mutation occurred (e.g. `advance: edge already
-   exists; no change`).
+### How the decision reached the children
 
-### Recommended default: strict-refuse (exit 2)
+Five children asked exactly the shape question this card decided, so they carry a "Decided via parent" record and are pullable at `human_gate: none`: the redundant-edge pair (`goc-advance-claims-success-…`, `goc-unadvance-claims-success-…`), `goc-decide-accepts-empty-…`, `goc-attest-silently-ignores-unknown-skip-names` and `goc-wait-with-a-past-until-date-…`.
 
-The codebase already establishes strict-refuse as *the* precondition-
-failure shape, so this is a small confirmation rather than an open
-design space:
+Four stay gated, because each asks a question the shape does not settle:
 
-- `_cmd_advance` already rejects a self-target with
-  `print("ERROR: cannot advance a card with itself", file=sys.stderr);
-  sys.exit(2)` and rejects a would-be cycle the same way
-  (`goc/engine.py:6572`, `:5237`). The
-  `goc-unadvance-with-self-target` child is literally asking for the
-  symmetric guard `advance` already has.
-- Argument/precondition errors throughout `engine.py` use the
-  `print("goc: error: …", file=sys.stderr); sys.exit(2)` pattern
-  (`:2496`, `:2510`, `:2541`, `:3437`, `:3463`, …); exit 1 is reserved
-  for validation-graph failures and exit 3 for FATAL schema/IO.
-- Strict-refuse is the only shape that protects the `--commit`-driven
-  scripts and agents the "Why it matters" section names: a non-zero
-  exit is the contract those callers already check.
+- `goc-unadvance-with-self-target-leaves-card-in-half-edge-state` — whether the guard sits in `_cmd_unadvance` (Option A) or inside `_mutate_pair` so that other callers such as `repair-edges` are covered too (Option B).
+- `goc-status-silently-drops-worker-overrides-on-non-active-transitions` — whether the worker overrides should be honored on every transition (Option A) or refused (Option B).
+- `goc-wait-clear-silently-discards-reason-and-until-set-in-same-call` — whether `--clear` combined with a set is refused (Option A) or means clear-then-set (Option B).
+- `goc-status-superseded-discards-by-override-when-target-already-superseded` — whether a second `--by` redirects the supersession (option 1) or is refused (option 2).
 
-The two no-op-success siblings (`advance`/`unadvance` redundant edge)
-want one shape applied symmetrically to BOTH directions; strict-refuse
-satisfies that (redundant add → exit 2; redundant remove → exit 2).
-
-### Factoring sub-decision (also DoD item 1)
-
-A reusable helper (e.g. `_refuse(reason: str)` that prints
-`goc: error: {reason}` and `sys.exit(2)`) vs. per-verb inline checks.
-Recommendation: a one-line helper for the message+exit, with the
-*precondition predicate* inline per verb (each verb's invalid-input
-test is verb-specific — redundant edge, empty string, mode conflict,
-non-active transition — so only the failure emission is shared).
-
-**To proceed:** `Skill(decide-card)
-mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
---decision "<shape + factoring>" --because "<why>"`, then a follow-on
-series can close the nine children under the recorded shape.
+If one of them is answered with "refuse", strict-refuse applies, with this card's shared emission helper.
 
 ## Family roster (open children, wired via `advanced_by`)
 

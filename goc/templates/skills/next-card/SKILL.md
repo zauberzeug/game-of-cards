@@ -2,6 +2,9 @@
 name: next-card
 description: "Pick the highest-leverage open card to work on next. Read-only verdict — does NOT flip status (pull-card claims). AUTO-INVOKE on \"what's next\", \"pick something\", \"what should I do\", or autonomous-loop work. Filters to `human_gate: none` for loop safety."
 argument-hint: optional area filter (e.g. an area-tag or path prefix); omit for full open queue
+allowed-tools:
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --status active -v; else goc --status active -v; fi 2>&1 | head -20)'
+  - 'Bash(b=.claude/skills/_goc-bootstrap.sh; if [ -f $b ]; then sh $b --ready -v${GOC_WORKER:+ --worker "$GOC_WORKER"}; else goc --ready -v${GOC_WORKER:+ --worker "$GOC_WORKER"}; fi 2>&1 || true)'
 ---
 
 ## When to invoke
@@ -10,7 +13,7 @@ Invoke when the user says "what's next", "pick something", "work on the queue", 
 
 ## Preflight
 
-If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff detects which setup step is missing (CLI not installed, Bash allowance not granted, project state not scaffolded) and walks the user through it. Re-invoke this skill only after kickoff completes.
+If any `!` block below shows `goc: command not found`, `Permission for this action has been denied`, or `no such file or directory: .game-of-cards/deck/`, **stop and invoke `Skill(kickoff)` first**. Kickoff finds the missing setup step (CLI not installed, deck not scaffolded); a denied `goc` call goes to `Skill(claude-kickoff)` on Claude Code. Re-invoke this skill only after kickoff completes.
 
 ## Context
 
