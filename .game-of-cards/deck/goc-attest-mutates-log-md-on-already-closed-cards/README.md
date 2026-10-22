@@ -12,9 +12,9 @@ advances:
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: decision recorded in `## Decision required` — guard `goc attest` against terminal targets (the sibling-consistent option), allow with a "re-attest is a no-op echo of the original" semantic, or split (re-attest passes by reading the already-recorded block instead of mutating).
+  - [x] PROCESS: decision recorded in `## Decision required` — guard `goc attest` against terminal targets (the sibling-consistent option), allow with a "re-attest is a no-op echo of the original" semantic, or split (re-attest passes by reading the already-recorded block instead of mutating). — decided 2026-10-22 via the parent epic: option 1, refuse outright.
   - [ ] TDD: `reproduce.py` exits zero — running `goc attest` against a closed card no longer mutates `log.md` (or behaves per the recorded decision).
-  - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` carries a `TERMINAL_STATUSES` guard mirroring `_cmd_decide` (engine.py:4909) and `_cmd_done` (engine.py:3243), with an error message naming the replacement path (re-open is forbidden; file a new card).
+  - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` refuses terminal targets through the parent epic's shared `_refuse_terminal_mutation` helper (decided 2026-10-22), with an error message naming the replacement path (re-open is forbidden; file a new card).
   - [ ] MECHANICAL: the misleading `Next: goc done <title> to close once all DoD items are ticked.` print at `engine.py:5890` is dropped on terminal-card paths (or removed entirely if the guard short-circuits before it runs).
   - [ ] PROCESS: `uv run goc validate` clean; full regression suite green.
 ---
@@ -149,7 +149,7 @@ for sibling consistency.
 
 *Resolved 2026-10-22T05:17:58Z:* Decided via parent terminal-status-guard-missing-across-mutation-verbs: option 1, refuse outright — the terminal guard runs at the top of _cmd_attest and writes nothing
 
-*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide no longer refuses terminal cards
+*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide has stopped refusing terminal cards
 
 ## Fix
 

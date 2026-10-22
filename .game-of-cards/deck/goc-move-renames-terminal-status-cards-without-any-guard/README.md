@@ -12,7 +12,7 @@ advances:
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: pick the guard shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`).
+  - [x] PROCESS: pick the guard shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`). — decided 2026-10-22 via the parent epic: (c), reject unless `--force`.
   - [ ] TDD: reproduce.py exits zero — a two-card fixture (one `done`, one `open`) runs `goc move <done> <new>` and the chosen guard either rejects with a non-zero exit + clear error (option a) or refuses to write while letting Layer-1 prose stay legible (option b); the done card's directory is unchanged on disk; the open-card rename path remains green via a paired positive case.
   - [ ] MECHANICAL: implement the chosen guard in `goc/engine.py` (`_cmd_move`, line 4780) and re-sync plugin mirrors via `python scripts/sync_plugin_assets.py`.
   - [ ] PROCESS: sibling sweep — confirm `_apply_verdict_interactive` (engine.py:4675-4688) inherits the new guard via its `goc move` subprocess call (defense-in-depth — the parent quality-pass card has its own entry-point guard but the move subprocess hop is a second seam); add a regression test if the inheritance is not obvious from code reading.
@@ -92,7 +92,7 @@ Reachability: the most concerning path is the quality-pass subprocess hop (above
 
 *Resolved 2026-10-22T05:17:58Z:* Decided via parent terminal-status-guard-missing-across-mutation-verbs: (c) — reject terminal targets by default with a --force escape hatch; the quality-pass move subprocess inherits the rejection via the exit code
 
-*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide no longer refuses terminal cards
+*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide has stopped refusing terminal cards
 
 ## Sibling sweep
 

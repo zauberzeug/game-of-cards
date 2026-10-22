@@ -13,13 +13,13 @@ advanced_by:
   - goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards
   - goc-move-renames-terminal-status-cards-without-any-guard
 tags: [epic, meta-fix, api-contract]
-summary: "Aggregation epic for the family of mutation verbs that mutate cards whose `status` is already terminal (`done`/`disproved`/`superseded`) with no `TERMINAL_STATUSES` guard. `goc decide` got a guard (engine.py:~5868, via the closed sibling); `goc wait`, `goc attest`, `goc quality-pass`, and `goc move` still lack one. Collects the open siblings so they can be resolved with one shared guard shape (a helper applied across the verbs) instead of four independent point-fixes that drift."
+summary: "Aggregation epic for the family of mutation verbs that mutate cards whose `status` is already terminal (`done`/`disproved`/`superseded`) with no `TERMINAL_STATUSES` guard: `goc wait`, `goc attest`, `goc quality-pass` and `goc move`. Decided 2026-10-22: one shared helper that strictly refuses terminal targets, `goc move --force` as the only escape hatch, advance/unadvance out of scope, and a freshly written message — `goc decide`'s old guard became a terminal gate-repair path, so there is nothing to mirror."
 definition_of_done: |
-  - [ ] PROCESS: A shared guard shape is decided — either a reusable `TERMINAL_STATUSES` helper that each verb calls, or a per-verb inline check mirroring `_cmd_decide` (engine.py:~5868). Recorded in this card's log.md.
+  - [x] PROCESS: A shared guard shape is decided — either a reusable `TERMINAL_STATUSES` helper that each verb calls, or a per-verb inline check mirroring `_cmd_decide` (engine.py:~5868). Recorded in this card's log.md. — decided 2026-10-22: one reusable helper (see "## Agreed shape").
   - [ ] PROCESS: All four open child cards (`goc-wait-...`, `goc-attest-...`, `goc-quality-pass-...`, `goc-move-...`) are closed or superseded under the agreed shape; this epic's `advanced_by` roster all terminal.
-  - [ ] MECHANICAL: Each guarded verb's error message names the supersede workflow (`goc status <old> superseded --by <new>`) where that is the correct forward path, matching the post-fix `_cmd_decide` message.
+  - [ ] MECHANICAL: Each guarded verb's error message names the card, its terminal status and the supersede workflow (`goc status <old> superseded --by <new>`) where that is the correct forward path. The message is written fresh in the shared helper: `_cmd_decide` has stopped refusing terminal cards (it runs a terminal gate-repair path, engine.py `_cmd_decide`), so there is no message to mirror.
   - [ ] TDD: A regression test asserts each of the four verbs refuses a terminal-status target (exit non-zero, no mutation written).
-  - [ ] PROCESS: Sibling-shape audit closed out — `_cmd_advance` / `_cmd_unadvance` (engine.py:~5662/4404) explicitly classified as in-scope (need a guard) or out-of-scope (supersession edges legitimately mutate closed cards), with the verdict recorded.
+  - [x] PROCESS: Sibling-shape audit closed out — `_cmd_advance` / `_cmd_unadvance` (engine.py:~5662/4404) explicitly classified as in-scope (need a guard) or out-of-scope (supersession edges legitimately mutate closed cards), with the verdict recorded. — out of scope, recorded in the 2026-10-22 decision: edge maintenance on a terminal endpoint is part of the record axis.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -31,9 +31,10 @@ A family of `goc` mutation verbs share one root-cause defect: they
 mutate a card whose `status` is already terminal (`done`,
 `disproved`, `superseded`) with **no `TERMINAL_STATUSES` guard**, so a
 closed card — the deck's durable record-axis artefact — silently gains
-fresh state long after closure. `goc decide` was given the canonical
-guard (`engine.py:~5868`); the rest of the family was overlooked when
-that guard was added.
+fresh state long after closure. `goc decide` was once given a guard;
+the rest of the family was overlooked when it was added, and `goc
+decide` itself has since replaced the guard with a terminal gate-repair
+path (`_cmd_decide`), so none of the four has a sibling to copy.
 
 ## Family roster
 
@@ -46,8 +47,8 @@ Open children (wired via `advanced_by`):
 
 Closed predecessor (record axis, not wired to avoid mutating a closed
 card): `goc-decide-accepts-decisions-on-already-closed-cards` — the
-card that added the canonical `_cmd_decide` guard the others should
-mirror.
+card that added the original `_cmd_decide` guard, since replaced by
+decide's terminal gate-repair path.
 
 Related but distinct shape (not a child): `no-verb-can-fix-a-closed-at-that-contradicts-the-cards-status`
 is about the *absence* of a repair verb for an already-broken
@@ -75,5 +76,30 @@ when its `advanced_by` roster is terminal.
 
 *Resolved 2026-10-22T05:17:11Z:* Approve the recommended bundle: strict refuse via one shared terminal-status helper across wait, attest, move, quality-pass and the summary/DoD rewrites; goc move gets a --force escape hatch; advance/unadvance stay out of scope; the helper's message is written fresh
 
-*Reasoning:* The maintainer approved the bundle in a human session on 2026-10-22; it is the sibling-consistent 'closed cards are read-only' default, and _cmd_decide no longer refuses terminal cards (it now runs a terminal gate-repair path), so there is no refusal message left to mirror
+*Reasoning:* The maintainer approved the bundle in a human session on 2026-10-22; it is the sibling-consistent 'closed cards are read-only' default, and _cmd_decide has stopped refusing terminal cards (it now runs a terminal gate-repair path), so there is no refusal message left to mirror
+
+## Agreed shape
+
+The approved bundle (the full option catalogue is archived in
+`log.md`; each child carries its own "Decided via parent" record):
+
+1. **One helper.** `_refuse_terminal_mutation(card, verb, *,
+   replacement="supersede")` in `engine.py`, called right after
+   `load_card_or_exit` in every guarded verb. It prints a fresh
+   message naming the card, its terminal status and the
+   `goc status <old> superseded --by <new>` forward path, then exits 2
+   without writing anything.
+2. **`goc wait`** → strict refuse, setters and `--clear` alike.
+   `validate_waiting_overlay`'s terminal skip stays: a terminal overlay
+   can then only be inherited from the live state before closure.
+3. **`goc attest`** → strict refuse at the top of `_cmd_attest`.
+4. **`goc quality-pass`** → filter terminal cards out of the Layer-2
+   LLM sample regardless of `--status` (Layer 1 still reports over them,
+   read-only), and guard `_apply_summary_rewrite` / `_apply_dod_rewrite`
+   so every future caller inherits the protection.
+5. **`goc move`** → reject by default, `--force` to bypass (the
+   `goc done --force` precedent). The quality-pass `move` subprocess
+   inherits the rejection through the non-zero exit code.
+6. **`_cmd_advance` / `_cmd_unadvance`** → out of scope; supersession
+   legitimately maintains edges on closed cards.
 

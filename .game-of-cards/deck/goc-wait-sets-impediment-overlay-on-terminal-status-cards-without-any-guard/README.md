@@ -12,10 +12,10 @@ advances:
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: decision recorded in `## Decision required` — guard `goc wait` against terminal targets (the sibling-consistent option), allow with a "historical record" semantic, or split (allow `--clear` but reject `--reason`/`--until`).
+  - [x] PROCESS: decision recorded in `## Decision required` — guard `goc wait` against terminal targets (the sibling-consistent option), allow with a "historical record" semantic, or split (allow `--clear` but reject `--reason`/`--until`). — decided 2026-10-22 via the parent epic: option 1, strict guard.
   - [ ] TDD: `reproduce.py` exits non-zero — running `goc wait` against a terminal card no longer mutates the overlay (or behaves per the recorded decision).
-  - [ ] MECHANICAL: `_cmd_wait` in `goc/engine.py` carries a `TERMINAL_STATUSES` guard mirroring `_cmd_decide` (engine.py:4958), with an error message naming the replacement path (file a new card; supersede if the closed card needs revisiting).
-  - [ ] PROCESS: `validate_waiting_overlay` (engine.py:2271) decision recorded — either keep the terminal skip (now defensible because the setter refuses) or extend it to emit a `TERMINAL_OVERLAY` warning for legacy stragglers.
+  - [ ] MECHANICAL: `_cmd_wait` in `goc/engine.py` refuses terminal targets through the parent epic's shared `_refuse_terminal_mutation` helper (decided 2026-10-22; `_cmd_decide` has stopped carrying a refusal to mirror), with an error message naming the replacement path (file a new card; supersede if the closed card needs revisiting).
+  - [x] PROCESS: `validate_waiting_overlay` (engine.py:2271) decision recorded — either keep the terminal skip (now defensible because the setter refuses) or extend it to emit a `TERMINAL_OVERLAY` warning for legacy stragglers. — decided 2026-10-22 via the parent epic: keep the terminal skip.
 ---
 
 # `goc wait` sets an impediment overlay on a terminal-status card without any guard
@@ -123,7 +123,7 @@ closure-as-historical-record contract does not endorse.
 
 *Resolved 2026-10-22T05:17:57Z:* Decided via parent terminal-status-guard-missing-across-mutation-verbs: option 1, strict terminal-status guard — goc wait refuses terminal targets for the setters and --clear alike; validate_waiting_overlay keeps its terminal skip
 
-*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide no longer refuses terminal cards
+*Reasoning:* The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide has stopped refusing terminal cards
 
 ## Fix sketch (option 1)
 
