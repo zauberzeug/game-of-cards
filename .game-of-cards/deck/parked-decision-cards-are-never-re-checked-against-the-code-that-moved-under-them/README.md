@@ -1,6 +1,6 @@
 ---
 title: parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them
-summary: "Nothing re-checks a human_gate: decision card against the code it cites, so a parked card whose defect is fixed by later work keeps advertising a live defect indefinitely. Two measured instances: goc-waiting-filter-drifts-from-engine-on-elapsed-and-bare-waits and waiting-flag-filters-on-waiting-on-field-not-the-impediment-overlay both described a --waiting drift that commit 91d40320 fixed on 2026-06-24 while closing a third, gate-free card filed for the same defect the same day — no reference, no supersession edge, 61 days parked. The engine also makes this irreducible: goc status ... superseded refuses while the gate is up, so no autonomous pass can retire a stale park."
+summary: "Nothing re-checks a human_gate: decision card against the code it cites, so a parked card whose defect is fixed by later work keeps advertising a live defect — two --waiting cards stayed parked 61 days after commit 91d40320 fixed their defect, and goc status ... superseded rightly refuses while the gate is up. Decided 2026-10-22: a Skill(refine-deck) category runs an as-filed anchor scan over gated cards before its citation-repair step and re-runs each candidate's reproduce.py; the gate keeps blocking superseded. A vanished anchor is not evidence of a fix — 37 of 38 anchor-stale gated cards were still live on 2026-10-22 — so the category re-anchors live defects and leaves retirement to the human."
 status: open
 stage: null
 contribution: high
@@ -13,10 +13,12 @@ tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero — it must first FAIL on today's tree by finding at least one parked card whose cited anchor text is absent from HEAD, and pass only once such cards are surfaced by a mechanism rather than by accident. Include a known-caught control (a card whose anchors all still resolve) so a green run distinguishes "nothing stale" from "nothing scanned", per `static-source-guards-never-prove-they-can-catch-an-offender`.
   - [x] EMPIRICAL: measure how many of the 170 decision-gated cards are affected, using absent-anchor count as the proxy. This pass found 44 absent anchors across 30 cards without looking for stale parks; the real number is unknown and the decision below should not be taken on two instances.
-  - [ ] PROCESS: the `## Decision required` question is answered and recorded — whether staleness detection is a `goc` mechanism, a `Skill(refine-deck)` category, or a documented duty of whoever runs `goc triage`.
+  - [x] PROCESS: the `## Decision required` question is answered and recorded — whether staleness detection is a `goc` mechanism, a `Skill(refine-deck)` category, or a documented duty of whoever runs `goc triage`. — decided 2026-10-22: Option B, a `Skill(refine-deck)` category.
   - [x] MECHANICAL: whichever way it goes, the closing path gains the missing step — `Skill(finish-card)` § "After closure" tells a closer to check whether the defect they just fixed is also described by an open card, and to write the supersession edge. Today nothing prompts that.
   - [x] MECHANICAL: `Skill(create-card)` dedups new filings against the *gated* backlog, not only against open titles. Both instances below were filed as fresh cards while a parked card already described the defect.
-  - [ ] PROCESS: decide explicitly whether the gate should keep blocking `goc status <t> superseded`. It is the reason a stale park cannot be retired autonomously, and loosening it is a real option with real risk — record the rejection if it is rejected.
+  - [x] PROCESS: decide explicitly whether the gate should keep blocking `goc status <t> superseded`. It is the reason a stale park cannot be retired autonomously, and loosening it is a real option with real risk — record the rejection if it is rejected. — decided 2026-10-22: the gate keeps blocking; loosening it is rejected.
+  - [ ] MECHANICAL: `Skill(refine-deck)` gains a "Stale parks" category that runs the as-filed anchor scan over gated cards **before** its citation-repair step, since the repair relocates anchors and erases the signal. Per candidate: re-run its `reproduce.py` where one exists — still reproducing → re-anchor the cites and append a `## <ts> — Staleness re-check` entry (a vanished anchor is not evidence of a fix); no longer reproducing → append the re-check entry with the evidence and leave the card at its gate for the human to retire; `reproduce.py` crashing or absent → report the card for a human re-read, never treat it as fixed. The scan ships with the skill rather than only as this card's `reproduce.py`.
+  - [ ] TDD: a test pins the category's contract in the shipped skill — the stale-parks scan precedes the repair step, and the reproduce-first, re-anchor-not-retire rule is stated.
   - [x] MECHANICAL: if a mechanism ships, mirrors re-synced (`python scripts/sync_plugin_assets.py --check`) and the OpenClaw port re-run (`python3 scripts/port_skills_to_openclaw.py --check`), both clean.
   - [x] PROCESS: `uv run goc validate` clean; `uv run python -m unittest discover -s tests` green.
 worker: {who: "claude[bot]", where: main}
@@ -110,6 +112,35 @@ code moved; only reading the card proves the defect went with it. Both known
 instances are inside the 26, which is the reason to trust the number as a
 screen. The 44-across-30 figure quoted when this card was filed came from a
 different anchoring rule and is superseded by the table above.
+
+### Re-measured 2026-10-22: a vanished anchor is almost never a fix
+
+Two months later the same scan reports 38 anchor-stale gated cards (204
+gated, 155 with a resolvable as-filed anchor). A read-only bulk pass then
+checked every one of them against `af6ce90d`. Where the card ships a
+`reproduce.py` it was re-run; otherwise the current code was read, and
+`git log -S` named the commit that moved each anchor:
+
+| verdict | cards |
+|---|---|
+| still live (defect reproduces or is visible in the code) | **37** (2 narrowed, 1 re-scoped) |
+| actually fixed — retire | 1 (`unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes`) |
+
+The anchors moved through refactors, not fixes: `0be57d4d` alone (the
+2026-09-01 `goc upgrade` write-plan rework) moved 9 of them. So the screen
+is far noisier than the 2026-08-24 reading suggested, and retiring on an
+absent anchor would have destroyed 37 live bug reports. Two more lessons
+from the pass:
+
+- A `reproduce.py` can rot too. Two of them no longer run (one imports a
+  removed function, one relies on a scaffold `goc new` stopped writing)
+  while their defect is still live. A crashing reproducer means "re-read",
+  not "fixed".
+- Two further cards are stale by *content* although every anchor still
+  resolves, which no anchor scan can see.
+
+That is why the decided category re-runs the reproducer first and
+re-anchors live defects instead of proposing them for retirement.
 
 ## The signal erases itself — and that decides Option B
 

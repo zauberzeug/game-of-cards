@@ -158,3 +158,9 @@ silence.
 ## 2026-10-22T05:26:19Z: decision recorded
 
 Option B — a Skill(refine-deck) category runs the as-filed anchor scan over gated cards before the citation-repair step, re-runs each candidate's reproduce.py and re-anchors live defects; the human gate keeps blocking superseded — The maintainer chose B in a human session on 2026-10-22 over the card's revised A-or-D recommendation, keeping the mechanism in the hygiene pass; loosening the superseded gate is rejected, because an agent that clears human gates to tidy the board would be worse than the rot. Gate decision → none. Status active → open — the claim parked behind the gate is released, so the next pull-card claims the card per this decision.
+
+## 2026-10-22T05:27:15Z — Decision reconciled; the 2026-10-22 bulk measurement folded in
+
+- The maintainer chose Option B over the card's revised A-or-D recommendation, so this is a re-scope of the stated recommendation. The summary, the DoD (items 3 and 6 ticked, two new items for the refine-deck category and its test) and the "How big it is" section now carry the decision.
+- New evidence from a read-only bulk pass over the gated backlog on 2026-10-22: 38 anchor-stale gated cards, every `reproduce.py` re-run against `af6ce90d` (code read where none exists) → 37 still live (2 narrowed, 1 re-scoped), 1 actually fixed (`unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes`). `0be57d4d` alone moved 9 anchors. Two reproducers no longer run although their defect is live, and two cards are stale by content with every anchor resolving.
+- Consequence written into the DoD: the category re-runs the reproducer first and re-anchors live defects; a vanished anchor or a crashing reproducer is never treated as a fix, and retirement stays with the human because the gate keeps blocking `superseded`.
