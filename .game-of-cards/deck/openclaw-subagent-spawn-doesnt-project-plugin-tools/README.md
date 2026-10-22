@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: 2026-05-09
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - provide-openclaw-plugin-for-skills-and-hooks
   - publish-openclaw-plugin
@@ -118,3 +118,10 @@ A repro this would file directly upstream at <https://github.com/openclaw/opencl
 
 - The tester's reproduction environment is `/tmp/goc-release-smoke/` with the OpenClaw runtime installed. They've been running retests #1–#5 of the smoke card on that setup; the same setup applies here.
 - If this turns out to be (c), an upstream issue is still useful to file even if we can't fix it ourselves — it documents the gap for other plugin authors and gives OpenClaw maintainers a concrete repro.
+
+## Decision
+
+*Resolved 2026-10-22T05:09:51Z:* Supersede by openclaw-subagent-plugin-tools-alsoallow-ignored, which traced the same symptom to upstream openclaw#23359 / PR #51388
+
+*Reasoning:* The maintainer approved retiring the duplicate in a human session on 2026-10-22; both cards describe goc missing from spawned-subagent toolsets despite tools.subagents.tools.alsoAllow, and the 05-10 card carries the diagnosis and the external wait
+
