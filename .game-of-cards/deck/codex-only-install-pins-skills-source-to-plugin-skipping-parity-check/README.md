@@ -6,7 +6,7 @@ stage: null
 contribution: high
 created: "2026-05-27T14:02:43Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, unverified]
@@ -70,3 +70,10 @@ Surfaced by: general-purpose audit hunter (install/sync seam), 2026-05-27.
 
 [codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/) decides whether Codex installs keep vendoring `.codex/skills/` now that
 the Codex plugin ships. Under option B there, `skills_source` has to say which host it describes. That is this card's question, so the two should be decided together.
+
+## Decision
+
+*Resolved 2026-10-22T05:56:37Z:* Lower the gate: write the reproduce.py next, which needs no human input
+
+*Reasoning:* Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none
+
