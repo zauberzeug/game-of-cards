@@ -40,3 +40,7 @@ exits 0. This card's defect is unchanged. Any other non-zero exit still
 leaves an empty count, and `reproduce.py`'s stand-in run, which does not
 depend on that trigger, still exits 1. The README's Defect and Evidence
 sections now say so.
+
+## 2026-10-22T03:17:04Z: decision recorded
+
+Apply pull-card-yml.patch as-is from a human session: workflow-level shell bash for pipefail, > 0 launch gates, goc --ready counts — Maintainer approved the workflow fix in a human session on 2026-10-22; the patch is verified by both reproducers and is the one human edit that closes this card and its --ready sibling. Gate session → none.

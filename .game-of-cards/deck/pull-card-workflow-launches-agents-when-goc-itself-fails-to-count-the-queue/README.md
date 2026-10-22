@@ -6,7 +6,7 @@ stage: null
 contribution: medium
 created: "2026-09-28T01:38:32Z"
 closed_at: null
-human_gate: session
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra]
@@ -157,3 +157,10 @@ so the bot cannot land the patch. A human session:
 
 Surfaced by: general-purpose audit hunter (repo scripts and CI
 workflows), 2026-09-28.
+
+## Decision
+
+*Resolved 2026-10-22T03:17:04Z:* Apply pull-card-yml.patch as-is from a human session: workflow-level shell bash for pipefail, > 0 launch gates, goc --ready counts
+
+*Reasoning:* Maintainer approved the workflow fix in a human session on 2026-10-22; the patch is verified by both reproducers and is the one human edit that closes this card and its --ready sibling
+
