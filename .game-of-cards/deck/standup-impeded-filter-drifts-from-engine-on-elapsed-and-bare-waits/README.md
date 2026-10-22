@@ -6,7 +6,7 @@ stage: null
 contribution: low
 created: "2026-05-29T11:27:22Z"
 closed_at: null
-human_gate: decision
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract, documentation]
@@ -150,3 +150,10 @@ import the engine and so reimplements it in an inline `python3`
 one-liner. The OpenClaw TS port carries a third copy of the same
 `isImpeded ⟷ waiting_impedes` reimplementation, tracked under
 [openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting](../openclaw-hook-predicates-reimplement-engine-logic-and-keep-drifting/).
+
+## Decision
+
+*Resolved 2026-10-22T06:00:43Z:* Fixed by 6291964e: the standup Section 2 block now asks goc --waiting, the engine's impediment view
+
+*Reasoning:* Stale sweep under the bulk rule the maintainer approved in a human session on 2026-10-22: the drift no longer reproduces, so the remaining possible fixes are moot
+

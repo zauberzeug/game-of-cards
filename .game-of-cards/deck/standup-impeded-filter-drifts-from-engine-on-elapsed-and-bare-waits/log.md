@@ -48,3 +48,7 @@ No status or gate change: the predicate choice is still the human's call.
 ## 2026-10-22T05:41:25Z — Staleness re-check
 
 6291964e (card `denied-preamble-block-aborts-skill-load-before-the-preflight-routes-to-kickoff`) replaced the standup Section 2 Context block. The hand-rolled `python3 -c` filter over `--json`, which Claude Code would not pre-approve as an `allowed-tools` entry, became the engine's own view: `goc --waiting -v 2>&1 | head -60`. The block now evaluates `waiting_impedes` through `live_impeded` instead of `c.get('waiting_on')`, so the two drifting cells this card describes (elapsed `waiting_until`, bare `waiting_until` without `waiting_on`) can no longer disagree with the engine. `tests/test_standup_impeded_block_scope.py` pins that the block is the `--waiting` view with no re-filter behind it. The gate is `decision`, so retiring this card (done or superseded) is left to the human.
+
+## 2026-10-22T06:00:43Z: decision recorded
+
+Fixed by 6291964e: the standup Section 2 block now asks goc --waiting, the engine's impediment view — Stale sweep under the bulk rule the maintainer approved in a human session on 2026-10-22: the drift no longer reproduces, so the remaining possible fixes are moot. Gate decision → none.
