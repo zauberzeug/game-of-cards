@@ -76,8 +76,12 @@ and the no-op line:
 > advances/advanced_by/supersedes/superseded_by — nothing to do.
 
 `emit_frontmatter` canonicalises far more than those four fields: scalar
-quoting, block-scalar shape, key ordering, and the blank line that separates
-the frontmatter from the body. So the reported set is
+quoting, block-scalar shape, and the blank line that separates the frontmatter
+from the body. (This card originally listed key ordering too; it does not
+belong — the emitter walks the parsed mapping in the authored file's own order.
+The overstatement reached the shipped help string and was corrected by
+[`migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does`](../migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/).)
+So the reported set is
 "cards not in canonical form", not "cards with list-style drift" — and the
 report prints bare card names, giving the reader nothing to distinguish the
 two.

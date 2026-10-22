@@ -20,3 +20,13 @@ engine-managed divergence from authored divergence has multiple
 credible mechanisms (normalize-before-compare, strip-managed-line,
 split plan-vs-report classification, or add an `engine-managed`
 status) — see `## Decision required` in README.
+
+## 2026-10-04 — reach widened by a sibling fix
+
+`upgrade-skill-cannot-reach-the-divergence-report-once-the-version-is-current`
+made `goc upgrade` print the divergence report on its "already at goc X —
+nothing to do." path too, which used to print none. So the needless
+`config.yaml` reconcile this card describes is no longer limited to runs
+with engine work: every `Skill(upgrade)` run sees the pristine file as
+`preserved`, including one at the current version. The classification is
+unchanged, and so is the `## Decision required` question in README.

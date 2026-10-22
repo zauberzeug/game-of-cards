@@ -13,7 +13,7 @@ Before running the body of this skill, the agent should see current deck state. 
 
 - `git fetch --quiet 2>/dev/null; behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo 0); [ "${behind:-0}" -gt 0 ] && echo "⚠️ Local is $behind commit(s) behind upstream — pull before trusting the deck view below; closures landed on the remote will not appear." || echo "✓ Local is current with upstream (or no upstream configured)."`
 - `goc --status active -v`
-- `goc --json --status open 2>/dev/null | python3 -c "import json,sys; cards=json.load(sys.stdin); impeded=[c for c in cards if c.get('waiting_on')]; print('\n'.join(f\"{c['title']} [waiting_on: {c['waiting_on']}{(' until ' + c['waiting_until']) if c.get('waiting_until') else ''}]: {(c.get('summary') or '(no summary)')[:80]}\" for c in impeded) or 'No impeded cards.')" 2>/dev/null || true`
+- `goc --json --status all 2>/dev/null | python3 -c "import json,sys; cards=json.load(sys.stdin); impeded=[c for c in cards if c.get('waiting_on') and c['status'] not in ('done','disproved','superseded') and not c.get('draft')]; print('\n'.join(f\"{c['title']} [waiting_on: {c['waiting_on']}{(' until ' + c['waiting_until']) if c.get('waiting_until') else ''}]: {(c.get('summary') or '(no summary)')[:80]}\" for c in impeded) or 'No impeded cards.')" 2>/dev/null || true`
 - `goc --status open --json 2>&1 | head -60`
 
 # Standup
@@ -40,7 +40,9 @@ title, the `waiting_on` reason, the `waiting_until` date if any, and
 the body's `## Waiting` section (or the most recent `log.md` entry if
 no section exists). One line per card. A card may appear here even
 while `status: active` — the overlay is orthogonal to the progress
-status.
+status, which is why the Context block above queries `--status all`
+rather than the open queue and then drops terminal and draft cards by
+hand, mirroring the scope `engine.live_impeded` defines.
 
 ## Section 3 — Closed since yesterday
 
@@ -56,7 +58,7 @@ uniformly covers `done` / `disproved` / `superseded`.
 ```bash
 goc --json --closed-since 24h --slim 2>/dev/null | python3 -c "
 import json, sys
-cards = sorted(json.load(sys.stdin), key=lambda c: c.get('closed_at') or '')
+cards = json.load(sys.stdin)
 for c in cards:
     print(f\"{c['title']}: {c['status']}\")
 print(f\"({len(cards)} closed in last 24h)\" if cards else 'Nothing closed in the last 24h.')
@@ -66,11 +68,12 @@ print(f\"({len(cards)} closed in last 24h)\" if cards else 'Nothing closed in th
 `--closed-since 24h` does the date-window filter inside the engine
 (reading the structured `closed_at` record, not file mtime — a
 pull/merge/clone writes every `log.md` at one instant and a
-`-newer`-mtime scan falsely reports "Nothing closed"). `--slim` strips
-body/large fields so the Context block ships kilobytes instead of the
-multi-hundred-KB full-deck JSON. The title-by-status output is enough
-for the standup format; expand the window or drop `--slim` if you need
-summaries.
+`-newer`-mtime scan falsely reports "Nothing closed") and lists the
+closures most recently closed first, so the snippet prints them as
+they come. `--slim` strips body/large fields so the Context block
+ships kilobytes instead of the multi-hundred-KB full-deck JSON. The
+title-by-status output is enough for the standup format; expand the
+window or drop `--slim` if you need summaries.
 
 If none match, report "Nothing closed in the last 24h." When the count
 is large (a batch sync), summarize by theme rather than listing every
@@ -83,16 +86,28 @@ oldest first. These are parked cards where the agent hit the Andon cord
 and a human must lower the gate to unblock autonomous work.
 
 ```bash
-goc --json --status open 2>/dev/null | \
+goc --json --status all 2>/dev/null | \
   python3 -c "
 import json, sys
 cards = json.load(sys.stdin)
-waiting = [c for c in cards if c.get('human_gate') in ('decision', 'session')]
+waiting = [c for c in cards
+           if c.get('human_gate') in ('decision', 'session')
+           and c['status'] not in ('done', 'disproved', 'superseded')
+           and not c.get('draft')]
 waiting.sort(key=lambda c: c.get('created', ''))
 for c in waiting:
     print(f\"{c['title']} [{c['human_gate']}]: {c.get('summary', '(no summary)')[:80]}\")
 " 2>/dev/null || true
 ```
+
+Like the overlay in Section 2, the gate is orthogonal to the progress
+status: a card may appear here while `status: active`, because the
+ordinary Andon-cord shape is claim → work → hit a judgement call →
+raise the gate, which leaves the card parked at `active`. So the query
+spans `--status all` rather than the open queue, then drops by hand the
+two classes a widened scope would otherwise add — closing never lowers
+a gate, so a terminal card can carry a stale one, and `goc new` gates
+at `decision` by default, so every unauthored draft scaffold is gated.
 
 For each: show title, gate type, and the `## Decision required` section
 header if present. The human resolves these via the `decide-card` skill.
@@ -103,7 +118,7 @@ Show the top 3 open `human_gate: none` cards by value score (the cards
 the `pull-card` skill would pick next), as a forward look.
 
 ```bash
-goc --ready 2>/dev/null | head -5 || true
+goc --ready 2>/dev/null | grep -v '^ACTIVE:' | head -5 || true
 ```
 
 `--ready` is the engine's pull predicate (`status: open` ∧ not a draft ∧
@@ -113,6 +128,14 @@ conjuncts, and because the queue is value-sorted while gated epics carry
 the top values, it surfaces the *least* pullable cards in the deck. When
 `--ready` matches nothing, report that instead of omitting the section:
 an empty pull queue is the day's headline, and Section 4 is its cause.
+
+The `grep -v` drops the engine's `ACTIVE:` soft-lock banner, which goes
+to **stdout** and appears only when some card is claimed. Left in, it
+spends one of the five budgeted lines on chrome, so the block delivers
+two rows instead of the three promised above — keep it filtered, and keep
+the budget at 5. Nothing is lost: Section 1 already renders those active
+cards in full. The `No cards match` line does not start with `ACTIVE:`,
+so the empty-queue report still survives the filter.
 
 ## Output format
 

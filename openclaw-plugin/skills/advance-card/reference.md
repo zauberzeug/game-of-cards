@@ -105,7 +105,7 @@ The full decision procedure behind the core skill's short form:
 
 - **Aggregation epic** — its value chain *is* its children; closes
   when they close. Encoding: `child.advances: [epic]`. Verb on the
-  child: `goc advance <child> --by <epic>`.
+  epic: `goc advance <epic> --by <child>`.
 - **Governing cluster** — a decision or standard-setting card that
   closes when *decided*, independent of the cluster's work. Encoding:
   a **shared tag**, no `advances` edge in either direction. Add the

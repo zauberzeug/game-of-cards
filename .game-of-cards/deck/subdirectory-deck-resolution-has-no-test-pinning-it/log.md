@@ -46,3 +46,18 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-08-11 — Closure' present
+
+## 2026-09-28T01:39:46Z — Post-close amendment
+
+Extended by [`goc-finds-the-deck-from-a-subdirectory-but-attests-validates-and-installs-there`](../goc-finds-the-deck-from-a-subdirectory-but-attests-validates-and-installs-there/).
+The walk this card pinned feeds only `DECK_ROOT`. Other surfaces still
+take the project root from cwd:
+
+- `REPO_ROOT`, used as `goc attest`'s check cwd and by `goc validate`'s
+  skill-parity and plugin checks;
+- the `install` / `upgrade` target;
+- the hooks' project dir.
+
+So `validate` from a subdirectory reads the real deck's cards but skips
+the real repo's `.claude/skills/` parity check. This card's fixture has
+no `.claude/skills/`, so its test could not see the skip.

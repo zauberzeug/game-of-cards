@@ -134,7 +134,8 @@ project-local tags register in `.game-of-cards/canonical-tags.md`
 - **The scaffold is born `draft: true`** — hidden from queues until
   authored (Steps 5–7). Claiming or closing clears the flag;
   `goc publish <title>` releases an authored-but-unclaimed card
-  (`reference.md` § Draft contract).
+  (`reference.md` § Draft contract). All three need a `summary:`
+  (Step 5).
 
 ## Step 5 — write the body (the dashboard)
 
@@ -178,8 +179,9 @@ Each later round of work rewrites the dashboard *and* appends a
 
 For bug / measurement / regression cards, ship a
 `deck/<title>/reproduce.py` that, on a clean checkout, prints output
-an outside reader would accept as proof. Find the repo root with the
-**parent-walk pattern** — never `parents[N]` with a fixed N:
+an outside reader would accept as proof. Find the repo root holding
+`.game-of-cards/` with the **parent-walk pattern** — never
+`parents[N]` with a fixed N:
 
 ```python
 import sys
@@ -188,10 +190,10 @@ from pathlib import Path
 def _repo_root() -> Path:
     p = Path(__file__).resolve().parent
     while p != p.parent:
-        if (p / "pyproject.toml").exists():
+        if (p / ".game-of-cards").is_dir():
             return p
         p = p.parent
-    raise RuntimeError("repo root (pyproject.toml) not found")
+    raise RuntimeError(".game-of-cards/ not found")
 
 sys.path.insert(0, str(_repo_root()))
 ```

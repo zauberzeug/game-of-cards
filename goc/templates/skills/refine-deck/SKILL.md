@@ -134,16 +134,44 @@ Per cite (long form: `reference.md` § Citation anchor check):
    absent to present — the filing commit for a virgin cite, the repair
    commit for one an earlier pass rewrote. Anchoring a repaired number
    at the filing commit reads unrelated code and moves the cite onto it.
-3. Anchor ≠ the line in HEAD → the cite is defunct.
+   Presence is SET MEMBERSHIP over that version's extracted cite tokens,
+   never a substring search: `path:N` must not read as present inside
+   `path:N-M`, or it inherits the range's older anchor. And a token the
+   card holds at TWO OR MORE in-scope occurrences is undecidable — the
+   occurrences share one history, so no walk anchors them apart. DECLINE
+   it, report it, leave the numbers alone.
+3. Refuse a trivial anchor BEFORE comparing it: a blank, a bare brace,
+   or anything under ~12 chars matches everywhere, so re-finding it at
+   the cited offset is no evidence the cite is current. DECLINE and
+   report it, never `current`. Else anchor ≠ the line in HEAD → the
+   cite is defunct.
 4. Relocate the anchor text in HEAD and rewrite the number **only** on
-   a unique match of a non-trivial line (>~12 chars, not a blank or a
-   bare brace). Never guess.
+   a UNIQUE match — step 3 already refused the lines that match
+   everywhere. Never guess. When the anchor is a `def`/`class` line
+   whose exact text is gone, retry on a unique `def <name>(` /
+   `class <name>(`: a definition is identified by its NAME, not by its
+   parameter list, so a keyword-only argument appended to a signature
+   must not read as "the code was refactored away". Two or more
+   definitions of that name is an ambiguous match — DECLINE. The name
+   rule feeds the endpoint mapper only; step 1's pair check still
+   decides what a range emits.
 
-Cites step 4 declines — anchor gone, ambiguous, or trivial — are
-REPORTED for a human to read, never silently skipped. Anchor text that
-exists nowhere usually means the cited code was refactored away:
-re-read the card and, if the refactor also fixed the defect, close via
+Cites the recipe declines — ambiguous occurrence, trivial anchor,
+anchor gone, ambiguous match, incoherent pair, retired
+occurrence — are REPORTED for a human to read, never silently skipped.
+Anchor text that exists nowhere, with no unique definition of its name
+either, usually means the cited code was refactored away: re-read the
+card and, if the refactor also fixed the defect, close via
 `Skill(finish-card)` with a note "fixed incidentally by <commit-hash>".
+
+End the step by COMMITTING the rewrites, then RE-RUNNING the decision
+phase over the cards just written — the walk reads `git log`, so an
+uncommitted cite anchors on a RETIRED occurrence. A correctly repaired
+deck is a FIXED POINT, so it must propose ZERO further repairs. Every
+per-cite rule passes on a second-round proposal — real anchor, unique
+match, confident rewrite onto the wrong line — so the re-run is the
+only thing that catches a pass repairing its own output. A non-empty
+second round is a recipe defect to file, not more rewrites to apply.
 
 ### Missing summaries
 
@@ -206,10 +234,10 @@ What it surfaces:
 
 When a coherent body of work emerges that isn't covered by an
 existing tag (e.g., a sprint of 6 cards all about a specific
-research front), file via `Skill(create-card)` a card whose DoD is
-the SCHEMA.md PR adding the new tag + its predicate. Adding the
-tag itself remains a SCHEMA.md PR per the schema's "Adding new
-tags" rule; the filing that schedules that PR is imperative. Like
+research front), file via `Skill(create-card)` a card whose DoD
+adds the new tag + its predicate per `Skill(card-schema)`'s
+`reference.md` § Adding new tags. This pass never adds the tag
+itself; filing the card that does is imperative. Like
 every other structural finding, the candidate either becomes a
 card here, gets disproved (the proposed predicate doesn't fire on
 a sufficient set), or parks `--tag unverified` per Step 4.5 — not

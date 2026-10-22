@@ -25,6 +25,8 @@ worker: {who: "claude[bot]", where: main}
 
 # Design claim protocol with branch and author metadata
 
+> Later evidence: the shipped protocol is first-writer-wins (the later claimer is refused), not the last-writer-wins the Decision names — see [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/).
+
 ## Why
 
 The current claim flow writes status `active` and pushes — enough

@@ -38,7 +38,9 @@ with `uv run python -m unittest discover -s tests`; it also passes under
 pytest). `.github/workflows/ci.yml` is a build + console-script +
 regression-test + `goc validate` matrix on Python 3.10-3.13: the
 `Run regression tests` step (`uv run python -m unittest discover -s
-tests`) gates code correctness, and the validation step gates
+tests`) gates code correctness — and, through
+`tests/test_wheel_package_parity.py`, which runs `uv build`, that the
+wheel ships every tracked `goc/` file — and the validation step gates
 card-frontmatter drift.
 
 Releases publish to three registries — PyPI, npm, ClawHub — all via
@@ -201,16 +203,28 @@ path) plus `claude-plugin/hooks/hooks.json` and
 default). They stay hand-written because a command is not derivable
 from a script name — Codex carries per-event `statusMessage` strings
 and a version-fallback shell wrapper, Claude a different root
-variable. `goc validate` covers all three: `validate_hook_registration`
-checks `GOC_CLAUDE_HOOKS`, and `validate_plugin_hook_registration`
-checks each payload's `hooks.json` against the scripts that payload
-ships — in both directions, so a script nothing registers (installed
-but never invoked) and a registration naming a script the payload no
-longer ships (fails on every fire) each turn the build red. The
-plugin check is gated on the payload root existing at the repo root,
-so it is inert in consuming repos. OpenClaw is out of scope for it:
-it reimplements the deck hooks in TypeScript inside
-`openclaw-plugin/index.ts` and ships no `hooks.json`.
+variable. `goc validate` covers all three, on both halves of a
+registration — which scripts, and which event each one fires on.
+`validate_hook_registration` checks `GOC_CLAUDE_HOOKS` against
+`templates/hooks/`, and `validate_plugin_hook_registration` checks each
+payload's `hooks.json` against the scripts that payload ships — in both
+directions, so a script nothing registers (installed but never invoked)
+and a registration naming a script the payload no longer ships (fails
+on every fire) each turn the build red. It then compares the *event*
+each payload binds a script to against `GOC_CLAUDE_HOOKS` as the
+reference mapping (both read it through one `claude_hook_bindings()`
+walk), so the session primer moved to `Stop` or the prompt router to
+`SessionStart` turns the build red too — that drift registers the right
+scripts and keeps exiting 0, so nothing else would notice. The
+comparison assumes the hosts share an event vocabulary, true of all
+three today; a host that renames an event needs a per-host alias map
+there. The plugin check runs only in the goc source tree, recognized by
+`goc/templates/` at the repo root (the tree the payloads are built
+from) rather than by a payload folder, which a consuming repo may have
+for its own plugin. It and `validate_plugin_mirror_parity`, which shares
+the gate, are therefore inert in consuming repos. OpenClaw is out of
+scope for the hook check: it reimplements the deck hooks in TypeScript
+inside `openclaw-plugin/index.ts` and ships no `hooks.json`.
 
 ### Skill and hook files have two copies — edit the template, sync handles the rest
 
@@ -236,10 +250,16 @@ it is a *merge* target rather than a mirrored file: `goc install` /
 plugin-mode cleanup strips those same entries back out. So its
 ownership is shared — the `hooks` entries whose command matches
 `GOC_CLAUDE_HOOKS` are goc-owned (change them in `goc/install.py`, not
-in `.claude/settings.json`, and `goc validate` enforces the parity);
-any other key the repo adds is yours. goc writes no `permissions`
-block there — the `Bash(goc:*)` grant is a human step, documented in
-`Skill(claude-kickoff)`.
+in `.claude/settings.json`); any other key the repo adds is yours.
+The file is not one of the three hook registries `goc validate`
+covers (above), so a hand edit that drops or repoints a goc-owned
+registration passes `goc validate`. The merge is what repairs it: a
+vendored-mode `goc upgrade` re-adds every `GOC_CLAUDE_HOOKS` entry the
+file lacks, even at the same version, but a repointed entry no longer
+matches, so it stays behind beside the re-added one
+(`goc-upgrade-leaves-stale-prior-version-hook-registrations-in-claude-settings`).
+goc writes no `permissions` block there — the `Bash(goc:*)` grant is a
+human step, documented in `Skill(claude-kickoff)`.
 
 The `<!-- BEGIN GOC vX.Y.Z -->` marker in `AGENTS.md` and
 the `.goc-version` sentinel are rewritten by the release workflow
@@ -263,7 +283,14 @@ agent is present. The new `Skill(upgrade)` runs the engine and then
 reads the engine's machine-readable divergence report (printed after
 the sentinel `GoC project-state divergence report (JSON):`) to drive
 LLM reconciliation of the *evolving* files where real upstream
-changes need a judgment call. Headless / CI / scripted upgrades
+changes need a judgment call. The engine prints that report on every
+run except an effecting `--dry-run` (which prints its plan instead),
+the `already at goc X — nothing to do.` short-circuit included:
+a diverged evolving file is `preserved`, a no-op to the write plan,
+so a report gated on writes would vanish whenever the version is
+already current — the usual state by the time the skill runs
+(`upgrade-skill-cannot-reach-the-divergence-report-once-the-version-is-current`).
+Headless / CI / scripted upgrades
 (e.g., the `--keep-local-skills` path) preserve content with no agent
 in the loop.
 
@@ -283,11 +310,12 @@ which destination files its wipe-and-recopy would remove and plans one
 deletion, not a new term beside the guard
 (`upgrade-write-plan-omits-the-skill-tree-prune-from-dry-run-and-no-op-verdict`).
 The three remaining terms next to the plan cover work the plan does not
-model: the interactive vendored-cleanup prompt, the legacy-briefing strip,
-and the `skills_source` pin — the one surviving `pending_*` term that does
-gate a write, kept honest by asking `_write_skills_source` in `probe=True`
-mode rather than restating what it would do, and a holdover rather than a
-shape to copy.
+model: the interactive vendored-cleanup prompt (offered when
+`_strip_claude_vendored_harness` in `probe=True` mode finds GoC content to
+remove), the legacy-briefing strip, and the `skills_source` pin — the one
+surviving `pending_*` term that does gate a write, kept honest by asking
+`_write_skills_source` in `probe=True` mode rather than restating what it
+would do, and a holdover rather than a shape to copy.
 
 ### `skills_source` — which install path owns `.claude/skills/`
 
@@ -303,10 +331,15 @@ the per-repo signal that says where Claude Code's GoC skills come from:
 
 Switching modes is a manual config edit. To move a vendored repo to
 plugin mode: edit `skills_source: plugin` in
-`.game-of-cards/config.yaml`, then `goc upgrade` — which detects the
-leftover `.claude/skills/` and prompts for cleanup. The cleanup only
-removes GoC-managed skill directories, hook files, and settings
-entries; non-GoC skills in `.claude/skills/` are preserved. Declining
+`.game-of-cards/config.yaml`, then `goc upgrade` — which prompts for
+cleanup whenever GoC-owned leftovers remain: GoC-named skill
+directories, the `_goc-bootstrap.sh` shim, GoC hook scripts, or GoC
+entries in `.claude/settings.json`. The detection keys on that GoC
+content, not on whether `.claude/skills/` exists: it asks the cleanup
+itself in probe mode, so a `.claude/skills/` holding only the repo's
+own skills is not re-offered on every later upgrade, and GoC hooks
+left without one still are. The cleanup only removes that GoC
+content; non-GoC skills in `.claude/skills/` are preserved. Declining
 the cleanup is a strict no-op (the buggy "decline re-vendors and
 deletes user skills" path that motivated this design is gone).
 
@@ -356,9 +389,14 @@ templates — the bundled engine derives its hook list from
 omits** `templates/skills/`: the bundled
 engine refuses `--local-skills` on `goc install` and `--keep-local-skills`
 on `goc upgrade` (see `_is_plugin_context` in `goc/install.py`), so
-the skill templates are never read from inside the plugin payload. To
-vendor skills into source control, install via `pipx install
-game-of-cards` instead — that path keeps the full template tree.
+the skill templates are never read from inside the plugin payload. The
+one thing the engine still needs from them, the names of GoC's skills
+(so the vendored→plugin cleanup in `goc upgrade` can tell GoC's skill
+directories from a repo's own), it reads from the payload's flat
+`skills/` tree beside its `goc/` (`_goc_skill_names` in
+`goc/install.py`). To vendor skills into source control, install via
+`pipx install game-of-cards` instead — that path keeps the full
+template tree.
 
 **Do not edit `claude-plugin/` or `codex-plugin/` directly.** The `sync-plugin-assets`
 pre-commit hook (`scripts/sync_plugin_assets.py`) auto-regenerates those
@@ -560,7 +598,7 @@ When filing GoC cards in this repo:
   Filter with `goc --worker <X>` or set `GOC_WORKER` env var for
   runner-specific queue views.
 
-<!-- BEGIN GOC v0.0.27 -->
+<!-- BEGIN GOC v0.0.28 -->
 ## Game of Cards — methodology runtime
 
 This repo uses [Game of Cards](https://github.com/zauberzeug/game-of-cards):

@@ -417,9 +417,10 @@ class HiddenDraftCountSpansTheWholeQueryTest(unittest.TestCase):
     def _deck(self, name: str, cards: dict[str, dict]) -> None:
         """Deck of `{title: {status, closed_at, waiting_on, draft}}`.
 
-        Every card is authored (real DoD and body inherited from the template)
-        so `card_is_draft` fires on the explicit flag alone — the placeholder
-        half of that predicate would confound what is being measured here.
+        Every card is authored (real DoD and body inherited from the template),
+        so each draft is one `goc publish` would actually release. What makes
+        a card a draft is the explicit `draft: true` flag alone, which is all
+        `card_is_draft` reads.
         """
         deck = self._root / name / ".game-of-cards" / "deck"
         deck.mkdir(parents=True)

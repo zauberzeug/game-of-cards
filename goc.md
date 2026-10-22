@@ -56,6 +56,12 @@ goc install --agents codex
 goc install --agents claude,codex
 ```
 
+What each harness writes into the repo:
+
+- `--agents claude` writes `CLAUDE.md` and no skills or hooks: Claude Code loads those from the [Claude Code plugin](#claude-code-plugin).
+- `--agents claude --local-skills` vendors them as well — `.claude/skills/`, `.claude/hooks/`, and their entries in `.claude/settings.json` — for CI, or for an agent runtime such as OpenCode that reads skills from `.claude/skills/`.
+- `--agents codex` writes Codex-readable skills under `.codex/skills/`.
+
 Repo-local development form:
 
 ```bash
@@ -67,7 +73,7 @@ uv run goc install --agents codex
 Once `goc install` has scaffolded the substrate, the deck is empty. Two ways to seed it:
 
 - **Ask your coding agent.** Say "audit the deck" (or "find issues to file as cards"). This triggers the `audit-deck` skill, which audits the repo for previously-undocumented defects, doc drift, missing tests, or architectural smells, and files each finding as a card via `goc new`. Re-invoke until the queue is the size you want.
-- **By hand.** `goc new rename-the-export-button` scaffolds a single card with valid frontmatter and a placeholder Definition of Done that `goc done` will refuse to close until you fill it in. You may run it from any nested directory: GoC walks upward to the nearest existing `.game-of-cards/` root. If none exists, it refuses and points back to `goc install` instead of creating a stray deck.
+- **By hand.** `goc new rename-the-export-button` scaffolds a single card with valid frontmatter and a placeholder Definition of Done that `goc done` will refuse to close until you fill it in. You may run it from any nested directory: GoC walks upward to the nearest existing `.game-of-cards/` root. If none exists, it refuses and points back to `goc install` instead of creating a stray deck. Every other verb treats that same root as the project root, so from a subdirectory `goc attest` runs the closure checks at the root, `goc validate` checks the whole install, `goc upgrade` upgrades the enclosing install, and `goc install` refuses as already installed. Under shared-deck worktree mode the project root is the linked worktree's own checkout, while the deck stays in the primary tree.
 
 ## Upgrade an install
 
@@ -86,7 +92,7 @@ The `claude-plugin/` directory at the root of the `game-of-cards` repository is 
 
 ### What the plugin provides
 
-- **16 GoC skills** (same as `goc install --agents claude`) — auto-discoverable by Claude Code when the plugin is loaded.
+- **16 GoC skills** (the set `goc install --agents claude --local-skills` vendors into `.claude/skills/`) — auto-discoverable by Claude Code when the plugin is loaded.
 - **SessionStart hook** — prints an active-card reminder at session start.
 - **UserPromptSubmit hook** — detects work-initiating prompts and injects a deck-first reminder.
 - **Stop hook** — prompts a pattern-generalization self-assessment after code-mutating turns.
@@ -154,12 +160,19 @@ Skills from the plugin are namespaced as `game-of-cards:<skill>` in the UI but s
 
 ### Coexistence with the repo-local harness
 
-When a consuming repo was previously set up with `goc install --agents claude`, it has `.claude/skills/` and `.claude/hooks/` checked in and hook entries in `.claude/settings.json`. The plugin and the repo-local harness can coexist:
+A repo installed with `goc install --local-skills` — or with `goc install --agents claude` before the plugin became the Claude default — has the GoC skills checked in under `.claude/skills/`, the GoC hook scripts under `.claude/hooks/`, GoC hook entries in `.claude/settings.json`, and `skills_source: vendored` pinned in `.game-of-cards/config.yaml`. The plugin and that repo-local harness can coexist:
 
 - **Skills** — the plugin's skills take precedence over repo-local `.claude/skills/` skills of the same name.
-- **Hooks** — both `settings.json` hooks and plugin `hooks.json` hooks fire; avoid duplicates by removing the GoC entries from `settings.json` once you switch to the plugin.
+- **Hooks** — both `settings.json` hooks and plugin `hooks.json` hooks fire, so every GoC hook runs twice until the repo is switched to the plugin.
 
-To clean up a previous repo-local harness installation, remove `.claude/skills/`, `.claude/hooks/`, and the GoC hook entries from `.claude/settings.json`, then rely on the plugin entirely.
+To switch the repo to the plugin, let `goc upgrade` remove the vendored layout:
+
+1. Set `skills_source: plugin` in `.game-of-cards/config.yaml`.
+2. Run `goc upgrade` and answer `y` when it offers to remove the leftover vendored layout (`echo y | goc upgrade` when scripting it).
+
+The cleanup removes only what GoC installed — its skill directories, its hook scripts, and its entries in `.claude/settings.json` — and leaves the repo's own skills, hook scripts, and settings in place. Any `goc` can run the switch, including the engine bundled in the plugin, which is what a bare `goc` runs inside a Claude Code session with the plugin enabled.
+
+Do not hand-delete `.claude/skills/` instead. That deletes the repo's own skills along with GoC's, and because `skills_source` is still `vendored`, the next `goc upgrade` re-vendors every GoC skill, hook script, and settings entry, so the hooks fire twice again.
 
 ## Codex plugin
 
@@ -196,7 +209,7 @@ Codex plugin hooks are opt-in in the current runtime. To enable the GoC hook set
 plugin_hooks = true
 ```
 
-Codex does not currently document plugin `bin/` auto-PATH behavior. The plugin ships `bin/goc` and the bundled engine for plugin-aware launchers, but skill instructions still assume `goc` is callable in the project environment. In this source repo, use `uv run goc ...`; in consumer repos, install the CLI with `pipx install game-of-cards` or `uv tool install game-of-cards` if bare `goc` is missing.
+Codex does not currently document plugin `bin/` auto-PATH behavior. The plugin therefore ships `skills/_goc-bootstrap.sh`, which invokes the bundled engine through the sibling `bin/goc` wrapper, and every Codex skill carries a `## Codex GoC Command` block that resolves `goc` through it. In this source repo, use `uv run goc ...`; in plugin-only consumer repos, run `<plugin-root>/skills/_goc-bootstrap.sh <verb>` (the helper sits under `~/.codex/plugins/cache/` when the plugin root is not obvious from the loaded skill path). Install `game-of-cards` with `pipx` or `uv tool` only when using vendored Codex skills without the plugin payload.
 
 ### Versioning and release
 

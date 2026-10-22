@@ -1,6 +1,6 @@
 ---
 title: doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
-summary: "tests/test_guidance_accuracy.py now holds nine guard classes, plus two more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Fourteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them. The fourteenth adds the first surface whose rot is executed rather than read — a skill body specifying a procedure an agent follows literally, which moved 165 correct citations onto unrelated code before it was caught — and it is guardable only by running the instruction against a fixture, which is neither option as written."
+summary: "tests/test_guidance_accuracy.py now holds twelve guard classes, plus four more in their own files, each added reactively after a reader caught a doc claim that had already rotted. Nothing sweeps the doc surfaces for UNGUARDED restatements of tree-derived facts, so every next stale claim is found by a human or an audit pass rather than by CI. Fourteenth instance of the shape; the fix path needs a scope decision that must say which surfaces count — the ninth added prose restating *prose*, where a derive-from-tree guard is structurally impossible, the eleventh added machine-readable manifests, where it is not just possible but cheap, and the twelfth added the public website plus a claim whose ground truth is an external registry rather than this tree. The thirteenth widens nothing and is the sharpest for it: three false clauses in an *already-guarded* AGENTS.md sentence, all three written by an earlier instance's own repair, so neither a per-surface sweep nor per-claim pinning would have caught them. The fourteenth adds the first surface whose rot is executed rather than read — a skill body specifying a procedure an agent follows literally, which moved 165 correct citations onto unrelated code before it was caught — and it is guardable only by running the instruction against a fixture, which is neither option as written."
 status: open
 stage: null
 contribution: medium
@@ -26,6 +26,26 @@ advanced_by:
   - agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does
   - second-citation-repair-pass-moves-correct-cites-onto-unrelated-code
   - cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay
+  - migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does
+  - hook-catalogue-cites-an-audit-skill-section-that-never-existed
+  - installed-files-point-readers-at-a-deck-folder-install-never-creates
+  - shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates
+  - contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions
+  - shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids
+  - cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it
+  - install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag
+  - deck-location-doc-says-claims-push-by-default-and-last-writer-wins
+  - deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects
+  - shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced
+  - codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
+  - agents-md-says-goc-validate-checks-hook-entries-in-claude-settings
+  - agents-md-mislabels-claude-settings-json-as-user-owned-permission-list
+  - kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe
+  - loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse
+  - engine-comments-claim-unflagged-placeholder-cards-count-as-drafts
+  - engine-still-names-the-deck-script-and-schema-file-goc-replaced
+  - reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml
+  - plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
@@ -35,8 +55,8 @@ definition_of_done: |
 
 `tests/test_guidance_accuracy.py` is this repo's answer to doc drift: a test that
 pins a prose claim to the code or tree it describes. The mechanism works — but it
-is applied **one claim at a time, always after the fact**. Nine guard classes now
-live in that file (two further guards got their own files), and every one was written in
+is applied **one claim at a time, always after the fact**. Twelve guard classes now
+live in that file (four further guards got their own files), and every one was written in
 response to an already-rotted claim someone happened to notice. Nothing looks for
 the *unguarded* claims.
 
@@ -52,14 +72,50 @@ the *unguarded* claims.
 | `GocMdPluginReferenceAccuracyTest` | [cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships](../cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships/) | 2026-07-26 |
 | *(none yet — open)* | [ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card](../ci-workflow-header-miscounts-skill-templates-and-cites-a-nonexistent-card/) | — |
 | `CliFrameworkPointerAccuracyTest` | [openclaw-verb-mirror-comment-names-click-in-an-argparse-cli](../openclaw-verb-mirror-comment-names-click-in-an-argparse-cli/) | 2026-07-26 |
+| `ClaudeSettingsOwnershipAccuracyTest` | [agents-md-mislabels-claude-settings-json-as-user-owned-permission-list](../agents-md-mislabels-claude-settings-json-as-user-owned-permission-list/) | 2026-07-26 |
 | *(none — not guardable by the technique; see below)* | [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/) | 2026-07-27 |
 | `test_no_shipped_skill_body_links_into_a_deck` (own file, `tests/test_skill_template_deck_links.py`) | [card-schema-reference-links-to-a-deck-card-no-consumer-repo-has](../card-schema-reference-links-to-a-deck-card-no-consumer-repo-has/) | 2026-07-29 |
 | *(none yet — open)* | [openclaw-plugin-manifest-config-options-do-not-behave-as-documented](../openclaw-plugin-manifest-config-options-do-not-behave-as-documented/) | — |
 | `LlmsTxtInstallChannelTest` (own file, `tests/test_llms_txt_install_channels.py`) | [llms-txt-still-presents-the-clawhub-install-as-unpublished](../llms-txt-still-presents-the-clawhub-install-as-unpublished/) | 2026-08-01 |
 | *(no new class — four tests added to the existing `AgentsArchitectureAccuracyTest`)* | [agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does](../agents-md-cli-bullet-describes-parser-wiring-the-entry-point-never-does/) | 2026-08-15 |
 | `DocumentedAnchorRuleTest` + `SecondRepairPassTest` (own file, `tests/test_refine_deck_citation_anchor.py`) | [second-citation-repair-pass-moves-correct-cites-onto-unrelated-code](../second-citation-repair-pass-moves-correct-cites-onto-unrelated-code/) | 2026-08-17 |
+| `MigrateListStyleKeyOrderScopeTest` (own file, `tests/test_migrate_list_style_key_order_scope.py`) | [migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does](../migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does/) | 2026-09-07 |
+| `ContributorGuideAccuracyTest` | [contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions](../contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/) | 2026-09-21 |
+| `SkillAdvanceExampleDirectionTest` (own file, `tests/test_skill_advance_example_direction.py`) | [shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/) | 2026-09-21 |
+| `PluginSwitchRecipeTest` (own file, `tests/test_plugin_switch_recipe.py`) | [cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it](../cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it/) | 2026-10-02 |
+| `InstallDocClaimsTest` (own file, `tests/test_install_doc_claims.py`) | [install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/) | 2026-10-03 |
+| `DeckLocationClaimRowsTest` (own file, `tests/test_deck_location_claim_rows.py`) | [deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/) | 2026-10-04 |
+| `ClaimRaceReassuranceTest` (own file, `tests/test_claim_race_reassurance.py`) | [deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/) | 2026-10-04 |
+| `retired_files` sweep + `DeckLayoutBlockTest` (widened `tests/test_skill_template_deck_links.py`) | [shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/) | 2026-10-14 |
+| `DeliveryChannelSurfacesTest` + `PreFixTextFiresTest` (own file, `tests/test_delivery_channel_surfaces.py`) | [codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine](../codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine/) | 2026-10-07 |
+| `ClaudeSettingsHookEditClaimsTest` (own file, `tests/test_claude_settings_hook_edit_claims.py`) | [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/) | 2026-10-07 |
+| `ShippedRecipeTest` + `PreFixRecipeFiresTest` (own file, `tests/test_reproduce_recipe_root.py`) | [reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/) | 2026-10-17 |
+| `PayloadManifestTest` + `PreFixManifestFiresTest` + `ManifestFormatTest` (own file, `tests/test_plugin_payload_dependency_manifests.py`) | [plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped](../plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped/) | 2026-10-17 |
 
-Fourteen instances across four months, each its own file → claim → fix → guard cycle.
+Thirty-seven instances across five months, each its own file → claim → fix →
+guard cycle. `advanced_by` is the authoritative count; the table above shows
+twenty-seven of them, because nine closed instances and one still-open one carry
+the edge but no row yet
+([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
+[meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),
+[cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay](../cli-reference-steers-authors-onto-deprecated-blocked-status-not-the-wait-overlay/),
+[hook-catalogue-cites-an-audit-skill-section-that-never-existed](../hook-catalogue-cites-an-audit-skill-section-that-never-existed/),
+[installed-files-point-readers-at-a-deck-folder-install-never-creates](../installed-files-point-readers-at-a-deck-folder-install-never-creates/),
+[shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates](../shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates/),
+[kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe](../kickoff-autonomy-choice-hands-off-to-host-complements-that-carry-no-recipe/),
+[loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse](../loop-examples-trail-a-bare-interval-that-claude-code-does-not-parse/),
+[engine-comments-claim-unflagged-placeholder-cards-count-as-drafts](../engine-comments-claim-unflagged-placeholder-cards-count-as-drafts/),
+[engine-still-names-the-deck-script-and-schema-file-goc-replaced](../engine-still-names-the-deck-script-and-schema-file-goc-replaced/)).
+The gap ran three rows, then seven; the twenty-third instance is the first to
+arrive with its row already written, and the twenty-fourth through
+thirtieth did the same, so it held at six. The thirty-first closed in
+July and was linked late, with its row (see the thirtieth below). Between
+2026-10-08 and 2026-10-14 four more were linked, none of them with a DoD
+naming a row, and none got one, so the gap stands at ten. The narrowing was
+never the process self-correcting — a row exists only where that card's DoD
+named it as a closure item, one card at a time. Absent such an item the table
+is still a hand-maintained restatement of `advanced_by`, and it rots exactly
+the way every claim catalogued in it did.
 `Skill(audit-deck)`'s sibling-sweep rule sets the threshold at four: "If the sweep
 would produce a 4th instance of an already-catalogued family, file the
 architectural meta-fix instead." This card is that filing.
@@ -221,6 +277,130 @@ against a synthetic fixture, which is a third technique the decision should
 name. Third, its rot needed two hygiene passes to become visible at all, which
 puts a lower bound on how long an instruction-shaped defect can sit green: the
 sweep interval of whatever process executes it.
+
+The twenty-third is the second instance of that same executed-rather-than-read
+class, and it settles the "third technique" from hypothesis into precedent. The
+aggregation-epic recipe in `advance-card/reference.md` stated an encoding
+(`child.advances: [epic]`) and then gave a verb form that builds its inverse,
+so both halves read as correct English and no derivation over the tree could
+disagree with either
+([shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/),
+closed 2026-09-21). Its guard parses the example and the claim out of the skill
+body and runs the example against a scratch deck — the same technique the
+fourteenth described, now with two independent implementations
+(`tests/test_refine_deck_citation_anchor.py`,
+`tests/test_skill_advance_example_direction.py`). Two datums follow. The
+technique generalizes across unrelated recipes rather than fitting one, so
+naming it in the decision costs no new invention. And both instances shipped
+identically to all six skill trees before anyone read them closely, so the unit
+that needs sweeping is the *template*, not the surface count: one uncovered
+instruction in `goc/templates/skills/` is six consumer-visible defects.
+
+The twenty-fourth is the third instance of the executed class and the first on
+a human-facing page rather than a skill body. `goc.md`'s vendored → plugin
+switch told the reader to hand-delete `.claude/skills/`, which took the repo's
+own skills with it and was undone by the next `goc upgrade`, because the recipe
+never touched the `skills_source` pin
+([cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it](../cli-reference-plugin-switch-recipe-deletes-user-skills-and-the-next-upgrade-reverts-it/),
+closed 2026-10-02). Its guard (`tests/test_plugin_switch_recipe.py`) reads the
+numbered steps out of the page, runs them against a scratch install, and runs
+the page's two warnings both ways, so it fails when either the doc or the engine
+moves. Grepping for the same claim turned up a second copy in an engine string:
+`goc validate`'s double-fire remedy said to remove `.claude/hooks/`, which
+leaves the settings registrations pointing at deleted scripts. That is Option
+B's claim-keyed sweep, applied by hand, finding a copy no doc-surface sweep
+would have reached.
+
+The twenty-fifth is the first instance where a guard protected the false claim.
+`test_claude_skill_count_matches_payload` is cited below as a model guard because
+it derives its count from `claude-plugin/skills/`. Its regex also required the
+words beside the count, "(same as `goc install --agents claude`)", verbatim. That
+clause had been false since 2026-05-07, when the plugin became the Claude
+default, and the guard that pinned it was written on 2026-07-26. Correcting the
+page would have turned CI red
+([install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag](../install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag/),
+closed 2026-10-03).
+
+This is the thirteenth instance's lesson in a stronger form. There, a guard missed
+the other claims in its sentence; here, it required one of them. That gives the
+decision a cheap rule: **a guard's pattern should contain only the value it
+derives.** Any other literal text in the pattern is a claim nobody checks, and the
+guard turns its correction into a CI failure. The repair kept only the count in
+the regex and checked the clause by running it. The instance also extends the
+run-it technique from recipes to descriptions. "Flag X writes Y" is guardable by
+installing with X, and the new guard does that for every harness bullet. Its
+flag check is the claim-keyed sweep Option B describes, applied to one claim
+shape: every `goc install` / `goc upgrade` flag named in any doc or shipped
+template must appear in that verb's `--help` usage. It sweeps every one of them
+with no false positives. The removed `--no-harness` had survived five months in
+`ABOUT.md` because the card that removed it listed which docs to update, and
+`ABOUT.md` was not on the list.
+
+The twenty-sixth is the first whose false claim was faithful to its source.
+`DECK_LOCATION.md`'s claim table said a claim race is settled last-writer-wins
+"per the recorded decision" on
+[design-claim-protocol-with-branch-and-author-metadata](../design-claim-protocol-with-branch-and-author-metadata/).
+The decision does say that, but the same card's DoD shipped the reverse: a
+stale claimer whose rebase conflicts is refused, so the first claim stays. The
+row also presented a push that only the opt-in `workflow.claim_push` makes as
+the default
+([deck-location-doc-says-claims-push-by-default-and-last-writer-wins](../deck-location-doc-says-claims-push-by-default-and-last-writer-wins/),
+closed 2026-10-04). Two datums. A recorded decision is prose like any other,
+and a page that cites one inherits its errors, so the derivation has to reach
+the implementation: the guard (`tests/test_deck_location_claim_rows.py`) runs
+the protocol against scratch remotes instead of reading the decision. And the
+fixed row documents a known, decision-gated defect (an identical racing claim
+reports success), so the guard runs every check both ways and fails when an
+observation flips. The card that closes that hole cannot leave the page
+describing it.
+
+The twenty-seventh came out of the same session. Grepping the claim rather
+than the file found the same reassurance, that git's merge handles a claim
+race, in `ABOUT.md` and in the shipped deck skill
+([deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects](../deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects/),
+closed 2026-10-04). That is Option B's claim-keyed sweep applied by hand once
+more, and it reached copies a guard on `DECK_LOCATION.md` alone never would. The
+repair made the sweep mechanical for this one claim: its guard
+(`tests/test_claim_race_reassurance.py`) reads every tracked file outside the
+deck and the tests, mirrors and plugin payloads included, while a scratch-remote
+claim shows the default does not push. It also hit a constraint a page-local
+guard never meets. The fix wanted to point at `DECK_LOCATION.md` rather than
+restate it, as the ninth instance's lesson prescribes, but that page does not
+ship, so a shipped skill naming it by filename would dangle in every consuming
+repo. The pointer is an absolute URL. Any scope this card settles on should say
+how a shipped surface cites a repo-only document.
+
+The twenty-eighth came out of the twenty-seventh's closure, from the same skill
+body
+([shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced](../shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced/),
+closed 2026-10-14). The deck skill's layout block listed a `SCHEMA.md` and a
+`deck.py` inside the deck, and refine-deck scheduled a new tag as "a SCHEMA.md
+PR": pre-package residue that two earlier repairs removed from the engine
+docstring and the installed project README without reaching these copies. A
+derive-from-tree guard was cheap here, because a fresh `goc install` is the
+ground truth for which files a consumer has, and the repair took it alongside a
+name ban: the ban covers the two retired names in every shipped template tree,
+while the layout block's third phantom entry, a deck-root `README.md`, carries
+a name legal for every card, so only comparing the block against a real
+install catches it.
+
+The thirtieth repeats the thirteenth's lesson in the same file.
+[agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/)
+found `AGENTS.md` telling contributors that `goc validate` enforces parity for
+the goc-owned hook entries in `.claude/settings.json`. No validate step reads
+those entries for parity, so a dropped or repointed registration passes. The
+clause was written on 2026-07-26 (`8a89f791`) by the repair of
+[agents-md-mislabels-claude-settings-json-as-user-owned-permission-list](../agents-md-mislabels-claude-settings-json-as-user-owned-permission-list/),
+in the parenthetical that repair added. The guard written the same day pinned
+the two names in that parenthetical, `GOC_CLAUDE_HOOKS` and `goc/install.py`,
+but not the clause beside them. Two datums. First, the repair's own body called
+it an instance of this card, but it never got the edge. It is linked now as the
+thirty-first, so `advanced_by`, the count this card calls authoritative, was
+opt-in too and was missing an instance. Second, the new guard
+(`tests/test_claude_settings_hook_edit_claims.py`) makes the hand edit in a
+scratch install and checks both ways every clause the rewritten sentence states.
+For which files `goc validate` covers, the sentence points at the registry list
+earlier in `AGENTS.md` instead of restating it.
 
 ## What's structurally wrong
 

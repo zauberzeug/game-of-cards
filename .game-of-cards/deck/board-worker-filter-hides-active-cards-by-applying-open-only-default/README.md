@@ -9,6 +9,7 @@ closed_at: "2026-06-25T01:32:30Z"
 human_gate: none
 advances:
   - board-renderer-keeps-dropping-cards-the-table-shows
+  - query-views-each-decide-by-hand-which-filters-apply-and-keep-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

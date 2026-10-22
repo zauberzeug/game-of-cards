@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:1986-1995` — `validate_card`, the `LIST_REL_FIELDS` loop:
+`goc/engine.py:2021-2030` — `validate_card`, the `LIST_REL_FIELDS` loop:
 
 ```python
 for field in LIST_REL_FIELDS:
@@ -38,7 +38,7 @@ for field in LIST_REL_FIELDS:
 ```
 
 `LIST_REL_FIELDS = ("advances", "advanced_by", "supersedes", "superseded_by")`
-(`goc/engine.py:1279`).
+(`goc/engine.py:1314`).
 
 ## What's broken
 

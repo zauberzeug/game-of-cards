@@ -10,10 +10,14 @@ generalization reminders.
 
 from __future__ import annotations
 
+import codecs
 import contextlib
 import importlib.util
 import io
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,6 +25,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 HOOK = ROOT / "goc" / "templates" / "hooks" / "pattern_generalization_check.py"
+TEMPLATE_CONFIG = ROOT / "goc" / "templates" / "game_of_cards" / "config.yaml"
 
 
 def _load_hook():
@@ -376,6 +381,89 @@ class OptInDefaultTest(unittest.TestCase):
         rc, err = self._run_main("hooks:\n  pattern_generalization_check: true\n")
         self.assertEqual(rc, 2)
         self.assertIn("pattern-check", err)
+
+
+class UndecodableInputTest(unittest.TestCase):
+    """A config.yaml or transcript that does not decode must not crash the hook.
+
+    `_enabled` and `_had_code_mutation` read in the host's default encoding
+    inside `except OSError`, and a decode failure is a ValueError. `main`
+    calls `_enabled` on every Stop event, so a config.yaml the host could not
+    decode made the hook exit 1 at every turn end, even with the hook off.
+    """
+
+    # LC_ALL=C names the C locale; PYTHONUTF8=0 and PYTHONCOERCECLOCALE=0 stop
+    # Python from swapping it for UTF-8. The child's default encoding is then
+    # ASCII, standing in for a host whose default encoding is not UTF-8.
+    ASCII_DEFAULT = {"LC_ALL": "C", "PYTHONUTF8": "0", "PYTHONCOERCECLOCALE": "0"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = _load_hook()
+
+    def _project(self, config: bytes) -> Path:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        project = Path(tmp.name)
+        (project / ".game-of-cards").mkdir()
+        (project / ".game-of-cards" / "config.yaml").write_bytes(config)
+        return project
+
+    def _run_with_ascii_default(self, project: Path, transcript: Path | None):
+        env = {**os.environ, **self.ASCII_DEFAULT}
+        probe = subprocess.run(
+            [sys.executable, "-c", "import locale; print(locale.getpreferredencoding(False))"],
+            capture_output=True, text=True, env=env,
+        )
+        try:
+            default = codecs.lookup(probe.stdout.strip()).name
+        except LookupError:
+            default = probe.stdout.strip()
+        if default != "ascii":
+            self.skipTest(f"cannot force an ASCII default encoding here ({default!r})")
+        payload = {
+            "stop_hook_active": False,
+            "cwd": str(project),
+            "transcript_path": str(transcript) if transcript else "",
+        }
+        return subprocess.run(
+            [sys.executable, str(HOOK)],
+            input=json.dumps(payload).encode("ascii"),
+            capture_output=True, cwd=project, env=env, timeout=60,
+        )
+
+    def test_config_that_does_not_decode_leaves_the_hook_off(self):
+        # Even when it opts in: a config that does not decode reads as
+        # absent, the way the engine's load_deck_config reads it.
+        project = self._project(b"pattern_generalization_check: true\n# owner: Ren\xe9\n")
+        self.assertFalse(self.hook._enabled(str(project)))
+
+    def test_transcript_that_does_not_decode_counts_as_no_mutation(self):
+        project = self._project(b"pattern_generalization_check: true\n")
+        transcript = project / "transcript.jsonl"
+        entry = {"role": "assistant", "content": [{"type": "tool_use", "name": "Edit", "input": {}}]}
+        transcript.write_bytes(b"\xff\n" + json.dumps(entry).encode("ascii") + b"\n")
+        self.assertFalse(self.hook._had_code_mutation(str(transcript)))
+
+    def test_shipped_template_config_under_ascii_default_encoding_exits_zero(self):
+        project = self._project(TEMPLATE_CONFIG.read_bytes())
+        proc = self._run_with_ascii_default(project, None)
+        self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
+
+    def test_utf8_transcript_under_ascii_default_encoding_still_reminds(self):
+        project = self._project(b"pattern_generalization_check: true\n")
+        transcript = project / "transcript.jsonl"
+        entries = [
+            {"role": "user", "content": "fix the typo \U0001F601"},
+            {"role": "assistant", "content": [{"type": "tool_use", "name": "Edit", "input": {}}]},
+        ]
+        transcript.write_bytes(
+            "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries).encode("utf-8")
+        )
+        proc = self._run_with_ascii_default(project, transcript)
+        stderr = proc.stderr.decode("utf-8", "replace")
+        self.assertEqual(proc.returncode, 2, stderr)
+        self.assertIn("pattern-check", stderr)
 
 
 if __name__ == "__main__":

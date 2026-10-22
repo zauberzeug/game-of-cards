@@ -123,3 +123,103 @@ which is the expected outcome on a guard authored the same hour, and is why
 the cost of the technique is better measured here than on the retrofit cases.
 The four guards in this card's offender table are still unaddressed; nothing
 about this closure narrows them.
+
+## 2026-09-21T05:20:00Z — Seventh surface, and the two-failing-states mirror
+
+Connected from
+[contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions](../contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions/)
+(closed 2026-09-21, commit `d79a7531`). The new
+`ContributorGuideAccuracyTest` lands in `tests/test_guidance_accuracy.py` —
+the file that holds three of the four guards in this card's offender table —
+and was written with sensitivity proof from the start, so the two shapes now
+sit side by side in one module for anyone weighing the scope question.
+
+Two controls, because the seven checks needed both directions:
+
+- **historical fixture** — the pre-fix `CONTRIBUTING.md` clauses, verbatim
+  under their real headings, fed to the same `_contributing_findings(text)`
+  the passing assertion calls. The test asserts *every* check id fires, not
+  that some list is non-empty, so one check going quiet is a failure rather
+  than a quieter pass.
+- **per-check mutation isolation** — each of the seven claims reintroduced
+  alone into the repaired file, asserting exactly that check fires and no
+  other. The fixture alone would not have caught a check that fires for the
+  wrong reason: three of `mirror-refresh-mechanism`'s clauses trip together
+  on the historical text.
+
+Taking the text as an argument rather than reading the file is what made both
+possible, and it cost nothing — the passing assertion reads the file and
+hands it over.
+
+**The new datum is the inverse failure.** This card's third entry recorded
+controls catching a check with two *passing* states (nothing drifted vs
+nothing ran). The card above hit the mirror: its filed `reproduce.py` graded
+the quote convention as `if double > single` — measured from the tree alone,
+never reading what the guide claimed — so it had two *failing* states, "the
+guide is wrong" and "the guide is right but the check never looked". It could
+not go green, and the DoD it was written for says it must. Three sibling
+checks in the same script were pinned to one day's wording the same way.
+
+That shape is invisible to everything this card proposes: a known-caught
+control confirms it fires, which it does, always. Only running it against the
+repaired surface distinguishes them — which for a card artifact means the
+closing session, the one session with an interest in the check being
+satisfiable. Whatever scope is picked, an artifact whose DoD promises it will
+exit zero is worth a *green* control as much as a red one.
+
+No decision recorded — the gate stays `decision`; the four guards in the
+offender table are still unaddressed.
+
+## 2026-09-21T05:55:00Z — Eighth surface: an execution guard, which can assert its own coverage
+
+Connected from
+[shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/)
+(closed 2026-09-21, commit `b1b7ad8f`). The new
+`SkillAdvanceExampleDirectionTest`
+(`tests/test_skill_advance_example_direction.py`) walks every
+`goc advance A --by B` occurrence in all six shipped skill trees, pairs it
+with the `<role>.advances: [<role>]` encoding claim stated in the same
+markdown block, and runs it against a scratch deck — the defect it pins was a
+recipe whose stated encoding and given verb were both plausible English and
+disagreed only once something executed them.
+
+Written with sensitivity proof from the start, so this is a compliance datum
+rather than a retrofit. Two controls, and the second is a shape this card has
+not recorded:
+
+- **historical fixture** — the pre-fix aggregation-epic bullet verbatim, fed
+  to the same `_examples_in(text, source)` the passing assertion calls, with
+  the guard required to both read a claim out of it and reject the example.
+- **direct coverage assertion** — `test_the_covered_set_is_not_empty` reads
+  the scan result itself and fails if no example is paired with a claim,
+  reporting the example sites it saw but could not cover.
+
+The second control is available because the guard's assertion is an
+*execution*, not a scan: the scan is an intermediate value the test can
+inspect, where a prohibition guard's scan and assertion are the same
+expression. So the two-passing-states problem splits. A dead scanner still
+passes silently and still needs the fixture — but "nothing ran" is directly
+assertable, with no historical text to keep, and it degrades usefully: an
+author who deletes an encoding claim while editing a skill body is told which
+example sites went uncovered rather than watching the guard go quiet.
+
+Cheap enough to be non-optional. The four guards in this card's offender table
+each scan into a list before asserting it empty, so each could assert what it
+scanned in one more line — which narrows the cost objection under
+`## Decision required`, though it does not answer the scope question. Nothing
+about this entry addresses those four; they remain unaddressed, and the gate
+stays `decision`.
+
+
+## 2026-10-11T04:53:33Z — Connected: a clean sample must not come from the scanner's literals
+
+From `card-language-guard-still-flags-legitimate-english-its-docstring-rules-out`
+(closed). The first connected instance's fix included a known-clean check,
+`test_exemption_composes_beyond_the_source_literals`, which multiplied the
+guard's listed `-ung` prefixes by its listed stems. The guard then flagged
+`hamstrung` and `underhung`, built on prefixes the list lacked, and that test
+could not see them because its sample came from the list. The README's
+clean-sample paragraph now carries the constraint: the near-miss has to come
+from a population the scanner does not define. The successor used a hunspell
+dictionary sweep and first elements absent from the guard's source text.
+Evidence only; the gate stays `decision`.

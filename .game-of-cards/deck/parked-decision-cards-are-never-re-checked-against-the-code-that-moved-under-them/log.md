@@ -45,3 +45,42 @@ the script exits 1 with 24 unsurfaced candidates, which is the correct
 pre-fix state, and clearing them needs the mechanism the human picks. DoD 6
 (should the gate keep blocking `superseded`) is recorded with a recommendation
 to keep it, but the DoD asks for an explicit human ruling, not an agent's.
+
+## 2026-09-21 — refine-deck: deck-wide measurement of the parked cohort
+
+Supporting evidence from the 2026-09-21 hygiene pass, recorded here rather
+than filed as a new card because it is this card's thesis measured at deck
+scale, not a separate finding.
+
+Of 200 open cards, **127 (64%) have had no `log.md` (or, absent one, README)
+activity in 60+ days**. The tail is dominated by a single batch: roughly
+twenty `goc-*` verb cards filed together around 2026-05-29, every one still
+`human_gate: decision`, all untouched for ~115 days. Longest-parked open card
+is 129 days (`support-custom-frontmatter-fields-with-enum-and-required-when-rules`).
+
+This is the footprint the card predicts — parks accumulate because no pass can
+retire them and no human re-reads them — and it is why the hygiene pass files
+its own findings at `human_gate: none` where the evidence supports it.
+
+## 2026-10-17T05:00:00Z — Instance connected: a decision option resting on a premise false at filing
+
+[pattern-generalization-opt-out-regex-misses-quoted-yaml-values](../pattern-generalization-opt-out-regex-misses-quoted-yaml-values/)
+(open, `decision`, filed 2026-05-29). Its Option 3 weighs replacing the
+hook's regex with `yaml.safe_load` on the premise that "the engine already
+requires PyYAML". The engine dropped PyYAML in `d490d6d1` on 2026-05-09,
+twenty days before the card was filed. That understates the option's cost:
+it would add goc's only third-party import. The card now carries a
+`## Staleness re-check` entry (`d821a2f1`); its gate and options are
+untouched.
+
+Two datums for the decision. First, Option C's closer sweep is what found
+it. The closure of
+`plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped`
+grepped open cards for the package names its fix touched. That fix did not
+fix this card's defect, but the shared symbol surfaced a stale premise
+anyway, so the sweep reaches further than "cards your fix also fixed".
+Second, neither Option A nor B's as-filed anchor scan would fire here. The
+claim was false when written, not made false by later work, and it is prose
+("requires PyYAML"), not a cited anchor that stopped resolving. Option D's
+framing, that a parked card's claims hold as of its filing date, needs the
+same caveat: a claim can already be stale at filing.

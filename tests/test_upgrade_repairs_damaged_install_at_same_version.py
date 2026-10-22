@@ -195,7 +195,12 @@ class UpgradeNoOpIsPreservedTest(unittest.TestCase):
             with _chdir(repo), _engine_config_at(repo):
                 out = _quiet(goc_install.upgrade)
 
-            self.assertEqual(f"already at goc {goc_install.__version__} — nothing to do.\n", out)
+            verdict, *report = out.splitlines()
+            self.assertEqual(f"already at goc {goc_install.__version__} — nothing to do.", verdict)
+            # The only other output is the read-only divergence report
+            # Skill(upgrade) reads (test_upgrade_reports_divergence_at_current_version.py).
+            self.assertEqual([goc_install._DIVERGENCE_REPORT_MARKER], report[:1])
+            self.assertEqual(2, len(report))
             self.assertEqual(before, _snapshot(repo), msg="no-op upgrade touched files")
 
     def test_second_bare_upgrade_after_a_repair_is_a_no_op(self) -> None:

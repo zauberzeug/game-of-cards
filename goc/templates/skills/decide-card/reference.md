@@ -64,7 +64,8 @@ needs a mental remap defeats that purpose.
 ## Re-scope reconciliation
 
 `goc decide` touches exactly two surfaces: it writes the
-`## Decision` block and lowers the gate. That is correct for a
+`## Decision` block and lowers the gate (releasing a card parked
+while `active` back to `open`). That is correct for a
 *first* decision — but when the decision **reverses or re-scopes a
 verdict the card already states**, every other place still asserting
 the old verdict is now stale, and the card contradicts itself. The

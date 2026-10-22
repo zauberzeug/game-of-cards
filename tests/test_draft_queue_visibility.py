@@ -52,7 +52,8 @@ class DraftQueueVisibilityTest(unittest.TestCase):
     def setup_deck(self, cwd: Path) -> None:
         # one draft (fresh scaffold) + one authored/published card
         self.assert_ok(self.run_goc(cwd, "new", "draft-card", "--gate", "none", "--tag", "story"))
-        self.assert_ok(self.run_goc(cwd, "new", "live-card", "--gate", "none", "--tag", "story"))
+        self.assert_ok(self.run_goc(cwd, "new", "live-card", "--gate", "none", "--tag", "story",
+                                    "--summary", "Published card."))
         path = cwd / ".game-of-cards" / "deck" / "live-card" / "README.md"
         text = path.read_text()
         text = text.replace(
@@ -100,7 +101,7 @@ class DraftQueueVisibilityTest(unittest.TestCase):
     def author_and_publish(self, cwd: Path, title: str, *new_args: str) -> None:
         """Scaffold `title` with the given `goc new` args, fill in real body/DoD,
         and publish so the draft flag clears while the gate stays as filed."""
-        self.assert_ok(self.run_goc(cwd, "new", title, *new_args))
+        self.assert_ok(self.run_goc(cwd, "new", title, *new_args, "--summary", f"{title} summary."))
         path = cwd / ".game-of-cards" / "deck" / title / "README.md"
         text = path.read_text()
         text = text.replace(

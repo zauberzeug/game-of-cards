@@ -21,10 +21,10 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:4990-5000` — `_git_auto_commit`'s `exclude_draft` filter.
+- `goc/engine.py:5040-5050` — `_git_auto_commit`'s `exclude_draft` filter.
 - `goc/engine.py:5234-5237` — `_cmd_status`: `commit_targets = [card_dir]`
   plus `DECK_DIR / successor` for `superseded --by`.
-- `goc/engine.py:6524` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
+- `goc/engine.py:6577` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
   `_git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], ...)`.
 
 ## What's broken
@@ -57,7 +57,7 @@ warning that the commit was split. Same for `goc status <old> superseded
 --by <draft-successor>`.
 
 The lone caller that opts out (`goc new --commit`,
-`engine.py:6240-6245`, `exclude_draft=False`) exists precisely "to avoid a
+`engine.py:6293-6298`, `exclude_draft=False`) exists precisely "to avoid a
 half-edge (one endpoint committed, the other left untracked)" — the exact
 failure the two-card verbs now reproduce.
 
@@ -91,7 +91,7 @@ deck that fails `goc validate` with `references unknown title`, and the
 referential-integrity invariant ("closed-card relationship edges are
 first-class; validate enforces both axes") is broken in the committed
 record. Reachability: `goc new <epic>` (default no-commit, born draft)
-followed by `goc advance <child> --by <epic>` is the documented
+followed by `goc advance <epic> --by <child>` is the documented
 aggregation-epic wiring order; with auto_commit on, the split commit
 happens on the standard path. Introduced by the fix for
 [placeholder-cards-superseded-before-they-are-authored](../placeholder-cards-superseded-before-they-are-authored/)
@@ -110,7 +110,7 @@ committed trees. A human should pick which invariant bends.
 
 **Option A — commit the draft counterpart together with the edge
 (atomicity wins).** Pass `exclude_draft=False` from the two-card call
-sites at `engine.py:6011`, `:5710`, `:5725`.
+sites at `engine.py:6064`, `:5710`, `:5725`.
 
 - Pros: committed tree always validates; matches the `goc new --commit`
   precedent and the half-edge rule; smallest behavior change.
@@ -128,7 +128,7 @@ before writing either endpoint.
 - Pros: both invariants preserved; the error teaches the publish step;
   no placeholder ever ships.
 - Cons: breaks the documented epic-wiring flow (`goc new <epic>` then
-  `goc advance <child> --by <epic>` now requires an intervening publish);
+  `goc advance <epic> --by <child>` now requires an intervening publish);
   strictness applies even when auto_commit is off, where the split-commit
   problem does not exist — unless the refusal is conditioned on
   auto_commit, adding mode-dependent behavior.
@@ -144,7 +144,7 @@ nothing and prints a "left uncommitted: counterpart is a draft" notice.
 - Cons: silently downgrades auto_commit's atomicity promise — mutations
   linger as ambient worktree changes that the next unrelated commit may
   sweep up, which is the failure auto_commit was built to avoid.
-- Preview: change the filter at `engine.py:4990-5000` to all-or-nothing
+- Preview: change the filter at `engine.py:5040-5050` to all-or-nothing
   plus a stderr notice.
 
 **Recommendation.** Option A — the committed-tree referential-integrity

@@ -35,8 +35,10 @@ Invoke when the user says "I decided X", "let's go with Y", "the answer is Z", "
 The Andon-cord loop: `Skill(pull-card)` raises `human_gate`
 (`none → decision` / `session`) when it hits a question only a human
 can answer; this skill lowers the gate back to `none` in one cheap
-action. Status stays `open`, so the next `pull-card` claims and
-implements per the recorded decision. Humans resolve the cause;
+action. The card comes out `open` — one parked while `active`
+(pull-card claims before it works) is released back to the queue —
+so the next `pull-card` claims and implements per the recorded
+decision. Humans resolve the cause;
 agents wield the wrench — and an agent that can cite the project
 rubric MAY decide on its own behalf (lazy Andon, below).
 
@@ -70,7 +72,11 @@ actually applies:
    resolution (`<decision> — <reason>. Gate <prior> → none.`).
 
 3. **Frontmatter.** Flips `human_gate: decision` (or `session`) →
-   `none`. Status is unchanged (`open` stays `open`).
+   `none`. An `open` card stays `open`. An `active` card (parked
+   mid-work) returns to `open` with its `worker` kept, because
+   `active` + gate `none` reads as a live claim that no queue lists;
+   to keep working it in the same session, re-claim it with
+   `goc status <title> active`.
 
 4. **Refuses** if the gate is already `none` or the title doesn't
    exist.
@@ -158,7 +164,8 @@ A decision recorded in violation of this contract can be rewound —
 - Does NOT implement the card (that's `pull-card`'s next round).
 - Does NOT close the card (that's `Skill(finish-card)`'s DoD-gated
   contract).
-- Does NOT mutate `status` — the card stays `open`.
+- Does NOT mutate `status`, except to release a parked claim
+  (`active` → `open`, above).
 
 ## Cross-references
 

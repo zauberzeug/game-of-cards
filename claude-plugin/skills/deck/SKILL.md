@@ -45,8 +45,10 @@ situation actually calls for it:
   the gate, the next pull resumes the work.
 
 Multiple sessions work cards in parallel. `status: active` is the
-soft lock; git's merge handles the rare simultaneous-claim race
-(whichever commits first wins).
+soft lock, but by default a claim stays in your clone, so two clones
+can both claim one card; `workflow.claim_push: true` pushes the claim
+and refuses a later conflicting one (`reference.md` § Game of Cards
+as the runtime).
 
 ## What this looks like in practice
 
@@ -100,10 +102,8 @@ live in `.game-of-cards/canonical-tags.md`.
 
 ```
 deck/
-  SCHEMA.md                 # canonical schema (frontmatter IS the schema)
-  README.md                 # navigation + conventions
-  deck.py                   # CLI; computes filtered views from frontmatter
-  <title>/                   # one dir per card; never moves on state change
+  log.md                    # deck-level journal (sprint notes, schema bumps)
+  <title>/                  # one dir per card; never moves on state change
     README.md               # frontmatter + dashboard body — latest knowledge + current state
     log.md                  # append-only journal — history, details, decisions, flow
     reproduce.py            # OPTIONAL — declared in DoD when present
@@ -164,8 +164,9 @@ One skill per job; compose, don't bundle.
   only — `human_gate` is `decide-card`'s responsibility.
 - `Skill(decide-card)` — the human's Andon-cord lowering action.
   Records `<decision> + <because>` on a parked card and flips gate
-  `decision`/`session` → `none`. Status stays `open` so the next
-  `pull-card` claims and implements per the recorded decision.
+  `decision`/`session` → `none`. The card comes out `open` (one parked
+  while `active` is released) so the next `pull-card` claims and
+  implements per the recorded decision.
 - `Skill(finish-card)` — close a card: tick DoD, append closure log,
   run `goc done <title>`, then run any project-specific post-close or
   commit handoff defined by the consuming repo's hook.

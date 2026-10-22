@@ -1,6 +1,6 @@
 ---
 title: goc-new-stamps-goc-worker-queue-filter-into-authored-worker-field
-summary: "`goc new`'s `--worker` uses `argparse.SUPPRESS` and shares the default dest `worker` with the global `--worker` queue filter (whose default is `$GOC_WORKER`). So a bare `goc new` run with `GOC_WORKER` or global `--worker` set stamps that triage-filter value into the new card's authored `worker` field. Fix: give `new --worker` a distinct dest, mirroring the `advances_wire`/`advanced_by_wire` remedy at engine.py:4020-4023. Decision-gated on the intended contract."
+summary: "`goc new`'s `--worker` uses `argparse.SUPPRESS` and shares the default dest `worker` with the global `--worker` queue filter (whose default is `$GOC_WORKER`). So a bare `goc new` run with `GOC_WORKER` or global `--worker` set stamps that triage-filter value into the new card's authored `worker` field. Fix: give `new --worker` a distinct dest, mirroring the `advances_wire`/`advanced_by_wire` remedy at engine.py:4069-4023. Decision-gated on the intended contract."
 status: open
 stage: null
 contribution: medium
@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:3921` — the **global** `--worker` flag, documented and
+- `goc/engine.py:3970` — the **global** `--worker` flag, documented and
   intended as a queue/triage **filter**, with the env var as its default:
 
   ```python
@@ -30,7 +30,7 @@ definition_of_done: |
                       help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.")
   ```
 
-- `goc/engine.py:4024` — `goc new`'s own `--worker`, declared with
+- `goc/engine.py:4073` — `goc new`'s own `--worker`, declared with
   `default=argparse.SUPPRESS` and sharing the default dest `worker`:
 
   ```python
@@ -56,7 +56,7 @@ definition_of_done: |
 — flows straight into `args.worker` and gets stamped onto the card as
 its authored worker designation.
 
-The global `--worker` is documented (engine.py:3922, AGENTS.md) as a
+The global `--worker` is documented (engine.py:3971, AGENTS.md) as a
 **read-side queue filter** for runner-scoped views; the worker field
 on a card is a **write-side authorship designation**. The two share a
 dest, and the filter value leaks into the authored field.

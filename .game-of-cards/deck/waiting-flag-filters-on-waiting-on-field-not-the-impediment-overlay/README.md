@@ -24,9 +24,9 @@ definition_of_done: |
 
 Re-resolved at HEAD on 2026-08-24; the cite this card was filed with is dead.
 
-- Filter: `goc/engine.py:4310` — now `live_impeded(t, include_drafts=...)`
-- Live-impediment wrapper: `goc/engine.py:2745` (`live_impeded`)
-- Impedance predicate: `goc/engine.py:2696` (`waiting_impedes`)
+- Filter: `goc/engine.py:4311` — now `live_impeded(t, include_drafts=...)`
+- Live-impediment wrapper: `goc/engine.py:2780` (`live_impeded`)
+- Impedance predicate: `goc/engine.py:2731` (`waiting_impedes`)
 - Flag help text: `goc/engine.py:3912`
 - Regression coverage: `tests/test_waiting_filter_status_scope.py:91`
 
@@ -46,7 +46,7 @@ set **or** a bare `waiting_until`, so a card deferred with `goc wait <title>
 flagged `⏳` on the board, and yet omitted from `goc --waiting` — the one
 view whose purpose is to surface impeded work.
 
-**That code is gone.** `goc/engine.py:4310` now reads:
+**That code is gone.** `goc/engine.py:4311` now reads:
 
 ```python
 rows = [t for t in rows if live_impeded(t, include_drafts=include_drafts)]

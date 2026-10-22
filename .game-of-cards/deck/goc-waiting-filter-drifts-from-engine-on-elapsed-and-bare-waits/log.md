@@ -56,3 +56,18 @@ prescribes, so a staleness scan can tell a card that was re-read from one
 nobody has opened. Retiring this card needs `goc decide`; an agent may not
 lower the gate. Tracked by
 [`parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`](../parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them/).
+
+## 2026-09-14 — refine-deck: defunct cite corrected by hand
+
+The body cited `card_is_ready` at `engine.py:1722`. That number was wrong the
+day it was written — at this card's filing commit (`5570bdb4`) `card_is_ready`
+was at line 1729, and 1722 was a blank line two lines above an unrelated
+function. Because the anchored citation recipe compares the anchor line's text
+to HEAD's text at the same offset, and both were blank, three consecutive
+hygiene passes verdicted the cite `current` while it drifted 910 lines from the
+function it names.
+
+Corrected to `goc/engine.py:2632`, the definition of `card_is_ready` in HEAD.
+The recipe gap that hid it is filed as
+[citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank](../citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank/),
+which carries this cite as its worked example.

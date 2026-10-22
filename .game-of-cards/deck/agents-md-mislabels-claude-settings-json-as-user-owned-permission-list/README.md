@@ -7,7 +7,8 @@ contribution: high
 created: "2026-07-26T19:06:59Z"
 closed_at: "2026-07-26T19:12:39Z"
 human_gate: none
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [documentation, infra]
 definition_of_done: |
@@ -19,6 +20,8 @@ worker: {who: "claude[bot]", where: main}
 ---
 
 # AGENTS.md calls `.claude/settings.json` a per-repo permission allow-list; goc writes hook registrations into it
+
+> Later evidence: see [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/). The claim below that `goc validate` enforces registration parity is false: no validate step checks the settings entries for parity with `GOC_CLAUDE_HOOKS`, and the "and `goc validate` enforces the parity" clause this fix added to AGENTS.md has been rewritten.
 
 ## Location
 

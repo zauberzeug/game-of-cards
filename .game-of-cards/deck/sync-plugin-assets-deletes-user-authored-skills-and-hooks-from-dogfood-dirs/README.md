@@ -24,7 +24,7 @@ definition_of_done: |
 - `scripts/sync_plugin_assets.py:270-272` — the dst-only prune inside `_sync_dir`
 - `scripts/sync_plugin_assets.py:171-198` — the dogfood pairs it applies to (`.claude/skills/` with only `_goc-bootstrap.sh` preserved; `.claude/hooks/` with an empty `preserve_files`)
 - `scripts/sync_plugin_assets.py:377` — same prune shape in `_sync_codex_skill_tree` for `.codex/skills/` (`rel.parts[0] not in eligible` unlinks non-GoC names)
-- `scripts/sync_plugin_assets.py:579` — `subprocess.run(["git", "add", "--"] + rel, check=True, ...)` stages the deletions and crashes on untracked ones
+- `scripts/sync_plugin_assets.py:585` — `subprocess.run(["git", "add", "--"] + rel, check=True, ...)` stages the deletions and crashes on untracked ones
 
 ## What's broken
 

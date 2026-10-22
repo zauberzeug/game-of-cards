@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-30T17:50:00Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting
 advanced_by:
   - goc-decide-corrupts-decision-text-via-regex-replacement-template
   - goc-decide-loses-deliberation-history-by-not-archiving-replaced-section

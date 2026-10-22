@@ -178,3 +178,26 @@ defect's test into that helper as a second consumer.
 Grepping for similar inverted-argument suggestions in other
 validator warning strings: no other instances found (only this
 warning suggests an `unadvance`/`advance` sequence in its fix text).
+
+That sweep was scoped to warning strings, and one site outside them
+has since turned up: the aggregation-epic recipe in
+`goc/templates/skills/advance-card/reference.md` stated the encoding
+`child.advances: [epic]` and gave the verb as
+`goc advance <child> --by <epic>`, so following it built the very edge
+this warning then fires on
+([shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/),
+fixed 2026-09-21). This verb's argument order has therefore been
+written backwards in two independent shipped texts, and until that fix
+a consumer met both in sequence: the recipe that built the backwards
+edge, then the warning that is supposed to undo it and instead re-adds
+it. The pair is what makes this card's own fix load-bearing rather than
+cosmetic — with the recipe corrected, this warning is now the only
+shipped text that still gets the order wrong.
+
+The guard that landed with the recipe fix
+(`tests/test_skill_advance_example_direction.py`) runs every
+role-named `goc advance` example in a shipped skill body against a
+scratch deck. It does not reach validator warning strings, which are
+emitted from `engine.py` rather than authored in a skill body — so it
+would not have caught this card's defect, and this card's own TDD item
+(a unit test asserting the warning text) stays required.

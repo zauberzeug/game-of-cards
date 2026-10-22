@@ -51,7 +51,7 @@ hook-point in its workflow. Same injection syntax as content stubs:
 | `hooks/decide-card.md` | `decide-card` | Agent-invoked decision contract (citation form for `--because`) |
 | `hooks/finish-card.md` | `finish-card` | Step 2 closure-criteria audit AND Step 7 post-close action (status-dashboard refresh, changelog row, etc.) |
 | `hooks/pull-card.md` | `pull-card` | Lazy-Andon trial: when a parked question can be resolved by a project rubric instead of raising the gate |
-| `hooks/audit-deck.md` | `audit-deck` | Phase 0 priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
+| `hooks/audit-deck.md` | `audit-deck` | Context priming reads + Phase 1 probe recipe + Phase 2 hunter roster |
 | `hooks/refine-deck.md` | `refine-deck` | Context priming reads before the hygiene pass |
 
 ## Per-file ownership and `goc upgrade` behavior
@@ -86,6 +86,3 @@ for the reconciliation contract.
 - **Versioned in git, kept in the repo root.** `.game-of-cards/` is
   intentionally not gitignored. Project-specific GoC configuration
   is project content; it ships with the repo.
-- **Sub-card 6 handles migration.** When phasor-agents migrates off
-  the vendored `deck.py`, this directory will be authored from the
-  audit catalogue (`deck/goc-package-pyproject-and-pypi-release/audit_catalogue.md`).

@@ -112,3 +112,22 @@ cluster with no hard ordering (the case our own guidance says wants a
 tag, not an edge):
 [`no-guardrail-for-canonical-epic-edge-direction`](../no-guardrail-for-canonical-epic-edge-direction/),
 [`unknown-tag-error-does-not-tell-you-how-to-add-a-tag`](../unknown-tag-error-does-not-tell-you-how-to-add-a-tag/).
+
+## Post-close: the three-shapes fork shipped with its verb reversed
+
+The "One card coordinates many others" fork this card authored
+(commit 175058ff, then relocated from `SKILL.md` into
+`advance-card/reference.md` by the progressive-disclosure restructure
+6e501d2f) stated the aggregation encoding correctly as
+`child.advances: [epic]` and then gave the verb as
+`goc advance <child> --by <epic>`. `goc advance <title> --by <advancer>`
+writes `advancer.advances += title`, so the recipe built
+`epic.advances: [children]` — the "Backwards aggregation … **Never.**"
+shape defined nine lines below it in the same list, and the exact
+signature `no-guardrail-for-canonical-epic-edge-direction` had just
+taught `goc validate` to flag. The fork was correct as a taxonomy and
+wrong as an instruction, for the four months it shipped to all six
+skill trees. Fixed, with a guard that runs each shipped example against
+a scratch deck, by
+[`shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids`](../shipped-epic-recipe-builds-the-backwards-edge-its-own-next-bullet-forbids/)
+(closed 2026-09-21).

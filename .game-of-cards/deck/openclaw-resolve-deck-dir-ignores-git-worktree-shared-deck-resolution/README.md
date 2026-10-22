@@ -35,14 +35,14 @@ definition_of_done: |
   }
   ```
 
-- `goc/engine.py:42-120` — the engine's two-stage resolution this is meant to
+- `goc/engine.py:44-143` — the engine's two-stage resolution this is meant to
   mirror:
-  - `_detect_worktree_common_root` / `_resolve_deck_root` (lines 42-94): when
+  - `_detect_worktree_common_root` / `_resolve_deck_root` (lines 44-118): when
     `cwd` is inside a git worktree **and** `worktree_deck: shared` is enabled
     (env `GOC_WORKTREE_DECK=shared`, or `workflow.worktree_deck: shared` in the
     common root's `config.yaml`), the deck root is redirected to the **primary
     working tree root** so every worktree shares one deck.
-  - `_resolve_deck_dir` (lines 97-120): canonical-wins precedence — when both
+  - `_resolve_deck_dir` (lines 121-143): canonical-wins precedence — when both
     `.game-of-cards/deck/` and legacy `deck/` exist it returns the **canonical**
     path (and flags `_DUAL_TREE_CONFLICT`); legacy is returned only when
     canonical is absent.
@@ -107,6 +107,15 @@ opt-out regex). Unlike those — which drift by subtle edge-case bugs — this o
 drifts by omitting whole engine behaviors, and it is not covered by the
 hand-maintained `isImpeded` matrix test. It is filed as a concrete instance and
 as new evidence for that meta-fix.
+
+The Python hooks had the same redirect gap, closed by
+[python-hooks-ignore-git-worktree-shared-deck-resolution](../python-hooks-ignore-git-worktree-shared-deck-resolution/).
+They could not delegate (they import nothing from the package), so they mirror
+`_detect_worktree_common_root` / `_shared_worktree_deck_root` and read
+`workflow.worktree_deck` with a block-layout reader, pinned to the engine by
+`tests/test_project_root_from_subdirectory.py`. That block in
+`goc/templates/hooks/deck_session_start.py` is the scope Option A below would
+port to TypeScript.
 
 ## Decision required
 

@@ -15,3 +15,15 @@ prose; forward-looking promise with no expiry or owner). The root's instance
 table and count were updated in place, and its `log.md` records the one thing
 this instance adds beyond a tally: workflow-file comments are a doc surface
 its Option A sweep list does not cover.
+
+## 2026-10-04 — Fix section no longer credits the package-data step
+
+[ci-package-data-check-reads-back-the-source-tree-it-lists-so-it-cannot-fail](../ci-package-data-check-reads-back-the-source-tree-it-lists-so-it-cannot-fail/)
+showed that the `Verify package data ships templates` step reads back the
+editable source tree, so it passes on a wheel that ships no skills. The Fix
+section credited that step with the invariant the header should state. It now
+credits `tests/test_wheel_package_parity.py`, which builds the wheel. It also
+links
+[ci-package-data-step-reports-skills-ship-without-looking-at-a-wheel](../ci-package-data-step-reports-skills-ship-without-looking-at-a-wheel/),
+which removes or rewires the step and needs the same human session. The DoD is
+unchanged.

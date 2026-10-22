@@ -38,6 +38,7 @@ class AttestAutomatedTimeoutTest(unittest.TestCase):
             check["cmd"],
             capture_output=True,
             text=True,
+            errors="backslashreplace",
             timeout=1000,
             cwd=str(engine.REPO_ROOT),
             check=False,

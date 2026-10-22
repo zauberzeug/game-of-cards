@@ -34,3 +34,15 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 7/7 ticked
 - [x] log-md-closure-entry — '## 2026-09-03 — Closure' present
+
+## 2026-09-07T05:14:00Z — Post-close correction
+
+This card's body listed **key ordering** among what `emit_frontmatter`
+canonicalises, and the fix carried that into the shipped subparser help. The
+emitter has no ordering step — it walks `fm.items()`, the mapping
+`parse_frontmatter` filled top-down — so a key-reordered card re-emits
+byte-identically. The body claim is corrected in place and the shipped strings
+are fixed by
+`migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does`
+(closed 2026-09-07). No status change: everything else this card asserted and
+fixed still holds.

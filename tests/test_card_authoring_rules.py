@@ -89,6 +89,13 @@ PRECISION_CASES = [
     "unstrung-retry-loop-never-terminates",
     "release-notes-generator-skips-the-first-entry",
     "kitchen-sink-fixture-masks-a-real-failure",
+    # One per claim `card-language-guard-still-flags-legitimate-english-its-docstring-rules-out`
+    # disproved: an English compound on an unlisted first element, a word on an
+    # ending once documented as collision-free, and marker-list homographs.
+    "retry-budget-is-hamstrung-by-a-fixed-cap",
+    "temperature-readout-ignores-fahrenheit-locales",
+    "the-sort-algo-is-quadratic-on-sorted-input",
+    "nouveau-driver-fallback-is-never-tried",
 ]
 
 # The English side of the `-ung` collision, spelled out: the participle stems and
@@ -105,11 +112,39 @@ ENGLISH_UNG_FAMILY = [
 # English side must not cost any of these, which rules out "raise the length
 # floor" and "drop the suffix layer" as fixes. Three of them (`Regelung`,
 # `Rechnung`, `Reinigung`) start with the `re-` prefix, so they exercise the
-# exact-stem requirement rather than a plain `startswith` test.
+# exact-stem requirement rather than a plain `startswith` test. The last row
+# supplies a German noun ending in each English stem the others leave
+# unwitnessed, so a stem cannot move into `TAIL_SAFE_UNG_STEMS` without one of
+# these going quiet.
 GERMAN_UNG_NOUNS = [
     "berechtigung", "aenderung", "pruefung", "loesung", "ordnung", "warnung",
     "rechnung", "regelung", "reinigung", "unterbrechung", "untersuchung",
     "umstellung", "buchung", "sammlung", "meinung",
+    "bildung", "leistung", "verzweiflung", "abwechslung", "ursprung",
+]
+
+# Every native-English `-ung` word at or above `MIN_SUFFIX_TOKEN_LEN` in
+# hunspell's en_US dictionary, affix rules expanded: the population the `-ung`
+# exemption is a claim about, rather than the words its own source names. Its
+# other `-ung` entries are German loanwords and romanized East Asian names,
+# which the guard's "Known false positives" leaves flagged.
+DICTIONARY_ENGLISH_UNG_WORDS = [
+    "aqualung", "hamstrung", "overhung", "overstrung", "rehung", "restrung",
+    "sprung", "strung", "underhung", "underslung", "unslung", "unsprung",
+    "unstrung", "unsung",
+]
+
+# First elements the guard lists nowhere. `ham` is attested (`hamstrung`); the
+# rest are hypothetical compounds, which is the point — a tail-safe stem must
+# accept a first element nobody has written yet.
+UNLISTED_FIRST_ELEMENTS = ("ham", "bow", "tight", "loose", "fore", "back")
+
+# English words the marker lists must not carry: the docstring's exclusion list,
+# and `algo`/`nada`/`tout`/`nouveau`, which were markers until a card showed them
+# blocking English prose.
+ENGLISH_HOMOGRAPHS = [
+    "die", "war", "hat", "tag", "fast", "con", "sin", "todo", "per", "non",
+    "come", "pour", "sans", "com", "des", "algo", "nada", "tout", "nouveau",
 ]
 
 # Every marker entry that spells its umlaut as an ASCII digraph, paired with the
@@ -290,7 +325,7 @@ class EnglishOnlyUnparseableCardTest(unittest.TestCase):
 
 
 class EnglishOnlyUngCollisionTest(unittest.TestCase):
-    """The one marker suffix with an English collision, from both sides.
+    """The one marker suffix with a native-English collision, from both sides.
 
     Regression guard for
     `card-language-guard-flags-legitimate-english-as-non-english`: the exemption
@@ -354,6 +389,91 @@ class EnglishOnlyUngCollisionTest(unittest.TestCase):
         self.assertFalse(
             [r for r in reasons if "'des'" in r], f"no reason may cite 'des': {reasons}"
         )
+
+
+class EnglishOnlyClaimsBeyondTheLiteralsTest(unittest.TestCase):
+    """The guard's documented precision, tested on English its source never names.
+
+    Regression guard for
+    `card-language-guard-still-flags-legitimate-english-its-docstring-rules-out`.
+    The docstring promised that no future prefix could make an `-ung` word a
+    false positive, that eight endings had no English collision, and that no
+    marker entry was ever legitimate English; `hamstrung`, `underhung`,
+    `fahrenheit`, `tout`, `nouveau`, `algo` and `nada` were all flagged anyway.
+    The suite could not see it: its composition test multiplies the guard's own
+    prefixes by the guard's own stems, so an unlisted prefix was outside
+    everything it asked. Each test here draws its English from outside those
+    literals, or pins why a literal has to stay one.
+    """
+
+    def test_tail_safe_stems_take_a_first_element_the_guard_never_lists(self) -> None:
+        source = (ROOT / "scripts" / "check_card_language.py").read_text(encoding="utf-8")
+        listed = set(guard.ENGLISH_UNG_PREFIXES) & set(UNLISTED_FIRST_ELEMENTS)
+        self.assertFalse(
+            listed, f"{sorted(listed)} joined ENGLISH_UNG_PREFIXES; pick unlisted elements"
+        )
+        composed = [
+            first + stem
+            for first in UNLISTED_FIRST_ELEMENTS
+            for stem in guard.TAIL_SAFE_UNG_STEMS
+            if first + stem not in source
+        ]
+        self.assertTrue(composed, "expected compounds absent from the guard's source text")
+        for token in composed:
+            with self.subTest(token=token):
+                self.assertEqual(
+                    guard.flag_text(token),
+                    [],
+                    f"{token!r} ends in a tail-safe stem; no enumeration can exempt it",
+                )
+
+    def test_tail_safe_stems_are_english_stems(self) -> None:
+        self.assertLessEqual(set(guard.TAIL_SAFE_UNG_STEMS), guard.ENGLISH_UNG_STEMS)
+
+    def test_every_other_stem_ends_a_german_noun_the_guard_catches(self) -> None:
+        """Why the other nine take only a listed prefix: a tail rule costs recall.
+
+        A stem joins `ENGLISH_UNG_STEMS` either tail-safe or with a German noun
+        here that ends in it. That noun is the evidence the stem cannot be a
+        tail, and `test_german_ung_nouns_are_still_caught` turns red the moment
+        the stem is moved into `TAIL_SAFE_UNG_STEMS` anyway.
+        """
+        for stem in sorted(guard.ENGLISH_UNG_STEMS - set(guard.TAIL_SAFE_UNG_STEMS)):
+            with self.subTest(stem=stem):
+                witnesses = [n for n in GERMAN_UNG_NOUNS if n.endswith(stem)]
+                self.assertTrue(
+                    witnesses,
+                    f"no German noun in GERMAN_UNG_NOUNS ends in {stem!r}: add one, "
+                    "or make the stem tail-safe if German has none",
+                )
+                self.assertTrue(all(guard.flag_text(n) for n in witnesses), witnesses)
+
+    def test_no_german_noun_ends_in_a_tail_safe_stem(self) -> None:
+        clashes = [n for n in GERMAN_UNG_NOUNS if n.endswith(guard.TAIL_SAFE_UNG_STEMS)]
+        self.assertEqual(clashes, [], "a tail-safe stem must end no German word")
+
+    def test_every_english_ung_word_in_the_dictionary_reads_clean(self) -> None:
+        flagged = {
+            w: guard.flag_text(w) for w in DICTIONARY_ENGLISH_UNG_WORDS if guard.flag_text(w)
+        }
+        self.assertEqual(flagged, {}, f"English dictionary words flagged: {flagged}")
+
+    def test_fahrenheit_is_exempt_as_a_whole_word_only(self) -> None:
+        """`-heit` was documented as collision-free; the exemption is exact."""
+        self.assertEqual(guard.flag_text("convert fahrenheit to celsius"), [])
+        for noun in ("unerfahrenheit", "sicherheit", "freiheit", "einheit"):
+            with self.subTest(noun=noun):
+                self.assertTrue(
+                    guard.flag_text(noun),
+                    f"{noun!r} is German; a tail match on 'fahrenheit' would exempt "
+                    "'unerfahrenheit' (inexperience)",
+                )
+
+    def test_english_homographs_are_not_marker_words(self) -> None:
+        for word in ENGLISH_HOMOGRAPHS:
+            with self.subTest(word=word):
+                self.assertNotIn(word, guard.MARKER_WORDS)
+                self.assertEqual(guard.flag_text(word), [])
 
 
 class EnglishOnlyNativeSpellingTest(unittest.TestCase):

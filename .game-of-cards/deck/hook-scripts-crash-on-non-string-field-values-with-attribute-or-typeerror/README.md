@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-31T04:26:23Z"
 closed_at: "2026-05-31T04:28:37Z"
 human_gate: none
-advances: []
+advances:
+  - hook-scripts-keep-spawning-one-crash-fix-per-malformed-input-shape
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |

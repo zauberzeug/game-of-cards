@@ -191,10 +191,46 @@ the filing commit for a cite no pass has touched, the repair commit for
 one an earlier pass rewrote. Find it by walking the card's own history:
 list `git log --follow --format=%H -- <deck>/<card>/README.md` oldest to
 newest (check the legacy `deck/` path too), read the README at each
-commit, and take the newest commit at which the exact cite token turns
-from absent to present. Read the cited file at that commit — `git show
-<commit>:<path>` — and take the cited line's text. That text is what the
-card meant; the number is only its address at the time.
+commit, and take the newest commit at which the cite token turns from
+absent to present. Presence is SET MEMBERSHIP, not a substring search:
+extract that version's cite tokens with the same pattern the pass uses
+to find cites in the card, and ask whether this token is one of them.
+Read the cited file at that commit — `git show <commit>:<path>` — and
+take the cited line's text. That text is what the card meant; the number
+is only its address at the time.
+
+**Why the presence test has to be token-exact.** A plain text search
+reads `path:N` as present inside `path:N-M`, so a single-line cite that
+shares its number with a range the same card carries never turns from
+absent to present at the commit that actually wrote it — it reads as
+present from whenever the range arrived, and inherits the range's older
+anchor. Calling the token "exact" is not enough and is why this held for
+a month: the word modified the token, while the test around it was still
+`in`. Measured on this deck 2026-09-14, two cites anchored this way,
+both onto text one line above the function their card names, and both
+were proposed for a rewrite onto that wrong line.
+
+**One token at two occurrences — DECLINE.** The walk identifies a cite
+by its TOKEN, and a token is not unique inside a card. Where the same
+in-scope token sits at two or more occurrences, those occurrences share
+one history and no walk can anchor them apart, even in principle:
+token-exactness does not help, because the token genuinely WAS present
+at the earlier commit, at the other occurrence. So count the occurrences
+before walking, and decline the token outright when there is more than
+one — a residue row, never a rewrite. The passes manufacture this shape
+themselves: neighbouring cites drift by the same amount, so a pass
+repairs them together and lands one on a number another already held.
+Measured on this deck 2026-09-14: 63 open cards hold an in-scope token
+at two or more occurrences, benign only while both occurrences still
+mean the same line.
+
+**A cite that already resolves at HEAD is not a repair candidate.**
+Cheap, and worth running first: if HEAD holds at the cited line the
+symbol the card's own prose names, the number is correct and no anchor
+can say otherwise. That would have stopped all three false repairs this
+rule was written for. It is belt-and-braces rather than the fix — it
+silences the symptom for cites that happen to be right and does nothing
+for one that is genuinely defunct and anchored on a neighbour's history.
 
 **Why not the creating commit.** It is the same commit for a cite no
 pass has ever rewritten, so the walk subsumes that older rule rather
@@ -209,27 +245,129 @@ moved 165 that were correct. Repair passes recur, so second passes are
 the normal case; an anchor that is right only on a virgin deck is right
 only once.
 
-**Deciding.** Anchor text ≠ the text at that line in HEAD → defunct.
-Then look for the anchor text in HEAD and rewrite the number only when
-the match is UNIQUE and the line is NON-TRIVIAL: skip blanks, bare
-braces, and anything under roughly 12 characters, which match
-everywhere. That guard is what makes the repair safe to apply
-unattended — on the pass that produced this rule it repaired 388 cites
-across 113 cards and declined 279 rather than guess.
+**Deciding.** Test the anchor line BEFORE comparing it. A blank, a bare
+brace, or anything under roughly 12 characters matches everywhere, so
+re-finding it at the cited offset is no more evidence that the cite is
+current than it is evidence of where the cite should move: the verdict
+is a DECLINE, reported, never `current`. Only a non-trivial anchor is
+compared — anchor text ≠ the text at that line in HEAD → defunct. Then
+look for the anchor text in HEAD and rewrite the number only when the
+match is UNIQUE; the line is already known substantial, because the
+refusal above ran first. That guard is what makes the repair safe to
+apply unattended — on the pass that produced this rule it repaired 388
+cites across 113 cards and declined 279 rather than guess.
 
-**The residue is output, not silence.** The declines split four ways
+**One predicate, both directions.** The non-triviality test shipped on
+the relocate step alone, and the asymmetry is the whole defect: a line
+too weak to move a cite by one line was strong enough to certify it for
+another pass. Nothing surfaced that, because a `current` verdict is
+silence — no decline line, no residue row — and a blank anchor cannot
+decay, so it freezes an author's original typo into a permanent
+`current`. Measured on this deck 2026-09-14: 46 of 413 `current`
+verdicts (11%), over 28 open cards, rested on such a line. One had
+passed three consecutive anchored passes while missing the function its
+card named by 910 lines, having never named it correctly at all.
+
+**A definition is identified by its name, not by its parameter list.**
+Exact full-line equality makes the anchor LINE the unit of identity. That
+is right for a statement inside a body, where the line is all the card
+ever meant, and wrong for a `def` or `class` line, where the card means
+the DEFINITION and the line is only how it announced itself on the day
+the cite was written. Append a keyword-only parameter, widen a return
+annotation, reflow the argument list across two lines — the function is
+still there, still uniquely named, still one grep away, and the exact
+test reports `anchor text absent` and declines. It declines again on the
+next pass, and on every pass after, because nothing about the situation
+changes. So when the anchor is a definition line and its exact text is
+absent from HEAD, retry on a unique `def <name>(` / `class <name>(`
+match. Only the identity claim moves, from "this line" to "this
+definition"; the refusal to guess does not, and two constraints hold it
+there:
+
+- **Two or more definitions of that name is an ambiguous match —
+  DECLINE.** An overload in a mirror tree, a method and a module-level
+  function sharing a name: the card's prose disambiguates, the matcher
+  cannot. Nearest-match is no more available to this rule than to the
+  exact one.
+- **The pair check still decides.** The name rule feeds the endpoint
+  mapper and nothing else. A range whose start relocates by name while
+  its end sits unmoved is the same wreck the pair guard above refuses,
+  and it is refused there.
+
+Measured on this deck 2026-09-14: 12 declines over 9 open cards were
+def/class anchors a unique-name match locates, and ONE refactor produced
+most of them — five install-time writers gained `*, probe: bool = False`
+in a single commit, so every card citing any of them lost its anchor at
+once. Signature drift arrives in families, so this class does not
+trickle in, it lands in batches, which is what makes a per-pass judgement
+call the wrong place for it.
+
+The relaxation stops at the definition line. Whitespace normalization and
+similarity ratios would have reached 16 further cites that same round and
+rest on a tuned threshold rather than on an identity claim; a wrong
+relocation is worse than a decline, and a threshold cannot say which it
+produced. Non-Python definition forms — TypeScript `function` and
+`const … =>`, shell functions — stay out until a measurement asks for
+them.
+
+**The residue is output, not silence.** The declines split six ways
 and each is reported for a human read:
 
 | Decline | What it usually means |
 |---|---|
-| trivial anchor line | the address is unrecoverable mechanically; a reader must re-derive it from the card's prose |
-| ambiguous (>1 match) | boilerplate or a repeated idiom; the card's surrounding text disambiguates, the matcher cannot |
-| anchor text absent | the cited code was refactored away — re-read the card, and if the refactor also fixed the defect, close it per the core skill |
+| ambiguous occurrence (>1 in the card) | the same cite token sits at two or more in-scope occurrences of one card, so the history walk cannot tell which occurrence it is anchoring; only the card's prose says what each one meant |
+| trivial anchor, verdict undecidable | the anchor line is a blank, a bare brace, or under ~12 characters, so matching it at the cited offset is no evidence the cite is current and finding it elsewhere is no evidence of where it went; a reader must re-derive the address from the card's prose |
+| ambiguous match (>1 hit in HEAD) | boilerplate, a repeated idiom, or a definition name HEAD holds more than once — an overload in a mirror tree, a method beside a module-level function; the card's surrounding text disambiguates, the matcher cannot |
+| anchor text absent | neither the anchor text nor — for a definition line — a unique `def`/`class` of that name is anywhere in HEAD; the code may have been refactored away, but it may equally have been renamed or split, so re-read the card before reading the decline as evidence the defect is gone, and close it per the core skill only if a refactor did fix it |
 | incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |
+| retired occurrence (re-run before the commit) | a second-round proposal on a cite this pass itself wrote, made while the rewrite was still uncommitted: the walk cannot see the rewrite, so it anchored on the last commit that carried the number — a different cite's, before an earlier pass moved it. The cite is not defunct and the proposal is not a repair; apply nothing that round proposed, commit, and re-run |
 
 A pass that printed only the cites it could auto-repair would report a
 shrinking problem while the unmappable majority rotted unseen — the
-same fail-open shape as the bounds test it replaced.
+same fail-open shape as the bounds test it replaced. Expect the first
+pass after a widened decline to report MORE residue than the one before
+it, and read that as accounting caught up rather than as a regression:
+moving the trivial-anchor test ahead of the comparison reclassified 46
+cites on this deck from a silent `current` into the table above, none of
+which the pass before it had been entitled to certify.
+
+**Close the step by committing, then re-running it.** Commit the
+rewrites, then run the decision phase again over the cards just written
+and assert it proposes ZERO further repairs. A correctly repaired deck
+is a fixed point, so any second-round proposal is the pass repairing
+its own output — and the per-cite rules cannot catch that, because each
+such proposal is individually well-formed: a real anchor, a unique
+match, a confident rewrite onto the wrong line. The colliding-anchor
+class above was found by exactly this re-run and by nothing else; a
+pass that had followed the recipe as written would have reported three
+successful repairs and left no trace of the three correct cites it
+moved. Treat a non-empty second round as a defect in the recipe to be
+filed, not as more work to apply.
+
+**The commit comes first because the walk reads history.** Its input is
+`git log`, so a rewrite still uncommitted in the working tree is
+invisible to it. For a cite the pass has just written, the newest
+absent-to-present turn is then one from BEFORE this pass — on a
+renumbering pass, routinely a RETIRED occurrence: the number the card
+carried for a different cite until an earlier pass moved that cite
+elsewhere. The walk anchors the fresh cite on the retired occurrence's
+text, finds that text uniquely in HEAD, and proposes moving a correct
+cite onto it. Neither occurrence guard above sees it — presence is set
+membership already, and the token occurs once in the card — because
+the colliding occurrence is in the card's PAST, where no count of
+current occurrences reaches. Measured on this deck 2026-09-21: one pass
+re-ran over its identical 269 repairs twice, and proposed 3 further
+repairs before its commit, all three false, and 0 after it. So the
+re-run is only valid once the rewrites are committed, which a local
+commit satisfies; pushing can wait for the verdict. A pass that cannot
+commit yet — another agent holds the shared index — commits the
+rewrites in a throwaway worktree and re-runs there, or holds the step
+open until its own commit lands. It never re-runs over the working
+tree, and it applies nothing such a run proposes (the retired-occurrence
+row above). Reading the working-tree README as the walk's newest
+version would make the re-run valid at any point, but it would anchor
+cites on edits nobody has committed and redefine the walk every other
+rule here is built on, where the ordering costs one sentence.
 
 ## Tag sweeps
 
@@ -275,10 +413,9 @@ and `judgment`" for the three measurements.
 
 The optional `--llm` flag on `goc quality-pass` is a hook for a
 Sonnet-batched pass that extends the audit to summary quality +
-per-DoD-item issues. Currently a stub; the integration story is
-tracked in `deck/auto-validate-card-titles-summaries-and-dods/log.md`.
-The regex-only mode is sufficient as the always-on baseline; the
-batched LLM pass is a nice-to-have, not load-bearing.
+per-DoD-item issues. Currently a stub. The regex-only mode is
+sufficient as the always-on baseline; the batched LLM pass is a
+nice-to-have, not load-bearing.
 
 ## Example Step 4 output
 

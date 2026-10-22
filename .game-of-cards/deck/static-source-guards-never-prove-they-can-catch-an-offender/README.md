@@ -56,6 +56,30 @@ table above — `assertEqual(engine, skill)` is fail-closed, so a dead read
 raises rather than passing empty. The citation is about the technique, not
 membership in the family.
 
+Five further surfaces have applied the technique since, each recorded in
+`log.md` rather than here. `ContributorGuideAccuracyTest` (2026-09-21) is the
+first to sit in `tests/test_guidance_accuracy.py` alongside three of the four
+offenders above, and the first to pair a verbatim historical fixture with
+per-check mutation isolation — the fixture alone cannot tell a check that
+fires from a check that fires for the wrong reason. Its entry also records a
+failure mode nothing in this card reaches: a check with two *failing* states
+rather than two passing ones. A known-caught control passes on it happily —
+firing is all such a check ever does — and only a control asserting it goes
+*green* against a repaired surface separates "the claim is wrong" from "the
+check never read the claim".
+
+The newest, `SkillAdvanceExampleDirectionTest` (2026-09-21), is the first
+whose assertion is not a scan at all: it scans shipped skill bodies for
+`goc advance` examples, then *executes* each one against a scratch deck. That
+splits the two-passing-states problem in two, and only one half needs a
+fixture. A dead scanner still passes silently, so the offender fixture is
+required as ever — but the covered set is a value the guard can read directly,
+so emptiness is assertable without one, naming the example sites it found and
+could not cover. Where a prohibition guard can only ask "would I fire on a
+known offender?", an execution guard can also ask "what did I actually look
+at?" — a control that costs one assertion and no historical text, and that the
+offender table's four guards could each carry today.
+
 ## What's broken
 
 A prohibition guard ends in some variant of
@@ -260,7 +284,13 @@ for matches and finding none — a real measurement that was nonetheless against
 the wrong population, because it can only surface false positives the current
 corpus already triggers. A registered clean sample has to be a *near-miss the
 corpus does not contain* (there `sprung`, `strung`, `des`), not a sample of
-present data, or it reproduces the same blind spot with more ceremony.
+present data, or it reproduces the same blind spot with more ceremony. Nor may
+it be generated from the scanner's own literals. That fix shipped a clean-side
+test that multiplied the guard's listed prefixes by its listed stems, and the
+next defect was an unlisted prefix
+([card-language-guard-still-flags-legitimate-english-its-docstring-rules-out](../card-language-guard-still-flags-legitimate-english-its-docstring-rules-out/)).
+A sample the scanner defines cannot see what the scanner omits; the successor
+draws its clean side from hunspell's en_US dictionary instead.
 
 ## A fourth surface: closure verifications, which no option below reaches
 

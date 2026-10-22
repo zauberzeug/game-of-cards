@@ -155,3 +155,317 @@ Two things recorded in the dashboard above:
   the day the surfaces diverged.
 - **No decision recorded** — the gate stays `decision`; this entry adds evidence
   to the scope question (which surfaces count), not an answer to it.
+
+## 2026-09-07 — eighteenth instance connected: a shipped `--help` string
+
+- **Instance**:
+  `migrate-list-style-help-promises-key-order-normalisation-the-emitter-never-does`
+  (closed 2026-09-07). `advances` edge wired; table row added; the count
+  sentence rewritten in place against `advanced_by`.
+- **Why it is not a duplicate**: the shape is exactly this card's — a prose
+  restatement of code behaviour (`goc migrate-list-style --help` and the
+  command docstring enumerating what `emit_frontmatter` normalises), rotted,
+  caught by an audit pass rather than CI, repaired by adding one more per-claim
+  guard in its own file. Surfaced by a `pull-card` session on an empty ready
+  queue; the Stop-hook pattern check routed it here via dedup.
+- **What it adds**: a sixth surface class — the **shipped `--help` output**,
+  which argparse renders before any card or tree is read, so a derive-from-tree
+  guard cannot be evaluated at render time and has to run as a test instead. It
+  is also the sharpest instance yet of the failure mode the thirteenth first
+  showed: the false clause was written *by an earlier instance's own repair*.
+  The predecessor card
+  [migrate-list-style-reports-and-rewrites-far-more-than-list-style](../migrate-list-style-reports-and-rewrites-far-more-than-list-style/)
+  widened the same string from "four relation fields" to "everything
+  emit_frontmatter owns" and hand-enumerated that set, adding `key order` — a
+  member the emitter never had. Both a per-surface sweep and per-claim pinning
+  would have passed: the string was freshly written and correct about
+  everything else. Only deriving the enumeration from the emitter, or testing
+  each listed member against it, reaches it — a datum for Option B's unit.
+- **Table drift recorded**: `advanced_by` held 17 edges against 14 table rows
+  before this entry. Named in the body rather than silently reconciled; filling
+  the three missing rows needs each instance's guard class, which is that
+  card's own work.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.
+
+## 2026-09-21 — twenty-third instance connected: the contributor on-ramp
+
+- **Instance**:
+  `contributor-guide-sends-readers-to-a-conventions-file-that-holds-no-conventions`
+  (closed 2026-09-21). `advances` edge wired; table row added
+  (`ContributorGuideAccuracyTest`); the count sentence rewritten in place
+  against `advanced_by`, and the two guard-class counts corrected — they said
+  nine in-file and two own-file while the tree carried eleven and four.
+- **Why it is not a duplicate**: same shape — seven groups of prose restating
+  tree state (a file count, a directory roster, a manifest list, a hook-id
+  list, a quote convention, a refresh mechanism, a conventions pointer), all
+  seven rotted, none guarded, caught by an audit pass rather than CI.
+- **What it adds**: the first *reader-facing on-ramp* surface. Every earlier
+  instance rotted where an agent or an existing contributor could route around
+  it; this one rots on the file GitHub links from the issue form, the
+  pull-request form and the repository sidebar — the first file an outside
+  contributor opens, and the audience the project says it wants but does not
+  have yet. Two commits had touched it in four months, one of them scoped to a
+  single section.
+- **A datum for the scope question**: this is the cheapest instance yet for
+  Option A. Five of the seven groups are one-line tree derivations, and the
+  sixth — the conventions pointer — turned out to be mechanical too once
+  restated as *does every document this guide links to have prose on the page*,
+  which catches the `@AGENTS.md` shim without knowing anything about that shim.
+  Only the seventh, how the guide chooses to *describe* AGENTS.md, needs a
+  human. So the "prose restating prose is unreachable" bound the ninth instance
+  set is narrower than it looked: a pointer claim looks like prose and grades
+  like a tree fact.
+- **Table drift recorded**: `advanced_by` held 23 edges against 15 table rows
+  before this entry, 16 after. Seven instances still carry the edge and no row;
+  named in the body rather than silently reconciled, since filling each row
+  needs that instance's guard class.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.
+
+## 2026-10-03 — twenty-fifth instance connected: a guard that required the false clause
+
+- **Instance**:
+  `install-docs-still-describe-the-pre-plugin-install-model-and-a-removed-no-harness-flag`
+  (closed 2026-10-03). `advances` edge wired, table row added
+  (`InstallDocClaimsTest`, own file), count sentence rewritten in place against
+  `advanced_by` (25 edges, 19 rows, gap still six).
+- **Why it is not a duplicate**: same shape. Three reader-facing pages restated
+  the install model (a flag set and what each flag writes). That model changed
+  on 2026-05-07, and the pages kept the old one for five months: a removed
+  `--no-harness`, `--agents claude` vendoring skills, and OpenCode routed to
+  installs that vendor none.
+- **What it adds**: the first instance where a guard *protected* the false
+  claim. `test_claude_skill_count_matches_payload`, which the body cites as a
+  model derive-from-tree guard, matched the goc.md count with a regex that also
+  required the clause beside it verbatim. That clause was already false when
+  the guard was written on 2026-07-26, so correcting the page would have
+  failed CI.
+- **A datum for the scope question**: a cheap, decidable rule falls out — a
+  guard's pattern holds only the value it derives, and any other literal text
+  in it is an unchecked claim that the guard defends against correction. The
+  instance also shows the run-it technique reaching descriptions, not just
+  recipes: "flag X writes Y" is checked by installing with X. And it shows a
+  precise claim-keyed sweep (Option B) for one claim shape: every
+  `goc install` / `goc upgrade` flag named in any doc or shipped template must
+  appear in that verb's `--help` usage.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.
+
+## 2026-10-04 — twenty-sixth and twenty-seventh instances connected: a page faithful to a wrong decision record
+
+- **Instances**:
+  `deck-location-doc-says-claims-push-by-default-and-last-writer-wins`
+  (closed 2026-10-04) and
+  `deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects`
+  (filed open the same day from its claim-keyed sweep). Both `advances` edges
+  wired, table rows added (`DeckLocationClaimRowsTest`, own file; *none yet —
+  open*), count sentence rewritten in place against `advanced_by` (27 edges,
+  21 rows, gap still six).
+- **Why they are not duplicates**: same shape. Reader-facing pages restated
+  the claim protocol with a default push and a race resolution the engine does
+  not perform.
+- **What it adds**: the first instance whose false claim was faithful to the
+  source it cited. The recorded decision on
+  `design-claim-protocol-with-branch-and-author-metadata` says last-writer-wins,
+  and the same card's DoD shipped first-writer-wins. Citing a decision does not
+  check a claim; only the implementation can.
+- **A datum for the scope question**: a page that documents a known,
+  decision-gated defect needs its guard in both directions. The new guard
+  checks the page against live observations and against every observation
+  flipped, so the card that closes the identical-claim hole turns it red until
+  the page stops describing the hole.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.
+
+## 2026-10-04 — twenty-seventh instance closed: a pointer a shipped surface cannot follow
+
+- **Instance**:
+  `deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects`
+  (closed 2026-10-04). Its row now names `ClaimRaceReassuranceTest` (own file,
+  `tests/test_claim_race_reassurance.py`); the count sentence is unchanged
+  (27 edges, 21 rows, gap still six).
+- **What it adds**: the first guard written as a claim-keyed sweep from the
+  start. It reads every tracked file outside the deck and the tests while a
+  scratch-remote claim shows the default does not push, so the five mirror
+  trees and the plugin payloads are covered without being listed.
+- **A datum for the scope question**: "point, don't restate" (the ninth
+  instance's lesson) meets a wall when the owning document does not ship.
+  `DECK_LOCATION.md` lives at this repo's root, so a shipped skill citing it by
+  filename dangles in every consuming repo; the fix used an absolute URL, and
+  the size-capped skill core reached it through its `reference.md` sibling.
+  The rendered site has a narrower version of the same gap: `pages.yml`
+  rewrites a fixed list of repo-relative links, so `ABOUT.md` needed the
+  absolute URL too.
+- **No decision recorded** — the gate stays `decision`; this entry adds evidence
+  to the scope question, not an answer to it.
+
+## 2026-10-04 — twenty-eighth instance connected: pre-package residue in the deck skill
+
+- **Instance**:
+  `shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced`
+  (filed open, gate none, surfaced while closing the twenty-seventh). Edge
+  wired at filing; *none yet — open* row added; count sentence rewritten in
+  place against `advanced_by` (28 edges, 22 rows, gap still six).
+- **Why it is not a duplicate**: `shipped-docs-abbreviate-the-deck-path-to-a-root-install-no-longer-creates`
+  owns the `deck/` root spelling; this card owns the files listed under that
+  root, which are wrong under either spelling.
+- **What it adds**: the ground truth is an install, not a file in this tree.
+  Its reproduce.py runs `goc install --local-skills` into a scratch repo and
+  checks the installed skills against what was written.
+- **No decision recorded** — the gate stays `decision`.
+
+## 2026-10-05 — twenty-ninth instance connected: Codex guidance that predates the Codex plugin
+
+- **Instance**:
+  `codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine`
+  (filed open, gate none, by an audit-deck pass). Edge wired at filing; *none
+  yet — open* row added; count sentence rewritten in place against
+  `advanced_by` (29 edges, 23 rows, gap still six).
+- **Why it is not a duplicate**: no card names the channel count, the
+  `no plugin yet` help text, or the Codex sections of `goc.md` /
+  `site/llms.txt`. `cli-reference-plugin-sections-describe-a-payload-goc-no-longer-ships`
+  swept `goc.md`'s Claude Code and OpenClaw sections only.
+- **What it adds**: a datum against Option D. Its stale claims are negatives
+  ("no plugin yet"; three channels) that the plugin landing in the tree
+  falsified. They had owners: the help text's rationale was tied to
+  `publish-codex-plugin`, and the closed `claude-install-defaults-to-plugin-path`
+  named a follow-up card for the day it shipped. Closing the owner revisited
+  nothing, and the named follow-up was never filed. A slug requirement gives a
+  promise an owner, but nothing makes closing the owner re-read the claim. A
+  second datum on the same page, not filed: `PERSONAS.md:74-76` lists
+  multi-human + multi-agent claim metadata as not yet shipped and cites
+  `design-claim-protocol-with-branch-and-author-metadata`, closed 2026-05-09,
+  as the card that covers it.
+- **No decision recorded** — the gate stays `decision`.
+
+## 2026-10-07T04:45:00Z — Instance closed: codex-install-guidance-predates-the-codex-plugin-and-its-bundled-engine
+
+Guarded by `tests/test_delivery_channel_surfaces.py`. It derives the channel
+set from the plugin payload manifests plus the PyPI package, and computes the
+count word instead of writing it into a pattern. It fails when an enumerating
+surface omits a channel or states another count, when a doc or help line
+pairs a shipped host with "no plugin", or when a Codex run-goc section skips
+the bundled helper. On the pre-fix tree (`f510cbe1`) it fires on all seven
+sites. It also confirms this card's Option D datum: the "no plugin yet" promise
+had owners, and closing them revisited nothing.
+
+## 2026-10-09T04:54:45Z — Instance connected: engine comments that misstated a predicate and were copied twice
+
+[engine-comments-claim-unflagged-placeholder-cards-count-as-drafts](../engine-comments-claim-unflagged-placeholder-cards-count-as-drafts/)
+(done) adds two data points.
+
+- **False from birth, not rotted.** Three `goc/engine.py` comments said
+  `card_is_draft` also catches a card that keeps the `goc new`
+  placeholders but has no draft flag. They described an earlier
+  iteration of the commit that introduced the flag. `card_is_draft`'s
+  own docstring, sixteen lines below one of them, stated the shipped
+  rule correctly the whole time. So the shape also covers claims that
+  were never true, which no "re-check when the code changes" mechanism
+  would catch.
+- **Copied before anyone caught it.** A regression test's docstring and a
+  closed card's `reproduce.py` each restated the claim as the reason for
+  their own fixtures. As with the eighth instance, a false claim reaches
+  new surfaces faster than per-claim guards get added.
+
+The fix corrected all five texts and pinned the behavior, not the prose
+(`tests/test_unflagged_placeholder_scaffold_is_not_a_draft.py`). A comment
+that restates a predicate's semantics is prose about code, and a
+behavioral test is the closest tree-derived guard that reaches it.
+
+## 2026-10-15T04:52:00Z — Instance closed: engine-still-names-the-deck-script-and-schema-file-goc-replaced
+
+[engine-still-names-the-deck-script-and-schema-file-goc-replaced](../engine-still-names-the-deck-script-and-schema-file-goc-replaced/)
+(done) is the twenty-eighth instance's residue, one directory over. That
+repair banned `deck.py` and `SCHEMA.md` from every shipped template tree, but
+two `goc/engine.py` lines kept the names. One was in the prompt
+`goc quality-pass --llm` sends a model, so it was executed rather than read.
+The other was a code comment. The datum for the scope question: the ban was
+scoped by *where docs live*, and the prompt was doc text living in code, in
+the one tree the ban skipped. The repair stopped choosing the directory. The
+`retired_files` sweep now covers the whole `goc/` package, since neither name
+is right in any file.
+
+Housekeeping, not reconciled here: the README's running count ("Thirty-one
+instances") and its guard table (25 rows) trail `advanced_by`, which now
+lists 35 edges. The four latest connections each added an edge but no row or
+paragraph.
+
+## 2026-10-16T04:58:00Z — Two instances connected: a recipe that assumes this repo, and a manifest that kept a retired claim
+
+- [reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/)
+  (open). `Skill(create-card)` Step 6 ships a repo-root walk keyed on
+  `pyproject.toml`. That is this repo's marker; the engine walks to
+  `.game-of-cards/`. It is the fourteenth instance's surface class again: a
+  procedure agents run literally, guardable only by running it against a
+  fixture. It crashes in a repo without a `pyproject.toml`, and it silently
+  picks the wrong root under a workspace that has one. The fact restated is
+  the engine's definition of the project root, so a guard can derive it from
+  `_walk_to_deck_root` rather than restate it.
+- [plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped](../plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped/)
+  (open). This is the third shipped surface to carry "goc needs click" after
+  the second instance (`AGENTS.md`, `goc/cli.py`) and the eighth (an OpenClaw
+  TypeScript comment). This time it sits in a package manifest and lockfile
+  that the plugin wrapper stopped reading in May. It adds to the eighth
+  instance's datum: a guard keyed to the claim reaches surfaces that a
+  per-file or per-doc-set guard never scans, including machine-readable ones.
+
+The README's running count and guard table are not reconciled here. Both
+new cards name their row as a closure item, as the twenty-third through
+thirtieth did.
+
+## 2026-10-17T04:32:00Z — Instance closed: reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml
+
+[reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/)
+(done). `Skill(create-card)` Step 6 now walks to `.game-of-cards/`, the marker
+`_walk_to_deck_root` resolves, in the code, the error message and the prose.
+The guard is `tests/test_reproduce_recipe_root.py`. It runs the template's
+recipe in four fixture repos (JS, Go, a repo nested in a pyproject workspace,
+Python) and compares the answer with `_walk_to_deck_root` on the same
+directory. It also checks that every shipped copy carries the template's
+recipe. `PreFixRecipeFiresTest` feeds the old `pyproject.toml` walk through
+the same check, and it misses the root in three of the four fixtures.
+
+The datum for the scope question: this belongs to the executed class
+the README records for the fourteenth, twenty-third and twenty-fourth
+instances. Like them, it needed a fixture run rather than a text match.
+Here the ground truth was an engine function, so the guard derives the
+expected answer from the engine instead of restating it.
+A procedure that restates an engine definition can be guarded at the cost of
+one fixture harness. Prose that restates prose cannot.
+
+The row is added to the guard table. The running count is still not
+reconciled with `advanced_by`.
+
+## 2026-10-17T04:50:00Z — Instance closed: plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped
+
+[plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped](../plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped/)
+(done). `claude-plugin/pyproject.toml` and `claude-plugin/uv.lock` are
+deleted. Nothing read them after the wrapper dropped uv on 2026-05-09. The
+guard is `tests/test_plugin_payload_dependency_manifests.py`. It derives
+both sides of the claim: a payload is any tracked directory bundling
+`<dir>/goc/`, the import set comes from an `ast` walk of that copy, and the
+declared set from each Python manifest or lockfile the payload tracks.
+`PreFixManifestFiresTest` feeds the pre-fix `pyproject.toml` (verbatim) and
+`uv.lock` through the same check against the real bundled engine, and both
+are flagged for click and pyyaml.
+
+The datum for the scope question: this is the eleventh instance's
+machine-readable-manifest class, carrying the eighth's claim ("goc needs
+click") on a third surface. As the eleventh found, a manifest is the cheap
+case for Option A, because both sides of the claim are data: the
+declarations parse and so do the imports. The guard keys on the claim
+(declared against imported), not on the file, so it covers every payload,
+including one added later. Its one judgment call is about scope, not
+technique. A lockfile's transitive pins and a build backend are
+declarations too, but not claims about what the engine imports, and
+counting them would turn a legitimate future manifest red. That is the
+twenty-fifth instance's lesson applied in advance: the guard should check
+only the claim it derives.
+
+The row is added to the guard table, and the running count is reconciled
+in place with `advanced_by`: 37 edges, 27 rows, a gap of ten. The six
+rowless instances the paragraph already named are joined by four linked
+between 2026-10-08 and 2026-10-14, none of whose DoDs named a row. The
+frontmatter summary still narrates the instances only up to the fourteenth
+and is not touched here.

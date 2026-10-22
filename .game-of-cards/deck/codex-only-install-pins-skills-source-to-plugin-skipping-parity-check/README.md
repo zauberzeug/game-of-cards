@@ -65,3 +65,8 @@ mislabel, exactly the drift-rot the parity check exists to prevent.
 If either step fails to reproduce, flip to `disproved` with the evidence.
 
 Surfaced by: general-purpose audit hunter (install/sync seam), 2026-05-27.
+
+## Related decision
+
+[codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/) decides whether Codex installs keep vendoring `.codex/skills/` now that
+the Codex plugin ships. Under option B there, `skills_source` has to say which host it describes. That is this card's question, so the two should be decided together.

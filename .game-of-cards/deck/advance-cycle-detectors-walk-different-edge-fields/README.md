@@ -26,7 +26,7 @@ definition_of_done: |
 - `detect_advance_cycles` — `goc/engine.py:~2126`: walks `advanced_by`
   (`advanced_by = t.frontmatter.get("advanced_by") or []`).
 - `_would_create_advance_cycle` — `goc/engine.py:2136`: walks `advances`
-  (`advances = card.frontmatter.get("advances") or []` at `goc/engine.py:2154`).
+  (`advances = card.frontmatter.get("advances") or []` at `goc/engine.py:2189`).
 
 ## Hypothesis
 

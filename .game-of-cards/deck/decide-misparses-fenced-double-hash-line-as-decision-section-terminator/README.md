@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-30T23:39:22Z"
 closed_at: null
 human_gate: decision
-advances: []
+advances:
+  - decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

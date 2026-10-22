@@ -102,3 +102,8 @@ that should be decided, not assumed.
 
 Surfaced by a general-purpose install.py hunter during an empty-queue
 audit-deck pass.
+
+## Related decision
+
+[codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/) decides whether Codex installs keep vendoring `.codex/skills/` now that
+the Codex plugin ships. Under option B there, a Codex install run from a plugin engine stops vendoring and gets the same refusal Claude's `--local-skills` gets, which would dissolve this card's crash path.

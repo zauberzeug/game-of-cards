@@ -176,9 +176,36 @@ skills still work; only the automatic lifecycle reminders are absent.
 
 ## Stage 4 — confirm ready
 
+If `.game-of-cards/config.yaml` records `autonomy:` as `loop`, `cron`
+or `action`, first show the user that mode's entry from § Reference:
+autonomy recipes — kickoff recorded the choice, nothing has wired it.
+
 Report:
 
 ```text
 Codex-specific GoC setup is ready. The plugin provides the GoC skills;
 plugin hooks run when `[features].plugin_hooks = true`.
 ```
+
+## Reference: autonomy recipes
+
+One entry per mode kickoff Stage 6 records. Each recipe starts one
+`pull-card` per session and leaves the repetition to the scheduler.
+
+- **`loop`** — the Codex CLI has no in-session timer. In the ChatGPT
+  desktop app, a scheduled task created from a Codex chat can re-run on
+  a minute-based interval in this local project ("every 30 minutes, run
+  the pull-card skill once"); it runs only while the app does.
+- **`cron`** — a crontab entry runs one `codex exec` session per tick:
+
+  ```cron
+  */30 * * * * cd /path/to/repo && codex exec --sandbox danger-full-access 'Run the pull-card skill once, then exit.' >> /tmp/pull-card.log 2>&1
+  ```
+
+  `codex exec` defaults to a read-only sandbox, and `workspace-write`
+  keeps `.git` read-only, so pull-card's commit fails under either. Use
+  `danger-full-access` only on an isolated host or container.
+- **`action`** — no recipe ships. `openai/codex-action@v1` runs Codex in
+  CI, but under its default sandbox `.git` stays read-only, so
+  pull-card's commit needs a follow-up job or an unsandboxed run, and
+  GoC has worked out neither.

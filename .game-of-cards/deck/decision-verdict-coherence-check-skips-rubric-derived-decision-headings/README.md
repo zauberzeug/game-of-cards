@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-06-15T04:48:26Z"
 closed_at: "2026-06-15T04:51:39Z"
 human_gate: none
-advances: []
+advances:
+  - decision-required-options-have-no-machine-readable-shape-and-parsers-keep-drifting
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |

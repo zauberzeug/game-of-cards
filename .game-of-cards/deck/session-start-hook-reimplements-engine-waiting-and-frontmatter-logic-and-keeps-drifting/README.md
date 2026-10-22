@@ -21,6 +21,8 @@ advanced_by:
   - session-start-hook-over-coerces-quoted-waiting-scalars-to-absent
   - session-start-hook-comment-stripper-truncates-quoted-scalar-with-internal-hash
   - a-wait-reason-starting-with-zero-makes-an-impeded-card-look-resumable
+  - python-hooks-ignore-git-worktree-shared-deck-resolution
+  - session-start-hook-crashes-on-a-card-whose-bytes-do-not-decode
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] (replace after the decision is recorded)
@@ -44,6 +46,13 @@ The predicates currently re-derived by hand:
 - `_parse_waiting_until` ⟷ `goc.engine._waiting_until_instant` (+ ISO regexes)
 - `_frontmatter_tail` / `_scalar_or_none` ⟷ `goc._vendor.yaml_lite` scalar,
   inline-comment, quote, and `_NULL_SET` resolution
+- `_find_project_dir` ⟷ `goc.engine._resolve_deck_root` — carried by this hook
+  and, byte-identical, by the Stop hook `pattern_generalization_check.py`: the
+  deck walk plus the shared-deck worktree redirect, whose
+  `workflow.worktree_deck` read is a hand-rolled reading of yaml_lite
+- the `_card_*` readers' file read ⟷ `goc.engine.read_card_text` plus
+  `load_all_cards`' warn-and-skip: a card whose bytes do not decode is
+  corrupt and left out of the deck view
 
 Each cell has drifted and been fixed as its own one-off card, never caught by a
 guard derived from the engine:

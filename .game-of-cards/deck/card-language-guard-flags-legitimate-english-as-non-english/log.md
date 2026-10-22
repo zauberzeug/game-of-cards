@@ -91,3 +91,16 @@ this shape (that root plus `doc-accuracy-guards-are-opt-in-per-claim-…`,
 `draft-gating-is-opt-in-per-surface-…`, `query-flag-validation-is-opt-in-per-flag-…`),
 and the mechanism question is identical, so one decision settles both. The
 missing act is a decision, not another card.
+
+## 2026-10-11T04:53:33Z — Post-close amendment
+
+Extended by [`card-language-guard-still-flags-legitimate-english-its-docstring-rules-out`](../card-language-guard-still-flags-legitimate-english-its-docstring-rules-out/)
+— two claims this closure recorded did not hold. "Eight endings have no English
+collision" fails on `-heit` (`fahrenheit`) and, against hunspell's en_US, on
+German loanwords and names under five more endings. The derived `-ung` rule
+still enumerated its prefixes, so `hamstrung` and `underhung` fired. Keeping
+`nada` went too, along with `algo`, `tout` and `nouveau`, because the claim it
+was kept under ("never legitimate English") was the one disproved. The successor
+splits the `-ung` stems into five that end no German noun (any first element)
+and nine that keep the exact prefix + stem rule. It exempts `fahrenheit` by
+exact match, and its docstring names the 47 dictionary words still flagged.

@@ -96,6 +96,63 @@ TEMPLATE_SKILLS = ROOT / "goc" / "templates" / "skills"
 # census, the compounding trace and the fourth decline row went to the
 # reference sibling. Same reason as the fourth raise: the defect IS a pass
 # filling in a rule the recipe did not state, so a pointer is what failed.
+#
+# refine-deck was raised a sixth time on 2026-09-14 by the card
+# `citation-repair-pass-calls-a-cite-current-when-its-anchor-line-is-a-brace-or-blank`:
+# the recipe's non-triviality predicate ran on the relocate step only, so a
+# line too weak to move a cite by one line was strong enough to certify it for
+# another pass — `}` at the cited offset in HEAD matching `}` at the anchor
+# commit verdicts `current` (measured: 46 of 413 `current` verdicts over 28
+# open cards, one of them certifying a cite that missed its named function by
+# 910 lines through three consecutive passes). What stayed in the core is the
+# refusal itself, moved ahead of the comparison into step 3; the asymmetry
+# argument, the census and the widened decline row went to the reference
+# sibling. A pointer fails here for the same reason as the fourth and fifth
+# raises, sharpened: the verdict this catches emits NO output at all, so a
+# pass that does not already carry the rule has nothing to go look it up from.
+#
+# refine-deck was raised a seventh time on 2026-09-14 by the card
+# `citation-repair-pass-gives-two-cites-in-one-card-the-same-anchor-when-their-numbers-collide`:
+# step 2's history walk identified a cite by its TOKEN and tested presence with
+# a substring search, so `path:N` read as present inside a `path:N-M` the same
+# card carried and inherited the range's older anchor — and where one token
+# sits at two occurrences of a card, the two share one history and no walk can
+# anchor them apart at all (measured: two colliding anchors proposed for a
+# rewrite onto the line above the function their card named, over a population
+# of 63 open cards holding a repeated token). What stayed in the core is the
+# set-membership presence test and the repeated-token DECLINE, plus the
+# closing re-run that asserts the pass is a fixed point; the why, the census
+# and the fifth decline row went to the reference sibling. A pointer fails
+# here for a reason the sixth raise does not cover: every per-cite rule PASSES
+# on the repair this produces — real anchor, unique match, confident rewrite —
+# so a pass carrying only a pointer has no symptom that would send it looking.
+#
+# refine-deck was raised an eighth time on 2026-09-14 by the card
+# `citation-repair-pass-declines-a-moved-function-whose-definition-line-gained-a-parameter`:
+# step 4 relocated a defunct cite on exact full-line equality, which makes the
+# anchor LINE the unit of identity even where the line is a `def` — so a
+# keyword-only parameter appended to a signature reports the function as
+# refactored away while it sits uniquely named a few lines down (measured: 12
+# declines over 9 open cards, and ONE refactor that added `*, probe: bool =
+# False` to five install-time writers produced most of them). What stayed in
+# the core is the name retry, its ambiguity DECLINE, and its subordination to
+# step 1's pair check; the identity argument, the census and the two narrowed
+# residue rows went to the reference sibling. A pointer fails here the way it
+# failed on the fourth through seventh raises, with one twist of its own: the
+# decline is honest OUTPUT, so a pass carrying only a pointer reads a
+# well-formed refusal and has no reason to suspect a rule is missing behind it.
+#
+# deck was raised on 2026-10-04 by the card
+# `deck-skill-promises-git-merge-settles-claim-races-the-default-config-never-detects`:
+# its parallel-sessions sentence said git's merge settles a simultaneous claim
+# race, whichever commits first wins. By default a claim stays in the
+# claimer's clone, so two clones both claim one card and nothing merges at
+# claim time; the protection exists only as the opt-in `workflow.claim_push`.
+# The integration behavior per identity setup went to the reference sibling.
+# What stayed in the core is the default and the opt-in's name, because the
+# old sentence was itself the false reassurance: a core that only points at
+# the sibling still tells a reader who stops there nothing about claim_push.
+# The skill had 35 bytes of headroom.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -104,8 +161,8 @@ BODY_CAPS = {
     "next-card": 10_000,
     "pull-card": 10_000,
     "card-schema": 12_800,
-    "deck": 10_000,
-    "refine-deck": 12_500,
+    "deck": 10_100,
+    "refine-deck": 14_200,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

@@ -25,7 +25,7 @@ definition_of_done: |
 
 - Early-return path: `goc/engine.py:5947-5956`
 - Worker-update path that is bypassed: `goc/engine.py:4001-4002` (`_auto_populate_worker`)
-- Argparser that advertises the dropped flags: `goc/engine.py:3989-3992`
+- Argparser that advertises the dropped flags: `goc/engine.py:4038-4041`
 
 ## What's broken
 

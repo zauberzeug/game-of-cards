@@ -2,19 +2,22 @@
 
 Thanks for your interest in contributing!
 This page is the short version — the long-form context lives in
-[`README.md`](README.md) (methodology), [`AGENTS.md`](AGENTS.md) (deck workflow),
-[`CLAUDE.md`](CLAUDE.md) (project conventions), and the header comment of
-[`.github/workflows/release.yml`](.github/workflows/release.yml) (release machinery).
+[`README.md`](README.md) (methodology), [`AGENTS.md`](AGENTS.md) (deck
+workflow **and** project conventions), and the header comment of
+[`.github/workflows/release.yml`](.github/workflows/release.yml) (release
+machinery). `CLAUDE.md` is not a document: it holds a single `@AGENTS.md`
+import directive that Claude Code expands into its own context, so read
+`AGENTS.md` directly whatever your editor or agent is.
 
 ## About the project
 
 Game of Cards is a deck-based methodology and CLI for human + AI
 contributors. This repository is both the source tree for the `goc`
 package *and* its own consumer — it dogfoods every change. The Python
-package is small (4 source files under `goc/`); most of the surface
+package is small (6 source files under `goc/`); most of the surface
 area is in the `goc/templates/` payload that `goc install` ships into
-consuming repos, and in the two plugin payloads (`claude-plugin/`,
-`openclaw-plugin/`) that mirror it.
+consuming repos, and in the three plugin payloads (`claude-plugin/`,
+`codex-plugin/`, `openclaw-plugin/`) that mirror it.
 
 ## Reporting issues
 
@@ -39,15 +42,17 @@ Useful commands during development:
 
 ```bash
 uv build                                       # produce wheel + sdist in dist/
-pre-commit run --all-files                     # sync plugin assets + goc validate
-python3 scripts/sync_plugin_assets.py --check  # verify claude-plugin/ is in sync
+uv run python -m unittest discover -s tests    # regression suite
+pre-commit run --all-files                     # sync-plugin-assets, goc-validate, card-language, card-frontmatter-yaml
+python3 scripts/sync_plugin_assets.py --check  # verify the plugin payloads are in sync
 ```
 
-The plugin payloads (`claude-plugin/`, `openclaw-plugin/`) are
-**byte-for-byte mirrors** of `goc/` and `goc/templates/`. A pre-commit
-hook regenerates them on every commit; CI fails the build if they
-drift. **Always edit the source under `goc/templates/` — never the
-mirrors directly.** Details in [`CLAUDE.md`](CLAUDE.md).
+The plugin payloads (`claude-plugin/`, `codex-plugin/`,
+`openclaw-plugin/`) are **byte-for-byte mirrors** of `goc/` and
+`goc/templates/`. The `sync-plugin-assets` pre-commit hook regenerates
+them on every commit; CI fails the build if they drift. **Always edit
+the source under `goc/templates/` — never the mirrors directly.**
+Details in [`AGENTS.md`](AGENTS.md).
 
 ## Working with the deck (Game of Cards)
 
@@ -71,30 +76,39 @@ CLI reference is in [`goc.md`](goc.md).
 
 Project-specific conventions (template/mirror dogfooding, version
 literals, marker-bounded merges, etc.) are documented in
-[`CLAUDE.md`](CLAUDE.md). Read it before non-trivial changes — most
+[`AGENTS.md`](AGENTS.md). Read it before non-trivial changes — most
 "surprises" in the codebase are dogfooding side effects that the file
 already explains.
 
 General style:
 
 - Python 3.10+, type hints where they aid readability (not religiously).
-- Single quotes for strings; f-strings preferred.
-- Edit `goc/templates/...` and re-run `goc upgrade` rather than
-  editing `.claude/skills/...` directly (the latter is a consumer
-  copy of the former and gets overwritten on upgrade).
+- Double quotes for strings; f-strings preferred.
+- Edit `goc/templates/...`, never the mirrors under `.claude/skills/`,
+  `.codex/skills/` or the plugin payloads. The `sync-plugin-assets`
+  pre-commit hook regenerates every mirror from the template on each
+  commit (`scripts/sync_plugin_assets.py`) and CI re-checks it with
+  `--check`, so a hand-edited mirror is overwritten locally and fails
+  the build remotely. (`goc upgrade` is the *consuming*-repo verb: it
+  refreshes a downstream checkout and writes nothing into this tree's
+  payloads.)
 
 ## Before submitting a pull request
 
-Two checks gate every PR:
+Two commands gate every PR:
 
 ```bash
-pre-commit run --all-files     # formats, mirrors plugin assets, runs goc validate
-uv run goc validate            # explicit re-run (pre-commit also calls this)
+pre-commit run --all-files     # sync-plugin-assets, goc-validate, card-language, card-frontmatter-yaml
+uv run goc validate            # explicit re-run (the goc-validate hook also calls this)
 ```
 
 Pre-commit handles the plugin-asset byte-mirror, which is the most
 common drift cause. CI runs `python scripts/sync_plugin_assets.py
---check` and fails on any mismatch.
+--check` and fails on any mismatch. The two card hooks fire on the
+filing path as well as on CI — `goc new --commit` shells out to `git
+commit` without `--no-verify` — so a card whose title or summary is not
+in English, or whose frontmatter no strict YAML parser accepts, is
+rejected the moment you file it.
 
 For non-trivial changes, **work on a feature branch**, not on `main`.
 File a card first if the work doesn't already have one — the card is
@@ -117,8 +131,13 @@ gh workflow run release.yml -f version=X.Y.Z
 
 That one command:
 
-1. Rewrites the version literals in `goc/__init__.py` and the four
-   plugin manifests.
+1. Rewrites the version literals in `goc/__init__.py` and the five
+   plugin manifests (`claude-plugin/.claude-plugin/plugin.json`,
+   `codex-plugin/.codex-plugin/plugin.json`,
+   `openclaw-plugin/package.json`, `openclaw-plugin/package-lock.json`,
+   `.claude-plugin/marketplace.json`), plus the two dogfood self-host
+   surfaces (`.game-of-cards/deck/.goc-version` and the `<!-- BEGIN GOC
+   vX.Y.Z -->` marker in `AGENTS.md`).
 2. Builds the wheel + sdist with the new version pinned.
 3. Runs the end-to-end auto-bootstrap smoke test.
 4. Creates and pushes the tag `vX.Y.Z` from HEAD.
@@ -167,7 +186,7 @@ constraint trail.
   [`release.yml` header comment](.github/workflows/release.yml).
 - **Plugin asset mirrors** — auto-synced by `scripts/sync_plugin_assets.py`
   via the pre-commit hook; CI fails on drift. Don't edit
-  `claude-plugin/` or `openclaw-plugin/goc/` directly.
+  `claude-plugin/`, `codex-plugin/` or `openclaw-plugin/` directly.
 - **OpenClaw skills** — *not* auto-synced from `goc/templates/skills/`.
   Re-port with `python3 scripts/port_skills_to_openclaw.py` after a
   source-skill rewrite; review the diff before committing.

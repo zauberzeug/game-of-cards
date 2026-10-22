@@ -1,4 +1,13 @@
-"""Regression guard: no shipped skill body links into a `.game-of-cards/deck/` path.
+"""Regression guard: no shipped template names a file a consuming repo never has.
+
+Four checks enforce one rule. `deck_links` catches a markdown link whose
+target routes through `.game-of-cards/deck/`; `card_paths` catches a `deck/`
+path that names a concrete card directory and promises a file inside it, in
+any syntax; `retired_files` catches the two files goc's pre-package layout kept
+in the deck directory. All three sweep the six skill trees and the four
+project-state template trees, and `retired_files` also sweeps the rest of the
+`goc/` package. The fourth, `layout_root_entries`, holds the deck skill's
+layout block to the deck directory a real `goc install` leaves behind.
 
 `goc/templates/skills/` is package data. `goc install --local-skills` copies it
 into a consuming repo's `.claude/skills/`, and the Claude, Codex and OpenClaw
@@ -24,15 +33,62 @@ also feeds the historical offending line to the predicate and asserts it fires,
 so a guard that silently stopped matching fails rather than passing quietly on a
 clean tree.
 
+`installed-files-point-readers-at-a-deck-folder-install-never-creates` is why
+the second predicate exists. That card found two survivors of the link-only
+rule — `game_of_cards/README.md` citing
+``deck/goc-package-pyproject-and-pypi-release/audit_catalogue.md`` (renamed
+since, and under the pre-move deck root) and `refine-deck/reference.md` citing
+``deck/auto-validate-card-titles-summaries-and-dods/log.md`` (no card of that
+name ever existed). The second sat inside `goc/templates/skills`, a tree this
+file already swept: it escaped on syntax alone, being inline code rather than a
+link. Guards written from one instance inherit that instance's shape, so widen
+here rather than adding a twelfth guard file.
+
+`card_paths` rests on two discriminators, both checked below rather than
+assumed. A card slug is always hyphenated (all 764 dirs in goc's own deck are,
+and `test_card_slugs_are_hyphenated` re-derives it from the tree), which keeps
+running prose like `deck/methodology/workflow` out; and the match must promise
+a *file* inside the directory, which keeps the `deck/<title>/` placeholder —
+19 sites per skill tree — legal. The residual gap is a bare inline-code
+directory reference with no filename; that shape has never shipped, and
+`deck_links` already covers it in link form.
+
 The rule has no false-positive surface to trade against: goc's cards are goc's,
-so there is no consuming repo in which such a link could be correct. Cite a
+so there is no consuming repo in which such a citation could be correct. Cite a
 decision by its bare backticked title instead — the convention
 `card-schema/reference.md` already uses eight lines below the offender.
+
+`shipped-skills-still-point-at-the-deck-script-and-schema-file-goc-replaced`
+is why the last two checks exist. Before goc was a package, a vendored
+`deck.py` script and a `SCHEMA.md` file sat inside the deck directory; the
+`goc` CLI and `goc/schema.yaml` replaced them, and install writes neither into
+a consuming repo. Three passages outlived them: the deck skill's layout block,
+`deck/reference.md` calling `deck.py` the engine, and refine-deck scheduling a
+new tag as "the SCHEMA.md PR". The last is executed rather than read — an agent
+following it writes a DoD for a file it cannot edit. Neither name is legal in
+any shipped template, so `retired_files` matches them anywhere. The same layout
+block also listed a deck-root `README.md` that install never writes, and no
+name predicate can flag that without flagging every card's README; so the
+block is compared against a real install instead of a list of banned names,
+which also catches the next file install starts or stops writing there.
+
+`engine-still-names-the-deck-script-and-schema-file-goc-replaced` is why
+`retired_files` reaches past the template trees. Two `goc/engine.py` lines kept
+both names after the templates lost them: the prompt `goc quality-pass --llm`
+sends a model attributed its title antipatterns to `deck.py`, and the
+frontmatter parser's banner said it read `SCHEMA.md`. Neither line sat in a
+swept tree. Neither name is right in any file, so the predicate now sweeps the
+whole package. The three plugin payloads' `goc/` copies are held byte-identical
+to it by `sync_plugin_assets.py --check`, so sweeping the source covers them.
 """
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -49,6 +105,26 @@ SHIPPED_SKILL_TREES = (
     "openclaw-plugin/skills",
 )
 
+# `goc install` copies this tree into a consuming repo's `.game-of-cards/`,
+# so a card citation here ships exactly as far as one in a skill body. Held
+# separately from the skill trees only because its liveness floor differs.
+PROJECT_STATE_TREES = (
+    "goc/templates/game_of_cards",
+    "claude-plugin/goc/templates/game_of_cards",
+    "codex-plugin/goc/templates/game_of_cards",
+    "openclaw-plugin/goc/templates/game_of_cards",
+)
+
+SWEPT_TREES = SHIPPED_SKILL_TREES + PROJECT_STATE_TREES
+
+# The whole package, which the wheel and all three plugin payloads ship. It
+# holds both template trees above plus the engine, whose prompts and comments
+# the template trees miss; `swept_files` reads each nested file once.
+PACKAGE_TREE = "goc"
+
+# What `retired_files` sweeps: neither retired name is right in any file.
+RETIRED_FILE_TREES = SWEPT_TREES + (PACKAGE_TREE,)
+
 # A markdown link whose target routes through a `.game-of-cards/deck/` path.
 # Anchored on the link syntax `](…)` rather than the bare path so that prose,
 # shell snippets and `ls .game-of-cards/deck/` examples stay legal — the defect
@@ -60,6 +136,16 @@ DECK_LINK_RE = re.compile(r"\]\(([^)\s]*\.game-of-cards/deck/[^)\s]*)\)")
 # installed into, so it is outside this guard's rule.
 _URL_SCHEME_RE = re.compile(r"\A[a-z][a-z0-9+.-]*:", re.IGNORECASE)
 
+# A `deck/` path naming a concrete card directory AND a file inside it.
+# `([a-z0-9]+(?:-[a-z0-9]+)+)` requires the hyphen every real slug carries;
+# the trailing group requires a filename, so `deck/<title>/README.md` — whose
+# slug is the literal placeholder — cannot match on either count.
+CARD_PATH_RE = re.compile(
+    r"(?<![\w./-])(?:\.game-of-cards/)?deck/"
+    r"([a-z0-9]+(?:-[a-z0-9]+)+)/"
+    r"([\w.-]+\.[a-z]{2,4})\b"
+)
+
 # The line that shipped in `card-schema/reference.md` until this card closed.
 HISTORICAL_OFFENDER = (
     "[`advanced-by-treated-as-hard-prerequisite-but-documented-as-mostly-loose`]"
@@ -68,22 +154,115 @@ HISTORICAL_OFFENDER = (
 )
 
 
+# The two lines that survived the link-only rule, verbatim as they shipped.
+HISTORICAL_CARD_PATH_OFFENDERS = (
+    "  audit catalogue (`deck/goc-package-pyproject-and-pypi-release/"
+    "audit_catalogue.md`).",
+    "tracked in `deck/auto-validate-card-titles-summaries-and-dods/log.md`.",
+)
+
+# A file the pre-package layout kept in the deck directory: the vendored
+# `deck.py` script, now the `goc` CLI, and `SCHEMA.md`, now `goc/schema.yaml`.
+# Case-sensitive, so `schema.yaml` and the word "schema" stay legal.
+RETIRED_FILE_RE = re.compile(r"\b(deck\.py|SCHEMA\.md)\b")
+
+# The lines naming one, verbatim as they shipped, with the name each yields:
+# five from the skill templates, then the two `goc/engine.py` lines.
+HISTORICAL_RETIRED_FILE_OFFENDERS = (
+    ("  SCHEMA.md                 # canonical schema (frontmatter IS the schema)", "SCHEMA.md"),
+    ("  deck.py                   # CLI; computes filtered views from frontmatter", "deck.py"),
+    ("write-ahead logs happen invisibly. Our cards are the rows; deck.py", "deck.py"),
+    ("the SCHEMA.md PR adding the new tag + its predicate. Adding the", "SCHEMA.md"),
+    ("tag itself remains a SCHEMA.md PR per the schema's \"Adding new", "SCHEMA.md"),
+    ("# Frontmatter parser — used for SCHEMA.md AND every card's README.md", "SCHEMA.md"),
+    ("     camelCase tokens — same antipattern set as deck.py `new` rejects)", "deck.py"),
+)
+
+# The deck skill's layout block as it shipped until that card closed.
+HISTORICAL_LAYOUT_BLOCK = """\
+```
+deck/
+  SCHEMA.md                 # canonical schema (frontmatter IS the schema)
+  README.md                 # navigation + conventions
+  deck.py                   # CLI; computes filtered views from frontmatter
+  <title>/                   # one dir per card; never moves on state change
+    README.md               # frontmatter + dashboard body — latest knowledge + current state
+    log.md                  # append-only journal — history, details, decisions, flow
+    reproduce.py            # OPTIONAL — declared in DoD when present
+    [other validation scripts]
+```
+"""
+
+# A layout block's root line. Either spelling counts, so the check survives
+# the decision-gated question of how shipped docs should abbreviate the path.
+LAYOUT_ROOT_RE = re.compile(r"(?:\.game-of-cards/)?deck/")
+
+# The block's stand-in for every card directory; a fresh install has none.
+CARD_DIR_PLACEHOLDER = "<title>/"
+
+
+def card_paths(text: str) -> list[str]:
+    """Return every concrete `deck/<slug>/<file>` citation in `text`."""
+    return [f"deck/{slug}/{name}" for slug, name in CARD_PATH_RE.findall(text)]
+
+
 def deck_links(text: str) -> list[str]:
     """Return every markdown link target in `text` that points into a deck."""
     return [t for t in DECK_LINK_RE.findall(text) if not _URL_SCHEME_RE.match(t)]
 
 
-def sweep() -> list[tuple[str, int, str]]:
-    """Return (repo-relative path, line number, target) for every deck link."""
-    hits: list[tuple[str, int, str]] = []
-    for tree in SHIPPED_SKILL_TREES:
+def retired_files(text: str) -> list[str]:
+    """Return every name in `text` of a deck file goc no longer has."""
+    return RETIRED_FILE_RE.findall(text)
+
+
+def layout_root_entries(text: str) -> list[str]:
+    """Return what the fenced layout block in `text` lists directly under its root.
+
+    A direct child sits at a two-space indent; deeper lines describe a card
+    directory, which `goc new` fills, not install. Returns [] when `text`
+    holds no such block.
+    """
+    entries: list[str] = []
+    in_fence = in_block = False
+    for line in text.splitlines():
+        if line.startswith("```"):
+            if in_block:
+                break
+            in_fence = not in_fence
+        elif in_fence and LAYOUT_ROOT_RE.fullmatch(line):
+            in_block = True
+        elif in_block and re.match(r"  \S", line):
+            entries.append(line.split()[0])
+    return entries
+
+
+def swept_files(trees=SWEPT_TREES) -> list[Path]:
+    """Return every file under `trees`, once each even where the trees nest."""
+    files: dict[Path, None] = {}
+    for tree in trees:
         base = ROOT / tree
         if not base.is_dir():
             continue
-        for md in sorted(base.rglob("*.md")):
-            for lineno, line in enumerate(md.read_text(encoding="utf-8").splitlines(), 1):
-                for target in deck_links(line):
-                    hits.append((str(md.relative_to(ROOT)), lineno, target))
+        for path in sorted(base.rglob("*")):
+            if path.is_dir() or "__pycache__" in path.parts:
+                continue
+            files.setdefault(path)
+    return list(files)
+
+
+def sweep(predicates=(deck_links, card_paths), trees=SWEPT_TREES) -> list[tuple[str, int, str]]:
+    """Return (repo-relative path, line number, target) for every citation."""
+    hits: list[tuple[str, int, str]] = []
+    for path in swept_files(trees):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            for predicate in predicates:
+                for target in predicate(line):
+                    hits.append((str(path.relative_to(ROOT)), lineno, target))
     return hits
 
 
@@ -129,6 +308,96 @@ class SkillTemplateDeckLinkSensitivityTest(unittest.TestCase):
             with self.subTest(case=label):
                 self.assertEqual(deck_links(line), [], f"{label}: {line!r} must stay clean")
 
+    def test_card_path_predicate_flags_both_historical_offenders(self) -> None:
+        """Each line that survived the link-only rule must now fire."""
+        for line, expected in zip(
+            HISTORICAL_CARD_PATH_OFFENDERS,
+            (
+                "deck/goc-package-pyproject-and-pypi-release/audit_catalogue.md",
+                "deck/auto-validate-card-titles-summaries-and-dods/log.md",
+            ),
+        ):
+            with self.subTest(line=line[:48]):
+                self.assertEqual(
+                    card_paths(line),
+                    [expected],
+                    "the guard must flag the exact line this repo shipped; if "
+                    "this fails the concrete-card-path rule is unenforced again",
+                )
+
+    def test_card_path_predicate_flags_every_deck_root_and_file_kind(self) -> None:
+        """Recall does not depend on which deck root or file the author named."""
+        for label, line in (
+            ("legacy root", "see `deck/some-real-card/README.md` for detail"),
+            ("canonical root", "see `.game-of-cards/deck/some-real-card/log.md`"),
+            ("reproduce script", "run .game-of-cards/deck/some-real-card/reproduce.py"),
+            ("sibling artifact", "the grid in deck/some-real-card/options.html"),
+            ("inside a link", "see [x](.game-of-cards/deck/some-real-card/README.md)"),
+        ):
+            with self.subTest(case=label):
+                self.assertTrue(card_paths(line), f"{label}: {line!r} should be flagged")
+
+    def test_card_path_predicate_leaves_the_placeholder_convention_alone(self) -> None:
+        """Precision: `deck/<title>/` is house shorthand at 19 sites per tree.
+
+        Naming the directory, or the placeholder card inside it, is how the
+        shipped skills describe card layout. Flagging those would make the
+        guard unusable — the defect is naming a card that only goc has.
+        """
+        for label, line in (
+            ("placeholder readme", "Rewrite `deck/<title>/README.md` body to document"),
+            ("placeholder script", "Run via `uv run python deck/<title>/reproduce.py`"),
+            ("placeholder log", "section to `deck/<title>/log.md`, leave status"),
+            ("short placeholder", "| Scaffold under `.game-of-cards/deck/<t>/`. |"),
+            ("prose slash phrase", "references the deck/methodology/workflow, or at"),
+            ("bare directory", 'ls .game-of-cards/deck/ 2>/dev/null && echo "DECK_EXISTS"'),
+            ("sibling card link", "see [other-card](../other-card/) for the rationale"),
+        ):
+            with self.subTest(case=label):
+                self.assertEqual(card_paths(line), [], f"{label}: {line!r} must stay clean")
+
+    def test_retired_file_predicate_flags_every_historical_offender(self) -> None:
+        """Each line that shipped a retired deck file's name must fire."""
+        for line, name in HISTORICAL_RETIRED_FILE_OFFENDERS:
+            with self.subTest(line=line[:48]):
+                self.assertEqual(
+                    retired_files(line),
+                    [name],
+                    "the guard must flag the exact line this repo shipped; if "
+                    "this fails the retired-deck-file rule is unenforced again",
+                )
+
+    def test_retired_file_predicate_leaves_the_replacements_alone(self) -> None:
+        """Precision: naming what replaced the retired files is legal."""
+        for label, line in (
+            ("engine", "Our cards are the rows; the `goc` CLI is the engine"),
+            ("packaged schema", "the schema ships inside the package as `goc/schema.yaml`"),
+            ("skill sibling", "`schema.yaml` sits beside `SKILL.md` in the skill dir"),
+            ("card readme", "    README.md               # frontmatter + dashboard body"),
+            ("new tag", "per `Skill(card-schema)`'s `reference.md` § Adding new tags"),
+            ("parser banner", "# Frontmatter parser — used for every card's README.md"),
+            ("quality-pass prompt", "     camelCase tokens — all rejected by `goc new`)"),
+        ):
+            with self.subTest(case=label):
+                self.assertEqual(retired_files(line), [], f"{label}: {line!r} must stay clean")
+
+    def test_card_slugs_are_hyphenated(self) -> None:
+        """Re-derive the discriminator `CARD_PATH_RE` rests on from the deck.
+
+        The predicate tells a card slug apart from a prose phrase like
+        `deck/methodology/workflow` by requiring a hyphen. That holds for every
+        card goc has ever filed; if a hyphenless slug ever lands, this fails
+        loudly instead of the predicate silently going blind to it.
+        """
+        deck = ROOT / ".game-of-cards" / "deck"
+        slugs = [d.name for d in deck.iterdir() if d.is_dir()]
+        self.assertGreater(len(slugs), 100, "deck did not load — assertion would be vacuous")
+        self.assertEqual(
+            [s for s in slugs if "-" not in s],
+            [],
+            "a hyphenless card slug makes CARD_PATH_RE blind to citations of it",
+        )
+
     def test_the_trees_are_actually_being_swept(self) -> None:
         """Guard the guard: a clean result must come from real skill bodies.
 
@@ -142,6 +411,26 @@ class SkillTemplateDeckLinkSensitivityTest(unittest.TestCase):
                 self.assertGreater(
                     len(list(base.rglob("*.md"))), 10, f"{tree} holds too few skill bodies"
                 )
+        for tree in PROJECT_STATE_TREES:
+            base = ROOT / tree
+            with self.subTest(tree=tree):
+                self.assertTrue(base.is_dir(), f"{tree} is missing — sweep would skip it")
+                # README + 5 content stubs + 6 workflow-hook stubs + config.yaml.
+                self.assertGreater(
+                    len(list(base.rglob("*"))), 10, f"{tree} holds too few shipped files"
+                )
+        files = swept_files(RETIRED_FILE_TREES)
+        with self.subTest(tree=PACKAGE_TREE):
+            self.assertIn(
+                ROOT / PACKAGE_TREE / "engine.py",
+                files,
+                "the engine is outside the retired-file sweep — its quality-pass "
+                "prompt would go unchecked",
+            )
+            skill = ROOT / "goc/templates/skills/deck/SKILL.md"
+            self.assertEqual(
+                files.count(skill), 1, "a file under two swept trees must be read once"
+            )
 
 
 class SkillTemplateDeckLinkTest(unittest.TestCase):
@@ -150,10 +439,75 @@ class SkillTemplateDeckLinkTest(unittest.TestCase):
         self.assertEqual(
             hits,
             [],
-            "shipped skill bodies must not link into `.game-of-cards/deck/` — a "
-            "consuming repo has none of goc's cards, so the link is dead on "
+            "shipped templates must not cite a card in `.game-of-cards/deck/` — a "
+            "consuming repo has none of goc's cards, so the citation is dead on "
             f"install. Cite the card by bare backticked title instead. Found: {hits}",
         )
+
+    def test_no_shipped_template_names_a_retired_deck_file(self) -> None:
+        hits = sweep((retired_files,), RETIRED_FILE_TREES)
+        self.assertEqual(
+            hits,
+            [],
+            "shipped templates and the goc package must not name `deck.py` or "
+            "`SCHEMA.md` — the `goc` CLI and `goc/schema.yaml` replaced them, and "
+            f"install writes neither into a consuming repo. Found: {hits}",
+        )
+
+
+class DeckLayoutBlockTest(unittest.TestCase):
+    """The deck skill's layout block lists what install puts in the deck."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        drop = ("CLAUDE", "GIT_", "GOC_")
+        env = {k: v for k, v in os.environ.items() if not k.startswith(drop)}
+        env["PYTHONPATH"] = str(ROOT)
+        with tempfile.TemporaryDirectory(prefix="goc-deck-layout-") as tmp:
+            subprocess.run(["git", "init", "-q", tmp], check=True, env=env)
+            done = subprocess.run(
+                [sys.executable, "-m", "goc.cli", "install", "--agents", "claude"],
+                cwd=tmp, env=env, capture_output=True, text=True,
+            )
+            if done.returncode != 0:
+                raise AssertionError(f"goc install failed:\n{done.stdout}{done.stderr}")
+            deck = Path(tmp) / ".game-of-cards" / "deck"
+            # Dot files (the `.goc-version` sentinel) are left out, as a
+            # directory listing leaves them out.
+            installed = [
+                p.name + ("/" if p.is_dir() else "")
+                for p in deck.iterdir()
+                if not p.name.startswith(".")
+            ]
+        cls.expected = sorted(installed + [CARD_DIR_PLACEHOLDER])
+
+    def test_install_writes_something_into_the_deck(self) -> None:
+        """Guard the guard: an empty install would make any block look wrong."""
+        self.assertGreater(len(self.expected), 1, "install left the deck empty")
+
+    def test_check_fires_on_the_historical_block(self) -> None:
+        entries = layout_root_entries(HISTORICAL_LAYOUT_BLOCK)
+        self.assertEqual(entries, ["SCHEMA.md", "README.md", "deck.py", CARD_DIR_PLACEHOLDER])
+        self.assertNotEqual(
+            sorted(entries),
+            self.expected,
+            "the pre-fix block listed three files install never writes; if it "
+            "now matches, the layout check is unenforced again",
+        )
+
+    def test_every_shipped_deck_skill_lists_what_install_writes(self) -> None:
+        for tree in SHIPPED_SKILL_TREES:
+            path = ROOT / tree / "deck" / "SKILL.md"
+            with self.subTest(tree=tree):
+                entries = layout_root_entries(path.read_text(encoding="utf-8"))
+                self.assertTrue(entries, f"{path}: no layout block found — check would be vacuous")
+                self.assertEqual(
+                    sorted(entries),
+                    self.expected,
+                    f"{path.relative_to(ROOT)}: the layout block must list exactly "
+                    "what `goc install` writes into the deck directory, plus the "
+                    f"`{CARD_DIR_PLACEHOLDER}` card placeholder",
+                )
 
 
 if __name__ == "__main__":

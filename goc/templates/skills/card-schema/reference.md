@@ -60,14 +60,18 @@ Absent means authored (every card predating the flag is authored).
 **Lifecycle:** `goc new` stamps it; it clears automatically on claim
 or close (`goc status <title> active`, `goc done`), and explicitly
 via `goc publish <title>` — which refuses on a pure placeholder
-(nothing to publish until body and DoD are written).
+(nothing to publish until body and DoD are written). All three verbs
+refuse to release a draft without a valid `summary`, the rule
+`goc validate` applies to every published card.
 
 **What the flag suppresses** — so unauthored work cannot be acted on
 by automation (the dedup/supersede race that motivated it):
 
 - Hidden from the default queue (`goc`, `goc --ready`, `card_is_ready`)
-  and the scheduler; surfaced only under `goc --status all`, marked
-  `✎` on the board.
+  and the scheduler; surfaced only under `goc --status all` and on the
+  board. Both mark it `✎` after the title, and `--json` carries
+  `draft: true`, so a title match in the `goc --status all | grep`
+  dedup view shows whether it is an unauthored placeholder.
 - `goc status <title> {superseded,disproved}` refuses on a draft — a
   title-only placeholder must not be closed as a "duplicate."
 - goc's auto-commit skips draft cards, so an unauthored scaffold

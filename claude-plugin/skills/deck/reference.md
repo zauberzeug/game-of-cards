@@ -54,8 +54,8 @@ This separates the methodology's **rigor** (machine-checkable DoDs,
 audit-trail commits, supersession chains, hook-enforced routing)
 from its **visibility** (zero by default). Same principle as a
 database engine: the user writes SQL; transactions, locks, and
-write-ahead logs happen invisibly. Our cards are the rows; deck.py
-is the engine; the skills are the query interface.
+write-ahead logs happen invisibly. Our cards are the rows; the
+`goc` CLI is the engine; the skills are the query interface.
 
 Three operating modes coexist:
 
@@ -64,7 +64,7 @@ Three operating modes coexist:
   silently while answering. Card operations are NEVER announced
   unless the user explicitly asks to see the deck.
 - **Autonomous mode.** No human is steering. `Skill(pull-card)`
-  runs on `/loop pull-card 30m` or `/schedule pull-card
+  runs on `/loop 30m /pull-card` or `/schedule pull-card
   weekday 09:00`, draining the `human_gate: none` queue.
   `Skill(audit-deck)` runs on a slower cadence to keep the queue
   fed. The deck advances overnight. The human wakes up to commits
@@ -75,17 +75,28 @@ Three operating modes coexist:
   card. `Skill(scan-deck)` surfaces parked cards (triage default
   on bare invocation or "what's up?"); `Skill(scan-deck) decisions
   to make` walks each decision-gated card via `AskUserQuestion`
-  and calls `Skill(decide-card)` per answer. Gate lowered → next
+  and calls `Skill(decide-card)` per answer. Gate lowered (a card
+  parked while `active` is released back to `open`) → next
   `pull-card` claims and implements per the recorded decision.
   Lean's pulled-cord pattern: humans resolve the cause, agents
   restart the line.
 
 Multiple Claude sessions on the same project work cards in parallel.
-The `status: active` field is the soft lock; git's merge handles
-the rare race when two sessions claim the same card simultaneously
-(whichever commits first wins). The user can have N parallel chats
-going while M scheduled agents work the deck — they ride the events
-as they occur, present or absent as resources allow.
+The `status: active` field is the soft lock, and sessions sharing a
+checkout see a claim at once. By default a claim stays in the
+claimer's clone (`goc status <title> active` commits it without
+pushing), so two clones can both claim the same card and both
+succeed. The race surfaces at the earliest when the second worker
+integrates: as a conflict over the card's claim under distinct
+identities, and under one shared identity only through the two
+workers' finished work, because the two claims are identical and
+integrate cleanly. Setting `workflow.claim_push: true` in
+`.game-of-cards/config.yaml` pushes each claim as it is made and
+refuses a later conflicting claimer; the claim table in
+[`DECK_LOCATION.md`](https://github.com/zauberzeug/game-of-cards/blob/main/DECK_LOCATION.md#claim-and-sync-semantics)
+has the detail. The user can have N parallel chats going while M
+scheduled agents work the deck — they ride the events as they occur,
+present or absent as resources allow.
 
 ## The worldview: Game of Cards
 

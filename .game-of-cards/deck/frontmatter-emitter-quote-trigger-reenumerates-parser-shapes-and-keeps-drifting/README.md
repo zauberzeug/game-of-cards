@@ -20,6 +20,7 @@ advanced_by:
   - inline-emitter-writes-non-newline-line-breaks-bare-dropping-subsequent-frontmatter
   - definition-of-done-emitter-silently-splits-checkboxes-on-non-lf-line-breaks
   - goc-writes-card-summaries-a-standard-yaml-reader-cannot-parse
+  - goc-writes-frontmatter-values-a-standard-yaml-reader-retypes-silently
 tags: [meta-fix, infra, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick a factoring (see `## Decision required`) and record it in log.md with rationale.

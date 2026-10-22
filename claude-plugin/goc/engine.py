@@ -34,7 +34,6 @@ from goc._vendor import yaml_lite as yaml
 # Paths
 
 PACKAGE_DIR = Path(__file__).resolve().parent  # installed package dir (goc/)
-REPO_ROOT = Path.cwd()  # project being managed (consuming repo's root)
 
 
 _DUAL_TREE_CONFLICT: bool = False
@@ -46,6 +45,9 @@ def _detect_worktree_common_root(cwd: Path) -> Path | None:
 
     Signal: git rev-parse --git-common-dir differs from --git-dir when cwd is
     a linked worktree; the common dir is then the primary .git directory.
+    The two are compared as resolved paths, never as printed: from a
+    subdirectory of the primary working tree git prints --git-dir absolute and
+    --git-common-dir relative to cwd, two spellings of the same directory.
     """
     try:
         r_git = subprocess.run(
@@ -60,14 +62,64 @@ def _detect_worktree_common_root(cwd: Path) -> Path | None:
         return None
     if r_git.returncode != 0 or r_common.returncode != 0:
         return None
-    git_dir = r_git.stdout.strip()
-    common_dir = r_common.stdout.strip()
-    if git_dir == common_dir:
+    # `cwd / p` is `p` itself when git printed an absolute path.
+    git_dir = (cwd / r_git.stdout.strip()).resolve()
+    common_path = (cwd / r_common.stdout.strip()).resolve()
+    if git_dir == common_path:
         return None  # primary working tree, not a worktree
-    common_path = Path(common_dir)
-    if not common_path.is_absolute():
-        common_path = (cwd / common_path).resolve()
     return common_path.parent
+
+
+def _shared_worktree_deck_root(cwd: Path) -> Path | None:
+    """Return the primary working tree root when cwd is in a linked git
+    worktree that opted into worktree_deck=shared, else None."""
+    common_root = _detect_worktree_common_root(cwd)
+    if common_root is None:
+        return None
+    # Env var wins without requiring the config to exist yet.
+    if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
+        return common_root
+    config_path = common_root / ".game-of-cards" / "config.yaml"
+    if config_path.exists():
+        try:
+            cfg = yaml.safe_load(config_path.read_text()) or {}
+            if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
+                return common_root
+        except Exception:
+            pass
+    return None
+
+
+def _git_toplevel(cwd: Path) -> Path | None:
+    """Return the top level of the git working tree holding cwd, else None."""
+    try:
+        r = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, cwd=str(cwd), timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if r.returncode != 0 or not r.stdout.strip():
+        return None
+    return Path(r.stdout.strip())
+
+
+def _resolve_project_roots(cwd: Path) -> tuple[Path, Path]:
+    """Return `(repo_root, deck_root)` for cwd — the one derivation of both.
+
+    `deck_root` is `_resolve_deck_root(cwd)`. `repo_root` is the project being
+    managed: the root that attest checks run in, validate's parity checks
+    read, and `goc install` / `goc upgrade` write. It IS `deck_root`, from cwd
+    or any nested directory, except under the shared-deck worktree redirect:
+    there `deck_root` is the primary tree, while the code being worked on is
+    the linked worktree's own checkout, so `repo_root` is that tree's top
+    level (cwd when git cannot name it). With no deck found, both are cwd.
+    """
+    shared_root = _shared_worktree_deck_root(cwd)
+    if shared_root is not None:
+        return _git_toplevel(cwd) or cwd, shared_root
+    deck_root = _walk_to_deck_root(cwd)
+    return deck_root, deck_root
 
 
 def _resolve_deck_root(cwd: Path) -> Path:
@@ -86,22 +138,18 @@ def _resolve_deck_root(cwd: Path) -> Path:
     tree) is opt-in via worktree_deck=shared, never implied by nesting.
     Falling back to cwd keeps read-only commands useful before installation;
     mutating creation commands must reject that fallback instead of silently
-    scaffolding a second deck.
+    scaffolding a second deck. `REPO_ROOT` is derived from this same result
+    by `_resolve_project_roots`, so every root reader follows the walk too.
+    The runtime hooks carry a mirror of this resolution, the shared-deck
+    redirect and the walk both (`_find_project_dir`), pinned to this function
+    by tests/test_project_root_from_subdirectory.py.
     """
-    common_root = _detect_worktree_common_root(cwd)
-    if common_root is not None:
-        # Env var wins without requiring the config to exist yet.
-        if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
-            return common_root
-        config_path = common_root / ".game-of-cards" / "config.yaml"
-        if config_path.exists():
-            try:
-                cfg = yaml.safe_load(config_path.read_text()) or {}
-                if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
-                    return common_root
-            except Exception:
-                pass
+    return _resolve_project_roots(cwd)[1]
 
+
+def _walk_to_deck_root(cwd: Path) -> Path:
+    """The nearest-ancestor walk of `_resolve_deck_root`, without the
+    shared-deck worktree redirect."""
     own_tree_root_passed = False
     for candidate in (cwd, *cwd.parents):
         has_git = (candidate / ".git").exists()
@@ -143,14 +191,16 @@ def _resolve_deck_dir(repo_root: Path) -> Path:
     return canonical
 
 
-DECK_ROOT = _resolve_deck_root(REPO_ROOT)
+# REPO_ROOT: project being managed (consuming repo's root), derived with
+# DECK_ROOT from one walk, so it names the root from any nested directory.
+REPO_ROOT, DECK_ROOT = _resolve_project_roots(Path.cwd())
 DECK_DIR = _resolve_deck_dir(DECK_ROOT)
 SCHEMA_FILE = PACKAGE_DIR / "schema.yaml"
 GAME_OF_CARDS_CONFIG_FILE = DECK_ROOT / ".game-of-cards" / "config.yaml"
 LEGACY_DECK_CONFIG_FILE = DECK_ROOT / ".claude" / "config.yaml"
 
 # ────────────────────────────────────────────────────────────────────────────
-# Frontmatter parser — used for SCHEMA.md AND every card's README.md
+# Frontmatter parser — used for every card's README.md
 
 # The `(\n+)` group captures the blank line(s) between the last frontmatter
 # field and the closing `---` so that yaml_lite — not the delimiter — decides
@@ -205,6 +255,23 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return data, m.group(3) or ""
 
 
+def read_card_text(readme: Path) -> str:
+    """Read a card's README.md, raising FrontmatterError if its bytes do not decode.
+
+    `UnicodeDecodeError` is a `ValueError` but not a `FrontmatterError`, so a
+    bare `read_text()` let one undecodable card past every broken-card handler
+    (`load_all_cards`' warn-and-skip, `validate_deck_directories`' ERROR line,
+    `load_card_or_exit`'s diagnostic) and crash the whole deck view with a
+    traceback naming no file. Undecodable bytes can only be rejected, never
+    repaired, so they take the corrupt-card path. Which codec cards are read in
+    is a separate question (`goc-crashes-on-hosts-whose-default-encoding-is-not-utf-8`).
+    """
+    try:
+        return readme.read_text()
+    except UnicodeDecodeError as exc:
+        raise FrontmatterError(f"README.md is not decodable text: {exc}") from exc
+
+
 # Characters that force a quoted scalar wherever in the value they appear.
 # TAB is in the class because it is illegal ANYWHERE in a YAML plain scalar —
 # a strict reader refuses `summary: column<TAB>separated` with "while scanning
@@ -224,7 +291,10 @@ _YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@\t]")
 _YAML_INDICATORS = frozenset("-?:,[]{}#&*!|>'\"%@`")
 # `-`, `?` and `:` are indicators only when followed by whitespace or standing
 # alone: `-v` and `?query` are ordinary plain scalars, while `- v` is a sequence
-# entry, `? v` an explicit key, and a bare `-` an empty sequence entry.
+# entry, `? v` an explicit key, and a bare `-` an empty sequence entry. This
+# exemption holds in BLOCK context, which is where every caller but two puts a
+# scalar; inside a flow collection `?` binds unconditionally — see
+# `_YAML_FLOW_HAZARDS`.
 _YAML_SPACE_BOUND_INDICATORS = frozenset("-?:")
 # Every other indicator is illegal at position 0 whatever follows it. Several
 # members are already caught anywhere by `_YAML_NEEDS_QUOTE`; the set stays
@@ -242,6 +312,15 @@ _YAML_INDICATOR_FIRST = _YAML_INDICATORS - _YAML_SPACE_BOUND_INDICATORS
 # `yaml._BLOCK_INDICATOR_RE` / `yaml._FOLDED_INDICATOR_RE` so the emitter's
 # quote-trigger cannot drift from the parser's recognizers.
 _YAML_BLOCK_HEADER_RE = re.compile(r"^(?:\|\d*[-+]?|>\d*[-+]?)$")
+# YAML 1.2 §7.4 `c-flow-indicator` plus the flow-context key indicator: inside
+# a flow collection (`[a, b]`, `{who: a, where: b}`) a plain scalar may contain
+# none of these *anywhere*, not merely at position 0. `,[]{}` are already
+# quoted anywhere by `_YAML_NEEDS_QUOTE`, so the set adds exactly one character
+# — `?`, which `_YAML_SPACE_BOUND_INDICATORS` exempts because in block context
+# it binds only when space-bound. The set stays spec-complete rather than
+# minimized to `{"?"}` so it reads as "the flow-context rule" and survives any
+# future narrowing of `_YAML_NEEDS_QUOTE`.
+_YAML_FLOW_HAZARDS = frozenset(",[]{}?")
 
 
 def _contains_line_break(s: str) -> bool:
@@ -299,18 +378,32 @@ def _parser_coerces_scalar(s: str) -> bool:
     )
 
 
-def _yaml_inline(value) -> str:
+def _yaml_inline(value, *, flow: bool = False) -> str:
     """Render a scalar/list as inline YAML for flat-frontmatter use.
 
     Multi-line strings are NOT supported here — emit_frontmatter detects
     them and uses literal-block style (`|-`) instead.
+
+    `flow=True` says the rendered scalar is spliced into a YAML *flow*
+    collection rather than written as a block mapping value. Flow context
+    admits a strictly narrower plain scalar, so the quote trigger widens by
+    `_YAML_FLOW_HAZARDS`. Two call sites enter one: the list branch below
+    (which emits `[a, b]`) sets it on its own recursion, and `_emit_worker`
+    sets it for the `{who: …, where: …}` mapping. Callers writing an ordinary
+    block value must leave it False — widening unconditionally would quote
+    every `?`-bearing summary in a deck for no reason.
     """
     if value is None:
         return "null"
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, list):
-        return "[]" if not value else "[" + ", ".join(_yaml_inline(v) for v in value) + "]"
+        # The rendered form IS a flow sequence, so its elements are in flow
+        # context whatever context the list itself sits in.
+        return (
+            "[]" if not value
+            else "[" + ", ".join(_yaml_inline(v, flow=True) for v in value) + "]"
+        )
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
@@ -359,6 +452,7 @@ def _yaml_inline(value) -> str:
         or _parser_coerces_scalar(s)
         or bool(_YAML_BLOCK_HEADER_RE.match(s))
         or s != s.strip()
+        or (flow and not _YAML_FLOW_HAZARDS.isdisjoint(s))
     ):
         # Escape \ and " for safe inclusion in "..." YAML scalar.
         escaped = s.replace("\\", "\\\\").replace('"', '\\"')
@@ -415,6 +509,11 @@ def _emit_worker(value) -> str:
 
     Flat string (`worker: gpu-rig`) when only `who` is set; inline mapping
     (`worker: {who: gpu-rig, where: feature/foo}`) when both are set.
+
+    The mapping branch is a YAML *flow* collection, so both members render with
+    `flow=True`: a plain scalar there may not carry `,[]{}` or `?` anywhere.
+    The flat branch is an ordinary block mapping value and must NOT set it —
+    `worker: who?knows` is legal and quoting it would churn every such card.
     """
     if value is None:
         return "null"
@@ -424,7 +523,10 @@ def _emit_worker(value) -> str:
         who = value.get("who", "")
         where = value.get("where")
         if where:
-            return f"{{who: {_yaml_inline(who)}, where: {_yaml_inline(where)}}}"
+            return (
+                f"{{who: {_yaml_inline(who, flow=True)}, "
+                f"where: {_yaml_inline(where, flow=True)}}}"
+            )
         return _yaml_inline(who)
     return _yaml_inline(str(value))
 
@@ -930,8 +1032,8 @@ class Card:
         cleared by `goc publish`, `goc status active`, or `goc done`. Absent =
         authored (the default for every card predating this flag). Orthogonal to
         `status`: a draft card is still `status: open`; the flag is a "not yet
-        real" overlay, like `waiting_on`. See `card_is_draft` for the composite
-        predicate that also catches flagless legacy scaffolds."""
+        real" overlay, like `waiting_on`. `card_is_draft`, the predicate every
+        draft-gated surface consults, reads this flag and nothing else."""
         v = self.frontmatter.get("draft")
         return v if isinstance(v, bool) else False
 
@@ -984,13 +1086,14 @@ def load_card(card_dir: Path) -> Card | None:
     """Load a card; return None if the directory has no card-shaped README.md.
 
     Raises `FrontmatterError` if README.md exists with an opening `---` but
-    no matching closer (or YAML inside is unparseable). Callers that want
-    a uniform exit-with-diagnostic should use `load_card_or_exit` instead.
+    no matching closer (or YAML inside is unparseable), or if its bytes do
+    not decode. Callers that want a uniform exit-with-diagnostic should use
+    `load_card_or_exit` instead.
     """
     readme = card_dir / "README.md"
     if not readme.exists():
         return None
-    fm, body = parse_frontmatter(readme.read_text())
+    fm, body = parse_frontmatter(read_card_text(readme))
     if not fm:
         return None
     dod_field = fm.get("definition_of_done", "")
@@ -1344,7 +1447,7 @@ def validate_deck_directories() -> list[str]:
                 errors.append(f"{sub.name}: card directory missing README.md")
             continue
         try:
-            fm, _body = parse_frontmatter(readme.read_text())
+            fm, _body = parse_frontmatter(read_card_text(readme))
         except FrontmatterError as exc:
             errors.append(f"{sub.name}: {exc}")
             continue
@@ -1410,33 +1513,24 @@ def validate_hook_registration() -> list[str]:
     invoked), and the inverse where a registration points at a file that
     no longer exists.
     """
-    from goc.install import GOC_CLAUDE_HOOKS, _HOOK_FILE_RE, deck_hook_scripts
+    from goc.install import claude_hook_bindings, deck_hook_scripts
 
     templates = PACKAGE_DIR / "templates"
     if not (templates / "hooks").exists():
         return []
 
-    errors: list[str] = []
     scripts = set(deck_hook_scripts(templates))
+    bindings, errors = claude_hook_bindings()
 
-    registered: set[str] = set()
-    for event, command in GOC_CLAUDE_HOOKS.items():
-        m = _HOOK_FILE_RE.search(command)
-        if not m:
-            errors.append(
-                f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] command has no "
-                f"recognizable script path: {command!r}"
-            )
-            continue
-        name = Path(m.group(1)).name
-        registered.add(name)
+    for name, events in sorted(bindings.items()):
         if name not in scripts:
-            errors.append(
+            errors.extend(
                 f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] points to "
                 f"templates/hooks/{name} which does not exist"
+                for event in sorted(events)
             )
 
-    for name in sorted(scripts - registered):
+    for name in sorted(scripts - set(bindings)):
         errors.append(
             f"hook registration: templates/hooks/{name} has no event entry in "
             "GOC_CLAUDE_HOOKS — file would be copied to .claude/hooks/ but never "
@@ -1459,8 +1553,13 @@ _PLUGIN_HOOK_SCRIPT_RE = re.compile(r"[\w.-]+\.py")
 PLUGIN_HOOK_REGISTRIES = ("claude-plugin", "codex-plugin")
 
 
-def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]]:
-    """Script basenames every command in `registry` names, plus shape errors.
+def _plugin_registered_hook_bindings(registry: Path) -> tuple[set[tuple[str, str]], list[str]]:
+    """Every `(event, script basename)` pair `registry`'s commands bind, plus shape errors.
+
+    Both halves of the pair are part of the contract: which scripts a payload
+    invokes, and which event each one fires on. Returning the pair rather than
+    the basename alone is what lets the caller check the second half — a hook
+    bound to the wrong event exits 0 forever, so nothing downstream notices.
 
     Parsed defensively at each level. `hooks.json` is authored by hand, so a
     malformed one is a plausible input, and this repo has a standing family of
@@ -1480,7 +1579,7 @@ def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]
             "object; nothing can be registered from this shape"
         ]
 
-    names: set[str] = set()
+    bindings: set[tuple[str, str]] = set()
     errors: list[str] = []
     for event, groups in data["hooks"].items():
         if not isinstance(groups, list):
@@ -1505,12 +1604,30 @@ def _plugin_registered_hook_scripts(registry: Path) -> tuple[set[str], list[str]
                         "without a string 'command'"
                     )
                     continue
-                names.update(_PLUGIN_HOOK_SCRIPT_RE.findall(command))
-    return names, errors
+                bindings.update(
+                    (event, name) for name in _PLUGIN_HOOK_SCRIPT_RE.findall(command)
+                )
+    return bindings, errors
+
+
+def _is_goc_source_tree() -> bool:
+    """True when `REPO_ROOT` is the goc source tree the plugin payloads are built from.
+
+    Both plugin checks below hold `claude-plugin/`, `codex-plugin/` and
+    `openclaw-plugin/` against `goc/templates/` and `goc/`, so the tree the
+    payloads are generated from is what tells this repo from a consuming one.
+    A payload-named folder cannot: a consuming repo may keep its own Claude Code
+    or Codex plugin under the conventional name. Gated on that folder, the
+    mirror walk raised `FileNotFoundError` on the consumer's missing
+    `goc/templates/skills`, and the hook check held the consumer's own
+    `hooks.json` to GoC's one-script-per-hook layout.
+    """
+    return (REPO_ROOT / "goc" / "templates").is_dir()
 
 
 def validate_plugin_hook_registration() -> list[str]:
-    """Check each plugin payload's `hooks.json` against the scripts it ships.
+    """Check each plugin payload's `hooks.json` against the scripts it ships
+    and against the event every script is bound to.
 
     `validate_hook_registration` above enforces script ↔ registration parity for
     `GOC_CLAUDE_HOOKS`, which drives `.claude/settings.json` on the vendored
@@ -1527,15 +1644,41 @@ def validate_plugin_hook_registration() -> list[str]:
     that event. The sync produces the second shape on its own, since retiring a
     template prunes the mirrored file while leaving the registry untouched.
 
-    Gated on the payload roots existing at `REPO_ROOT`, like the mirror-parity
-    check, so this is inert in consuming repos.
-    """
-    from goc.install import deck_hook_scripts
+    Which *event* a script fires on is the third silent failure, and the one
+    the script-set difference above cannot see: a payload binding the session
+    primer to `Stop` and the pattern check to `SessionStart` registers exactly
+    the right scripts. Both keep exiting 0 — the primer just reprints the
+    active-card reminder after every turn and the pattern check reminds nobody
+    — so the mis-binding surfaces as behaviour nobody attributes to a registry
+    typo. The event mapping is the half `AGENTS.md` says cannot be derived from
+    a script name, which makes it the half most likely to drift and the one
+    that has to be *compared* rather than generated.
 
+    `GOC_CLAUDE_HOOKS` is the reference mapping for that comparison. It carries
+    no more authority than the payloads do — a swap authored there surfaces as
+    every payload disagreeing with it — but it is the registry written in
+    Python rather than JSON, so it is the readable one to name in a diagnostic.
+    The comparison assumes the hosts share an event vocabulary, which they do
+    today (`SessionStart` / `UserPromptSubmit` / `Stop` in all three). A host
+    that renames an event needs a per-host alias map here; that is a deliberate
+    edit, which is the point — it is the silent drift this rules out.
+
+    Gated on `_is_goc_source_tree()`, like the mirror-parity check, so this is
+    inert in consuming repos, including one whose own plugin keeps a
+    `hooks.json` under `claude-plugin/` or `codex-plugin/`.
+    """
+    from goc.install import claude_hook_bindings, deck_hook_scripts
+
+    if not _is_goc_source_tree():
+        return []
     templates = PACKAGE_DIR / "templates"
     if not (templates / "hooks").exists():
         return []
     shipped_by_source = set(deck_hook_scripts(templates))
+
+    # Commands with no recognizable script path are `validate_hook_registration`'s
+    # diagnostic to report; this caller wants the bindings it could read.
+    reference, _ = claude_hook_bindings()
 
     errors: list[str] = []
     for plugin in PLUGIN_HOOK_REGISTRIES:
@@ -1543,8 +1686,9 @@ def validate_plugin_hook_registration() -> list[str]:
         registry = hooks_dir / "hooks.json"
         if not registry.exists():
             continue
-        registered, shape_errors = _plugin_registered_hook_scripts(registry)
+        bindings, shape_errors = _plugin_registered_hook_bindings(registry)
         errors.extend(shape_errors)
+        registered = {name for _, name in bindings}
         rel = _display_path(registry)
 
         # Compare against what the payload actually ships where present, and
@@ -1568,6 +1712,22 @@ def validate_plugin_hook_registration() -> list[str]:
                 f"{plugin}/hooks/ does not ship — the hook would fail with "
                 "'no such file' on every fire. Drop the entry or restore the script."
             )
+
+        # The event half, compared only for scripts both registries name. A
+        # script one side is missing entirely is the script half's finding,
+        # reported above and by `validate_hook_registration`; restating it here
+        # under a second diagnosis would only bury the one that names the fix.
+        for name in sorted(registered & set(reference)):
+            bound = {event for event, script in bindings if script == name}
+            if bound != reference[name]:
+                errors.append(
+                    f"hook registration: {rel} binds {name} to "
+                    f"{', '.join(sorted(bound))}, but GOC_CLAUDE_HOOKS binds it "
+                    f"to {', '.join(sorted(reference[name]))} — the event is "
+                    "hand-maintained in every registry and a hook on the wrong "
+                    "event still exits 0, so the mismatch is silent at runtime. "
+                    "Align the event in one registry or the other."
+                )
     return errors
 
 
@@ -1602,9 +1762,11 @@ class _DeepDircmp(filecmp.dircmp):
 def validate_plugin_mirror_parity() -> list[str]:
     """Check that plugin/ mirrors match their source-of-truth trees byte-for-byte.
 
-    Covers `claude-plugin/`, `codex-plugin/`, and `openclaw-plugin/` when present. Only the
-    pairs whose plugin root actually exists at REPO_ROOT are checked, so this
-    works in both the goc source repo and downstream consumers.
+    Covers `claude-plugin/`, `codex-plugin/`, and `openclaw-plugin/` when present,
+    and only in the goc source tree (`_is_goc_source_tree()`): the source side of
+    every pair lives under `goc/`, which a consuming repo does not have, while a
+    payload-named folder it may — its own plugin. Within the source tree, only
+    the pairs whose plugin root exists at REPO_ROOT are checked.
 
     Drift means a source-of-truth file was edited without updating the plugin
     mirror; fix is to run `python scripts/sync_plugin_assets.py` and commit
@@ -1629,6 +1791,8 @@ def validate_plugin_mirror_parity() -> list[str]:
         deck_hook_scripts,
         skill_for_agent,
     )
+    if not _is_goc_source_tree():
+        return []
     claude_plugin_root = REPO_ROOT / "claude-plugin"
     codex_plugin_root = REPO_ROOT / "codex-plugin"
     openclaw_plugin_root = REPO_ROOT / "openclaw-plugin"
@@ -1780,19 +1944,36 @@ def validate_plugin_mirror_parity() -> list[str]:
             if rel.parts[0] not in eligible:
                 continue
             dst_item = dst / rel
-            expected = (
-                _codex_skill_text(src_item, skill_name=rel.parts[0])
-                if src_item.name == "SKILL.md"
-                else src_item.read_text()
-            )
             if not dst_item.exists():
                 diffs.append(f"{rel.as_posix()} (missing)")
-            elif dst_item.read_text() != expected:
+            elif src_item.name == "SKILL.md":
+                expected = _codex_skill_text(src_item, skill_name=rel.parts[0])
+                if dst_item.read_text() != expected:
+                    diffs.append(f"{rel.as_posix()} (differs)")
+            # Siblings compared by bytes so install-vs-mirror newline skew is
+            # detectable here too. `read_text()` applies universal-newline
+            # translation, which reads a CRLF mirror copy as identical to its
+            # LF source — the blind spot `scripts/sync_plugin_assets.py --check`
+            # already closed with the same byte comparison.
+            elif dst_item.read_bytes() != src_item.read_bytes():
                 diffs.append(f"{rel.as_posix()} (differs)")
         for dst_item in sorted(dst.rglob("*")):
-            if "__pycache__" in dst_item.parts or dst_item.is_dir():
+            if "__pycache__" in dst_item.parts:
                 continue
             rel = dst_item.relative_to(dst)
+            if dst_item.is_dir():
+                # An EMPTY dir with no source counterpart is an orphan nothing
+                # else reports — git masks empty dirs, and the file walk above
+                # only sees files, so it rots in the payload silently. A
+                # non-empty orphan already surfaces through its own files.
+                is_orphan = (
+                    not rel.parts
+                    or rel.parts[0] not in eligible
+                    or not (src / rel).exists()
+                )
+                if is_orphan and not any(dst_item.iterdir()):
+                    diffs.append(f"{rel.as_posix()} (only in {dst_rel})")
+                continue
             if rel.as_posix() == "_goc-bootstrap.sh":
                 bootstrap_src = templates_root / "bootstrap" / "_goc-bootstrap.sh"
                 if not bootstrap_src.exists():
@@ -1929,18 +2110,13 @@ def validate_card(t: Card, schema: Schema, all_titles: set[str]) -> list[str]:
             f" (status={status_value!r}, closed_at={closed_at!r})"
         )
 
-    summary_value = fm.get("summary")
-    if summary_value is not None:
-        if not isinstance(summary_value, str):
-            errors.append(f"{t.title}: summary: must be a string")
-        elif not summary_value.strip():
-            errors.append(f"{t.title}: summary: must not be empty or whitespace-only")
-    elif not t.draft:
+    summary_error = summary_problem(fm)
+    if summary_error is not None and (fm.get("summary") is not None or not t.draft):
         # Absent key is the same defect as present-but-blank, one door over:
         # triage views render a blank row either way. Draft scaffolds are
-        # unauthored by definition — flagging them would make every fresh
-        # `goc new` red before authoring starts.
-        errors.append(f"{t.title}: summary: missing — required on published cards")
+        # unauthored by definition — flagging an ABSENT summary on them would
+        # make every fresh `goc new` red before authoring starts.
+        errors.append(f"{t.title}: summary: {summary_error}")
 
     worker = fm.get("worker")
     if worker is not None:
@@ -2602,9 +2778,15 @@ SCAFFOLD_BODY_PLACEHOLDER = "(write the design doc here)"
 
 def is_placeholder_scaffold(card: Card) -> bool:
     """True iff the card still carries BOTH generated scaffold placeholders — the
-    `goc new` DoD stub AND body stub. The flagless backstop in `card_is_draft`:
-    catches legacy / hand-made scaffolds authored before the `draft` flag, and
-    scaffolds whose flag was hand-stripped without authoring."""
+    `goc new` DoD stub AND body stub.
+
+    Its one consumer is `goc publish` (`_cmd_publish`), which asks it only of a
+    card `card_is_draft` has already flagged and refuses to release a draft that
+    is still a pure placeholder. It is not part of the draft gate: `card_is_draft`
+    reads the flag alone (its docstring says why). So an unflagged card that
+    still carries both placeholders — scaffolded before the flag existed, or
+    with the flag stripped by hand — is ordinary queue work: listed, pullable
+    and supersedable like any authored card."""
     dod = card.frontmatter.get("definition_of_done", "")
     dod_str = dod if isinstance(dod, str) else ""
     return SCAFFOLD_DOD_PLACEHOLDER in dod_str and SCAFFOLD_BODY_PLACEHOLDER in card.body
@@ -2617,8 +2799,8 @@ def card_is_draft(card: Card) -> bool:
 
     The single "not yet real" predicate consulted by the terminal-transition
     guard (`_cmd_status`), the auto_commit filter (`_git_auto_commit`), and the
-    queue / scheduler / board / json surfaces — so the rule is defined once and
-    cannot drift per call site, exactly like `waiting_impedes`.
+    queue / scheduler / table / board / json surfaces — so the rule is defined
+    once and cannot drift per call site, exactly like `waiting_impedes`.
 
     Keyed on the flag ALONE, deliberately NOT on `is_placeholder_scaffold`: a
     card that is claimed (`active`) or closed before its body is filled in has
@@ -2627,6 +2809,52 @@ def card_is_draft(card: Card) -> bool:
     placeholder check instead guards `goc publish` (refusing to release an empty
     card), which is a different question than "is this queue/commit visible."""
     return card.draft
+
+
+# The mark a draft carries after its title in both human views: the table's
+# TITLE cell and the board's card cell. Both key it on `card_is_draft` alone,
+# the predicate behind the `--json` `draft` field, so a card is marked in one
+# view iff it is marked in the other and flagged in JSON. `goc --status all`
+# is the one table that lists drafts, and it is the view create-card dedups
+# against with `grep`, so the mark sits on the row itself at every verbosity.
+DRAFT_MARKER = "✎"
+
+
+def summary_problem(frontmatter: dict) -> str | None:
+    """Why `summary` fails the published-card contract, or None when it holds.
+
+    The single rule behind `validate`'s summary errors AND the draft-release gate
+    of `publish` / `status active` / `done` — defined once, so a verb can never
+    release a card that the next `goc validate` rejects.
+    """
+    value = frontmatter.get("summary")
+    if value is None:
+        return "missing — required on published cards"
+    if not isinstance(value, str):
+        return "must be a string"
+    if not value.strip():
+        return "must not be empty or whitespace-only"
+    return None
+
+
+def summary_release_error(card: Card) -> str | None:
+    """Refusal text when releasing this card from draft would leave it without a
+    valid summary; None when the card is no draft or its summary holds.
+
+    Only the draft → published transition is gated: the verb must not create a
+    validate-red card. Cards that never were drafts (hand-written) keep
+    `validate` as their net instead of becoming unclaimable here.
+    """
+    if not card_is_draft(card):
+        return None
+    problem = summary_problem(card.frontmatter)
+    if problem is None:
+        return None
+    return (
+        f"ERROR: {card.title}: summary: {problem}. Releasing the card from draft "
+        f"would leave `goc validate` red — add a one-line `summary:` (what + why) "
+        f"to the frontmatter first."
+    )
 
 
 def card_is_ready(card: Card, by_title: dict[str, Card], *, include_drafts: bool = False) -> bool:
@@ -2982,11 +3210,11 @@ def filter_cards(
         out = [t for t in out if t.status in statuses]
     elif status is not None and status != "all":
         out = [t for t in out if t.status == status]
-    # Unauthored scaffolds (draft flag or surviving placeholder) are hidden from
-    # every listing except `--status all`: a draft is not yet real work and must
-    # not appear as queueable. The board path renders the full deck (not this
-    # filtered set) and marks drafts instead. `card_is_draft` is the shared
-    # not-yet-real predicate (also enforced in `card_is_ready`).
+    # Draft scaffolds (the explicit `draft: true` flag) are hidden from every
+    # listing except `--status all`: a draft is not yet real work and must not
+    # appear as queueable. The board marks the drafts it shows. `card_is_draft`
+    # is the shared not-yet-real predicate (also enforced in `card_is_ready`);
+    # it reads the flag alone, so a surviving placeholder body hides nothing.
     #
     # `include_drafts` suppresses only this conjunct, so a caller can recover
     # how many cards the draft filter alone removed without restating the rest
@@ -3149,6 +3377,23 @@ def _closed_at_instant(value: object) -> datetime | None:
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
 
+def _closed_recency_key(t: Card) -> tuple[int, float, str]:
+    """Sort key putting the most recently closed card first.
+
+    `closed_at` descending, read through `_closed_at_instant` so a date-only
+    legacy stamp and a `...Z` datetime compare on one timeline (the date-only
+    stamp counts as that day's midnight UTC). A card whose `closed_at` is
+    missing or unparseable — `goc validate` flags both on a terminal card —
+    sorts after every dated one. The title breaks ties, so closures sharing
+    an instant (a batch closed in one second, several date-only stamps on one
+    day) keep an order that does not depend on the input order.
+    """
+    dt = _closed_at_instant(t.closed_at)
+    if dt is None:
+        return (1, 0.0, t.title)
+    return (0, -dt.timestamp(), t.title)
+
+
 def validate_tag_filters(tags: list[str]) -> list[str] | None:
     if not tags:
         return None
@@ -3168,7 +3413,10 @@ def sort_default(
     values: dict[str, tuple[float, list[str]]] | None = None,
     by_title: dict[str, Card] | None = None,
 ) -> list[Card]:
-    """Sort by GRPW-computed value, with ToC-style near-term-flow tiebreak.
+    """Live cards by GRPW-computed value, then closed cards by recency.
+
+    Live cards (status outside `TERMINAL_STATUSES`) come first, sorted by
+    value with a ToC-style near-term-flow tiebreak.
 
     Key tuple: (-value, -live_direct_advances_count, age_days)
     - primary: highest computed value first (graph-amplified contribution)
@@ -3196,6 +3444,18 @@ def sort_default(
     `by_title` is omitted it is built from `cards`, which is only correct
     when `cards` IS the full deck; callers that sort a subset must thread
     the full-deck lookup (every renderer already holds one as `full_by_title`).
+
+    Terminal cards follow the live ones, most recently closed first
+    (`_closed_recency_key`). Value is a scheduler-axis number — the walk
+    prunes terminal descendants because completed work can no longer be
+    unblocked — so it ranks nothing once a card is closed. Ranking closures
+    by it froze every closed-card view on the oldest high-contribution
+    closures: the board's DONE / DISPROVED / SUPERSEDED columns under their
+    row cap, `--done`, and `--closed-since` all listed the newest closure
+    last. Recency is the order those views are read in. Splitting here,
+    not at each caller, keeps every listing on one rule: a single-status set
+    (a board column, `--done`) is one partition, and `--status all` reads as
+    the queue followed by the record.
     """
     if values is None:
         values = compute_values(cards)
@@ -3222,7 +3482,9 @@ def sort_default(
         v, _ = values.get(t.title, (0.0, []))
         return (-v, -live_direct(t), t.created)
 
-    return sorted(cards, key=key)
+    live = [t for t in cards if t.status not in TERMINAL_STATUSES]
+    closed = [t for t in cards if t.status in TERMINAL_STATUSES]
+    return sorted(live, key=key) + sorted(closed, key=_closed_recency_key)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -3323,11 +3585,12 @@ def render_table(
         dod = "prose" if t.dod_freeform else f"{t.dod_done}/{t.dod_done + t.dod_open}"
         v_score, _ = values.get(t.title, (0.0, []))
         value_str = _format_value(v_score)
+        title = f"{t.title} {DRAFT_MARKER}" if card_is_draft(t) else t.title
         if verbose >= 1:
             stage = str(t.stage) if t.stage is not None else "-"
-            rows.append((t.title, t.status, stage, t.contribution, value_str, t.human_gate, t.created, tags, dod))
+            rows.append((title, t.status, stage, t.contribution, value_str, t.human_gate, t.created, tags, dod))
         else:
-            rows.append((t.title, t.status, t.contribution, value_str, t.human_gate, tags, dod))
+            rows.append((title, t.status, t.contribution, value_str, t.human_gate, tags, dod))
     widths = [
         max(_display_width(h), max((_display_width(r[i]) for r in rows), default=0))
         for i, h in enumerate(headers)
@@ -3365,7 +3628,21 @@ def render_table(
             if why:
                 out_lines.append(f"    why: {why}")
             if t.summary:
-                out_lines.append(f"    summary: {t.summary}")
+                # Every entry in this block is one `    key: value` line, and
+                # the four-space indent is what marks a line as belonging to
+                # the row above rather than being a new record. A summary is
+                # a multi-line block scalar on 6% of this repo's own deck
+                # (`emit_frontmatter` writes any multi-line string that way,
+                # and `_apply_summary_rewrite` exists to produce them), so
+                # interpolating it whole would emit continuation lines at
+                # column zero. Clip to the first line and advertise the clip
+                # with a `goc show` pointer — the same convention the summary
+                # branch of `_cmd_triage` already follows.
+                summary_lines = t.summary.splitlines()
+                summary_text = (summary_lines[0] if summary_lines else "").rstrip()
+                if len(summary_lines) > 1:
+                    summary_text += f" … (see `goc show {t.title}`)"
+                out_lines.append(f"    summary: {summary_text}")
             # The impediment overlay is the HARD "cannot pull" axis, so it
             # reads above the advisory `awaiting:` line below — which says
             # "(you may start)" and would otherwise be the only
@@ -3542,6 +3819,8 @@ def render_board(
         by_status[t.status].append(t)
     hidden_by_status: dict[str, int] = {}
     for c in columns:
+        # A terminal column comes back most recently closed first, so the
+        # row cap trims the oldest closures rather than the newest.
         sorted_col = sort_default(by_status[c], values=values, by_title=by_title)
         hidden_by_status[c] = max(0, len(sorted_col) - max_rows)
         by_status[c] = sorted_col[:max_rows]
@@ -3549,13 +3828,17 @@ def render_board(
         c = t.contribution or ""
         marker = f" [{c[0] if c else '?'}]"
         live = t.status not in TERMINAL_STATUSES
-        # A draft (unauthored scaffold) gets a distinct ✎ marker — the board's
-        # "not yet real, do not pull" signal — shown instead of the ⏳ not-ready
-        # glyph. A draft is hidden from the queue for a different reason than a
-        # gate/impediment, so a distinct mark reads clearer.
-        is_draft = live and card_is_draft(t)
+        # A draft (unauthored scaffold) gets a distinct `DRAFT_MARKER` — the
+        # board's "not yet real, do not pull" signal — shown instead of the ⏳
+        # not-ready glyph. A draft is hidden from the queue for a different
+        # reason than a gate/impediment, so a distinct mark reads clearer.
+        # Not gated on `live`, so the board agrees with the table and `--json`
+        # even on a terminal card still flagged draft (`goc validate` rejects
+        # that), which `--done` hides as a draft too. `not_ready` below stays
+        # live-gated on its own.
+        is_draft = card_is_draft(t)
         if is_draft:
-            marker += " ✎"
+            marker += f" {DRAFT_MARKER}"
         # Mark a card not-pullable on the board whenever any queue-hiding
         # axis fires. This mirrors `card_is_ready` /
         # `card_is_workable_for_scheduler`: a human_gate parks an open card
@@ -3626,9 +3909,10 @@ def render_board(
 
 def render_leverage_line(
     ready: list[Card],
-    all_cards: list[Card],
+    cards: list[Card],
     *,
     values: dict[str, tuple[float, list[str]]] | None = None,
+    by_title: dict[str, Card] | None = None,
 ) -> str:
     """One-line leverage comparison after a pull-card pick.
 
@@ -3637,13 +3921,21 @@ def render_leverage_line(
     gated card exists outside the ready set (per the spec, the line is
     omitted when there's nothing to compare against) or when the ready
     set is itself empty (no pick to announce).
+
+    `cards` is the pool the gated half is drawn from. `_cmd_default` scopes
+    it by the same query filters as `ready`, so both halves describe one
+    queue. Thread `by_title` and `values` from the full deck, as
+    `render_active_notice` does. When omitted they are built from `cards`,
+    which is correct only when `cards` is the full deck.
     """
     if not ready:
         return ""
     if values is None:
-        values = compute_values(all_cards)
+        values = compute_values(cards)
+    if by_title is None:
+        by_title = {t.title: t for t in cards}
     open_gated = [
-        t for t in all_cards
+        t for t in cards
         if t.status == "open"
         and not card_is_draft(t)
         and t.human_gate in ("decision", "session")
@@ -3651,9 +3943,7 @@ def render_leverage_line(
     ]
     if not open_gated:
         return ""
-    gated_top = sort_default(
-        open_gated, values=values, by_title={t.title: t for t in all_cards}
-    )[0]
+    gated_top = sort_default(open_gated, values=values, by_title=by_title)[0]
     pulled = ready[0]
     pulled_value = values.get(pulled.title, (0.0, []))[0]
     gated_value = values.get(gated_top.title, (0.0, []))[0]
@@ -4008,7 +4298,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p_new.add_argument("--gate", choices=schema.human_gate_values, default=schema.human_gate_default)
     p_new.add_argument("--summary", default=None,
                        help="Triage summary (≤ 3 sentences, what + why). Optional at scaffold "
-                            "time, but validate requires it once the card leaves draft.")
+                            "time; publish, status active and done refuse to release the "
+                            "card from draft without it.")
     # --tag, --worker share `dest` with global filters; SUPPRESS lets the
     # parent value flow through when the subparser flag isn't passed.
     p_new.add_argument("--tag", dest="tags", action="append", default=argparse.SUPPRESS,
@@ -4138,7 +4429,8 @@ def _build_parser() -> argparse.ArgumentParser:
                                   help="Re-emit every card into canonical form. Named for the relation-edge list "
                                        "(advances/advanced_by/supersedes/superseded_by) block-style migration, but "
                                        "normalises everything emit_frontmatter owns — scalar quoting, block scalars, "
-                                       "key order, the blank line before the body. The report names the changed part.")
+                                       "the blank line before the body. Key order is carried over, not canonicalised. "
+                                       "The report names the changed part.")
     p_mls.add_argument("--dry-run", action="store_true",
                        help="Show which cards would change without writing files.")
 
@@ -4256,6 +4548,18 @@ def _cmd_default(args):
     stages = parse_stage_filter(args.stage_flag)
     tag_filters = validate_tag_filters(args.tags)
     full_by_title = {t.title: t for t in cards}
+    # The query's scope: which cards the reader is looking at. It is kept
+    # apart from the lifecycle conjuncts (status, gate, readiness, closure
+    # date) because the `--ready` leverage line draws its gated half from this
+    # same scope (see below). A scope filter added here reaches both halves.
+    scope = {
+        "stages": stages,
+        "contribution": args.contribution,
+        "tags": tag_filters,
+        "advances": args.advances,
+        "advanced_by": args.advanced_by,
+        "worker": args.worker,
+    }
 
     def run_query(*, include_drafts: bool = False) -> list[Card]:
         """Apply the whole query predicate, not just its first stage.
@@ -4279,17 +4583,12 @@ def _cmd_default(args):
         rows = filter_cards(
             cards,
             status=status,
-            stages=stages,
-            contribution=args.contribution,
             human_gate=args.human_gate,
-            tags=tag_filters,
             since=since,
-            advances=args.advances,
-            advanced_by=args.advanced_by,
-            worker=args.worker,
             ready=args.ready,
             by_title=full_by_title,
             include_drafts=include_drafts,
+            **scope,
         )
         if closed_since_threshold is not None:
             rows = [
@@ -4370,8 +4669,23 @@ def _cmd_default(args):
             if args.worker else cards
         )
         active_notice = render_active_notice(notice_cards, values=full_values, by_title=full_by_title) if status == "open" else ""
+        # The leverage line's gated half asks the same query as its "Pulling"
+        # half with the gate conjunct inverted: which card would this query
+        # pull if a human lowered its gate? So it takes the whole `scope`, not
+        # only --worker as the banner does. A gated card outside the scope is
+        # one this puller could not pull even once ungated. Drawing from the
+        # whole deck made a GOC_WORKER-scoped runner ping a human about
+        # another worker's card. Only the scope is applied here
+        # (`status=None`), not `run_query`: the lifecycle conjuncts are what
+        # separate the two halves, and `render_leverage_line` applies the
+        # gated half's own: open, gated, unimpeded.
         leverage = (
-            render_leverage_line(filtered, cards, values=full_values)
+            render_leverage_line(
+                filtered,
+                filter_cards(cards, status=None, **scope),
+                values=full_values,
+                by_title=full_by_title,
+            )
             if args.ready else ""
         )
         # `out` is now always non-empty (a table, or the empty-result line),
@@ -4476,7 +4790,7 @@ Evaluate three dimensions per card:
    understand what the card is about WITHOUT opening the body.
    - Bad: "pong-late-hr-stuck-below-50-after-bug-140-path-2"
      (engineer's-jargon: rN refs, path-N, bug-N, math symbols, _md_/_py_,
-     camelCase tokens — same antipattern set as deck.py `new` rejects)
+     camelCase tokens — all rejected by `goc new`)
    - Good: "pong-cannot-recover-prior-task-performance"
    Verdict {{ok: true}} if PO-readable; {{ok: false, rewrite: "...", reason: "..."}} otherwise.
 
@@ -4848,6 +5162,10 @@ def _cmd_done(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    release_error = summary_release_error(t)
+    if release_error:
+        print(release_error, file=sys.stderr)
+        sys.exit(2)
     _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
@@ -4932,6 +5250,10 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
                 f"to lower the gate before closing.",
                 file=sys.stderr,
             )
+            sys.exit(2)
+        release_error = summary_release_error(t)
+        if release_error:
+            print(f"{release_error} Refusing bundled close.", file=sys.stderr)
             sys.exit(2)
         plan.append((title, card_dir, t.status, t))
     for title, _, _, _ in plan:
@@ -5527,10 +5849,19 @@ def _enabled_goc_plugin_key(repo_root: Path, home: Path) -> str | None:
 
 
 def _goc_hook_basenames() -> set[str]:
-    """The GoC lifecycle-hook script basenames, derived from the registry."""
-    from goc.install import GOC_CLAUDE_HOOKS
+    """The GoC lifecycle-hook script basenames, derived from the registry.
 
-    return {command.split("/")[-1].strip() for command in GOC_CLAUDE_HOOKS.values()}
+    Read through `claude_hook_bindings`, the registry's one command-to-script
+    walk, rather than a parse of its own. The split-on-"/" this replaced kept
+    whatever followed the script name, so the shell-safe quoted command form
+    (`python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/x.py"`) left a `"` on every
+    name and the double-fire check matched nothing. A command with no
+    recognizable script path is `validate_hook_registration`'s finding.
+    """
+    from goc.install import claude_hook_bindings
+
+    bindings, _ = claude_hook_bindings()
+    return set(bindings)
 
 
 def _vendored_goc_hooks_registered(repo_root: Path) -> list[str]:
@@ -5578,7 +5909,10 @@ def validate_plugin_hook_double_fire(
         f"are also vendored in .claude/ ({', '.join(vendored)}); each fires "
         f"twice per turn. Resolve by disabling the plugin for this repo "
         f"(set \"{key}\": false under enabledPlugins, or run /plugin) OR switch "
-        f"to skills_source: plugin and remove .claude/hooks/.",
+        f"the repo to the plugin: set skills_source: plugin in "
+        f".game-of-cards/config.yaml, then run `goc upgrade` and accept its "
+        f"cleanup, which removes only GoC's skills, hook scripts and settings "
+        f"entries.",
     )]
 
 
@@ -5609,6 +5943,12 @@ def _run_automated_check(check: dict) -> tuple[bool, str]:
             cmd,
             capture_output=True,
             text=True,
+            # A check prints arbitrary tool output; a strict decode raised
+            # UnicodeDecodeError after the check had already finished, so the
+            # exit code never got to decide the verdict. The escapes are ASCII:
+            # the summary stays printable and writable to log.md under any host
+            # codec, which "replace" (U+FFFD) would not guarantee.
+            errors="backslashreplace",
             timeout=timeout_seconds,
             cwd=str(REPO_ROOT),
             check=False,
@@ -5617,6 +5957,14 @@ def _run_automated_check(check: dict) -> tuple[bool, str]:
         return False, f"TIMEOUT (>{timeout_seconds}s)"
     except FileNotFoundError:
         return False, f"command not found: {cmd[0]}"
+    except OSError as exc:
+        # The command exists but could not be started: EACCES for a script
+        # without the executable bit, ENOEXEC for one without a shebang line
+        # (subprocess calls execve directly, with no /bin/sh fallback). Like a
+        # missing command, that is a failed check, not a crash. `Popen` sets
+        # `filename` to the executable it tried, so `cmd` is never indexed.
+        program = exc.filename if exc.filename is not None else cmd
+        return False, f"cannot run {program}: {exc.strerror or exc}"
     if result.returncode == 0:
         stdout_tail = (result.stdout or "").strip().split("\n")[-1]
         return True, (stdout_tail[:120] if stdout_tail else "OK")
@@ -5891,14 +6239,17 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     if not who:
         return text
 
-    # Build the YAML inline value and mutate the frontmatter line-anchored.
-    who_yaml = _yaml_inline(who)
+    # Render through `_emit_worker` — the same helper `emit_frontmatter` uses —
+    # rather than restating its flat-vs-mapping branch here. This path used to
+    # carry its own copy, which is how it kept emitting an unquoted flow mapping
+    # after `_emit_worker` learned that flow context needs `_YAML_FLOW_HAZARDS`:
+    # a claim by a git identity holding a `?` wrote frontmatter no strict YAML
+    # reader accepts. One renderer means the next quoting rule lands on every
+    # writer at once.
+    worker: dict = {"who": who}
     if where:
-        where_yaml = _yaml_inline(where)
-        worker_yaml = f"{{who: {who_yaml}, where: {where_yaml}}}"
-    else:
-        worker_yaml = who_yaml
-    return mutate_frontmatter_field(text, "worker", worker_yaml)
+        worker["where"] = where
+    return mutate_frontmatter_field(text, "worker", _emit_worker(worker))
 
 
 def _cmd_status(args):
@@ -5990,6 +6341,11 @@ def _cmd_status(args):
             file=sys.stderr,
         )
         sys.exit(2)
+    if new_status == "active":
+        release_error = summary_release_error(t)
+        if release_error:
+            print(release_error, file=sys.stderr)
+            sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = mutate_frontmatter_field(text, "status", new_status)
     if new_status in TERMINAL_STATUSES:
@@ -6045,6 +6401,10 @@ def _cmd_publish(args):
             f"releases authored work, it does not author it.",
             file=sys.stderr,
         )
+        sys.exit(2)
+    release_error = summary_release_error(t)
+    if release_error:
+        print(release_error, file=sys.stderr)
         sys.exit(2)
     text = (card_dir / "README.md").read_text()
     text = remove_frontmatter_field(text, "draft")
@@ -6792,15 +7152,21 @@ def _cmd_decide(args):
     """Record a decision in the body + log; lower the human gate to `none`.
 
     On a non-terminal card this is the normal Andon-cord lowering — a
-    parked card becomes pullable. On a *terminal* card with a still-raised
-    gate it is the **repair** path for the `status: terminal` +
-    `human_gate != none` contradiction the validator flags. A cleanly
-    closed card always carries `gate: none` (the close-time verbs enforce
-    it), so the only terminal cards that get past the "gate already none"
-    guard below are the broken ones — older closures that predate the
-    gate guard, hand-edits, or `goc migrate` imports — whose dangling gate
-    must be cleared for `goc validate` to pass. The card stays closed; the
-    decision block documents the resolution for the record axis.
+    parked card becomes pullable. A card parked while `active` is also
+    returned to `open`. Pull-card claims before it can hit the judgement
+    call that raises the gate, so lowering the gate alone would leave
+    `active` + `none`, the shape of a live agent claim, and every queue
+    view and pull-card's soft-lock rule would skip the decided card.
+
+    On a *terminal* card with a still-raised gate it is the **repair** path
+    for the `status: terminal` + `human_gate != none` contradiction the
+    validator flags. A cleanly closed card always carries `gate: none` (the
+    close-time verbs enforce it), so the only terminal cards that get past
+    the "gate already none" guard below are the broken ones — older
+    closures that predate the gate guard, hand-edits, or `goc migrate`
+    imports — whose dangling gate must be cleared for `goc validate` to
+    pass. The card stays closed; the decision block documents the
+    resolution for the record axis.
     """
     title = args.title
     decision = args.decision
@@ -6817,6 +7183,7 @@ def _cmd_decide(args):
         )
         sys.exit(2)
     is_terminal = t.status in TERMINAL_STATUSES
+    releases_claim = t.status == "active"
     prior_gate = t.human_gate
     # Resolved from the pre-mutation card: the gate flip does not touch
     # `advanced_by`, but the notice belongs to the card as the deciding
@@ -6831,6 +7198,10 @@ def _cmd_decide(args):
     body = replace_or_append_decision(body, decision, reasoning, now)
     text = emit_frontmatter(fm, body=body)
     text = mutate_frontmatter_field(text, "human_gate", "none")
+    if releases_claim:
+        # Same release as `goc status <title> open`: `worker` stays as the
+        # designation, and the next claim re-stamps `where`.
+        text = mutate_frontmatter_field(text, "status", "open")
     (card_dir / "README.md").write_text(text)
     log_path = card_dir / "log.md"
     existing = log_path.read_text() if log_path.exists() else ""
@@ -6847,6 +7218,11 @@ def _cmd_decide(args):
             f"{archived}\n"
         )
     recorded_note = f"{decision} — {reasoning}. Gate {prior_gate} → none."
+    if releases_claim:
+        recorded_note += (
+            " Status active → open — the claim parked behind the gate is "
+            "released, so the next pull-card claims the card per this decision."
+        )
     if is_terminal:
         recorded_note += (
             f" (Post-closure gate repair on a {t.status} card — the card "
@@ -6859,10 +7235,17 @@ def _cmd_decide(args):
     if prereq_notice:
         print(prereq_notice, file=sys.stderr)
     print(f"{title}: decision recorded; gate {prior_gate} → none")
+    if releases_claim:
+        print(f"{title}: active → open (the claim parked behind the gate is released)")
     if is_terminal:
         print(
             f"Next: gate cleared on a {t.status} card — record-axis repair; "
             f"the card stays closed and `goc validate` now passes."
+        )
+    elif releases_claim:
+        print(
+            "Next: gate lowered to none — any agent can now claim this card. goc to see "
+            f"the queue; to keep working it in this session, goc status {title} active."
         )
     else:
         print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
@@ -6968,7 +7351,14 @@ def _cmd_show(args):
     if not p.exists():
         print(f"ERROR: {p} not found", file=sys.stderr)
         sys.exit(2)
-    text = p.read_text()
+    problem: FrontmatterError | None = None
+    try:
+        text = read_card_text(p)
+    except FrontmatterError as exc:
+        # Print it anyway, U+FFFD marking each undecodable byte. `show` never
+        # writes, so the replacement cannot destroy the card's bytes.
+        text = p.read_text(errors="replace")
+        problem = exc
     print(text)
     artifacts = sorted(
         f.name for f in card_dir.iterdir()
@@ -6982,10 +7372,13 @@ def _cmd_show(args):
     # `show` stays read-everything (the broken card is the one you most want
     # to inspect), but surface parse problems via stderr so the inconsistency
     # with `validate` / `done` becomes visible at the same call site.
-    try:
-        parse_frontmatter(text)
-    except FrontmatterError as exc:
-        print(f"WARNING: {title}: {exc}", file=sys.stderr)
+    if problem is None:
+        try:
+            parse_frontmatter(text)
+        except FrontmatterError as exc:
+            problem = exc
+    if problem is not None:
+        print(f"WARNING: {title}: {problem}", file=sys.stderr)
 
 
 def _cmd_migrate(args):
@@ -7149,8 +7542,17 @@ def _cmd_migrate_list_style(args):
     Named for the migration it was introduced for — converting relation-edge
     lists (advances/advanced_by/supersedes/superseded_by) to block style — but
     the predicate is whole-card canonical equality, so scalar quoting,
-    block-scalar shape, key order and the blank line before the body are
-    normalised too. The report names the changed part per card.
+    block-scalar shape and the blank line before the body are normalised too.
+    The report names the changed part per card.
+
+    Key order is NOT in that set, and no string here may claim it is:
+    `emit_frontmatter` walks `fm.items()`, i.e. the mapping `parse_frontmatter`
+    filled top-down, so the authored file's own key order is carried straight
+    through. A card whose only drift is a swapped key pair re-emits
+    byte-identically and is correctly reported as already canonical. There is
+    no reference order to normalise toward either — `schema.yaml` lists
+    required and optional fields for validation, not for emission, and the only
+    canonical order that exists is the dict literal in `_cmd_new`.
     """
     dry_run = args.dry_run
     if not DECK_DIR.exists():
@@ -7162,8 +7564,8 @@ def _cmd_migrate_list_style(args):
         readme = card_dir / "README.md"
         if not readme.exists():
             continue
-        original = readme.read_text()
         try:
+            original = read_card_text(readme)
             fm, body = parse_frontmatter(original)
         except FrontmatterError as exc:
             print(f"WARNING: {card_dir.name}: {exc}", file=sys.stderr)

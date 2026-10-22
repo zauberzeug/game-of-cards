@@ -41,7 +41,7 @@ The single invariant that makes claims meaningful is: **`.game-of-cards/` must b
 
 | Configuration | Sync mechanism | Failure mode |
 |---|---|---|
-| Same repo | Git on main. `goc status active` autocommits and pushes; other agents pull before claiming. | A worker that forgets to pull races a stale view of the queue. Last-writer-wins on the file resolves it (per the recorded decision in `design-claim-protocol-with-branch-and-author-metadata`). |
+| Same repo | Git on main. `goc status <title> active` commits the claim locally and pushes it only when `workflow.claim_push: true` is set (off by default). Other agents see a claim once it reaches the remote, so they pull before claiming. | A worker that claims from a stale view races the earlier claimer. With `claim_push` set, the first writer wins: the later claimer's push is rejected, it rebases onto the remote, and when the rebase conflicts `goc status` exits 2 naming the racing worker. A claim that writes the same `worker` as the remote one (a shared bot identity, or a preset designation both claims keep) produces no conflict, so it reports success too ([`claim-push-reports-success-when-rebase-drops-identical-racing-claim`](.game-of-cards/deck/claim-push-reports-success-when-rebase-drops-identical-racing-claim)). Without `claim_push`, nothing detects the race: both claims succeed, and the duplicate work surfaces only as a conflict when the second worker integrates. |
 | Sibling repo | Same — git on the sibling's main. Plus the path-resolver layer to find the sibling. | Same as same-repo, plus the new failure mode where the sibling clone is missing or out of date. |
 | Submodule | Submodule pointer bumps in the code repo + git on the deck repo. | Two-step staleness: deck repo can be ahead of submodule pointer, or submodule pointer can be ahead of working-tree submodule contents. Both confuse `goc`. |
 | Hosted SaaS | Server is the source of truth. Clients write through. | Network partition or auth expiry blocks all claim activity, not just one agent's. Offline degrades to read-only or breaks entirely. |
@@ -50,7 +50,7 @@ The single invariant that makes claims meaningful is: **`.game-of-cards/` must b
 
 | Configuration | Offline |
 |---|---|
-| Same repo | Fully functional. Git push deferred; `goc` keeps working. |
+| Same repo | Fully functional. Git push deferred; `goc` keeps working. With `workflow.claim_push: true`, a claim still commits locally, but `goc status <title> active` exits 2 because its push fails. |
 | Sibling repo | Fully functional, same as same-repo. |
 | Submodule | Fully functional. |
 | Hosted SaaS | Degraded or broken depending on the service's offline story. |

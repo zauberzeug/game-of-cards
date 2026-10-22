@@ -507,6 +507,18 @@ def _detect_existing(deck_dir: Path) -> str | None:
     return sentinel.read_text().strip()
 
 
+def _project_target() -> Path:
+    """Return the project `install` / `upgrade` act on — the engine's
+    `REPO_ROOT`, derived by the same upward walk from cwd. From a
+    subdirectory of an installed repo that is the enclosing install, so
+    `upgrade` upgrades it and `install` refuses instead of scaffolding a stray
+    nested deck. With no enclosing deck it is cwd, the "run `goc install` at
+    the intended project root" contract."""
+    from goc.engine import _resolve_project_roots
+
+    return _resolve_project_roots(Path.cwd().resolve())[0]
+
+
 def _find_installed_deck_dir(target: Path) -> Path | None:
     """Return the path of an existing GoC install (new or legacy), or None."""
     new = target / ".game-of-cards" / "deck"
@@ -587,8 +599,9 @@ _KEEP_LOCAL_SKILLS_PLUGIN_REFUSAL = (
 def _should_use_local_skills(agent: str, *, local_skills: bool) -> bool:
     """True if this agent should use the vendored skills layout (vs the plugin path).
 
-    Codex always uses vendored layout (no plugin yet).
     Claude defaults to the plugin path; --local-skills opts in to vendored.
+    Every Codex install vendors `.codex/skills/` whatever the flag says —
+    the Codex plugin ships, but this rule has not been revisited for it.
     """
     return agent != "claude" or local_skills
 
@@ -600,6 +613,40 @@ GOC_CLAUDE_HOOKS: dict[str, str] = {
 }
 
 _HOOK_FILE_RE = re.compile(r"\$\{CLAUDE_PROJECT_DIR\}/(.+?\.py)")
+
+
+def claude_hook_bindings() -> tuple[dict[str, set[str]], list[str]]:
+    """`GOC_CLAUDE_HOOKS` inverted to script basename → the events it is bound to.
+
+    Every hook validator reads the registry through this one walk:
+    `validate_hook_registration` compares the scripts against
+    `templates/hooks/`, `validate_plugin_hook_registration` compares the
+    *events* against each payload's `hooks.json`, and
+    `validate_plugin_hook_double_fire` (via `engine._goc_hook_basenames`)
+    looks the script names up in the repo's vendored settings. Keeping the
+    command-to-script parse in one place is deliberate — the second reader of
+    a hand-maintained registry is exactly where a divergent copy of the
+    transform would otherwise start, and the double-fire check's own
+    split-on-"/" copy did diverge: it kept the closing quote of a quoted path.
+
+    A command with no recognizable script path is reported rather than dropped,
+    so the shared walk owes its callers the same diagnostics the single-caller
+    version produced. The mapping is script → *set* of events because one
+    script may legitimately be bound to several (`GOC_CLAUDE_HOOKS` is keyed by
+    event, so it can express that; the inverse cannot be a plain scalar).
+    """
+    bindings: dict[str, set[str]] = {}
+    errors: list[str] = []
+    for event, command in GOC_CLAUDE_HOOKS.items():
+        m = _HOOK_FILE_RE.search(command)
+        if not m:
+            errors.append(
+                f"hook registration: GOC_CLAUDE_HOOKS[{event!r}] command has no "
+                f"recognizable script path: {command!r}"
+            )
+            continue
+        bindings.setdefault(Path(m.group(1)).name, set()).add(event)
+    return bindings, errors
 
 
 def _backup_unparseable_settings(settings_path: Path, original: str) -> Path:
@@ -736,38 +783,44 @@ def _merge_claude_settings(settings_path: Path, *, probe: bool = False) -> bool:
     return changed
 
 
-def _strip_goc_settings_entries(settings_path: Path) -> None:
-    """Remove GoC-managed hook entries from .claude/settings.json."""
+def _strip_goc_settings_entries(settings_path: Path, *, probe: bool = False) -> bool:
+    """Remove GoC-managed hook entries from .claude/settings.json.
+
+    Returns whether the file changes; `probe=True` reports what *would*
+    change without writing the file or printing any warning.
+    """
+
+    def _warn(message: str) -> None:
+        if not probe:
+            print(message, file=sys.stderr)
+
     if not settings_path.exists():
-        return
+        return False
     try:
         settings = json.loads(settings_path.read_text())
     except json.JSONDecodeError as exc:
-        print(
+        _warn(
             f"  warning: {settings_path} is not valid JSON ({exc}); "
-            f"leaving it untouched (GoC hook entries not removed).",
-            file=sys.stderr,
+            f"leaving it untouched (GoC hook entries not removed)."
         )
-        return
+        return False
     if not isinstance(settings, dict):
-        print(
+        _warn(
             f"  warning: {settings_path} is valid JSON but not an object "
             f"(got {type(settings).__name__}); leaving it untouched "
-            f"(GoC hook entries not removed).",
-            file=sys.stderr,
+            f"(GoC hook entries not removed)."
         )
-        return
+        return False
 
     goc_commands = set(GOC_CLAUDE_HOOKS.values())
     hooks = settings.get("hooks", {})
     if not isinstance(hooks, dict):
-        print(
+        _warn(
             f"  warning: {settings_path} has a non-object `hooks` field "
             f"(got {type(hooks).__name__}); leaving it untouched "
-            f"(GoC hook entries not removed).",
-            file=sys.stderr,
+            f"(GoC hook entries not removed)."
         )
-        return
+        return False
 
     # Events that were already empty before the strip pass are
     # user-authored placeholders the function never touched; the cleanup
@@ -783,11 +836,10 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
     for event in list(hooks.keys()):
         event_value = hooks[event]
         if not isinstance(event_value, list):
-            print(
+            _warn(
                 f"  warning: {settings_path} hooks.{event} is "
                 f"{type(event_value).__name__} (expected list); leaving it "
-                f"untouched (GoC hook entries not removed for this event).",
-                file=sys.stderr,
+                f"untouched (GoC hook entries not removed for this event)."
             )
             continue
         new_groups: list = []
@@ -800,12 +852,11 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
                 continue
             group_hooks = group["hooks"]
             if not isinstance(group_hooks, list):
-                print(
+                _warn(
                     f"  warning: {settings_path} hooks.{event}[].hooks is "
                     f"{type(group_hooks).__name__} (expected list); leaving "
                     f"this group untouched (GoC hook entries not removed for "
-                    f"this group).",
-                    file=sys.stderr,
+                    f"this group)."
                 )
                 new_groups.append(group)
                 continue
@@ -821,10 +872,9 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
                     continue
                 filtered.append(h)
             if non_dicts:
-                print(
+                _warn(
                     f"  warning: {settings_path} hooks.{event}[].hooks contains "
-                    f"non-object items; preserving them verbatim.",
-                    file=sys.stderr,
+                    f"non-object items; preserving them verbatim."
                 )
             if removed_any:
                 changed = True
@@ -849,40 +899,58 @@ def _strip_goc_settings_entries(settings_path: Path) -> None:
     if not hooks:
         settings.pop("hooks", None)
 
-    if changed:
+    if changed and not probe:
         settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    return changed
 
 
-def _strip_claude_vendored_harness(target: Path, templates: Path) -> None:
+def _goc_skill_names(templates: Path, agent: str) -> frozenset[str] | None:
+    """Names of the skills GoC ships for `agent`, or None when no skill tree is at hand.
+
+    `templates/skills/` holds them wherever it ships (the wheel, the source
+    tree). A plugin payload omits that tree and carries the same skills flat
+    at `<payload>/skills/`, beside its bundled `goc/` package, so they are read
+    from there. The fallback keys on that tree rather than on
+    `_is_plugin_context()`, whose directory-name test misses the versioned
+    roots of marketplace installs. Only directories holding a `SKILL.md`
+    count. A caller that deletes by these names must keep everything on None.
+    """
+    for skills_src in (templates / "skills", templates.parent.parent / "skills"):
+        if skills_src.is_dir():
+            return frozenset(
+                p.name
+                for p in skills_src.iterdir()
+                if (p / "SKILL.md").is_file() and skill_for_agent(p.name, agent)
+            )
+    return None
+
+
+def _strip_claude_vendored_harness(target: Path, templates: Path, *, probe: bool = False) -> bool:
     """Remove GoC-managed vendored files from a Claude install.
 
-    Removes only the skill directories whose names match GoC templates,
-    the hook files registered in the manifest and settings, and strips
-    GoC entries from .claude/settings.json. User-authored skills with
-    other names in `.claude/skills/` are preserved.
+    Removes only the skill directories `_goc_skill_names` lists (none when
+    it has no skill tree to read), the hook files registered in the manifest
+    and settings, and strips GoC entries from .claude/settings.json.
+    User-authored skills with other names in `.claude/skills/` are preserved.
+
+    Returns whether any of that GoC content was there to remove;
+    `probe=True` answers the same question without touching anything.
+    `goc upgrade` offers the cleanup on exactly that answer, so a
+    `.claude/skills/` holding only the repo's own skills is no leftover,
+    while GoC hook files or settings entries left without one are.
     """
     shim = _load_agent_shim(templates, "claude")
 
-    if shim.skills:
-        skills_dir = target / shim.skills.target
-        if skills_dir.is_dir():
-            skills_src = templates / "skills"
-            # The bundled plugin engine omits templates/skills/, so the set of
-            # GoC-owned skill names cannot be derived there. Skip skill-dir
-            # removal in that case (never destroy authored content) and let the
-            # hook-file and settings-entry cleanup below proceed.
-            goc_owned = {
-                p.name for p in skills_src.iterdir()
-                if p.is_dir() and skill_for_agent(p.name, "claude")
-            } if skills_src.is_dir() else set()
-            for child in list(skills_dir.iterdir()):
-                if child.is_dir() and child.name in goc_owned:
-                    shutil.rmtree(child)
-            try:
-                if not any(skills_dir.iterdir()):
-                    skills_dir.rmdir()
-            except OSError:
-                pass
+    skills_dir = target / shim.skills.target if shim.skills else None
+    goc_skill_dirs: list[Path] = []
+    if skills_dir is not None and skills_dir.is_dir():
+        # With no skill tree to name GoC's skills, skip skill-dir removal
+        # (never destroy authored content) and let the hook-file and
+        # settings-entry cleanup below proceed. `goc upgrade`'s prompt says so.
+        goc_owned = _goc_skill_names(templates, "claude") or frozenset()
+        goc_skill_dirs = [
+            child for child in skills_dir.iterdir() if child.is_dir() and child.name in goc_owned
+        ]
 
     files_to_remove: set[Path] = set()
     for file in shim.files:
@@ -891,6 +959,24 @@ def _strip_claude_vendored_harness(target: Path, templates: Path) -> None:
         m = _HOOK_FILE_RE.search(cmd)
         if m:
             files_to_remove.add(target / m.group(1))
+    has_goc_files = any(f.is_file() for f in files_to_remove)
+
+    settings_path = target / shim.settings_json if shim.settings_json else None
+    if probe:
+        return bool(
+            goc_skill_dirs
+            or has_goc_files
+            or (settings_path is not None and _strip_goc_settings_entries(settings_path, probe=True))
+        )
+
+    for child in goc_skill_dirs:
+        shutil.rmtree(child)
+    if skills_dir is not None and skills_dir.is_dir():
+        try:
+            if not any(skills_dir.iterdir()):
+                skills_dir.rmdir()
+        except OSError:
+            pass
 
     for f in files_to_remove:
         if f.is_file():
@@ -902,8 +988,8 @@ def _strip_claude_vendored_harness(target: Path, templates: Path) -> None:
         except OSError:
             pass
 
-    if shim.settings_json:
-        _strip_goc_settings_entries(target / shim.settings_json)
+    settings_changed = settings_path is not None and _strip_goc_settings_entries(settings_path)
+    return bool(goc_skill_dirs or has_goc_files or settings_changed)
 
 
 def _plan_writes(
@@ -1677,7 +1763,8 @@ UPGRADE_AGENTS_HELP = (
 )
 LOCAL_SKILLS_HELP = (
     "Vendor skills, hooks, and settings entries into source control. "
-    "Default for Codex (no plugin yet); opt-in for Claude. "
+    "Opt-in for Claude, whose default is the plugin path. "
+    "Codex installs always vendor .codex/skills/; this flag does not change that. "
     "Use for CI environments without plugin support, or repos that fork/template GoC. "
     "Requires a pipx install of game-of-cards — refused when running under the GoC plugin."
 )
@@ -1793,7 +1880,7 @@ def install(
         print(_LOCAL_SKILLS_PLUGIN_REFUSAL, file=sys.stderr)
         sys.exit(2)
 
-    target = Path.cwd().resolve()
+    target = _project_target()
     deck_dir = target / ".game-of-cards" / "deck"
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
@@ -1963,7 +2050,7 @@ def upgrade(
         print(_KEEP_LOCAL_SKILLS_PLUGIN_REFUSAL, file=sys.stderr)
         sys.exit(2)
 
-    target = Path.cwd().resolve()
+    target = _project_target()
     templates = _templates_root()
     supported_agents = _registered_agents(templates)
 
@@ -2012,13 +2099,14 @@ def upgrade(
         claude_skills_mode = "vendored"
 
     # Detect leftover vendored layout (relevant only when the new mode is plugin —
-    # then the layout is stale and the user may want it cleaned up).
-    claude_has_vendored = False
-    if "claude" in agents:
-        claude_shim = _load_agent_shim(templates, "claude")
-        claude_has_vendored = bool(claude_shim.skills and (target / claude_shim.skills.target).is_dir())
-
-    needs_vendored_cleanup = claude_skills_mode == "plugin" and claude_has_vendored
+    # then the layout is stale and the user may want it cleaned up). Ask the
+    # cleanup what it would remove rather than restating it as a directory
+    # test: it keeps the repo's own skills, so a `.claude/skills/` that holds
+    # only those is no leftover, while GoC hooks or settings entries without
+    # one are.
+    needs_vendored_cleanup = claude_skills_mode == "plugin" and _strip_claude_vendored_harness(
+        target, templates, probe=True
+    )
 
     local_skills_agents: frozenset[str]
     if claude_skills_mode == "vendored":
@@ -2043,7 +2131,8 @@ def upgrade(
     # covered the moment it is planned. Only the two pieces of non-write work
     # the plan does not model (the interactive cleanup prompt, the legacy
     # briefing strip) plus the skills_source pin still need their own terms,
-    # and the pin asks the executor that performs it rather than restating it.
+    # and the cleanup and the pin both ask their own executor in probe mode
+    # rather than restating what it would do.
     plan_has_effect = any(write.action not in _NO_OP_ACTIONS for write in upgrade_plan)
     pending_cleanup = needs_vendored_cleanup
     pending_briefing_migration = bool(legacy_briefings_to_strip)
@@ -2062,12 +2151,19 @@ def upgrade(
         and not pending_skills_source
     ):
         print(f"already at goc {__version__} — nothing to do.")
+        # The report is still owed: a diverged evolving file is `preserved` (a
+        # no-op to the plan) yet is exactly what `Skill(upgrade)` reconciles
+        # from this report, and the skill's run is often the second one at a
+        # version. Read-only, so the dry-run preview prints it too.
+        _emit_divergence_report(
+            _user_owned_classifications(target, templates), templates / "game_of_cards"
+        )
         return
 
     if dry_run:
         notes: list[str] = []
         if needs_vendored_cleanup:
-            notes.append("will offer cleanup of leftover .claude/skills/ (plugin mode)")
+            notes.append("will offer cleanup of GoC files from a prior vendored install (plugin mode)")
         if legacy_briefings_to_strip:
             notes.append(
                 f"briefing target → {resolved_briefing}; will strip blocks from {', '.join(legacy_briefings_to_strip)}"
@@ -2082,11 +2178,23 @@ def upgrade(
     if needs_vendored_cleanup:
         print(
             "This repo is configured for plugin-mode skills (skills_source: plugin)\n"
-            "but a leftover .claude/skills/ from a prior vendored install was found.\n"
-            "Cleanup removes GoC-managed skill directories, GoC hook files, and\n"
-            "GoC entries in .claude/settings.json. Non-GoC skills in .claude/skills/\n"
-            "are preserved."
+            "but GoC files from a prior vendored install were found."
         )
+        # Promise only what the cleanup will do: without GoC's skill names it
+        # keeps every skill dir.
+        if _goc_skill_names(templates, "claude") is None:
+            print(
+                "Cleanup removes GoC hook files and GoC entries in .claude/settings.json,\n"
+                "but leaves every skill directory in .claude/skills/ in place: this goc\n"
+                "ships no skill tree to tell GoC's skills from the repo's own. To remove\n"
+                "them too, rerun the upgrade with goc from `pipx install game-of-cards`."
+            )
+        else:
+            print(
+                "Cleanup removes GoC-managed skill directories, GoC hook files, and\n"
+                "GoC entries in .claude/settings.json. Non-GoC skills in .claude/skills/\n"
+                "are preserved."
+            )
         confirmed = _confirm("Remove leftover vendored layout?", default=False)
         if confirmed:
             _strip_claude_vendored_harness(target, templates)

@@ -72,3 +72,14 @@ two flags" from being an accepted fix.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-08-11 — Closure' present
+
+## 2026-10-09T04:38:00Z — Forward pointer: a fixture docstring stated a false draft-gate rule
+
+Post-close evidence. This card's `reproduce.py` justified its authored
+fixtures by saying `card_is_draft` also fires on a surviving placeholder
+scaffold. It does not. `card_is_draft` reads the `draft: true` flag alone,
+by recorded design. The sentence repeated a stale `is_placeholder_scaffold`
+docstring. The fixtures were authored anyway, so this card's verdict and
+fix are unaffected. The docstring is corrected in place, and the
+`goc/engine.py` comments it echoed are corrected by
+[engine-comments-claim-unflagged-placeholder-cards-count-as-drafts](../engine-comments-claim-unflagged-placeholder-cards-count-as-drafts/).

@@ -45,3 +45,16 @@ are registration sites that appeared afterwards.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-08-13 — Closure' present
+
+## 2026-10-07T05:04:26Z — Post-close amendment
+
+Extended by [`goc-validate-crashes-in-a-repo-that-has-its-own-plugin-folder`](../goc-validate-crashes-in-a-repo-that-has-its-own-plugin-folder/).
+This closure gated `validate_plugin_hook_registration` on the payload roots
+existing at `REPO_ROOT`, copying the mirror-parity check. It recorded the check
+as inert in consuming repos because they "have no `claude-plugin/` directory".
+A consuming repo can have one for its own plugin. There the check reported a
+helper module the consumer's hook imports as "never invoked", and a script the
+consumer keeps in `scripts/` as failing "on every fire". The mirror-parity check
+crashed outright on the same layout. Both checks are now gated on
+`goc/templates/` at the project root, and the README carries a pointer at the
+top.
