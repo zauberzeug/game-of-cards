@@ -1,11 +1,11 @@
 ---
 title: write-agentsmd-alongside-claudemd
 summary: "AGENTS.md is the Linux-Foundation-stewarded shared-substrate convention read by Codex, Cursor, Copilot's coding agent, OpenCode, and Aider. Claude Code does NOT read AGENTS.md by default — it reads CLAUDE.md, and the official guidance is to either import AGENTS.md into CLAUDE.md via `@AGENTS.md` syntax or symlink CLAUDE.md → AGENTS.md. `goc install` should write/merge an `AGENTS.md` block (so the methodology is visible to the five non-Claude agent runtimes) AND ensure CLAUDE.md actually pulls AGENTS.md content into Claude's context — today's slimmed `CLAUDE_GOC.md` uses a plain markdown link `[AGENTS.md](AGENTS.md)`, which does not import. Same marker-bounded merge pattern as CLAUDE.md (so `goc upgrade` can re-sync without clobbering user content)."
-status: active
+status: done
 stage: null
 contribution: medium
 created: 2026-05-03
-closed_at: null
+closed_at: "2026-10-22T05:13:12Z"
 human_gate: none
 advances:
   - ship-game-of-cards-as-cross-agent-cli
@@ -18,9 +18,9 @@ definition_of_done: |
   - [x] `goc install` writes `AGENTS.md` (creates if absent, appends marker-bounded section if present) at the repo root
   - [x] AGENTS.md content is agent-agnostic: no `Skill(...)` notation (Claude-specific); uses `goc <verb>` and "ask the agent to ..." phrasings instead
   - [x] Marker pattern matches CLAUDE.md: `<!-- BEGIN GOC v<version> -->` / `<!-- END GOC -->` so `goc upgrade` can re-sync
-  - [ ] Validated on at least three agent runtimes: Claude Code, OpenCode, and one of {Codex, Cursor, Copilot} — agent reads AGENTS.md and recognizes the deck-first mode
+  - [x] Validated on at least three agent runtimes: Claude Code, OpenCode, and one of {Codex, Cursor, Copilot} — agent reads AGENTS.md and recognizes the deck-first mode — amended by the 2026-10-22 decision: the three runtimes the deck runs on in production count — Claude Code (CLAUDE.md imports AGENTS.md via `@AGENTS.md`), Codex (reads AGENTS.md natively; shipped as `codex-plugin/`) and OpenClaw (production deployment of `openclaw-plugin/`). OpenCode is not a supported target.
   - [x] CLAUDE.md sections become a "Claude-specific delta" (silent runtime via UserPromptSubmit hook) — overlap with AGENTS.md is removed; cross-link from CLAUDE.md → AGENTS.md for shared content
-  - [ ] Test: in a freshly-installed repo, removing CLAUDE.md and using only AGENTS.md, an OpenCode session can still file/advance/finish a card via `goc` verbs
+  - [x] ~~Test: in a freshly-installed repo, removing CLAUDE.md and using only AGENTS.md, an OpenCode session can still file/advance/finish a card via `goc` verbs~~ — **struck** by the 2026-10-22 decision: OpenCode is not a supported runtime; the AGENTS.md-only path is exercised daily by Codex, which reads no CLAUDE.md.
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -67,7 +67,13 @@ The shared content lives in AGENTS.md; CLAUDE.md becomes a thin "and on Claude C
 - AGENTS.md spec: https://agents.md (Linux Foundation)
 - OpenCode native skill compat: sst/opencode reads `.claude/skills/` directly, so the `goc` verbs surface there once skills are installed
 
-## Validation required (DoD-4 + DoD-6)
+## Validation (DoD-4 + DoD-6)
+
+Resolved 2026-10-22 without a dedicated cross-runtime session: the deck
+runs in production on Claude Code, Codex and OpenClaw, which the
+maintainer counted as the three-runtime validation. The OpenCode
+round-trip (DoD-6) is struck, because OpenCode is not a supported
+target. The original plan for the session follows for the record.
 
 The implementation is shipped (goc commit `df473f7` in `~/Projects/game-of-cards`):
 
