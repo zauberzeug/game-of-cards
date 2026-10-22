@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] Fix: cwd resolution is per calling session/agent, never another session's value
   - [ ] Regression test covering the multi-agent case
   - [ ] Released to ClawHub; fclaw updated and AGENTS.md workaround note relaxed
+waiting_on: external
 ---
 
 # goc tool files cards into the wrong agent's deck on multi-agent gateways
