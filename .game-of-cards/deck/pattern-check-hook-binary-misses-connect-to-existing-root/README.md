@@ -9,12 +9,12 @@ summary: |-
   exceeds deciding") and `create-card`'s dedup step warn against. Fix: reword the REMINDER to a
   three-branch form (no / dedup-then-connect / file) and sync the ~9 duplicated copies across host
   ports, then release.
-status: active
+status: open
 stage: null
 contribution: medium
 created: "2026-06-06T06:54:29Z"
 closed_at: null
-human_gate: session
+human_gate: none
 advances:
   - single-source-pattern-check-reminder-across-host-ports
 advanced_by: []
@@ -89,28 +89,9 @@ Same shape/length as today; preserves the opt-out phrase and the detection logic
 Prompt-wording + propagation only. The detection logic (which turns fire the hook, the
 `stop_hook_active` re-block guard, the broad-git-mutation matcher) is correct and out of scope.
 
-## Decision required
+## Decision
 
-The reword work (DoD 1–3) is **complete, tested, and committed to `main`** — all 7 Python
-copies, the openclaw TS port, and the rebuilt openclaw bundle now carry the three-branch
-REMINDER, and `ReminderWordingTest` guards it. The full regression suite (413 tests) and both
-sync/porter drift checks pass.
+*Resolved 2026-10-22T05:12:16Z:* Close as done: the reword shipped in v0.0.25-v0.0.27 and the single-sourcing stretch item is deferred to its follow-on card
 
-Only **DoD item 4 — version bump + release** remains. That is a maintainer call rather than an
-autonomous-puller action: it cuts a fresh public version published irreversibly to PyPI, npm,
-and ClawHub, and the choice of whether to cut a release *now* for this one wording change versus
-letting it ride the next accumulated release is a release-cadence decision. The deck is also
-carrying several `session`-gated cards, suggesting the maintainer is steering outward/release
-actions directly at the moment.
+*Reasoning:* The maintainer approved the retirement in a human session on 2026-10-22; ced3cd0e is contained in the v0.0.25, v0.0.26 and v0.0.27 releases, and single-source-pattern-check-reminder-across-host-ports exists as the DoD 5 follow-on
 
-**To resolve:** either
-
-- dispatch a patch release so downstream repos (e.g. phasor-agents, on cached v0.0.23) pick up
-  the wording on next `goc upgrade` — `gh workflow run release.yml -f version=X.Y.Z` (next patch
-  is `0.0.25`), record the run id in `log.md`, tick DoD 4, then `goc done` this card; **or**
-- decide the reword rides the next routine release — drop DoD item 4 to a follow-on
-  release-propagation card (the established pattern, cf. closed
-  `release-fixed-skill-frontmatter-to-codex-plugin-cache`) and close this one.
-
-DoD item 5 (single-sourcing the ~9 REMINDER copies) is deferred to follow-on card
-[single-source-pattern-check-reminder-across-host-ports](../single-source-pattern-check-reminder-across-host-ports/).
