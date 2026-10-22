@@ -32,3 +32,9 @@ Options:
 ## 2026-10-22T05:27:51Z: decision recorded
 
 Trigger: Explicit umbrella tag. Append: goc append-dod <slug> "<text>". Closure: All-DoD-ticked. — The maintainer answered the three design questions in a human session on 2026-10-22: an opt-in umbrella marker gives explicit intent without false matches, the engine verb keeps DoD appends schema-safe like the other frontmatter writers, and an umbrella closes like every other card once each appended item is ticked, accepting the open-ended-umbrella risk the card notes. Gate session → none.
+
+## 2026-10-22T05:28:42Z — Decision reconciled into the dashboard
+
+- `goc decide` archived the three option catalogues here and left a one-line `## Decision`; the README now carries an "## Agreed design" section that spells out each choice for the implementer (explicit `umbrella: <topic>` marker, `goc append-dod`, all-DoD-ticked closure without a finalize verb).
+- DoD: the three decision items ticked; the audit-deck item no longer describes a summary/tags/area heuristic (the decided trigger is the explicit marker) and now names the schema + card-schema additions the marker needs.
+- Hygiene: the body no longer quotes the stored preference verbatim or names an individual (AGENTS.md card-authoring rules); the preference is stated in the card's own voice.

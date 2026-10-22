@@ -11,11 +11,11 @@ advances: []
 advanced_by: []
 tags: [story, infra]
 definition_of_done: |
-  - [ ] PROCESS: trigger condition decided (see Decision required, item 1) and recorded in `## Decision` body section.
-  - [ ] PROCESS: append mechanism decided (see Decision required, item 2) and recorded in `## Decision` body section.
-  - [ ] PROCESS: closure semantics decided (see Decision required, item 3) and recorded in `## Decision` body section.
+  - [x] PROCESS: trigger condition decided (see Decision required, item 1) and recorded in `## Decision` body section. — "Explicit umbrella tag."
+  - [x] PROCESS: append mechanism decided (see Decision required, item 2) and recorded in `## Decision` body section. — `goc append-dod <slug> "<text>"`
+  - [x] PROCESS: closure semantics decided (see Decision required, item 3) and recorded in `## Decision` body section. — "All-DoD-ticked."
   - [ ] MECHANICAL: `goc append-dod <umbrella-slug> "<finding>"` (or chosen verb name) implemented in the engine. The new DoD line is inserted before the existing `PROCESS:` / `EMPIRICAL:` tail items where possible; original ordering is preserved otherwise. Refuses if the target card is not `open` or `active`.
-  - [ ] MECHANICAL: `audit-deck` SKILL.md updated to detect "an open card whose summary/tags/area match this finding" before filing fresh, and to call the append verb instead when matched. The matching heuristic is documented in the skill body.
+  - [ ] MECHANICAL: `audit-deck` SKILL.md updated to look up an open card carrying the finding's umbrella marker (`umbrella: <topic>`) before filing fresh, and to call the append verb when one exists; the first finding of a topic files fresh and sets the marker. The marker is added to `goc/schema.yaml` and `Skill(card-schema)`, and the rule is documented in the skill body.
   - [ ] EMPIRICAL: simulated re-run on the recent 19-card yaml-lite batch (or an equivalent fixture) shows N-1 cards collapsed into one umbrella DoD with N items; ceremony cost (file + claim + close per finding) reduced to a single cycle.
   - [ ] PROCESS: only `goc/` and `goc/templates/` are hand-edited; `python scripts/sync_plugin_assets.py --check` passes.
   - [ ] PROCESS: `uv run goc validate` passes.
@@ -27,11 +27,15 @@ definition_of_done: |
 
 `audit-deck` files a new card per finding. There is no affordance to extend an existing umbrella card's DoD list when a finding is a sibling of one already filed. The result, observed in a recent autonomous batch: 19 separate cards filed in ~24h for variations on a single theme (`yaml-lite` / frontmatter-emitter round-trip integrity), each paying the full create-card → claim → implement → attest → done → commit ceremony cost.
 
-Per the stored team preference (`feedback_umbrella_cards`): "one growing card per multi-failure-mode problem; split only when Rodja asks." The batch violated that preference because the methodology gave audit-deck no way to honor it — the only filing primitive is `goc new`, which always creates a fresh card.
+The team prefers one growing card per multi-failure-mode problem, split only on request. The batch violated that preference because the methodology gave audit-deck no way to honor it — the only filing primitive is `goc new`, which always creates a fresh card.
 
-## Why human_gate=session
+## Agreed design (decided 2026-10-22)
 
-Three open design choices need a human pick before implementation; each has credible alternatives. See `## Decision required` below.
+Three design choices were parked at `human_gate: session`; a human session answered them (the full option catalogue is archived in `log.md`):
+
+1. **Trigger — explicit umbrella tag.** A card carrying `umbrella: <topic>` is the target for any later finding on that topic. The marker is opt-in: the first finding of a topic files a fresh card and sets the marker; subsequent findings append to it. No tag-, area- or file-path heuristic, so no false matches.
+2. **Append — `goc append-dod <slug> "<text>"`.** An engine verb that adds the finding to the card's `definition_of_done` block with the same schema-aware safety as the other frontmatter writers, inserted before the `PROCESS:` / `EMPIRICAL:` tail items where possible, auto-committing per `workflow.auto_commit`, and refusing targets that are not `open` or `active`.
+3. **Closure — all DoD ticked.** An umbrella closes like every other card: once every appended item is ticked. No `--finalize` verb and no time box; the risk the options noted — an open-ended umbrella may stay open while new findings keep landing — was accepted.
 
 ## Decision
 
