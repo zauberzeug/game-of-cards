@@ -51,3 +51,19 @@ DoD item 5 (single-sourcing the ~9 REMINDER copies) is deferred to follow-on car
 ## 2026-10-22T05:12:16Z: decision recorded
 
 Close as done: the reword shipped in v0.0.25-v0.0.27 and the single-sourcing stretch item is deferred to its follow-on card — The maintainer approved the retirement in a human session on 2026-10-22; ced3cd0e is contained in the v0.0.25, v0.0.26 and v0.0.27 releases, and single-source-pattern-check-reminder-across-host-ports exists as the DoD 5 follow-on. Gate session → none. Status active → open — the claim parked behind the gate is released, so the next pull-card claims the card per this decision.
+
+## 2026-10-22T05:12:31Z — Closure
+
+- **What changed**: no code — DoD 4 and 5 ticked with evidence. The reword (ced3cd0e, 2026-06-09) ships in v0.0.25, v0.0.26 and v0.0.27 (`git tag --contains ced3cd0e`); the single-sourcing stretch item is deferred to `single-source-pattern-check-reminder-across-host-ports` (open, gate decision), already linked via `advances`.
+- **Verification**: `git tag --contains ced3cd0e` → v0.0.25 … v0.0.28; follow-on card exists; `uv run goc validate` exit 0.
+- **Audit**: no rubric configured; mechanical fix.
+- **Project impact**: one fewer active card parked on a release that happened four months ago.
+- **Tests**: no code touched; the full suite runs at the end of this batch.
+
+## Closure verification (2026-10-22T05:12:31Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-10-22 — Closure' present
