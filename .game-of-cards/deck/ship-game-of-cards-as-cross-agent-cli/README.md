@@ -17,7 +17,6 @@ advanced_by:
   - drop-card-redirect-directories
   - surface-active-cards-in-board
   - support-external-game-of-cards-state-location
-  - integrate-github-issues-discussions-and-pull-requests
   - support-custom-card-workflows-and-statuses
   - build-game-of-cards-project-website
   - restructure-comic-as-three-panels-and-add-audience-preamble
