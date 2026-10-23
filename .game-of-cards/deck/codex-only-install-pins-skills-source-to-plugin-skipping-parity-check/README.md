@@ -1,7 +1,7 @@
 ---
 title: codex-only-install-pins-skills-source-to-plugin-skipping-parity-check
 summary: "UNVERIFIED. `goc install` picks `skills_source` as `vendored if 'claude' in agents else 'plugin'` (goc/install.py:1856). A codex-only install (no claude agent) therefore writes `skills_source: plugin` even though Codex skills are vendored under `.codex/skills/` and there is no Claude plugin payload. `effective_skills_source()` then short-circuits the skill-dir parity check (engine.py:~1377), so template drift in the vendored codex tree goes unreported by `goc validate`. The value is sticky: upgrade only re-pins `if 'claude' in agents`."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-05-27T14:02:43Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: after simulating drift (delete a vendored `.codex/skills/<verb>/`), assert the parity validator returns `[]` (drift unreported) under the bad pin, and reports the missing skill once corrected.
   - [ ] PROCESS: decide the correct `skills_source` semantics for codex-only / multi-agent installs (does `plugin` mean "Claude plugin specifically", and should codex vendoring be tracked independently?). Record verdict in log.md.
   - [ ] MECHANICAL: if confirmed, fix the pick at install.py:1856 and the upgrade re-pin guard at install.py:~1403; drop the `unverified` tag once reproduce.py lands.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Codex-only install pins `skills_source: plugin`, skipping the parity check
