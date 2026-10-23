@@ -1,7 +1,7 @@
 ---
 title: goc-verbs-emit-frontmatter-their-own-validator-rejects
 summary: "Aggregation epic for a family of first-party `goc` verbs that exit 0 with a success line after writing frontmatter `goc validate` then rejects. Four independently-filed instances span `new`, `status active`, `publish`, `done` and the full-frontmatter re-emit verbs — `goc status active` alone self-corrupted twice and took two separate point fixes. The root cause is structural: each writer re-derives its own notion of a legal value, so nothing ties the writers' accept-set to `validate_card`'s, and every tightening of the validator silently opens a new gap in a writer. Needs a mechanism decision (shared predicates, a validate-the-result assertion, or schema-driven per-field validators) before another point fix."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-07T05:35:15Z"
@@ -21,6 +21,7 @@ definition_of_done: |
   - [ ] TDD: The same test asserts the complement — no verb can leave a card on disk that `validate_card` rejects — which is the invariant the four instances each violated in a different place.
   - [ ] PROCESS: All open child cards are closed or superseded under the agreed mechanism; this epic's `advanced_by` roster is all terminal.
   - [ ] MECHANICAL: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc` verbs emit frontmatter their own validator rejects
