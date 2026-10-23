@@ -118,3 +118,12 @@ have a failure mode:
 
 Pick the signal (or combination) before implementing. The DoD's Codex-only
 regression box guards against reintroducing the sibling bug.
+
+Root: [goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode](../goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode/)
+asks whether `goc install` should record install state, which is option 3
+here generalized across hosts. Its smallest form makes option 1 sound for
+new installs, because the pin is then written only when Claude is installed,
+and uses option 4 once, as the backfill for existing installs. Deciding the
+root picks the signal here. Option 1's failure is
+[codex-only-install-pins-skills-source-to-plugin-skipping-parity-check](../codex-only-install-pins-skills-source-to-plugin-skipping-parity-check/),
+confirmed 2026-10-23.

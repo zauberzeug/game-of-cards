@@ -81,3 +81,14 @@ would also have made `extract_resolved_decision_text`, which reads the first
 `## Decision` match, return the stale text after the next `goc decide`. The
 claim is released (`active → open`) so the card parks like every other gated
 card.
+
+## 2026-10-23 — Connected to a root decision card
+
+The pattern-generalization check found that this card's Option B (a per-host
+key) is the same mechanism as option 3 (a per-agent install ledger) on
+`goc-upgrade-drops-plugin-mode-claude-in-dual-claude-codex-installs`. No root
+card existed, so `goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode`
+was filed as the governing decision (cross-links only, no edge). Option B's
+pros now name the upgrade card it would also fix, and the related-decision
+section points at the root. Options and recommendation are otherwise
+unchanged.

@@ -28,3 +28,12 @@ Claude-only key, with the Codex tree always checked). That card is parked at
 `decision` with Options A (Claude-only) and B (per-host). Its B is what this
 card's options B and C would need. No change to this card's options or
 recommendation.
+
+## 2026-10-23 — Connected to a root decision card
+
+Filed `goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode`
+as the governing decision over this card, the codex-only parity card and
+`goc-upgrade-drops-plugin-mode-claude-in-dual-claude-codex-installs`. All
+three ask, from different sides, whether install state should be recorded.
+A root pointer was added under the options, with no edge. This card's options
+and recommendation are unchanged.

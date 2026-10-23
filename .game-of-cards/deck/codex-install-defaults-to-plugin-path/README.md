@@ -81,3 +81,9 @@ intended source?
 
 Whichever option is picked also answers the two parked cards above, so decide
 them together.
+
+Root: [goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode](../goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode/)
+asks whether `goc install` should record which hosts it installed and in
+which mode. B and C here need a Codex entry in that record, or a new Codex
+proxy if the root keeps inferring. A here needs only the record's smallest,
+Claude-only form.

@@ -127,7 +127,10 @@ its own value.
 
 - Pros: one model for every host. It is needed anyway if
   `codex-install-defaults-to-plugin-path` picks B (Codex defaults to the
-  plugin) or C (per-host detection).
+  plugin) or C (per-host detection). A per-host record would also tell
+  `goc upgrade` that Claude is installed, which is the signal
+  `goc-upgrade-drops-plugin-mode-claude-in-dual-claude-codex-installs`
+  lacks (its option 3).
 - Cons: it changes the config format, `get_skills_source` /
   `effective_skills_source`, `_write_skills_source`, install, upgrade, the
   validator and every doc that names the key, and repos already pinned to the
@@ -150,6 +153,12 @@ card moves Codex to the plugin, B's per-host value can later replace A's
 decides whether Codex installs keep vendoring `.codex/skills/` now that the
 Codex plugin ships. Its option A pairs with Option A here. Its options B and
 C need Option B here. Decide the two together.
+
+Root: [goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode](../goc-never-records-which-agent-harnesses-it-installed-or-in-which-mode/)
+asks whether `goc install` should record install state at all. Its smallest
+form is Option A here, plus writing the pin only when Claude is installed.
+Its full form is Option B here. Either way, the validator scope at
+`goc/engine.py:1480` comes first.
 
 ## Reproduce
 
