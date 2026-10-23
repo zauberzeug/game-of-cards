@@ -14,3 +14,17 @@ governing decision gets a shared tag and no edge.
 
 Dedup: no card named `codex-install-defaults-to-plugin-path` existed; only the
 two promising cards and the filing card mention the name.
+
+## 2026-10-23 — Option A's cost amended from a confirmed sibling
+
+A pull-card run confirmed
+`codex-only-install-pins-skills-source-to-plugin-skipping-parity-check` with a
+reproducer. Codex-only, mixed `claude,codex` and codex-only `--local-skills`
+installs all pin `skills_source: plugin`, and `goc validate` then skips the
+vendored `.codex/skills/` tree. Option A's cost line said only "the duplicate
+skill tree", so it was extended in place: as shipped, A also leaves that tree
+unchecked, and making A deliberate includes the sibling's Option A (a
+Claude-only key, with the Codex tree always checked). That card is parked at
+`decision` with Options A (Claude-only) and B (per-host). Its B is what this
+card's options B and C would need. No change to this card's options or
+recommendation.

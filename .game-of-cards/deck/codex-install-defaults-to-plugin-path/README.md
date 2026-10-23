@@ -59,6 +59,12 @@ intended source?
   plugin hooks are opt-in (`[features] plugin_hooks = true`), and Codex puts no
   plugin `bin/` on PATH, so a vendored tree works with no Codex-side setup. The
   help text already states this rule; the cost is the duplicate skill tree.
+  As shipped, A also leaves that tree unchecked. Every install that does not
+  vendor Claude pins `skills_source: plugin`, and that pin switches off
+  `goc validate`'s parity check for `.codex/skills/` too (confirmed
+  2026-10-23 on
+  [codex-only-install-pins-skills-source-to-plugin-skipping-parity-check](../codex-only-install-pins-skills-source-to-plugin-skipping-parity-check/)).
+  Making A deliberate includes that card's Option A.
 - **B — mirror Claude.** Codex installs default to the plugin path and write no
   `.codex/skills/`; `--local-skills` becomes the vendoring opt-in for both hosts.
   `goc upgrade` offers the vendored-to-plugin cleanup for `.codex/skills/` as it

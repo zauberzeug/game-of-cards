@@ -1,80 +1,164 @@
 ---
 title: codex-only-install-pins-skills-source-to-plugin-skipping-parity-check
-summary: "UNVERIFIED. `goc install` picks `skills_source` as `vendored if 'claude' in agents else 'plugin'` (goc/install.py:1856). A codex-only install (no claude agent) therefore writes `skills_source: plugin` even though Codex skills are vendored under `.codex/skills/` and there is no Claude plugin payload. `effective_skills_source()` then short-circuits the skill-dir parity check (engine.py:~1377), so template drift in the vendored codex tree goes unreported by `goc validate`. The value is sticky: upgrade only re-pins `if 'claude' in agents`."
-status: active
+summary: "CONFIRMED by reproduce.py (2026-10-23), and wider than filed: every install that vendors `.codex/skills/` without vendoring Claude (codex-only, mixed `claude,codex`, even codex-only `--local-skills`) pins `skills_source: plugin`, and `validate_skill_dir_parity` then returns `[]` before it reaches either tree. A GoC skill missing from the vendored Codex tree therefore never fails `goc validate`. Open: whether the key describes Claude only or every host, see `## Decision required`."
+status: open
+worker: {who: "claude[bot]", where: main}
 stage: null
 contribution: high
 created: "2026-05-27T14:02:43Z"
 closed_at: null
-human_gate: none
+human_gate: decision
 advances: []
 advanced_by: []
-tags: [bug, infra, unverified]
+tags: [bug, infra]
 definition_of_done: |
-  - [ ] TDD: a reproduce.py runs a codex-only `goc install` into a temp repo and asserts `.game-of-cards/config.yaml` records `skills_source: plugin` while `.codex/skills/` holds real vendored files and no Claude plugin exists — or disproves the claim.
-  - [ ] TDD: after simulating drift (delete a vendored `.codex/skills/<verb>/`), assert the parity validator returns `[]` (drift unreported) under the bad pin, and reports the missing skill once corrected.
+  - [x] TDD: a reproduce.py runs a codex-only `goc install` into a temp repo and asserts `.game-of-cards/config.yaml` records `skills_source: plugin` while `.codex/skills/` holds real vendored files and no Claude plugin exists — or disproves the claim.
+  - [x] TDD: after simulating drift (delete a vendored `.codex/skills/<verb>/`), assert the parity validator returns `[]` (drift unreported) under the bad pin, and reports the missing skill once corrected.
   - [ ] PROCESS: decide the correct `skills_source` semantics for codex-only / multi-agent installs (does `plugin` mean "Claude plugin specifically", and should codex vendoring be tracked independently?). Record verdict in log.md.
-  - [ ] MECHANICAL: if confirmed, fix the pick at install.py:1856 and the upgrade re-pin guard at install.py:~1403; drop the `unverified` tag once reproduce.py lands.
-worker: {who: "claude[bot]", where: main}
+  - [ ] TDD: a regression test in `tests/` pins the decided rule: drift in a vendored `.codex/skills/` fails `goc validate` after a codex-only, a mixed `claude,codex` and a codex-only `--local-skills` install, and reproduce.py exits 0.
+  - [ ] MECHANICAL: the decided fix lands (the validator's `plugin` skip, plus the install pick and the upgrade re-pin if the option needs them), and the `skills_source` table in AGENTS.md says which host the key describes.
 ---
 
 # Codex-only install pins `skills_source: plugin`, skipping the parity check
 
-> **UNVERIFIED** — surfaced by an audit hunter that reports a live repro;
-> citation lines checked here but the end-to-end behavior was not
-> re-verified this round. Falsification recipe below.
+> **Confirmed 2026-10-23** by `reproduce.py`, which exits 1. The defect is
+> wider than the title. It hits every install that vendors Codex without
+> vendoring Claude, not only codex-only ones.
 
 ## Location
 
-- `goc/install.py:1856`:
-  `chosen_source = "vendored" if "claude" in local_skills_agents else "plugin"`
-- `goc/engine.py:~1377`: `if effective_skills_source() == "plugin": return []`
-  (skips the skill-dir parity check).
-- `goc/install.py:~1403`: upgrade re-pins `skills_source` only
-  `if "claude" in agents` — so a codex-only upgrade never corrects a bad pin.
+- `goc/install.py:1943`:
+  `chosen_source = "vendored" if "claude" in local_skills_agents else "plugin"`.
+  The pin asks only whether Claude is vendored.
+- `goc/install.py:606`: `_should_use_local_skills` returns
+  `agent != "claude" or local_skills`, so Codex is vendored on every install,
+  whatever the flag says.
+- `goc/engine.py:1480`: `validate_skill_dir_parity` returns `[]` when
+  `effective_skills_source() == "plugin"`, before its loop over
+  `.claude/skills` and `.codex/skills` (`:1488`). The docstring gives a reason
+  for skipping `.claude/skills/` and none for `.codex/skills/`.
+- `goc/engine.py:1497-1499`: the drift message tells both trees to run
+  `goc upgrade --keep-local-skills` or to "set `skills_source: plugin` … to
+  skip this check".
+- `goc/install.py:2139`, `:2212`: `goc upgrade` reads and re-pins the key only
+  `if "claude" in agents`, so no Codex upgrade ever revisits it.
+- `AGENTS.md:320-329`: the section is titled "which install path owns
+  `.claude/skills/`", but its table says `plugin` makes `goc validate` skip
+  "the skill-dir parity check", which covers both trees. It also says
+  `vendored` is "Written when `goc install --local-skills` is used", which is
+  false for `--agents codex --local-skills`.
 
-## Hypothesis
+## What happens
 
-`skills_source` has three values (per AGENTS.md): `plugin` means "skills
-come from the Claude Code plugin payload; `goc validate` skips the
-skill-dir parity check"; `vendored` means "skills are checked into source
-control; validate enforces parity". The install-time pick keys solely on
-whether `claude` is in the agent set. A **codex-only** install has no
-claude agent, so it writes `plugin` — but there is no Claude plugin
-involved, and the Codex skills ARE vendored under `.codex/skills/`. The
-`plugin` pin then tells `effective_skills_source()` to skip parity, so
-drift in the vendored codex skill tree (template edits not re-synced) is
-silently unreported by `goc validate`. The pin is sticky because the
-upgrade-time re-pin is also gated on `"claude" in agents`.
+`reproduce.py` installs into a temp repo with an empty HOME, so no Claude
+plugin is present. It then deletes `.codex/skills/pull-card/` and runs
+`goc validate`:
 
-## Why it matters (if confirmed)
+| install | pin written | parity validator after the deletion | `goc validate` |
+|---|---|---|---|
+| `--agents codex` | `plugin` | `[]` | exit 0 |
+| `--agents claude,codex` | `plugin` | `[]` | exit 0 |
+| `--agents codex --local-skills` | `plugin` | `[]` | exit 0 |
 
-The whole point of the `vendored` mode is the parity guard that keeps
-`.codex/skills/` byte-identical to `goc/templates/skills/`. A codex-only
-consumer would get the guard silently disabled by an install-time
-mislabel, exactly the drift-rot the parity check exists to prevent.
+With the pin flipped to `vendored`, the same check reports
+`.codex/skills: missing skills ['pull-card']` in all three rows. The check
+works, and only the pin hides the drift. The mixed row is the one the
+original DoD missed. There the pin is right for Claude, so fixing the install
+pick alone cannot fix that row: the validator applies a value that describes
+Claude to the Codex tree. `goc install` picks that mixed set on its own in any
+repo that has both a Claude signal and a Codex signal (`AGENT_SIGNAL_PATHS`,
+`goc/install.py:51`).
 
-## Falsification recipe
+Repos installed before the key existed resolve `auto` through
+`_claude_plugin_present()`. A legacy codex-only repo with a deleted Codex
+skill was checked by hand on 2026-10-23. `goc validate` exits 1 on a host
+without the Claude plugin and 0 on a host with it, so whether the Codex tree
+is checked depends on Claude state on the machine that runs the check.
 
-1. `goc install --agents codex` (no claude) into a fresh temp repo.
-2. Read `.game-of-cards/config.yaml`; check whether `skills_source` is
-   `plugin`. If it is `vendored` (or `auto`), the hypothesis is wrong.
-3. If `plugin`: delete a `.codex/skills/<verb>/` dir to simulate drift,
-   run the parity validator, and confirm it returns `[]` (no error)
-   rather than reporting the missing skill.
+Plain `goc upgrade` restores the deleted directory and leaves the pin alone in
+both the codex-only and the mixed repo. The drift can be repaired, but nothing
+reports it. The drift message's `--keep-local-skills` advice is wrong for the
+Codex tree: run with `--agents claude,codex`, it vendors Claude's skills,
+hooks and settings entries and re-pins `skills_source: vendored`.
 
-If either step fails to reproduce, flip to `disproved` with the evidence.
+## Why it matters
 
-Surfaced by: general-purpose audit hunter (install/sync seam), 2026-05-27.
+The parity check is the only guard that keeps a vendored skill tree in step
+with the templates of the goc that validates it. Every Codex consumer who did
+not vendor Claude has that guard switched off. A goc release that adds a
+skill, or a skill directory deleted by hand, still passes `goc validate` and CI.
+
+## Decision required
+
+**Reasoning.** The 2026-05-30 directive in log.md held the semantics back
+until the defect was confirmed, and it now is. The fix depends on what
+`skills_source` describes.
+[codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/)
+raises the same question: its option B says the key "must then say which
+host it describes". Picking blindly risks per-host plumbing that option A of
+that card never needs, or a Claude-only reading that its options B and C
+would have to reopen.
+
+**Option A: the key describes Claude only, and a vendored Codex tree is always checked.**
+One value, read only for `.claude/skills/`. `.codex/skills/` counts as
+vendored whenever it exists, which every install makes true today.
+
+- Pros: the code already reads the key this way everywhere except the
+  validator's early return. Install pins from Claude's mode, upgrade reads and
+  re-pins it only when Claude is an agent, and AGENTS.md titles the section
+  after `.claude/skills/`. The fix is small and single-site, and it turns the
+  guard on for every Codex consumer at once.
+- Cons: if `codex-install-defaults-to-plugin-path` later picks its B or C,
+  the Codex check needs a signal of its own, and this reading must grow one
+  then. Consumers whose Codex tree has already drifted see `goc validate` fail
+  until they run `goc upgrade`.
+- Preview: at `goc/engine.py:1480` the `plugin` skip moves inside the loop and
+  skips only `.claude/skills`. The Codex tree's message at `:1497-1499` drops
+  the `skills_source: plugin` escape and points at plain `goc upgrade`, which
+  resyncs `.codex/skills/` in every mode. `AGENTS.md:328-329` says the key
+  covers Claude only and that `--local-skills` does not change it on a
+  codex-only install. Install and upgrade stay as they are.
+
+**Option B: the key becomes per-host.**
+Store Codex's mode beside Claude's, either as a mapping such as
+`skills_source: {claude: plugin, codex: vendored}` or as a second key. Install
+writes both, upgrade re-pins both, and the validator checks each tree against
+its own value.
+
+- Pros: one model for every host. It is needed anyway if
+  `codex-install-defaults-to-plugin-path` picks B (Codex defaults to the
+  plugin) or C (per-host detection).
+- Cons: it changes the config format, `get_skills_source` /
+  `effective_skills_source`, `_write_skills_source`, install, upgrade, the
+  validator and every doc that names the key, and repos already pinned to the
+  single value need a migration. All of that describes a Codex mode that has
+  only one possible value today.
+- Preview: `goc/engine.py:5738` and `:5808` read a per-host value;
+  `goc/install.py:1832` writes one; `:1943` pins Codex from
+  `local_skills_agents`; `:2139` and `:2212` re-pin for Codex too; the loop at
+  `goc/engine.py:1488` picks each tree's value.
+
+**Recommendation:** Option A, decided together with
+`codex-install-defaults-to-plugin-path`. It is right for today's
+always-vendored Codex and fixes every Codex consumer with one change. If that
+card moves Codex to the plugin, B's per-host value can later replace A's
+"always check Codex" without reverting anything.
 
 ## Related decision
 
-[codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/) decides whether Codex installs keep vendoring `.codex/skills/` now that
-the Codex plugin ships. Under option B there, `skills_source` has to say which host it describes. That is this card's question, so the two should be decided together.
+[codex-install-defaults-to-plugin-path](../codex-install-defaults-to-plugin-path/)
+decides whether Codex installs keep vendoring `.codex/skills/` now that the
+Codex plugin ships. Its option A pairs with Option A here. Its options B and
+C need Option B here. Decide the two together.
 
-## Decision
+## Reproduce
 
-*Resolved 2026-10-22T05:56:37Z:* Lower the gate: write the reproduce.py next, which needs no human input
+```bash
+uv run python .game-of-cards/deck/codex-only-install-pins-skills-source-to-plugin-skipping-parity-check/reproduce.py
+```
 
-*Reasoning:* Bulk rule approved by the maintainer in a human session on 2026-10-22: a gated card with no written question and a mechanical fix drops to gate none
+The script exits 1 while the defect fires. It exits 0 once drift in a vendored
+`.codex/skills/` fails `goc validate` after all three installs, or once an
+install stops vendoring that tree. It exits 2 if the harness breaks.
 
+Surfaced by: general-purpose audit hunter (install/sync seam), 2026-05-27.
