@@ -108,6 +108,208 @@ instance `advanced_by` meta-fix), and apply via `goc advance X
 --by Y`. The advance command is symmetric-by-construction so the
 validator stays happy.
 
+## Stale-parks scan
+
+A card at `human_gate: decision` or `session` is a claim about code,
+held until a human reads it, and nothing re-evaluates the claim in the
+meantime. Later work can fix the defect, or move the code it names,
+while the card goes on asserting it. The human who finally reads it
+then picks between options for a bug that may be gone, using cites
+that no longer resolve.
+
+**Why anchor as filed, and why first.** The citation repair below
+anchors a cite at the commit that last WROTE its number. That is the
+right rule for repairing a drifted number and the wrong one for this
+question. A repair moves the number onto a line that exists, and from
+then on the cite resolves cleanly while the code the card was filed
+about is gone. Measured on this project's deck 2026-08-24: last-write
+anchoring caught 0 of the 2 known stale parks, and anchoring at the
+filing commit caught both. So this scan anchors every cite at the
+card's filing commit, resolving its path in the filing commit's tree.
+It runs before the repair in any pass that does both. A pass that
+repairs first destroys the evidence this scan reads.
+
+**A vanished anchor is a screen, not a verdict.** Re-measured on the
+same deck 2026-10-22, 38 gated cards had an as-filed anchor gone from
+HEAD. 37 of them still carried a live defect and 1 was actually fixed.
+The anchors had moved through refactors, not fixes (one rework alone
+moved 9), so retiring on an absent anchor would have destroyed 37 live
+bug reports. That is why the reproducer runs before anything is
+written.
+
+Run from the repo root, with `goc` as your environment invokes it:
+
+```bash
+goc --status all --json > "${TMPDIR:-/tmp}/goc-cards.json"
+python3 - "${TMPDIR:-/tmp}/goc-cards.json" <<'EOF'
+import json, re, subprocess, sys
+from pathlib import Path
+
+cards = json.load(open(sys.argv[1], encoding="utf-8"))
+DECK = ".game-of-cards/deck" if Path(".game-of-cards/deck").is_dir() else "deck"
+CITE = re.compile(r"([A-Za-z0-9_./\-]+\.(?:py|md|ya?ml|json|ts|sh|toml|txt))[:#](\d+)")
+RECHECK = re.compile(r"^##\s+.*\bStaleness re-check\b", re.M)
+SHA = re.compile(r"[0-9a-f]{40}(?:[0-9a-f]{24})?")
+# Mirror/vendored copies; when a cite's basename matches several files,
+# prefer the copy outside these. Add your repo's own mirror trees.
+MIRROR = (".claude/", ".codex/", "claude-plugin/", "codex-plugin/", "openclaw-plugin/")
+MIN_ANCHOR = 12  # shorter lines match everywhere and prove nothing
+
+
+def git(*args, stdin=None):
+    return subprocess.run(["git", *args], capture_output=True, input=stdin).stdout
+
+
+def blobs(specs):
+    """Read many `<rev>:<path>` blobs with one `git cat-file --batch`."""
+    specs = list(dict.fromkeys(specs))
+    out = git("cat-file", "--batch", stdin="".join(s + "\n" for s in specs).encode())
+    got, i = {}, 0
+    for spec in specs:
+        nl = out.find(b"\n", i)
+        if nl < 0:
+            break
+        header = out[i:nl].decode("utf-8", "replace")
+        if header.endswith(("missing", "ambiguous")):
+            got[spec], i = None, nl + 1
+            continue
+        size = int(header.split()[-1])
+        got[spec] = out[nl + 1 : nl + 1 + size].decode("utf-8", "replace")
+        i = nl + 1 + size + 1
+    return got
+
+
+def suffix_index(rev, deck_dir):
+    """Every path suffix -> the files of `rev` ending with it."""
+    index = {}
+    for path in git("ls-tree", "-r", "-z", "--name-only", rev).decode().split("\0"):
+        if path and not path.startswith(deck_dir):
+            parts = path.split("/")
+            for k in range(len(parts)):
+                index.setdefault("/".join(parts[k:]), []).append(path)
+    return index
+
+
+gated = [c for c in cards
+         if c["status"] in ("open", "active") and c.get("human_gate") not in (None, "none")]
+checked = rechecked = 0
+candidates = []
+for card in gated:
+    folder = Path(DECK) / card["title"]
+    log = folder / "log.md"
+    if log.is_file() and RECHECK.search(log.read_text(encoding="utf-8")):
+        rechecked += 1  # someone already re-read it; see the entry
+        continue
+    history, sha = [], None
+    for tok in git("log", "--follow", "--name-only", "--format=%H", "--",
+                   f"{folder}/README.md").decode().split():
+        if SHA.fullmatch(tok):
+            sha = tok
+        elif sha:
+            history.append((sha, tok))
+    if not history:
+        continue
+    filing, filed_as = history[-1]  # oldest commit = the filing commit
+    body = blobs([f"{filing}:{filed_as}"])[f"{filing}:{filed_as}"] or ""
+    index = suffix_index(filing, filed_as.rsplit("/", 2)[0] + "/")
+    cites = []
+    for m in CITE.finditer(body):
+        pool = index.get(m.group(1), [])
+        pool = [p for p in pool if not p.startswith(MIRROR)] or pool
+        if pool:
+            cites.append((m.group(0), int(m.group(2)),
+                          min(pool, key=lambda p: (p.count("/"), len(p)))))
+    cites = list(dict.fromkeys(cites))
+    sources = blobs(f"{filing}:{path}" for _, _, path in cites)
+    gone = []
+    for token, num, path in cites:
+        lines = (sources.get(f"{filing}:{path}") or "").split("\n")
+        if not 1 <= num <= len(lines) or len(lines[num - 1].strip()) < MIN_ANCHOR:
+            continue
+        anchor = lines[num - 1].strip()
+        checked += 1
+        now = Path(path)
+        if not now.is_file() or anchor not in now.read_text(encoding="utf-8", errors="replace"):
+            gone.append(f"{token} -> {path}  anchor gone: {anchor[:70]!r}")
+    if gone:
+        candidates.append(card["title"])
+        repro = "yes" if (folder / "reproduce.py").is_file() else "none"
+        print(f"{card['title']}  [{card['human_gate']}]  reproduce.py: {repro}")
+        for line in gone:
+            print(f"    {line}")
+
+print(f"\ngated open/active cards: {len(gated)} ({rechecked} already re-checked, skipped)")
+print(f"as-filed anchors checked: {checked}")
+print(f"stale-park candidates: {len(candidates)}")
+EOF
+```
+
+An empty candidate list reads the same whether nothing is stale or
+nothing was scanned, so read the `anchors checked` count before
+believing it. Zero checked anchors over a deck of cited gated cards
+means the scan found nothing to scan: a wrong deck path, or cites in a
+form the pattern misses.
+
+**Per candidate — reproducer first.** Run its `reproduce.py` from the
+repo root with a timeout, and read the output as well as the exit code.
+A reproducer can exit zero while its defect still fires. A traceback,
+an import error or a missing fixture is a CRASH, not a verdict: two
+reproducers found by the 2026-10-22 pass no longer ran, one importing a
+removed function, while their defect was still live. Then:
+
+- **Still reproduces** — the defect is live, so its code exists
+  somewhere. Re-anchor each cite whose code moved: read the card's
+  prose for what the cite names, find that code in HEAD, and rewrite
+  the number. A cite you cannot place stays as it is and is named in
+  the entry. Leave pasted output and transcripts alone; the scope rule
+  in § Citation anchor check applies here too.
+- **No longer reproduces** — record the evidence and stop there. Do not
+  lower the gate, do not rewrite the card's options, and do not try
+  `goc status <card> superseded`. The engine refuses a gated card, and
+  it should: an agent that cleared human gates to tidy the board would
+  be worse than the rot. Name the card in the Step 4 report so the
+  human can retire it with `goc decide`.
+- **Crashed, or no `reproduce.py`** — record that the defect was not
+  verified, and why. Reading the code may justify re-anchoring a cite
+  whose new home is unambiguous, but it never justifies calling the
+  defect fixed. Name the card in the Step 4 report for a human re-read.
+
+Every candidate gets the entry, including the ones nobody could verify.
+The heading is the marker this scan skips on, and `Skill(finish-card)`
+writes the same heading when a closer's fix retires a gated card. A
+card the pass could not verify therefore carries its note where the
+human will read it, rather than reappearing in every pass's output.
+The entry, appended to the card's `log.md`:
+
+```markdown
+## 2026-10-24T05:00:00Z — Staleness re-check
+
+As-filed anchors gone from HEAD: `goc/install.py:920`
+(`if write.path.name == "log.md":`), moved by `0be57d4d`.
+Reproducer: `reproduce.py` → exit 1, "DEFECT PRESENT: ...".
+Verdict: still live. Re-anchored `goc/install.py:920` → `:1034`.
+Gate unchanged.
+```
+
+The verdict line is one of `still live`, `no longer reproduces — left
+at its gate for a human to retire`, or `not verified (reproducer
+crashed: <error> | no reproducer) — needs a human re-read`.
+`git log -S'<anchor text>' --format='%h %s' -- <path>` names the commit
+that moved the anchor.
+
+Commit this category's edits before the citation repair starts. The
+repair's history walk reads `git log`, so a re-anchored number still in
+the working tree would be anchored on the commit before it.
+
+**What the scan does not see.** Once a card carries the entry, this
+scan skips it. If the code moves again later, the re-anchored cites
+are caught by the citation repair instead: it anchors them at the
+re-check commit, the last commit to write them, and reports any whose
+text is gone under `anchor text absent`. No anchor scan sees a card that
+is stale by CONTENT while every cite still resolves, or a premise that
+was already false the day the card was filed. A cite whose path matches
+no file of the filing commit is skipped, not reported.
+
 ## Citation anchor check
 
 **Why the bounds test does not work.** `line ≤ EOF` asks whether a

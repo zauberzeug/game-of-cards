@@ -172,6 +172,23 @@ def taxed_size(path: Path) -> int:
 # old sentence was itself the false reassurance: a core that only points at
 # the sibling still tells a reader who stops there nothing about claim_push.
 # The skill had 35 bytes of headroom.
+#
+# refine-deck was raised a ninth time on 2026-10-24 by the card
+# `parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them`:
+# nothing re-checked a gated card against the code it cites, so a parked card
+# whose defect later work had fixed kept advertising it (two cards, 61 days),
+# and the maintainer decided the remedy is a refine-deck category. What stayed
+# in the core is the ordering (the scan runs BEFORE the citation repair, which
+# moves numbers onto lines that exist and so erases the very signal the scan
+# reads), the as-filed anchor, and the reproduce-first, never-retire rule
+# (measured 2026-10-22: 37 of 38 anchor-stale gated cards were still live, so
+# an absent anchor read as a fix would have retired 37 real bug reports). The
+# scan script, the measurements and the entry template went to the reference
+# sibling. A pointer alone fails twice over: a pass that has not read the rule
+# runs the repair step it already knows and destroys the evidence first, and a
+# pass that finds an absent anchor without the rule reads it as the fix the
+# citation step's own decline row half-invites. The skill had 26 bytes of
+# headroom.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -181,7 +198,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_100,
-    "refine-deck": 14_200,
+    "refine-deck": 15_300,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

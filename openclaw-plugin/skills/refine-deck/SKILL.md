@@ -5,7 +5,7 @@ description: Deck hygiene pass — retag stale cards, prune 90-day unverified pa
 
 ## When to invoke
 
-Invoke when the user says "tidy up the deck", "check for stale cards", "hygiene pass", "clean up the queue", "archive old", "audit the deck", or invokes /refine-deck. Covers retagging stale cards, pruning 90-day unverified parks, surfacing defunct file:line references, surfacing orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surfacing engineer-jargon titles for retitling, and proposing new canonical tags (XP refactor mercilessly + Kanban continuous improvement).
+Invoke when the user says "tidy up the deck", "check for stale cards", "hygiene pass", "clean up the queue", "archive old", "audit the deck", or invokes /refine-deck. Covers retagging stale cards, pruning 90-day unverified parks, re-checking gated cards whose cited code moved, surfacing defunct file:line references, surfacing orphaned dependencies (epics with no children, meta-fix families not wired, log.md migration TODOs), surfacing engineer-jargon titles for retitling, and proposing new canonical tags (XP refactor mercilessly + Kanban continuous improvement).
 
 ## Context (project-local extension)
 
@@ -45,6 +45,7 @@ situation actually applies:
 |---|---|
 | Why this pass exists; hook scope rules | Rationale |
 | Running the four orphaned-dependency sub-checks | Orphaned-dependency sub-check scripts |
+| Running the stale-parks scan; the re-check entry | Stale-parks scan |
 | Anchoring cites; what the recipe declines | Citation anchor check |
 | `goc quality-pass --llm` | Quality-pass `--llm` flag |
 | What the Step 4 report should look like | Example Step 4 output |
@@ -97,6 +98,25 @@ decide if the lead is still real, and either:
 - Escalate the gate from `none` to `decision` if blocking on a
   framing question.
 - Flip to `disproved` if the original evidence has rotted away.
+
+### Stale parks (gated cards)
+
+Run BEFORE the citation repair below: a repair moves numbers onto lines
+that exist, erasing the signal that a parked card's code moved. Anchor
+each cite of every open/active card with `human_gate` ≠ `none` at the
+card's FILING commit and list the cards whose anchor text is gone from
+HEAD — the scan in `reference.md` § Stale-parks scan. A vanished anchor
+is not evidence of a fix. Per candidate, re-run its `reproduce.py` FIRST:
+
+- Still reproduces → re-anchor its cites onto the current code and
+  append a `## <ts> — Staleness re-check` entry to its `log.md`.
+- No longer reproduces → append that entry with the evidence; leave
+  the card at its gate. Retiring it is the human's call.
+- Crashes, or none exists → append the entry saying so and report the
+  card for a human re-read. Never treat it as fixed.
+
+Never lower a gate. Commit before the repair below — its walk reads
+`git log`.
 
 ### Defunct file:line citations
 
