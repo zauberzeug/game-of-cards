@@ -6243,9 +6243,11 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     """Populate the `worker` field on a card being claimed as active.
 
     If the card already has a worker.who (designation), preserve it and only
-    add/update `where`. If no prior worker, auto-detect `who` from git config
-    and `where` from the current branch. Explicit --worker-who / --worker-where
-    flags override auto-detection for either sub-field.
+    add/update `where`. If no prior worker, resolve `who` from the
+    `GOC_WORKER_WHO` environment variable and fall back to git config; `where`
+    resolves from `GOC_WORKER_WHERE` and falls back to the current branch.
+    Explicit --worker-who / --worker-where flags override both for either
+    sub-field.
     """
     existing = card.frontmatter.get("worker")
     if isinstance(existing, str):
@@ -6260,22 +6262,34 @@ def _auto_populate_worker(text: str, card: "Card", worker_who: str | None, worke
     elif "who" in existing_dict:
         who = existing_dict["who"]
     else:
-        try:
-            r = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5)
-            who = r.stdout.strip() if r.returncode == 0 else ""
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            who = ""
+        # `GOC_WORKER_WHO` makes the claim identity a property of the execution
+        # environment instead of a flag the caller has to remember. Containerised
+        # workers (CI images, agent sandboxes) routinely have no git identity at
+        # all — no repo-local config, no ~/.gitconfig, no /etc/gitconfig — so
+        # `git config user.name` is the last resort here, not the first. Without
+        # either, `_cmd_status` refuses the claim.
+        who = os.environ.get("GOC_WORKER_WHO", "").strip()
+        if not who:
+            try:
+                r = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, timeout=5)
+                who = r.stdout.strip() if r.returncode == 0 else ""
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                who = ""
 
     if worker_where is not None:
         where: str | None = worker_where
     else:
-        try:
-            r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5)
-            where = r.stdout.strip() if r.returncode == 0 else None
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            where = None
-        if where in ("", "HEAD"):
-            where = None
+        # Same reasoning as GOC_WORKER_WHO: an execution context without a git
+        # checkout can still name where the work runs (a sandbox or job id).
+        where = os.environ.get("GOC_WORKER_WHERE", "").strip() or None
+        if where is None:
+            try:
+                r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, timeout=5)
+                where = r.stdout.strip() if r.returncode == 0 else None
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                where = None
+            if where in ("", "HEAD"):
+                where = None
         if where is None:
             # No detectable branch (detached HEAD / fresh checkout): preserve any
             # stored branch context rather than dropping it. A detectable branch
@@ -6318,6 +6332,15 @@ def _cmd_status(args):
     # refusal cannot leave a claimed-but-invalid card behind.
     _reject_invalid_worker_flag("--worker-who", worker_who)
     _reject_invalid_worker_flag("--worker-where", worker_where)
+    if new_status == "active":
+        # The environment is a second source of the same two values, so it gets
+        # the same boundary check: a line break inside GOC_WORKER_WHO would
+        # otherwise reach the emitter as a FrontmatterError traceback. An empty
+        # or blank variable counts as unset (the claim falls back to git).
+        for env_name in ("GOC_WORKER_WHO", "GOC_WORKER_WHERE"):
+            env_value = os.environ.get(env_name, "").strip()
+            if env_value:
+                _reject_invalid_worker_flag(env_name, env_value)
     successor = args.superseded_by
     if successor is not None and new_status != "superseded":
         print(
@@ -6403,6 +6426,18 @@ def _cmd_status(args):
         text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(_utc_now_iso()))
     if new_status == "active":
         text = _auto_populate_worker(text, t, worker_who, worker_where)
+        # A claim nobody can be named for is refused before the write: an
+        # active card without a worker is a claim no queue can attribute, and
+        # `_auto_populate_worker` leaves the card untouched when no identity
+        # resolves rather than stamping an invalid `{who: ""}`.
+        if parse_frontmatter(text)[0].get("worker") is None:
+            print(
+                f"ERROR: {title}: cannot claim without a worker identity — the card has "
+                f"no worker, GOC_WORKER_WHO is unset and git user.name is unavailable. "
+                f"Pass --worker-who <identity> or set GOC_WORKER_WHO.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
         # Claiming a card proves it is authored: clear any draft flag so it
         # rejoins the queue and auto_commit will publish it (the guard above
         # already ensured we are not racing a terminal transition on a draft).

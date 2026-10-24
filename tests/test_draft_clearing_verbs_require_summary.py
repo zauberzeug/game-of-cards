@@ -63,7 +63,7 @@ class DraftClearingVerbsRequireSummaryTest(unittest.TestCase):
 
     VERBS = {
         "publish": ("publish", "card-a", "--no-commit"),
-        "status active": ("status", "card-a", "active", "--no-commit"),
+        "status active": ("status", "card-a", "active", "--worker-who", "test-worker", "--no-commit"),
         "done": ("done", "card-a"),
     }
 
@@ -116,7 +116,8 @@ class DraftClearingVerbsRequireSummaryTest(unittest.TestCase):
             path.write_text(path.read_text().replace('summary: "Temporary summary."\n', "").replace(
                 "summary: Temporary summary.\n", ""))
             self.assertNotIn("summary:", path.read_text())
-            self.assert_ok(self.run_goc(cwd, "status", "card-a", "active", "--no-commit"))
+            self.assert_ok(self.run_goc(cwd, "status", "card-a", "active",
+                                        "--worker-who", "test-worker", "--no-commit"))
 
 
 if __name__ == "__main__":

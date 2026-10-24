@@ -611,8 +611,15 @@ When filing GoC cards in this repo:
   a machine name, or a capability tag (e.g. `gpu-required`, `human`,
   `rendering-expert`). The field persists after close as a historical
   record; `goc status <title> active` auto-populates it at claim time.
-  Filter with `goc --worker <X>` or set `GOC_WORKER` env var for
-  runner-specific queue views.
+  The claimed `who` comes from `--worker-who`, else the card's existing
+  designation, else the `GOC_WORKER_WHO` env var, else
+  `git config user.name`; `where` likewise from `--worker-where`,
+  `GOC_WORKER_WHERE`, then the current branch. A claim no source can
+  name is refused (exit 2) before the card is written, so set
+  `GOC_WORKER_WHO` in CI images and agent sandboxes that have no git
+  identity. Filter with `goc --worker <X>` or set `GOC_WORKER` env var
+  for runner-specific queue views — `GOC_WORKER` only filters; it never
+  names a claim.
 
 <!-- BEGIN GOC v0.0.28 -->
 ## Game of Cards — methodology runtime

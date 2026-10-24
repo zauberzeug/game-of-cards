@@ -13,6 +13,7 @@ advanced_by:
   - parked-active-cards-are-missing-from-goc-triage
   - parked-active-cards-are-missing-from-goc-ready-leverage-line
   - standup-waiting-on-you-section-omits-active-cards-parked-at-a-human-gate
+  - parked-claims-stay-active-under-goc-wait-and-release-has-no-rule-for-the-worker
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
   - [ ] PROCESS: pick the architectural shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`). The pick determines DoD items below.
