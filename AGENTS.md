@@ -226,6 +226,22 @@ the gate, are therefore inert in consuming repos. OpenClaw is out of
 scope for the hook check: it reimplements the deck hooks in TypeScript
 inside `openclaw-plugin/index.ts` and ships no `hooks.json`.
 
+Every runtime hook is inert in a repo that never opted in. The plugin
+registers its hooks globally, so they run in every repo the user
+opens; each resolves the project dir through its own
+`_find_project_dir` mirror — all three pinned to
+`engine._resolve_deck_root` by
+`tests/test_project_root_from_subdirectory.py` — and acts only where
+that root opted in: `deck_session_start.py` and `deck_prompt_router.py`
+on a `.game-of-cards/deck/` (or the legacy `deck/`),
+`pattern_generalization_check.py` on its explicit switch in
+`.game-of-cards/config.yaml`. `goc install`, run by `Skill(kickoff)`,
+remains the only opt-in path (`goc new` refuses without a deck). A hook
+that acts on the prompt text alone installs the methodology as a side
+effect of phrasing (`runtime-hooks-fire-in-repos-that-never-opted-in`).
+The OpenClaw port's `before_prompt_build` handler does not carry the
+guard yet (`openclaw-prompt-hook-fires-in-workspaces-without-a-deck`).
+
 ### Skill and hook files have two copies — edit the template, sync handles the rest
 
 Because this repo dogfoods itself, every file under `.claude/skills/`,

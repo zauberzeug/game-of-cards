@@ -37,6 +37,8 @@ the `python3` already on your PATH.
 | `UserPromptSubmit` | `deck_prompt_router` | Detects work-initiating prompts; injects a deck-first reminder |
 | `Stop` | `pattern_generalization_check` | After code-mutating turns, prompts the agent to consider filing a generalization card. Off by default; enable with `hooks.pattern_generalization_check: true` in `.game-of-cards/config.yaml` |
 
+The plugin is enabled in every repo you open, but its hooks act only in a repo that has opted in — one holding the `.game-of-cards/deck/` that `goc install` (run by the `kickoff` skill) creates. Everywhere else all three stay silent; enabling the plugin opts no repo in.
+
 ## Install
 
 ```

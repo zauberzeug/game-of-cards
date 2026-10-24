@@ -24,6 +24,10 @@ reminder, prompt router, and pattern-generalization hook, add:
 plugin_hooks = true
 ```
 
+Enabled hooks still act only in a repo that has opted in to GoC — one holding
+the `.game-of-cards/deck/` that `goc install` creates. Everywhere else they stay
+silent.
+
 Codex does not currently document plugin `bin/` auto-PATH behavior. The plugin
 therefore ships `skills/_goc-bootstrap.sh`, which invokes the bundled engine
 through the sibling `bin/goc` wrapper. In this source repo, use

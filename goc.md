@@ -98,6 +98,8 @@ The `claude-plugin/` directory at the root of the `game-of-cards` repository is 
 - **Stop hook** — prompts a pattern-generalization self-assessment after code-mutating turns.
 - **A bundled goc engine** under `claude-plugin/goc/`, plus `bin/goc` — see [Prerequisites](#prerequisites).
 
+The plugin is enabled in every repo you open, but its hooks act only in a repo that has opted in — one holding the `.game-of-cards/deck/` that `goc install` (run by `Skill(kickoff)`) creates. Everywhere else all three stay silent: enabling the plugin opts no repo in, and neither does a work-shaped prompt.
+
 Skills and hook scripts are **real files**, byte-for-byte copies of their source-of-truth under `goc/templates/`. They cannot be symlinks: Claude Code's marketplace install extracts only the `source: ./claude-plugin` subtree, and a symlink pointing outside it silently disappears on consumer install.
 
 **Edit the template, never the mirror.** `goc/templates/skills/` and `goc/templates/hooks/` are the source of truth; the `sync-plugin-assets` pre-commit hook regenerates `claude-plugin/` from them and stages the result, and CI runs `python scripts/sync_plugin_assets.py --check` to fail the build on drift. An edit made directly to `claude-plugin/` is overwritten by the next commit.

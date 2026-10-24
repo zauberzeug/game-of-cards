@@ -175,7 +175,7 @@ class HookProjectDirWalkTest(_Fixture):
     tests/test_subdirectory_deck_resolution.py and the redirect over a linked
     worktree with and without the opt-in."""
 
-    HOOK_NAMES = ("deck_session_start", "pattern_generalization_check")
+    HOOK_NAMES = ("deck_session_start", "pattern_generalization_check", "deck_prompt_router")
 
     def layouts(self) -> list[tuple[Path, Path]]:
         """(start dir, expected root) for each layout."""
