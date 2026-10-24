@@ -1,7 +1,7 @@
 ---
 title: goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard
 summary: "`goc wait` lets a caller attach `waiting_on` / `waiting_until` to a card whose `status` is already terminal (`done`, `disproved`, `superseded`). Sibling mutation verbs (`decide`, `status`, `done`) all reject terminal targets; `wait` is the missing member of the family. `goc validate` does not flag the resulting contradictory overlay — `validate_waiting_overlay` skips terminal cards, so the bad state lives indefinitely."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T15:56:05Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: `reproduce.py` exits non-zero — running `goc wait` against a terminal card no longer mutates the overlay (or behaves per the recorded decision).
   - [ ] MECHANICAL: `_cmd_wait` in `goc/engine.py` refuses terminal targets through the parent epic's shared `_refuse_terminal_mutation` helper (decided 2026-10-22; `_cmd_decide` has stopped carrying a refusal to mirror), with an error message naming the replacement path (file a new card; supersede if the closed card needs revisiting).
   - [x] PROCESS: `validate_waiting_overlay` (engine.py:2271) decision recorded — either keep the terminal skip (now defensible because the setter refuses) or extend it to emit a `TERMINAL_OVERLAY` warning for legacy stragglers. — decided 2026-10-22 via the parent epic: keep the terminal skip.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc wait` sets an impediment overlay on a terminal-status card without any guard
