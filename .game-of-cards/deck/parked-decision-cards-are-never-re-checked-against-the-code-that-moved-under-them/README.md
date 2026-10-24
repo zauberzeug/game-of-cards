@@ -1,7 +1,7 @@
 ---
 title: parked-decision-cards-are-never-re-checked-against-the-code-that-moved-under-them
 summary: "Nothing re-checks a human_gate: decision card against the code it cites, so a parked card whose defect is fixed by later work keeps advertising a live defect — two --waiting cards stayed parked 61 days after commit 91d40320 fixed their defect, and goc status ... superseded rightly refuses while the gate is up. Decided 2026-10-22: a Skill(refine-deck) category runs an as-filed anchor scan over gated cards before its citation-repair step and re-runs each candidate's reproduce.py; the gate keeps blocking superseded. A vanished anchor is not evidence of a fix — 37 of 38 anchor-stale gated cards were still live on 2026-10-22 — so the category re-anchors live defects and leaves retirement to the human."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-08-24T02:32:11Z"
