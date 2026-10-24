@@ -114,3 +114,31 @@ convention-aligned default; diverging from it would re-open the
 ## 2026-10-22T05:17:11Z: decision recorded
 
 Approve the recommended bundle: strict refuse via one shared terminal-status helper across wait, attest, move, quality-pass and the summary/DoD rewrites; goc move gets a --force escape hatch; advance/unadvance stay out of scope; the helper's message is written fresh — The maintainer approved the bundle in a human session on 2026-10-22; it is the sibling-consistent 'closed cards are read-only' default, and _cmd_decide no longer refuses terminal cards (it now runs a terminal gate-repair path), so there is no refusal message left to mirror. Gate decision → none. Status active → open — the claim parked behind the gate is released, so the next pull-card claims the card per this decision.
+
+## 2026-10-24T05:03:39Z — Shared helper landed with `goc wait`; forward path corrected
+
+[`goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard`](../goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard/)
+introduced `_refuse_terminal_mutation(card, verb)` in `goc/engine.py` and
+closed. Two departures from the approved bundle, both forced by evidence
+rather than taste:
+
+- **Forward path.** The bundle had the helper name
+  `goc status <old> superseded --by <new>`. Run against a `done` card,
+  that command exits 2 with "terminal cards cannot be moved backward
+  through `goc status`" — `_cmd_status` refuses every terminal card, so a
+  message naming it sends the user from one refusal to another. The
+  helper instead names the path `Skill(finish-card)` "After closure"
+  documents: file a new card and point to it from the closed card's
+  log.md with a dated post-close amendment.
+  `tests/test_terminal_status_guard.py` pins the premise, so the message
+  can name supersession again if closed-card supersession ever becomes
+  legal.
+- **Signature.** With no supersede path to choose, the
+  `replacement="supersede"` keyword had nothing to select, so the helper
+  takes `(card, verb)`. `goc move` will need a `--force` hint in its
+  refusal; that belongs in the helper, not a second inline message.
+
+The README's "Agreed shape" item 1 and the MECHANICAL DoD item now carry
+this. `tests/test_terminal_status_guard.py` already holds one fixture
+card per terminal status, so `attest`, `quality-pass` and `move` can add
+their cases there as they adopt the helper.

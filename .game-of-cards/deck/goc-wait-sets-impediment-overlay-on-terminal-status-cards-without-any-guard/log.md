@@ -46,3 +46,23 @@ or 3 lands here.
 ## 2026-10-22T05:17:57Z: decision recorded
 
 Decided via parent terminal-status-guard-missing-across-mutation-verbs: option 1, strict terminal-status guard — goc wait refuses terminal targets for the setters and --clear alike; validate_waiting_overlay keeps its terminal skip — The maintainer approved the parent's recommended bundle in a human session on 2026-10-22, which resolves exactly this card's question; implement through the parent's shared _refuse_terminal_mutation helper, whose message is written fresh because _cmd_decide no longer refuses terminal cards. Gate decision → none.
+
+
+## 2026-10-24T05:05:16Z — Closure
+
+- **What changed**: `goc/engine.py` — new `_refuse_terminal_mutation(card, verb)`, the parent epic's shared terminal guard (live card passes; closed card gets one message naming card, status, verb and forward path, then exit 2 before any write). `_cmd_wait` calls it right after `load_card_or_exit`, so the setters and `--clear` are refused alike. `validate_waiting_overlay` keeps its terminal skip; its docstring now says why that is sound. `goc wait --help` names a live card's overlay. Synced to the three plugin engine mirrors.
+- **Forward path departs from the fix sketch**: the sketch and the parent's agreed shape named `goc status <old> superseded --by <new>`, but that command exits 2 on every terminal card ("terminal cards cannot be moved backward through `goc status`", checked against a `done` card on 2026-10-24). The message names the `Skill(finish-card)` "After closure" path instead: a new card plus a dated post-close amendment in the closed card's log.md. `tests/test_terminal_status_guard.py` pins the premise. The parent's README and log record the correction, along with dropping the `replacement="supersede"` keyword it made moot.
+- **DoD wording**: the TDD item said `reproduce.py` "exits non-zero" for the fixed state, the reverse of the deck's reproducer contract (0 = defect no longer fires, 1 = fires, 2 = harness broken). It now says "exits zero", and `reproduce.py` follows the contract.
+- **Verification**: `reproduce.py` — 9/9 closed-card calls (`done` / `disproved` / `superseded` × `--reason` setter, bare `--until`, `--clear`) exit 2 with the README byte-identical, and the open-card control still writes its overlay. Before the fix it exited 1 with all 9 rewritten. `tests/test_terminal_status_guard.py` (5 tests) fails 16 ways against the pre-fix engine and passes now.
+- **Audit**: no rubric configured; mechanical fix
+- **Project impact**: n/a
+- **Tests**: 1369 passed / 0 failed (`uv run python -m unittest discover -s tests`)
+- **Surfaced**: `goc done` and `goc done --bundle` answer a `disproved` / `superseded` card with "use the supersede/disprove workflow", a workflow `goc status` refuses for that same card. Filed and fixed through as `goc-done-on-a-closed-card-suggests-a-supersede-workflow-that-refuses-it`.
+
+## Closure verification (2026-10-24T05:05:32Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — no advanced_by edges
+- [x] dod-100-percent — 4/4 ticked
+- [x] log-md-closure-entry — '## 2026-10-24 — Closure' present

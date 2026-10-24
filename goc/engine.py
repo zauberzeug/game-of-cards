@@ -2415,7 +2415,8 @@ def validate_waiting_overlay(cards: list[Card], *, today: "date | datetime | Non
     A non-terminal card whose `waiting_until` is in the past has overrun
     its expected return; the wait is no longer plausibly self-clearing
     and should be re-triaged. Closed cards are exempt (the historical
-    date is a record, not an SLE).
+    date is a record, not an SLE) — `goc wait` refuses closed cards, so
+    the only overlay goc leaves on one is carried over from its live state.
 
     The elapsed test uses the same full-timestamp comparison as
     `waiting_impedes`: a datetime-form wait is not reported as overdue
@@ -4327,7 +4328,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # wait
     p_wait = subparsers.add_parser(
         "wait",
-        help="Set or clear the impediment overlay (waiting_on + waiting_until).",
+        help="Set or clear a live card's impediment overlay (waiting_on + waiting_until).",
     )
     p_wait.add_argument("title")
     p_wait.add_argument("--reason", choices=schema.waiting_on_values, default=None,
@@ -5481,6 +5482,35 @@ def _reject_invalid_worker_flag(flag: str, value: str | None) -> None:
             file=sys.stderr,
         )
         sys.exit(2)
+
+
+def _refuse_terminal_mutation(card: Card, verb: str) -> None:
+    """Exit 2 if `card` is closed, before `goc <verb>` writes anything to it.
+
+    A `done` / `disproved` / `superseded` card is the deck's record of what was
+    contracted and how it ended, so a verb that would layer fresh state onto it
+    refuses instead. Callers invoke this right after `load_card_or_exit`, ahead
+    of every disk write, so a refusal leaves the card byte-identical. It is the
+    shared guard `terminal-status-guard-missing-across-mutation-verbs` decided
+    on: each guarded verb calls it instead of inlining its own check, so their
+    refusals cannot drift apart.
+
+    The forward path the message names is `Skill(finish-card)` "After closure":
+    file a new card and point to it from the closed card's log.md. It does not
+    offer `goc status <title> superseded --by <new>` — `_cmd_status` refuses
+    every terminal card, so that command cannot apply to any card stopped here.
+    """
+    if card.status not in TERMINAL_STATUSES:
+        return
+    print(
+        f"ERROR: {card.title}: status is {card.status!r} (terminal); `goc {verb}` "
+        f"does not modify closed cards — a closed card is the deck's record. If it "
+        f"needs revisiting, file a new card for the work and point to it from "
+        f"{card.title}'s log.md with a dated post-close amendment "
+        f"(Skill(finish-card) 'After closure').",
+        file=sys.stderr,
+    )
+    sys.exit(2)
 
 
 def _commit_override(commit: bool, no_commit: bool) -> bool | None:
@@ -6818,11 +6848,16 @@ def _cmd_wait(args):
     The overlay is orthogonal to `status` — a card may be active AND
     impeded. `--clear` drops both fields; otherwise `--reason` and/or
     `--until` set the overlay.
+
+    A closed card is refused, setters and `--clear` alike: the overlay is a
+    live-card "cannot pull yet" signal, and one a card carried into its
+    closure is part of the record, not a stale value to wipe.
     """
     _validate_commit_flags(args.commit, args.no_commit)
     title = args.title
     card_dir = resolve_card_dir(title)
     t = load_card_or_exit(card_dir, title)
+    _refuse_terminal_mutation(t, "wait")
     schema = load_schema()
     text = (card_dir / "README.md").read_text()
     fm, body = parse_frontmatter(text)
