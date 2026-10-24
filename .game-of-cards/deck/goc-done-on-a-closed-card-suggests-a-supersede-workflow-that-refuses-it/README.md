@@ -1,7 +1,7 @@
 ---
 title: goc-done-on-a-closed-card-suggests-a-supersede-workflow-that-refuses-it
 summary: "goc done and goc done --bundle refuse a disproved or superseded card with 'use the supersede/disprove workflow', but goc status refuses every terminal card, so the advice sends the user to a second refusal. Route both refusals through the shared _refuse_terminal_mutation helper, which names the post-close amendment path that does work."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-10-24T05:07:00Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: `tests/test_terminal_status_guard.py` covers both `done` paths for both non-`done` terminal statuses, and the guard-ordering tests in `tests/test_close_terminal_gate_guard.py` stay green.
   - [ ] PROCESS: the closed predecessor `done-command-overwrites-terminal-cards`, whose DoD contracted the old wording, gets a dated post-close amendment in its log.md pointing here.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc done` on a closed card suggests a supersede workflow that refuses it
