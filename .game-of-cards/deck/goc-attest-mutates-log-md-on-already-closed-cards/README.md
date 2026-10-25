@@ -1,7 +1,7 @@
 ---
 title: goc-attest-mutates-log-md-on-already-closed-cards
 summary: "`goc attest` is the only state-touching verb in the family (`done`, `decide`, `status`, `wait`) that does not refuse a terminal target. Running it on a `done` / `disproved` / `superseded` card writes a fresh `## Closure verification (<today>)` block into the closed card's `log.md`, vandalising the historical record and — when a layer-3 derived check fails on a year-old card whose closure heading no longer matches today's date — recording a `FAIL` line that contradicts the card's actual closure outcome."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T18:08:20Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` refuses terminal targets through the parent epic's shared `_refuse_terminal_mutation` helper (decided 2026-10-22), with an error message naming the replacement path (re-open is forbidden; file a new card).
   - [ ] MECHANICAL: the misleading `Next: goc done <title> to close once all DoD items are ticked.` print at `engine.py:5890` is dropped on terminal-card paths (or removed entirely if the guard short-circuits before it runs).
   - [ ] PROCESS: `uv run goc validate` clean; full regression suite green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc attest` mutates `log.md` on already-closed cards
