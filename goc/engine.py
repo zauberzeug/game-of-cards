@@ -4237,7 +4237,7 @@ def _build_parser() -> argparse.ArgumentParser:
                       default=argparse.SUPPRESS,
                       help="Filter by status (overrides global --status; default: open).")
     p_qp.add_argument("--llm", action="store_true", default=False,
-                      help="Also run a Sonnet-batched summary+DoD audit.")
+                      help="Also run a Sonnet-batched summary+DoD audit (closed cards are skipped).")
     p_qp.add_argument("--no-llm", dest="llm", action="store_false",
                       help="Disable LLM audit.")
     p_qp.add_argument("--limit", type=_non_negative_int, default=None,
@@ -4953,7 +4953,13 @@ def _apply_summary_rewrite(card: Card, new_summary: str) -> None:
     Routes through `emit_frontmatter` (same pattern as `_apply_dod_rewrite`) so
     a multi-line LLM-authored summary emits as a `|-` block scalar instead of
     a bare unquoted value that would destroy every frontmatter field below it.
+
+    A closed card is refused before anything is written. The guard re-reads
+    the card instead of trusting `card`: `goc quality-pass` loads its sample
+    before the LLM call and the accept/reject prompts, so a card closed in
+    that window still reads as live in the caller's copy.
     """
+    _refuse_terminal_mutation(load_card_or_exit(card.path, card.title), "quality-pass")
     readme = card.path / "README.md"
     text = readme.read_text()
     fm, body = parse_frontmatter(text)
@@ -4962,7 +4968,11 @@ def _apply_summary_rewrite(card: Card, new_summary: str) -> None:
 
 
 def _apply_dod_rewrite(card: Card, issues: list[dict]) -> None:
-    """Replace specific DoD items by 0-based index. Other items preserved verbatim."""
+    """Replace specific DoD items by 0-based index. Other items preserved verbatim.
+
+    Refuses a closed card exactly as `_apply_summary_rewrite` does.
+    """
+    _refuse_terminal_mutation(load_card_or_exit(card.path, card.title), "quality-pass")
     readme = card.path / "README.md"
     text = readme.read_text()
     fm, body = parse_frontmatter(text)
@@ -5099,7 +5109,19 @@ def _cmd_quality_pass(args):
     if not llm:
         return
 
-    sample = cards if limit is None else cards[:limit]
+    # Layer 2 rewrites what it audits, so closed cards never reach it, whatever
+    # --status selected: a closed card is the deck's record of what it was held
+    # to. Layer 1 above still reports on them, since it only reads.
+    live = [c for c in cards if c.status not in TERMINAL_STATUSES]
+    if len(live) < len(cards):
+        closed = len(cards) - len(live)
+        print(
+            f"Layer-2 (Sonnet pass): skipping {closed} closed {_plural(closed, 'card')} — "
+            f"a closed card is the deck's record, so Layer 2 never rewrites one."
+        )
+        if not live:
+            return
+    sample = live if limit is None else live[:limit]
     print(f"Layer-2 (Sonnet pass): auditing {len(sample)} {_plural(len(sample), 'card')} via `claude --model sonnet -p`…")
     prompt = _build_quality_prompt(sample)
     try:

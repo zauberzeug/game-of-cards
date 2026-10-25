@@ -11,7 +11,9 @@ rewrite and a DoD rewrite for both cards. With `--yes`, both would be auto-appli
 Post-fix contract: the done card's `summary` and `definition_of_done` survive
 unchanged. Pre-fix: both fields are silently overwritten on disk.
 
-Exit 0 — fix in place; exit 1 — defect still present (done card mutated).
+Exit 0 — fix in place; exit 1 — defect still present (done card mutated);
+exit 2 — harness broken: the open card was not rewritten either, so the run
+never reached the apply path and the done card's survival proves nothing.
 """
 import os
 import sys
@@ -150,6 +152,9 @@ def main() -> int:
         if done_summary_mutated or done_dod_mutated:
             print("\nFAIL: defect present — terminal-status card was mutated.")
             return 1
+        if not open_summary_mutated:
+            print("\nHARNESS: the open card was not rewritten — the apply path never ran.")
+            return 2
         print("\nPASS: terminal-status card survived quality-pass --llm --yes.")
         return 0
 

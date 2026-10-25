@@ -160,3 +160,26 @@ deck now carries a `config.yaml` with `workflow.auto_commit: false`, and
 with layer-3 checks every probe card passes, so an unguarded verb visibly
 writes and exits 0 instead of failing on something unrelated. `move` and
 `quality-pass` can call `_assert_refused` without per-verb flags.
+
+## 2026-10-25T04:52:07Z — `goc quality-pass` adopted the helper
+
+[`goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards`](../goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards/)
+closed in the decided (a) + (c) shape. `_cmd_quality_pass` leaves closed
+cards out of the Layer-2 sample whatever `--status` selected, and makes no
+LLM call when every selected card is closed. Layer 1 still reports on them.
+`_apply_summary_rewrite` and `_apply_dod_rewrite` call
+`_refuse_terminal_mutation` before writing.
+
+One refinement over the bundle: the helpers guard a fresh
+`load_card_or_exit(card.path, card.title)`, not the `Card` they are handed.
+Quality-pass loads its sample before the LLM call and the accept/reject
+prompts, so a card a parallel session closes in that window still reads as
+live in the caller's copy. With the sample filter in place, that window is
+the only way a closed card reaches the helpers today.
+
+Only `goc move` remains. Its child confirmed on 2026-10-25 that
+`goc move done-card renamed-done-card` still renames a `done` card with
+exit 0. `_goc` in `tests/test_terminal_status_guard.py` now accepts
+`extra_env`, and `_snapshot(title)` returns a card directory's bytes for the
+before/after comparisons. `move` can use `_assert_refused` as it is, plus
+one `--force` case.
