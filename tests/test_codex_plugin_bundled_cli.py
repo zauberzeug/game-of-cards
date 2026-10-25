@@ -9,9 +9,9 @@ implying `goc` is on PATH or asking them to create a global shim.
 Two contracts are enforced here:
 
 1. EMPIRICAL — from a non-GoC working directory, the bundled
-   `codex-plugin/bin/goc` wrapper AND the `PYTHONPATH=<root> python3 -m
-   goc.cli` form both run the engine by absolute path (no global install,
-   no PATH entry).
+   `codex-plugin/bin/goc` wrapper AND its launcher file
+   `python3 <root>/goc/_launch.py` both run the engine by absolute path (no
+   global install, no PATH entry).
 2. MECHANICAL — `codex-kickoff`'s guidance (template + every mirror)
    states that `goc` is not callable in a plugin-only install, points at
    the bundled-engine invocation, and forbids the `~/.local/bin/goc` shim.
@@ -56,19 +56,19 @@ class BundledCliReachableByAbsolutePathTest(unittest.TestCase):
         )
         self.assertIn("usage: goc", result.stdout)
 
-    def test_engine_module_runs_via_pythonpath(self) -> None:
+    def test_engine_launcher_runs_by_absolute_path(self) -> None:
         with tempfile.TemporaryDirectory() as outside:
             result = subprocess.run(
-                [sys.executable, "-m", "goc.cli", "--help"],
+                [sys.executable, str(PLUGIN_ROOT / "goc" / "_launch.py"), "--help"],
                 cwd=outside,
                 capture_output=True,
                 text=True,
-                env={"PYTHONPATH": str(PLUGIN_ROOT), "PATH": "/usr/bin:/bin"},
+                env={"PATH": "/usr/bin:/bin"},
             )
         self.assertEqual(
             result.returncode,
             0,
-            msg=f"PYTHONPATH=<plugin-root> python -m goc.cli failed:\n{result.stderr}",
+            msg=f"python3 <plugin-root>/goc/_launch.py failed:\n{result.stderr}",
         )
         self.assertIn("usage: goc", result.stdout)
 
@@ -89,7 +89,7 @@ class CodexGuidanceResolvesBundledEngineTest(unittest.TestCase):
                 ),
             )
             self.assertIn(
-                "python3 -m goc.cli",
+                "goc/_launch.py",
                 text,
                 msg=(
                     f"{path.relative_to(ROOT)}: Codex guidance must give the "

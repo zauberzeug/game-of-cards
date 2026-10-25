@@ -455,8 +455,10 @@ shape from Claude Code's:
   (verified via spike on the
   `provide-openclaw-plugin-for-skills-and-hooks` card). So `goc` is
   exposed as a **registered tool** via `api.registerTool('goc', ...)`,
-  not a shell binary on PATH. The tool handler shells out to
-  `python3 -m goc.cli` with `PYTHONPATH` set to the plugin root.
+  not a shell binary on PATH. The tool handler runs the vendored engine
+  through its launcher file (`python3 <plugin>/goc/_launch.py`, built by
+  `gocCommand`), never with `-m`, so the agent-supplied cwd cannot put a
+  project's own `goc/` package or a stdlib-named module in its place.
 - The three GoC lifecycle hooks (session-start active-card reminder,
   deck-first prompt-injection, pattern-generalization self-assessment)
   are **TypeScript ports** registered via `api.on('session_start' | ...)`.
@@ -505,7 +507,12 @@ OpenClaw-plugin-specific files that are NOT auto-synced:
 ### Plugin runs goc from a vendored engine — Python 3.10+ is the only host prerequisite
 
 `claude-plugin/bin/goc` is a shell wrapper that invokes the bundled engine
-via `python3 -m goc.cli` with `PYTHONPATH` pointing at the plugin root.
+by the path of its launcher file (`goc/_launch.py`), with `PYTHONPATH`
+pointing at the plugin root. It deliberately avoids `python3 -m goc.cli`:
+`-m` puts the working directory first on `sys.path`, so a consumer repo's own
+`goc/` package or a module named after one the engine imports would run
+instead (card `plugin-goc-wrapper-lets-repo-local-python-replace-the-bundled-engine`). The engine re-invokes
+itself the same way (`goc.engine._goc_command`).
 Claude Code auto-prepends the plugin's `bin/` directory to the Bash tool's
 PATH while the plugin is enabled, so skill bodies keep calling plain
 `goc <verb>` and the wrapper transparently runs the vendored engine.

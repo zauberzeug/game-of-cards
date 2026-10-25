@@ -36,6 +36,16 @@ from goc._vendor import yaml_lite as yaml
 PACKAGE_DIR = Path(__file__).resolve().parent  # installed package dir (goc/)
 
 
+def _goc_command() -> list[str]:
+    """argv that runs this same engine again, through its launcher file.
+
+    Never through `python -m`: that puts the working directory (the consumer repo) first
+    on sys.path, so its own `goc/` package or a module named after a standard one would run
+    instead. See `goc/_launch.py`.
+    """
+    return [sys.executable, str(PACKAGE_DIR / "_launch.py")]
+
+
 _DUAL_TREE_CONFLICT: bool = False
 _LEGACY_ONLY: bool = False
 
@@ -5017,14 +5027,7 @@ def _apply_verdict_interactive(card: Card, verdict: dict, *, auto_yes: bool = Fa
     tv = verdict.get("title_verdict") or {}
     if not tv.get("ok") and tv.get("rewrite"):
         if ask(f"  apply title rewrite → {tv['rewrite']!r}?"):
-            move_cmd = [
-                sys.executable,
-                "-m",
-                "goc.cli",
-                "move",
-                card.title,
-                tv["rewrite"],
-            ]
+            move_cmd = [*_goc_command(), "move", card.title, tv["rewrite"]]
             r = subprocess.run(move_cmd, capture_output=True, text=True, check=False)
             if r.returncode == 0:
                 applied["title"] = True

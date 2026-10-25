@@ -125,9 +125,9 @@ shim — the engine is already bundled:
    PLUGIN_ROOT="${PLUGIN_ROOT:-<grandparent of this skill's directory>}"
 
    "$PLUGIN_ROOT/bin/goc" --help
-   # If the wrapper is not executable in your sandbox, invoke the engine
-   # module directly — this is exactly what the wrapper does internally:
-   PYTHONPATH="$PLUGIN_ROOT" python3 -m goc.cli --help
+   # If the wrapper is not executable in your sandbox, run the engine's
+   # launcher file directly — this is exactly what the wrapper does internally:
+   python3 "$PLUGIN_ROOT/goc/_launch.py" --help
    ```
 
 Substitute the resolved invocation for every bare `goc ...` the other

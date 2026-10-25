@@ -19,4 +19,7 @@ else
     exit 127
 fi
 
-exec env PYTHONPATH="${PLUGIN_ROOT}:${PYTHONPATH:-}" "$PYTHON" -m goc.cli "$@"
+# Run the engine through its launcher file, not `-m goc.cli`: `-m` puts the working
+# directory first on sys.path, so a repo's own `goc/` package or a module named after
+# one the engine imports would run instead of the bundled engine (goc/_launch.py).
+exec env PYTHONPATH="${PLUGIN_ROOT}${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" "$PLUGIN_ROOT/goc/_launch.py" "$@"

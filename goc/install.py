@@ -545,8 +545,8 @@ _PACKAGE_DIR = Path(__file__).resolve().parent  # this goc/ package on disk
 def _is_plugin_context() -> bool:
     """True when this engine is running from a copy bundled inside a GoC plugin.
 
-    Plugin payloads carry `goc/` at `<plugin_root>/goc/` and their wrappers set
-    PYTHONPATH so `python -m goc.cli` resolves to that nested copy. In every
+    Plugin payloads carry `goc/` at `<plugin_root>/goc/`, and their wrappers start it
+    through `goc/_launch.py`, which resolves `goc` to that nested copy. In every
     other layout (pipx, editable install, `uv run --project .`) the parent of
     the package directory is the project root or a site-packages dir.
     """

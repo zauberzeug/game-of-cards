@@ -106,7 +106,7 @@ Skills and hook scripts are **real files**, byte-for-byte copies of their source
 
 ### Prerequisites
 
-**Python 3.10+ on PATH — nothing else.** The plugin bundles the engine under `claude-plugin/goc/` and ships `bin/goc`, a wrapper that runs it via `python3 -m goc.cli` with `PYTHONPATH` set to the plugin root. Claude Code auto-prepends the plugin's `bin/` to the Bash tool's PATH while the plugin is enabled, so skill bodies call plain `goc <verb>` and get the bundled engine. No `uv`, no `pipx install game-of-cards`, no venv, no first-call latency.
+**Python 3.10+ on PATH — nothing else.** The plugin bundles the engine under `claude-plugin/goc/` and ships `bin/goc`, a wrapper that runs it through its launcher file `goc/_launch.py` (never `python3 -m goc.cli`, which would let the working directory shadow the engine). Claude Code auto-prepends the plugin's `bin/` to the Bash tool's PATH while the plugin is enabled, so skill bodies call plain `goc <verb>` and get the bundled engine. No `uv`, no `pipx install game-of-cards`, no venv, no first-call latency.
 
 Because engine and skills ship in the same payload, they cannot skew — the plugin needs no minimum-version check. Installing `game-of-cards` separately is still supported if you want a global `goc` binary outside Claude Code (see [Install the command](#install-the-command)); it is not a prerequisite for the plugin, and vendoring skills into source control with `--local-skills` requires it (the bundled engine refuses that flag).
 
@@ -226,7 +226,7 @@ The `openclaw-plugin/` directory at the root of the `game-of-cards` repository i
 ### What the plugin provides
 
 - **16 GoC skills** as workspace-tier `SKILL.md` directories that OpenClaw auto-discovers, ported from `goc/templates/skills/` by `scripts/port_skills_to_openclaw.py` (the Claude- and Codex-specific kickoff complements are the two templates left out). The port applies invocation-neutral rewrites, so unlike the Claude and Codex mirrors it is reviewed and committed by hand rather than auto-staged — but it is deterministic: `scripts/port_skills_to_openclaw.py --check` re-ports into memory and fails on any difference, and `tests/test_plugin_mirror_parity.py` runs that same check in CI. Re-run the porter after editing a source skill.
-- **`goc` as a registered OpenClaw tool** — not a shell binary on PATH. OpenClaw has no auto-PATH-prepend mechanism for plugin `bin/` directories (verified via spike), so the plugin's TypeScript entry point calls `api.registerTool('goc', ...)` with a typed parameter schema; the handler shells out to `python3 -m goc.cli` with `PYTHONPATH` pointing at the bundled engine inside the plugin payload.
+- **`goc` as a registered OpenClaw tool** — not a shell binary on PATH. OpenClaw has no auto-PATH-prepend mechanism for plugin `bin/` directories (verified via spike), so the plugin's TypeScript entry point calls `api.registerTool('goc', ...)` with a typed parameter schema; the handler runs the bundled engine inside the plugin payload through its launcher file (`python3 <plugin>/goc/_launch.py`).
 - **Three lifecycle hooks** registered via `api.on()`: `session_start` (active-card reminder), `before_prompt_build` (deck-first prompt injection), `agent_end` (pattern-generalization self-assessment). These are TypeScript ports of the Claude `SessionStart` / `UserPromptSubmit` / `Stop` Python hook scripts.
 - **A vendored goc engine inside the npm payload** — the same byte-for-byte mirror of `goc/` used by `claude-plugin/`, enforced by the `sync-plugin-assets` pre-commit hook.
 

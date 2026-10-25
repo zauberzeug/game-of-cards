@@ -1,22 +1,24 @@
 ---
 title: plugin-goc-wrapper-lets-repo-local-python-replace-the-bundled-engine
-summary: "The plugin bin/goc wrappers invoke \"python3 -m goc.cli\", and -m puts the invocation cwd at sys.path[0] — ahead of the plugin root supplied via PYTHONPATH. Any consumer repo containing a top-level goc/ package silently takes over the goc command in that session, and a repo-root module shadowing a stdlib name the engine imports hard-crashes the wrapper instead. The plugin advertises a bundled engine; what actually runs is decided by repo content."
-status: open
+summary: "The plugin bin/goc wrappers and the OpenClaw tool handler ran \"python3 -m goc.cli\", and -m puts the invocation cwd at sys.path[0], ahead of the plugin root — so a consumer repo's top-level goc/ package took over the goc command and a repo-root module shadowing a stdlib name crashed it. Every plugin start and the engine's own re-invocation now run goc/_launch.py by absolute path, which swaps sys.path[0] for the plugin root before anything else is imported; this holds on the Python 3.10 floor."
+status: done
 stage: null
 contribution: high
 created: "2026-09-10T04:50:58Z"
-closed_at: null
-human_gate: decision
+closed_at: "2026-10-25T05:24:19Z"
+human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, infra, api-contract]
 definition_of_done: |
-  - [ ] DECISION: pick the isolation mechanism given the Python 3.10 floor — `-P` / `PYTHONSAFEPATH` are 3.11+, so either raise the floor, branch on version, or stop using `-m` (see `## Decision required`)
-  - [ ] TDD: `reproduce.py` exits zero — a cwd-local `goc/` package no longer replaces the bundled engine for either wrapper
-  - [ ] TDD: a regression test covers the stdlib-shadowing variant (a repo-root module named after something `goc.engine` imports)
-  - [ ] MECHANICAL: the same isolation is applied to the OpenClaw tool handler, which shells out with the same `-m` shape and an agent-supplied cwd (`openclaw-plugin/index.ts`)
-  - [ ] MECHANICAL: the trailing empty `PYTHONPATH` element (`"${PLUGIN_ROOT}:${PYTHONPATH:-}"` with `PYTHONPATH` unset) is removed — it re-adds the cwd a second time
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+  - [x] DECISION: pick the isolation mechanism given the Python 3.10 floor — `-P` / `PYTHONSAFEPATH` are 3.11+, so either raise the floor, branch on version, or stop using `-m` (see `## Decision`)
+  - [x] TDD: `reproduce.py` exits zero — a cwd-local `goc/` package no longer replaces the bundled engine for either wrapper
+  - [x] TDD: a regression test covers the stdlib-shadowing variant (a repo-root module named after something `goc.engine` imports)
+  - [x] MECHANICAL: the same isolation is applied to the OpenClaw tool handler, which shells out with the same `-m` shape and an agent-supplied cwd (`openclaw-plugin/index.ts`)
+  - [x] MECHANICAL: the trailing empty `PYTHONPATH` element (`"${PLUGIN_ROOT}:${PYTHONPATH:-}"` with `PYTHONPATH` unset) is removed — it re-adds the cwd a second time
+  - [x] MECHANICAL: the engine's own re-invocation (the `quality-pass` title rewrite runs `goc move` in a subprocess) uses the same launcher — found while fixing, not in the original scope
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass
+worker: {who: claude-code, where: host}
 ---
 
 # The plugin `goc` wrapper lets repo-local Python replace the bundled engine
@@ -65,7 +67,29 @@ is the primary cause — the shadowing still happens with `PYTHONPATH=/nonexiste
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/plugin-goc-wrapper-lets-repo-local-python-replace-the-bundled-engine/reproduce.py`:
+After the fix, `reproduce.py` exits 0:
+
+```
+[claude-plugin] hijacked=False
+  goc, version 0.0.28
+
+[codex-plugin] hijacked=False
+  goc, version 0.0.28
+
+[OK] the bundled engine wins over a cwd-local goc/ package.
+```
+
+`tests/test_plugin_engine_ignores_working_directory.py` runs every start — both
+wrappers, the OpenClaw handler's `gocCommand` (extracted from `index.ts` and run
+under node), and `goc.engine._goc_command` — in a scratch cwd holding one impostor at
+a time (a `goc/` package, a `dataclasses.py`), and checks that the committed esbuild
+output carries the same form. Before the fix both wrappers loaded both impostors and
+the other two starts had no launcher form yet; the old handler argv
+(`["python3", "-m", "goc.cli", ...]`) loads both impostors the same way, reproduced
+against an installed 0.0.28 OpenClaw plugin. Green after the fix, also under
+Python 3.10.20.
+
+Before the fix, `uv run python .game-of-cards/deck/plugin-goc-wrapper-lets-repo-local-python-replace-the-bundled-engine/reproduce.py`:
 
 ```
 [claude-plugin] hijacked=True
@@ -115,26 +139,29 @@ Note this repo is itself an instance: running the plugin wrapper from the
 `game-of-cards` checkout loads the source tree, not the payload. Here that is
 harmless dogfooding, which is part of why it has gone unnoticed.
 
-## Decision required
+## Decision
 
-The clean fixes are version-gated, and `pyproject.toml` supports Python 3.10:
+*Resolved 2026-10-25T05:20:07Z:* Option 2: every plugin start and the engine's own re-invocation run goc/_launch.py by absolute path instead of python3 -m goc.cli; the Python 3.10 floor stays
 
-1. **`-P` / `PYTHONSAFEPATH=1`** — exactly this problem's fix, but both are
-   **3.11+**. Requires either raising the floor to 3.11 (a consumer-visible
-   break; AGENTS.md and the plugin READMEs all state "Python 3.10+ is the only
-   host prerequisite") or branching in the wrapper on the interpreter version,
-   which leaves 3.10 hosts unprotected.
-2. **Stop using `-m`** — invoke a small launcher inside the payload by absolute
-   path, which makes `sys.path[0]` the payload directory instead of the cwd.
-   Works on 3.10, but changes how the entry point is reached and needs care so
-   `goc.cli`'s own imports still resolve against the payload.
-3. **Sanitize inside the entry point** — have `goc/cli.py` drop a `sys.path[0]`
-   that is not the payload root before importing the engine. Works on 3.10, but
-   it is too late for the stdlib-shadowing variant, which fails at
-   `goc.engine` import time.
+*Reasoning:* It covers the goc-package takeover and the stdlib-shadowing variant on every supported Python without a version branch; the maintainer (Rodja, 2026-10-25) delegated the pick and asked for the fix on main
 
-Options 2 and 3 differ in whether protection covers the stdlib case; option 1
-differs in supported-host policy. That is a maintainer call.
+## Fix
 
-Whatever is picked also applies to the OpenClaw handler, which has the same
-shape with a less predictable cwd.
+- `goc/_launch.py` (new, mirrored into all three plugin payloads): started by path, its
+  first statement replaces `sys.path[0]` (the `goc/` package itself) with the directory
+  that holds the package, then `runpy.run_module("goc.cli", run_name="__main__",
+  alter_sys=True)` reproduces the `-m` start. The working directory never enters
+  `sys.path`.
+- `claude-plugin/bin/goc`, `codex-plugin/bin/goc`: `exec env
+  PYTHONPATH="${PLUGIN_ROOT}${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON"
+  "$PLUGIN_ROOT/goc/_launch.py" "$@"` — no `-m`, no trailing empty element. `PYTHONPATH`
+  stays, because commands that `goc attest` runs may rely on it.
+- `openclaw-plugin/index.ts`: the handler builds its argv with the top-level
+  `gocCommand(args)` (`["python3", <plugin>/goc/_launch.py, ...args]`); `dist/` rebuilt
+  with `npm run build` (diff limited to this change).
+- `goc/engine.py`: `_goc_command()` for the `goc move` subprocess in
+  `_apply_verdict_interactive`.
+- Docs and guidance that described the `-m` start: `AGENTS.md`, `goc.md`,
+  `openclaw-plugin/README.md`, the `codex-kickoff` skill (template and mirrors), and the
+  `_is_plugin_context` docstring.
+

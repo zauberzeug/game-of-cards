@@ -3,8 +3,8 @@
 #
 # Claude Code auto-prepends ${plugin}/bin to the Bash tool's PATH while the
 # plugin is enabled, so skill bodies can keep calling plain `goc <verb>`.
-# This wrapper invokes the bundled engine directly via `python3 -m goc.cli`,
-# with PYTHONPATH pointing at the plugin root so the bundled package is found.
+# This wrapper invokes the bundled engine directly, by the path of its launcher
+# file inside the plugin's own `goc/` package.
 # No venv, no uv, no first-call latency.
 
 set -euo pipefail
@@ -22,4 +22,7 @@ else
     exit 127
 fi
 
-exec env PYTHONPATH="${PLUGIN_ROOT}:${PYTHONPATH:-}" "$PYTHON" -m goc.cli "$@"
+# Run the engine through its launcher file, not `-m goc.cli`: `-m` puts the working
+# directory first on sys.path, so a repo's own `goc/` package or a module named after
+# one the engine imports would run instead of the bundled engine (goc/_launch.py).
+exec env PYTHONPATH="${PLUGIN_ROOT}${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" "$PLUGIN_ROOT/goc/_launch.py" "$@"

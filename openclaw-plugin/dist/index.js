@@ -2383,6 +2383,9 @@ import { access, readFile, readdir } from "node:fs/promises";
 var COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 var PLUGIN_ROOT = resolve(COMPILED_DIR, "..");
 var VENDORED_GOC_PATH = PLUGIN_ROOT;
+function gocCommand(args) {
+  return ["python3", resolve(VENDORED_GOC_PATH, "goc", "_launch.py"), ...args];
+}
 var GOC_VERBS = [
   "validate",
   "quality-pass",
@@ -2775,7 +2778,7 @@ var index_default = definePluginEntry({
         PYTHONPATH: process.env.PYTHONPATH ? `${VENDORED_GOC_PATH}:${process.env.PYTHONPATH}` : VENDORED_GOC_PATH
       };
       const result = await api.runtime.system.runCommandWithTimeout(
-        ["python3", "-m", "goc.cli", ...args],
+        gocCommand(args),
         { cwd, env, timeoutMs: 6e4 }
       );
       return {

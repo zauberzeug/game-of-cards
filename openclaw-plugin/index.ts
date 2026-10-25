@@ -41,6 +41,14 @@ const COMPILED_DIR = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = resolve(COMPILED_DIR, "..");
 const VENDORED_GOC_PATH = PLUGIN_ROOT;
 
+// The vendored engine runs through its launcher file, never `python3 -m goc.cli`: `-m`
+// puts the cwd — an agent-supplied project directory — first on sys.path, so that
+// project's own `goc/` package or a module named after one the engine imports would run
+// instead of the vendored engine (see goc/_launch.py).
+function gocCommand(args: string[]): string[] {
+  return ["python3", resolve(VENDORED_GOC_PATH, "goc", "_launch.py"), ...args];
+}
+
 // Mirrors the argparse subparser surface that `_build_parser` registers in
 // goc/engine.py (goc/cli.py wires that parser up) — keep in sync if new verbs
 // land. That parser is the source of truth; the drift guard in
@@ -647,7 +655,7 @@ export default definePluginEntry({
           : VENDORED_GOC_PATH,
       };
       const result = await api.runtime.system.runCommandWithTimeout(
-        ["python3", "-m", "goc.cli", ...args],
+        gocCommand(args),
         { cwd, env, timeoutMs: 60_000 },
       );
       return {

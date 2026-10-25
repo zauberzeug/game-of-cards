@@ -14,7 +14,7 @@ import directive that Claude Code expands into its own context, so read
 Game of Cards is a deck-based methodology and CLI for human + AI
 contributors. This repository is both the source tree for the `goc`
 package *and* its own consumer — it dogfoods every change. The Python
-package is small (6 source files under `goc/`); most of the surface
+package is small (7 source files under `goc/`); most of the surface
 area is in the `goc/templates/` payload that `goc install` ships into
 consuming repos, and in the three plugin payloads (`claude-plugin/`,
 `codex-plugin/`, `openclaw-plugin/`) that mirror it.

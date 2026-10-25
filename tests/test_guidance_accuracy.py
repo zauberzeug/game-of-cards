@@ -592,7 +592,7 @@ class GocMdPluginReferenceAccuracyTest(unittest.TestCase):
         only host prerequisite (AGENTS.md § "Plugin runs goc from a vendored
         engine")."""
         wrapper = (ROOT / "claude-plugin" / "bin" / "goc").read_text()
-        self.assertIn("-m goc.cli", wrapper, msg="claude-plugin/bin/goc no longer runs the bundled engine.")
+        self.assertIn("goc/_launch.py", wrapper, msg="claude-plugin/bin/goc no longer runs the bundled engine.")
         self.assertTrue(
             (ROOT / "claude-plugin" / "goc" / "engine.py").exists(),
             msg="claude-plugin/goc/engine.py missing; the payload no longer vendors the engine.",

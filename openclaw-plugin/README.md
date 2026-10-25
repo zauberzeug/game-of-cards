@@ -63,8 +63,8 @@ The plugin is also published on npm as `game-of-cards`.
 
 ### Prerequisite
 
-`python3` (3.10+) on PATH. The plugin invokes the bundled engine via
-`python3 -m goc.cli` from the tool handler — no `uv`, no `pipx`, no
+`python3` (3.10+) on PATH. The plugin runs the bundled engine through its
+launcher file (`goc/_launch.py`) from the tool handler — no `uv`, no `pipx`, no
 separate `pipx install game-of-cards` step.
 
 ## Known limitations
