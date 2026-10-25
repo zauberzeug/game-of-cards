@@ -1,7 +1,7 @@
 ---
 title: goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards
 summary: "`goc quality-pass --status all|done|disproved|superseded --llm [--yes]` runs the Sonnet rewrite pass over terminal-status cards (done/disproved/superseded). Accepted verdicts mutate `summary` and `definition_of_done` frontmatter in place via `_apply_summary_rewrite` / `_apply_dod_rewrite`, and propose title renames via `goc move` (which also lacks a terminal guard). Closed cards are immutable records of what was contracted and met; the verb has no terminal-status guard at the entry point or in the mutation helpers. Sibling pattern to `goc-decide-accepts-decisions-on-already-closed-cards` (closed, guard added at engine.py:4909), `goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard` (open), and `goc-attest-mutates-log-md-on-already-closed-cards` (open)."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T18:59:23Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: implement the chosen guard in `goc/engine.py` and re-sync plugin mirrors via `python scripts/sync_plugin_assets.py`.
   - [ ] PROCESS: sibling sweep — confirm `_cmd_move` (engine.py:6638) does or does not need its own terminal-status guard; file a follow-up card if the audit reveals `goc move` standalone is also unguarded (the quality-pass path invokes `move` via subprocess and would benefit from defense-in-depth).
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc quality-pass --llm` mutates summary and DoD on terminal-status cards
