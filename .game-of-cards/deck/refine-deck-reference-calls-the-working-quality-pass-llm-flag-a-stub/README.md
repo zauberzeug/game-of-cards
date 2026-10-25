@@ -1,7 +1,7 @@
 ---
 title: refine-deck-reference-calls-the-working-quality-pass-llm-flag-a-stub
 summary: "Skill(refine-deck)'s reference.md says the `goc quality-pass --llm` flag is 'Currently a stub', but it has run a real Sonnet audit since the 2026-05-04 package skeleton: it proposes title renames (applied through `goc move`) and summary and DoD rewrites, and `--yes` applies every one unreviewed. A reader who trusts the doc can run it as a no-op and rewrite live cards; the section should say what the pass does and name its `--dry-run`, `--yes` and `--limit` controls."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-10-25T04:54:16Z"
@@ -10,13 +10,13 @@ human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
-draft: true
 definition_of_done: |
   - [ ] TDD: `reproduce.py` exits zero (the section no longer calls the flag a stub and names every option the parser documents as "With --llm:").
   - [ ] TDD: `tests/test_guidance_accuracy.py` pins the same two checks against the template, and proves they fire on the pre-fix wording.
   - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § "Quality-pass `--llm` flag" describes what the pass sends, what it proposes, how rewrites are applied, its `--dry-run` / `--yes` / `--limit` controls and that closed cards are never sent.
   - [ ] MECHANICAL: mirrors re-synced and the OpenClaw port re-run; `scripts/sync_plugin_assets.py --check` and `scripts/port_skills_to_openclaw.py --check` are clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Skill(refine-deck)'s reference calls the working `quality-pass --llm` flag a stub
