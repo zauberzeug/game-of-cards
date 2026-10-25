@@ -13,12 +13,12 @@ advanced_by:
   - goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards
   - goc-move-renames-terminal-status-cards-without-any-guard
 tags: [epic, meta-fix, api-contract]
-summary: "Aggregation epic for the family of mutation verbs that mutate cards whose `status` is already terminal (`done`/`disproved`/`superseded`) with no `TERMINAL_STATUSES` guard: `goc wait`, `goc attest`, `goc quality-pass` and `goc move`. Decided 2026-10-22: one shared helper that strictly refuses terminal targets, `goc move --force` as the only escape hatch, advance/unadvance out of scope, and a freshly written message — `goc decide`'s old guard became a terminal gate-repair path, so there is nothing to mirror. The helper, `_refuse_terminal_mutation`, landed 2026-10-24 with `goc wait`; `attest`, `quality-pass` and `move` still need to adopt it."
+summary: "Aggregation epic for the family of mutation verbs that mutate cards whose `status` is already terminal (`done`/`disproved`/`superseded`) with no `TERMINAL_STATUSES` guard: `goc wait`, `goc attest`, `goc quality-pass` and `goc move`. Decided 2026-10-22: one shared helper that strictly refuses terminal targets, `goc move --force` as the only escape hatch, advance/unadvance out of scope, and a freshly written message — `goc decide`'s old guard became a terminal gate-repair path, so there is nothing to mirror. The helper, `_refuse_terminal_mutation`, landed 2026-10-24 with `goc wait` and `goc attest` adopted it 2026-10-25; `quality-pass` and `move` still need to."
 definition_of_done: |
   - [x] PROCESS: A shared guard shape is decided — either a reusable `TERMINAL_STATUSES` helper that each verb calls, or a per-verb inline check mirroring `_cmd_decide` (engine.py:~5868). Recorded in this card's log.md. — decided 2026-10-22: one reusable helper (see "## Agreed shape").
   - [ ] PROCESS: All four open child cards (`goc-wait-...`, `goc-attest-...`, `goc-quality-pass-...`, `goc-move-...`) are closed or superseded under the agreed shape; this epic's `advanced_by` roster all terminal.
-  - [ ] MECHANICAL: Each guarded verb's error message names the card, its terminal status and the supersede workflow (`goc status <old> superseded --by <new>`) where that is the correct forward path. The message is written fresh in the shared helper: `_cmd_decide` has stopped refusing terminal cards (it runs a terminal gate-repair path, engine.py `_cmd_decide`), so there is no message to mirror. — 2026-10-24: that command is the correct path for no terminal card (`_cmd_status` refuses them all), so the helper names the `Skill(finish-card)` "After closure" path instead; met for `wait`.
-  - [ ] TDD: A regression test asserts each of the four verbs refuses a terminal-status target (exit non-zero, no mutation written).
+  - [ ] MECHANICAL: Each guarded verb's error message names the card, its terminal status and the supersede workflow (`goc status <old> superseded --by <new>`) where that is the correct forward path. The message is written fresh in the shared helper: `_cmd_decide` has stopped refusing terminal cards (it runs a terminal gate-repair path, engine.py `_cmd_decide`), so there is no message to mirror. — 2026-10-24: that command is the correct path for no terminal card (`_cmd_status` refuses them all), so the helper names the `Skill(finish-card)` "After closure" path instead; met for `wait` and `attest`.
+  - [ ] TDD: A regression test asserts each of the four verbs refuses a terminal-status target (exit non-zero, no mutation written). — 2026-10-25: `wait` and `attest` covered in `tests/test_terminal_status_guard.py`; `quality-pass` and `move` remain.
   - [x] PROCESS: Sibling-shape audit closed out — `_cmd_advance` / `_cmd_unadvance` (engine.py:~5662/4404) explicitly classified as in-scope (need a guard) or out-of-scope (supersession edges legitimately mutate closed cards), with the verdict recorded. — out of scope, recorded in the 2026-10-22 decision: edge maintenance on a terminal endpoint is part of the record axis.
 worker: {who: "claude[bot]", where: main}
 ---
@@ -41,7 +41,7 @@ path (`_cmd_decide`), so none of the four has a sibling to copy.
 Children (wired via `advanced_by`):
 
 - [goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard](../goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard/) — `_cmd_wait` attached a `waiting_on` / `waiting_until` overlay to terminal cards. **Closed 2026-10-24**: introduced the shared helper and the `tests/test_terminal_status_guard.py` fixture the other three extend.
-- [goc-attest-mutates-log-md-on-already-closed-cards](../goc-attest-mutates-log-md-on-already-closed-cards/) — `goc attest` rewrites `log.md` on already-closed cards.
+- [goc-attest-mutates-log-md-on-already-closed-cards](../goc-attest-mutates-log-md-on-already-closed-cards/) — `goc attest` appended a fresh `## Closure verification` block to a closed card's `log.md`. **Closed 2026-10-25**: `_cmd_attest` calls the helper before loading the check config. The fixture now turns auto-commit off in its scratch `config.yaml` instead of passing `--no-commit` on every call, which `attest` — like `move` and `quality-pass` — does not accept.
 - [goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards](../goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards/) — `goc quality-pass` rewrites `summary` / DoD on terminal cards.
 - [goc-move-renames-terminal-status-cards-without-any-guard](../goc-move-renames-terminal-status-cards-without-any-guard/) — `goc move` retitles a closed card and rewrites historical backrefs.
 
@@ -98,7 +98,7 @@ The approved bundle (the full option catalogue is archived in
 2. **`goc wait`** → strict refuse, setters and `--clear` alike.
    `validate_waiting_overlay`'s terminal skip stays: a terminal overlay
    can then only be inherited from the live state before closure.
-3. **`goc attest`** → strict refuse at the top of `_cmd_attest`.
+3. **`goc attest`** → strict refuse at the top of `_cmd_attest` (landed 2026-10-25).
 4. **`goc quality-pass`** → filter terminal cards out of the Layer-2
    LLM sample regardless of `--status` (Layer 1 still reports over them,
    read-only), and guard `_apply_summary_rewrite` / `_apply_dod_rewrite`

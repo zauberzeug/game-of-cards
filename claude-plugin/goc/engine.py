@@ -4259,7 +4259,7 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Bypass DoD enforcement (free-form prose DoDs).")
 
     # attest
-    p_attest = subparsers.add_parser("attest", help="Run layer-2 + layer-3 closure checks.")
+    p_attest = subparsers.add_parser("attest", help="Run a live card's layer-2 + layer-3 closure checks.")
     p_attest.add_argument("title")
     p_attest.add_argument("--skip", dest="skips", action="append", default=[],
                           help="Skip a check by name; recorded as SKIPPED in log.")
@@ -6144,12 +6144,18 @@ def _cmd_attest(args):
     but every one of them is covered by ``--skip`` — no check actually runs, so
     the all-``[~] SKIPPED`` block proves exactly as little as the bare header.
     "No check ran" is refused regardless of why none ran.
+
+    A closed card is refused before either: its log.md is the record of how it
+    closed, and a late block would re-litigate that closure — on any later day
+    the ``log-md-closure-entry`` check cannot find a closure heading dated today,
+    so the stray block records a FAIL the card's real closure never had.
     """
     title = args.title
     skips = args.skips
     non_interactive = args.non_interactive
     card_dir = resolve_card_dir(title)
     card = load_card_or_exit(card_dir, title)
+    _refuse_terminal_mutation(card, "attest")
     config = load_deck_config()
     all_cards = load_all_cards()
     today = _utc_now_iso()

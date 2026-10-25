@@ -142,3 +142,21 @@ The README's "Agreed shape" item 1 and the MECHANICAL DoD item now carry
 this. `tests/test_terminal_status_guard.py` already holds one fixture
 card per terminal status, so `attest`, `quality-pass` and `move` can add
 their cases there as they adopt the helper.
+
+## 2026-10-25T04:35:08Z — `goc attest` adopted the helper
+
+[`goc-attest-mutates-log-md-on-already-closed-cards`](../goc-attest-mutates-log-md-on-already-closed-cards/)
+closed: `_cmd_attest` calls `_refuse_terminal_mutation(card, "attest")`
+right after `load_card_or_exit`, ahead of the empty-config and all-skipped
+refusals, so a closed card is refused for being closed rather than for
+whatever its config happens to lack.
+
+One fixture change the remaining children inherit. `_goc` in
+`tests/test_terminal_status_guard.py` used to append `--no-commit` to
+every call, but only the commit-capable verbs take that flag — `attest`,
+`move` and `quality-pass` exit 2 on it as an unknown argument, which would
+have satisfied the exit-code assertion for the wrong reason. The scratch
+deck now carries a `config.yaml` with `workflow.auto_commit: false`, and
+with layer-3 checks every probe card passes, so an unguarded verb visibly
+writes and exits 0 instead of failing on something unrelated. `move` and
+`quality-pass` can call `_assert_refused` without per-verb flags.

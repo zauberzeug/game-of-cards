@@ -1,9 +1,20 @@
 """Reproduce: `goc attest` runs on a card whose status is already terminal.
 
-Constructs a throwaway deck containing a single `done` card, then invokes
-`goc attest` against it. The defect: the verb returns 0, appends a fresh
-"Closure verification" block to `log.md`, and prints a "Next: goc done"
-hint — none of which is appropriate for a card that closed N days ago.
+Builds a throwaway deck holding a single `done` card and runs
+`goc attest --non-interactive` against it under two check configurations:
+
+- one that includes `log-md-closure-entry`, which a closed card cannot pass on
+  any day after its closure, so the stray block records a spurious FAIL;
+- one whose checks all pass on the closed card, so attest exits 0 and prints
+  its `Next: goc done <title>` hint for a card that closed long ago.
+
+The defect fires when either run appends to the closed card's `log.md` or
+prints the `Next: goc done` hint. Fixed means both runs are refused by the
+terminal-status guard (exit 2, "(terminal)" on stderr) with `log.md`
+byte-identical.
+
+Exit codes: 0 = defect no longer fires, 1 = defect fires, 2 = harness or
+precondition broken.
 
 Run via `uv run python .game-of-cards/deck/goc-attest-mutates-log-md-on-already-closed-cards/reproduce.py`.
 """
@@ -58,7 +69,7 @@ CARD_LOG = """\
 Closed.
 """
 
-CONFIG_YAML = """\
+CLOSURE_ENTRY_CONFIG = """\
 layer_2_project_dod: []
 layer_3_goc_dod:
   - name: advanced-by-closed
@@ -71,8 +82,25 @@ workflow:
   auto_commit: false
 """
 
+ALL_PASS_CONFIG = """\
+layer_2_project_dod: []
+layer_3_goc_dod:
+  - name: advanced-by-closed
+    kind: derived
+  - name: dod-100-percent
+    kind: derived
+workflow:
+  auto_commit: false
+"""
 
-def main() -> int:
+SCENARIOS = (
+    ("closure-entry check configured", CLOSURE_ENTRY_CONFIG),
+    ("every configured check passes", ALL_PASS_CONFIG),
+)
+
+
+def _attest_closed_card(config: str) -> tuple[subprocess.CompletedProcess[str], str, str]:
+    """Run `goc attest` on a fresh closed-card deck; return (result, log before, log after)."""
     workdir = Path(tempfile.mkdtemp(prefix="goc-attest-repro-"))
     try:
         subprocess.run(["git", "init", "-q"], cwd=workdir, check=True)
@@ -81,7 +109,7 @@ def main() -> int:
         (workdir / "pyproject.toml").write_text("[project]\nname='x'\nversion='0'\n")
         deck_dir = workdir / ".game-of-cards" / "deck"
         deck_dir.mkdir(parents=True)
-        (workdir / ".game-of-cards" / "config.yaml").write_text(CONFIG_YAML)
+        (workdir / ".game-of-cards" / "config.yaml").write_text(config)
         card = deck_dir / "dummy-closed-card"
         card.mkdir()
         (card / "README.md").write_text(CARD_README)
@@ -90,8 +118,8 @@ def main() -> int:
 
         env = os.environ.copy()
         env["PYTHONPATH"] = str(REPO_ROOT)
+        env.pop("GOC_WORKTREE_DECK", None)
         log_before = log.read_text()
-
         result = subprocess.run(
             [sys.executable, "-m", "goc.cli", "attest", "dummy-closed-card", "--non-interactive"],
             cwd=workdir,
@@ -99,49 +127,62 @@ def main() -> int:
             capture_output=True,
             text=True,
         )
-        log_after = log.read_text()
+        return result, log_before, log.read_text()
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+def main() -> int:
+    verdicts: list[int] = []
+    for label, config in SCENARIOS:
+        try:
+            result, log_before, log_after = _attest_closed_card(config)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            print(f"HARNESS BROKEN ({label}): {exc}")
+            return 2
+
+        mutated = log_after != log_before
+        hinted = "Next: goc done" in result.stdout
+        refused = result.returncode == 2 and "(terminal)" in result.stderr
 
         print("=" * 72)
-        print("goc attest dummy-closed-card  (card status: done)")
+        print(f"goc attest dummy-closed-card  (card status: done; {label})")
         print("=" * 72)
         print("exit code:", result.returncode)
-        print()
         print("--- stdout ---")
         print(result.stdout)
         print("--- stderr ---")
         print(result.stderr)
-        print("--- log.md before ---")
-        print(log_before)
-        print("--- log.md after ---")
-        print(log_after)
+        if mutated:
+            print("--- log.md after ---")
+            print(log_after)
+        print(f"  log.md mutated:              {mutated}")
+        print(f"  'Next: goc done' printed:    {hinted}")
+        print(f"  refused by terminal guard:   {refused}")
+        print()
 
-        appended = len(log_after) > len(log_before)
-        refused = (
-            result.returncode != 0
-            and "terminal" in (result.stderr + result.stdout).lower()
-            and not appended
+        if mutated or hinted:
+            verdicts.append(1)
+        elif refused:
+            verdicts.append(0)
+        else:
+            verdicts.append(2)
+
+    if 1 in verdicts:
+        print(
+            "DEFECT REPRODUCED: `goc attest` treats a closed card as attestable — it "
+            "appends a fresh 'Closure verification (<today>)' block to the card's "
+            "log.md and/or tells the caller to `goc done` a card that is already done."
         )
-
-        print("=" * 72)
-        print("DEFECT CHECK")
-        print("=" * 72)
-        print(f"  card status:                       done (closed 2026-01-02)")
-        print(f"  log.md mutated by attest verb:     {appended}")
-        print(f"  verb refused with terminal-guard:  {refused}")
-        if appended:
-            print(
-                "\nDEFECT REPRODUCED: `goc attest` mutates a closed card's log.md, "
-                "appending a fresh 'Closure verification (<today>)' block. The "
-                "sibling mutation verbs (`done`, `decide`, `status`) all refuse "
-                "terminal targets; `attest` is the missing member of the family. "
-                "The bad block lives in the closed card's historical record "
-                "until a human removes it."
-            )
-            return 0
-        print("\nNo defect — `goc attest` correctly refused to mutate the closed card.")
         return 1
-    finally:
-        shutil.rmtree(workdir, ignore_errors=True)
+    if 2 in verdicts:
+        print(
+            "HARNESS BROKEN: `goc attest` neither mutated the closed card nor refused it "
+            "as terminal; inspect the output above."
+        )
+        return 2
+    print("No defect — `goc attest` refused the closed card and left its log.md untouched.")
+    return 0
 
 
 if __name__ == "__main__":

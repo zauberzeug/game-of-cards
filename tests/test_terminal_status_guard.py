@@ -47,6 +47,19 @@ definition_of_done: |
 Body.
 """
 
+# Checks every probe card passes, so an unguarded `goc attest` would write its
+# block and exit 0 on a closed card rather than fail for an unrelated reason.
+# Auto-commit is off here rather than per call: `attest` takes no `--no-commit`.
+CONFIG = """layer_2_project_dod: []
+layer_3_goc_dod:
+  - name: advanced-by-closed
+    kind: derived
+  - name: dod-100-percent
+    kind: derived
+workflow:
+  auto_commit: false
+"""
+
 
 def _card(title: str, status: str) -> engine.Card:
     return engine.Card(
@@ -98,6 +111,7 @@ class GuardedVerbCliTest(unittest.TestCase):
             if status == "superseded":
                 extra = "superseded_by:\n  - live-card\n" + extra
             self._write(f"{status}-card", status, extra)
+        (self.root / ".game-of-cards" / "config.yaml").write_text(CONFIG)
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
@@ -117,11 +131,11 @@ class GuardedVerbCliTest(unittest.TestCase):
         env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
         env.pop("GOC_WORKTREE_DECK", None)
         return subprocess.run(
-            [sys.executable, "-m", "goc.cli", *args, "--no-commit"],
+            [sys.executable, "-m", "goc.cli", *args],
             cwd=str(self.root), env=env, text=True, capture_output=True, check=False,
         )
 
-    def _assert_refused(self, title: str, verb: str, *flags: str) -> None:
+    def _assert_refused(self, title: str, verb: str, *flags: str) -> subprocess.CompletedProcess[str]:
         card = self.deck / title
         before = {p.name: p.read_bytes() for p in card.iterdir()}
         res = self._goc(verb, title, *flags)
@@ -133,6 +147,7 @@ class GuardedVerbCliTest(unittest.TestCase):
         self.assertEqual(before, after, msg=f"{title} was mutated\nstderr: {res.stderr}")
         self.assertIn(f"ERROR: {title}: status is", res.stderr)
         self.assertIn(f"`goc {verb}`", res.stderr)
+        return res
 
     def test_wait_refuses_every_terminal_status_setters_and_clear_alike(self) -> None:
         shapes = (
@@ -149,6 +164,20 @@ class GuardedVerbCliTest(unittest.TestCase):
         res = self._goc("wait", "live-card", "--reason", "external")
         self.assertEqual(res.returncode, 0, msg=res.stderr)
         self.assertIn("waiting_on: external", (self.deck / "live-card" / "README.md").read_text())
+
+    def test_attest_refuses_every_terminal_status(self) -> None:
+        for status in sorted(engine.TERMINAL_STATUSES):
+            with self.subTest(status=status):
+                res = self._assert_refused(f"{status}-card", "attest", "--non-interactive")
+                # The guard runs before the checks, so attest never tells the
+                # caller to `goc done` a card that is already closed.
+                self.assertNotIn("Next: goc done", res.stdout)
+
+    def test_attest_still_records_a_verification_block_on_a_live_card(self) -> None:
+        res = self._goc("attest", "live-card", "--non-interactive")
+        self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+        self.assertIn("## Closure verification", (self.deck / "live-card" / "log.md").read_text())
+        self.assertIn("Next: goc done live-card", res.stdout)
 
     def test_the_forward_path_offered_is_not_the_refused_supersede_command(self) -> None:
         # `goc status <old> superseded --by <new>` reads like the way to retire
