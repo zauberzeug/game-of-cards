@@ -2868,6 +2868,101 @@ def summary_release_error(card: Card) -> str | None:
     )
 
 
+def _dir_birth_time(path: Path) -> datetime | None:
+    """When `path` was created, as its filesystem records it; None when unknown.
+
+    `os.stat` exposes it as `st_birthtime` on macOS, the BSDs and Windows. On
+    Linux Python does not, so ask coreutils `stat`, which reads it through
+    statx; a filesystem that keeps no birth time answers 0.
+    """
+    try:
+        birth = getattr(os.stat(path), "st_birthtime", None)
+    except OSError:
+        return None
+    if birth:
+        return datetime.fromtimestamp(birth, tz=timezone.utc)
+    try:
+        r = subprocess.run(["stat", "-c", "%W", str(path)], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    value = r.stdout.strip()
+    if r.returncode != 0 or not value.isdigit() or int(value) == 0:
+        return None
+    return datetime.fromtimestamp(int(value), tz=timezone.utc)
+
+
+def _first_commit_time(path: Path) -> datetime | None:
+    """Author time of the commit that first added `path`, following renames;
+    None outside git, for an untracked file, or when git does not answer."""
+    try:
+        r = subprocess.run(
+            ["git", "log", "--follow", "--diff-filter=A", "--format=%aI", "--", path.name],
+            capture_output=True, text=True, cwd=str(path.parent), timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    stamps = [line.strip() for line in r.stdout.splitlines() if line.strip()]
+    if r.returncode != 0 or not stamps:
+        return None
+    try:
+        return datetime.fromisoformat(stamps[-1]).astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+@dataclass(frozen=True)
+class CreatedRestore:
+    """A `created:` stamp recovered from evidence, ready to write back."""
+
+    stamp: str
+    source: str
+
+    def apply(self, text: str) -> str:
+        return mutate_frontmatter_field(text, "created", _yaml_inline(self.stamp))
+
+    def note(self, title: str) -> str:
+        return (
+            f"{title}: created: restored {self.stamp} from {self.source} "
+            f"(README.md had been rewritten without the stamp `goc new` wrote)"
+        )
+
+
+def created_restore(card: Card, card_dir: Path) -> tuple[CreatedRestore | None, str | None]:
+    """`(restore, None)` when the card lost its `created:` stamp and evidence
+    recovers it, `(None, refusal)` when nothing records when it was filed, and
+    `(None, None)` when the card still carries the field.
+
+    An agent that fills a `goc new` scaffold by rewriting README.md wholesale —
+    easy with a write tool that needs no prior read — drops the generated stamp,
+    and only `validate` would notice, long after the session that filed the card.
+    The verbs that write a card back restore it from the card directory's birth
+    time and the commit that first added README.md. Each bounds the filing time
+    from above (a later checkout is born after the filing; a commit cannot
+    predate its file), so the earlier one is kept. The current time is never
+    written: it is not when the card was created.
+    """
+    if "created" in card.frontmatter:
+        return None, None
+    evidence = [
+        (when, source)
+        for when, source in (
+            (_dir_birth_time(card_dir), "the card directory's birth time"),
+            (_first_commit_time(card_dir / "README.md"), "the commit that first added README.md"),
+        )
+        if when is not None
+    ]
+    if not evidence:
+        return None, (
+            f"ERROR: {card.title}: created: required field missing — README.md was "
+            f"rewritten without the stamp `goc new` wrote, and neither a directory "
+            f"birth time nor a commit records when the card was filed. Set `created:` "
+            f"only from a record of the filing and never from the current time; "
+            f"without one, report the card instead of guessing."
+        )
+    when, source = min(evidence, key=lambda item: item[0])
+    return CreatedRestore(when.strftime("%Y-%m-%dT%H:%M:%SZ"), source), None
+
+
 def card_is_ready(card: Card, by_title: dict[str, Card], *, include_drafts: bool = False) -> bool:
     """Composite "ready-to-pull" predicate used by next-card / pull-card.
 
@@ -5213,9 +5308,15 @@ def _cmd_done(args):
     if release_error:
         print(release_error, file=sys.stderr)
         sys.exit(2)
+    restore, created_error = created_restore(t, card_dir)
+    if created_error:
+        print(created_error, file=sys.stderr)
+        sys.exit(2)
     _enforce_closure_on_integration_or_exit(title)
     now = _utc_now_iso()
     text = (card_dir / "README.md").read_text()
+    if restore:
+        text = restore.apply(text)
     text = mutate_frontmatter_field(text, "status", "done")
     text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(now))
     # Closing proves the card is authored; clear any lingering draft flag so a
@@ -5223,6 +5324,8 @@ def _cmd_done(args):
     text = remove_frontmatter_field(text, "draft")
     (card_dir / "README.md").write_text(text)
     print(f"{title}: {prior} → done")
+    if restore:
+        print(restore.note(title))
     print("Next: goc to see what's open, or ask your agent to \"drain the queue\" (pull-card).")
 
 
@@ -5261,6 +5364,7 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
         seen.add(title)
         deduped.append(title)
     plan: list[tuple[str, Path, str, "Card"]] = []
+    restores: dict[str, CreatedRestore] = {}
     for title in deduped:
         card_dir = resolve_card_dir(title)
         t = load_card_or_exit(card_dir, title)
@@ -5302,6 +5406,12 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
         if release_error:
             print(f"{release_error} Refusing bundled close.", file=sys.stderr)
             sys.exit(2)
+        restore, created_error = created_restore(t, card_dir)
+        if created_error:
+            print(f"{created_error} Refusing bundled close.", file=sys.stderr)
+            sys.exit(2)
+        if restore:
+            restores[title] = restore
         plan.append((title, card_dir, t.status, t))
     for title, _, _, _ in plan:
         _enforce_closure_on_integration_or_exit(title)
@@ -5318,11 +5428,16 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
             (existing.rstrip() + "\n\n" + appendix) if existing.strip() else appendix
         )
         text = (card_dir / "README.md").read_text()
+        restore = restores.get(title)
+        if restore:
+            text = restore.apply(text)
         text = mutate_frontmatter_field(text, "status", "done")
         text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(now))
         text = remove_frontmatter_field(text, "draft")
         (card_dir / "README.md").write_text(text)
         print(f"{title}: {prior} → done")
+        if restore:
+            print(restore.note(title))
     print(f"\nBundled close: {len(plan)} {_plural(len(plan), 'card')}.")
     print("Next: commit the closures together.")
 
@@ -6428,7 +6543,13 @@ def _cmd_status(args):
         if release_error:
             print(release_error, file=sys.stderr)
             sys.exit(2)
+    restore, created_error = created_restore(t, card_dir)
+    if created_error:
+        print(created_error, file=sys.stderr)
+        sys.exit(2)
     text = (card_dir / "README.md").read_text()
+    if restore:
+        text = restore.apply(text)
     text = mutate_frontmatter_field(text, "status", new_status)
     if new_status in TERMINAL_STATUSES:
         text = mutate_frontmatter_field(text, "closed_at", _yaml_inline(_utc_now_iso()))
@@ -6443,6 +6564,8 @@ def _cmd_status(args):
         # Maintain typed bidirectional supersession link on both endpoints.
         _mutate_pair(title, successor, "superseded_by", "supersedes", add=True)
     print(f"{title}: {prior} → {new_status}")
+    if restore:
+        print(restore.note(title))
     if successor is not None:
         print(f"  superseded_by: {successor}; {successor}.supersedes += {title}")
     if new_status == "active":
@@ -6488,10 +6611,18 @@ def _cmd_publish(args):
     if release_error:
         print(release_error, file=sys.stderr)
         sys.exit(2)
+    restore, created_error = created_restore(t, card_dir)
+    if created_error:
+        print(created_error, file=sys.stderr)
+        sys.exit(2)
     text = (card_dir / "README.md").read_text()
+    if restore:
+        text = restore.apply(text)
     text = remove_frontmatter_field(text, "draft")
     (card_dir / "README.md").write_text(text)
     print(f"{title}: published (draft flag cleared); now visible in the queue")
+    if restore:
+        print(restore.note(title))
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):
         if _git_auto_commit([card_dir], f"deck: publish {title}"):
@@ -6675,7 +6806,11 @@ def _cmd_new(args):
     # deck-path display used elsewhere (e.g. the rebase-conflict path above).
     rel = card_dir.relative_to(DECK_ROOT)
     print(f"created {rel}/")
-    print(f"Next: edit {rel}/README.md to fill the body and DoD; then ask your agent to implement the card.")
+    print(
+        f"Next: edit {rel}/README.md in place to fill the body and DoD — keep the generated "
+        f"frontmatter (created, draft) rather than rewriting the file; then ask your agent "
+        f"to implement the card."
+    )
     # Default for `goc new` is NO commit so the scaffold-then-fill-in
     # workflow is unchanged; --commit is the opt-in for wired filings so
     # the new card's edge writes to existing endpoints don't linger as
