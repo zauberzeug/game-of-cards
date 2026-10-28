@@ -1,7 +1,7 @@
 ---
 title: goc-advance-claims-success-when-adding-an-already-existing-edge
 summary: "`goc advance A --by B` prints a confident `advance: A.advanced_by += B; B.advances += A` message and exits 0 even when the bidirectional edge already exists. Both READMEs are rewritten byte-for-byte unchanged, the auto-commit silently no-ops, and the user (or a script driving `--commit`) is left believing an edge was just added. Symmetric counterpart to `goc-unadvance-claims-success-when-removing-a-non-existent-edge`."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T19:42:01Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_cmd_advance` (engine.py:6565) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_advance` honors before printing the success line and entering the auto-commit branch.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the already-existing-edge case.
   - [ ] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc advance` claims success when adding an already-existing edge
