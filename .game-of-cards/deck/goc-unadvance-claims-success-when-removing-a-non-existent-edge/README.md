@@ -1,7 +1,7 @@
 ---
 title: goc-unadvance-claims-success-when-removing-a-non-existent-edge
 summary: "`goc unadvance A --by B` prints a confident `unadvance: A.advanced_by -= B; B.advances -= A` message and exits 0 even when no edge exists between A and B. The two READMEs are rewritten with their original content (zero diff), the auto-commit silently no-ops, and the user is left believing an edge was removed."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T19:29:58Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:6535) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_unadvance` honors before printing the success line and entering the auto-commit branch.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the missing-edge case.
   - [ ] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc unadvance` claims success when removing a non-existent edge
