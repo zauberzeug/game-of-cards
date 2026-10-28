@@ -111,3 +111,26 @@ series can close the nine children under the recorded shape.
 ## 2026-10-22T05:20:21Z: decision recorded
 
 1. Strict-refuse: invalid input exits 2 with a goc error on stderr and mutates nothing; factoring per the card's recommendation, a one-line shared helper for the message and exit with the precondition predicates inline per verb — The maintainer accepted the card's recommendation in a human session on 2026-10-22; strict-refuse is the precondition-failure shape the engine already uses (exit 2) and the only one that protects --commit-driven scripts and agents. Gate decision → none.
+
+
+## 2026-10-28: first child closed — shared helper landed
+
+`goc-unadvance-claims-success-when-removing-a-non-existent-edge` closed under
+the decided shape. It introduced the emission helper this card's decision
+prescribed, `engine._refuse_invalid_input(reason)` (`ERROR: <reason>` on
+stderr, exit 2 — `ERROR:` rather than `goc: error:`, because every mutation
+verb's precondition refusal already printed it and `goc: error:` is the
+query-flag parser's), and routed `_cmd_advance`'s existing self-edge and
+cycle refusals through it with byte-identical output. The family's tests
+start in `tests/test_mutation_verbs_refuse_invalid_input.py`.
+
+Checked on the way, as the unadvance card's archived deliberation asked:
+`goc wait --clear` on a card with no overlay already prints `<title>: no
+waiting overlay to clear; nothing to do`, exits 0 and writes nothing — an
+honest no-op, not the misleading success this family refuses — so it was
+left as is.
+
+Dashboard updated in place: the unadvance roster bullet carries its closure,
+the roster heading no longer says "open", the summary no longer counts nine
+*open* children, and `### How the decision reached the children` names the
+helper and the test module.

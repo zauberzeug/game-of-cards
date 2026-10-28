@@ -5653,6 +5653,24 @@ def _refuse_terminal_mutation(card: Card, verb: str) -> None:
     sys.exit(2)
 
 
+def _refuse_invalid_input(reason: str) -> None:
+    """Exit 2 with `ERROR: <reason>`, before `goc <verb>` writes anything.
+
+    The strict-refuse shape decided on by
+    `mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success`
+    for input a mutation verb cannot act on as asked — an edge that is not
+    there to remove, a self-edge, one that would close a cycle. Performing a
+    no-op and printing the success line anyway misleads every caller that
+    trusts the exit code, the `--commit`-driven scripts and agents above all.
+    What makes input invalid is verb-specific, so each verb keeps its
+    predicate inline and calls this ahead of every disk write: a refusal
+    leaves the deck byte-identical, and the family's refusals share one
+    emission instead of drifting apart.
+    """
+    print(f"ERROR: {reason}", file=sys.stderr)
+    sys.exit(2)
+
+
 def _commit_override(commit: bool, no_commit: bool) -> bool | None:
     if commit and no_commit:
         print("ERROR: pass only one of --commit / --no-commit", file=sys.stderr)
@@ -6847,6 +6865,15 @@ def _remove_from_list_field(text: str, field: str, title_to_remove: str) -> str:
     return emit_frontmatter(fm, body=body)
 
 
+def _edge_field_lists(card: Card, field: str, ref: str) -> bool:
+    """True iff `card`'s `field` edge list names `ref`.
+
+    A non-list value names nothing, the way the graph walkers read it.
+    """
+    refs = card.frontmatter.get(field)
+    return isinstance(refs, list) and ref in refs
+
+
 def _mutate_pair(child_title: str, parent_title: str, field_on_child: str, field_on_parent: str, *, add: bool) -> None:
     """Add or remove a bidirectional edge between two cards."""
     child_dir = resolve_card_dir(child_title)
@@ -7095,12 +7122,10 @@ def _cmd_advance(args):
     no_commit = args.no_commit
     _validate_commit_flags(commit, no_commit)
     if title == advancer:
-        print("ERROR: cannot advance a card with itself", file=sys.stderr)
-        sys.exit(2)
+        _refuse_invalid_input("cannot advance a card with itself")
     cards = load_all_cards()
     if _would_create_advance_cycle(cards, title, advancer):
-        print(f"ERROR: adding {advancer} → {title} would create a cycle in the advances graph", file=sys.stderr)
-        sys.exit(2)
+        _refuse_invalid_input(f"adding {advancer} → {title} would create a cycle in the advances graph")
     _mutate_pair(title, advancer, "advanced_by", "advances", add=True)
     print(f"advance: {title}.advanced_by += {advancer}; {advancer}.advances += {title}")
     commit_policy = _commit_override(commit, no_commit)
@@ -7116,6 +7141,25 @@ def _cmd_unadvance(args):
     commit = args.commit
     no_commit = args.no_commit
     _validate_commit_flags(commit, no_commit)
+    child = load_card_or_exit(resolve_card_dir(title), title)
+    parent = load_card_or_exit(resolve_card_dir(advancer), advancer)
+    # Either half is enough: removing the half of an edge a hand edit left
+    # dangling is a real removal. With neither listed there is nothing to
+    # remove, and reporting a removal anyway is a misleading no-op success.
+    if not (
+        _edge_field_lists(child, "advanced_by", advancer)
+        or _edge_field_lists(parent, "advances", title)
+    ):
+        reason = (
+            f"cannot remove {advancer} → {title}: no such edge — {title}.advanced_by "
+            f"does not list {advancer} and {advancer}.advances does not list {title}"
+        )
+        if _edge_field_lists(child, "advances", advancer) or _edge_field_lists(parent, "advanced_by", title):
+            reason += (
+                f"; the edge runs the other way ({title} → {advancer}) — if that is "
+                f"the one to remove, run `goc unadvance {advancer} --by {title}`"
+            )
+        _refuse_invalid_input(reason)
     _mutate_pair(title, advancer, "advanced_by", "advances", add=False)
     print(f"unadvance: {title}.advanced_by -= {advancer}; {advancer}.advances -= {title}")
     commit_policy = _commit_override(commit, no_commit)

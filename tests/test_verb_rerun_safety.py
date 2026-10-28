@@ -287,10 +287,10 @@ SURFACES: dict[str, Surface] = {
         note="re-emits both endpoints unconditionally; the bytes are identical",
     ),
     "unadvance": Surface(
-        RE_EMITS,
+        REFUSES,
         ("unadvance", "alpha-probe-card", "--by", "beta-probe-card"),
         _deck_with_edge,
-        note="re-emits both endpoints unconditionally; the bytes are identical",
+        note="the first run removes the edge, so the second has none to remove",
     ),
     "wait": Surface(
         RE_EMITS,

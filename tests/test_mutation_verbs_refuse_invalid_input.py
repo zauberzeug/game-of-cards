@@ -1,0 +1,176 @@
+"""Regression guard: mutation verbs refuse input they cannot act on as asked.
+
+`mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success`
+decided on strict-refuse: invalid input exits 2 with `ERROR:` on stderr and
+writes nothing, emitted through one shared helper,
+`engine._refuse_invalid_input`, while each verb keeps its own predicate
+inline. These tests pin the helper's contract and each guarded verb's
+refusal — exit 2, no success line, every card byte-identical — next to the
+valid input the guard must still let through.
+"""
+
+from __future__ import annotations
+
+import io
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from contextlib import redirect_stderr
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from goc import engine  # noqa: E402
+
+
+CARD = """---
+title: {title}
+summary: "Probe card for the invalid-input guard."
+status: open
+stage: null
+contribution: medium
+created: "2026-05-29T00:00:00Z"
+closed_at: null
+human_gate: none
+advances:{advances}
+advanced_by:{advanced_by}
+tags: [bug]
+definition_of_done: |
+  - [ ] MECHANICAL: probe.
+---
+
+# {title}
+
+Body.
+"""
+
+CONFIG = """workflow:
+  auto_commit: false
+"""
+
+
+def _edges(refs: tuple[str, ...]) -> str:
+    return "".join(f"\n  - {ref}" for ref in refs) if refs else " []"
+
+
+class RefuseInvalidInputHelperTest(unittest.TestCase):
+    def test_exits_2_with_the_reason_on_stderr(self) -> None:
+        err = io.StringIO()
+        with redirect_stderr(err), self.assertRaises(SystemExit) as raised:
+            engine._refuse_invalid_input("probe reason")
+        self.assertEqual(raised.exception.code, 2)
+        self.assertEqual(err.getvalue(), "ERROR: probe reason\n")
+
+
+class UnadvanceCliTest(unittest.TestCase):
+    """`goc unadvance <title> --by <advancer>` removes the edge advancer → title.
+
+    Driven through the real CLI against a scratch deck whose edges are written
+    by hand, so a half-edge can be set up and `goc advance` is not under test.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.deck = self.root / ".game-of-cards" / "deck"
+        self.deck.mkdir(parents=True)
+        (self.root / ".game-of-cards" / "config.yaml").write_text(CONFIG)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _write(self, title: str, *, advances: tuple[str, ...] = (), advanced_by: tuple[str, ...] = ()) -> None:
+        card = self.deck / title
+        card.mkdir()
+        (card / "README.md").write_text(
+            CARD.format(title=title, advances=_edges(advances), advanced_by=_edges(advanced_by))
+        )
+        (card / "log.md").write_text("")
+
+    def _goc(self, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        pythonpath = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
+        env.pop("GOC_WORKTREE_DECK", None)
+        return subprocess.run(
+            [sys.executable, "-m", "goc.cli", *args],
+            cwd=str(self.root), env=env, text=True, capture_output=True, check=False,
+        )
+
+    def _snapshot(self) -> dict[str, bytes]:
+        return {
+            path.relative_to(self.deck).as_posix(): path.read_bytes()
+            for path in sorted(self.deck.rglob("*"))
+            if path.is_file()
+        }
+
+    def _edges_of(self, title: str) -> tuple[list[str], list[str]]:
+        fm = engine.load_card(self.deck / title).frontmatter
+        return fm["advances"], fm["advanced_by"]
+
+    def _assert_refused(self, title: str, advancer: str) -> subprocess.CompletedProcess[str]:
+        before = self._snapshot()
+        res = self._goc("unadvance", title, "--by", advancer)
+        self.assertEqual(
+            res.returncode, 2,
+            msg=f"expected exit 2\nstdout: {res.stdout}\nstderr: {res.stderr}",
+        )
+        self.assertEqual(before, self._snapshot(), msg=f"the deck was written\nstderr: {res.stderr}")
+        self.assertNotIn("unadvance:", res.stdout)
+        self.assertIn(f"ERROR: cannot remove {advancer} → {title}: no such edge", res.stderr)
+        return res
+
+    def test_refuses_an_edge_neither_card_lists(self) -> None:
+        self._write("alpha")
+        self._write("beta")
+        res = self._assert_refused("alpha", "beta")
+        self.assertNotIn("other way", res.stderr)
+
+    def test_refuses_once_the_edge_is_gone(self) -> None:
+        # The re-run case: the first call removes the edge, so the second has
+        # nothing left to remove and must not report a removal again.
+        self._write("alpha", advanced_by=("beta",))
+        self._write("beta", advances=("alpha",))
+        first = self._goc("unadvance", "alpha", "--by", "beta")
+        self.assertEqual(first.returncode, 0, msg=first.stderr)
+        self._assert_refused("alpha", "beta")
+
+    def test_names_the_reversed_command_when_the_edge_runs_the_other_way(self) -> None:
+        # alpha advances beta, so the edge is removed by `unadvance beta --by
+        # alpha`; the swapped spelling must not pass for a removal.
+        self._write("alpha", advances=("beta",))
+        self._write("beta", advanced_by=("alpha",))
+        res = self._assert_refused("alpha", "beta")
+        self.assertIn("the edge runs the other way (alpha → beta)", res.stderr)
+        self.assertIn("`goc unadvance beta --by alpha`", res.stderr)
+
+    def test_still_removes_a_real_edge(self) -> None:
+        self._write("alpha", advanced_by=("beta",))
+        self._write("beta", advances=("alpha",))
+        res = self._goc("unadvance", "alpha", "--by", "beta")
+        self.assertEqual(res.returncode, 0, msg=res.stderr)
+        self.assertIn("unadvance: alpha.advanced_by -= beta; beta.advances -= alpha", res.stdout)
+        self.assertEqual(self._edges_of("alpha"), ([], []))
+        self.assertEqual(self._edges_of("beta"), ([], []))
+
+    def test_still_removes_either_dangling_half_of_an_edge(self) -> None:
+        # A hand edit can leave one half of an edge behind; `unadvance` is how
+        # it gets removed, so one listed half is enough for the guard.
+        self._write("child-half", advanced_by=("parent-a",))
+        self._write("parent-a")
+        self._write("child-b")
+        self._write("parent-half", advances=("child-b",))
+        for title, advancer in (("child-half", "parent-a"), ("child-b", "parent-half")):
+            with self.subTest(title=title, advancer=advancer):
+                res = self._goc("unadvance", title, "--by", advancer)
+                self.assertEqual(res.returncode, 0, msg=res.stderr)
+                self.assertEqual(self._edges_of(title), ([], []))
+                self.assertEqual(self._edges_of(advancer), ([], []))
+
+
+if __name__ == "__main__":
+    unittest.main()

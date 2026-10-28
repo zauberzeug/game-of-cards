@@ -1,22 +1,22 @@
 ---
 title: goc-unadvance-claims-success-when-removing-a-non-existent-edge
-summary: "`goc unadvance A --by B` prints a confident `unadvance: A.advanced_by -= B; B.advances -= A` message and exits 0 even when no edge exists between A and B. The two READMEs are rewritten with their original content (zero diff), the auto-commit silently no-ops, and the user is left believing an edge was removed."
-status: active
+summary: "`goc unadvance A --by B` printed `unadvance: A.advanced_by -= B; B.advances -= A` and exited 0 when no edge existed between A and B — both READMEs rewritten byte-identical, the auto-commit a silent no-op — so a missing edge looked exactly like a removed one. It now refuses (exit 2, `ERROR: cannot remove B → A: no such edge`, nothing written) when neither half of the edge is listed, through the parent epic's new shared `_refuse_invalid_input` helper, and names the reversed command when the edge runs the other way; a real edge, or a dangling half of one, is still removed."
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T19:29:58Z"
-closed_at: null
+closed_at: "2026-10-28T04:34:09Z"
 human_gate: none
 advances:
   - mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits zero (defect no longer fires — running `goc unadvance` on a non-existent edge produces a distinct signal from removing a real edge).
+  - [x] TDD: reproduce.py exits zero (defect no longer fires — running `goc unadvance` on a non-existent edge produces a distinct signal from removing a real edge). — the missing edge gets exit 2, `ERROR:` on stderr, no success line and both READMEs untouched, while the real-edge control gets exit 0 and the success line; the same script exits 1 against the pre-fix engine.
   - [x] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("no edge to remove")`. Match whichever shape the rest of the engine uses for analogous non-mutating verb calls (e.g. `goc wait --clear` on a card without a wait). — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
-  - [ ] MECHANICAL: `_cmd_unadvance` (engine.py:6535) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_unadvance` honors before printing the success line and entering the auto-commit branch.
-  - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the missing-edge case.
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] MECHANICAL: `_cmd_unadvance` (engine.py:6535) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_unadvance` honors before printing the success line and entering the auto-commit branch. — `_cmd_unadvance` checks before `_mutate_pair`: either half listed passes, neither listed is refused through `_refuse_invalid_input` ahead of any write.
+  - [x] TDD: a regression test in `tests/` asserts the chosen signal for the missing-edge case. — `tests/test_mutation_verbs_refuse_invalid_input.py`; 4 of its 6 tests fail against the pre-fix engine.
+  - [x] PROCESS: `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -24,14 +24,21 @@ worker: {who: "claude[bot]", where: main}
 
 ## Location
 
-- `goc/engine.py:4403-4414` — `_cmd_unadvance`
-- `goc/engine.py:6265-6271` — `_remove_from_list_field`
-- `goc/engine.py:6330-6343` — `_mutate_pair`
+- `goc/engine.py` `_cmd_unadvance` — printed the removal line and entered
+  the auto-commit branch without checking that the edge existed; it now
+  checks first.
+- `goc/engine.py` `_refuse_invalid_input` — the parent epic's shared
+  strict-refuse emission, added with this fix.
+- `goc/engine.py` `_remove_from_list_field` / `_mutate_pair` — the no-op
+  removal and the byte-identical rewrite behind the false success line
+  (unchanged).
 
-## What's broken
+## What was broken
 
-`_cmd_unadvance` unconditionally prints a "removed edge" success message and
-enters the auto-commit branch regardless of whether the edge actually existed.
+Before the fix, `_cmd_unadvance` unconditionally printed a "removed edge"
+success message and entered the auto-commit branch regardless of whether the
+edge actually existed. The excerpts and line numbers below are the pre-fix
+code.
 
 ```python
 # goc/engine.py:6587
@@ -80,7 +87,7 @@ checks rely on knowing what the edge set already looks like; checking
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/goc-unadvance-claims-success-when-removing-a-non-existent-edge/reproduce.py`:
+As filed, the original reproducer showed the false success:
 
 ```
 --- stdout ---
@@ -94,6 +101,25 @@ DEFECT CONFIRMED:
   - both README files are byte-identical to their pre-call contents
   - no warning on stderr that the edge did not exist
 ```
+
+After the fix,
+`uv run python .game-of-cards/deck/goc-unadvance-claims-success-when-removing-a-non-existent-edge/reproduce.py`
+exits 0 (the reproducer contract: 0 = defect no longer fires, 1 = fires,
+2 = harness broken):
+
+```
+$ goc unadvance alpha --by beta   # no such edge
+  exit 2
+  stdout: (empty)
+  stderr: ERROR: cannot remove beta → alpha: no such edge — alpha.advanced_by does not list beta and beta.advances does not list alpha
+$ goc unadvance delta --by gamma  # real edge
+  exit 0
+  stdout: unadvance: delta.advanced_by -= gamma; gamma.advances -= delta
+
+FIXED: a non-existent edge is refused with nothing written; a real edge is still removed.
+```
+
+Against the pre-fix engine the same script exits 1 (`DEFECT FIRES`).
 
 ## Why it matters
 
@@ -127,27 +153,44 @@ the same level of feedback as adding-a-thing.
 
 ## Fix
 
-Concrete change in `_cmd_unadvance` (engine.py:6535):
+`_cmd_unadvance` loads both cards and checks the edge before `_mutate_pair`
+runs:
 
-```python
-def _cmd_unadvance(args):
-    title = args.title
-    advancer = args.advancer
-    ...
-    # NEW: inspect edge presence before mutating.
-    child_fm, _ = parse_frontmatter((DECK_DIR / title / "README.md").read_text())
-    if advancer not in (child_fm.get("advanced_by") or []):
-        # Chosen failure mode goes here.
-        ...
-    _mutate_pair(title, advancer, "advanced_by", "advances", add=False)
-    ...
-```
+- **Either half listed → remove.** `title.advanced_by` naming `advancer`, or
+  `advancer.advances` naming `title`, is enough: a hand edit can leave one
+  half of an edge dangling, and `goc unadvance` is how it gets removed. That
+  covers the half-edge case the `_mutate_pair`-sentinel alternative was
+  preferred for, without writing first and asking afterwards.
+- **Neither listed → refuse** through `_refuse_invalid_input`:
+  `ERROR: cannot remove <advancer> → <title>: no such edge …` on stderr,
+  exit 2, before any write — the READMEs are not rewritten and the
+  auto-commit branch is never reached.
+- **The edge runs the other way** (`title` advances `advancer`) → the same
+  refusal also names `goc unadvance <advancer> --by <title>`. A swapped
+  spelling is one way to land here: `goc validate`'s `BACKWARDS_EPIC_EDGE`
+  hint prints one
+  ([validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments](../validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments/)).
 
-Alternative: have `_mutate_pair` (engine.py:6330) return `True` iff at least
-one of the two writes changed the file, and let `_cmd_unadvance` branch on
-that return. Cleaner because it also catches the rare case where one side of
-the bidirectional edge exists but the other doesn't (broken referential
-integrity — `goc repair-edges` territory).
+`_refuse_invalid_input(reason)` is the parent epic's decided factoring: one
+shared emission (`ERROR: <reason>`, exit 2) with each verb's predicate
+inline. `_cmd_advance`'s self-edge and cycle refusals now go through it too,
+with byte-identical output, so the pair's refusals cannot drift apart. The
+prefix is `ERROR:`, the one every mutation verb's precondition refusal
+already prints; `goc: error:` belongs to the query-flag parser.
 
-Do NOT apply the fix in this card; record the decision in `log.md` and
-implement under whichever closure path the project picks.
+A second `goc unadvance` of the same edge is now refused rather than
+re-emitting both cards, so `tests/test_verb_rerun_safety.py` declares
+`unadvance` `REFUSES` (was `RE_EMITS`).
+
+Tests: `tests/test_mutation_verbs_refuse_invalid_input.py` pins the helper's
+contract; the refusal (exit 2, no success line, deck byte-identical) for no
+edge, for a re-run after the removal, and for the swapped direction (with
+the reversed command named); and that a real edge and either dangling half
+are still removed. The family's remaining children add their verb's cases
+there.
+
+Unchanged, out of scope: `goc unadvance <t> --by <t>` on a card that carries
+a self-edge passes this guard (a half is listed) and still leaves the
+half-edge — that is the gated
+[goc-unadvance-with-self-target-leaves-card-in-half-edge-state](../goc-unadvance-with-self-target-leaves-card-in-half-edge-state/).
+Without a self-edge the call is now refused as a missing edge.
