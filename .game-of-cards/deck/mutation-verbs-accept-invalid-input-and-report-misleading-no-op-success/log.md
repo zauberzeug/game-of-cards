@@ -155,3 +155,25 @@ line, every card byte-identical), which the remaining children can reuse.
 `RE_EMITS`).
 
 Dashboard updated in place: the advance roster bullet carries its closure.
+
+
+## 2026-10-28: third child closed — blank `goc decide` values refused
+
+`goc-decide-accepts-empty-decision-and-because-arguments` closed under the
+decided shape. `_cmd_decide` refuses through `_refuse_invalid_input` when
+`--decision`, `--because` or both are blank after `.strip()`
+(`ERROR: <title>: --decision and --because must be non-empty (blank: …)`,
+exit 2, nothing written). The check runs before the card is read: it is a
+pure argument check, like `_cmd_advance`'s self-edge refusal. The helper's
+docstring now lists the blank case and covers an empty record as well as
+a no-op.
+
+`tests/test_mutation_verbs_refuse_invalid_input.py` gains `DecideCliTest`
+on the shared `_ScratchDeckCliTest` base, whose `_write` now takes a
+`human_gate` so a parked card can be written by hand.
+`tests/test_verb_rerun_safety.py` is unchanged: `decide` was already
+`REFUSES`.
+
+Dashboard updated in place: the decide roster bullet carries its closure.
+Six children remain: the four gated ones, plus `goc-attest-silently-ignores-unknown-skip-names`
+and `goc-wait-with-a-past-until-date-…`, both pullable.

@@ -5660,11 +5660,12 @@ def _refuse_invalid_input(reason: str) -> None:
     `mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success`
     for input a mutation verb cannot act on as asked — an edge that is not
     there to remove or is already there to add, a self-edge, one that would
-    close a cycle. Performing a no-op and printing the success line anyway
-    misleads every caller that trusts the exit code, the `--commit`-driven
-    scripts and agents above all. What makes input invalid is verb-specific,
-    so each verb keeps its predicate inline and calls this ahead of every
-    disk write: a refusal leaves the deck byte-identical, and the family's
+    close a cycle, a decision or its reasoning left blank. Printing the
+    success line anyway, over a no-op or an empty record, misleads every
+    caller that trusts the exit code, the `--commit`-driven scripts and
+    agents above all. What makes input invalid is verb-specific, so each
+    verb keeps its predicate inline and calls this ahead of every disk
+    write: a refusal leaves the deck byte-identical, and the family's
     refusals share one emission instead of drifting apart.
     """
     print(f"ERROR: {reason}", file=sys.stderr)
@@ -7447,6 +7448,19 @@ def _cmd_decide(args):
     commit = args.commit
     no_commit = args.no_commit
     _validate_commit_flags(commit, no_commit)
+    # argparse's `required=True` enforces presence only, so an empty string
+    # passes. A blank value would still lower the gate while recording a
+    # `## Decision` block and log entry with nothing in them — the record of
+    # a decision nobody wrote down.
+    blank = [
+        flag
+        for flag, value in (("--decision", decision), ("--because", reasoning))
+        if not value.strip()
+    ]
+    if blank:
+        _refuse_invalid_input(
+            f"{title}: --decision and --because must be non-empty (blank: {', '.join(blank)})"
+        )
     card_dir = resolve_card_dir(title)
     t = load_card_or_exit(card_dir, title)
     if t.human_gate == "none":

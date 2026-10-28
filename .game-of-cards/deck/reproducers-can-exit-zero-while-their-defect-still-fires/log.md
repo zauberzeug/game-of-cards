@@ -29,3 +29,20 @@ have read the pair as consistent. The DoD line now says `exits zero`. The
 script spelled the inversion `sys.exit(0 if defect_fires else 1)`, which a
 static scan for a literal `return 0` on the defect-present branch would not
 match.
+
+## 2026-10-28 — Third inverted reproducer in the family fixed on close
+
+`goc-decide-accepts-empty-decision-and-because-arguments/reproduce.py` was
+the same variant as the advance card: `sys.exit(0 if defect_fires else 1)`,
+a DoD reading `reproduce.py exits non-zero (defect no longer fires …)`, and
+a body saying the DoD "flips this". It was rewritten to the 0/1/2 contract
+when the card closed (exit 1 against the pre-fix engine, exit 0 after), and
+its DoD line now says `exits zero`.
+
+A further shape for the sweep to expect: the inverted script never ran its
+defect-absent branch, so it could not handle it. Against the fixed engine it
+died on `out.splitlines()[0]` of an empty stdout (`IndexError`, exit 1)
+before printing any verdict. Under its own inverted DoD that crash would have
+read as "fixed", and under the 0/1/2 contract it reads as "fires". Either
+way the exit code reflects the crash, not the defect, so a classification
+run should treat a traceback as exit 2 (harness broken), whatever the code.

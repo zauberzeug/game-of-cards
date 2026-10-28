@@ -35,7 +35,7 @@ stage: null
 contribution: medium
 created: "2026-05-29T00:00:00Z"
 closed_at: null
-human_gate: none
+human_gate: {human_gate}
 advances:{advances}
 advanced_by:{advanced_by}
 tags: [bug]
@@ -83,11 +83,23 @@ class _ScratchDeckCliTest(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def _write(self, title: str, *, advances: tuple[str, ...] = (), advanced_by: tuple[str, ...] = ()) -> None:
+    def _write(
+        self,
+        title: str,
+        *,
+        advances: tuple[str, ...] = (),
+        advanced_by: tuple[str, ...] = (),
+        human_gate: str = "none",
+    ) -> None:
         card = self.deck / title
         card.mkdir()
         (card / "README.md").write_text(
-            CARD.format(title=title, advances=_edges(advances), advanced_by=_edges(advanced_by))
+            CARD.format(
+                title=title,
+                advances=_edges(advances),
+                advanced_by=_edges(advanced_by),
+                human_gate=human_gate,
+            )
         )
         (card / "log.md").write_text("")
 
@@ -249,6 +261,44 @@ class AdvanceCliTest(_ScratchDeckCliTest):
                 self.assertEqual(res.returncode, 0, msg=res.stderr)
                 self.assertEqual(self._edges_of(title), ([], [advancer]))
                 self.assertEqual(self._edges_of(advancer), ([title], []))
+
+
+class DecideCliTest(_ScratchDeckCliTest):
+    """`goc decide <title> --decision <what> --because <why>` lowers a raised gate."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self._write("parked", human_gate="decision")
+
+    def _assert_refused(self, decision: str, because: str, *, blank: str) -> None:
+        res = self._refused(
+            "decide", "parked", "--decision", decision, "--because", because,
+            error=f"parked: --decision and --because must be non-empty (blank: {blank})",
+        )
+        self.assertNotIn("decision recorded", res.stdout)
+
+    def test_refuses_a_blank_decision(self) -> None:
+        self._assert_refused("", "The reasoning.", blank="--decision")
+
+    def test_refuses_a_blank_because(self) -> None:
+        self._assert_refused("The decision.", "", blank="--because")
+
+    def test_refuses_both_blank(self) -> None:
+        self._assert_refused("", "", blank="--decision, --because")
+
+    def test_refuses_whitespace_only_values(self) -> None:
+        # Whitespace renders as nothing in the `## Decision` block and the
+        # log entry, so it is as blank there as an empty string.
+        self._assert_refused("   ", "\t\n", blank="--decision, --because")
+
+    def test_still_records_a_real_decision(self) -> None:
+        res = self._goc("decide", "parked", "--decision", "Option A.", "--because", "It is simpler.")
+        self.assertEqual(res.returncode, 0, msg=res.stderr)
+        self.assertIn("parked: decision recorded; gate decision → none", res.stdout)
+        card = engine.load_card(self.deck / "parked")
+        self.assertEqual(card.human_gate, "none")
+        self.assertIn("Option A.", card.body)
+        self.assertIn("It is simpler.", card.body)
 
 
 if __name__ == "__main__":

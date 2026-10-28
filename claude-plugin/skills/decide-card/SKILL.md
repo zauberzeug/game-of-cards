@@ -56,8 +56,9 @@ actually applies:
    to keep working it in the same session, re-claim it with
    `goc status <title> active`.
 
-4. **Refuses** if the gate is already `none` or the title doesn't
-   exist.
+4. **Refuses** (exit 2, nothing written) if the gate is already
+   `none`, the title doesn't exist, or `--decision` / `--because` is
+   blank.
 
 ## Workflow
 
