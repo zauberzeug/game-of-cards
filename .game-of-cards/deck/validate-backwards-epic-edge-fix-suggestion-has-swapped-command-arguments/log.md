@@ -22,3 +22,20 @@ after which it too is refused). The defect stands; the summary, step 1 of
 `## What's broken` and a note under `## Empirical evidence` were updated in
 place. Re-ran `reproduce.py`: still exits 0 — it checks on-disk state, which
 is unchanged.
+
+
+## 2026-10-28: the swapped advance is now refused too
+
+`goc-advance-claims-success-when-adding-an-already-existing-edge` closed:
+`goc advance` now exits 2 with nothing written when both halves of the named
+edge are already listed. The warning's second verbatim command, `goc advance
+child-x --by card-a`, names the backwards edge itself, so it now prints
+`ERROR: cannot add card-a → child-x: the edge already exists — child-x.advanced_by
+lists card-a and card-a.advances lists child-x` instead of an addition line.
+Followed verbatim, the warning now produces two refusals and no false success,
+and the first refusal names the corrected first step. The warning text itself
+is still swapped, so the defect stands. The summary, step 2 of
+`## What's broken`, the note under `## Empirical evidence` and the sibling-sweep
+sentence that said the warning "re-adds" the edge were updated in place.
+Re-ran `reproduce.py`: still exits 0, since it checks on-disk state, which is
+unchanged.

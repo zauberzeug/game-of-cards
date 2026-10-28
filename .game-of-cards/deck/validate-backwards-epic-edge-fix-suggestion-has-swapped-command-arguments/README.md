@@ -1,6 +1,6 @@
 ---
 title: validate-backwards-epic-edge-fix-suggestion-has-swapped-command-arguments
-summary: "`goc validate`'s `BACKWARDS_EPIC_EDGE` advisory tells the user to run `goc unadvance <card> --by <child>` then `goc advance <child> --by <card>` to flip the edge. The arguments are swapped relative to `_cmd_advance`/`_cmd_unadvance` semantics: the suggested unadvance removes nothing (the edge being targeted lives on the other pair of fields; once a silent no-op, it has been refused with exit 2 since 2026-10-28), and the suggested advance re-adds the same bad edge. A user who follows the warning verbatim ends up with the original backwards edge unchanged."
+summary: "`goc validate`'s `BACKWARDS_EPIC_EDGE` advisory tells the user to run `goc unadvance <card> --by <child>` then `goc advance <child> --by <card>` to flip the edge. The arguments are swapped relative to `_cmd_advance`/`_cmd_unadvance` semantics: the suggested unadvance removes nothing (the edge being targeted lives on the other pair of fields; once a silent no-op, it has been refused with exit 2 since 2026-10-28), and the suggested advance names the bad edge itself (once a silent no-op that printed an addition, it too has been refused with exit 2 since 2026-10-28, as an edge already in place). A user who follows the warning verbatim ends up with the original backwards edge unchanged."
 status: open
 stage: null
 contribution: medium
@@ -58,10 +58,11 @@ semantics:
    is now refused (exit 2, nothing written), and because the edge runs
    the other way the refusal names the corrected
    `goc unadvance <child> --by <card>`.
-2. `goc advance <child> --by <card>` adds `child.advanced_by += card`
-   and `card.advances += child` — **re-adding the bad edge** (or,
-   in the no-op-precursor case, leaving the state identical to
-   before the sequence ran).
+2. `goc advance <child> --by <card>` asks for `child.advanced_by +=
+   card` and `card.advances += child` — **the bad edge itself**, which
+   both cards already list, so it adds nothing. Until 2026-10-28 it was
+   a silent no-op that printed an addition; it is now refused (exit 2,
+   nothing written) as an edge already in place.
 
 Net effect of following the verbatim warning: zero state change.
 The "backwards aggregation epic" the warning was meant to fix is
@@ -123,8 +124,10 @@ child-x.advanced_by = []                                    # old edge removed
 Since 2026-10-28 the first verbatim command no longer prints a removal:
 it exits 2 with `ERROR: cannot remove child-x → card-a: no such edge — …;
 the edge runs the other way (card-a → child-x) — if that is the one to
-remove, run `goc unadvance child-x --by card-a``. The states above are
-unchanged, and `reproduce.py` still exits 0.
+remove, run `goc unadvance child-x --by card-a``. The second no longer
+prints an addition either: it exits 2 with `ERROR: cannot add card-a →
+child-x: the edge already exists — …`. The states above are unchanged,
+and `reproduce.py` still exits 0.
 
 ## Why it matters
 
@@ -198,8 +201,8 @@ this warning then fires on
 fixed 2026-09-21). This verb's argument order has therefore been
 written backwards in two independent shipped texts, and until that fix
 a consumer met both in sequence: the recipe that built the backwards
-edge, then the warning that is supposed to undo it and instead re-adds
-it. The pair is what makes this card's own fix load-bearing rather than
+edge, then the warning that is supposed to undo it and instead leaves it
+in place. The pair is what makes this card's own fix load-bearing rather than
 cosmetic — with the recipe corrected, this warning is now the only
 shipped text that still gets the order wrong.
 

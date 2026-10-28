@@ -1,15 +1,24 @@
-"""Demonstrate that `goc advance` claims success on an already-existing edge.
+"""Check that `goc advance` on an edge already in place gives a signal distinct
+from adding a new one.
 
-The verb prints its `advance: ...` success line and exits 0 even when the
-bidirectional edge already exists; on-disk READMEs are byte-for-byte
-unchanged. This is the symmetric counterpart to
-`goc-unadvance-claims-success-when-removing-a-non-existent-edge`.
+The defect: a second `goc advance beta --by alpha`, with the edge alpha → beta
+already in place, printed the same
+`advance: beta.advanced_by += alpha; alpha.advances += beta` line as the first
+call, exited 0 and rewrote both READMEs byte-identical — the signal a real
+addition gives. Fixed, it is refused (non-zero exit, `ERROR:` on stderr, no
+success line, nothing written), while the first call, which does add the
+edge, still exits 0 with the success line.
+
+Exit codes: 0 = defect no longer fires, 1 = defect fires, 2 = the harness or
+a precondition is broken.
+
+Run with:  uv run python .game-of-cards/deck/goc-advance-claims-success-when-adding-an-already-existing-edge/reproduce.py
 """
-import hashlib
-import io
+
+import os
+import subprocess
 import sys
 import tempfile
-from contextlib import redirect_stdout
 from pathlib import Path
 
 
@@ -22,89 +31,82 @@ def _repo_root() -> Path:
     raise RuntimeError("repo root (pyproject.toml) not found")
 
 
-sys.path.insert(0, str(_repo_root()))
+REPO = _repo_root()
+sys.path.insert(0, str(REPO))
 
-from goc import engine  # noqa: E402
-
-
-def _digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+from goc.engine import parse_frontmatter  # noqa: E402
 
 
-def _new_card(deck: Path, slug: str) -> None:
-    (deck / slug).mkdir(parents=True)
-    (deck / slug / "log.md").write_text("")
-    (deck / slug / "README.md").write_text(
-        "---\n"
-        f"title: {slug}\n"
-        'summary: ""\n'
-        "status: open\n"
-        "stage: null\n"
-        "contribution: medium\n"
-        'created: "2026-05-29T00:00:00Z"\n'
-        "closed_at: null\n"
-        "human_gate: none\n"
-        "advances: []\n"
-        "advanced_by: []\n"
-        "tags: [bug]\n"
-        "definition_of_done: |\n"
-        "  - [ ] (placeholder)\n"
-        "---\n\n"
-        f"# {slug}\n"
-    )
-
-
-class _Args:
-    def __init__(self, title: str, advancer: str) -> None:
-        self.title = title
-        self.advancer = advancer
-        self.commit = False
-        self.no_commit = True
-
-
-def main() -> None:
+def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        deck = root / ".game-of-cards" / "deck"
-        deck.mkdir(parents=True)
-        engine.REPO_ROOT = root
-        engine.DECK_DIR = deck
-        _new_card(deck, "a")
-        _new_card(deck, "b")
-        readme_a = deck / "a" / "README.md"
-        readme_b = deck / "b" / "README.md"
+        deck_root = Path(tmp) / "deck-root"
+        gocdir = deck_root / ".game-of-cards"
+        (gocdir / "deck").mkdir(parents=True)
+        (gocdir / "config.yaml").write_text("skills_source: vendored\n")
 
-        print("=== Call 1: goc advance b --by a (edge does NOT yet exist) ===")
-        buf1 = io.StringIO()
-        with redirect_stdout(buf1):
-            engine._cmd_advance(_Args("b", "a"))
-        out1 = buf1.getvalue().rstrip()
-        d1_a, d1_b = _digest(readme_a), _digest(readme_b)
-        print(f"  stdout: {out1!r}")
-        print(f"  sha256(a/README.md)[:12]: {d1_a}")
-        print(f"  sha256(b/README.md)[:12]: {d1_b}")
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
+        env.pop("GOC_WORKTREE_DECK", None)
 
-        print()
-        print("=== Call 2: goc advance b --by a (edge ALREADY exists) ===")
-        buf2 = io.StringIO()
-        with redirect_stdout(buf2):
-            engine._cmd_advance(_Args("b", "a"))
-        out2 = buf2.getvalue().rstrip()
-        d2_a, d2_b = _digest(readme_a), _digest(readme_b)
-        print(f"  stdout: {out2!r}")
-        print(f"  sha256(a/README.md)[:12]: {d2_a}")
-        print(f"  sha256(b/README.md)[:12]: {d2_b}")
+        def run_goc(*argv: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                [sys.executable, "-m", "goc.cli", *argv],
+                cwd=deck_root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
 
-        print()
-        print("=== Verdict ===")
-        same_msg = out1 == out2
-        no_change = (d1_a == d2_a) and (d1_b == d2_b)
-        print(f"  Call 2 prints the same success line as call 1?  {same_msg}")
-        print(f"  Call 2 left both READMEs byte-for-byte unchanged? {no_change}")
-        defect_fires = same_msg and no_change
-        print(f"  DEFECT FIRES (claims-success-on-no-op): {defect_fires}")
-        sys.exit(0 if defect_fires else 1)
+        def readme(slug: str) -> str:
+            return (gocdir / "deck" / slug / "README.md").read_text()
+
+        def has_edge() -> bool:
+            beta, _ = parse_frontmatter(readme("beta"))
+            alpha, _ = parse_frontmatter(readme("alpha"))
+            return "alpha" in (beta.get("advanced_by") or []) and "beta" in (alpha.get("advances") or [])
+
+        def show(label: str, res: subprocess.CompletedProcess) -> None:
+            print(f"$ goc advance beta --by alpha   # {label}")
+            print(f"  exit {res.returncode}")
+            print(f"  stdout: {res.stdout.strip() or '(empty)'}")
+            print(f"  stderr: {res.stderr.strip() or '(empty)'}")
+
+        for slug in ("alpha", "beta"):
+            r = run_goc("new", slug, "--summary", f"Probe card {slug}.",
+                        "--contribution", "low", "--gate", "none", "--tag", "bug")
+            if r.returncode != 0:
+                print(f"HARNESS: could not scaffold {slug}\n{r.stdout}{r.stderr}", file=sys.stderr)
+                return 2
+        if has_edge():
+            print("PRECONDITION: alpha and beta already share an edge", file=sys.stderr)
+            return 2
+
+        # The control: the first call adds a new edge.
+        first = run_goc("advance", "beta", "--by", "alpha", "--no-commit")
+        show("edge not yet in place", first)
+        if first.returncode != 0 or "advance:" not in first.stdout or not has_edge():
+            print("HARNESS: adding a new edge failed — the control is broken", file=sys.stderr)
+            return 2
+
+        # The defect call: the same edge, now already in place.
+        before = (readme("alpha"), readme("beta"))
+        second = run_goc("advance", "beta", "--by", "alpha", "--no-commit")
+        unchanged = before == (readme("alpha"), readme("beta"))
+        show("edge already in place", second)
+
+        refused = (
+            second.returncode != 0
+            and "ERROR:" in second.stderr
+            and "advance:" not in second.stdout
+            and unchanged
+        )
+        if refused:
+            print("\nFIXED: an edge already in place is refused with nothing written; a new edge is still added.")
+            return 0
+        print("\nDEFECT FIRES: adding an edge already in place is not refused"
+              f" (exit {second.returncode}, cards {'unchanged' if unchanged else 'REWRITTEN'}).")
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -66,11 +66,11 @@ class RefuseInvalidInputHelperTest(unittest.TestCase):
         self.assertEqual(err.getvalue(), "ERROR: probe reason\n")
 
 
-class UnadvanceCliTest(unittest.TestCase):
-    """`goc unadvance <title> --by <advancer>` removes the edge advancer → title.
+class _ScratchDeckCliTest(unittest.TestCase):
+    """Drives `goc` through the real CLI against a scratch deck.
 
-    Driven through the real CLI against a scratch deck whose edges are written
-    by hand, so a half-edge can be set up and `goc advance` is not under test.
+    The cards are written by hand, so a precondition — a half-edge, an edge
+    already in place — is set up without the verb under test.
     """
 
     def setUp(self) -> None:
@@ -112,17 +112,28 @@ class UnadvanceCliTest(unittest.TestCase):
         fm = engine.load_card(self.deck / title).frontmatter
         return fm["advances"], fm["advanced_by"]
 
-    def _assert_refused(self, title: str, advancer: str) -> subprocess.CompletedProcess[str]:
+    def _refused(self, *args: str, error: str) -> subprocess.CompletedProcess[str]:
+        """Run `goc <args>`: exit 2, `ERROR: <error>`, no success line, nothing written."""
         before = self._snapshot()
-        res = self._goc("unadvance", title, "--by", advancer)
+        res = self._goc(*args)
         self.assertEqual(
             res.returncode, 2,
             msg=f"expected exit 2\nstdout: {res.stdout}\nstderr: {res.stderr}",
         )
         self.assertEqual(before, self._snapshot(), msg=f"the deck was written\nstderr: {res.stderr}")
-        self.assertNotIn("unadvance:", res.stdout)
-        self.assertIn(f"ERROR: cannot remove {advancer} → {title}: no such edge", res.stderr)
+        self.assertNotIn(f"{args[0]}:", res.stdout)
+        self.assertIn(f"ERROR: {error}", res.stderr)
         return res
+
+
+class UnadvanceCliTest(_ScratchDeckCliTest):
+    """`goc unadvance <title> --by <advancer>` removes the edge advancer → title."""
+
+    def _assert_refused(self, title: str, advancer: str) -> subprocess.CompletedProcess[str]:
+        return self._refused(
+            "unadvance", title, "--by", advancer,
+            error=f"cannot remove {advancer} → {title}: no such edge",
+        )
 
     def test_refuses_an_edge_neither_card_lists(self) -> None:
         self._write("alpha")
@@ -170,6 +181,74 @@ class UnadvanceCliTest(unittest.TestCase):
                 self.assertEqual(res.returncode, 0, msg=res.stderr)
                 self.assertEqual(self._edges_of(title), ([], []))
                 self.assertEqual(self._edges_of(advancer), ([], []))
+
+
+class AdvanceCliTest(_ScratchDeckCliTest):
+    """`goc advance <title> --by <advancer>` adds the edge advancer → title."""
+
+    def _assert_refused(self, title: str, advancer: str) -> subprocess.CompletedProcess[str]:
+        return self._refused(
+            "advance", title, "--by", advancer,
+            error=f"cannot add {advancer} → {title}: the edge already exists",
+        )
+
+    def test_refuses_an_edge_both_cards_already_list(self) -> None:
+        self._write("alpha", advanced_by=("beta",))
+        self._write("beta", advances=("alpha",))
+        self._assert_refused("alpha", "beta")
+
+    def test_refuses_once_the_edge_is_in_place(self) -> None:
+        # The re-run case: the first call adds the edge, so the second has
+        # nothing left to add and must not report an addition again.
+        self._write("alpha")
+        self._write("beta")
+        first = self._goc("advance", "alpha", "--by", "beta")
+        self.assertEqual(first.returncode, 0, msg=first.stderr)
+        self._assert_refused("alpha", "beta")
+
+    def test_names_an_existing_edge_inside_a_cycle_as_existing(self) -> None:
+        # alpha and beta advance each other, a cycle only a hand edit can
+        # build. Re-adding beta → alpha adds nothing, so the refusal names the
+        # edge already in place, not a cycle the call would not create.
+        self._write("alpha", advances=("beta",), advanced_by=("beta",))
+        self._write("beta", advances=("alpha",), advanced_by=("alpha",))
+        res = self._assert_refused("alpha", "beta")
+        self.assertNotIn("cycle", res.stderr)
+
+    def test_still_refuses_the_reversed_edge_as_a_cycle(self) -> None:
+        # alpha advances beta, so beta → alpha is a new edge the other way:
+        # the cycle guard refuses it, and it is not mistaken for the edge
+        # already in place.
+        self._write("alpha", advances=("beta",))
+        self._write("beta", advanced_by=("alpha",))
+        res = self._refused(
+            "advance", "alpha", "--by", "beta",
+            error="adding beta → alpha would create a cycle in the advances graph",
+        )
+        self.assertNotIn("already exists", res.stderr)
+
+    def test_still_adds_a_new_edge(self) -> None:
+        self._write("alpha")
+        self._write("beta")
+        res = self._goc("advance", "alpha", "--by", "beta")
+        self.assertEqual(res.returncode, 0, msg=res.stderr)
+        self.assertIn("advance: alpha.advanced_by += beta; beta.advances += alpha", res.stdout)
+        self.assertEqual(self._edges_of("alpha"), ([], ["beta"]))
+        self.assertEqual(self._edges_of("beta"), (["alpha"], []))
+
+    def test_still_completes_either_dangling_half_of_an_edge(self) -> None:
+        # A hand edit can leave one half of an edge behind; `advance` is one
+        # way to complete it, so only both listed halves trip the guard.
+        self._write("child-half", advanced_by=("parent-a",))
+        self._write("parent-a")
+        self._write("child-b")
+        self._write("parent-half", advances=("child-b",))
+        for title, advancer in (("child-half", "parent-a"), ("child-b", "parent-half")):
+            with self.subTest(title=title, advancer=advancer):
+                res = self._goc("advance", title, "--by", advancer)
+                self.assertEqual(res.returncode, 0, msg=res.stderr)
+                self.assertEqual(self._edges_of(title), ([], [advancer]))
+                self.assertEqual(self._edges_of(advancer), ([title], []))
 
 
 if __name__ == "__main__":

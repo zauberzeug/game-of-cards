@@ -1,22 +1,22 @@
 ---
 title: goc-advance-claims-success-when-adding-an-already-existing-edge
-summary: "`goc advance A --by B` prints a confident `advance: A.advanced_by += B; B.advances += A` message and exits 0 even when the bidirectional edge already exists. Both READMEs are rewritten byte-for-byte unchanged, the auto-commit silently no-ops, and the user (or a script driving `--commit`) is left believing an edge was just added. Symmetric counterpart to `goc-unadvance-claims-success-when-removing-a-non-existent-edge`."
-status: active
+summary: "`goc advance A --by B` printed `advance: A.advanced_by += B; B.advances += A` and exited 0 when the bidirectional edge already existed — both READMEs rewritten byte-identical, the auto-commit a silent no-op — so a re-add looked exactly like a new edge. It now refuses (exit 2, `ERROR: cannot add B → A: the edge already exists`, nothing written) when both halves of the edge are listed, through the parent epic's shared `_refuse_invalid_input` helper and ahead of the cycle guard; a new edge, or a dangling half of one, is still added. Symmetric counterpart to `goc-unadvance-claims-success-when-removing-a-non-existent-edge`."
+status: done
 stage: null
 contribution: medium
 created: "2026-05-29T19:42:01Z"
-closed_at: null
+closed_at: "2026-10-28T04:44:52Z"
 human_gate: none
 advances:
   - mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits non-zero (defect no longer fires — running `goc advance` on a pre-existing edge produces a distinct signal from creating a new edge).
+  - [x] TDD: reproduce.py exits zero (defect no longer fires — running `goc advance` on a pre-existing edge produces a distinct signal from creating a new edge). — the edge already in place gets exit 2, `ERROR:` on stderr, no success line and both READMEs untouched, while the first call, which adds the edge, gets exit 0 and the success line; the same script exits 1 against the pre-fix engine. Reworded from `exits non-zero`, which matched the inverted original script.
   - [x] PROCESS: decision recorded on whether the failure mode is `exit 2 + ERROR`, `exit 0 + WARNING on stderr`, or `exit 0 + no-op-success message ("edge already exists")`. Match whichever shape the resolved sibling `goc-unadvance-claims-success-when-removing-a-non-existent-edge` picks for analogous non-mutating verb calls. — decided 2026-10-22 via the parent epic: strict-refuse (exit 2).
-  - [ ] MECHANICAL: `_cmd_advance` (engine.py:6565) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_advance` honors before printing the success line and entering the auto-commit branch.
-  - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the already-existing-edge case.
-  - [ ] PROCESS: `uv run goc validate` passes.
+  - [x] MECHANICAL: `_cmd_advance` (engine.py:6565) checks edge presence before mutating, OR `_mutate_pair` returns a "no-op" sentinel that `_cmd_advance` honors before printing the success line and entering the auto-commit branch. — `_cmd_advance` checks before `_mutate_pair`: both halves listed is refused through `_refuse_invalid_input` ahead of any write and of the cycle guard; one listed half is completed as before.
+  - [x] TDD: a regression test in `tests/` asserts the chosen signal for the already-existing-edge case. — `AdvanceCliTest` in `tests/test_mutation_verbs_refuse_invalid_input.py`; 3 of its 6 tests fail against the pre-fix engine, as does the `advance` row of `tests/test_verb_rerun_safety.py`, now `REFUSES`.
+  - [x] PROCESS: `uv run goc validate` passes.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -24,15 +24,19 @@ worker: {who: "claude[bot]", where: main}
 
 ## Location
 
-- `goc/engine.py:4382-4400` — `_cmd_advance`
-- `goc/engine.py:6252-6262` — `_add_to_list_field` (idempotent: returns input text when the value is already present)
-- `goc/engine.py:6330-6343` — `_mutate_pair` (writes the result of `_add_to_list_field` back, but exposes no signal when the write was a no-op)
+- `goc/engine.py` `_cmd_advance` — printed the addition line and entered
+  the auto-commit branch without checking whether the edge was already in
+  place; it now checks first.
+- `goc/engine.py` `_add_to_list_field` / `_mutate_pair` — the idempotent
+  add and the byte-identical rewrite behind the false success line
+  (unchanged).
 
-## What's broken
+## What was broken
 
-`_cmd_advance` unconditionally prints an "added edge" success message and
-enters the auto-commit branch regardless of whether the edge actually
-existed beforehand.
+Before the fix, `_cmd_advance` unconditionally printed an "added edge"
+success message and entered the auto-commit branch regardless of whether
+the edge already existed. The excerpts and line numbers below are the
+pre-fix code.
 
 ```python
 # goc/engine.py:6565
@@ -75,17 +79,16 @@ def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:
 ```
 
 …but `_mutate_pair` discards the signal — it writes the unchanged text
-back without telling its caller. `_cmd_advance` therefore never learns
-that the requested edge already existed, and reports a confident
-"created" outcome where reality is "did nothing." `_git_auto_commit`
-(invoked when `--commit`/auto-commit is on) finds no diff and silently
-returns False, so the only durable trace of the operation is the
+back without telling its caller. `_cmd_advance` therefore never learned
+that the requested edge already existed, and reported a confident
+"created" outcome where reality was "did nothing." `_git_auto_commit`
+(invoked when `--commit`/auto-commit is on) found no diff and silently
+returned False, so the only durable trace of the operation was the
 misleading line on stdout.
 
 ## Empirical evidence
 
-`uv run python .game-of-cards/deck/goc-advance-claims-success-when-adding-an-already-existing-edge/reproduce.py`
-on a clean checkout:
+As filed, the original reproducer showed the false success:
 
 ```text
 === Call 1: goc advance b --by a (edge does NOT yet exist) ===
@@ -104,25 +107,47 @@ on a clean checkout:
   DEFECT FIRES (claims-success-on-no-op): True
 ```
 
-The reproducer exits 0 while the defect fires; the DoD flips this so
-exit 0 only happens once the fix is in.
+That reproducer exited 0 while the defect fired. After the fix,
+`uv run python .game-of-cards/deck/goc-advance-claims-success-when-adding-an-already-existing-edge/reproduce.py`
+exits 0 (the reproducer contract: 0 = defect no longer fires, 1 = fires,
+2 = harness broken):
+
+```text
+$ goc advance beta --by alpha   # edge not yet in place
+  exit 0
+  stdout: advance: beta.advanced_by += alpha; alpha.advances += beta
+  stderr: (empty)
+$ goc advance beta --by alpha   # edge already in place
+  exit 2
+  stdout: (empty)
+  stderr: ERROR: cannot add alpha → beta: the edge already exists — beta.advanced_by lists alpha and alpha.advances lists beta
+
+FIXED: an edge already in place is refused with nothing written; a new edge is still added.
+```
+
+Against the pre-fix engine the same script exits 1 (`DEFECT FIRES`).
 
 ## Why it matters
 
 `_cmd_advance` is one of the two CLI surfaces (alongside `_cmd_unadvance`)
-through which agents and humans rewrite the deck's value-flow graph. The
-verb is reachable through three documented paths:
+through which agents and humans rewrite the deck's value-flow graph. Three
+documented paths reach the shared add helper `_mutate_pair(..., add=True)`:
 
 1. Direct CLI: `goc advance <title> --by <advancer>` — invoked from
-   `Skill(advance-card)` when an agent links two existing cards.
-2. `goc new --advanced-by <existing>` (`engine.py:6283-6286`) — routes
-   through the same `_mutate_pair` codepath. A `goc new` filing that
-   re-asserts an already-wired edge would also misreport.
-3. `goc repair-edges --execute` (`engine.py:6478`) — repairs half-edges
-   by calling `_mutate_pair(..., add=True)` for each missing inverse.
-   The repair loop pre-filters to genuinely missing inverses, so this
-   path is not currently miscalled — but the misreporting shape lives
-   in the shared helper, which means any future caller inherits it.
+   `Skill(advance-card)` when an agent links two existing cards. This is
+   the path that misreported.
+2. `goc new --advances <existing>` / `--advanced-by <existing>` — the new
+   card starts with empty edge lists and repeated flags are deduplicated
+   (`_unique_preserving_order`), so at most one half of an edge can
+   already be in place; the call is never a full no-op.
+3. `goc repair-edges --apply` — repairs half-edges by calling
+   `_mutate_pair(..., add=True)` for each missing inverse. The repair loop
+   pre-filters to genuinely missing inverses, so this path is not
+   miscalled either.
+
+`_mutate_pair` itself still reports nothing about a no-op, so a future
+caller that can hand it an edge already in place needs its own check, the
+way `_cmd_advance` and `_cmd_unadvance` now have one.
 
 Concrete failure mode:
 
@@ -132,17 +157,15 @@ Concrete failure mode:
   on. The auto-commit no-ops silently, so no git history records the
   outcome either way. A reader investigating "why was this edge added on
   date X" finds nothing — the edge predates the apparent claim.
-- More damaging in shell automation: a script using `goc advance ... &&
-  git commit -m "deck: B advances A"` will create an empty commit (the
-  goc auto-commit is off, but the wrapper's `&&` sees exit 0). The deck
-  history accumulates ghost edge-add commits whose diff is empty.
+- More damaging in shell automation: a script chaining
+  `goc advance ... && git commit ...` sees exit 0 and proceeds as though
+  an edge landed, so its own record of the deck's history claims an edge
+  addition whose diff is empty.
 
 This is the symmetric counterpart to
 [goc-unadvance-claims-success-when-removing-a-non-existent-edge](../goc-unadvance-claims-success-when-removing-a-non-existent-edge/),
-which catalogues the same defect shape in the remove direction. The
-shared root cause (the `_mutate_pair` / `_add_to_list_field` no-op
-signal is discarded) suggests one fix touching both verbs, which is why
-this card carries the `meta-fix` tag.
+which catalogued the same defect shape in the remove direction and
+closed first, introducing the shared refusal helper this fix reuses.
 
 ## Decision
 
@@ -152,8 +175,30 @@ this card carries the `meta-fix` tag.
 
 ## Fix
 
-Once the decision lands, the smallest change is to make `_mutate_pair`
-return a tri-state result (`"added" | "noop" | "removed"`) and have
-both `_cmd_advance` and `_cmd_unadvance` honor it before printing
-the success line and entering the auto-commit branch. The data-layer
-idempotency stays; only the CLI's claim about what happened changes.
+`_cmd_advance` loads both cards and checks the edge before `_mutate_pair`,
+mirroring the guard its sibling put in `_cmd_unadvance`:
+
+- **Both halves listed** — `<title>.advanced_by` names the advancer and
+  `<advancer>.advances` names the title. There is nothing to add, so it
+  refuses through the parent epic's shared `_refuse_invalid_input`:
+  `ERROR: cannot add <advancer> → <title>: the edge already exists — …`,
+  exit 2, nothing written.
+- **One half listed** — a dangling half a hand edit left behind.
+  Completing it is a real addition, so it proceeds as before.
+- **Neither listed** — a new edge, unchanged.
+
+The check runs ahead of the cycle guard, so an edge already inside a
+hand-built cycle is refused as existing rather than as a cycle the call
+would not create. An edge already running the other way
+(`<title> → <advancer>`) is not the edge being added; the cycle guard
+still refuses it as before.
+
+The fix sketch filed with this card — a tri-state `_mutate_pair` result
+honored by both verbs — was not used, for the reason the sibling gave: it
+writes first and asks afterwards, while the decision requires that a
+refusal write nothing.
+
+A second `goc advance` of the same edge is now refused instead of
+re-emitting both cards, so `tests/test_verb_rerun_safety.py` declares
+`advance` `REFUSES` (was `RE_EMITS`). The regression cases sit beside the
+sibling's in `tests/test_mutation_verbs_refuse_invalid_input.py`.

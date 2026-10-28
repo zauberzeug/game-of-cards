@@ -5659,13 +5659,13 @@ def _refuse_invalid_input(reason: str) -> None:
     The strict-refuse shape decided on by
     `mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success`
     for input a mutation verb cannot act on as asked — an edge that is not
-    there to remove, a self-edge, one that would close a cycle. Performing a
-    no-op and printing the success line anyway misleads every caller that
-    trusts the exit code, the `--commit`-driven scripts and agents above all.
-    What makes input invalid is verb-specific, so each verb keeps its
-    predicate inline and calls this ahead of every disk write: a refusal
-    leaves the deck byte-identical, and the family's refusals share one
-    emission instead of drifting apart.
+    there to remove or is already there to add, a self-edge, one that would
+    close a cycle. Performing a no-op and printing the success line anyway
+    misleads every caller that trusts the exit code, the `--commit`-driven
+    scripts and agents above all. What makes input invalid is verb-specific,
+    so each verb keeps its predicate inline and calls this ahead of every
+    disk write: a refusal leaves the deck byte-identical, and the family's
+    refusals share one emission instead of drifting apart.
     """
     print(f"ERROR: {reason}", file=sys.stderr)
     sys.exit(2)
@@ -7123,6 +7123,17 @@ def _cmd_advance(args):
     _validate_commit_flags(commit, no_commit)
     if title == advancer:
         _refuse_invalid_input("cannot advance a card with itself")
+    child = load_card_or_exit(resolve_card_dir(title), title)
+    parent = load_card_or_exit(resolve_card_dir(advancer), advancer)
+    # Only both halves leave nothing to add: completing the half of an edge a
+    # hand edit left dangling is a real addition. With both listed, reporting
+    # an addition anyway is a misleading no-op success. Checked ahead of the
+    # cycle guard, which would misname an edge already inside a cycle.
+    if _edge_field_lists(child, "advanced_by", advancer) and _edge_field_lists(parent, "advances", title):
+        _refuse_invalid_input(
+            f"cannot add {advancer} → {title}: the edge already exists — {title}.advanced_by "
+            f"lists {advancer} and {advancer}.advances lists {title}"
+        )
     cards = load_all_cards()
     if _would_create_advance_cycle(cards, title, advancer):
         _refuse_invalid_input(f"adding {advancer} → {title} would create a cycle in the advances graph")

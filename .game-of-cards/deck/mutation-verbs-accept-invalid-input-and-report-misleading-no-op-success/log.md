@@ -134,3 +134,24 @@ Dashboard updated in place: the unadvance roster bullet carries its closure,
 the roster heading no longer says "open", the summary no longer counts nine
 *open* children, and `### How the decision reached the children` names the
 helper and the test module.
+
+
+## 2026-10-28: second child closed — the redundant-edge pair is done
+
+`goc-advance-claims-success-when-adding-an-already-existing-edge` closed under
+the decided shape, so both directions of the redundant-edge pair now refuse.
+`_cmd_advance` refuses through `_refuse_invalid_input` when both halves of the
+edge are already listed (`ERROR: cannot add <advancer> → <title>: the edge
+already exists — …`, exit 2, nothing written) and still completes a dangling
+half, the mirror of the unadvance guard. The check runs ahead of the cycle
+guard, so an edge already inside a hand-built cycle is named as existing
+rather than as a cycle the call would not create.
+
+`tests/test_mutation_verbs_refuse_invalid_input.py` now hoists its scratch-deck
+plumbing into a `_ScratchDeckCliTest` base with a `_refused(*args, error=…)`
+assertion for the strict-refuse shape (exit 2, the `ERROR:` line, no success
+line, every card byte-identical), which the remaining children can reuse.
+`tests/test_verb_rerun_safety.py` declares `advance` `REFUSES` (was
+`RE_EMITS`).
+
+Dashboard updated in place: the advance roster bullet carries its closure.

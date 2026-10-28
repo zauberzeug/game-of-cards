@@ -282,9 +282,9 @@ SURFACES: dict[str, Surface] = {
     ),
     "publish": Surface(NO_OP, ("publish", "draft-probe-card")),
     "advance": Surface(
-        RE_EMITS,
+        REFUSES,
         ("advance", "alpha-probe-card", "--by", "beta-probe-card"),
-        note="re-emits both endpoints unconditionally; the bytes are identical",
+        note="the first run adds the edge, so the second finds it already there",
     ),
     "unadvance": Surface(
         REFUSES,
