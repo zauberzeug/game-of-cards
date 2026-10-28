@@ -1,7 +1,7 @@
 ---
 title: goc-decide-accepts-empty-decision-and-because-arguments
 summary: "`goc decide <title> --decision '' --because ''` exits 0, lowers the human gate to `none`, and writes a corrupt `## Decision` block (no decision text, no reasoning text) plus a log entry whose visible content is ` — . Gate decision → none.`. The Andon-cord handoff that `Skill(decide-card)` documents is meant to be a permanent audit trail of what was decided and why; empty values silently break that trail while still releasing the card to autonomous pullers."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-29T19:53:19Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `_cmd_decide` (engine.py:6844) validates that `args.decision.strip()` and `args.reasoning.strip()` are both non-empty before reading the README, with a single `ERROR: --decision and --because must be non-empty` message and exit 2 when either is blank.
   - [ ] TDD: a regression test in `tests/` asserts the chosen signal for the empty-string case, separately for empty-`--decision`, empty-`--because`, and both.
   - [ ] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc decide` accepts empty `--decision` / `--because` arguments
