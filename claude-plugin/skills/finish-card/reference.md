@@ -51,6 +51,9 @@ layer-2 + layer-3 check:
 To skip a single check (rare — e.g. a genuinely flaky automated
 check): `--skip <name>`. The skip is recorded as
 `[~] SKIPPED — <description>` in the block. Do not skip casually.
+A name that matches no configured check is refused (exit 2, no check
+run, nothing written) with the configured names listed, so a typo
+cannot pass for a skip.
 
 ## Retraction vs waiting (`advanced-by-closed` failures)
 

@@ -46,3 +46,21 @@ before printing any verdict. Under its own inverted DoD that crash would have
 read as "fixed", and under the 0/1/2 contract it reads as "fires". Either
 way the exit code reflects the crash, not the defect, so a classification
 run should treat a traceback as exit 2 (harness broken), whatever the code.
+
+## 2026-10-28 — Fourth inverted reproducer in the family fixed on close
+
+`goc-attest-silently-ignores-unknown-skip-names/reproduce.py` printed
+`DEFECT REPRODUCED` and returned 0 on its defect-present branch — the plain
+`return 0` shape a static scan would match — under a DoD that already read
+`reproduce.py exits zero`. It was rewritten to the 0/1/2 contract when the
+card closed (exit 1 against the pre-fix engine, exit 0 after), so it needs
+no sweep.
+
+One more shape for the sweep to expect: the inverted script recognised a fix
+only by a phrase in stderr (`do not match any configured check` or
+`unknown skip name`) from the fix sketch. The landed message words it
+differently, so against the fixed engine it reported `typo accepted
+silently: True` beside its `No defect` verdict. A reproducer that keys its
+verdict on prose the fix had not yet written can misread the fix; the
+rewrite keys on exit code, `ERROR:`, whether any check ran and whether
+log.md changed.

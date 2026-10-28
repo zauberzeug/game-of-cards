@@ -57,6 +57,13 @@ def _edges(refs: tuple[str, ...]) -> str:
     return "".join(f"\n  - {ref}" for ref in refs) if refs else " []"
 
 
+def _marker_check(name: str) -> str:
+    """A layer-2 closure check that leaves `<name>.ran` in the project root."""
+    code = f"open('{name}.ran', 'w').close()"
+    cmd = ", ".join(f'"{part}"' for part in (sys.executable, "-c", code))
+    return f"  - name: {name}\n    kind: automated\n    cmd: [{cmd}]\n"
+
+
 class RefuseInvalidInputHelperTest(unittest.TestCase):
     def test_exits_2_with_the_reason_on_stderr(self) -> None:
         err = io.StringIO()
@@ -299,6 +306,65 @@ class DecideCliTest(_ScratchDeckCliTest):
         self.assertEqual(card.human_gate, "none")
         self.assertIn("Option A.", card.body)
         self.assertIn("It is simpler.", card.body)
+
+
+class AttestCliTest(_ScratchDeckCliTest):
+    """`goc attest <title> --skip <name>` records a configured check as SKIPPED.
+
+    Each configured check leaves a marker file when it runs, so a refusal can
+    show that no check ran — not even the one a typo meant to skip, which is
+    what the defect did — beside the deck staying byte-identical.
+    """
+
+    CHECKS = ("lint", "unit-tests")
+
+    def setUp(self) -> None:
+        super().setUp()
+        (self.root / ".game-of-cards" / "config.yaml").write_text(
+            CONFIG
+            + "layer_2_project_dod:\n"
+            + "".join(_marker_check(name) for name in self.CHECKS)
+            + "layer_3_goc_dod: []\n"
+        )
+        self._write("probe")
+
+    def _ran(self) -> set[str]:
+        return {name for name in self.CHECKS if (self.root / f"{name}.ran").exists()}
+
+    def _assert_refused(self, *skips: str, unknown: str) -> subprocess.CompletedProcess[str]:
+        res = self._refused(
+            "attest", "probe", *(arg for name in skips for arg in ("--skip", name)),
+            error=f"probe: unknown --skip {unknown} — the configured closure checks are: lint, unit-tests",
+        )
+        self.assertEqual(self._ran(), set(), msg="a check ran before the refusal")
+        return res
+
+    def test_refuses_a_name_no_configured_check_has(self) -> None:
+        self._assert_refused("lnt", unknown="name 'lnt'")
+
+    def test_refuses_an_unknown_name_beside_a_valid_one(self) -> None:
+        # The valid skip must not carry the typo through: pre-fix this ran
+        # unit-tests, the check the typo meant to skip, and exited 0.
+        self._assert_refused("lint", "unit-test", unknown="name 'unit-test'")
+
+    def test_names_each_unknown_name_once_in_the_order_given(self) -> None:
+        self._assert_refused("tests", "lnt", "tests", unknown="names 'tests', 'lnt'")
+
+    def test_refuses_a_typo_ahead_of_the_all_skipped_guard(self) -> None:
+        # Every configured check is skipped too, but the typo is the input
+        # error to report first: fixing it may be all the call needed.
+        res = self._assert_refused("lint", "unit-tests", "lnit", unknown="name 'lnit'")
+        self.assertNotIn("every configured closure check was skipped", res.stderr)
+
+    def test_still_skips_a_configured_check(self) -> None:
+        res = self._goc("attest", "probe", "--skip", "lint", "--non-interactive")
+        self.assertEqual(res.returncode, 0, msg=res.stderr)
+        self.assertIn("[~] lint — SKIPPED", res.stdout)
+        self.assertIn("Attestation OK.", res.stdout)
+        self.assertEqual(self._ran(), {"unit-tests"})
+        log = (self.deck / "probe" / "log.md").read_text()
+        self.assertIn("- [~] lint SKIPPED", log)
+        self.assertIn("- [x] unit-tests", log)
 
 
 if __name__ == "__main__":

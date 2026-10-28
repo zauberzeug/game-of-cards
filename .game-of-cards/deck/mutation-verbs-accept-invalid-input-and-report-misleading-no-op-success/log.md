@@ -177,3 +177,26 @@ on the shared `_ScratchDeckCliTest` base, whose `_write` now takes a
 Dashboard updated in place: the decide roster bullet carries its closure.
 Six children remain: the four gated ones, plus `goc-attest-silently-ignores-unknown-skip-names`
 and `goc-wait-with-a-past-until-date-…`, both pullable.
+
+
+## 2026-10-28: fourth child closed — unknown `goc attest --skip` names refused
+
+`goc-attest-silently-ignores-unknown-skip-names` closed under the decided
+shape. `_cmd_attest` refuses through `_refuse_invalid_input` when a `--skip`
+value names no configured check in either layer
+(`ERROR: <title>: unknown --skip name '<name>' — the configured closure
+checks are: …`, exit 2, no check run, nothing written), each unknown name
+reported once in the order given. It needs the config, so it runs after the
+closed-card and no-checks-configured refusals, and ahead of the all-skipped
+refusal so a typo is named even when the other names skip every check. The
+helper's docstring now lists the unknown-skip case.
+
+`tests/test_mutation_verbs_refuse_invalid_input.py` gains `AttestCliTest` on
+the shared `_ScratchDeckCliTest` base; its configured checks are automated
+commands that leave marker files, so a refusal can show that no check ran.
+`tests/test_verb_rerun_safety.py` is unchanged: its `attest` probe passes no
+`--skip`, so `APPENDS` still holds.
+
+Dashboard updated in place: the attest roster bullet carries its closure.
+Five children remain: the four gated ones, plus
+`goc-wait-with-a-past-until-date-…`, pullable.

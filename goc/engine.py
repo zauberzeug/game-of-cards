@@ -4367,7 +4367,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p_attest = subparsers.add_parser("attest", help="Run a live card's layer-2 + layer-3 closure checks.")
     p_attest.add_argument("title")
     p_attest.add_argument("--skip", dest="skips", action="append", default=[],
-                          help="Skip a check by name; recorded as SKIPPED in log.")
+                          help="Skip a configured check by name (an unknown name is "
+                          "refused); recorded as SKIPPED in log.")
     p_attest.add_argument("--non-interactive", action="store_true",
                           help="Fail manual/agent checks instead of prompting.")
 
@@ -5660,13 +5661,13 @@ def _refuse_invalid_input(reason: str) -> None:
     `mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success`
     for input a mutation verb cannot act on as asked — an edge that is not
     there to remove or is already there to add, a self-edge, one that would
-    close a cycle, a decision or its reasoning left blank. Printing the
-    success line anyway, over a no-op or an empty record, misleads every
-    caller that trusts the exit code, the `--commit`-driven scripts and
-    agents above all. What makes input invalid is verb-specific, so each
-    verb keeps its predicate inline and calls this ahead of every disk
-    write: a refusal leaves the deck byte-identical, and the family's
-    refusals share one emission instead of drifting apart.
+    close a cycle, a decision or its reasoning left blank, a `--skip` naming
+    no configured check. Printing the success line anyway, over a no-op or
+    an empty record, misleads every caller that trusts the exit code, the
+    `--commit`-driven scripts and agents above all. What makes input invalid
+    is verb-specific, so each verb keeps its predicate inline and calls this
+    ahead of every disk write: a refusal leaves the deck byte-identical, and
+    the family's refusals share one emission instead of drifting apart.
     """
     print(f"ERROR: {reason}", file=sys.stderr)
     sys.exit(2)
@@ -6304,10 +6305,14 @@ def _cmd_attest(args):
     the all-``[~] SKIPPED`` block proves exactly as little as the bare header.
     "No check ran" is refused regardless of why none ran.
 
-    A closed card is refused before either: its log.md is the record of how it
-    closed, and a late block would re-litigate that closure — on any later day
-    the ``log-md-closure-entry`` check cannot find a closure heading dated today,
-    so the stray block records a FAIL the card's real closure never had.
+    Unknown-skip contract: a ``--skip`` name that matches no configured check
+    is refused before the all-skipped check and before any check runs, naming
+    the configured checks — a typo must not pass for a skip.
+
+    A closed card is refused before all three: its log.md is the record of how
+    it closed, and a late block would re-litigate that closure — on any later
+    day the ``log-md-closure-entry`` check cannot find a closure heading dated
+    today, so the stray block records a FAIL the card's real closure never had.
     """
     title = args.title
     skips = args.skips
@@ -6334,6 +6339,17 @@ def _cmd_attest(args):
         sys.exit(2)
 
     all_check_names = {c["name"] for c in layer_2_checks} | {c["name"] for c in layer_3_checks}
+    # argparse takes any string for --skip, and the run loop below only asks
+    # whether each configured check was named — never whether each name is a
+    # configured check. A typo was dropped without a word: the check it meant
+    # to skip ran anyway while the caller believed it skipped.
+    unknown = [name for name in dict.fromkeys(skips) if name not in all_check_names]
+    if unknown:
+        _refuse_invalid_input(
+            f"{title}: unknown --skip {_plural(len(unknown), 'name')} "
+            f"{', '.join(repr(name) for name in unknown)} — the configured closure "
+            f"checks are: {', '.join(sorted(all_check_names))}"
+        )
     if all_check_names and all_check_names <= skips_set:
         print(
             "ERROR: every configured closure check was skipped via --skip "
