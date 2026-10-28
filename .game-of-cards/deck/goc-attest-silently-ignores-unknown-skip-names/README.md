@@ -1,7 +1,7 @@
 ---
 title: goc-attest-silently-ignores-unknown-skip-names
 summary: "`goc attest <card> --skip <name>` accepts arbitrary strings as skip names without validating them against the configured check inventory. A typo (e.g. `--skip complie` instead of `compile`) is silently a no-op: the user thinks they skipped a check; the check actually ran. No error, no warning. Same shape as the existing family of silently-dropped CLI-input bugs."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-31T03:20:21Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] TDD: regression test under `tests/` covers (a) the unknown-skip rejection/warning path and (b) the all-valid-skips happy path.
   - [ ] MECHANICAL: `_cmd_attest` in `goc/engine.py` validates `args.skips` against the configured check inventory before the per-check loop.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes; `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc attest --skip <name>` accepts unknown skip names with no error
