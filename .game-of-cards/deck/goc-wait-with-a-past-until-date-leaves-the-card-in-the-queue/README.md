@@ -1,23 +1,23 @@
 ---
 title: goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue
-summary: "`goc wait <t> --until <date already past>` writes the overlay, prints a success line and auto-commits, but the engine's own `waiting_impedes` reads an elapsed `waiting_until` as non-impeding — so the card stays in `--ready`, is absent from `--waiting`, and the next autonomous pull claims it. The common form is a bare `--until <today>`: a `YYYY-MM-DD` value resolves to midnight UTC, so it is already elapsed at every moment of the day it names. Ninth instance of the mutation-verbs-accept-invalid-input family; the remedy shape is that epic's parked decision, so this card carries the same gate."
-status: active
+summary: "`goc wait <t> --until <date already past>` wrote the overlay, printed a success line and auto-committed, but the engine's own `waiting_impedes` reads an elapsed `waiting_until` as non-impeding — so the card stayed in `--ready`, was absent from `--waiting`, and the next autonomous pull claimed it. The common form was a bare `--until <today>`: a `YYYY-MM-DD` value resolves to midnight UTC, so it is elapsed at every moment of the day it names. It now refuses an `--until` the read guard says would not impede, asked of `waiting_impedes` on the card as it would be written — exit 2, `ERROR: <title>: --until '<value>' has already elapsed …`, nothing written — through the parent epic's shared `_refuse_invalid_input` helper."
+status: done
 stage: null
 contribution: medium
 created: "2026-08-26T04:40:53Z"
-closed_at: null
+closed_at: "2026-10-29T04:54:12Z"
 human_gate: none
 advances:
   - mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success
 advanced_by: []
 tags: [bug, api-contract, meta-fix]
 definition_of_done: |
-  - [ ] PROCESS: the shared validation-failure shape decided on [mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success](../mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success/) is applied here rather than re-derived — strict-refuse (exit 2, no mutation), exit-0-with-stderr-WARNING, or an honest no-op line. Record which, and why, in this card's `log.md`.
-  - [ ] TDD: `reproduce.py` exits zero — neither `--until <today>` nor `--until <long-past date>` produces exit 0 with a bare success line while the card stays in `--ready` and out of `--waiting`.
-  - [ ] MECHANICAL: `_cmd_wait` (`goc/engine.py:6439`) decides the elapsed case from the engine's own read guard rather than a second copy of the comparison — reuse `_waiting_until_instant` + `_now_instant` (or `waiting_impedes` on the post-write card), so this check cannot drift from `waiting_impedes` the way the hook readers repeatedly did.
-  - [ ] MECHANICAL: scoped to the `--until` value supplied in THIS invocation. Whether a bare `--reason` should refresh or clear a **pre-existing** stale `waiting_until` is a different question, owned by [goc-wait-does-not-clear-stale-elapsed-waiting-until](../goc-wait-does-not-clear-stale-elapsed-waiting-until/) — do not resolve it here.
-  - [ ] TDD: regression test in `tests/` covers `--until <today>` (bare date, elapsed at midnight UTC), `--until <long-past date>`, `--until <future date>` (unchanged — still impedes, no new output), and the datetime shape `YYYY-MM-DDTHH:MM:SSZ` on both sides of `now`.
-  - [ ] MECHANICAL: `Skill(advance-card)` Step 6 (`goc/templates/skills/advance-card/SKILL.md:139-142`) states what an already-elapsed `--until` does — it currently documents only that `goc validate` reports an elapsed date as `WAITING_OVERDUE`, which is the state a card drifts into, not the state this verb can create outright. Plugin mirrors synced; `uv run goc validate` clean.
+  - [x] PROCESS: the shared validation-failure shape decided on [mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success](../mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success/) is applied here rather than re-derived — strict-refuse (exit 2, no mutation), exit-0-with-stderr-WARNING, or an honest no-op line. Record which, and why, in this card's `log.md`. — strict-refuse through the shared `_refuse_invalid_input`, as the parent decided on 2026-10-22 for all nine children; the why is in log.md's closure entry.
+  - [x] TDD: `reproduce.py` exits zero — neither `--until <today>` nor `--until <long-past date>` produces exit 0 with a bare success line while the card stays in `--ready` and out of `--waiting`. — both get exit 2, `ERROR:` naming `--until` and the README untouched, beside a future-date control that still hides its card; the same script exits 1 against the pre-fix engine. Rewritten to the 0/1/2 contract: as filed, a broken harness exited 1 (read as the defect) and any non-zero exit read as fixed.
+  - [x] MECHANICAL: `_cmd_wait` (`goc/engine.py:6439`) decides the elapsed case from the engine's own read guard rather than a second copy of the comparison — reuse `_waiting_until_instant` + `_now_instant` (or `waiting_impedes` on the post-write card), so this check cannot drift from `waiting_impedes` the way the hook readers repeatedly did. — `waiting_impedes` on a `Card` built from the frontmatter about to be written; no copy of `until_dt > now`.
+  - [x] MECHANICAL: scoped to the `--until` value supplied in THIS invocation. Whether a bare `--reason` should refresh or clear a **pre-existing** stale `waiting_until` is a different question, owned by [goc-wait-does-not-clear-stale-elapsed-waiting-until](../goc-wait-does-not-clear-stale-elapsed-waiting-until/) — do not resolve it here. — the check runs only when this call passes `--until`; `test_judges_only_the_until_this_call_passes` pins that a bare `--reason` over a stale elapsed date is not refused by it.
+  - [x] TDD: regression test in `tests/` covers `--until <today>` (bare date, elapsed at midnight UTC), `--until <long-past date>`, `--until <future date>` (unchanged — still impedes, no new output), and the datetime shape `YYYY-MM-DDTHH:MM:SSZ` on both sides of `now`. — `WaitCliTest` in `tests/test_mutation_verbs_refuse_invalid_input.py`: today, 2020-01-01, a datetime an hour past and an elapsed `--until` over a live wait are refused (all four fail against the pre-fix engine); a date 30 days out and a datetime an hour out keep the exact pre-fix success line and hide the card.
+  - [x] MECHANICAL: `Skill(advance-card)` Step 6 (`goc/templates/skills/advance-card/SKILL.md:139-142`) states what an already-elapsed `--until` does — it currently documents only that `goc validate` reports an elapsed date as `WAITING_OVERDUE`, which is the state a card drifts into, not the state this verb can create outright. Plugin mirrors synced; `uv run goc validate` clean. — Step 6 now says an elapsed `--until` is refused (exit 2, nothing written) and that a bare date is midnight UTC, so deferring through today takes tomorrow's date; its examples use `<YYYY-MM-DD>`. Mirrors synced, OpenClaw port re-run; `goc validate` exits 0.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -60,10 +60,10 @@ worker: {who: "claude[bot]", where: main}
 - `goc/engine.py:1218` — `_waiting_until_instant`: a bare `YYYY-MM-DD`
   becomes **midnight UTC** of that day.
 
-## What's broken
+## What was broken
 
-`_cmd_wait` validates two things about `--until`: that it parses as ISO, and
-nothing else. It never asks whether the overlay it is about to write actually
+`_cmd_wait` validated two things about `--until`: that it parses as ISO, and
+nothing else. It never asked whether the overlay it was about to write actually
 impedes. The engine's read guard says it does not:
 
 ```python
@@ -72,10 +72,10 @@ return until_dt > now
 ```
 
 That elapsed-resurfaces rule is deliberate and documented — a wait that has
-*matured* should return its card to the queue. But `goc wait` will just as
+*matured* should return its card to the queue. But `goc wait` would just as
 happily write a wait that is **born elapsed**, and then report it exactly like
 a wait that took effect: a success line naming both fields, exit 0, and an
-auto-commit. Nothing in the output distinguishes "parked" from "no-op".
+auto-commit. Nothing in the output distinguished "parked" from "no-op".
 
 The `--until <today>` case is the one an operator hits without doing anything
 unusual. `_waiting_until_instant` resolves a bare `YYYY-MM-DD` to midnight UTC,
@@ -83,7 +83,7 @@ so `--until 2026-08-26` is already in the past at 00:00:01 on 2026-08-26. The
 natural reading of "wait until today" — *don't offer this again during today* —
 is the exact opposite of what the value does.
 
-The skill body says only what happens to a date that goes stale on its own
+The skill body said only what happens to a date that goes stale on its own
 (`goc/templates/skills/advance-card/SKILL.md:139-142`):
 
 > A future `waiting_until` (or a reason with no date) hides the card from
@@ -91,14 +91,16 @@ The skill body says only what happens to a date that goes stale on its own
 > date passes; an elapsed date is surfaced by `goc validate` as
 > `WAITING_OVERDUE`.
 
-It does not say that `goc wait` will *create* one on request and call it a
+It did not say that `goc wait` would *create* one on request and call it a
 success — because nobody expected the verb to accept an input it can prove
 inert at the moment it writes it.
 
 ## Empirical evidence
 
 `uv run python .game-of-cards/deck/goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue/reproduce.py`
-(exit 1), abridged:
+against the pre-fix engine (exit 1), abridged — as filed; the script has since
+gained a future-date control and the 0/1/2 exit contract, and exits 0 against
+the fixed engine:
 
 ```
 === goc wait demo-today --reason deferred --until 2026-08-26  (today) ===
@@ -148,29 +150,36 @@ pull path reads.
 
 ## Fix
 
-Blocked on the family decision, not on analysis. This is the ninth instance of
-[mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success](../mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success/),
-whose first DoD item exists precisely so the nine children stop re-deriving the
-validation-failure shape nine ways. Its three candidates map here as:
+Landed 2026-10-29 under the shape the parent
+[mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success](../mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success/)
+decided for all nine children: **strict-refuse**. When this call passes
+`--until`, `_cmd_wait` builds the card as it would be written and asks
+`waiting_impedes` whether it impedes. If not, it refuses through the shared
+`_refuse_invalid_input` before the write — exit 2, nothing written, no commit:
 
-1. **Strict-refuse** — `ERROR: --until: <value> is already elapsed; the overlay
-   would not impede` on stderr, no mutation, `sys.exit(2)`. Matches the two
-   rejections already in this same block (bad `--reason`, malformed `--until`).
-2. **Exit-0 with a stderr WARNING** — write it, warn that it impedes nothing.
-   Preserves any use of an elapsed overlay as a deliberate record.
-3. **Honest stdout line** — append a second parenthetical beside the existing
-   `(no reason set; implied 'deferred')`, e.g.
-   `(already elapsed; does not impede — the card stays in the queue)`.
+```
+ERROR: demo: --until '2026-10-29' has already elapsed (a bare date is midnight UTC
+at the start of that day), so the wait would not hide demo from the queue — pass
+a later --until, or --reason alone for an open-ended wait
+```
 
-Whichever shape wins, the *predicate* must not be a fourth hand-written copy of
+The parenthetical appears only for a bare date, where the midnight-UTC reading
+is the trap. A future `--until` is untouched: same success line, same overlay.
+
+The predicate is the read guard itself, not a fourth hand-written copy of
 `until_dt > now`. `waiting_impedes`, `validate_waiting_overlay`, the
 SessionStart hook and the OpenClaw port have each drifted from that comparison
 at least once (see
 [session-start-hook-impeded-check-ignores-elapsed-waiting-until](../session-start-hook-impeded-check-ignores-elapsed-waiting-until/)
 and
-[waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift](../waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/)).
-Reuse `_waiting_until_instant` + `_now_instant`, or evaluate `waiting_impedes`
-on the post-write card.
+[waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift](../waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/)),
+so asking `waiting_impedes` keeps the write path from drifting the same way.
+
+`--until`'s help text and `Skill(advance-card)` Step 6 now say an already
+elapsed date is refused and that a bare date is midnight UTC; Step 6's
+examples use a `<YYYY-MM-DD>` placeholder in place of a literal date, which
+had itself gone stale. The regression tests are `WaitCliTest` in
+`tests/test_mutation_verbs_refuse_invalid_input.py`.
 
 ## Scope boundary
 

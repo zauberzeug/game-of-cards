@@ -82,3 +82,25 @@ adds the live-card rename and the `--force` retitle as paired positive
 cases, and treats either one failing as exit 2. A classification run
 should flag a reproducer whose only fixed-branch evidence is the absence
 of the defect.
+
+
+## 2026-10-29 — A reproducer whose broken harness exited 1, fixed on close
+
+`goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue/reproduce.py`
+was not inverted — it returned 1 on its defect-present branch and 0 when
+fixed — but it showed the mirror image of the inverted shape. Its setup ran on
+bare `assert`s, so a broken harness crashed with exit 1, the code that means
+"defect fires". That fired for real: `goc publish` had started refusing a card
+without a `summary`, the script's probe cards had none, and against the fixed
+engine it crashed in setup with exit 1. A box ticked or left open on that exit
+code would have recorded a defect the run never reached. It also had no
+positive control: any non-zero `goc wait` exit read as fixed, so an argparse
+error or a traceback would have passed.
+
+It was rewritten to the 0/1/2 contract when the card closed: setup failures
+and outcomes matching neither verdict exit 2, the fixed verdict needs exit 2 +
+`ERROR:` + an untouched README, and a future-date control must still hide its
+card. Two more shapes for the classification sweep to expect: a bare `assert`
+(or any uncaught exception) in setup turns a harness failure into exit 1, and
+a reproducer can go stale through a precondition the engine added after it
+was filed.

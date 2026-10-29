@@ -56,7 +56,7 @@ input-validation guard checks the *arguments*.
 
 ### How the decision reached the children
 
-Five children asked exactly the shape question this card decided, so they carry a "Decided via parent" record and are pullable at `human_gate: none`: the redundant-edge pair (`goc-advance-claims-success-…`, `goc-unadvance-claims-success-…`), `goc-decide-accepts-empty-…`, `goc-attest-silently-ignores-unknown-skip-names` and `goc-wait-with-a-past-until-date-…`.
+Five children asked exactly the shape question this card decided, so they carry a "Decided via parent" record and were pulled at `human_gate: none`; all five closed by 2026-10-29: the redundant-edge pair (`goc-advance-claims-success-…`, `goc-unadvance-claims-success-…`), `goc-decide-accepts-empty-…`, `goc-attest-silently-ignores-unknown-skip-names` and `goc-wait-with-a-past-until-date-…`.
 
 Four stay gated, because each asks a question the shape does not settle:
 
@@ -83,7 +83,7 @@ check:
 - [goc-status-silently-drops-worker-overrides-on-non-active-transitions](../goc-status-silently-drops-worker-overrides-on-non-active-transitions/) — `--worker-who`/`--worker-where` are read only inside the `active` branch, so they silently produce no mutation on `open`/`disproved`/`superseded` transitions.
 - [goc-wait-clear-silently-discards-reason-and-until-set-in-same-call](../goc-wait-clear-silently-discards-reason-and-until-set-in-same-call/) — `wait --clear --reason X --until Y` clears the overlay and silently discards the requested set; the mode conflict is accepted without rejection.
 - [goc-status-superseded-discards-by-override-when-target-already-superseded](../goc-status-superseded-discards-by-override-when-target-already-superseded/) — `status <t> superseded --by <new>` early-returns when `prior == new_status`, before the `_mutate_pair` that wires the new typed forward routing, so a re-pointing `--by` is silently dropped.
-- [goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue](../goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue/) — `wait --until <date already past>` writes an overlay the engine's own read guard treats as non-impeding, then reports it exactly like a wait that took effect; the card stays in `--ready` and the next autonomous pull claims it.
+- [goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue](../goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue/) — `wait --until <date already past>` wrote an overlay the engine's own read guard treats as non-impeding, then reported it exactly like a wait that took effect; the card stayed in `--ready` and the next autonomous pull claimed it. **Closed 2026-10-29**: when the call passes `--until`, `_cmd_wait` asks `waiting_impedes` about the card as it would be written and refuses through the shared helper if the wait would not impede — a bare `--until <today>` included, since a bare date is midnight UTC. A stale date already on the card is left to the gated `goc-wait-does-not-clear-stale-elapsed-waiting-until`. Its cases are `WaitCliTest` in the family's test module.
 
 ## Why it matters
 

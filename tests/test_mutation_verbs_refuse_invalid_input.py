@@ -18,6 +18,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -365,6 +366,91 @@ class AttestCliTest(_ScratchDeckCliTest):
         log = (self.deck / "probe" / "log.md").read_text()
         self.assertIn("- [~] lint SKIPPED", log)
         self.assertIn("- [x] unit-tests", log)
+
+
+class WaitCliTest(_ScratchDeckCliTest):
+    """`goc wait <title> --until <date>` hides a card from the queue until the date.
+
+    `waiting_impedes` reads an `--until` that has already elapsed as no wait at
+    all, so the verb refuses one instead of writing it under a success line
+    while the card stays in the queue. Dates are set relative to the clock with
+    an hour or more of margin, so no run lands on the boundary.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self._write("probe")
+        self.now = datetime.now(tz=timezone.utc)
+
+    def _instant(self, delta: timedelta) -> str:
+        return (self.now + delta).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def _queued(self) -> tuple[bool, bool]:
+        """Whether `probe` is listed by `--ready` and by `--waiting`."""
+        listed = []
+        for query in ("--ready", "--waiting"):
+            res = self._goc(query, "--no-color")
+            self.assertEqual(res.returncode, 0, msg=res.stderr)
+            listed.append("probe" in res.stdout)
+        return listed[0], listed[1]
+
+    def _assert_refused(self, *args: str, until: str, bare_date: bool) -> None:
+        note = " (a bare date is midnight UTC at the start of that day)" if bare_date else ""
+        res = self._refused(
+            "wait", "probe", *args, "--until", until,
+            error=(
+                f"probe: --until {until!r} has already elapsed{note}, so the wait would not "
+                "hide probe from the queue"
+            ),
+        )
+        self.assertEqual(res.stdout, "")
+
+    def _assert_set(self, until: str) -> None:
+        # The output a future --until always produced: the guard adds nothing.
+        res = self._goc("wait", "probe", "--until", until)
+        self.assertEqual(res.returncode, 0, msg=res.stderr)
+        self.assertEqual(res.stderr, "")
+        self.assertEqual(
+            res.stdout,
+            f"probe: waiting_on=None waiting_until={until!r} (no reason set; implied 'deferred')\n",
+        )
+        self.assertEqual(self._queued(), (False, True))
+
+    def test_refuses_today_as_a_bare_date(self) -> None:
+        # Midnight UTC at the start of today has passed at every moment of the
+        # day it names: the everyday form of the defect.
+        self._assert_refused(until=self.now.date().isoformat(), bare_date=True)
+        self.assertEqual(self._queued(), (True, False))
+
+    def test_refuses_a_long_past_date(self) -> None:
+        self._assert_refused("--reason", "external", until="2020-01-01", bare_date=True)
+
+    def test_refuses_a_datetime_already_past(self) -> None:
+        self._assert_refused(until=self._instant(-timedelta(hours=1)), bare_date=False)
+
+    def test_refusal_leaves_a_live_wait_in_place(self) -> None:
+        live = self._goc("wait", "probe", "--reason", "external", "--until", self._instant(timedelta(days=7)))
+        self.assertEqual(live.returncode, 0, msg=live.stderr)
+        self._assert_refused(until="2020-01-01", bare_date=True)
+        self.assertEqual(self._queued(), (False, True))
+
+    def test_still_sets_a_future_date(self) -> None:
+        self._assert_set((self.now + timedelta(days=30)).date().isoformat())
+
+    def test_still_sets_a_future_datetime(self) -> None:
+        self._assert_set(self._instant(timedelta(hours=1)))
+
+    def test_judges_only_the_until_this_call_passes(self) -> None:
+        # A stale date already on the card is not this guard's input: whether a
+        # bare --reason should refresh it is the open question of
+        # goc-wait-does-not-clear-stale-elapsed-waiting-until.
+        readme = self.deck / "probe" / "README.md"
+        readme.write_text(
+            readme.read_text().replace("human_gate: none\n", 'human_gate: none\nwaiting_until: "2020-01-01"\n')
+        )
+        res = self._goc("wait", "probe", "--reason", "external")
+        self.assertEqual(res.returncode, 0, msg=res.stderr)
+        self.assertNotIn("has already elapsed", res.stderr)
 
 
 if __name__ == "__main__":

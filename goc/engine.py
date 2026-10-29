@@ -4440,9 +4440,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_wait.add_argument("--reason", choices=schema.waiting_on_values, default=None,
                         help="Exogenous wait reason. Composes with --until.")
     p_wait.add_argument("--until", default=None,
-                        help="ISO date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ) the wait is expected to clear. "
-                        "Future date hides the card from next-card/pull-card; elapsed date is surfaced "
-                        "as an SLE escalation by goc validate.")
+                        help="ISO date (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ; a bare date is midnight UTC) "
+                        "the wait is expected to clear. It hides the card from next-card/pull-card until "
+                        "it passes, then goc validate surfaces it as an SLE escalation; a date already "
+                        "elapsed is refused.")
     p_wait.add_argument("--clear", action="store_true",
                         help="Drop both waiting_on and waiting_until.")
     p_wait.add_argument("--commit", action="store_true",
@@ -5675,8 +5676,9 @@ def _refuse_invalid_input(reason: str) -> None:
     for input a mutation verb cannot act on as asked — an edge that is not
     there to remove or is already there to add, a self-edge, one that would
     close a cycle, a decision or its reasoning left blank, a `--skip` naming
-    no configured check. Printing the success line anyway, over a no-op or
-    an empty record, misleads every caller that trusts the exit code, the
+    no configured check, a wait whose `--until` has already elapsed. Printing
+    the success line anyway, over a no-op or an empty record, or over a wait
+    that hides nothing, misleads every caller that trusts the exit code, the
     `--commit`-driven scripts and agents above all. What makes input invalid
     is verb-specific, so each verb keeps its predicate inline and calls this
     ahead of every disk write: a refusal leaves the deck byte-identical, and
@@ -7075,6 +7077,11 @@ def _cmd_wait(args):
     A closed card is refused, setters and `--clear` alike: the overlay is a
     live-card "cannot pull yet" signal, and one a card carried into its
     closure is part of the record, not a stale value to wipe.
+
+    An `--until` that has already elapsed is refused too, before anything is
+    written: `waiting_impedes` reads an elapsed date as no wait at all, so
+    the card would stay in the queue under a success line. A bare date is
+    midnight UTC, so `--until <today>` has elapsed all day.
     """
     _validate_commit_flags(args.commit, args.no_commit)
     title = args.title
@@ -7119,6 +7126,24 @@ def _cmd_wait(args):
             fm["waiting_on"] = new_reason
         if new_until is not None:
             fm["waiting_until"] = new_until
+            # Asked of the read guard itself, on the card as it would be
+            # written, not of a second copy of its comparison. Only this
+            # call's --until is judged: whether a bare --reason should refresh
+            # a stale date already on the card is a separate question.
+            would_write = Card(
+                title=title, path=card_dir, frontmatter=fm, body=body,
+                dod_open=t.dod_open, dod_done=t.dod_done,
+            )
+            if not waiting_impedes(would_write):
+                bare_date = (
+                    " (a bare date is midnight UTC at the start of that day)"
+                    if _is_date_only(new_until) else ""
+                )
+                _refuse_invalid_input(
+                    f"{title}: --until {new_until!r} has already elapsed{bare_date}, so the wait "
+                    f"would not hide {title} from the queue — pass a later --until, or --reason "
+                    f"alone for an open-ended wait"
+                )
     (card_dir / "README.md").write_text(emit_frontmatter(fm, body=body))
     effective_reason = fm.get("waiting_on") or ("deferred" if fm.get("waiting_until") else None)
     if args.clear:

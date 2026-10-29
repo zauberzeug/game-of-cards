@@ -130,16 +130,20 @@ For exogenous waits the dependency graph cannot see: `external`
 `deferred` (calendar-postponed).
 
 ```bash
-goc wait <title> --reason external --until 2026-06-15
-goc wait <title> --until 2026-06-15    # bare --until implies deferred
+goc wait <title> --reason external --until <YYYY-MM-DD>
+goc wait <title> --until <YYYY-MM-DD>  # bare --until implies deferred
 goc wait <title> --reason resource     # open-ended wait
 goc wait <title> --clear
 ```
 
 A future `waiting_until` (or a reason with no date) hides the card
 from `--ready` / next-card / pull-card and re-enters it automatically
-when the date passes; an elapsed date is surfaced by `goc validate`
-as `WAITING_OVERDUE`. The overlay is orthogonal to `status`.
+when the date passes; a date that elapses while the card waits is
+surfaced by `goc validate` as `WAITING_OVERDUE`. An `--until` that has
+already elapsed hides nothing, so `goc wait` refuses it (exit 2,
+nothing written). A bare date is midnight UTC at the start of that
+day: `--until <today>` has already elapsed — to defer through today,
+pass tomorrow's date. The overlay is orthogonal to `status`.
 
 ## Edge vs tag (short form)
 

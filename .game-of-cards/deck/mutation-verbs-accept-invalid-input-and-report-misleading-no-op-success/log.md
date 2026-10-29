@@ -200,3 +200,26 @@ commands that leave marker files, so a refusal can show that no check ran.
 Dashboard updated in place: the attest roster bullet carries its closure.
 Five children remain: the four gated ones, plus
 `goc-wait-with-a-past-until-date-…`, pullable.
+
+
+## 2026-10-29: fifth child closed — an elapsed `goc wait --until` refused
+
+`goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue` closed under the
+decided shape. When the call passes `--until`, `_cmd_wait` builds the card as
+it would be written and asks `waiting_impedes` whether it impedes; if not, it
+refuses through `_refuse_invalid_input` (`ERROR: <title>: --until '<value>' has
+already elapsed …, so the wait would not hide <title> from the queue — …`,
+exit 2, nothing written). The predicate is the read guard itself rather than a
+copy of its comparison, and it judges only this call's `--until`: whether a
+bare `--reason` should refresh a stale date already on the card stays with the
+gated `goc-wait-does-not-clear-stale-elapsed-waiting-until`. The helper's
+docstring now lists the elapsed-wait case.
+
+`tests/test_mutation_verbs_refuse_invalid_input.py` gains `WaitCliTest` on the
+shared `_ScratchDeckCliTest` base. Its dates are relative to the clock with an
+hour or more of margin, so no run lands on the midnight boundary.
+`tests/test_verb_rerun_safety.py` is unchanged: its `wait` probe passes no
+`--until`.
+
+Dashboard updated in place: the wait roster bullet carries its closure. Four
+children remain, all gated.
