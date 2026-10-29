@@ -183,3 +183,40 @@ exit 0. `_goc` in `tests/test_terminal_status_guard.py` now accepts
 `extra_env`, and `_snapshot(title)` returns a card directory's bytes for the
 before/after comparisons. `move` can use `_assert_refused` as it is, plus
 one `--force` case.
+
+## 2026-10-29T04:42:16Z — `goc move` adopted the helper
+
+[`goc-move-renames-terminal-status-cards-without-any-guard`](../goc-move-renames-terminal-status-cards-without-any-guard/)
+closed in the decided (c) shape (commit 79ed3f73). `_cmd_move` resolves the
+source card first. Unless `--force` is passed, it calls
+`_refuse_terminal_mutation(..., "move", override="--force")`. The call sits
+ahead of the checks on the new title, which no title could get a closed card
+past, and ahead of `--dry-run`, so the preview never lists a rename the real
+run would refuse.
+
+The `--force` hint is the helper's new keyword-only `override`, so it is
+part of the one shared message rather than a second, inline one. Verbs that
+pass none are told of no flag they lack. `_apply_verdict_interactive` needed
+no change: its `goc move` subprocess never passes `--force`. A test pins
+that path by closing a card while a fake `claude` is mid-call.
+
+`_assert_refused` in `tests/test_terminal_status_guard.py` now snapshots
+the whole deck rather than the one card, because a move rewrites other
+cards' references too. `wait` and `attest` pass under the stricter
+comparison unchanged.
+
+## 2026-10-29T04:42:16Z — Closure
+
+- **What changed**: no code of its own — the epic closes because its `advanced_by` roster is terminal: `goc wait` (2026-10-24, cf74ab76), `goc attest` (2026-10-25, 07427d22), `goc quality-pass` (2026-10-25, 7aaecd36) and `goc move` (2026-10-29, 79ed3f73) all refuse a closed card through `_refuse_terminal_mutation` (`goc/engine.py:5631`), in the shapes recorded under "## Agreed shape". `advance` / `unadvance` stay out of scope by the 2026-10-22 decision.
+- **Verification**: `tests/test_terminal_status_guard.py` covers all four verbs (17 tests). The four children's reproducers each exit 0 on the current engine.
+- **Audit**: no rubric configured; mechanical fix
+- **Project impact**: n/a
+- **Tests**: 1416 passed / 0 failed / 0 xfailed; `goc validate` exit 0
+
+## Closure verification (2026-10-29T04:42:24Z)
+
+### Layer-3 (GoC DoD)
+
+- [x] advanced-by-closed — all 4 closed
+- [x] dod-100-percent — 5/5 ticked
+- [x] log-md-closure-entry — '## 2026-10-29 — Closure' present
