@@ -1,6 +1,6 @@
 ---
 title: terminal-status-guard-missing-across-mutation-verbs
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-21T10:57:17Z"
