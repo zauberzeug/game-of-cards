@@ -266,8 +266,8 @@ What it surfaces:
   reject filings (engineer-jargon: `r88`, `path-2`, `phase-3`,
   `bug-140`, `_md_`/`_py_` infixes, camelCase tokens, math symbols).
   Catches legacy cards filed before the antipattern guard was wired.
-  For each surfaced title: rename via `goc move <old> <new>` so
-  cross-references rewrite atomically.
+  For each surfaced title of an unclosed card: rename via
+  `goc move <old> <new>` so cross-references rewrite atomically.
 - **Missing summaries** — pre-2026-05-01 cards may lack the
   `summary:` frontmatter field that triage views (`goc -v`)
   depend on. For each: read the body, write a ≤3-sentence summary

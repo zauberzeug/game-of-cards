@@ -9,7 +9,12 @@ card, its status and a forward path that actually works.
 
 `goc quality-pass` takes no title, so it skips closed cards rather than
 refusing the run: they stay out of its LLM sample, and its two rewrite
-helpers refuse any closed card that reaches them anyway.
+helpers refuse any closed card that reaches them anyway. Its title rewrites
+go through a `goc move` subprocess, so they inherit move's refusal.
+
+`goc move` is the one guarded verb with an escape hatch: `--force` renames a
+closed card anyway, for a deliberate correction of the record, and its
+refusal names the flag.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -99,6 +105,19 @@ class RefuseTerminalMutationHelperTest(unittest.TestCase):
                 self.assertIn(repr(status), message)
                 self.assertIn("`goc wait`", message)
                 self.assertIn("post-close amendment", message)
+
+    def test_only_a_verb_with_an_override_is_told_of_one(self) -> None:
+        for override in (None, "--force"):
+            with self.subTest(override=override):
+                err = io.StringIO()
+                with redirect_stderr(err), self.assertRaises(SystemExit):
+                    engine._refuse_terminal_mutation(
+                        _card("closed-card", "done"), "move", override=override
+                    )
+                if override is None:
+                    self.assertNotIn("overrides this refusal", err.getvalue())
+                else:
+                    self.assertIn(f"`{override}` overrides this refusal", err.getvalue())
 
 
 class QualityPassRewriteHelperTest(unittest.TestCase):
@@ -212,25 +231,33 @@ class GuardedVerbCliTest(unittest.TestCase):
             cwd=str(self.root), env=env, text=True, capture_output=True, check=False,
         )
 
-    def _snapshot(self, title: str) -> dict[str, bytes]:
-        return {p.name: p.read_bytes() for p in (self.deck / title).iterdir()}
+    def _snapshot(self, title: str | None = None) -> dict[str, bytes]:
+        """Every file of card `title`, or of the whole deck when omitted."""
+        root = self.deck if title is None else self.deck / title
+        return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()}
 
     def _assert_refused(self, title: str, verb: str, *flags: str) -> subprocess.CompletedProcess[str]:
-        before = self._snapshot(title)
+        # The whole deck, not just the card: `goc move` would rename the card
+        # AND rewrite every reference to it in the other cards.
+        before = self._snapshot()
         res = self._goc(verb, title, *flags)
         self.assertEqual(
             res.returncode, 2,
             msg=f"expected exit 2\nstdout: {res.stdout}\nstderr: {res.stderr}",
         )
-        self.assertEqual(before, self._snapshot(title), msg=f"{title} was mutated\nstderr: {res.stderr}")
+        self.assertEqual(before, self._snapshot(), msg=f"the deck was mutated\nstderr: {res.stderr}")
         self.assertIn(f"ERROR: {title}: status is", res.stderr)
         self.assertIn(f"`goc {verb}`", res.stderr)
         return res
 
-    def _fake_claude(self, titles: list[str]) -> dict[str, str]:
-        """Put a `claude` on PATH that records its argv and proposes a summary
-        and a DoD rewrite for every one of `titles`, closed cards included."""
-        verdicts = [
+    def _link_from_live_card(self, *titles: str) -> None:
+        readme = self.deck / "live-card" / "README.md"
+        readme.write_text(readme.read_text() + "".join(f"\nSee [{t}](../{t}/).\n" for t in titles))
+
+    @staticmethod
+    def _summary_and_dod_rewrites(titles: list[str]) -> list[dict]:
+        """Verdicts proposing a summary and a DoD rewrite for each of `titles`."""
+        return [
             {
                 "title": title,
                 "title_verdict": {"ok": True},
@@ -239,12 +266,20 @@ class GuardedVerbCliTest(unittest.TestCase):
             }
             for title in titles
         ]
+
+    def _fake_claude(self, verdicts: list[dict], *, before_reply: str = "") -> dict[str, str]:
+        """Put a `claude` on PATH that records its argv and replies with
+        `verdicts`, closed cards included. `before_reply` is a shell command
+        the stub runs first — how a test changes the deck while the LLM call
+        is in flight."""
         reply = self.root / "claude-reply.json"
         reply.write_text(json.dumps({"result": json.dumps(verdicts)}))
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
         stub = bin_dir / "claude"
-        stub.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$FAKE_CLAUDE_ARGV"\ncat "$FAKE_CLAUDE_REPLY"\n')
+        stub.write_text(
+            f'#!/bin/sh\nprintf "%s\\n" "$@" > "$FAKE_CLAUDE_ARGV"\n{before_reply}\ncat "$FAKE_CLAUDE_REPLY"\n'
+        )
         stub.chmod(0o755)
         return {
             "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
@@ -284,7 +319,7 @@ class GuardedVerbCliTest(unittest.TestCase):
 
     def test_quality_pass_llm_keeps_closed_cards_out_of_the_llm_sample(self) -> None:
         closed = [f"{status}-card" for status in sorted(engine.TERMINAL_STATUSES)]
-        extra_env = self._fake_claude(["live-card", *closed])
+        extra_env = self._fake_claude(self._summary_and_dod_rewrites(["live-card", *closed]))
         before = {title: self._snapshot(title) for title in closed}
         res = self._goc("quality-pass", "--status", "all", "--llm", "--yes", extra_env=extra_env)
         self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
@@ -303,13 +338,77 @@ class GuardedVerbCliTest(unittest.TestCase):
         self.assertIn("- [x] MECHANICAL: rewritten live-card.", live)
 
     def test_quality_pass_llm_over_only_closed_cards_never_calls_the_llm(self) -> None:
-        extra_env = self._fake_claude(["done-card"])
+        extra_env = self._fake_claude(self._summary_and_dod_rewrites(["done-card"]))
         before = self._snapshot("done-card")
         res = self._goc("quality-pass", "--status", "done", "--llm", "--yes", extra_env=extra_env)
         self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
         self.assertEqual(before, self._snapshot("done-card"))
         self.assertIn("skipping 1 closed card", res.stdout)
         self.assertFalse((self.root / "claude-argv.txt").exists(), msg="the LLM was called")
+
+    def test_move_refuses_every_terminal_status_unless_forced(self) -> None:
+        closed = [f"{status}-card" for status in sorted(engine.TERMINAL_STATUSES)]
+        self._link_from_live_card(*closed)
+        for title in closed:
+            # The guard runs ahead of the checks on the new title and of
+            # --dry-run: no title gets a closed card past it, and the preview
+            # does not list a rename the real run would refuse.
+            for args in ((f"renamed-{title}",), (f"renamed-{title}", "--dry-run"), ("Not_A_Slug",)):
+                with self.subTest(title=title, args=args):
+                    res = self._assert_refused(title, "move", *args)
+                    self.assertIn("`--force` overrides this refusal", res.stderr)
+                    self.assertEqual("", res.stdout)
+
+    def test_move_still_renames_a_live_card(self) -> None:
+        res = self._goc("move", "live-card", "renamed-live-card")
+        self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+        self.assertFalse((self.deck / "live-card").exists())
+        self.assertIn("title: renamed-live-card", (self.deck / "renamed-live-card" / "README.md").read_text())
+
+    def test_move_force_renames_a_closed_card_and_rewrites_its_references(self) -> None:
+        closed = [f"{status}-card" for status in sorted(engine.TERMINAL_STATUSES)]
+        self._link_from_live_card(*closed)
+        for title in closed:
+            with self.subTest(title=title):
+                res = self._goc("move", title, f"renamed-{title}", "--force")
+                self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+                self.assertFalse((self.deck / title).exists())
+                renamed = self.deck / f"renamed-{title}"
+                self.assertIn(f"title: renamed-{title}", (renamed / "README.md").read_text())
+                self.assertIn(f"renamed from {title}", (renamed / "log.md").read_text())
+                self.assertIn(
+                    f"[renamed-{title}](../renamed-{title}/)",
+                    (self.deck / "live-card" / "README.md").read_text(),
+                )
+
+    def test_quality_pass_retitle_of_a_card_closed_mid_run_is_refused_by_move(self) -> None:
+        # quality-pass loads its sample before the LLM call, so a card closed
+        # while the call is in flight reaches the apply step as live. Its title
+        # rewrite runs `goc move` in a subprocess that never passes --force,
+        # so move's own guard refuses it and nothing is renamed.
+        readme = self.deck / "live-card" / "README.md"
+        closed = self.root / "live-card-closed-mid-run.md"
+        closed.write_text(
+            readme.read_text()
+            .replace("status: open", "status: done")
+            .replace("closed_at: null", 'closed_at: "2026-05-30T00:00:00Z"')
+        )
+        retitle = [{
+            "title": "live-card",
+            "title_verdict": {"ok": False, "reason": "probe", "rewrite": "renamed-live-card"},
+            "summary_verdict": {"ok": True},
+            "dod_issues": [],
+        }]
+        extra_env = self._fake_claude(
+            retitle, before_reply=f"cp {shlex.quote(str(closed))} {shlex.quote(str(readme))}"
+        )
+        res = self._goc("quality-pass", "--llm", "--yes", extra_env=extra_env)
+        self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+        self.assertFalse((self.deck / "renamed-live-card").exists(), msg=res.stdout + res.stderr)
+        self.assertEqual(closed.read_bytes(), readme.read_bytes())
+        self.assertEqual("", (self.deck / "live-card" / "log.md").read_text())
+        self.assertIn("move failed: ERROR: live-card: status is 'done' (terminal)", res.stderr)
+        self.assertIn("Applied: 0 titles", res.stdout)
 
     def test_the_forward_path_offered_is_not_the_refused_supersede_command(self) -> None:
         # `goc status <old> superseded --by <new>` reads like the way to retire

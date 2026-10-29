@@ -1,13 +1,21 @@
 """Reproduce: `goc move` renames a card whose status is already terminal.
 
-Constructs a throwaway deck containing a single `done` card, then invokes
-`goc move` to rename it. The defect: the verb returns 0, performs the
-directory rename, and rewrites every cross-reference across the tracked
-tree — none of which is appropriate for a card whose slug is part of the
-kanban record axis. The sibling state-flip verbs (`done`, `decide`,
-`status`) all refuse terminal targets; `move` is one of the remaining
-members of the family without a closed-card audit (alongside `wait`,
-`attest`, and `quality-pass`, each tracked by its own card).
+Builds a throwaway two-card deck: `dummy-closed-card` (`done`) and
+`dummy-open-card` (`open`), whose body links to the closed card. Each scenario
+starts from a fresh copy of that deck:
+
+- `goc move dummy-closed-card renamed-closed-card` — the defect. Unguarded,
+  the verb exits 0, renames the closed card's directory and rewrites every
+  reference to its slug, including the open card's link. Fixed means it is
+  refused by the terminal-status guard (exit 2, "(terminal)" and the
+  `--force` escape hatch on stderr) with every deck file byte-identical.
+- `goc move dummy-open-card renamed-open-card` — the paired positive case: a
+  live card still renames.
+- `goc move dummy-closed-card renamed-closed-card --force` — the decided
+  escape hatch: a deliberate retitle of a closed card still renames.
+
+Exit codes: 0 = defect no longer fires, 1 = defect fires, 2 = harness or
+precondition broken (including a fix that broke either positive case).
 
 Run via `uv run python .game-of-cards/deck/goc-move-renames-terminal-status-cards-without-any-guard/reproduce.py`.
 """
@@ -34,7 +42,7 @@ def _repo_root() -> Path:
 REPO_ROOT = _repo_root()
 
 
-CARD_README = """\
+CLOSED_README = """\
 ---
 title: dummy-closed-card
 summary: "A closed card used to reproduce the goc-move closed-card defect."
@@ -56,10 +64,32 @@ definition_of_done: |
 Closed for reproduction purposes.
 """
 
-CARD_LOG = """\
+CLOSED_LOG = """\
 ## 2026-01-02T00:00:00Z: closure
 
 Closed.
+"""
+
+OPEN_README = """\
+---
+title: dummy-open-card
+summary: "A live card whose body links to the closed card."
+status: open
+stage: null
+contribution: low
+created: "2026-01-03T00:00:00Z"
+closed_at: null
+human_gate: none
+advances: []
+advanced_by: []
+tags: [bug]
+definition_of_done: |
+  - [ ] TDD: open
+---
+
+# dummy-open-card
+
+Follows up on [dummy-closed-card](../dummy-closed-card/).
 """
 
 CONFIG_YAML = """\
@@ -68,79 +98,130 @@ workflow:
 """
 
 
-def main() -> int:
+def _build_deck() -> Path:
     workdir = Path(tempfile.mkdtemp(prefix="goc-move-repro-"))
+    subprocess.run(["git", "init", "-q"], cwd=workdir, check=True)
+    subprocess.run(["git", "config", "user.email", "x@y"], cwd=workdir, check=True)
+    subprocess.run(["git", "config", "user.name", "x"], cwd=workdir, check=True)
+    (workdir / "pyproject.toml").write_text("[project]\nname='x'\nversion='0'\n")
+    deck = workdir / ".game-of-cards" / "deck"
+    deck.mkdir(parents=True)
+    (workdir / ".game-of-cards" / "config.yaml").write_text(CONFIG_YAML)
+    for slug, readme, log in (
+        ("dummy-closed-card", CLOSED_README, CLOSED_LOG),
+        ("dummy-open-card", OPEN_README, ""),
+    ):
+        (deck / slug).mkdir()
+        (deck / slug / "README.md").write_text(readme)
+        (deck / slug / "log.md").write_text(log)
+    subprocess.run(["git", "add", "."], cwd=workdir, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "initial"], cwd=workdir, check=True)
+    return workdir
+
+
+def _snapshot(deck: Path) -> dict[str, bytes]:
+    return {
+        str(p.relative_to(deck)): p.read_bytes()
+        for p in sorted(deck.rglob("*"))
+        if p.is_file()
+    }
+
+
+def _move(*args: str) -> tuple[subprocess.CompletedProcess[str], dict[str, bytes], dict[str, bytes]]:
+    """Run `goc move <args>` on a fresh deck; return (result, deck before, deck after)."""
+    workdir = _build_deck()
     try:
-        subprocess.run(["git", "init", "-q"], cwd=workdir, check=True)
-        subprocess.run(["git", "config", "user.email", "x@y"], cwd=workdir, check=True)
-        subprocess.run(["git", "config", "user.name", "x"], cwd=workdir, check=True)
-        (workdir / "pyproject.toml").write_text("[project]\nname='x'\nversion='0'\n")
-        deck_dir = workdir / ".game-of-cards" / "deck"
-        deck_dir.mkdir(parents=True)
-        (workdir / ".game-of-cards" / "config.yaml").write_text(CONFIG_YAML)
-        old_slug = "dummy-closed-card"
-        new_slug = "dummy-closed-card-renamed"
-        old_card = deck_dir / old_slug
-        old_card.mkdir()
-        (old_card / "README.md").write_text(CARD_README)
-        (old_card / "log.md").write_text(CARD_LOG)
-
-        subprocess.run(["git", "add", "."], cwd=workdir, check=True)
-        subprocess.run(
-            ["git", "commit", "-q", "-m", "initial"], cwd=workdir, check=True
-        )
-
+        deck = workdir / ".game-of-cards" / "deck"
         env = os.environ.copy()
         env["PYTHONPATH"] = str(REPO_ROOT)
-
+        env.pop("GOC_WORKTREE_DECK", None)
+        before = _snapshot(deck)
         result = subprocess.run(
-            [sys.executable, "-m", "goc.cli", "move", old_slug, new_slug],
+            [sys.executable, "-m", "goc.cli", "move", *args],
             cwd=workdir,
             env=env,
             capture_output=True,
             text=True,
         )
-
-        print("=" * 72)
-        print(f"goc move {old_slug} {new_slug}  (card status: done)")
-        print("=" * 72)
-        print("exit code:", result.returncode)
-        print()
-        print("--- stdout ---")
-        print(result.stdout)
-        print("--- stderr ---")
-        print(result.stderr)
-
-        new_card = deck_dir / new_slug
-        old_still_exists = old_card.exists()
-        new_exists = new_card.exists()
-        renamed = (not old_still_exists) and new_exists
-        refused = (
-            result.returncode != 0
-            and "terminal" in (result.stderr + result.stdout).lower()
-            and not renamed
-        )
-
-        print("=" * 72)
-        print("DEFECT CHECK")
-        print("=" * 72)
-        print(f"  card status:                       done (closed 2026-01-02)")
-        print(f"  directory renamed by move verb:    {renamed}")
-        print(f"  verb refused with terminal-guard:  {refused}")
-        if renamed:
-            print(
-                "\nDEFECT REPRODUCED: `goc move` silently retitled a closed "
-                "card. The slug is part of the kanban record axis — every "
-                "existing cross-reference (in other cards' bodies, log.md "
-                "entries, this repo's tracked files) was rewritten to the "
-                "new slug. Sibling mutation verbs (`done`, `decide`, "
-                "`status`) refuse terminal targets; `move` does not."
-            )
-            return 0
-        print("\nNo defect — `goc move` correctly refused to rename the closed card.")
-        return 1
+        return result, before, _snapshot(deck)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _report(label: str, result: subprocess.CompletedProcess[str]) -> None:
+    print("=" * 72)
+    print(label)
+    print("=" * 72)
+    print("exit code:", result.returncode)
+    print("--- stdout ---")
+    print(result.stdout)
+    print("--- stderr ---")
+    print(result.stderr)
+
+
+def _renamed(after: dict[str, bytes], old: str, new: str) -> bool:
+    return f"{new}/README.md" in after and f"{old}/README.md" not in after
+
+
+def main() -> int:
+    try:
+        closed, closed_before, closed_after = _move("dummy-closed-card", "renamed-closed-card")
+        live, _, live_after = _move("dummy-open-card", "renamed-open-card")
+        forced, _, forced_after = _move("dummy-closed-card", "renamed-closed-card", "--force")
+    except (OSError, subprocess.CalledProcessError) as exc:
+        print(f"HARNESS BROKEN: {exc}")
+        return 2
+
+    _report("goc move dummy-closed-card renamed-closed-card  (card status: done)", closed)
+    changed = sorted(
+        path for path in closed_before.keys() | closed_after.keys()
+        if closed_before.get(path) != closed_after.get(path)
+    )
+    refused = (
+        closed.returncode == 2
+        and "(terminal)" in closed.stderr
+        and "--force" in closed.stderr
+    )
+    print(f"  deck files changed:                {changed or 'none'}")
+    print(f"  refused by terminal guard:         {refused}")
+    print()
+
+    _report("goc move dummy-open-card renamed-open-card  (card status: open)", live)
+    live_ok = live.returncode == 0 and _renamed(live_after, "dummy-open-card", "renamed-open-card")
+    print(f"  live card renamed:                 {live_ok}")
+    print()
+
+    _report("goc move dummy-closed-card renamed-closed-card --force  (card status: done)", forced)
+    forced_ok = forced.returncode == 0 and _renamed(
+        forced_after, "dummy-closed-card", "renamed-closed-card"
+    )
+    print(f"  closed card renamed under --force: {forced_ok}")
+    print()
+
+    if changed:
+        print(
+            "DEFECT REPRODUCED: `goc move` retitled a closed card without being told "
+            "to. Its slug is part of the deck's record, and the rename rewrote every "
+            "reference to it — the open card's link included."
+        )
+        return 1
+    if not refused:
+        print(
+            "HARNESS BROKEN: `goc move` left the closed card alone but was not refused "
+            "by the terminal-status guard naming `--force`; inspect the output above."
+        )
+        return 2
+    if not (live_ok and forced_ok):
+        print(
+            "HARNESS BROKEN: the closed card is refused, but a live-card rename or the "
+            "`--force` retitle no longer works; inspect the output above."
+        )
+        return 2
+    print(
+        "No defect — `goc move` refused the closed card unless forced and left the "
+        "deck untouched, while live cards and `--force` retitles still rename."
+    )
+    return 0
 
 
 if __name__ == "__main__":

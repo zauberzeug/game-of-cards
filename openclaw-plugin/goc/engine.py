@@ -4488,6 +4488,9 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Bypass the title-antipattern check (rare; used by migration tools).")
     p_move.add_argument("--dry-run", action="store_true",
                         help="Print sites that would be rewritten without making changes.")
+    p_move.add_argument("--force", action="store_true",
+                        help="Rename a closed (done/disproved/superseded) card, which move otherwise "
+                             "refuses (rare; a deliberate correction of the record, e.g. a slug normalization).")
 
     # decide
     p_decide = subparsers.add_parser("decide", help="Record a decision in the body + log; lower the human gate to `none`.")
@@ -5625,7 +5628,7 @@ def _reject_invalid_worker_flag(flag: str, value: str | None) -> None:
         sys.exit(2)
 
 
-def _refuse_terminal_mutation(card: Card, verb: str) -> None:
+def _refuse_terminal_mutation(card: Card, verb: str, *, override: str | None = None) -> None:
     """Exit 2 if `card` is closed, before `goc <verb>` writes anything to it.
 
     A `done` / `disproved` / `superseded` card is the deck's record of what was
@@ -5640,15 +5643,25 @@ def _refuse_terminal_mutation(card: Card, verb: str) -> None:
     file a new card and point to it from the closed card's log.md. It does not
     offer `goc status <title> superseded --by <new>` — `_cmd_status` refuses
     every terminal card, so that command cannot apply to any card stopped here.
+
+    `override` is the flag that bypasses the refusal, for the one verb that has
+    one: `goc move --force`, kept for a deliberate correction of the record such
+    as a slug normalization. The message names it, so the escape hatch is found
+    from the refusal itself; a verb without one is told of no flag it lacks.
     """
     if card.status not in TERMINAL_STATUSES:
         return
+    bypass = (
+        f" `{override}` overrides this refusal; keep it for a deliberate correction "
+        f"of the record."
+        if override else ""
+    )
     print(
         f"ERROR: {card.title}: status is {card.status!r} (terminal); `goc {verb}` "
         f"does not modify closed cards — a closed card is the deck's record. If it "
         f"needs revisiting, file a new card for the work and point to it from "
         f"{card.title}'s log.md with a dated post-close amendment "
-        f"(Skill(finish-card) 'After closure').",
+        f"(Skill(finish-card) 'After closure').{bypass}",
         file=sys.stderr,
     )
     sys.exit(2)
@@ -7291,6 +7304,16 @@ def _cmd_move(args):
     allow_jargon = args.allow_jargon
     dry_run = args.dry_run
     schema = load_schema()
+    src = resolve_card_dir(old_title)
+    if not src.exists():
+        print(f"ERROR: {src} does not exist", file=sys.stderr)
+        sys.exit(2)
+    # A closed card's slug is part of the deck's record: every pointer to it
+    # resolves through the directory name. It is refused ahead of the checks on
+    # the new title, which no choice of title could get it past, and ahead of
+    # --dry-run, so the preview never lists a rename the real run would refuse.
+    if not args.force:
+        _refuse_terminal_mutation(load_card_or_exit(src, old_title), "move", override="--force")
     if not allow_jargon:
         antipatterns_hit = _check_title_antipatterns(new_title)
         if antipatterns_hit:
@@ -7310,11 +7333,7 @@ def _cmd_move(args):
     if old_title == new_title:
         print(f"ERROR: cannot move a card to itself (old and new titles are both {new_title!r})", file=sys.stderr)
         sys.exit(2)
-    src = resolve_card_dir(old_title)
     dst = resolve_card_dir(new_title)
-    if not src.exists():
-        print(f"ERROR: {src} does not exist", file=sys.stderr)
-        sys.exit(2)
     if dst.exists():
         print(f"ERROR: {dst} already exists", file=sys.stderr)
         sys.exit(2)

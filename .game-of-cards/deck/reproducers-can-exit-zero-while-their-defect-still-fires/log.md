@@ -64,3 +64,21 @@ silently: True` beside its `No defect` verdict. A reproducer that keys its
 verdict on prose the fix had not yet written can misread the fix; the
 rewrite keys on exit code, `ERROR:`, whether any check ran and whether
 log.md changed.
+
+## 2026-10-29 — Fifth inverted reproducer in the family fixed on close
+
+`goc-move-renames-terminal-status-cards-without-any-guard/reproduce.py`
+printed `DEFECT REPRODUCED` and returned 0 on its defect-present branch,
+which is the plain `return 0` shape, under a DoD that read
+`reproduce.py exits zero`. It was rewritten to the 0/1/2 contract when
+the card closed (exit 1 against the pre-fix engine, exit 0 after), so it
+needs no sweep.
+
+The script also had a further shape for the sweep to expect: it had no
+positive control. Its "No defect" branch fired whenever the closed card
+was not renamed, for whatever reason. A fix that broke `goc move`
+outright, or an argparse error, would have read as fixed. The rewrite
+adds the live-card rename and the `--force` retitle as paired positive
+cases, and treats either one failing as exit 2. A classification run
+should flag a reproducer whose only fixed-branch evidence is the absence
+of the defect.
