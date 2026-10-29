@@ -1,7 +1,7 @@
 ---
 title: audit-deck-cannot-extend-an-existing-umbrella-card-for-related-findings
 summary: "When `audit-deck` finds a defect in an area it has already filed cards for in the same pass (or recently), there is no affordance to extend an existing umbrella card — every finding becomes a new card with full create-card → claim → implement → attest → done → commit ceremony. A recent batch filed 19 separate `yaml-lite`/frontmatter-emitter cards in ~24h, all of which were variations on one theme (round-trip integrity of the hand-rolled YAML subset). Per the stored `umbrella cards during iterative debugging` preference, that should have been one growing umbrella card with a DoD list that extended as new findings landed. This card scopes the missing affordance: a CLI verb to append a finding to an open card's DoD, plus the audit-deck workflow change that uses it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-28T04:01:37Z"
@@ -19,6 +19,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: simulated re-run on the recent 19-card yaml-lite batch (or an equivalent fixture) shows N-1 cards collapsed into one umbrella DoD with N items; ceremony cost (file + claim + close per finding) reduced to a single cycle.
   - [ ] PROCESS: only `goc/` and `goc/templates/` are hand-edited; `python scripts/sync_plugin_assets.py --check` passes.
   - [ ] PROCESS: `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # audit-deck-cannot-extend-an-existing-umbrella-card-for-related-findings
