@@ -1,7 +1,7 @@
 ---
 title: advance-cycle-detectors-walk-different-edge-fields
 summary: "UNVERIFIED. The gating validator `detect_advance_cycles` (goc/engine.py:~2126) walks the `advanced_by` field, while the live edge-add guard `_would_create_advance_cycle` (goc/engine.py:2136) walks the `advances` field. On a half-edged deck (only one side populated) the two can return opposite verdicts about the same logical cycle, so `goc validate` may pass a cycle the `goc advance` guard would have refused. Bounded: on a validate-clean (bidirectionally-edged) deck both fields agree."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-27T14:02:43Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: a reproduce.py builds a deck with cycle `a→b→c→a` written only in `advances` and shows `detect_advance_cycles(cards)` returns `[]` while `_would_create_advance_cycle` reports the cycle — or disproves the divergence.
   - [ ] PROCESS: decide whether the two detectors should walk a single canonical field (and which) or whether `validate_bidirectional_edges` already makes the divergence unreachable on any deck `goc validate` accepts. Record verdict in log.md.
   - [ ] MECHANICAL: if a real divergence is confirmed, align both walkers on the same field; drop the `unverified` tag once reproduce.py lands.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Advance cycle detectors walk different edge fields
