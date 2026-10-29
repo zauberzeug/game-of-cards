@@ -1,7 +1,7 @@
 ---
 title: goc-wait-with-a-past-until-date-leaves-the-card-in-the-queue
 summary: "`goc wait <t> --until <date already past>` writes the overlay, prints a success line and auto-commits, but the engine's own `waiting_impedes` reads an elapsed `waiting_until` as non-impeding — so the card stays in `--ready`, is absent from `--waiting`, and the next autonomous pull claims it. The common form is a bare `--until <today>`: a `YYYY-MM-DD` value resolves to midnight UTC, so it is already elapsed at every moment of the day it names. Ninth instance of the mutation-verbs-accept-invalid-input family; the remedy shape is that epic's parked decision, so this card carries the same gate."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-08-26T04:40:53Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: scoped to the `--until` value supplied in THIS invocation. Whether a bare `--reason` should refresh or clear a **pre-existing** stale `waiting_until` is a different question, owned by [goc-wait-does-not-clear-stale-elapsed-waiting-until](../goc-wait-does-not-clear-stale-elapsed-waiting-until/) — do not resolve it here.
   - [ ] TDD: regression test in `tests/` covers `--until <today>` (bare date, elapsed at midnight UTC), `--until <long-past date>`, `--until <future date>` (unchanged — still impedes, no new output), and the datetime shape `YYYY-MM-DDTHH:MM:SSZ` on both sides of `now`.
   - [ ] MECHANICAL: `Skill(advance-card)` Step 6 (`goc/templates/skills/advance-card/SKILL.md:139-142`) states what an already-elapsed `--until` does — it currently documents only that `goc validate` reports an elapsed date as `WAITING_OVERDUE`, which is the state a card drifts into, not the state this verb can create outright. Plugin mirrors synced; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc wait --until <past date>` leaves the card in the queue
