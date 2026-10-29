@@ -2296,6 +2296,18 @@ def find_half_edges(cards: list[Card]) -> list[HalfEdge]:
 
 
 def detect_advance_cycles(cards: list[Card]) -> list[str]:
+    """Return cycle errors in the advances (value-flow) graph.
+
+    Walks `advances`, the field read by `_would_create_advance_cycle` (the
+    guard `goc advance`, `goc new` and `goc repair-edges` consult before
+    writing an edge) and by the `compute_values` priority walk.
+    `advanced_by` holds the same edges only on a deck without half-edges,
+    so a gate walking it disagreed with the guard wherever a cycle's edges
+    were recorded on one side only. A cycle recorded only in `advanced_by`
+    is read by neither walker: its half-edges fail validation on their own,
+    and `goc repair-edges` refuses the reverse half that would close it in
+    `advances`.
+    """
     by_title = {t.title: t for t in cards}
     errors: list[str] = []
     for start in cards:
@@ -2309,13 +2321,13 @@ def detect_advance_cycles(cards: list[Card]) -> list[str]:
             t = by_title.get(cur)
             if t is None:
                 continue
-            advanced_by = t.frontmatter.get("advanced_by") or []
-            if not isinstance(advanced_by, list):
+            advances = t.frontmatter.get("advances") or []
+            if not isinstance(advances, list):
                 continue
-            for b in advanced_by:
-                if b == start.title and cur != start.title:
-                    errors.append(f"{start.title}: advanced_by: cycle detected through {cur} → {b}")
-                stack.append(b)
+            for a in advances:
+                if a == start.title and cur != start.title:
+                    errors.append(f"{start.title}: advances: cycle detected through {cur} → {a}")
+                stack.append(a)
     return errors
 
 
@@ -2325,6 +2337,8 @@ def _would_create_advance_cycle(cards: list[Card], title: str, advancer: str) ->
     The proposed edge is advancer→title in the advances direction.  A cycle
     exists when title can already reach advancer by following existing advances
     edges — closing that path back to advancer would form a loop.
+    `detect_advance_cycles` walks the same field, so the guard and the
+    `goc validate` gate cannot disagree about a cycle.
     """
     by_title = {c.title: c for c in cards}
     seen: set[str] = set()

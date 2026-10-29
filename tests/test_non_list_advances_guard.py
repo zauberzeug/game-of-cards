@@ -64,10 +64,12 @@ class NonListAdvancesGuardTest(unittest.TestCase):
                 self.assertEqual(value, own)
                 self.assertNotIn("dangling advances edge", stderr.getvalue())
 
-    def test_detect_advance_cycles_ignores_non_list_advanced_by(self) -> None:
-        # Bare-string `advanced_by` must not crash or emit a spurious cycle.
-        card = _card("a", advanced_by="abc")
-        errors = engine.detect_advance_cycles([card])
+    def test_detect_advance_cycles_ignores_non_list_advances(self) -> None:
+        # Bare-string `advances` must not crash or emit a spurious cycle:
+        # iterated, "b" would walk a → b and b's real edge back to a.
+        a = _card("a", advances="b")
+        b = _card("b", advances=["a"])
+        errors = engine.detect_advance_cycles([a, b])
         self.assertEqual(errors, [])
 
     def test_would_create_advance_cycle_ignores_non_list_advances(self) -> None:
