@@ -110,3 +110,7 @@ refuses the edge that would close it in `advances`.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-10-29 — Closure' present
+
+## 2026-10-29T05:15:16Z — Post-close amendment
+
+Extended by [`advances-graph-readers-each-trust-one-field-and-disagree-on-half-edged-decks`](../advances-graph-readers-each-trust-one-field-and-disagree-on-half-edged-decks/). This card's gate/guard split is one instance of a wider one: ten consumers of the advances relation each read one half of an edge and split three to three on a half-edged deck. The union-of-both-halves option this card left for a human is that card's decision (gate `decision`), and this card now advances it.

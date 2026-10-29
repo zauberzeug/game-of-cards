@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-05-27T14:02:43Z"
 closed_at: "2026-10-29T05:09:57Z"
 human_gate: none
-advances: []
+advances:
+  - advances-graph-readers-each-trust-one-field-and-disagree-on-half-edged-decks
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
@@ -84,7 +85,9 @@ decision's single field, and it changes `goc repair-edges`: an
 `advanced_by`-recorded cycle would have every edge refused instead of all but
 one repaired, which re-pins
 `test_repair_edges_dry_run_matches_apply_on_interacting_half_edges` from 1
-fixable edge to 0. That is a behavior call for a human, not part of this fix.
+fixable edge to 0. That is a behavior call for a human, not part of this fix;
+it is parked as
+[advances-graph-readers-each-trust-one-field-and-disagree-on-half-edged-decks](../advances-graph-readers-each-trust-one-field-and-disagree-on-half-edged-decks/).
 
 ## Regression guard
 
