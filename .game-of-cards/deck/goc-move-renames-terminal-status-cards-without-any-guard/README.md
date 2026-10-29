@@ -1,7 +1,7 @@
 ---
 title: goc-move-renames-terminal-status-cards-without-any-guard
 summary: "`goc move <old> <new>` renames a card directory and rewrites every cross-reference across the tracked tree with no terminal-status check. Calling it on a `done` / `disproved` / `superseded` card silently retitles the card and rewrites historical links to the old slug — the kanban record axis the closed card sits on. Sibling in the same meta-fix family already in flight as `goc-decide-accepts-decisions-on-already-closed-cards` (closed; guard added at engine.py:4556), `goc-wait-sets-impediment-overlay-on-terminal-status-cards-without-any-guard` (open), `goc-attest-mutates-log-md-on-already-closed-cards` (open), and `goc-quality-pass-mutates-summary-and-dod-on-terminal-status-cards` (open). That last card's DoD step 4 explicitly flags `_cmd_move` as a follow-up audit; this card is that follow-up."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-06-01T05:26:39Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: implement the chosen guard in `goc/engine.py` (`_cmd_move`, line 4780) and re-sync plugin mirrors via `python scripts/sync_plugin_assets.py`.
   - [ ] PROCESS: sibling sweep — confirm `_apply_verdict_interactive` (engine.py:4675-4688) inherits the new guard via its `goc move` subprocess call (defense-in-depth — the parent quality-pass card has its own entry-point guard but the move subprocess hop is a second seam); add a regression test if the inheritance is not obvious from code reading.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` stays green; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc move` renames terminal-status cards without any guard
