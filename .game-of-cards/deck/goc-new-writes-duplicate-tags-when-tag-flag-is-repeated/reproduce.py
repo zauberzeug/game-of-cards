@@ -5,13 +5,12 @@ passes `--tag bug --tag bug --tag documentation --tag bug`, then prints
 the `tags:` line from the produced README.
 
 Expected behavior (after the fix): `tags: [bug, documentation]`.
-Current behavior:                  `tags: [bug, bug, documentation, bug]`.
+Pre-fix behavior:                  `tags: [bug, bug, documentation, bug]`.
 
-Exit code 0 when the defect FIRES (duplicates present); 1 when the fix has
-landed (no duplicates).  Inverted from the usual TDD convention so DoD can
-read "reproduce.py exits zero (defect no longer fires)" once the fix lands
-by inverting the expected-vs-actual comparison at that time; the boolean
-flips, the script stays a one-line reproducer.
+Exit code 0 when the defect no longer fires (no duplicates); 1 when it
+fires (duplicates present) — the DoD convention "reproduce.py exits zero
+(defect no longer fires)". The script was filed inverted (0 while the
+defect fired) and flipped when the fix landed.
 """
 
 from __future__ import annotations
@@ -69,9 +68,9 @@ def main() -> int:
         duplicates_present = tags_line.count("bug") > 1
         if duplicates_present:
             print("DUPLICATES PRESENT — defect fires.")
-            return 0
-        print("No duplicates — defect appears fixed.")
-        return 1
+            return 1
+        print("No duplicates — defect no longer fires.")
+        return 0
 
 
 if __name__ == "__main__":

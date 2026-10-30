@@ -6792,7 +6792,6 @@ def _cmd_new(args):
                 file=sys.stderr,
             )
             sys.exit(2)
-    tags = args.tags
     worker = args.worker
     # `new --worker` shares its argparse dest with the global `--worker` queue
     # filter, whose default is `$GOC_WORKER` — so an empty value here is the
@@ -6805,6 +6804,8 @@ def _cmd_new(args):
     commit = args.commit
     no_commit = args.no_commit
     _validate_commit_flags(commit, no_commit)
+    # Every repeatable list flag is a set: a value passed twice lands once.
+    tags = _unique_preserving_order(args.tags or [])
     advances = _unique_preserving_order(args.advances_wire or [])
     advanced_by = _unique_preserving_order(args.advanced_by_wire or [])
     if not allow_jargon:
