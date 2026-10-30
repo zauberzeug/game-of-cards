@@ -1,7 +1,7 @@
 ---
 title: goc-validate-accepts-a-card-body-that-carries-a-second-copy-of-the-frontmatter
 summary: "A 2026-08-24 hygiene pass split a card at the text '## Decision required' inside its frontmatter DoD and wrote a stale second body plus a glued DoD fragment into the README; goc validate stayed green for two months. Add a validate warning for a body that repeats frontmatter keys or DoD checkbox lines outside code fences."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-22T06:03:27Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: the check runs over the whole deck without new warnings except true positives (this repo had exactly one, repaired in 7616adc2)
   - [ ] MECHANICAL: `Skill(refine-deck)` says to rewrite card sections through the engine's section helpers (or at least to split the body only, never the whole file text)
   - [ ] PROCESS: `uv run goc validate` passes and the suite is green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # goc validate accepts a card body that carries a second copy of the frontmatter
