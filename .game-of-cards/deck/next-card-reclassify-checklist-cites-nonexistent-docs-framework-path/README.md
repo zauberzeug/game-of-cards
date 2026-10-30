@@ -112,8 +112,10 @@ Either path: regenerate auto-synced mirrors via `python scripts/sync_plugin_asse
 
 definition_of_done (replace after decision):
 
+```
   - [ ] PROCESS: human picks fix path A (delete) or B (generalize); decision recorded above
   - [ ] MECHANICAL: `goc/templates/skills/next-card/SKILL.md:121` edited per the chosen path
   - [ ] MECHANICAL: `python scripts/sync_plugin_assets.py` regenerates `.claude/skills/`, `.codex/skills/`, `claude-plugin/skills/`, `codex-plugin/skills/` mirrors; `--check` exits zero
   - [ ] MECHANICAL: `python scripts/port_skills_to_openclaw.py` re-ports the openclaw skill; `--check` exits zero
   - [ ] PROCESS: `uv run goc validate` clean
+```

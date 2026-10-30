@@ -30,3 +30,20 @@ through the inline-quoted emit path and round-trips there.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-05-26 — Closure' present
+
+## 2026-10-30T04:55:00Z — Body restored
+
+The README body had been lost since 83c1408d (2026-05-29). This card was
+filed without a frontmatter closer, so the engine took everything up to the
+first `---` inside the reproducer output as frontmatter, and the yaml-lite of
+that time accepted the prose without error. The claim then wrote `worker:` into
+that output, and the `closed_at` re-quoting migration re-emitted the frontmatter
+from the parsed keys. That kept the tail of the reproducer output as the whole
+body and dropped the H1 and every section before it. Today's parser refuses a
+card like that with a parse error, so the defect cannot recur this way.
+
+Restored the closure-time body from e1eb3ece, minus the `worker:` line the
+claim had inserted into the pasted output. The surviving tail matched the
+restored text byte for byte. Found by the deck-wide run of the new
+`BODY_REPEATS_FRONTMATTER` check
+(goc-validate-accepts-a-card-body-that-carries-a-second-copy-of-the-frontmatter).

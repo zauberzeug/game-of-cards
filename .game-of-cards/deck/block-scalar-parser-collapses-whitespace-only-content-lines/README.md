@@ -18,6 +18,58 @@ definition_of_done: |
   - [x] PROCESS: `uv run goc validate` clean and `python scripts/sync_plugin_assets.py --check` green (the vendored parser is mirrored into the plugin payloads)
 ---
 
+# block-scalar-parser-collapses-whitespace-only-content-lines
+
+## Location
+
+`goc/_vendor/yaml_lite.py:163-167` — the blank-line short-circuit inside
+`_parse_block_scalar`:
+
+```python
+raw = self._lines[self._pos]
+rstripped = raw.rstrip()
+if rstripped == "":
+    chunks.append("")
+    self._pos += 1
+    continue
+```
+
+## What's broken
+
+A block-scalar content line that is *all whitespace* (e.g. two spaces of
+block indent plus three interior spaces) is `rstrip()`'d to `""`, so it
+takes the blank-line branch and is appended as an empty string. The spaces
+past the block indent are silently dropped.
+
+This is the residual half of the block-scalar round-trip family. The closed
+card
+[block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip](../block-scalar-parser-strips-trailing-whitespace-breaking-emit-parse-round-trip/)
+fixed the **non-blank** content-line path (line 189) to slice
+`raw[block_indent:]` so trailing whitespace survives. Its own comment at
+lines 186-188 states the intent:
+
+> Strip only the leading block indentation; trailing whitespace on a
+> content line is meaningful in a YAML literal block (e.g. a Markdown
+> hard-break) and must survive the emit->parse round-trip.
+
+But a whitespace-only line never reaches that slice — it is intercepted by
+the `rstripped == ""` test above and never gets `raw[block_indent:]`
+applied. So the very invariant that fix established (content past the block
+indent is meaningful and must round-trip) is still violated for lines whose
+content happens to be only whitespace.
+
+The goc emitter (`emit_frontmatter` -> `_emit_block_field`) writes such a
+line verbatim — see the empirical output, where the emitted middle line is
+`     ` (2 indent + 3 content) — so this is a genuine emitter/parser
+disagreement, not a malformed-input edge case.
+
+## Empirical evidence
+
+`uv run python .game-of-cards/deck/block-scalar-parser-collapses-whitespace-only-content-lines/reproduce.py`:
+
+```
+=== emitted frontmatter ===
+---
 title: x
 summary: |-
   first line
