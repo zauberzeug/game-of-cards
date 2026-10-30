@@ -189,6 +189,19 @@ def taxed_size(path: Path) -> int:
 # pass that finds an absent anchor without the rule reads it as the fix the
 # citation step's own decline row half-invites. The skill had 26 bytes of
 # headroom.
+#
+# refine-deck was raised a tenth time on 2026-10-30 by the card
+# `goc-validate-accepts-a-card-body-that-carries-a-second-copy-of-the-frontmatter`:
+# a 2026-08-24 pass rewriting a decision section located it by searching the
+# whole README, matched the heading's text inside a DoD line first, and spliced
+# a DoD fragment, the `---` closer and a stale second body into the card (206
+# lines became 397, unnoticed for two months). What stayed in the core is the
+# rule — edit the body, find a section by its line-anchored heading — and the
+# name of the warning `goc validate` now emits for the damage; the incident,
+# the split snippet and the repair recipe went to the reference sibling. A
+# pointer alone fails because nothing sends a pass to look for one: a section
+# rewrite reads as plain text editing, and the pass that did the damage
+# invented its own split. The skill had 48 bytes of headroom.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -198,7 +211,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_100,
-    "refine-deck": 15_300,
+    "refine-deck": 15_700,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

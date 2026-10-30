@@ -878,7 +878,8 @@ def _dod_fenced_mask(lines: list[str]) -> list[bool]:
     """Per-line flag: True when the line opens/closes or sits inside a fenced
     code block, and so must not be treated as a DoD checkbox. All three DoD
     scanners (count_dod_boxes, _dod_box_indices, untagged_dod_items) route
-    through this so they cannot drift apart on fence handling.
+    through this so they cannot drift apart on fence handling; the body scanner
+    `frontmatter_copy_lines` uses it to skip fenced examples the same way.
 
     Fence matching follows CommonMark §4.5: a block opened with a run of one
     fence character (``` or ~~~) is closed only by a fence of the *same*
@@ -2704,6 +2705,81 @@ def validate_decision_verdict_coherence(cards: list[Card]) -> list[BlockerWarnin
             f"resolved ## Decision re-scopes/reverses a prior verdict, but the "
             f"summary/banner still asserts it (token: {hit.group(0)!r}) — "
             f"reconcile the summary/banner, or supersede+create instead",
+        ))
+    return warnings
+
+
+# Body lines only a copy of card text produces. A rewrite that locates its edit
+# in the whole README instead of in the body splices the frontmatter into the
+# body: a 2026-08-24 hygiene pass searched for `## Decision required`, matched
+# the DoD line quoting it first, and left a DoD fragment, the `---` closer and a
+# stale second body behind the new one — which `goc validate` passed for two
+# months (goc-validate-accepts-a-card-body-that-carries-a-second-copy-of-the-frontmatter).
+# Each shape is one that wrapped prose does not produce: a key line holds a
+# single value token (a block-scalar header for the DoD), and a DoD item sits at
+# the two-space block indent `_emit_block_field` writes, with a method tag — a
+# body's own checklist sits at column 0. `status:` and `waiting_until:` stay out:
+# both open wrapped prose lines in this repo's deck.
+BODY_FRONTMATTER_KEY_LINE = re.compile(
+    r"^(?:(?:title|human_gate): \S+"
+    r"|definition_of_done: [|>](?:[1-9][-+]?|[-+][1-9]?)?)[ \t]*$"
+)
+BODY_DOD_ITEM_LINE = re.compile(
+    r"^  - \[[ xX]\] (?:" + "|".join(DOD_METHOD_TAGS) + r"): "
+)
+BODY_H1_LINE = re.compile(r"^# ")
+
+
+def frontmatter_copy_lines(body: str) -> list[str]:
+    """Body lines, outside fenced code blocks, that repeat card text: a
+    frontmatter key line, a DoD item at the frontmatter's block indent, or an
+    H1 repeating the body's first H1 (the head of a second body copy).
+
+    A second H1 with different text is a legitimate, if unusual, body layout
+    and is not reported. Fenced lines are skipped through `_dod_fenced_mask`,
+    so a card that shows frontmatter inside a code block stays silent.
+    """
+    lines = body.splitlines()
+    fenced = _dod_fenced_mask(lines)
+    hits: list[str] = []
+    first_h1: str | None = None
+    for line, in_fence in zip(lines, fenced):
+        if in_fence:
+            continue
+        if BODY_FRONTMATTER_KEY_LINE.match(line) or BODY_DOD_ITEM_LINE.match(line):
+            hits.append(line)
+        elif BODY_H1_LINE.match(line):
+            if first_h1 is None:
+                first_h1 = line.strip()
+            elif line.strip() == first_h1:
+                hits.append(line)
+    return hits
+
+
+def validate_body_repeats_frontmatter(cards: list[Card]) -> list[BlockerWarning]:
+    """Surface a card body that carries a copy of card text outside a code fence.
+
+    Advisory only — never contributes to `validate`'s exit code: a card may
+    show frontmatter on purpose, and fencing it is how it says so. Unlike the
+    other advisory classes, terminal cards are checked too: this one guards the
+    record itself, and a closed card's body is that record. The first deck-wide
+    run found a closed card whose H1 and leading sections a frontmatter re-emit
+    had dropped.
+    """
+    warnings: list[BlockerWarning] = []
+    for c in cards:
+        hits = frontmatter_copy_lines(c.body)
+        if not hits:
+            continue
+        sample = "; ".join(line.strip()[:50] for line in hits[:3])
+        more = f" (+{len(hits) - 3} more)" if len(hits) > 3 else ""
+        warnings.append(BlockerWarning(
+            "BODY_REPEATS_FRONTMATTER",
+            c.title,
+            f"{len(hits)} body line(s) outside a code fence repeat the "
+            f"frontmatter or the H1: [{sample}]{more} — a rewrite likely "
+            f"spliced card text into the body; repair it from the README's "
+            f"git history, or fence the lines if they are an example",
         ))
     return warnings
 
@@ -4881,6 +4957,8 @@ def _cmd_validate(args):
     for w in validate_dod_method_tags(cards):
         print(w.message, file=sys.stderr)
     for w in validate_decision_verdict_coherence(cards):
+        print(w.message, file=sys.stderr)
+    for w in validate_body_repeats_frontmatter(cards):
         print(w.message, file=sys.stderr)
     for w in validate_plugin_hook_double_fire():
         print(w.message, file=sys.stderr)

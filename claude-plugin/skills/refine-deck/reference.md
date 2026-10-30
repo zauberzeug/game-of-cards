@@ -25,6 +25,51 @@ indiscriminately — out-of-scope artifacts surface as
 `contribution: low` or skip-with-note, never Tier-1/Tier-2 verdicts
 or meta-decision-card cluster members.
 
+## Editing card bodies
+
+A card's README is frontmatter, a closing `---`, then the body. Every
+rewrite this pass makes (a dashboard section, a ratified decision, a
+repaired cite) belongs to the body, so split the file first and search
+only the body. A heading's text can sit in the frontmatter too: a DoD
+item that says `see "## Decision required"` contains it, and a search
+of the whole file finds that occurrence first.
+
+That is how a 2026-08-24 pass on this project's deck damaged a card.
+Rewriting a decision section, it split the README at the first
+`## Decision required`, which was in the DoD line, and kept everything
+after the match. The card gained a heading glued to the tail of the DoD
+line, the rest of the DoD, the `---` closer and a stale copy of the
+whole old body — 397 lines instead of 206. For two months every later
+pass, every `goc validate` run and every agent that read the card saw
+nothing wrong: the frontmatter still parsed.
+
+Split the way the engine does (its `parse_frontmatter` and
+`emit_frontmatter`, where `goc` is importable):
+
+```python
+import re
+from pathlib import Path
+
+readme = Path(".game-of-cards/deck") / title / "README.md"
+text = readme.read_text(encoding="utf-8")
+# The frontmatter ends at the first line after the opener that is exactly `---`.
+head, body = re.match(r"(---\n.*?\n---[ \t]*\n)(.*)", text, re.S).groups()
+# Find the section by its line-anchored heading, in the body only; it runs
+# to the next `## ` heading or the end of the file.
+section = re.compile(r"^## Decision required[^\n]*\n.*?(?=^## |\Z)", re.M | re.S)
+body, found = section.subn(lambda _: new_section, body, count=1)
+assert found == 1, "section not in the body"
+readme.write_text(head + body, encoding="utf-8")
+```
+
+`goc validate` reports the damage as `BODY_REPEATS_FRONTMATTER`: outside
+a code fence, the body holds a frontmatter key line (`title:`,
+`human_gate:`, `definition_of_done: |`), a DoD item at the
+frontmatter's two-space indent, or a repeat of its own H1. Repair a
+flagged card from its history (`git log -p -- <card>/README.md`): drop
+a spliced copy, or restore a body a rewrite dropped. Lines the card
+shows on purpose belong in a code fence.
+
 ## Orphaned-dependency sub-check scripts
 
 The validator catches asymmetric edges (`A.advances=[B]` but

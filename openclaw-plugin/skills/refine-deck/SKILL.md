@@ -37,6 +37,12 @@ on the finding's nature:
   `--tag unverified` per Step 4.5. "Surfaced and discussed in chat"
   is not a disposition.
 
+Edit a card's body, never its whole README: split at the frontmatter's
+closing `---` and find a section by its line-anchored heading in the
+body. A whole-file search can match the heading's text in a DoD line
+first and splice frontmatter into the body — `goc validate` warns
+`BODY_REPEATS_FRONTMATTER` (`reference.md` § Editing card bodies).
+
 **Long-form material lives in `reference.md`** — a sibling file in
 this skill's directory. Read the named section only when the
 situation actually applies:
