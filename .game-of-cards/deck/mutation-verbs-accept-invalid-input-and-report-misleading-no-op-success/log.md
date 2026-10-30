@@ -223,3 +223,52 @@ hour or more of margin, so no run lands on the midnight boundary.
 
 Dashboard updated in place: the wait roster bullet carries its closure. Four
 children remain, all gated.
+
+
+## 2026-10-30: parked behind a `resource` overlay — every open child is gated
+
+A pull-card pass pulled this epic as the top `--ready` card and found nothing
+on it workable: DoD items 2–4 wait on the four gated children, and each of
+them asks a per-verb question the 2026-10-22 shape decision left open.
+`.game-of-cards/hooks/pull-card.md` defines no consultation rubric, so no
+agent can answer them.
+
+Parked with `goc wait --reason resource` rather than a raised gate. The epic
+has no question of its own: a `## Decision required` here could only restate
+its children's four, and it would add a fifth entry to the decision backlog
+`deck-fills-with-decision-gated-cards-faster-than-they-are-decided` is trying
+to shrink. The overlay is the stopgap the deck has used since 2026-05-29 on
+the two `blocked`-removal epics, whose only open child is gated at `session`.
+Those carry `deferred`; `resource` (a person is not yet available) is the
+closer reason here. The general fix stays with the gated
+`aggregation-epics-head-block-the-autonomous-pull-queue`. Not claimed: there
+was no work to lock.
+
+Re-checked the four children against the current code. Every defect still
+fires:
+
+- `goc-unadvance-with-self-target-…`: with self-edges on disk,
+  `goc unadvance foo --by foo` exits 0 and leaves `advances: []` /
+  `advanced_by: [foo]`. Its `reproduce.py` exits 0 *while* the defect fires,
+  the reverse of its own DoD item.
+- `goc-status-silently-drops-worker-overrides-…`: on hand-written authored
+  cards, `active → open` and `open → disproved` with `--worker-who` exit 0
+  and write no worker. Its `reproduce.py` still reports 3/3 dropped, but not
+  through the path the card documents: `goc new` now writes draft scaffolds,
+  so the draft guard refuses its `disproved` and `superseded` probes (exit 2),
+  and its `open` probe hits the same-status no-op.
+- `goc-wait-clear-silently-discards-…`: `reproduce.py` still shows the
+  requested overlay dropped under exit 0.
+- `goc-status-superseded-discards-by-override-…`: on hand-written cards, a
+  second `goc status foo superseded --by baz` prints `foo: already
+  superseded; nothing to do`, exits 0, and leaves `superseded_by` at `bar`.
+  Its `reproduce.py` aborts in setup (exit 2), because the draft guard
+  refuses the first supersession of a `goc new` scaffold.
+
+Each child's `log.md` carries its own re-check entry.
+
+Dashboard updated in place: a `## Waiting` section records the overlay and
+when to clear it (when the last child closes). The first `## Scope notes`
+bullet no longer says all nine children carry a decision gate, and it no
+longer points at the `## Decision required` section the 2026-10-22 decision
+replaced.

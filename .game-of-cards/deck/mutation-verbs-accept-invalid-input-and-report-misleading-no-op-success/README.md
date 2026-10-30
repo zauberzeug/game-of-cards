@@ -25,6 +25,7 @@ definition_of_done: |
   - [ ] TDD: A regression test asserts each guarded verb rejects (or honestly signals the no-op for) its invalid-input case — redundant edge add/remove, self-target unadvance, empty `--decision`/`--because`, unknown `--skip` name, worker-override on a non-active transition, `--clear` combined with `--reason`/`--until`, and `--by` on an already-superseded target.
   - [ ] MECHANICAL: `uv run goc validate` clean and `uv run python -m unittest discover -s tests` green after each child closes.
 worker: {who: "claude[bot]", where: main}
+waiting_on: resource
 ---
 
 # Mutation verbs accept invalid input and report a misleading no-op success
@@ -68,6 +69,12 @@ Four stay gated, because each asks a question the shape does not settle:
 If one of them is answered with "refuse", strict-refuse applies, with this card's shared emission helper.
 
 That helper is `engine._refuse_invalid_input(reason)`, landed 2026-10-28 with `goc-unadvance-claims-success-…`: it prints `ERROR: <reason>` — the prefix every mutation verb's precondition refusal already used — and exits 2, so each child adds only its verb's predicate, called ahead of every write. The family's regression tests live in `tests/test_mutation_verbs_refuse_invalid_input.py`; each child adds its verb's cases there.
+
+## Waiting
+
+`waiting_on: resource` since 2026-10-30: every child still open is one of the four gated cards above, so nothing on this card can move until a human answers their questions. Re-checked that day, all four defects still fire on the current code (`log.md`). This card has no question of its own, so its gate stays `none`. Without the overlay it heads the `--ready` queue, and every autonomous pull of it ends without progress. The general fix for that is the gated [aggregation-epics-head-block-the-autonomous-pull-queue](../aggregation-epics-head-block-the-autonomous-pull-queue/).
+
+Clear the overlay (`goc wait mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success --clear`) when the last child closes, so that a pull can tick DoD items 2–4 and close this card. A child whose gate drops does not clear it: the decided child is pulled on its own.
 
 ## Family roster (children, wired via `advanced_by`)
 
@@ -113,15 +120,16 @@ slice.
 
 ## Scope notes
 
-- The nine children each carry their own `human_gate: decision` with a
+- The nine children were each filed at `human_gate: decision` with a
   per-verb option menu; those catalogues stay in each child's body. This
   epic was filed at `human_gate: none` by an autonomous refine-deck pass
   (the wiring and framing were mechanical record/scheduler-axis hygiene,
   not a taste call); a 2026-06-25 pull-card pass then raised the gate to
   `decision` to record the shared-shape bundle — mirroring how
   `terminal-status-guard…` consolidated its children's recommendations —
-  before authorising a single implementation series. See `## Decision
-  required` above for the bundle.
+  before authorising a single implementation series, and the 2026-10-22
+  decision lowered it again. See `## Decision` above for the outcome; the
+  bundle is archived in `log.md`.
 - Other zero-edge `meta-fix` cards surfaced in the same pass
   (`goc-migrate-list-style-leaves-bulk-rewrite-uncommitted`,
   `goc-decide-leaves-prior-decision-block-when-the-body-already-has-one`,
