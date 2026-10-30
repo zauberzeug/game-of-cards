@@ -125,3 +125,38 @@ of the defect signal (a missing `tags:` line read as fixed), and a failing
 `goc` call crashed with exit 1. One shape is new: it ran whichever `goc` was
 in `.venv/bin` or on PATH, so outside this repo's venv it could exercise an
 installed engine instead of the tree under test.
+
+## 2026-10-30 — Three gated reproducers re-run: one inverted, two outrun by the draft guard
+
+A pull-card pass re-ran the reproducers of the four children still gated
+under `mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success`.
+None of the four was fixed (each card is gated), so all are left for this
+card's sweep.
+
+- `goc-unadvance-with-self-target-leaves-card-in-half-edge-state/reproduce.py`
+  prints `DEFECT FIRES` and returns 0, then returns 1 on both of its
+  "no longer fires" branches. That is the plain `return 0` shape, under a DoD
+  that reads `reproduce.py exits zero`.
+- `goc-status-silently-drops-worker-overrides-on-non-active-transitions/reproduce.py`
+  is not inverted, since it exits 1 when it sees a drop, but its verdict no
+  longer means what it says. It files its probe cards with `goc new`, which
+  now writes draft scaffolds, so the draft guard refuses its `disproved` and
+  `superseded` transitions (exit 2). The script counts each refusal as a
+  drop, because its only evidence is the absent `worker` field. Its third
+  probe starts from `open`, so it hits the same-status no-op instead of a
+  transition. Two shapes already logged here combine: an absence-of-effect
+  verdict with no check that the command succeeded, and a precondition the
+  engine added after filing.
+- `goc-status-superseded-discards-by-override-when-target-already-superseded/reproduce.py`
+  exits 2 in setup, when the draft guard refuses its first `goc status …
+  superseded` on a `goc new` scaffold. That is the honest harness-broken
+  signal, but it no longer reaches the defect.
+
+Another shape for the sweep to expect: `goc new` stamps `draft: true`, and
+only `goc publish`, `goc status … active` or `goc done` clears it. So a
+reproducer that files fixtures with `goc new` and drives `goc status …
+superseded|disproved` on them before publishing or claiming them now hits
+the draft guard. (`goc publish` itself now refuses a summary-less card, as
+in the 2026-10-29 entry.) Re-run against the current engine, such a
+reproducer either aborts in setup or, without a success check, misreads the
+refusal as its verdict.

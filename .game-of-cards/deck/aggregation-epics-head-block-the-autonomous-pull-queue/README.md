@@ -48,8 +48,9 @@ So `pull-card` pulls the epic, reads a DoD it cannot satisfy, and exits
 without closing. The harness re-triggers fresh, the picker selects the
 same epic again — **head-block**.
 
-This is observable on this repo's own deck *right now*. `goc --ready`
-offers exactly two cards, both aggregation epics:
+This was observable on this repo's own deck when the card was filed
+(2026-05-26): `goc --ready` offered exactly two cards, both aggregation
+epics:
 
 ```
 remove-blocked-from-status-enum-and-migrate-existing-cards      open  medium  5.1  none  ... 0/4
@@ -60,8 +61,18 @@ Their only remaining open child is
 [`remove-blocked-from-the-status-enum-and-validator`](../remove-blocked-from-the-status-enum-and-validator/)
 — `human_gate: session`, deliberately release-coordinated. An
 autonomous pull loop instructed to take only `human_gate: none` cards
-cannot make progress on either epic, yet they are the *only* things the
-picker offers.
+could make no progress on either epic, yet they were the *only* things
+the picker offered. Since 2026-05-29 both have carried a hand-set
+`waiting_on: deferred` overlay that keeps them out of `--ready`.
+
+It recurred on 2026-10-30 with
+[`mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success`](../mutation-verbs-accept-invalid-input-and-report-misleading-no-op-success/).
+Five of its nine children had closed and the other four are each gated at
+`decision`, so it topped `--ready` with nothing workable. It got the same
+stopgap, a hand-set `waiting_on: resource`. Nothing clears such an overlay
+when the children close: it holds until someone clears it by hand, and an
+epic whose overlay is forgotten stays hidden after its roster turns
+terminal.
 
 ## Why it matters — this is the monolith head-block, relocated
 
