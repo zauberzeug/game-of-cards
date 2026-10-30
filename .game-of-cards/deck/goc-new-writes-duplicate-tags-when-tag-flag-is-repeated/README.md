@@ -1,7 +1,7 @@
 ---
 title: goc-new-writes-duplicate-tags-when-tag-flag-is-repeated
 summary: "`goc new` deduplicates `--advances` and `--advanced-by` via `_unique_preserving_order` but writes `--tag` values verbatim. Repeating `--tag bug --tag bug` lands `tags: [bug, bug]` on disk; `goc validate` does not catch it, so duplicates survive into the deck and downstream filters that count tags double-count."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-05-30T06:30:27Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] PROCESS: decide whether `goc validate` should also flag pre-existing duplicates in already-filed cards (separate sibling card if yes)
   - [ ] TDD: a regression test in `tests/` covers `goc new --tag bug --tag bug`
   - [ ] PROCESS: `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc new` keeps duplicate `--tag` values
