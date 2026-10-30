@@ -19,3 +19,7 @@ Lower the gate: dedupe repeated --tag values the way advances are deduped — Bu
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-10-30 — Closure' present
+
+## 2026-10-30T04:30:14Z — Reproducer rewritten to the 0/1/2 contract after close
+
+The closure flip covered exit codes 0 and 1 only. The script still had no positive control and no exit 2: its "fixed" verdict was `tags_line.count("bug") <= 1`, which a missing or reshaped `tags:` line also satisfies. A failing `goc` call raised through `check=True` and exited 1, the code for "fires". It also ran whichever `goc` sat in `.venv/bin` or on PATH instead of this source tree. It now runs `python -m goc.cli` from the tree, reads `tags` back through `parse_frontmatter`, and exits 2 unless they are exactly the deduped or the duplicated list. Verified: exit 0 on the fixed engine, 1 against the pre-fix engine (`774a1f6f`), 2 with a `goc.cli` that raises. Recorded as an instance on `reproducers-can-exit-zero-while-their-defect-still-fires`.

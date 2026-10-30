@@ -11,7 +11,7 @@ advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [x] TDD: reproduce.py exits zero (defect no longer fires — `goc new --tag X --tag X` produces `tags: [X]`, not `[X, X]`) — exits 0 printing `tags written to disk: [bug, documentation]`; against the pre-fix engine it exits 1 with `[bug, bug, documentation, bug]`. The script was filed inverted (exit 0 while the defect fired) and was flipped to this contract.
+  - [x] TDD: reproduce.py exits zero (defect no longer fires — `goc new --tag X --tag X` produces `tags: [X]`, not `[X, X]`) — exits 0 printing `tags written to disk: [bug, documentation]`; against the pre-fix engine it exits 1 with `[bug, bug, documentation, bug]`. The script was filed inverted (exit 0 while the defect fired) and was rewritten to the 0/1/2 contract, exiting 2 when its harness breaks.
   - [x] MECHANICAL: `_cmd_new` deduplicates `tags` the same way it deduplicates `advances` / `advanced_by` (via `_unique_preserving_order`) — `tags = _unique_preserving_order(args.tags or [])`, moved beside the two edge lines; it covers the global `--tag` path too.
   - [x] PROCESS: decide whether `goc validate` should also flag pre-existing duplicates in already-filed cards (separate sibling card if yes) — decided no, so no sibling card: `_cmd_new` is the only writer of `tags`, no card in the deck repeats a list entry (823 scanned on 2026-10-30), and the engine already treats repeated list entries as a reader concern. Reasoning in the body.
   - [x] TDD: a regression test in `tests/` covers `goc new --tag bug --tag bug` — `tests/test_new_dedupes_repeated_list_flags.py`, 4 tests, 3 of which fail against the pre-fix engine; its tripwire fails the build when `goc new` gains a repeatable flag its table does not list.
@@ -57,10 +57,14 @@ checks tag membership, not repetition, so the card stayed green.
 
 ## Empirical evidence
 
-`reproduce.py` runs `goc install` and `goc new test-dedup-card --tag bug
---tag bug --tag documentation --tag bug` in a fresh temp repo (this
-repo's deck is untouched) and prints the `tags:` line it wrote. Exit 0
-means the defect no longer fires, exit 1 that it fires.
+`reproduce.py` runs `goc new test-dedup-card --tag bug --tag bug --tag
+documentation --tag bug` from this source tree in a fresh temp deck
+(this repo's deck is untouched) and reads the new card's `tags` back
+through the engine's frontmatter parser. Exit 0 means the defect no
+longer fires, 1 that it fires, 2 that the harness broke: its positive
+control is that the tags read back are one of the two lists below, so a
+failing `goc new`, a missing `tags` list or any other value exits 2
+rather than passing for a verdict.
 
 Against the pre-fix engine (exit 1):
 

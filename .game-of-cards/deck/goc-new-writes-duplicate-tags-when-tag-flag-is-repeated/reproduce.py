@@ -1,20 +1,25 @@
 """Reproduce: `goc new --tag X --tag X` writes duplicate tags to disk.
 
-Runs `goc new` in a fresh temp dir (so this repo's deck is untouched),
-passes `--tag bug --tag bug --tag documentation --tag bug`, then prints
-the `tags:` line from the produced README.
+Runs `goc new` from this source tree in a fresh temp deck (this repo's deck
+is untouched), passing `--tag bug --tag bug --tag documentation --tag bug`,
+and reads the new card's `tags` back through the engine's frontmatter parser.
 
 Expected behavior (after the fix): `tags: [bug, documentation]`.
 Pre-fix behavior:                  `tags: [bug, bug, documentation, bug]`.
 
-Exit code 0 when the defect no longer fires (no duplicates); 1 when it
-fires (duplicates present) — the DoD convention "reproduce.py exits zero
-(defect no longer fires)". The script was filed inverted (0 while the
-defect fired) and flipped when the fix landed.
+Exit codes: 0 = defect no longer fires, 1 = defect fires, 2 = the harness or
+a precondition is broken. The positive control is that the tags read back are
+one of those two lists: `goc new` failing, no card, no `tags` list or any
+other value exits 2 rather than passing for a verdict. The script was filed
+inverted (exit 0 while the defect fired) and was rewritten to this contract
+when the fix landed.
+
+Run with:  uv run python .game-of-cards/deck/goc-new-writes-duplicate-tags-when-tag-flag-is-repeated/reproduce.py
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -30,47 +35,56 @@ def _repo_root() -> Path:
     raise RuntimeError("repo root (pyproject.toml) not found")
 
 
-sys.path.insert(0, str(_repo_root()))
+REPO = _repo_root()
+sys.path.insert(0, str(REPO))
+
+from goc.engine import FrontmatterError, parse_frontmatter  # noqa: E402
+
+REQUESTED = ["bug", "bug", "documentation", "bug"]
+DEDUPED = ["bug", "documentation"]
 
 
 def main() -> int:
-    repo = _repo_root()
-    goc = repo / ".venv" / "bin" / "goc"
-    if not goc.exists():
-        # Fallback: install path used by `uv run goc` is the same venv;
-        # try the system PATH as a last resort so the script is portable.
-        goc = Path("goc")
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = Path(tmp)
+        (cwd / ".game-of-cards" / "deck").mkdir(parents=True)
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
+        env.pop("GOC_WORKTREE_DECK", None)
+        flags = [arg for tag in REQUESTED for arg in ("--tag", tag)]
+        res = subprocess.run(
+            [sys.executable, "-m", "goc.cli", "new", "test-dedup-card", "--contribution", "low", *flags],
+            cwd=cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        print(f"$ goc new test-dedup-card --contribution low {' '.join(flags)}")
+        print(f"  exit {res.returncode}")
+        if res.returncode != 0:
+            print(f"HARNESS: goc new failed:\n{res.stderr}", file=sys.stderr)
+            return 2
 
-    with tempfile.TemporaryDirectory() as td:
-        td_path = Path(td)
-        subprocess.run(["git", "init", "-q"], cwd=td_path, check=True)
-        subprocess.run([str(goc), "install"], cwd=td_path, check=True,
-                       capture_output=True)
-        subprocess.run(
-            [
-                str(goc), "new", "test-dedup-card",
-                "--tag", "bug",
-                "--tag", "bug",
-                "--tag", "documentation",
-                "--tag", "bug",
-                "--contribution", "low",
-            ],
-            cwd=td_path,
-            check=True,
-        )
-        readme = td_path / ".game-of-cards" / "deck" / "test-dedup-card" / "README.md"
-        text = readme.read_text()
-        tags_line = next(
-            (line for line in text.splitlines() if line.startswith("tags:")),
-            "(no tags: line found)",
-        )
-        print(f"tags written to disk: {tags_line.removeprefix('tags: ').strip()}")
-        duplicates_present = tags_line.count("bug") > 1
-        if duplicates_present:
+        readme = cwd / ".game-of-cards" / "deck" / "test-dedup-card" / "README.md"
+        try:
+            fm, _ = parse_frontmatter(readme.read_text())
+        except (OSError, FrontmatterError) as exc:
+            print(f"HARNESS: cannot read the new card's frontmatter: {exc}", file=sys.stderr)
+            return 2
+        tags = fm.get("tags")
+        if not isinstance(tags, list):
+            print(f"HARNESS: the new card has no tags list (got {tags!r})", file=sys.stderr)
+            return 2
+
+        print(f"tags written to disk: [{', '.join(map(str, tags))}]")
+        if tags == DEDUPED:
+            print("No duplicates — defect no longer fires.")
+            return 0
+        if tags == REQUESTED:
             print("DUPLICATES PRESENT — defect fires.")
             return 1
-        print("No duplicates — defect no longer fires.")
-        return 0
+        print(f"HARNESS: tags are neither {DEDUPED} nor {REQUESTED}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

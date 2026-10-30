@@ -104,3 +104,24 @@ card. Two more shapes for the classification sweep to expect: a bare `assert`
 (or any uncaught exception) in setup turns a harness failure into exit 1, and
 a reproducer can go stale through a precondition the engine added after it
 was filed.
+
+## 2026-10-30T04:30:14Z — Inverted reproducer fixed on close, inverted on purpose
+
+`goc-new-writes-duplicate-tags-when-tag-flag-is-repeated/reproduce.py`
+printed `DUPLICATES PRESENT — defect fires.` and returned 0, which is the plain
+`return 0` shape, under a DoD that read `reproduce.py exits zero`. It was
+rewritten to the 0/1/2 contract when the card closed (exit 1 against the
+pre-fix engine, exit 0 after, exit 2 when its harness breaks), so it needs no
+sweep.
+
+A further shape for the sweep to expect: this inversion was deliberate and
+documented. The docstring said the exit code was "Inverted from the usual
+TDD convention" and planned to flip the boolean when the fix landed. So the
+filer knew the DoD convention and still wrote a "succeed when reproduced"
+script, and the docstring states its own exit-code mapping. That is a static
+signal a classification scan could read before running anything. The script
+also showed two shapes already logged here: its fixed verdict was the absence
+of the defect signal (a missing `tags:` line read as fixed), and a failing
+`goc` call crashed with exit 1. One shape is new: it ran whichever `goc` was
+in `.venv/bin` or on PATH, so outside this repo's venv it could exercise an
+installed engine instead of the tree under test.
