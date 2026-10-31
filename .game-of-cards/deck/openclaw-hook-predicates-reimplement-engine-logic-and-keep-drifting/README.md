@@ -39,6 +39,7 @@ The predicates currently ported by hand:
 - `frontmatterTail` ⟷ `deck_session_start._frontmatter_tail`
 - `stripQuotes` ⟷ the Python tail's `.strip('"').strip("'")`
 - the `agent_end` opt-out regex ⟷ `pattern_generalization_check` opt-out
+- `hasDeck` ⟷ `deck_prompt_router._has_deck` (and the engine's deck-root walk)
 
 Each drifts independently, and each drift has been discovered and fixed as its
 own one-off card rather than caught by a guard:
@@ -80,6 +81,22 @@ own one-off card rather than caught by a guard:
    card resumable. This is instance #5 of the shape and the first found while
    the guard was already filed — evidence that the enumerated-cell matrix
    below does not catch new predicates, only new cells of old ones.
+6. **Still live (found 2026-10-31, not yet fixed)**: `hasDeck` asks whether
+   `.game-of-cards/deck` or `deck` *exists* (`access()`). The Python hooks'
+   `_has_deck` and the engine's deck-root walk ask whether it is a
+   *directory* (`is_dir()`). So a workspace whose root holds a regular file
+   named `deck`, such as a script, has opted in for the TS port but not for
+   Python. Two TS callers inherit the drift: the deck-first reminder's
+   opt-in guard (added by
+   [openclaw-prompt-hook-fires-in-workspaces-without-a-deck](../openclaw-prompt-hook-fires-in-workspaces-without-a-deck/))
+   and the goc tool's cwd fallback (`bestFallbackProjectDir`). Verified by
+   running both on the same directories:
+
+   ```
+   workspace root holds          TS hasDeck   Python _has_deck
+   a file named deck             true         False
+   .game-of-cards/deck (a file)  true         False
+   ```
 
 The only existing guard is the hand-written `isImpeded` matrix in
 `tests/test_openclaw_session_start_hook.py`: it extracts the TS functions and

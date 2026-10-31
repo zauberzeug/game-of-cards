@@ -30,3 +30,17 @@ Separately filed this sweep:
 which `advances` this card. That one is a *different* shape — the port is
 faithful to its Python source, and the faithfulness is the bug, because the
 copied value is Claude Code's host-specific tool vocabulary.
+
+## 2026-10-31T05:24:49Z — Instance #6: hasDeck accepts a file named deck
+
+Found while closing
+[openclaw-prompt-hook-fires-in-workspaces-without-a-deck](../openclaw-prompt-hook-fires-in-workspaces-without-a-deck/),
+whose new opt-in guard calls `hasDeck`. The TS helper tests that the path
+exists (`access()`), while `deck_prompt_router._has_deck` and the engine
+test `is_dir()`. Both were run on two workspaces, one holding a regular
+file `deck` and one holding a file `.game-of-cards/deck`. TS said true for
+both, Python said False for both. Added to the instance list and to the
+ported-predicate list. No fix applied: this card is gated on the mechanism
+decision, and the sibling-sweep rule keeps a fifth-plus instance off the
+fix-through path. On a real host nothing reaches the guard today anyway
+([openclaw-plugin-hooks-never-deliver-their-reminders-on-a-real-host](../openclaw-plugin-hooks-never-deliver-their-reminders-on-a-real-host/)).
