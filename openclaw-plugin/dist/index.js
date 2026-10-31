@@ -2857,6 +2857,7 @@ ${stderrJoined}` : "")).trim() || `goc ${params.verb} returned exit ${result.exi
       const hasTooling = TOOLING.some((re) => re.test(prompt));
       if ((hasExploration || hasTooling) && !hasWork) return;
       if (!hasWork) return;
+      if (!await hasDeck(sessionProjectDir ?? process.cwd())) return;
       if (typeof ctx?.appendSystemContext === "function") {
         ctx.appendSystemContext(DECK_REMINDER);
       } else if (typeof ctx?.prependSystemContext === "function") {

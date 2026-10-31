@@ -239,8 +239,14 @@ on a `.game-of-cards/deck/` (or the legacy `deck/`),
 remains the only opt-in path (`goc new` refuses without a deck). A hook
 that acts on the prompt text alone installs the methodology as a side
 effect of phrasing (`runtime-hooks-fire-in-repos-that-never-opted-in`).
-The OpenClaw port's `before_prompt_build` handler does not carry the
-guard yet (`openclaw-prompt-hook-fires-in-workspaces-without-a-deck`).
+The OpenClaw port carries the guard too. Its `before_prompt_build`
+handler appends the deck-first reminder only where the session's
+project dir holds a deck. That is the dir its `session_start` reads,
+checked as-is with no ancestor walk, and
+`tests/test_openclaw_prompt_hook.py` pins the guard. None of the
+OpenClaw handlers delivers anything on the SDK version the plugin pins
+yet, because they read guessed context shapes
+(`openclaw-plugin-hooks-never-deliver-their-reminders-on-a-real-host`).
 
 ### Skill and hook files have two copies — edit the template, sync handles the rest
 

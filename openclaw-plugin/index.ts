@@ -754,6 +754,12 @@ export default definePluginEntry({
     // AFTER prompt construction, so it cannot inject system context. The
     // right hook is before_prompt_build, which exposes
     // appendSystemContext / prependSystemContext / systemPrompt.
+    //
+    // Silent in a workspace that never opted in, like the Python router: the
+    // plugin's hooks run in every workspace, so the reminder speaks only where
+    // the session's project dir (the one session_start reads and the goc tool
+    // defaults to) holds a deck. The deck is looked up only for a work-shaped
+    // prompt, so no other prompt touches the disk.
     api.on("before_prompt_build", async (ctx: any) => {
       const prompt = ((ctx?.userPrompt as string | undefined) ?? "").toLowerCase();
       if (!prompt) return;
@@ -762,6 +768,7 @@ export default definePluginEntry({
       const hasTooling = TOOLING.some((re) => re.test(prompt));
       if ((hasExploration || hasTooling) && !hasWork) return;
       if (!hasWork) return;
+      if (!(await hasDeck(sessionProjectDir ?? process.cwd()))) return;
       if (typeof ctx?.appendSystemContext === "function") {
         ctx.appendSystemContext(DECK_REMINDER);
       } else if (typeof ctx?.prependSystemContext === "function") {

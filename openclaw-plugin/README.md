@@ -48,7 +48,7 @@ is bundled inside the npm payload — the only host prerequisite is
 | Event | Hook | Purpose |
 |---|---|---|
 | `session_start` | active-card reminder | Prints active cards at session boot; silent when none |
-| `before_prompt_build` | deck-first reminder | Detects work-initiating prompts; appends a deck-first reminder to system context |
+| `before_prompt_build` | deck-first reminder | Detects work-initiating prompts; appends a deck-first reminder to system context. Silent in a workspace without a deck (`.game-of-cards/deck/` or the legacy `deck/`) |
 | `agent_end` | pattern-generalization | After code-mutating turns, prompts the model to consider filing a generalization card. Off by default; enable with `hooks.pattern_generalization_check: true` in `.game-of-cards/config.yaml` |
 
 ## Install
