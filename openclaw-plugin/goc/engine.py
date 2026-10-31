@@ -716,9 +716,15 @@ def extract_resolved_decision_text(body: str) -> str | None:
 # both the decide-time reconciliation reminder and the advisory validator
 # `validate_decision_verdict_coherence`. See
 # goc-decide-leaves-stale-verdict-content-when-recording-a-rescope.
+# "no longer" counts only before a verdict word ("the refutation no longer
+# holds") and "instead of" not at all: both are everyday words in decisions
+# that reverse nothing ("_cmd_decide no longer refuses terminal cards"). Read
+# it through `rescope_marker`, which also skips a match that only names
+# something (`superseded_by`, a card slug).
 RESCOPE_MARKERS_RE = re.compile(
-    r"\b(?:re-?scop\w*|supersed\w*|revers\w*|overturn\w*|no longer|"
-    r"instead of|was wrong|now\s+viable|actually\s+viable)\b",
+    r"\b(?:re-?scop\w*|supersed\w*|revers\w*|overturn\w*|"
+    r"no\s+longer\s+(?:holds?|stands?|true|valid|correct|refuted|disproved|"
+    r"disproven|unviable)|was wrong|now\s+viable|actually\s+viable)\b",
     re.IGNORECASE,
 )
 
@@ -726,12 +732,98 @@ RESCOPE_MARKERS_RE = re.compile(
 # these alongside a re-scope/reversal decision is the self-contradiction we
 # flag (a "REFUTED" summary over a "viable" decision). Bare "viable" is
 # deliberately absent — only the negated forms count as a negative verdict.
+# Read it through `negative_verdict`: `disproved` is also a status name, and a
+# summary that names the status ("the card flips to `disproved`") states no
+# verdict.
 NEGATIVE_VERDICT_RE = re.compile(
     r"\b(?:refuted|disproved|disproven|unviable|not viable|do not pursue|"
     r"don't pursue|does\s+not\s+(?:work|converge)|doesn't\s+(?:work|converge)|"
     r"won't\s+work|will\s+not\s+work)\b",
     re.IGNORECASE,
 )
+
+# A token either list matches asserts nothing when it only *names* something.
+# `disproved` and `superseded` are statuses a card holds, so a summary listing
+# the terminal statuses (`done`/`disproved`/`superseded`) under a decision that
+# says "no longer" fired the coherence check on five coherent cards on
+# 2026-10-22 — and the decisions were reworded just to quiet it
+# (verdict-coherence-check-mistakes-the-disproved-status-name-for-a-negative-verdict).
+# `_names_rather_than_asserts` skips a match on two tiers:
+#   - code or an identifier, for any token: inside an inline `code` span,
+#     joined by an underscore (`superseded_by`), or one part of a hyphenated
+#     run of three or more parts (a card slug);
+#   - a status name used as a name, for a token equal to a status value: in a
+#     list with another status ("done/disproved/superseded", "disproved or
+#     superseded"), after a status cue ("status", "flips to", "as", "mark
+#     this"), or qualifying a card or a piece of the status machinery
+#     ("disproved cards", "the card is disproved", "the superseded gate").
+# A verdict that happens to use a status word ("Verdict: DISPROVED",
+# "Disproved 2026-06-24.") matches none of these and still counts.
+_STATUS_LIST_BEFORE_RE = re.compile(
+    r"\b(\w+)[\s`'\"*]*(?:[/|,&]|\bor\b|\band\b)[\s`'\"*({\[]*$", re.IGNORECASE
+)
+_STATUS_LIST_AFTER_RE = re.compile(
+    r"[\s`'\"*)}\]]*(?:[/|,&]|\bor\b|\band\b)[\s`'\"*]*(\w+)", re.IGNORECASE
+)
+_STATUS_CUE_BEFORE_RE = re.compile(
+    r"(?:\bstatus\s*[:=]?|\bgoc\s+status\s+\S+|\b(?:to|as)|"
+    r"\bmark(?:s|ed|ing)?(?:\s+(?:it|this|that|the\s+card))?)[\s`'\"*]*$",
+    re.IGNORECASE,
+)
+_CARD_BEFORE_RE = re.compile(
+    r"\bcards?\s+(?:is|are|was|were|be|been|gets?|got|becomes?|became)[\s`'\"*]*$",
+    re.IGNORECASE,
+)
+_STATUS_NOUN_AFTER_RE = re.compile(
+    r"[\s`'\"*]*(?:cards?|status(?:es)?|gates?|columns?|transitions?|flips?)\b",
+    re.IGNORECASE,
+)
+
+
+def _names_rather_than_asserts(text: str, m: re.Match[str]) -> bool:
+    """Whether match `m` in `text` only names a code token, an identifier, or
+    a status — see the comment above `_STATUS_LIST_BEFORE_RE`."""
+    start, end = m.span()
+    if text.count("`", 0, start) % 2:
+        return True
+    while start > 0 and (text[start - 1].isalnum() or text[start - 1] in "-_"):
+        start -= 1
+    while end < len(text) and (text[end].isalnum() or text[end] in "-_"):
+        end += 1
+    word = text[start:end]
+    if "_" in word or word.count("-") >= 2:
+        return True
+    if m.group(0).lower() not in STATUS_VALUES:
+        return False
+    before, after = text[: m.start()], text[m.end():]
+    for neighbor in (_STATUS_LIST_BEFORE_RE.search(before), _STATUS_LIST_AFTER_RE.match(after)):
+        if neighbor and neighbor.group(1).lower() in STATUS_VALUES:
+            return True
+    return bool(
+        _STATUS_CUE_BEFORE_RE.search(before)
+        or _CARD_BEFORE_RE.search(before)
+        or _STATUS_NOUN_AFTER_RE.match(after)
+    )
+
+
+def _asserted(pattern: re.Pattern[str], text: str) -> re.Match[str] | None:
+    """First match of `pattern` in `text` that asserts rather than names."""
+    return next(
+        (m for m in pattern.finditer(text) if not _names_rather_than_asserts(text, m)),
+        None,
+    )
+
+
+def negative_verdict(text: str) -> re.Match[str] | None:
+    """The first negative verdict `text` states — `NEGATIVE_VERDICT_RE` minus
+    status names, code and identifiers."""
+    return _asserted(NEGATIVE_VERDICT_RE, text)
+
+
+def rescope_marker(text: str) -> re.Match[str] | None:
+    """The first re-scope/reversal marker `text` states — `RESCOPE_MARKERS_RE`
+    minus status names, code and identifiers."""
+    return _asserted(RESCOPE_MARKERS_RE, text)
 
 
 def _body_banner_lines(body: str) -> list[str]:
@@ -2679,13 +2771,15 @@ def validate_decision_verdict_coherence(cards: list[Card]) -> list[BlockerWarnin
 
     Advisory only — never contributes to `validate`'s exit code. The trigger is
     deliberately narrow to stay low-false-positive: the recorded decision must
-    *literally* contain re-scope/reversal language (`RESCOPE_MARKERS_RE`), AND a
-    strong negative-verdict token (`NEGATIVE_VERDICT_RE`) must survive in the
-    summary or a `> …` banner. Terminal cards are exempt — a `disproved` card
-    legitimately states a negative verdict. The decide-time reconciliation
-    reminder is the point-of-action guard; this validator is the safety net for
-    the record (a re-scope recorded before the reminder existed, or one whose
-    operator skipped the reconciliation). See
+    *literally* contain re-scope/reversal language (`rescope_marker`), AND a
+    strong negative-verdict token (`negative_verdict`) must survive in the
+    summary or a `> …` banner. Both skip a token that only names something — a
+    status in a list or after a status cue, a code span, a card slug — so a
+    summary that names the `disproved` status states no verdict. Terminal cards
+    are exempt — a `disproved` card legitimately states a negative verdict. The
+    decide-time reconciliation reminder is the point-of-action guard; this
+    validator is the safety net for the record (a re-scope recorded before the
+    reminder existed, or one whose operator skipped the reconciliation). See
     goc-decide-leaves-stale-verdict-content-when-recording-a-rescope.
     """
     warnings: list[BlockerWarning] = []
@@ -2693,10 +2787,10 @@ def validate_decision_verdict_coherence(cards: list[Card]) -> list[BlockerWarnin
         if c.status in TERMINAL_STATUSES:
             continue
         decision_text = extract_resolved_decision_text(c.body)
-        if not decision_text or not RESCOPE_MARKERS_RE.search(decision_text):
+        if not decision_text or not rescope_marker(decision_text):
             continue
         surfaces = [c.summary or "", *_body_banner_lines(c.body)]
-        hit = next((m for m in (NEGATIVE_VERDICT_RE.search(s) for s in surfaces) if m), None)
+        hit = next((m for m in map(negative_verdict, surfaces) if m), None)
         if hit is None:
             continue
         warnings.append(BlockerWarning(
@@ -7504,7 +7598,7 @@ def _rescope_reconciliation_notice(t: Card, persisted_body: str) -> str:
     ]
     summary = (t.summary or "").strip()
     if summary:
-        flag = " ← still asserts a negative verdict" if NEGATIVE_VERDICT_RE.search(summary) else ""
+        flag = " ← still asserts a negative verdict" if negative_verdict(summary) else ""
         snippet = summary if len(summary) <= 100 else summary[:99] + "…"
         lines.append(f"  • summary: {snippet!r}{flag}")
     else:
@@ -7689,7 +7783,7 @@ def _cmd_decide(args):
         )
     else:
         print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
-    if RESCOPE_MARKERS_RE.search(decision):
+    if rescope_marker(decision):
         print(_rescope_reconciliation_notice(t, body), file=sys.stderr)
     commit_policy = _commit_override(commit, no_commit)
     if auto_commit_enabled(commit_policy):

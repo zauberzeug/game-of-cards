@@ -135,6 +135,62 @@ class DecideRescopeReconciliationTest(unittest.TestCase):
             self.assertIn("tracking-epic", out)
             self.assertIn("downstream-task", out)
 
+    def test_everyday_decision_prints_no_reminder(self) -> None:
+        # "instead of" and a "no longer" that reverses no verdict are everyday
+        # words, not re-scope markers
+        # (verdict-coherence-check-mistakes-the-disproved-status-name-for-a-negative-verdict).
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            title = "approach-x-is-unviable"
+            self.make_verdict_card(cwd, title)
+
+            result = self.run_goc(
+                cwd,
+                "decide",
+                title,
+                "--decision",
+                "Use the shared helper instead of the inline check; the old path no longer runs.",
+                "--because",
+                "One helper keeps the verbs consistent.",
+            )
+            self.assert_goc_ok(result)
+            out = (result.stdout + result.stderr).lower()
+            self.assertNotIn("re-scope", out)
+            self.assertNotIn("not auto-updated", out.replace("‑", "-"))
+
+    def test_status_name_summary_is_not_flagged_as_a_negative_verdict(self) -> None:
+        # The reminder still fires on a real re-scope, but a summary that only
+        # names the `disproved` status asserts no verdict to flag.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            title = "probe-the-cache"
+            self.assert_goc_ok(
+                self.run_goc(cwd, "new", title, "--gate", "decision", "--tag", "story")
+            )
+            readme = self.card_dir(cwd, title) / "README.md"
+            readme.write_text(
+                readme.read_text().replace(
+                    f"title: {title}\n",
+                    f"title: {title}\n"
+                    'summary: "Probe the cache; the card flips to `disproved` if the probe fails."\n',
+                    1,
+                )
+            )
+
+            result = self.run_goc(
+                cwd,
+                "decide",
+                title,
+                "--decision",
+                "Re-scope: probe warm restarts only.",
+                "--because",
+                "Cold restarts are out of scope.",
+            )
+            self.assert_goc_ok(result)
+            out = result.stdout + result.stderr
+            self.assertIn("re-scope", out.lower())
+            self.assertNotIn("still asserts a negative verdict", out)
+
     def test_plain_decision_prints_no_reminder(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

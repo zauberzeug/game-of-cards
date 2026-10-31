@@ -73,12 +73,17 @@ stale top-framing (the `summary:`, a body banner) is exactly what the
 next agent reads first, so it drives wrong downstream actions.
 
 The CLI helps: when `--decision` contains re-scope/reversal language
-(`re-scope`, `supersede`, `reverse`, `overturn`, `no longer`,
-`instead of`, `was wrong`, …), `goc decide` prints a reconciliation
-reminder listing the surfaces it did NOT update, and `goc validate`
-emits an advisory `DECISION_CONTRADICTS_VERDICT` if a re-scoped
-decision is left sitting over a still-negative summary/banner. After
-recording such a decision, reconcile by hand:
+(`re-scope`, `supersede`, `reverse`, `overturn`, `was wrong`,
+`now viable`, a refutation that `no longer holds`, …), `goc decide`
+prints a reconciliation reminder listing the surfaces it did NOT
+update, and `goc validate` emits an advisory
+`DECISION_CONTRADICTS_VERDICT` if a re-scoped decision is left sitting
+over a still-negative summary/banner. Both read prose only: a summary
+that names a status (`done`/`disproved`/`superseded`, "the card flips
+to `disproved`") states no verdict, and an everyday "instead of" or
+"no longer refuses" reverses nothing — so there is no need to reword
+a decision to quiet the warning. After recording such a decision,
+reconcile by hand:
 
 1. **`summary:` frontmatter** — the first thing triage views and
    agents read. Rewrite it to state the *current* verdict.
