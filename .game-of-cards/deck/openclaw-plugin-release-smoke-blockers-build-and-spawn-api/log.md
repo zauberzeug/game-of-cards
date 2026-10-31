@@ -233,3 +233,15 @@ Filed as
 (open, `human_gate: decision` — the guard mechanism is a real choice, and the
 most rigorous option needs a `.github/workflows/` edit the autonomous bot cannot
 make). This card stays closed; no scope reopens here.
+
+## 2026-10-31 — post-close evidence: the two "working" hooks never deliver
+
+§ "Conversation-hook opt-in" says the plugin "still works for tool calls and
+the other two hooks (`session_start`, `before_prompt_build`)". Against the
+pinned `openclaw@2026.5.7` that does not hold. The host calls typed hooks as
+`handler(event, ctx)` and reads only the return value. The plugin's handlers
+read `userPrompt` / `projectDir` off the event and deliver through `notify` /
+`appendSystemContext` methods no event carries, so no hook delivers anything.
+`session_start` is fire-and-forget and has no channel at all. Filed as
+[`openclaw-plugin-hooks-never-deliver-their-reminders-on-a-real-host`](../openclaw-plugin-hooks-never-deliver-their-reminders-on-a-real-host/)
+(open, `human_gate: decision`). This card stays closed.
