@@ -1,7 +1,7 @@
 ---
 title: verdict-coherence-check-mistakes-the-disproved-status-name-for-a-negative-verdict
 summary: "DECISION_CONTRADICTS_VERDICT fires when a summary merely names the status disproved (NEGATIVE_VERDICT_RE matches the bare word) and the decision uses everyday words like 'no longer' or 'instead of' (RESCOPE_MARKERS_RE). A human-session decision round on 2026-10-22 hit it on five cards and had to reword them to get validate quiet."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-22T06:03:27Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a unittest pins both directions (planted false positive stays silent, planted true positive still warns)
   - [ ] MECHANICAL: drop the `unverified` tag once reproduce.py lands
   - [ ] PROCESS: `uv run goc validate` passes and the suite is green
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The verdict-coherence check mistakes the disproved status name for a negative verdict
