@@ -6384,7 +6384,21 @@ def _run_automated_check(check: dict) -> tuple[bool, str]:
     return False, f"exit {result.returncode}: {err_tail[:120]}"
 
 
+# A closure entry's heading in log.md: the `## YYYY-MM-DDTHH:MM:SSZ — Closure`
+# form `Skill(finish-card)` Step 4 prescribes, or the legacy date-only
+# `## YYYY-MM-DD — Closure`. Group 1 is the stamp. Anchored at a line start, so
+# attest's own `## Closure verification (...)` block, and the summary lines it
+# writes under it, can never satisfy the check that attest runs.
+_CLOSURE_HEADING_RE = re.compile(
+    r"^## (\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}Z)?) — Closure",
+    re.MULTILINE,
+)
+
+
 def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> tuple[bool, str]:  # noqa: PLR0911
+    # No check reads `today` since `log-md-closure-entry` stopped matching the
+    # heading's date. It stays in the signature because deck reproducers pass
+    # it, two of them on open gated cards.
     name = check["name"]
     if name == "advanced-by-closed":
         advanced_by = card.frontmatter.get("advanced_by") or []
@@ -6413,16 +6427,17 @@ def _run_derived_check(check: dict, card: Card, all_cards: list, today: str) -> 
         log_path = DECK_DIR / card.title / "log.md"
         if not log_path.exists():
             return False, "log.md missing"
-        date_prefix = _date_part(today)
-        # Match either legacy date-only (`## YYYY-MM-DD — Closure`) or the
-        # current datetime form (`## YYYY-MM-DDTHH:MM:SSZ — Closure`).
-        pattern = re.compile(
-            rf"^## {re.escape(date_prefix)}(?:T\d{{2}}:\d{{2}}:\d{{2}}Z)? — Closure",
-            re.MULTILINE,
-        )
-        if pattern.search(log_path.read_text()):
-            return True, f"'## {date_prefix} — Closure' present"
-        return False, f"no '## {date_prefix} — Closure' section"
+        # Any well-formed closure heading counts, whatever day it names. The
+        # closer types the stamp by hand, so a date match would test the
+        # closer's clock rather than the entry: one written before UTC midnight
+        # would fail an attest run after it, as would any re-run on a later day
+        # (an `advanced_by` prerequisite closing, say) — and log.md is
+        # append-only, so the only way back to a pass would be a duplicate
+        # entry. The summary names the latest heading.
+        stamps = _CLOSURE_HEADING_RE.findall(log_path.read_text())
+        if stamps:
+            return True, f"'## {stamps[-1]} — Closure' present"
+        return False, "no '## YYYY-MM-DDTHH:MM:SSZ — Closure' section"
     return False, f"unknown derived check '{name}'"
 
 
@@ -6497,9 +6512,11 @@ def _cmd_attest(args):
     """Run layer-2 + layer-3 closure checks; append "Closure verification" block to log.md.
 
     Empty-config contract: when both ``layer_2_project_dod`` and ``layer_3_goc_dod``
-    are empty/unset, refuse the call (non-zero exit, no log.md mutation). Writing
-    a bare ``## Closure verification`` header would satisfy the bundled
-    ``log-md-closure-entry`` derived check on content that proves nothing.
+    are empty/unset, refuse the call (non-zero exit, no log.md mutation). A bare
+    ``## Closure verification`` header reads as an attestation while proving
+    nothing — though not to the ``log-md-closure-entry`` check, which looks for
+    the closer's ``## <stamp> — Closure`` entry and never matches attest's own
+    block.
 
     All-skipped contract: the same refusal applies when checks ARE configured
     but every one of them is covered by ``--skip`` — no check actually runs, so
@@ -6511,9 +6528,10 @@ def _cmd_attest(args):
     the configured checks — a typo must not pass for a skip.
 
     A closed card is refused before all three: its log.md is the record of how
-    it closed, and a late block would re-litigate that closure — on any later
-    day the ``log-md-closure-entry`` check cannot find a closure heading dated
-    today, so the stray block records a FAIL the card's real closure never had.
+    it closed, and a late block would re-litigate that closure — a check that
+    fails on a later day (a project test suite that has since moved on, say)
+    records a FAIL the card's real closure never had, and a clean run tells the
+    caller to ``goc done`` a card that is already done.
     """
     title = args.title
     skips = args.skips

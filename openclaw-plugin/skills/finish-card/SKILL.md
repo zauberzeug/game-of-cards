@@ -123,7 +123,8 @@ entries; the closure entry is one more entry at the bottom:
 ```
 
 The timestamp is ISO 8601 UTC. (`goc attest`'s closure-marker check
-date-prefix-matches, so legacy date-only headers keep validating.)
+takes this heading, or a legacy date-only one, whatever day it names —
+an entry written before UTC midnight still attests after it.)
 
 ## Step 5 — record the Closure verification (`goc attest`)
 
