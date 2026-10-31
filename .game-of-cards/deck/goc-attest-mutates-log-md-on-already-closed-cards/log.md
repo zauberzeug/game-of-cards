@@ -50,3 +50,13 @@ Decided via parent terminal-status-guard-missing-across-mutation-verbs: option 1
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-10-25 — Closure' present
+
+## 2026-10-31T05:46:44Z — Post-close amendment
+
+Harm 2 in the README no longer holds as written. That harm is "re-attesting
+any closed card on a later date always records a spurious FAIL" from
+`log-md-closure-entry`. Since ee682d87
+([closure-log-attestation-misfires-across-utc-midnight](../closure-log-attestation-misfires-across-utc-midnight/)),
+the check accepts a closure heading whatever day it names. The terminal
+guard stands on harms 1 and 3, and on any other check that fails on a later
+day. `_cmd_attest`'s docstring now gives those reasons.

@@ -13,3 +13,17 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-05-31 — Closure' present
+
+## 2026-10-31T05:46:44Z — Post-close amendment
+
+The README's first "Why it matters" paragraph says the
+`log-md-closure-entry` check is satisfied by a `## Closure verification`
+heading, i.e. by the stub attest itself writes. That was never true. The
+check matches the closer's `## <stamp> — Closure` entry, anchored at a line
+start, in every version since the first commit. Since ee682d87,
+`tests/test_closure_entry_check_ignores_heading_date.py` also pins that
+attest's own blocks cannot satisfy it
+([closure-log-attestation-misfires-across-utc-midnight](../closure-log-attestation-misfires-across-utc-midnight/)).
+The refusal stands on the paragraph after it: "Attestation OK" with zero
+checks run is a contract violation. `_cmd_attest`'s docstring, which
+repeated the claim, was corrected in the same commit.
