@@ -1,7 +1,7 @@
 ---
 title: closure-log-attestation-misfires-across-utc-midnight
 summary: "UNVERIFIED. The `log-md-closure-entry` derived check matches the log.md closure header against `today` (`_utc_now_iso` at attest time). A closure entry written on one UTC day and attested on the next won't match — the `## <yesterday> — Closure` header is searched for `## <today>`. Distinct from the closed read-time-date-guards card (that fixed local-vs-UTC, not write-day-vs-attest-day). Needs a reproduce.py proving the misfire via a real attest path."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-05-27T08:02:35Z"
@@ -14,6 +14,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py shows the closure check returning False for a log.md whose `## YYYY-MM-DDTHH:MM:SSZ — Closure` header is dated the day before the injected `today`.
   - [ ] PROCESS: decide the fix — match any well-formed closure header regardless of date, or compare against the card's own `closed_at` rather than wall-clock `today`. Record in log.md.
   - [ ] MECHANICAL: `goc validate` clean; plugin mirrors synced.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Closure-log attestation misfires across a UTC midnight boundary
