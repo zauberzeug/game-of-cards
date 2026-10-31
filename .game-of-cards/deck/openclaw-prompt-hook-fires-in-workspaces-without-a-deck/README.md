@@ -1,7 +1,7 @@
 ---
 title: openclaw-prompt-hook-fires-in-workspaces-without-a-deck
 summary: "The OpenClaw plugin's before_prompt_build handler appends the deck-first reminder on every work-shaped prompt without looking for a deck, so it claims \"runtime active\" in workspaces that never opted in. Its Python counterpart deck_prompt_router.py was gated on deck presence by runtime-hooks-fire-in-repos-that-never-opted-in; the TypeScript port in openclaw-plugin/index.ts needs the same guard."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-24T04:33:31Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: a regression test runs the handler logic (extracted from index.ts under `node --experimental-strip-types`, as tests/test_openclaw_session_start_hook.py does) and asserts no reminder for a work-shaped prompt in a directory without a deck, and the reminder, unchanged, in one with `.game-of-cards/deck/`
   - [ ] MECHANICAL: openclaw-plugin/dist/ is rebuilt from the edited index.ts (`npm run build` in openclaw-plugin/) and committed with it
   - [ ] MECHANICAL: the sentence in AGENTS.md naming this card as the open gap (the paragraph "Every runtime hook is inert in a repo that never opted in") is rewritten to state that the OpenClaw port carries the guard too, and openclaw-plugin/README.md's hook table says the reminder is silent without a deck
+worker: {who: "claude[bot]", where: main}
 ---
 
 # OpenClaw's prompt hook injects the deck-first reminder in workspaces without a deck
