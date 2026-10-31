@@ -1,7 +1,7 @@
 ---
 title: reproducers-can-exit-zero-while-their-defect-still-fires
 summary: "Two reproduce.py scripts exited 0 only while their drift still fired, the reverse of the DoD convention 'reproduce.py exits zero (defect no longer fires)', so after the fix they failed and before it they would have ticked the box on a live defect. Neither create-card nor card-schema states the exit-code contract, so each reproducer picks its own."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-10-22T06:07:58Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] EMPIRICAL: every open or gated card's reproduce.py is classified against the contract (a static scan for a `return 0` on the defect-present branch, confirmed by running the suspects); inverted ones are listed in log.md and fixed or re-filed
   - [ ] TDD: a guard (test or validate warning) catches a planted reproducer that returns 0 on its defect-present branch, if a reliable static signal exists; otherwise the card records why the contract stays documentation-only
   - [ ] PROCESS: `uv run goc validate` passes
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Reproducers can exit zero while their defect still fires
