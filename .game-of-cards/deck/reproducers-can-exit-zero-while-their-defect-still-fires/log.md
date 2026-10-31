@@ -160,3 +160,22 @@ the draft guard. (`goc publish` itself now refuses a summary-less card, as
 in the 2026-10-29 entry.) Re-run against the current engine, such a
 reproducer either aborts in setup or, without a success check, misreads the
 refusal as its verdict.
+
+## 2026-10-31T05:48:42Z — Instance: reproducers coupled to engine private signatures
+
+Surfaced while closing
+[closure-log-attestation-misfires-across-utc-midnight](../closure-log-attestation-misfires-across-utc-midnight/)
+(ee682d87). This is a new route to the crash-exits-1 ambiguity above, and
+it comes from outside the reproducer. Four deck reproducers call
+`goc.engine._run_derived_check(check, card, all_cards, today)` with
+`today` passed positionally. Two of them belong to open decision-gated
+cards (`attest-treats-dangling-advanced-by-refs-as-closed`,
+`advances-graph-readers-each-trust-one-field-and-disagree-on-half-edged-decks`),
+and the other two to closed ones. Others import privates like `_date_part`.
+After ee682d87 no check reads `today`. Dropping it from the signature would
+have made all four die with a `TypeError` and exit 1, which this contract
+reads as "defect fires", so the parameter stays, with a comment saying why.
+Nothing in CI runs deck reproducers, so an engine refactor breaks them
+without warning. That is one more reason a classification run must read a
+traceback as exit 2 whatever the code, and a reason a refactor should grep
+`.game-of-cards/deck/*/reproduce.py` before changing a signature.
