@@ -144,7 +144,17 @@ So 105 of the 183 open cards cannot reach the pass through any invocation.
    the process table.
 2. **Catch `OSError` at the call site** (`goc/engine.py:5416-5423`). Report
    it as one `ERROR:` line naming the launch failure, then exit 1. Give the
-   missing-CLI `RuntimeError` its own wording.
+   missing-CLI `RuntimeError` its own wording. The shape to copy already
+   exists in the engine: `_run_automated_check` (`goc/engine.py:6372-6379`)
+   catches `OSError` and reports `cannot run {program}: {exc.strerror or exc}`,
+   using `exc.filename`. That handler was added by the closed
+   [attest-automated-check-crashes-with-traceback-when-its-command-cannot-run-or-prints-undecodable-bytes](../attest-automated-check-crashes-with-traceback-when-its-command-cannot-run-or-prints-undecodable-bytes/).
+   A catch alone is not the fix here, though. It turns the traceback into a
+   message while the cards still never reach Claude, so item 1 (or 4) is
+   what delivers them. For the same reason, a generic top-level `OSError`
+   handler is not this card's fix. The open
+   [goc-new-crashes-with-oserror-traceback-on-overlong-title](../goc-new-crashes-with-oserror-traceback-on-overlong-title/)
+   shares the traceback symptom but needs an input guard instead.
 3. **Update the fake `claude` in `tests/test_terminal_status_guard.py:270-288`.**
    It records argv only (`printf "%s\n" "$@" > "$FAKE_CLAUDE_ARGV"`), and
    `test_quality_pass_llm_keeps_closed_cards_out_of_the_llm_sample` (`:332`)
