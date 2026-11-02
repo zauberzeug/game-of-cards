@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: reproduce.py exits zero inverted — with an unrelated `deck/` folder present, goc verbs operate on the canonical tree and `goc migrate` refuses to ingest or delete the non-deck folder.
   - [ ] TDD: regression test covers (a) unrelated `deck/` + canonical tree, (b) real legacy card deck + canonical tree (refusal must still fire), (c) legacy-only unrelated `deck/` (must NOT silently become the deck).
   - [ ] TDD: `goc migrate` never deletes top-level files in `deck/` that were not copied (existing data-loss shape shared with goc-migrate-silently-destroys-card-files-other-than-readme-and-log).
+  - [ ] TDD: the runtime hooks' opt-in gate (`_has_deck` in `deck_prompt_router.py`, the legacy fallback in `deck_session_start.py`, OpenClaw's `hasDeck`) accepts a legacy `deck/` only under the chosen predicate, so a repo whose only `deck/` is unrelated gets no deck-first reminder.
   - [ ] MECHANICAL: plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green).
 ---
 
@@ -35,6 +36,7 @@ top-level files are destroyed without ever being copied.
 - `goc/engine.py:7067` — `legacy_dirs = {d.name: d for d in legacy.iterdir() if d.is_dir()}` (only dirs are ever copied)
 - `goc/engine.py:7149` — `shutil.rmtree(legacy)` (deletes the whole folder, including never-copied top-level files)
 - `goc/install.py:470-478` — `_find_installed_deck_dir` requires `deck/.goc-version` before treating `deck/` as a GoC install (the contrasting predicate)
+- `goc/templates/hooks/deck_prompt_router.py:225-228` (`_has_deck`) and `goc/templates/hooks/deck_session_start.py:424-430` — the runtime hooks' opt-in gate, added 2026-10-24 after this card was filed, makes the same bare `(project_dir / "deck").is_dir()` check; `openclaw-plugin/index.ts:569-573` (`hasDeck`) is its OpenClaw port
 
 ## What's broken
 
@@ -117,3 +119,15 @@ Orthogonally, `goc migrate` should refuse (or skip with a warning) any
 "card" lacking GoC frontmatter, and must never `rmtree` a tree containing
 files it did not copy — that half overlaps the open migrate data-loss
 card and should be decided together.
+
+Whichever predicate is chosen must also reach the runtime hooks, which
+import nothing from the engine. Since
+[runtime-hooks-fire-in-repos-that-never-opted-in](../runtime-hooks-fire-in-repos-that-never-opted-in/)
+closed on 2026-10-24, the prompt router speaks only in an opted-in repo,
+and it counts a bare `deck/` directory as opted in. The plugin registers
+the hook for every repo the user opens. So in a repo that never installed
+GoC but keeps slides in `deck/`, a prompt such as "please fix the typo on
+the intro slide" gets the "Run the GoC pipeline SILENTLY" reminder. `goc`
+then reports "No cards match" instead of the missing-deck notice that
+routes a skill's preflight to kickoff, and `goc new` files the card
+inside the slide folder (case (c) above). See the 2026-11-02 log entry.

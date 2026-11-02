@@ -84,6 +84,16 @@ introduced the three-home feature and documents `CLAUDE.local.md` as
 covers user-authored import lines — this card is the resolver's
 fallback feeding a wrong-but-GoC-shaped target into that same sync.
 
+Caveat on the premise, found 2026-11-02 and not yet settled: "gitignored"
+is what the docs promise, but `goc install --briefing-target
+CLAUDE.local.md` writes no ignore rule. Right after install,
+`git status` lists the file as untracked. Unless something else ignores
+it (the user, a global excludes file, or Claude Code's own convention,
+which nobody has verified), the first `git add -A` checks it in, and then
+a fresh clone *has* the marker block. The details are parked in this
+card's log; any option chosen below should say which of the two worlds it
+assumes.
+
 ## Decision required
 
 Which evidence should the zero-marker-blocks branch trust, given the

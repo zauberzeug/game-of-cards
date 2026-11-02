@@ -272,3 +272,17 @@ when to clear it (when the last child closes). The first `## Scope notes`
 bullet no longer says all nine children carry a decision gate, and it no
 longer points at the `## Decision required` section the 2026-10-22 decision
 replaced.
+
+## 2026-11-02T01:02:06Z — Parked instance: `install` / `upgrade` take a blank `--agents` as an explicit choice
+
+Not filed as a child card yet, so it is recorded here and not lost. It is a new instance of this family's shape, an empty value accepted and then silently dropped, on the two verbs `goc/cli.py` routes to `goc/install.py`.
+
+- **Hypothesis** (code read 2026-11-02):
+  - `_agent_override_requested` returns `bool(agent_specs or claude or codex)` (`goc/install.py:450`). For `--agents ""` that is `bool(("",))`, which is True.
+  - `_parse_agents` (`goc/install.py:429`, `:434-435`) then keeps no token (`... for part in spec.split(",") if part.strip()`) and falls back with `if not tokens: tokens = list(default_agents)`.
+  - In `upgrade()` an explicit override sets `default_agents = DEFAULT_AGENTS` (`goc/install.py:2057-2059`), so the blank value becomes `claude` whatever is installed.
+  - In `install()` the same flag skips the OpenClaw no-harness default (`goc/install.py:1888-1889`).
+  - Both contradict `UPGRADE_AGENTS_HELP`: "Omit to auto-detect from installed harnesses" (`goc/install.py:1761`).
+- **Observed by the surfacing agent** (scratch repo, `HOME` isolated): after `goc install --agents codex`, a no-flag `goc upgrade` resolved `codex`. `goc upgrade --agents ""` printed `goc upgrade complete for agents: claude`, created `CLAUDE.md`, and did not refresh `.codex/skills/`. That is the symptom the closed `upgrade-default-adds-claude-to-codex-repos` fixed for the no-flag path, reached through a different input. Under the bundled OpenClaw engine, `install --agents ""` reported `installed for agents: claude.` and wrote `CLAUDE.md`.
+- **Falsification recipe**: in a scratch git repo, run `goc install --agents codex`, then `goc upgrade --agents "" --dry-run`. The instance is real while the plan lists Claude writes. It is fixed when a blank value either exits 2 with a usage error, as `_refuse_invalid_input` does for this family's engine verbs, or resolves like the no-flag run. `--agents ,` and `--agents " "` must behave the same way.
+- **Surfaced by**: an `audit-deck` hunter agent (general-purpose), 2026-11-02. Parked here under the park-or-disprove rule, because that run filed one new card.

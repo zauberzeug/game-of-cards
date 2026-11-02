@@ -44,3 +44,15 @@ should pin down. Whatever shape the eventual contract takes, it should
 assert the drift report enumerates *every* path the prune would remove,
 not just the marker file. No code change made in this session (the gate
 is `decision`).
+
+## 2026-11-02T01:02:06Z — Parked instance: drift detection is blind to file modes
+
+This is another case of "the drift check passes clean on a real drift", in `scripts/sync_plugin_assets.py`. It has not been filed as a child card yet, because the run that found it filed one new card.
+
+- **Hypothesis**: both the sync and its `--check` compare content only, at `scripts/sync_plugin_assets.py:343` (`_sync_file`) and `:545` (check path), each `if not dst.exists() or not filecmp.cmp(src, dst, shallow=False):`.
+  - A mirror whose executable bit was lost is reported in sync.
+  - It is never repaired either: `shutil.copy2` (`:345`), which would carry the mode, runs only when the content differs.
+  - The mirrored `_goc-bootstrap.sh` copies are tracked `100755`. The Codex resolver at `goc/install.py:1443` and `goc/templates/skills/codex-kickoff/SKILL.md:115` locates the installed helper with `find ... -type f -perm -111`, so a committed mode loss leaves that `find` with nothing to return.
+- **Observed by the surfacing agent** (scratch clone): after `chmod -x codex-plugin/skills/_goc-bootstrap.sh`, `python scripts/sync_plugin_assets.py --check` printed OK and exited 0. A plain sync left the bit off, and `git diff --summary` showed `mode change 100755 => 100644`.
+- **Falsification recipe**: in a scratch clone, `chmod -x` any `100755` mirror and run `--check`. It should report drift (exit 1), and a sync should restore the mode. A test can plant the drift the same way.
+- **Surfaced by**: an `audit-deck` hunter agent (general-purpose), 2026-11-02.
