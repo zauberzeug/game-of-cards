@@ -105,7 +105,8 @@ FILED = Observations(
 
 
 def _env(**extra: str) -> dict[str, str]:
-    drop = {"CLAUDECODE", "CLAUDE_CODE", "CLAUDE_PROJECT_DIR", "GOC_WORKER", "GOC_WORKTREE_DECK"}
+    drop = {"CLAUDECODE", "CLAUDE_CODE", "CLAUDE_PROJECT_DIR", "GOC_WORKER", "GOC_WORKER_WHO",
+            "GOC_WORKER_WHERE", "GOC_WORKTREE_DECK"}
     env = {k: v for k, v in os.environ.items() if k not in drop and not k.startswith("GIT_")}
     env["PYTHONPATH"] = str(ROOT)
     env.update(extra)

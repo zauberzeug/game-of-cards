@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -52,6 +53,15 @@ class AutoPopulateWorkerPreservesWhereTest(unittest.TestCase):
     HEAD` prints `HEAD`), the existing `where` must be preserved rather than
     dropped (which collapsed the worker to a bare `who` string).
     """
+
+    def setUp(self) -> None:
+        # `_auto_populate_worker` reads $GOC_WORKER_WHO / $GOC_WORKER_WHERE
+        # before git; an ambient value would decide what these tests assert.
+        env = mock.patch.dict(os.environ)
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop("GOC_WORKER_WHO", None)
+        os.environ.pop("GOC_WORKER_WHERE", None)
 
     def _run(self, work: Path, home: Path, card_text: str, who, where):
         cwd = os.getcwd()

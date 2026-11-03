@@ -42,7 +42,8 @@ WHERE_CHECK = "import os; print('ran-in:<' + os.getcwd() + '>')"
 
 def _env(home: Path, **extra: str) -> dict:
     env = dict(os.environ, PYTHONPATH=str(ROOT), HOME=str(home))
-    for key in ("GOC_WORKER", "GOC_WORKTREE_DECK", "CLAUDE_PROJECT_DIR",
+    for key in ("GOC_WORKER", "GOC_WORKER_WHO", "GOC_WORKER_WHERE",
+                "GOC_WORKTREE_DECK", "CLAUDE_PROJECT_DIR",
                 "CODEX_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT"):
         env.pop(key, None)
     env.update(extra)

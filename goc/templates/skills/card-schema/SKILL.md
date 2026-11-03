@@ -136,7 +136,8 @@ model).
 
 Optional free-form assignee: flat string (`worker: rodja`) or mapping
 (`worker: {who: rodja, where: feature/foo}`); unregistered values.
-Auto-populated at claim time by `goc status <title> active`; persists
+Auto-populated at claim time by `goc status <title> active` (`--worker-who`,
+existing value, `$GOC_WORKER_WHO`, git `user.name`; none → refused); persists
 after close. Filter with `goc --worker <X>` or `GOC_WORKER`.
 
 ### `draft`

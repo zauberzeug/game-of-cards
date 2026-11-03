@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -47,6 +48,15 @@ class AutoPopulateWorkerGitMissingTest(unittest.TestCase):
     aborted `goc status <title> active`. A missing git must behave exactly
     like git failing: no worker detected, card text left untouched.
     """
+
+    def setUp(self) -> None:
+        # `_auto_populate_worker` reads $GOC_WORKER_WHO / $GOC_WORKER_WHERE
+        # before git; an ambient value would decide what these tests assert.
+        env = mock.patch.dict(os.environ)
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop("GOC_WORKER_WHO", None)
+        os.environ.pop("GOC_WORKER_WHERE", None)
 
     def _with_empty_path(self, fn):
         with tempfile.TemporaryDirectory() as empty:

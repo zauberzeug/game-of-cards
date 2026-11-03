@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -52,6 +53,15 @@ class AutoPopulateWorkerEmptyWhoTest(unittest.TestCase):
     The claim must instead leave the card untouched, because a `where`-only
     worker is itself invalid: there is no valid worker to write.
     """
+
+    def setUp(self) -> None:
+        # `_auto_populate_worker` reads $GOC_WORKER_WHO / $GOC_WORKER_WHERE
+        # before git; an ambient value would decide what these tests assert.
+        env = mock.patch.dict(os.environ)
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop("GOC_WORKER_WHO", None)
+        os.environ.pop("GOC_WORKER_WHERE", None)
 
     def _make_repo(self, work: Path, home: Path) -> dict:
         env = dict(os.environ, HOME=str(home))
