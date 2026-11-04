@@ -4526,7 +4526,8 @@ def _build_parser() -> argparse.ArgumentParser:
                       default=argparse.SUPPRESS,
                       help="Filter by status (overrides global --status; default: open).")
     p_qp.add_argument("--llm", action="store_true", default=False,
-                      help="Also run a Sonnet-batched summary+DoD audit (closed cards are skipped).")
+                      help="Also audit each selected live card's title, summary and DoD with Sonnet, "
+                           "all in one `claude -p` call (closed cards are skipped).")
     p_qp.add_argument("--no-llm", dest="llm", action="store_false",
                       help="Disable LLM audit.")
     p_qp.add_argument("--limit", type=_non_negative_int, default=None,
@@ -5171,16 +5172,23 @@ def _extract_json_payload(raw: str) -> str:
 
 
 def _run_sonnet_quality_pass(prompt: str) -> list[dict]:
-    """Subprocess call to `claude --model sonnet -p ... --output-format json`.
+    """Run `claude --model sonnet -p --output-format json` with `prompt` on stdin.
 
-    Returns the parsed list-of-verdicts. Raises subprocess.CalledProcessError on
-    CLI failure; ValueError if the response cannot be parsed as JSON or if the
-    `claude` CLI is unauthenticated (returns is_error with a /login message).
+    The prompt carries every sampled card, so it must not travel as an argv
+    element: Linux refuses any single argument over MAX_ARG_STRLEN (128 KiB),
+    which a deck of about 80 cards outgrows. A pipe has no such cap, and print
+    mode reads its prompt from stdin when none is given on the command line.
+    UTF-8 both ways, not the locale's codec, which may lack the template's
+    `≥` and `σ`.
+
+    Returns the parsed list-of-verdicts. Raises OSError when `claude` cannot be
+    started (FileNotFoundError when no `claude` is on PATH);
+    subprocess.CalledProcessError when it exits non-zero; RuntimeError when it
+    answers with an error envelope (e.g. not logged in); ValueError, which
+    covers json.JSONDecodeError, when the response cannot be parsed.
     """
-    if shutil.which("claude") is None:
-        raise RuntimeError("`claude` CLI not on PATH; cannot run --llm pass.")
-    cmd = ["claude", "--model", "sonnet", "-p", prompt, "--output-format", "json"]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    cmd = ["claude", "--model", "sonnet", "-p", "--output-format", "json"]
+    result = subprocess.run(cmd, input=prompt, capture_output=True, encoding="utf-8", check=True)
     envelope = json.loads(result.stdout)
     if isinstance(envelope, dict) and envelope.get("is_error"):
         raise RuntimeError(f"claude CLI reported error: {envelope.get('result', '')!r}")
@@ -5415,10 +5423,27 @@ def _cmd_quality_pass(args):
     prompt = _build_quality_prompt(sample)
     try:
         verdicts = _run_sonnet_quality_pass(prompt)
+    except FileNotFoundError:
+        print(
+            "ERROR: cannot run claude: the `claude` CLI is not on PATH; --llm needs Claude Code installed and logged in.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except OSError as exc:
+        # `claude` is there but could not be started: EACCES without the
+        # executable bit, ENOEXEC without a shebang line, E2BIG when the
+        # environment outgrows the exec limit. Same shape as
+        # `_run_automated_check`.
+        print(f"ERROR: cannot run claude: {exc.strerror or exc}", file=sys.stderr)
+        sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"ERROR: claude CLI failed (exit {e.returncode}): {e.stderr[:500] or e.stdout[:500]}", file=sys.stderr)
         sys.exit(1)
-    except (ValueError, json.JSONDecodeError, RuntimeError) as e:
+    except RuntimeError as e:
+        # The error envelope: `claude` answered, and the answer is an error.
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+    except ValueError as e:
         print(f"ERROR: could not parse Sonnet response: {e}", file=sys.stderr)
         sys.exit(1)
 

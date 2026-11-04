@@ -226,9 +226,12 @@ class GuardedVerbCliTest(unittest.TestCase):
         env["PYTHONPATH"] = str(ROOT) if not pythonpath else f"{ROOT}{os.pathsep}{pythonpath}"
         env.pop("GOC_WORKTREE_DECK", None)
         env.update(extra_env or {})
+        # stdin closed, not inherited: the fake `claude` reads stdin to EOF, so
+        # it must never be left waiting on the test runner's own stdin.
         return subprocess.run(
             [sys.executable, "-m", "goc.cli", *args],
-            cwd=str(self.root), env=env, text=True, capture_output=True, check=False,
+            cwd=str(self.root), env=env, stdin=subprocess.DEVNULL,
+            text=True, capture_output=True, check=False,
         )
 
     def _snapshot(self, title: str | None = None) -> dict[str, bytes]:
@@ -268,22 +271,28 @@ class GuardedVerbCliTest(unittest.TestCase):
         ]
 
     def _fake_claude(self, verdicts: list[dict], *, before_reply: str = "") -> dict[str, str]:
-        """Put a `claude` on PATH that records its argv and replies with
-        `verdicts`, closed cards included. `before_reply` is a shell command
-        the stub runs first — how a test changes the deck while the LLM call
-        is in flight."""
+        """Put a `claude` on PATH that records its input and replies with
+        `verdicts`, closed cards included. It records argv and then stdin, so
+        the prompt is captured wherever the engine sends it (stdin, since
+        `quality-pass-llm-crashes-once-the-deck-outgrows-one-command-line-argument`).
+        `before_reply` is a shell command the stub runs first — how a test
+        changes the deck while the LLM call is in flight."""
         reply = self.root / "claude-reply.json"
         reply.write_text(json.dumps({"result": json.dumps(verdicts)}))
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
         stub = bin_dir / "claude"
         stub.write_text(
-            f'#!/bin/sh\nprintf "%s\\n" "$@" > "$FAKE_CLAUDE_ARGV"\n{before_reply}\ncat "$FAKE_CLAUDE_REPLY"\n'
+            "#!/bin/sh\n"
+            'printf "%s\\n" "$@" > "$FAKE_CLAUDE_INPUT"\n'
+            'cat >> "$FAKE_CLAUDE_INPUT"\n'
+            f"{before_reply}\n"
+            'cat "$FAKE_CLAUDE_REPLY"\n'
         )
         stub.chmod(0o755)
         return {
             "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
-            "FAKE_CLAUDE_ARGV": str(self.root / "claude-argv.txt"),
+            "FAKE_CLAUDE_INPUT": str(self.root / "claude-input.txt"),
             "FAKE_CLAUDE_REPLY": str(reply),
         }
 
@@ -329,7 +338,7 @@ class GuardedVerbCliTest(unittest.TestCase):
         # Layer 1 still reports on every selected card; only Layer 2 skips.
         self.assertIn("Quality pass over 4 cards (status=all)", res.stdout)
         self.assertIn("skipping 3 closed cards", res.stdout)
-        prompt = (self.root / "claude-argv.txt").read_text()
+        prompt = (self.root / "claude-input.txt").read_text()
         self.assertIn("live-card", prompt)
         for title in closed:
             self.assertNotIn(title, prompt)
@@ -344,7 +353,7 @@ class GuardedVerbCliTest(unittest.TestCase):
         self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
         self.assertEqual(before, self._snapshot("done-card"))
         self.assertIn("skipping 1 closed card", res.stdout)
-        self.assertFalse((self.root / "claude-argv.txt").exists(), msg="the LLM was called")
+        self.assertFalse((self.root / "claude-input.txt").exists(), msg="the LLM was called")
 
     def test_move_refuses_every_terminal_status_unless_forced(self) -> None:
         closed = [f"{status}-card" for status in sorted(engine.TERMINAL_STATUSES)]
