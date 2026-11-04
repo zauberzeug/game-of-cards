@@ -1,7 +1,7 @@
 ---
 title: quality-pass-llm-crashes-once-the-deck-outgrows-one-command-line-argument
 summary: "goc quality-pass --llm hands every selected card's title, summary and DoD to claude -p as one command-line argument, and Linux refuses a single argument over 128 KiB, so on a deck of more than about 80 open cards the pass dies with an uncaught OSError (Argument list too long) traceback before Claude starts. This repo's own 183 open cards render a 293,758-byte prompt, and the only workaround, --limit N, always takes the alphabetically first N cards, so most of a large deck can never be audited."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-02T00:54:14Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] TDD: an `OSError` raised while starting `claude` ends the run with one `ERROR:` line naming the launch failure and exit 1, no traceback; a missing `claude` is no longer reported as "could not parse Sonnet response".
   - [ ] MECHANICAL: the `--llm` help (`goc/engine.py:4529`) matches what the pass does — no "batched" claim unless it batches — and the fake `claude` in `tests/test_terminal_status_guard.py` captures the prompt wherever the fix sends it.
   - [ ] PROCESS: `python scripts/sync_plugin_assets.py --check` clean; `uv run python -m unittest discover -s tests` green; `uv run goc validate` clean.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc quality-pass --llm` crashes once the deck outgrows one command-line argument
