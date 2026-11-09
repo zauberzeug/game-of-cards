@@ -1,7 +1,7 @@
 ---
 title: internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded
 summary: "AGENTS.md forbids naming internal projects in cards and calls the rule unguarded but audited clean on 2026-07-27; the card that chose not to guard it did so because neither confidentiality rule had an observed instance. The internal project AGENTS.md itself gives as the rule's example is named on 16 lines across 6 cards, 3 of which already held it when the audit declared the deck clean. Redact the instances, correct the audit claim, and revisit the guard now that the zero-instance premise is false."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-09T02:34:58Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: AGENTS.md § Card authoring rules no longer states "audited clean on 2026-07-27"; it states what now enforces the rule, or the date and result of the latest audit
   - [ ] TDD: if a guard lands (see § Fix), a test in `tests/test_card_authoring_rules.py` plants a card body naming the example term and asserts the guard fails, and the cleaned deck passes it
   - [ ] PROCESS: `uv run goc validate`, `uv run python scripts/check_card_language.py` and the regression suite pass
+worker: {who: "claude[bot]", where: main}
 ---
 # Internal project name keeps reaching cards because the rule against it is unguarded
 
