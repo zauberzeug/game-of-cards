@@ -21,6 +21,7 @@ advances:
   - remove-blocked-from-status-enum-and-migrate-existing-cards
 advanced_by:
   - migrate-existing-blocked-cards-to-open-or-waiting-overlay
+  - cascade-root-warning-counts-only-cards-in-the-retired-blocked-status
 tags: [api-contract, documentation]
 definition_of_done: |
   - [ ] `blocked` removed from `status_values` in `goc/schema.yaml`;
