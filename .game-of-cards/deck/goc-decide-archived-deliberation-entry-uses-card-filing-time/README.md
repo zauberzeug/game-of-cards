@@ -90,7 +90,7 @@ FAIL: log.md headers are NOT in chronological order.
 
 The 'decision deliberation archived' entry uses the card's
 `created` timestamp instead of _utc_now_iso() at decide-time.
-Cited code: goc/engine.py:6786 — `filed = t.created or now`
+Cited code: goc/engine.py:4593 — `filed = t.created or now`
 ```
 
 See [`reproduce.py`](reproduce.py).

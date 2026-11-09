@@ -89,14 +89,14 @@ field.
 
 ```text
 $ grep -rn "shim\.guidance\|AgentShim(.*guidance" goc/ tests/ scripts/
-goc/install.py:109:    guidance: tuple[GuidanceBlock, ...]
-goc/install.py:357:        guidance=guidance,
+goc/install.py:107:    guidance: tuple[GuidanceBlock, ...]
+goc/install.py:355:        guidance=guidance,
 
 $ grep -rn "AGENTS_GUIDANCE\|CLAUDE_GUIDANCE" goc/ tests/
-goc/install.py:113:AGENTS_GUIDANCE = GuidanceBlock(...)
-goc/install.py:114:CLAUDE_GUIDANCE = GuidanceBlock(...)
-goc/install.py:140:    agents_body = (templates / AGENTS_GUIDANCE.template).read_text()...
-goc/install.py:140:        claude_body = (templates / CLAUDE_GUIDANCE.template).read_text()...
+goc/install.py:111:AGENTS_GUIDANCE = GuidanceBlock(...)
+goc/install.py:112:CLAUDE_GUIDANCE = GuidanceBlock(...)
+goc/install.py:136:    agents_body = (templates / AGENTS_GUIDANCE.template).read_text()...
+goc/install.py:138:        claude_body = (templates / CLAUDE_GUIDANCE.template).read_text()...
 ```
 
 The first grep returns only the field's declaration site and the

@@ -73,8 +73,8 @@ only what the *port* breaks:
 ```
 porter substitution: (re.compile(r"\$ARGUMENTS"), "the user's argument"),
 
-[PORT BREAKS IT] goc/templates/skills/retrospective/SKILL.md:53
-                 → openclaw-plugin/skills/retrospective/SKILL.md:50
+[PORT BREAKS IT] goc/templates/skills/retrospective/SKILL.md:46
+                 → openclaw-plugin/skills/retrospective/SKILL.md:43
                  source snippet compiles; ported snippet: SyntaxError: unterminated string literal (detected at line 6)
                  offending line: n = int('the user's argument'.strip() or '10')
 
