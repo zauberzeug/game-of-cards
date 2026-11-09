@@ -105,3 +105,11 @@ decide's `Next:` line should come from `card_is_ready` on the
 post-mutation card. That covers draft, status and overlay in one place,
 instead of a per-site fix for each conjunct. No DoD item ticked and no
 gate change; evidence for whoever picks.
+
+## 2026-11-09T02:00:13Z — Staleness re-check
+
+As-filed anchors gone from HEAD: `goc/engine.py:5951` (`card_dir = DECK_DIR / title` in `_cmd_decide`),
+moved by `3413b1b0` (now `card_dir = resolve_card_dir(title)`).
+Reproducer: `reproduce.py` → exit 0 (inverted: prints "DEFECT CONFIRMED: quality-pass audits draft scaffolds and decide falsely announces a hidden draft as claimable.").
+Verdict: still live. Re-anchored `goc/engine.py:5951` ff. → `:7754` ff. (`_cmd_decide`'s card load and its lone `human_gate == "none"` guard).
+Gate unchanged.

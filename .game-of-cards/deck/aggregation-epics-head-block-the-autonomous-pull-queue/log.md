@@ -24,3 +24,13 @@ decision:
 Dashboard updated in place: the "observable right now" passage under
 `## What's broken` now dates the 2026-05-26 snapshot, records the overlays,
 and names the recurrence.
+
+## 2026-11-09T01:56:50Z — Staleness re-check
+
+As-filed anchors gone from HEAD: `engine.py:1599`
+(`def card_is_ready(card: Card, by_title: dict[str, Card]) -> bool:`), moved by `bfcdf3e2`
+(signature gained `*, include_drafts: bool = False`).
+Reproducer: none.
+Verdict: not verified (no reproducer) — needs a human re-read. Reading HEAD: the ready predicate still has no aggregator or closure-gate conjunct; it gained only a draft conjunct.
+Re-anchored `engine.py:2667` → `:3150` (`def card_is_ready(`).
+Gate unchanged.

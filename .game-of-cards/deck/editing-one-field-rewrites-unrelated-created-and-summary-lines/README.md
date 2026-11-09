@@ -28,7 +28,7 @@ definition_of_done: |
   `unadvance` / `repair-edges` (`goc/engine.py:6321`), `goc quality-pass`
   summary/DoD rewrites, and `goc migrate-list-style`.
 - Emitter quoter: `_YAML_NEEDS_QUOTE = re.compile(r"[:#'\"\\\[\]\{\}\,`@]")`
-  (`goc/engine.py:208`) and `_yaml_inline` (`goc/engine.py:244-253`), reached
+  (`goc/engine.py:291`) and `_yaml_inline` (`goc/engine.py:244-253`), reached
   for `summary` via the catch-all scalar branch `emit_frontmatter`
   (`goc/engine.py:534`).
 

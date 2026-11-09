@@ -27,7 +27,7 @@ definition_of_done: |
   solely on that sentinel lookup.
 - `goc/install.py:1849` — the unconditional clobber:
   `(deck_dir / "log.md").write_text("# Deck Log\n\nAppend deck-level events here (sprint notes, schema bumps, etc.).\n")`
-- `goc/install.py:937-938` — the upgrade planner's contrasting rule:
+- `goc/install.py:1193-1194` — the upgrade planner's contrasting rule:
   `if write.path.name == "log.md": continue` (upgrade never touches the
   journal).
 
@@ -41,7 +41,7 @@ authored journal content. This contradicts the repo's ownership
 contract (AGENTS.md, `.game-of-cards/` ownership model): the engine
 "never destroys authored content under `.game-of-cards/`". The
 codebase already encodes that `log.md` is preserve-worthy — the
-*upgrade* planner explicitly skips it (`goc/install.py:937-938`) — but
+*upgrade* planner explicitly skips it (`goc/install.py:1193-1194`) — but
 the *install* executor writes it blind. Every other surface install
 touches has preservation machinery (`_sync_game_of_cards_config`
 preserves diverged stubs; marker blocks are goc-owned by contract);
@@ -95,6 +95,6 @@ Three credible fix shapes:
 
 Option 1 is the minimum safe fix; option 3 makes the reachability path
 a supported workflow. The dry-run plan (`_plan_writes`,
-`goc/install.py:883`) should reflect whichever action is chosen so the
+`goc/install.py:1015`) should reflect whichever action is chosen so the
 preview stays truthful (cf. the open meta-card
 [dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting](../dry-run-plan-reenumerates-executor-conditionals-and-keeps-drifting/)).

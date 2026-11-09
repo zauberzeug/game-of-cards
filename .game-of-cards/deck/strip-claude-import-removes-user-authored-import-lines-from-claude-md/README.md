@@ -20,9 +20,9 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:226-243` — `_strip_claude_import`
+- `goc/install.py:256-278` — `_strip_claude_import`
 - `goc/install.py:1617` — sole caller, inside `_sync_methodology_blocks` when `briefing_target == "CLAUDE.md"`
-- `goc/install.py:246-283` — `_sync_claude_import`, which shows why ownership of bare lines is ambiguous
+- `goc/install.py:281-324` — `_sync_claude_import`, which shows why ownership of bare lines is ambiguous
 
 ## Confirmed behaviour (reproduced end-to-end 2026-09-14)
 

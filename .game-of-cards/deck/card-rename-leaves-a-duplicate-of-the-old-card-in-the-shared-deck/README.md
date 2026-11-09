@@ -45,7 +45,7 @@ definition_of_done: |
   ]
   ```
 
-- `goc/engine.py:4685-4693` — and the commit it then makes is
+- `goc/engine.py:5747-5767` — and the commit it then makes is
   pathspec-scoped (`git add -- *paths`, `git commit -m message --
   *paths`), which by definition takes only those paths and leaves the
   rest of the index untouched.

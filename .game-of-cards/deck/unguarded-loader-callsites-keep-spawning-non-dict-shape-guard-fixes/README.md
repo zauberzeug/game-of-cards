@@ -34,7 +34,7 @@ Both closed cards added an `isinstance(_, dict)` guard to a specific
 loader callsite where the parsed payload is then treated as a mapping:
 
 1. [`frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror`](../frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror/)
-   — `parse_frontmatter` in `engine.py:161` now raises a clean
+   — `parse_frontmatter` in `engine.py:253` now raises a clean
    `FrontmatterError` when the YAML between the `---` delimiters
    parses to a non-mapping (was: `AttributeError` on `fm.get(...)`
    inside `load_card`).

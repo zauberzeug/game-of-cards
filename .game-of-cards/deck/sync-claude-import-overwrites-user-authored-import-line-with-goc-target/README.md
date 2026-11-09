@@ -1,6 +1,6 @@
 ---
 title: sync-claude-import-overwrites-user-authored-import-line-with-goc-target
-summary: "`_sync_claude_import` (`goc/install.py:246-284`) identifies the GoC import line to update by matching against ALL importable targets (`@AGENTS.md`, `@CLAUDE.local.md`), not just the one GoC manages. So a user's hand-authored `@CLAUDE.local.md` import is rewritten to `@AGENTS.md` when GoC's briefing target is the default, destroying the user's import. Sibling of `strip-claude-import-removes-user-authored-import-lines-from-claude-md`; both functions need the same ownership rule for bare import lines."
+summary: "`_sync_claude_import` (`goc/install.py:281-324`) identifies the GoC import line to update by matching against ALL importable targets (`@AGENTS.md`, `@CLAUDE.local.md`), not just the one GoC manages. So a user's hand-authored `@CLAUDE.local.md` import is rewritten to `@AGENTS.md` when GoC's briefing target is the default, destroying the user's import. Sibling of `strip-claude-import-removes-user-authored-import-lines-from-claude-md`; both functions need the same ownership rule for bare import lines."
 status: open
 stage: null
 contribution: medium
@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:246-284` — `_sync_claude_import`
+- `goc/install.py:281-324` — `_sync_claude_import`
 - `goc/install.py:264-267` — the sole-line early return
 - `goc/install.py:274-282` — the bare-line replacement loop
 - `goc/install.py:42` — `CLAUDE_IMPORTABLE_TARGETS = ("AGENTS.md", "CLAUDE.local.md")`
@@ -64,7 +64,7 @@ custom CLAUDE.md content, keep it" but the bare-line replacement loop
 mutates a line GoC never wrote.
 
 The intended path for non-GoC content is the marker-bounded block at
-`install.py:284` (`text.rstrip() + "\n\n" + block`); the bug is that the
+`install.py:324` (`text.rstrip() + "\n\n" + block`); the bug is that the
 union-match short-circuits to overwrite before that path is reached.
 
 ## Empirical evidence

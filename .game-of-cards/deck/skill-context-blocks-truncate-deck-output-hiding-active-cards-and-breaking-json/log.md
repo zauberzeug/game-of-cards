@@ -29,3 +29,18 @@ sessions orphan fall to the bottom where `head` cuts. Only the
 SessionStart hook named the card. The contradiction between that hook and
 the soft-lock rule is filed separately as
 [session-start-hook-says-resume-active-cards-that-pull-card-says-to-leave-alone](../session-start-hook-says-resume-active-cards-that-pull-card-says-to-leave-alone/).
+
+## 2026-11-09T01:57:48Z — Staleness re-check
+
+As-filed anchors gone from HEAD: `standup/SKILL.md:113`
+(`goc 2>/dev/null | head -5 || true`), moved by `0c4c3b09` (the Next-up
+example now reads `goc --ready ... | grep -v '^ACTIVE:' | head -5`).
+Reproducer: `reproduce.py` → exit 1, "FAIL pull-card:30: head -20 hid 2
+card(s) from a table the skill body calls a soft lock" (same for next-card:17)
+plus three invalid-JSON FAILs; its six "block drifted" FAILs are stale pinned
+line numbers only — the
+same caps still ship (pull-card :34/:46, next-card :20, standup :29,
+refine-deck :103, retrospective :19).
+Verdict: still live. Re-anchored `standup/SKILL.md:113` → `:133` (body and
+the DoD's `standup` :113).
+Gate unchanged.

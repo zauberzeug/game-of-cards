@@ -30,3 +30,14 @@ nothing to do." path too, which used to print none. So the needless
 with engine work: every `Skill(upgrade)` run sees the pristine file as
 `preserved`, including one at the current version. The classification is
 unchanged, and so is the `## Decision required` question in README.
+
+## 2026-11-09T01:56:17Z — Staleness re-check
+
+As-filed anchor gone from HEAD: `goc/install.py:1439`
+(`def _write_skills_source(target: Path, value: str) -> None:`), changed by `0be57d4d`
+(gained `*, probe: bool = False`, returns bool).
+Reproducer: `reproduce.py` → exit 0 (inverted: prints "DEFECT CONFIRMED: a pristine
+config.yaml (no user edits) is reported as `preserved`"); `_emit_divergence_report` still
+takes its status from `_classify_user_owned_file`.
+Verdict: still live. Re-anchored `goc/install.py:1508-1538` → `:1832-1865`.
+Gate unchanged.

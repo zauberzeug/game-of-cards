@@ -60,7 +60,7 @@ Supporting sites:
 | `goc/engine.py:214` | `_YAML_NEEDS_QUOTE` — character legality |
 | `goc/engine.py:277` | `_opens_with_yaml_indicator` — opening-character legality |
 | `goc/engine.py:294` | `_parser_coerces_scalar` — coercion, derived from `yaml_lite`'s recognizers |
-| `goc/engine.py:427` | `_emit_worker` — the reachable caller (`worker.where`) |
+| `goc/engine.py:536` | `_emit_worker` — the reachable caller (`worker.where`) |
 | `goc/_vendor/yaml_lite.py:43,51-53` | `_INT_RE`, `_NULL_SET`, `_TRUE_SET`, `_FALSE_SET` — the only recognizers the coercion term knows |
 
 ## What's broken
@@ -180,7 +180,7 @@ why the missing term has to be written by hand.
 creates a branch, commits, and runs `goc status <title> active`. The engine's
 `_auto_populate_worker` (`goc/engine.py:5893`) reads
 `git rev-parse --abbrev-ref HEAD` and stores it as `worker.where`, which
-`_emit_worker` (`goc/engine.py:427`) interpolates into a flow mapping through
+`_emit_worker` (`goc/engine.py:536`) interpolates into a flow mapping through
 `_yaml_inline`. `1.5` is an ordinary version-branch name and `off` is an
 ordinary git ref; neither is rejected anywhere. This is the same reachability
 path the closed sibling

@@ -24,7 +24,7 @@ definition_of_done: |
 - `goc/engine.py:5040-5050` — `_git_auto_commit`'s `exclude_draft` filter.
 - `goc/engine.py:5234-5237` — `_cmd_status`: `commit_targets = [card_dir]`
   plus `DECK_DIR / successor` for `superseded --by`.
-- `goc/engine.py:6577` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
+- `goc/engine.py:7429` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
   `_git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], ...)`.
 
 ## What's broken
@@ -57,7 +57,7 @@ warning that the commit was split. Same for `goc status <old> superseded
 --by <draft-successor>`.
 
 The lone caller that opts out (`goc new --commit`,
-`engine.py:6293-6298`, `exclude_draft=False`) exists precisely "to avoid a
+`engine.py:7099-7104`, `exclude_draft=False`) exists precisely "to avoid a
 half-edge (one endpoint committed, the other left untracked)" — the exact
 failure the two-card verbs now reproduce.
 
@@ -110,7 +110,7 @@ committed trees. A human should pick which invariant bends.
 
 **Option A — commit the draft counterpart together with the edge
 (atomicity wins).** Pass `exclude_draft=False` from the two-card call
-sites at `engine.py:6064`, `:5710`, `:5725`.
+sites at `engine.py:6064`, `:7429`, `:5725`.
 
 - Pros: committed tree always validates; matches the `goc new --commit`
   precedent and the half-edge rule; smallest behavior change.

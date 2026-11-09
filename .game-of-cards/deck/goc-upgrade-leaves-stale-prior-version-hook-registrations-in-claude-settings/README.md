@@ -25,7 +25,7 @@ definition_of_done: |
 ## Location
 
 - `goc/install.py:676-718` — `_merge_claude_settings`, the dedup-and-append loop.
-- `goc/install.py:694-808` — `_strip_goc_settings_entries`, the removal pass.
+- `goc/install.py:786-904` — `_strip_goc_settings_entries`, the removal pass.
 - `goc/install.py:556-560` — `GOC_CLAUDE_HOOKS`, the **current**-version event→command map both sites key on.
 
 ## What's broken

@@ -26,3 +26,13 @@ Kept parked, `unverified` kept. This is a UX taste call on goc's own surface
 with no consultation rubric, which is what the gate is for. A future decision
 should argue against the current comment's reasoning, not against the
 card's original description of unexamined collateral.
+
+## 2026-11-09T01:57:19Z — Staleness re-check
+
+As-filed anchors gone from HEAD: `goc/engine.py:2175`
+(`"dependency_awaiting": dependency_blocked(t, by_title),`), moved by `d6922a4f`
+(the JSON key now reads the liveness-gated `dependency_advisory` result).
+Reproducer: none.
+Verdict: not verified (no reproducer) — needs a human re-read. Reading HEAD: `card_cell` still paints one ⏳ when the dependency advisory or `waiting_impedes` fires.
+Re-anchored `goc/engine.py:2175` → `:4042` (the JSON `dependency_awaiting` key).
+Gate unchanged.

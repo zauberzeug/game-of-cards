@@ -15,7 +15,7 @@ definition_of_done: |
   - [ ] PROCESS: the `## Decision required` question below is answered and recorded via `Skill(decide-card)`, lowering the gate to `none`.
   - [ ] TDD: `reproduce.py` exits zero against this repo's own deck — no `!`-block drops a card from a table, and every `--json` block forwards a fragment that `json.loads` accepts.
   - [ ] TDD: a regression test asserts the invariant directly rather than re-running the CLI — for every `!`-block in `goc/templates/skills/*/SKILL.md`, a `--json` query is never piped through a line-bounding filter, and any bounded table query names its bound in a way the engine can report on. It must fail on today's tree.
-  - [ ] MECHANICAL: the chosen option landed across all six live sites (`pull-card` :30 and :42, `next-card` :17, `standup` :24, `refine-deck` :91, `retrospective` :17) in `goc/templates/skills/`. The two prose examples inside fenced code blocks (`scan-deck` :40, `standup` :113) are illustrative, not live — change them only if the decision makes them wrong as documentation.
+  - [ ] MECHANICAL: the chosen option landed across all six live sites (`pull-card` :30 and :42, `next-card` :17, `standup` :24, `refine-deck` :91, `retrospective` :17) in `goc/templates/skills/`. The two prose examples inside fenced code blocks (`scan-deck` :40, `standup` :133) are illustrative, not live — change them only if the decision makes them wrong as documentation.
   - [ ] MECHANICAL: if the fix adds or widens an engine flag, `goc --help` describes its real scope (today `--max-rows` says "Cap rows per column in --board", which is accurate — do not widen the text without widening the behaviour).
   - [ ] MECHANICAL: mirrors re-synced (`pre-commit run --all-files`) and the OpenClaw port re-run (`python3 scripts/port_skills_to_openclaw.py`), so all five consumer trees carry the fix; `python3 scripts/port_skills_to_openclaw.py --check` is clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
@@ -41,7 +41,7 @@ the only row bound the CLI has, and it is board-only —
 `goc --help` says so verbatim: `Cap rows per column in --board.`
 
 Two further `head -N` occurrences (`scan-deck/SKILL.md:40`,
-`standup/SKILL.md:113`) sit inside fenced code blocks as prose examples.
+`standup/SKILL.md:133`) sit inside fenced code blocks as prose examples.
 They are not live context blocks and are out of scope except as
 documentation.
 

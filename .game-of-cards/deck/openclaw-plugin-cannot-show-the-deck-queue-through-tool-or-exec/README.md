@@ -106,7 +106,7 @@ plugin's own documentation says so three times:
 - `openclaw-plugin/README.md:66-68` — "`python3` (3.10+) on PATH. The plugin
   invokes the bundled engine via `python3 -m goc.cli` from the tool handler —
   no `uv`, no `pipx`, no separate `pipx install game-of-cards` step."
-- `goc.md:214` — "**`goc` as a registered OpenClaw tool** — not a shell
+- `goc.md:229` — "**`goc` as a registered OpenClaw tool** — not a shell
   binary on PATH."
 
 `exec("goc --ready")` on a stock host is therefore command-not-found. The

@@ -227,7 +227,7 @@ but loud about something that never worked.
 `resolveDeckDir` for the hooks, and through the `goc` tool handler for
 the engine. The engine half is the expensive part: `goc/engine.py`
 resolves `DECK_DIR` at *import* time from module-level globals
-(`goc/engine.py:146-147`), so an override needs either a new env var the
+(`goc/engine.py:206-207`), so an override needs either a new env var the
 plugin sets before spawning, or a CLI flag — a change to the engine's
 public surface, not just the plugin's. That work overlaps the active
 epic

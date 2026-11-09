@@ -54,7 +54,7 @@ the layouts "verified against live Claude Code installs":
 
 i.e. on a consumer host the parent of the bundled `goc/` package is named
 `game-of-cards` or a version string like `0.0.24` — never `claude-plugin`.
-The Codex bootstrap finder (`goc/install.py:1100`) greps the same
+The Codex bootstrap finder (`goc/install.py:1443`) greps the same
 `.../cache/*/game-of-cards/*/skills/...` shape. AGENTS.md documents the
 omission of `templates/skills/` from the payload as safe *because* of the
 refusal:

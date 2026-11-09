@@ -26,7 +26,7 @@ definition_of_done: |
 - `goc/install.py:1857` and `goc/install.py:2104` — `goc install` calls
   `_write_skills_source(target, ...)` immediately after copying the
   template config.
-- `goc/install.py:1508-1538` — `_write_skills_source` rewrites the
+- `goc/install.py:1832-1865` — `_write_skills_source` rewrites the
   `skills_source:` line.
 - `goc/templates/game_of_cards/config.yaml:94` — ships
   `# skills_source: auto` (commented).

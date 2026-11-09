@@ -22,3 +22,14 @@ This is another consumer that needs this card's detection. It is recorded here, 
 - **Dependency on this card**: consulting `_is_plugin_context()` there would only help in this source tree. On a real marketplace install it returns False (this card's finding), so the hint stays wrong until this card's detection mechanism is decided.
 - **Falsification recipe**: run the plugin wrapper's `install` with `CLAUDECODE=1` in a scratch repo, from both the source-tree payload and a `<mkt>/game-of-cards/<version>/` copy. Once fixed, neither prints the `/plugin install` hint.
 - **Surfaced by**: an `audit-deck` hunter agent (general-purpose), 2026-11-02.
+
+## 2026-11-09T01:54:41Z — Staleness re-check
+
+As-filed anchor gone from HEAD: `goc/install.py:1100`
+(`GOC_BOOTSTRAP=$(find "$HOME/.codex/plugins/cache" -path '*/game-of-car…`), rewritten by
+`ef68bc7b` (mtime ordering replaced `| sort | tail -n 1`).
+Reproducer: `reproduce.py` → exit 0 (inverted: prints "DEFECT CONFIRMED: refusal is
+dead on the real marketplace layout"). `_is_plugin_context()` still compares
+`_PACKAGE_DIR.parent.name` against the three literal payload names.
+Verdict: still live. Re-anchored `goc/install.py:1100` → `:1443`.
+Gate unchanged.

@@ -125,7 +125,7 @@ This is the same anti-pattern resolved twice already in
 recent history:
 
 - `frontmatter-that-parses-to-a-list-or-scalar-crashes-loaders-with-a-raw-attributeerror`
-  (`goc/engine.py:161`, closed 2026-05-27) — top-level frontmatter is
+  (`goc/engine.py:253`, closed 2026-05-27) — top-level frontmatter is
   a non-mapping.
 - `canonical-tags-loader-iterates-bare-string-scalar-character-by-character`
   (closed 2026-05-29) — a bare-string scalar where a list was

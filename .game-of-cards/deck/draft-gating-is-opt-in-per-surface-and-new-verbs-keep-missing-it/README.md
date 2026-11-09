@@ -35,7 +35,7 @@ definition_of_done: |
   No `card_is_draft` gate, unlike `filter_cards` (`engine.py:2998`)
   which hides drafts from every listing.
 
-- `goc/engine.py:5951` ff. (`_cmd_decide`) — the only guard is
+- `goc/engine.py:7754` ff. (`_cmd_decide`) — the only guard is
   `if t.human_gate == "none"`; no draft guard (contrast
   `_cmd_status`'s draft refusal for superseded/disproved at
   `engine.py:6028`). The unconditional next-step at `engine.py:6921`:

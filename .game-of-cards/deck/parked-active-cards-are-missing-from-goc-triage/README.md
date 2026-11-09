@@ -15,7 +15,7 @@ tags: [bug, api-contract]
 definition_of_done: |
   - [ ] PROCESS: pick the fix shape from `## Decision required` and record the choice via `Skill(decide-card)` (lowers the gate to `none`).
   - [ ] TDD: a regression test exercises `_cmd_triage` against a fixture deck containing (a) `status: open` + `human_gate: decision`, (b) `status: active` + `human_gate: decision`, (c) `status: active` + `human_gate: session`. The test asserts the output matches the chosen framing — at minimum, the active+gated cards appear somewhere in the view (or are explicitly labeled per the chosen option).
-  - [ ] MECHANICAL: `_cmd_triage` filter (`goc/engine.py:4613`) implements the chosen option; the header count and the rendered bucket totals agree across text and `--json` modes.
+  - [ ] MECHANICAL: `_cmd_triage` filter (`goc/engine.py:7842`) implements the chosen option; the header count and the rendered bucket totals agree across text and `--json` modes.
   - [ ] EMPIRICAL: re-running `goc triage` on this repo's current deck (which has 2 active+gated cards on 2026-05-29) surfaces those 2 cards under the chosen framing, with the total header reflecting the corrected count.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
 ---
@@ -25,7 +25,7 @@ definition_of_done: |
 ## Location
 
 `goc/engine.py:6931-7013` (`_cmd_triage`). The selection filter is on
-line 4613:
+line 7842:
 
 ```python
 all_cards = [t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"]
@@ -113,7 +113,7 @@ lands.
 ### Option A — Drop the `status == "open"` clause; include all non-terminal cards
 
 ```python
-# goc/engine.py:4613
+# goc/engine.py:7842
 all_cards = [
     t for t in load_all_cards()
     if t.status not in TERMINAL_STATUSES and t.human_gate != "none"

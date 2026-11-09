@@ -31,3 +31,12 @@ exercise all three broken shapes plus the block-form happy-path control.
 both `uv run python` — PyYAML-absent structural path — and system
 `python3` — PyYAML parse path). Card stays `open`, `human_gate:
 decision`; no code change to the engine.
+
+## 2026-11-09T01:58:21Z — Staleness re-check
+
+As-filed anchor gone from HEAD: `goc/install.py:941`
+(`def _append_precommit_hook(target: Path) -> None:`), moved by `0be57d4d`.
+Reproducer: `reproduce.py` → exit 1, "DEFECT REPRODUCED" for `key-after-repos`, `empty-inline-repos` and `no-repos-key`.
+Verdict: still live. Re-anchored `goc/install.py:2010` → `:1657` (all three occurrences). The old number had already left the function:
+the 2026-08-10 pass `69e1e4f2` mapped `:1320` onto an unrelated line (`claude_skills_mode = effective_skills_source()`), and later passes tracked that line.
+Gate unchanged.

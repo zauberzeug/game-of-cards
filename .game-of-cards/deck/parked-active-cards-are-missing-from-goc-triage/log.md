@@ -23,3 +23,12 @@ chosen fix — Option A's snippet above drops the `status` clause but omits
 `card_is_draft`, which would regress the draft fix. The durable form is to
 route the whole candidate set through `filter_cards` (which already applies
 the draft exclusion) rather than hand-rolling the comprehension a third time.
+
+## 2026-11-09T01:58:17Z — Staleness re-check
+
+As-filed anchors gone from HEAD: `goc/engine.py:4613`
+(`all_cards = [t for t in load_all_cards() if t.status == "open" and t.h`), moved by `32ab10ba`
+(now the three-line `parked = [...]` comprehension; the draft exclusion is a separate statement).
+Reproducer: `reproduce.py` → exit 1, "DEFECT CONFIRMED: triage omits the active+gated fixture (['card-b-active-gated'])".
+Verdict: still live. Re-anchored all three occurrences of `goc/engine.py:4613` (DoD, `## Location`'s "line 4613", Option A's comment label) → `:7842`.
+Gate unchanged.

@@ -34,3 +34,12 @@ are in scope, and if so whether the rule for them is "call
 `goc --waiting --json`" rather than "re-derive from the JSON payload".
 
 No status or gate change — the helper shape is still the human's call.
+
+## 2026-11-09T01:59:02Z — Staleness re-check
+
+As-filed anchors gone from HEAD: `engine.py:2982` (`not_ready = live and (`), moved by `e861360e`
+(the board gate became `not_ready = live and not is_draft and (`).
+Reproducer: none.
+Verdict: not verified (no reproducer) — needs a human re-read. Reading HEAD: a `live_impeded` helper (added in `fd34c7cc`) now owns the live variant and the `--waiting` filter routes through it, so the table's `--waiting` row is out of date; board `card_cell`, `card_is_workable_for_scheduler`, `card_is_ready` and the gated-leverage line still inline the gate.
+Re-anchored `engine.py:2982-2986` → `:4141-4145` (board `card_cell`'s `not_ready`).
+Gate unchanged.

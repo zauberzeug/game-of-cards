@@ -38,7 +38,7 @@ phrasings:
 
 | Caller | file:line | Liveness phrasing |
 |---|---|---|
-| board `card_cell` | `engine.py:2982-2986` | `live and (... or waiting_impedes(t))`, `live = status not in TERMINAL_STATUSES` |
+| board `card_cell` | `engine.py:4141-4145` | `live and (... or waiting_impedes(t))`, `live = status not in TERMINAL_STATUSES` |
 | `--waiting` filter | `engine.py:4351` | `status not in TERMINAL_STATUSES and waiting_impedes(t)` (just fixed) |
 | `card_is_workable_for_scheduler` | `engine.py:2244-2248` | `if status in TERMINAL_STATUSES: return False` then `waiting_impedes` |
 | `card_is_ready` | `engine.py:2219-2223` | `if status != "open": return False` then `waiting_impedes` (stricter: open-only) |

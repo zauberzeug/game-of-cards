@@ -41,7 +41,7 @@ if not_ready:
 `dependency_blocked` as blocking — an open `advanced_by` prereq is advisory
 ("you may start"), only `waiting_impedes` and `human_gate` hide a card from the
 pull queue. The `-v` queue line and the JSON `dependency_awaiting` key
-(`goc/engine.py:2175`) reflect this neutral framing. But the board bundles
+(`goc/engine.py:4042`) reflect this neutral framing. But the board bundles
 `dependency_blocked` and `waiting_impedes` into one `not_ready` variable and
 paints the **same ⏳ glyph** for both. So on the board, a pullable
 dependency-awaiting card is visually indistinguishable from a card that must not
