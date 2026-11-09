@@ -14,7 +14,7 @@ definition_of_done: |
   - [ ] PROCESS: entry-resolution mechanism decided (option A/B/C/D in "Decision required") and gate lowered to none
   - [ ] TDD: reproduce.py exits zero — the written stanza's entry resolves on a host whose PATH lacks a bare `goc` (or install explicitly warns/skips when it cannot)
   - [ ] TDD: regression test covers the plugin-default install path: the written .pre-commit-config.yaml entry must be executable without a pipx/global goc install
-  - [ ] MECHANICAL: `_migrate_precommit_validate_pattern` / `_precommit_hook_drifted` migrate existing consumer stanzas to the chosen entry on `goc upgrade`
+  - [ ] MECHANICAL: `_refresh_goc_validate_block` migrates existing consumer stanzas to the chosen entry on `goc upgrade`
   - [ ] MECHANICAL: plugin mirrors resynced (claude-plugin/goc, codex-plugin/goc, openclaw-plugin/goc pick up install.py automatically via sync)
 ---
 
@@ -129,6 +129,9 @@ Which entry should the stanza ship (and should install gate/warn)?
   user acts.
 
 Whichever option lands, `goc upgrade` must migrate the already-written
-stanza in existing consumer repos (the `_precommit_hook_drifted` /
-`_migrate_precommit_validate_pattern` machinery already exists for the
-`files:` glob migration).
+stanza in existing consumer repos. The machinery exists for the `files:`
+glob migration: `_refresh_goc_validate_block` (`goc/install.py:1627`)
+re-emits a drifted stanza on every install and upgrade. It only rewrites a
+single-hook block that still reads `entry: goc validate`, so an option that
+changes the entry must widen that guard, or a migrated stanza is never
+refreshed again.
