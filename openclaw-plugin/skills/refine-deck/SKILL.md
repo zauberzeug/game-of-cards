@@ -169,10 +169,15 @@ Per cite (long form: `reference.md` § Citation anchor check):
    the cited offset is no evidence the cite is current. DECLINE and
    report it, never `current`. Else anchor ≠ the line in HEAD → the
    cite is defunct.
-4. Relocate the anchor text in HEAD and rewrite the number **only** on
-   a UNIQUE match — step 3 already refused the lines that match
-   everywhere. Never guess. When the anchor is a `def`/`class` line
-   whose exact text is gone, retry on a unique `def <name>(` /
+4. Before relocating: a commit to the cited file within ten minutes of
+   the anchor commit that changed the cited line gives the cite TWO
+   readings — the anchor's line, and that line on the commit's other
+   side. Anchor on the one the card's prose names and redo step 3;
+   prose naming both or neither → DECLINE as `anchor tree ambiguous`.
+   Then relocate the anchor text in HEAD and rewrite the number
+   **only** on a UNIQUE match — step 3 already refused the lines that
+   match everywhere. Never guess. When the anchor is a `def`/`class`
+   line whose exact text is gone, retry on a unique `def <name>(` /
    `class <name>(`: a definition is identified by its NAME, not by its
    parameter list, so a keyword-only argument appended to a signature
    must not read as "the code was refactored away". Two or more
@@ -181,11 +186,11 @@ Per cite (long form: `reference.md` § Citation anchor check):
    decides what a range emits.
 
 Cites the recipe declines — ambiguous occurrence, trivial anchor,
-anchor gone, ambiguous match, incoherent pair, retired
-occurrence — are REPORTED for a human to read, never silently skipped.
-Anchor text that exists nowhere, with no unique definition of its name
-either, usually means the cited code was refactored away: re-read the
-card and, if the refactor also fixed the defect, close via
+anchor tree ambiguous, anchor gone, ambiguous match, incoherent pair,
+retired occurrence — are REPORTED for a human to read, never silently
+skipped. Anchor text that exists nowhere, with no unique definition of
+its name either, usually means the cited code was refactored away:
+re-read the card and, if the refactor also fixed the defect, close via
 the `finish-card` skill with a note "fixed incidentally by <commit-hash>".
 
 End the step by COMMITTING the rewrites, then RE-RUNNING the decision

@@ -202,6 +202,22 @@ def taxed_size(path: Path) -> int:
 # pointer alone fails because nothing sends a pass to look for one: a section
 # rewrite reads as plain text editing, and the pass that did the damage
 # invented its own split. The skill had 48 bytes of headroom.
+#
+# refine-deck was raised an eleventh time on 2026-11-09 by the card
+# `citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`:
+# the citation recipe read the commit that WROTE a number as the tree the
+# number was COUNTED on, and on a shared branch a card can be counted against a
+# parallel commit to the cited file landing minutes after it, or against the
+# tree just before one landing minutes ahead of it (measured: five cites over
+# two cards, at +400 s and -37 s; three of them left on `print` lines for four
+# months). What stayed in the core is step 4's opening sentence — the
+# ten-minute window, the two readings, the prose read — and the new DECLINE in
+# the list of declines; the mechanics, the census and the two shapes no window
+# reaches went to the reference sibling. A pointer alone fails the way it did
+# on the seventh raise: every per-cite rule passes on the move this produces —
+# substantial anchor, unique match, a first-round proposal the re-run accepts
+# — so a pass carrying only a pointer has no symptom to send it looking. The
+# skill had 102 bytes of headroom.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -211,7 +227,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_100,
-    "refine-deck": 15_700,
+    "refine-deck": 16_000,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

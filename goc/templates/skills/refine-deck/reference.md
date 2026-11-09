@@ -492,6 +492,73 @@ moved 165 that were correct. Repair passes recur, so second passes are
 the normal case; an anchor that is right only on a virgin deck is right
 only once.
 
+**A neighbouring commit can own the number.** The walk finds the commit
+that WROTE a number, and every rule here reads that commit's tree as the
+one the number was COUNTED on. On a branch several agents commit to in
+parallel, the two part in both directions: an author counts against a
+working tree holding a parallel change to the cited file and commits the
+card before that change lands (a later tree), or counts first and
+commits the card on top of a parallel change that landed in between (an
+earlier tree). The anchor commit then holds different code at the cited
+number than the author read. The recipe finds that line uniquely in HEAD
+and moves a correct cite past every guard it has — the anchor is
+substantial, the match unique, and the closing re-run sees a first-round
+proposal — and once the move is applied, the pass's own commit becomes
+the cite's anchor, so every later pass tracks the wrong line faithfully.
+The "already resolves at HEAD" check above holds such a cite only while
+HEAD still has the named symbol at the cited number: a later-tree cite
+until a later change moves the line at its number, never an earlier-tree
+one.
+
+So when Deciding (below) finds a cite defunct, before relocating it,
+list `git log --format='%H %ct' -- <path>` and keep the commits to the
+cited file, other than the anchor commit, whose committer time is within
+ten minutes of the anchor's, on either side. For each, ask whether it
+changed the line at the cited number — whether `<commit>^:<path>` and
+`<commit>:<path>` hold different text there. None did → the anchor
+stands. One did → the cite has two readings: the anchor commit's line,
+and the line at that number in the tree on the commit's other side —
+`<commit>:<path>` for a commit after the anchor, `<commit>^:<path>` for
+one before it. Each further such commit adds a reading. Read the
+sentence the cite sits in, with the cites beside it, and ask which
+reading's line the prose names:
+
+- **Exactly one** → that line is the anchor: decide and relocate with
+  it as below. Where it is the neighbour's line and HEAD still holds it
+  at the cited number, the cite is right as it stands — the author
+  counted against the neighbour's tree — so leave the number alone.
+- **Both, or neither** → DECLINE as `anchor tree ambiguous`, reported
+  like every other decline. Never take the reading that relocates more
+  cleanly: both relocate uniquely, which is the defect.
+
+The prose read comes first, and HEAD holding the neighbour's line is no
+verdict without it. Where the author counted on the anchor tree, the
+neighbour's change rotted the cite, and HEAD holds the neighbour's line
+at that number until a later change moves it; read alone, that would
+certify the rot as `current`, in silence.
+
+Measured on this deck 2026-11-09: two cards, five cites. One card's
+numbers fit a commit to the cited file that landed 400 s after the card;
+the other's fit the tree before one that landed 37 s ahead of it.
+Replayed on the tree each author counted on, where every cite is
+correct by construction, the recipe moves all five — onto a guard and a
+comment inside the handlers the prose named, and onto `print` calls six
+lines above the code it named — and every anchored pass since
+2026-08-10 had tracked those three `print` lines. Ten minutes covers
+both. A window flags candidates, not misreads: over that pass's
+repaired and declined cites it flagged 23, among them the 2 misreads
+and 9 repairs that were counted on the anchor tree and correct, and
+only the prose tells those apart. The cost is reading about two dozen
+sentences a pass, in a recipe executed by an agent that reads cards
+anyway.
+
+Two shapes stay out of reach. A misread an earlier pass already applied
+has that pass's commit as its anchor, counted correctly on its own tree:
+anchor and HEAD agree on the wrong line, and only a re-read of the prose
+finds it. And an earlier-tree cite reads `current` until a later change
+moves the line at its number, because the anchor's line is what HEAD
+holds there; the rule catches it on the first pass after that.
+
 **Deciding.** Test the anchor line BEFORE comparing it. A blank, a bare
 brace, or anything under roughly 12 characters matches everywhere, so
 re-finding it at the cited offset is no more evidence that the cite is
@@ -557,13 +624,14 @@ produced. Non-Python definition forms — TypeScript `function` and
 `const … =>`, shell functions — stay out until a measurement asks for
 them.
 
-**The residue is output, not silence.** The declines split six ways
+**The residue is output, not silence.** The declines split seven ways
 and each is reported for a human read:
 
 | Decline | What it usually means |
 |---|---|
 | ambiguous occurrence (>1 in the card) | the same cite token sits at two or more in-scope occurrences of one card, so the history walk cannot tell which occurrence it is anchoring; only the card's prose says what each one meant |
 | trivial anchor, verdict undecidable | the anchor line is a blank, a bare brace, or under ~12 characters, so matching it at the cited offset is no evidence the cite is current and finding it elsewhere is no evidence of where it went; a reader must re-derive the address from the card's prose |
+| anchor tree ambiguous | a commit to the cited file within ten minutes of the anchor commit changed the line at the cited number, so the author may have counted on that commit's side of it, and the card's prose names both readings' lines or neither; a reader must say from the card which line it meant, since each reading relocates uniquely and only one is right |
 | ambiguous match (>1 hit in HEAD) | boilerplate, a repeated idiom, or a definition name HEAD holds more than once — an overload in a mirror tree, a method beside a module-level function; the card's surrounding text disambiguates, the matcher cannot |
 | anchor text absent | neither the anchor text nor — for a definition line — a unique `def`/`class` of that name is anywhere in HEAD; the code may have been refactored away, but it may equally have been renamed or split, so re-read the card before reading the decline as evidence the defect is gone, and close it per the core skill only if a refactor did fix it |
 | incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |

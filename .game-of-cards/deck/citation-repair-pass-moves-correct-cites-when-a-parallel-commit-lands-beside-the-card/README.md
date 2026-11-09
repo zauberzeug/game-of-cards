@@ -1,21 +1,21 @@
 ---
 title: citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card
 summary: "refine-deck's citation recipe anchors a cite at the commit that last wrote its number, assuming the number was computed against that commit's tree. On this repo's shared main, a card can be numbered against the tree of a parallel commit to the cited file that lands minutes before or after it, and the recipe then reads unrelated code at the anchor and moves a correct cite past every guard it has. Two cards found: five cites misread, one moved by this pass and restored, three tracked onto the wrong lines by every pass since 2026-08-10."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-11-09T02:13:07Z"
-closed_at: null
+closed_at: "2026-11-09T05:04:36Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: reproduce.py exits 0 — the reference's citation section carries the `anchor tree ambiguous` rule, so the documented recipe no longer moves the five instance cites on its own
-  - [ ] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § Citation anchor check states the neighbouring-commit rule from § Fix (the trigger, the two readings, the prose read, the decline), adds the `anchor tree ambiguous` residue row, and its count sentence reads "seven ways"
-  - [ ] MECHANICAL: `goc/templates/skills/refine-deck/SKILL.md` § Defunct file:line citations carries the rule's one-line form and names the new decline in its list of declines
-  - [ ] TDD: `tests/test_refine_deck_citation_anchor.py` gains cases replaying both instances (later tree, earlier tree): the documented recipe does not relocate them on the anchor alone, a recipe without the rule does; its residue-count and decline-naming tests pass
-  - [ ] MECHANICAL: plugin mirrors and the OpenClaw port re-synced (`python scripts/sync_plugin_assets.py`, `python3 scripts/port_skills_to_openclaw.py`); `uv run goc validate` and the regression suite pass
+  - [x] TDD: reproduce.py exits 0 — the reference's citation section carries the `anchor tree ambiguous` rule, so the documented recipe no longer moves the five instance cites on its own
+  - [x] MECHANICAL: `goc/templates/skills/refine-deck/reference.md` § Citation anchor check states the neighbouring-commit rule from § Fix (the trigger, the two readings, the prose read, the decline), adds the `anchor tree ambiguous` residue row, and its count sentence reads "seven ways"
+  - [x] MECHANICAL: `goc/templates/skills/refine-deck/SKILL.md` § Defunct file:line citations carries the rule's one-line form and names the new decline in its list of declines
+  - [x] TDD: `tests/test_refine_deck_citation_anchor.py` gains cases replaying both instances (later tree, earlier tree): the documented recipe does not relocate them on the anchor alone, a recipe without the rule does; its residue-count and decline-naming tests pass
+  - [x] MECHANICAL: plugin mirrors and the OpenClaw port re-synced (`python scripts/sync_plugin_assets.py`, `python3 scripts/port_skills_to_openclaw.py`); `uv run goc validate` and the regression suite pass
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -106,6 +106,10 @@ reference.md citation section carries `anchor tree ambiguous`: False
 DEFECT PRESENT: the documented recipe moves 5 of 5 correct cites numbered against a parallel commit's tree.
 ```
 
+That is the filing-time run. Since the fix it prints the same replay lines,
+which show what the anchor alone does, then reports the guard present and
+exits 0.
+
 **How often a neighbouring commit could be to blame** (2026-11-09). This counts
 commits to the cited file, other than the anchor itself, that changed the
 line at the cited number:
@@ -145,28 +149,48 @@ and [citation-idempotence-re-run-reports-false-repairs-until-the-pass-commits](.
 
 ## Fix
 
-Add a neighbouring-commit rule to reference.md § Citation anchor check, with
-its one-line form in SKILL.md step 4. Before relocating a defunct cite, list
-the commits to the cited file, other than the anchor commit, whose committer
-time is within ten minutes of it on either side. If any of them changed the
-line at the cited number, the cite has two readings: the anchor commit's line,
-and that line in the tree on the commit's other side. Read the sentence the
-cite sits in:
+Shipped as a neighbouring-commit rule in
+`goc/templates/skills/refine-deck/reference.md` § Citation anchor check (the
+paragraph "**A neighbouring commit can own the number.**"), with its one-line
+form opening step 4 of `goc/templates/skills/refine-deck/SKILL.md`
+§ Defunct file:line citations. When a cite reads defunct, before relocating
+it, the pass lists the commits to the cited file, other than the anchor
+commit, whose committer time is within ten minutes of it on either side. If
+one changed the line at the cited number, the cite has two readings: the
+anchor commit's line, and that line in the tree on the commit's other side
+(the commit's own tree when it landed after the anchor, its parent's when it
+landed before). The sentence the cite sits in decides:
 
-1. Relocate by the reading whose line is what the prose names, if exactly one
-   is.
-2. If HEAD already holds the other reading's line at the cited number, the
-   cite is right as it stands. Leave the number alone.
-3. If the prose does not decide, DECLINE it as `anchor tree ambiguous` and
-   report it like every other decline.
+1. Exactly one reading's line is what the prose names → anchor on it and
+   decide again. Where that is the neighbour's line and HEAD still holds it
+   at the cited number, the cite is right as it stands and the number is
+   left alone.
+2. The prose names both readings' lines, or neither → DECLINE as
+   `anchor tree ambiguous`, reported like every other decline. The residue
+   table carries the row, its count sentence reads "seven ways", and
+   SKILL.md's list of declines names it.
 
-Add the residue-table row ("The declines split six ways" becomes seven) and
-name the decline in SKILL.md's list. Ten minutes covers both instances
-(+400 s, −37 s). The measured cost is reading about two dozen sentences per
-pass, and the recipe is executed by an agent that reads cards anyway.
-Prefer a decline over a guess.
+One change from the filed design: "HEAD already holds the other reading's
+line" is applied only after the prose has picked that reading, not as a test
+of its own. On its own it would certify as `current` a cite whose author
+counted on the anchor tree and which the neighbour's change then rotted,
+because HEAD keeps the neighbour's line at that number until something moves
+it — a silent false clean, the failure the recipe's decide guard exists to
+refuse. Prose that does not decide is therefore always a decline.
 
-What no anchor rule can reach: a misread an earlier pass already applied. Its
-anchor is now that pass's commit, numbered correctly against its own tree.
-Finding those takes the prose re-read the staleness re-check does. This pass
-found both instances that way, not by any anchor test.
+Ten minutes covers both instances (+400 s, −37 s); the measured cost is
+reading about two dozen sentences per pass. `tests/test_refine_deck_citation_anchor.py`
+replays both directions on fixtures with pinned commit times
+(`LaterTreeNeighbourTest`, `EarlierTreeNeighbourTest`), proves the rule leaves
+ordinary repairs alone (`NeighbourRuleScopeTest`: no neighbour, a neighbour
+below the cited line, a card counted on the anchor tree), and classifies the
+prose of both surfaces (`DocumentedNeighbourRuleTest`). The refine-deck
+`SKILL.md` cap in `tests/test_skill_body_size.py` rose from 15,700 to 16,000
+bytes for the one-line form, with its rationale recorded beside the cap.
+
+What no anchor rule can reach, and the reference now says so: a misread an
+earlier pass already applied — its anchor is that pass's commit, counted
+correctly on its own tree, so anchor and HEAD agree on the wrong line and only
+a prose re-read finds it (this pass found both instances that way) — and an
+earlier-tree cite, which reads `current` until a later change moves the line
+at its number.

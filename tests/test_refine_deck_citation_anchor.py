@@ -92,6 +92,18 @@ named a different cite — and the check proposed moving a correct cite
 onto that cite's code: three such proposals over one pass's 269 repairs,
 and zero once the same pass had committed. The classifier pins the order
 and its reason, and the fixture replays that second pass both ways.
+
+The last gap sits under the walk's own premise:
+`citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`
+found the commit that WROTE a number read as the tree the number was
+COUNTED on. On a branch several agents commit to, a card can be counted
+against a parallel commit to the cited file that lands minutes after it, or
+against the tree just before one that landed minutes ahead of it; either way
+the anchor names code its author never read, and the recipe moves a correct
+cite past every guard it has (five cites over two cards on this deck). The
+fixtures replay both directions with pinned commit times, the classifier
+pins the window, the two readings, the prose read and the decline, and the
+scope tests prove the rule leaves an ordinary repair alone.
 """
 
 from __future__ import annotations
@@ -148,11 +160,18 @@ EXACT_LINE_ONLY = "exact-full-line-equality"
 COMMIT_THEN_RERUN = "rewrites-committed-before-the-re-run"
 RERUN_UNORDERED = "re-run-with-the-commit-unplaced"
 
+# Neighbouring-commit verdicts. NEIGHBOUR_UNREAD is the recipe as it shipped
+# from 2026-08-10 to 2026-11-09: the commit that wrote a number is read as the
+# tree the number was counted on, and no other tree is ever consulted.
+NEIGHBOUR_GUARDED = "neighbour-tree-read-and-decided-by-the-prose"
+NEIGHBOUR_UNREAD = "neighbour-tree-never-read"
+
 # What the recipe answers about one cited line.
 CURRENT = "current"
 DEFUNCT = "defunct"
 DECLINE_TRIVIAL = "decline-trivial-anchor"
 DECLINE_OCCURRENCE = "decline-ambiguous-occurrence"
+DECLINE_ANCHOR_TREE = "decline-anchor-tree-ambiguous"
 
 # How the pass finds the cites in a card — reused as the membership test the
 # fixed presence rule prescribes, so the fixture cannot drift into a second
@@ -168,6 +187,12 @@ DEFN = re.compile(r"^\s*(?:async\s+)?(def|class)\s+([A-Za-z_]\w*)\s*\(")
 # the threshold the shipped prose names and the one the card's reproduce.py
 # scans the deck with.
 MAX_PLAUSIBLE_SPAN = 500
+
+# A commit to the cited file this close to the anchor commit, on either side,
+# may hold the tree the number was counted on. Mirrors the ten minutes the
+# shipped prose names; both instances on this deck sit inside it (+400 s and
+# -37 s).
+WINDOW_SECONDS = 600
 
 CARD = "a-card-whose-cite-was-repaired-once"
 CITED_FILE = "src/app.py"
@@ -325,6 +350,69 @@ RETIRE_FILED = (6, 11)  # (target, decoy) at the filing commit
 RETIRE_PASS_1 = (6, 16)  # the first pass repairs the decoy cite only
 RETIRE_PASS_2 = (11, 21)  # the second pass: both correct in HEAD
 RETIRED_TOKEN = f"{CITED_FILE}:11"
+
+# The neighbouring-commit fixtures carry pinned commit times, because the rule
+# is a window: the file's first commit lands an hour before the card, the card
+# lands at T_CARD, and any later growth a day after it — all outside the
+# window — so the only commit inside it is the parallel one a fixture places.
+T_BASE = 1_790_000_000
+T_CARD = T_BASE + 3_600
+T_LATER = T_CARD + 86_400
+
+# The later tree, after the OpenClaw instance (a parallel commit 400 s after the
+# card added lines above both handlers it cites). The card is counted against
+# the tree that commit produces, so at the card's own commit each cited number
+# holds the line just below the handler it names: a guard inside one handler,
+# and a comment inside the other that names its handler too. Each sits
+# uniquely in HEAD one line further down, which is where the anchor moves it.
+LATER_V1 = [
+    '"""Fixture plugin."""',
+    "",
+    "def on_session_start(ctx):",
+    '    return ctx.notify("session reminder")',
+    "",
+    "def on_prompt(ctx):",
+    "    if (ctx.exploring or ctx.tooling) and not ctx.has_work: return None",
+    '    return ctx.append_system_context("deck-first reminder")',
+    "",
+    "def on_agent_end(ctx):",
+    "    # TODO(verify-context-shape): on_agent_end's ctx shape is a guess",
+    '    return ctx.notify("generalization check")',
+]
+LATER_NEIGHBOUR_INSERT = ['DECK_DIR = ".game-of-cards/deck"']
+LATER_NEIGHBOUR_DELAY = 400
+LATER_PROMPT_CITE = f"{CITED_FILE}:7"  # `def on_prompt` in the neighbour's tree
+LATER_AGENT_END_CITE = f"{CITED_FILE}:11"  # `def on_agent_end` there
+LATER_PROMPT_DECOY = 8  # the guard the anchor reads, in HEAD
+LATER_AGENT_END_DECOY = 12  # the comment the anchor reads, in HEAD
+
+# The earlier tree, after the auto-commit instance (a parallel commit 37 s
+# before the card added lines above the calls it cites). The card is counted
+# against the tree BEFORE that commit, so at the card's own commit its number
+# holds the `print` one line above the call it names; a day later the file
+# grows, the cite reads defunct, and the anchor tracks the `print`.
+ENGINE_V1 = [
+    '"""Fixture engine."""',
+    "",
+    "def cmd_status(card, targets):",
+    '    print(f"Next: implement {card}; tick DoD items as you go.")',
+    '    if auto_commit(targets, f"deck: {card} claimed"):',
+    "        return 0",
+    "    return 1",
+]
+ENGINE_NEIGHBOUR_INSERT = ["import shutil"]  # lands above the cited call
+ENGINE_NEIGHBOUR_APPEND = ["", "def cmd_wait(card):", "    return None"]  # below it
+ENGINE_GROWTH = ["import json", "import re", ""]
+EARLIER_NEIGHBOUR_LEAD = 37
+EARLIER_CITED = 5  # the call in the tree before the neighbour
+EARLIER_DECOY_IN_HEAD = 8  # the `print` the anchor reads, after both inserts
+EARLIER_CALL_IN_HEAD = 9  # the call the card names, after both inserts
+# The scope controls. A card counted on its own tree cites the call at its
+# position after the neighbour's insert; 313 s is the lead on the card whose
+# seven repairs inside the window the 2026-11-09 census checked and found right.
+ANCHOR_TREE_LEAD = 313
+ANCHOR_TREE_CITED = 6
+CALL_IN_HEAD_WITHOUT_INSERT = 8  # no neighbour above the call: growth only
 
 
 def documented_anchor(prose: str) -> str | None:
@@ -539,6 +627,37 @@ def documented_rerun_order(prose: str) -> str | None:
     )
     reason = "git log" in flat and "uncommitted" in flat
     return COMMIT_THEN_RERUN if ordered and reason else RERUN_UNORDERED
+
+
+def documented_neighbour_rule(prose: str) -> str | None:
+    """Does this stretch of skill prose read the tree beside the anchor commit?
+
+    The anchor commit is the one that WROTE a number, and on a shared branch it
+    need not hold the tree the number was COUNTED on: a parallel commit to the
+    cited file can land minutes after the card (the author counted on its
+    tree) or minutes before it (the author counted on the tree it replaced).
+    Four things have to be in the prose, and a pass needs all four. The
+    trigger: a commit to the cited file within ten minutes of the anchor that
+    changed the cited line. The two readings that trigger opens, one from the
+    tree on that commit's other side. The prose read that picks between them,
+    since both relocate uniquely. And the decline when the prose does not
+    decide, so the pass reports what it cannot settle rather than guessing.
+
+    Prose that never relocates is not the recipe and returns None. Prose that
+    relocates without all four is NEIGHBOUR_UNREAD — the shipped text this was
+    filed against, and equally a window that declines without ever reading
+    the second tree, the rule's own first draft.
+    """
+    flat = _flat(prose)
+    if "relocat" not in flat:
+        return None
+    trigger = "ten minutes" in flat and "cited file" in flat and "changed the" in flat
+    readings = "two readings" in flat and "other side" in flat
+    prose_read = "prose names" in flat or "prose naming" in flat
+    declined = "anchor tree ambiguous" in flat and "decline" in flat
+    if trigger and readings and prose_read and declined:
+        return NEIGHBOUR_GUARDED
+    return NEIGHBOUR_UNREAD
 
 
 def documented_decline_count(prose: str) -> str | None:
@@ -900,6 +1019,80 @@ def build_retired_occurrence_repo(repo: Path) -> None:
     git(repo, "commit", "-q", "-m", "grow the source above both cites")
 
 
+def commit_at(repo: Path, message: str, when: int) -> None:
+    """Stage everything and commit it with both dates pinned to `when`."""
+    env = {
+        **os.environ,
+        "PRE_COMMIT_ALLOW_NO_CONFIG": "1",
+        "GIT_AUTHOR_DATE": f"@{when} +0000",
+        "GIT_COMMITTER_DATE": f"@{when} +0000",
+    }
+    for args in (["add", "-A"], ["commit", "-q", "-m", message]):
+        subprocess.run(
+            ["git", *args], cwd=repo, check=True, capture_output=True,
+            text=True, env=env,
+        )
+
+
+def init_fixture_repo(repo: Path) -> None:
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.email", "test@example.com")
+    git(repo, "config", "user.name", "Test")
+    (repo / CITED_FILE).parent.mkdir(parents=True)
+    (repo / card_readme()).parent.mkdir(parents=True)
+
+
+def build_later_tree_repo(repo: Path) -> None:
+    """File a card counted on the tree of a parallel commit that lands after it."""
+    init_fixture_repo(repo)
+    write_source(repo, LATER_V1)
+    commit_at(repo, "the plugin as the card's author found it", T_BASE)
+
+    (repo / card_readme()).write_text(
+        f"# {CARD}\n\n"
+        f"- `{LATER_PROMPT_CITE}` — `on_prompt`: reads the prompt and appends "
+        "the reminder.\n"
+        f"- `{LATER_AGENT_END_CITE}` — `on_agent_end`: reads the tool calls.\n",
+        encoding="utf-8",
+    )
+    commit_at(repo, "file the card, counted on the fix still in flight", T_CARD)
+
+    write_source(repo, LATER_V1[:1] + LATER_NEIGHBOUR_INSERT + LATER_V1[1:])
+    commit_at(repo, "a parallel fix lands", T_CARD + LATER_NEIGHBOUR_DELAY)
+
+
+def build_engine_repo(
+    repo: Path, *, cited_line: int, neighbour: str | None = None, lead: int = 0
+) -> None:
+    """ENGINE_V1, a parallel commit `lead` seconds before the card, the card, growth.
+
+    `neighbour` is "insert" (a line lands above the cited call), "append" (it
+    lands below), or None (no parallel commit at all).
+    """
+    init_fixture_repo(repo)
+    source = list(ENGINE_V1)
+    write_source(repo, source)
+    commit_at(repo, "the engine as the card's author found it", T_BASE)
+
+    if neighbour == "insert":
+        source = source[:1] + ENGINE_NEIGHBOUR_INSERT + source[1:]
+    elif neighbour == "append":
+        source = source + ENGINE_NEIGHBOUR_APPEND
+    if neighbour is not None:
+        write_source(repo, source)
+        commit_at(repo, "a parallel commit to the cited file", T_CARD - lead)
+
+    (repo / card_readme()).write_text(
+        f"# {CARD}\n\n"
+        f"- `{CITED_FILE}:{cited_line}` — `auto_commit`: commits the claim.\n",
+        encoding="utf-8",
+    )
+    commit_at(repo, "file the card", T_CARD)
+
+    write_source(repo, source[:1] + ENGINE_GROWTH + source[1:])
+    commit_at(repo, "the file grows a day later", T_LATER)
+
+
 def anchor_commit(
     repo: Path, cite_token: str, mode: str, *, exact: bool = False
 ) -> str:
@@ -1091,6 +1284,119 @@ def cite_rewrites(repo: Path) -> dict[str, int]:
         if isinstance(new, int) and new != int(token.rsplit(":", 1)[1]):
             rewrites[token] = new
     return rewrites
+
+
+def show_lines(repo: Path, rev: str, path: str) -> list[str] | None:
+    """`git show <rev>:<path>` as lines, or None where that tree has no file."""
+    res = subprocess.run(
+        ["git", "show", f"{rev}:{path}"], cwd=repo, capture_output=True, text=True
+    )
+    return res.stdout.splitlines() if res.returncode == 0 else None
+
+
+def line_at(lines: list[str] | None, number: int) -> str | None:
+    if lines is None or not 0 < number <= len(lines):
+        return None
+    return lines[number - 1]
+
+
+def neighbour_trees(
+    repo: Path, anchor: str, path: str, cited_line: int
+) -> list[list[str]]:
+    """The second tree each neighbouring commit offers, as the prose names it.
+
+    A neighbour is a commit to `path`, other than the anchor, whose committer
+    time is within WINDOW_SECONDS of the anchor's and which changed the line
+    at the cited number. Its tree is the one on its OTHER side from the
+    anchor: its own for a commit after the anchor, its parent's for one before.
+    """
+    anchor_time = int(git(repo, "log", "-1", "--format=%ct", anchor))
+    trees = []
+    for entry in git(repo, "log", "--format=%H %ct", "--", path).splitlines():
+        commit, when = entry.split()
+        if commit == anchor or abs(int(when) - anchor_time) > WINDOW_SECONDS:
+            continue
+        before = show_lines(repo, f"{commit}^", path)
+        after = show_lines(repo, commit, path)
+        if line_at(before, cited_line) == line_at(after, cited_line):
+            continue  # it did not touch what sits at the cited number
+        lands_after = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", anchor, commit],
+            cwd=repo, capture_output=True,
+        ).returncode == 0
+        other_side = after if lands_after else before
+        if other_side is not None:
+            trees.append(other_side)
+    return trees
+
+
+# The identifiers a card's sentence names, in backticks. A cite token never
+# matches: its path breaks the identifier before the closing backtick.
+PROSE_SYMBOL = re.compile(r"`([A-Za-z_]\w*)`")
+
+
+def sentence_of(readme: str, cite_token: str) -> str:
+    """The card line a cite sits in — one cite per line in these fixtures."""
+    return next(
+        line for line in readme.splitlines()
+        if cite_token in card_cite_tokens(line)
+    )
+
+
+def prose_names(sentence: str, line: str | None) -> bool:
+    """Does the cite's sentence name this line?
+
+    The recipe hands this judgment to the agent reading the card. Held here to
+    its mechanical core — a backticked identifier from the sentence sits on
+    the line as a whole word — so the fixtures exercise the decision around
+    it, and a sentence whose symbol sits on both readings stays undecided, as
+    `agent_end` did on this deck's later-tree card.
+    """
+    if line is None:
+        return False
+    return any(
+        re.search(rf"\b{re.escape(symbol)}\b", line)
+        for symbol in PROSE_SYMBOL.findall(sentence)
+    )
+
+
+def repair_beside_neighbours(repo: Path, cite_token: str, *, neighbour_rule: bool):
+    """Steps 2-4 on one single-line cite, the neighbouring-commit rule on or off.
+
+    `neighbour_rule=False` is the recipe as it shipped: the anchor commit's
+    tree is the tree the number was counted on. `neighbour_rule=True` adds the
+    rule the fixed prose prescribes — when a defunct cite has a neighbouring
+    commit that changed its line, anchor on the reading the card's prose
+    names and decide again, and DECLINE when the prose names both or neither.
+
+    Returns the number the pass would write (the cited number itself for a
+    cite that is right as it stands), None where step 4 declines, or the name
+    of the decline.
+    """
+    readme = (repo / card_readme()).read_text(encoding="utf-8")
+    cited_line = int(cite_token.rsplit(":", 1)[1])
+    commit = anchor_commit(repo, cite_token, AUTHORING, exact=True)
+    anchored = show_lines(repo, commit, CITED_FILE)
+    head = (repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+    verdict = decide(anchored, head, cited_line, guard=True)
+    if verdict == DECLINE_TRIVIAL:
+        return DECLINE_TRIVIAL
+    if verdict == CURRENT:
+        return cited_line
+
+    readings = [anchored]
+    if neighbour_rule:
+        readings += neighbour_trees(repo, commit, CITED_FILE, cited_line)
+    if len(readings) > 1:
+        sentence = sentence_of(readme, cite_token)
+        named = [t for t in readings if prose_names(sentence, line_at(t, cited_line))]
+        if len({line_at(t, cited_line) for t in named}) != 1:
+            return DECLINE_ANCHOR_TREE  # both, or neither: never guess
+        readings = named
+    chosen = readings[0]
+    if decide(chosen, head, cited_line, guard=True) == DECLINE_TRIVIAL:
+        return DECLINE_TRIVIAL
+    return relocate(chosen, head, cited_line)
 
 
 class DocumentedAnchorRuleTest(unittest.TestCase):
@@ -2014,6 +2320,220 @@ class RetiredOccurrenceRerunTest(unittest.TestCase):
             anchor_commit(self.repo, RETIRED_TOKEN, AUTHORING, exact=True),
             "once committed, the fresh cite anchors on the commit that wrote it",
         )
+
+
+class DocumentedNeighbourRuleTest(unittest.TestCase):
+    """The commit that wrote a number need not hold the tree it was counted on."""
+
+    # Step 4 as it shipped from 2026-09-14 to 2026-11-09, opening sentence: it
+    # relocates whatever the anchor commit's tree holds at the cited number.
+    SHIPPED_STEP_FOUR = (
+        "4. Relocate the anchor text in HEAD and rewrite the number **only** on "
+        "a UNIQUE match — step 3 already refused the lines that match "
+        "everywhere. Never guess."
+    )
+    # The rule as the card that found the defect first drafted it: a window and
+    # a HEAD test, no second reading, no prose read. It misses the earlier tree
+    # outright, and declines every later-tree cite a nearby commit touched.
+    FIRST_DRAFT = (
+        "Before relocating, DECLINE a cite as `anchor tree ambiguous` when the "
+        "next commit to the cited file lands within an hour of the anchor "
+        "commit and HEAD still holds its line at the cited number."
+    )
+
+    def test_core_skill_reads_the_tree_beside_the_anchor(self) -> None:
+        self.assertEqual(
+            NEIGHBOUR_GUARDED,
+            documented_neighbour_rule(skill_step_four()),
+            "refine-deck SKILL.md step 4 must, before relocating, check the "
+            "commits to the cited file within ten minutes of the anchor commit; "
+            "one that changed the cited line gives the cite two readings, the "
+            "card's prose picks between them, and prose naming both or neither "
+            "is DECLINED as `anchor tree ambiguous` — without it a card counted "
+            "beside a parallel commit has its correct cites moved",
+        )
+
+    def test_reference_sibling_prescribes_the_same_rule(self) -> None:
+        self.assertEqual(
+            documented_neighbour_rule(skill_step_four()),
+            documented_neighbour_rule(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling disagree on "
+            "which tree a cite beside a parallel commit was counted on",
+        )
+
+    def test_the_shipped_rule_this_replaced_reads_no_second_tree(self) -> None:
+        # The classifier's own proof that it can fail.
+        self.assertEqual(
+            NEIGHBOUR_UNREAD, documented_neighbour_rule(self.SHIPPED_STEP_FOUR)
+        )
+
+    def test_a_window_that_never_reads_the_second_tree_is_not_the_rule(
+        self,
+    ) -> None:
+        self.assertEqual(NEIGHBOUR_UNREAD, documented_neighbour_rule(self.FIRST_DRAFT))
+
+    def test_prose_that_never_relocates_is_unclassifiable(self) -> None:
+        self.assertIsNone(
+            documented_neighbour_rule(
+                "Resolve the path — cards write `engine.py:N` for "
+                "`goc/engine.py:N`; prefer a non-mirror match."
+            )
+        )
+
+    def test_residue_table_carries_the_anchor_tree_decline(self) -> None:
+        rows = [row for row in residue_rows() if "anchor tree ambiguous" in row]
+        self.assertEqual(
+            1,
+            len(rows),
+            "refine-deck reference.md § Citation anchor check must carry "
+            "exactly one residue row for the anchor-tree decline; a cite the "
+            "prose cannot settle that leaves no trace is a guess by omission",
+        )
+
+
+class LaterTreeNeighbourTest(unittest.TestCase):
+    """Counted on the tree of a parallel commit that landed after the card."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_later_tree_repo(self.repo)
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_documented_recipe_leaves_a_cite_the_prose_settles(self) -> None:
+        self.assertEqual(
+            NEIGHBOUR_GUARDED,
+            documented_neighbour_rule(skill_step_four()),
+            "refine-deck SKILL.md step 4 no longer reads the tree beside the "
+            "anchor commit",
+        )
+        self.assertEqual(
+            int(LATER_PROMPT_CITE.rsplit(":", 1)[1]),
+            repair_beside_neighbours(self.repo, LATER_PROMPT_CITE, neighbour_rule=True),
+            "the recipe refine-deck ships must leave a cite whose prose names "
+            "the neighbour's line, and HEAD still holds it at the cited number",
+        )
+
+    def test_documented_recipe_declines_a_cite_the_prose_cannot_settle(
+        self,
+    ) -> None:
+        self.assertEqual(
+            NEIGHBOUR_GUARDED,
+            documented_neighbour_rule(skill_step_four()),
+            "refine-deck SKILL.md step 4 no longer reads the tree beside the "
+            "anchor commit",
+        )
+        self.assertEqual(
+            DECLINE_ANCHOR_TREE,
+            repair_beside_neighbours(
+                self.repo, LATER_AGENT_END_CITE, neighbour_rule=True
+            ),
+            "the recipe refine-deck ships must DECLINE a cite whose prose "
+            "names the line of both readings, rather than take the anchor's",
+        )
+
+    def test_the_anchor_alone_moves_both_correct_cites(self) -> None:
+        # Not a spec — the fixture's own proof that it exercises the defect.
+        # Both cites are right in HEAD, and the anchor moves each one line
+        # down: onto a guard, and onto a comment naming the handler as well.
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual("def on_prompt(ctx):", line_at(head, 7))
+        self.assertEqual("def on_agent_end(ctx):", line_at(head, 11))
+        self.assertEqual(
+            LATER_PROMPT_DECOY,
+            repair_beside_neighbours(self.repo, LATER_PROMPT_CITE, neighbour_rule=False),
+        )
+        self.assertEqual(
+            LATER_AGENT_END_DECOY,
+            repair_beside_neighbours(
+                self.repo, LATER_AGENT_END_CITE, neighbour_rule=False
+            ),
+        )
+
+
+class EarlierTreeNeighbourTest(unittest.TestCase):
+    """Counted on the tree before a parallel commit that landed first."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_engine_repo(
+            self.repo, cited_line=EARLIER_CITED, neighbour="insert",
+            lead=EARLIER_NEIGHBOUR_LEAD,
+        )
+        self.addCleanup(self._tmp.cleanup)
+        self.cite = f"{CITED_FILE}:{EARLIER_CITED}"
+
+    def test_documented_recipe_relocates_by_the_line_the_prose_names(self) -> None:
+        self.assertEqual(
+            NEIGHBOUR_GUARDED,
+            documented_neighbour_rule(skill_step_four()),
+            "refine-deck SKILL.md step 4 no longer reads the tree beside the "
+            "anchor commit",
+        )
+        self.assertEqual(
+            EARLIER_CALL_IN_HEAD,
+            repair_beside_neighbours(self.repo, self.cite, neighbour_rule=True),
+            "the recipe refine-deck ships must relocate a cite counted on the "
+            "tree before a parallel commit by the line its prose names, not by "
+            "the line the anchor commit holds at that number",
+        )
+
+    def test_the_anchor_alone_tracks_the_line_above(self) -> None:
+        # Not a spec — the fixture's own proof. The anchor holds the `print`
+        # above the call; the auto-commit card's three cites tracked theirs
+        # through every anchored pass from 2026-08-10.
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(ENGINE_V1[3], line_at(head, EARLIER_DECOY_IN_HEAD))
+        self.assertEqual(ENGINE_V1[4], line_at(head, EARLIER_CALL_IN_HEAD))
+        self.assertEqual(
+            EARLIER_DECOY_IN_HEAD,
+            repair_beside_neighbours(self.repo, self.cite, neighbour_rule=False),
+        )
+
+
+class NeighbourRuleScopeTest(unittest.TestCase):
+    """The rule opens a second reading only where a neighbour moved the line."""
+
+    def replay(self, cited_line: int, neighbour: str | None, lead: int = 0):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name)
+        build_engine_repo(repo, cited_line=cited_line, neighbour=neighbour, lead=lead)
+        cite = f"{CITED_FILE}:{cited_line}"
+        anchor = anchor_commit(repo, cite, AUTHORING, exact=True)
+        return (
+            repair_beside_neighbours(repo, cite, neighbour_rule=True),
+            repair_beside_neighbours(repo, cite, neighbour_rule=False),
+            neighbour_trees(repo, anchor, CITED_FILE, cited_line),
+        )
+
+    def test_ordinary_drift_is_repaired_by_the_anchor_alone(self) -> None:
+        guarded, unguarded, trees = self.replay(EARLIER_CITED, None)
+        self.assertEqual([], trees)
+        self.assertEqual(CALL_IN_HEAD_WITHOUT_INSERT, guarded)
+        self.assertEqual(unguarded, guarded)
+
+    def test_a_neighbour_below_the_cited_line_opens_no_second_reading(
+        self,
+    ) -> None:
+        guarded, unguarded, trees = self.replay(
+            EARLIER_CITED, "append", EARLIER_NEIGHBOUR_LEAD
+        )
+        self.assertEqual([], trees, "the append left the cited number alone")
+        self.assertEqual(CALL_IN_HEAD_WITHOUT_INSERT, guarded)
+        self.assertEqual(unguarded, guarded)
+
+    def test_a_cite_counted_on_the_anchor_tree_is_still_repaired(self) -> None:
+        # The window flags candidates, not misreads: here the neighbour DID
+        # move the cited line, the prose names the anchor's reading, and the
+        # rule repairs the cite exactly as the anchor alone would have.
+        guarded, unguarded, trees = self.replay(
+            ANCHOR_TREE_CITED, "insert", ANCHOR_TREE_LEAD
+        )
+        self.assertEqual(1, len(trees), "fixture check: the neighbour is read")
+        self.assertEqual(EARLIER_CALL_IN_HEAD, guarded)
+        self.assertEqual(unguarded, guarded)
 
 
 if __name__ == "__main__":

@@ -31,3 +31,20 @@ prose says — `:763` the `before_prompt_build` registration, `:797` the
 recipe can tell which tree a cite was written against, a pass should leave
 `:763` alone: its anchor at `66678c34` is `if ((hasExploration ||
 hasTooling) && !hasWork) return;`, which HEAD holds uniquely at `:769`.
+
+## 2026-11-09T05:04:19Z — The citation recipe now reads the tree these cites were counted on
+
+The hold above no longer needs to be carried by hand. refine-deck's citation
+recipe gained a neighbouring-commit rule (closing
+`citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`):
+before relocating a defunct cite it reads the tree beside any commit to the
+cited file within ten minutes of the anchor that changed the cited line, and
+lets the card's prose pick the reading, declining as `anchor tree ambiguous`
+when the prose does not decide.
+
+- `:763` still anchors at `66678c34`. `ffc0f4bc`, 400 s later, changed that
+  line; the prose's `before_prompt_build` names only `ffc0f4bc`'s line, and
+  HEAD still holds it at `:763`, so the rule leaves the number alone.
+- `:797` now anchors at `2195ec34`, which wrote it back, and that tree holds
+  the `agent_end` registration at `:797` as HEAD does, so the cite reads
+  current without the rule.
