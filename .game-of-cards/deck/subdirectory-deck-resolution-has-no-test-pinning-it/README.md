@@ -37,7 +37,7 @@ that is precisely where the reported consumer failure lives.
 
 The pre-fix behavior was not hypothetical: a consumer filed
 `deck-commands-run-from-a-subdirectory-report-a-healthy-empty-deck`
-(zauberzeug/zoe-app deck, 2026-07-31) after a refine pass took an
+(in its own deck, 2026-07-31) after a refine pass took an
 empty-because-unresolved deck for a clean one — every reader exits 0 with
 zero cards, which is indistinguishable from a drained deck. Their
 `reproduce.sh` is an end-to-end consumer pin (red against the pre-fix

@@ -31,7 +31,7 @@ The 2026-05-07 publish session caught **four** real shipping defects in
 sequence — symlinked plugin assets stripped during marketplace install,
 stale marketplace cache, skill-body shim path resolution, and bash-policy
 denial of `goc` invocation — none of which were visible to the existing
-unit tests. Each was caught only by Rodja running the plugin manually
+unit tests. Each was caught only by the maintainer running the plugin manually
 in a real Claude Code session. That's exactly the kind of surface that
 costs a release if it regresses, and the kind of confidence an automated
 end-to-end check is supposed to deliver.

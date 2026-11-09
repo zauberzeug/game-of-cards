@@ -1,4 +1,4 @@
-"""Regression guard for AGENTS.md § "Card authoring rules" — the English-only rule.
+"""Regression guard for AGENTS.md § "Card authoring rules" — English only, and no published internal name.
 
 Three of the four rules AGENTS.md states for cards filed in this repo had no
 enforcement anywhere. `openclaw-plugin-skills-erzwingen-mehrfach-reads-pro-session`
@@ -16,13 +16,22 @@ must demonstrate it can catch an offender, not merely report a clean tree.
 `test_flags_the_historical_offender` and the `RECALL_CASES` table are that
 demonstration; a guard that silently stopped matching would fail them rather
 than passing quietly on a deck that happens to be clean.
+
+The same script also guards the no-internal-names rule, for the two names
+AGENTS.md itself publishes as examples; `PublishedInternalNamesGuardTest` at the
+end of this module covers that check on the same terms.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import io
+import re
+import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -602,6 +611,239 @@ class EnglishOnlyGuardPrecisionTest(unittest.TestCase):
         empty glob. Without this, moving or renaming the deck would turn
         `test_live_deck_is_clean` into a vacuous pass."""
         self.assertGreater(len(list(guard.DECK_DIR.glob("*/README.md"))), 100)
+
+
+# The example project AGENTS.md publishes, spelled the ways the redacted deck
+# lines spelled it, plus the spellings an author might reach for instead.
+PROJECT_SPELLINGS = [
+    "Filed after the Zoe App drain repeatedly auto-pulled a card",
+    "observed in zauberzeug/zoe-app: their card",
+    "On a single-agent install (zoe) the bug is invisible",
+    "a consuming repo (ZOE workspace)",
+    "the zoe_app wrapper script",
+    "the Zoë deck",  # precomposed diaeresis
+    "the Zoe\u0308 deck",  # e plus a combining diaeresis
+]
+
+# The example meeting AGENTS.md publishes. The last entry wraps across a line,
+# the way a reflowed paragraph would carry it.
+MEETING_SPELLINGS = [
+    "raised at coding coffee last week",
+    "the Coding-Coffee retrospective",
+    "a coding_coffee note",
+    "discussed at the coding\ncoffee on Friday",
+]
+
+# Near misses that share letters with a published name but name nothing.
+INTERNAL_NAME_PRECISION_CASES = [
+    "zoea larvae are planktonic",
+    "the zoetrope animation",
+    "the protozoea stage",
+    "decoding coffee-machine telemetry",
+    "coding standards, then coffee",
+    "coffee",
+    "coding",
+]
+
+CLEAN_README = (
+    "---\n"
+    "title: cache-expires-too-soon\n"
+    'summary: "The cache expires before the first read."\n'
+    "---\n"
+    "\n"
+    "# Body\n"
+    "\n"
+    "Observed in a downstream consumer repository.\n"
+)
+
+
+class PublishedInternalNamesGuardTest(unittest.TestCase):
+    """AGENTS.md's no-internal-names rule, for the two names it publishes.
+
+    Regression guard for
+    `internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded`:
+    AGENTS.md called this rule unguarded but audited clean while the example
+    project it names sat on 16 lines across 6 cards, every one of them in a body
+    or a log — the surfaces the English-only check deliberately skips. So the
+    tests below plant names in each of those surfaces, not only in frontmatter.
+    """
+
+    @staticmethod
+    def _deck(tmp: str, files: dict[str, str]) -> Path:
+        deck = Path(tmp)
+        for rel, text in files.items():
+            path = deck / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        return deck
+
+    @staticmethod
+    def _run_main(deck: Path, argv: list[str]) -> int:
+        with mock.patch.object(guard, "DECK_DIR", deck), redirect_stdout(
+            io.StringIO()
+        ), redirect_stderr(io.StringIO()):
+            return guard.main(argv)
+
+    def test_planted_body_naming_the_project_fails_the_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            deck = self._deck(
+                tmp,
+                {
+                    "cache-expires-too-soon/README.md": CLEAN_README,
+                    "retry-budget-is-never-reset/README.md": CLEAN_README.replace(
+                        "a downstream consumer repository", "the Zoe App deck"
+                    ),
+                },
+            )
+            self.assertEqual(
+                guard.scan_deck_for_internal_names(deck),
+                [("retry-budget-is-never-reset/README.md", 8, "names the internal project 'Zoe'")],
+            )
+            self.assertEqual(self._run_main(deck, ["--check"]), 1, "--check must fail the commit")
+            self.assertEqual(self._run_main(deck, []), 0, "report mode must never fail")
+
+    def test_a_clean_deck_passes_the_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            deck = self._deck(tmp, {"cache-expires-too-soon/README.md": CLEAN_README})
+            self.assertEqual(guard.scan_deck_for_internal_names(deck), [])
+            self.assertEqual(self._run_main(deck, ["--check"]), 0)
+
+    def test_every_surface_of_a_card_is_scanned(self) -> None:
+        """Frontmatter, body, log, reproducer and nested sibling — all of the card."""
+        readme = (
+            "---\n"
+            "title: retry-budget-is-never-reset\n"
+            'summary: "Seen in the Zoe workspace."\n'
+            "definition_of_done: |\n"
+            "  - [ ] TDD: replay the zoe-app trace\n"
+            "---\n"
+            "\n"
+            "Raised at coding coffee.\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            deck = self._deck(
+                tmp,
+                {
+                    "c/README.md": readme,
+                    "c/log.md": "## 2026-11-09\n\nFiled from the zoe deck.\n",
+                    "c/reproduce.py": "# replays the Zoe App failure\nprint('ok')\n",
+                    "c/fixtures/notes.md": "clean line\nthe coding-coffee notes\n",
+                },
+            )
+            self.assertEqual(
+                [(path, line) for path, line, _reason in guard.scan_deck_for_internal_names(deck)],
+                [
+                    ("c/README.md", 3),
+                    ("c/README.md", 5),
+                    ("c/README.md", 8),
+                    ("c/fixtures/notes.md", 2),
+                    ("c/log.md", 3),
+                    ("c/reproduce.py", 1),
+                ],
+            )
+
+    def test_worker_value_is_the_only_exemption(self) -> None:
+        """AGENTS.md's worker docs let `worker:` name a machine; nothing else is exempt."""
+        flow = (
+            "---\n"
+            "title: a\n"
+            "worker: {who: claude-code, where: zoe-host}\n"
+            "---\n"
+            "\n"
+            "worker: {who: claude-code, where: zoe-host}\n"
+        )
+        block = (
+            "---\n"
+            "title: b\n"
+            "worker:\n"
+            "  who: claude-code\n"
+            "  where: zoe-host\n"
+            "tags: [zoe]\n"
+            "---\n"
+        )
+        sequence = "---\ntitle: c\nworker:\n- who: claude-code\n  where: zoe-host\n---\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            deck = self._deck(
+                tmp,
+                {
+                    "a/README.md": flow,
+                    "a/log.md": "worker: {who: claude-code, where: zoe-host}\n",
+                    "b/README.md": block,
+                    "c/README.md": sequence,
+                },
+            )
+            self.assertEqual(
+                [(path, line) for path, line, _reason in guard.scan_deck_for_internal_names(deck)],
+                [("a/README.md", 6), ("a/log.md", 1), ("b/README.md", 6)],
+                "only the frontmatter `worker` value is exempt: the same text in a "
+                "body or a log, or a key after the worker block, must still fire",
+            )
+
+    def test_every_spelling_is_caught(self) -> None:
+        for kind, spellings in (
+            ("internal project", PROJECT_SPELLINGS),
+            ("internal meeting", MEETING_SPELLINGS),
+        ):
+            for text in spellings:
+                with self.subTest(text=text):
+                    reasons = [reason for _line, reason in guard.flag_internal_names(text)]
+                    self.assertTrue(
+                        [r for r in reasons if kind in r], f"{text!r} must be flagged: {reasons}"
+                    )
+
+    def test_near_misses_are_not_flagged(self) -> None:
+        for text in INTERNAL_NAME_PRECISION_CASES:
+            with self.subTest(text=text):
+                self.assertEqual(guard.flag_internal_names(text), [])
+
+    def test_line_numbers_point_at_the_name(self) -> None:
+        """Folding diacritics must not shift lines; a wrapped name reports where it starts."""
+        self.assertEqual(
+            guard.flag_internal_names("Zoë\nplain\nZoe\u0308\n"),
+            [(1, "names the internal project 'Zoe'"), (3, "names the internal project 'Zoe'")],
+        )
+        self.assertEqual(
+            guard.flag_internal_names("one\ndiscussed at the coding\ncoffee on Friday\n"),
+            [(2, "names the internal meeting 'coding coffee'")],
+        )
+
+    def test_table_holds_exactly_the_examples_agents_md_publishes(self) -> None:
+        """Listing a published name exposes nothing; listing any other would.
+
+        Both directions: the guard may hold no name AGENTS.md does not print,
+        and an example AGENTS.md adds must reach the guard in the same change.
+        """
+        flat = re.sub(r"\s+", " ", (ROOT / "AGENTS.md").read_text(encoding="utf-8"))
+        anchor = "**No references to internal events or projects by name.**"
+        self.assertIn(anchor, flat, "AGENTS.md no longer states the no-internal-names rule")
+        start = flat.index(anchor)
+        end = flat.find(" - **", start + len(anchor))
+        bullet = flat[start : end if end != -1 else None]
+        published = {
+            name: kind.removesuffix("s")
+            for kind, name in re.findall(r"(internal \w+) \(e\.g\. ([^)]+)\)", bullet)
+        }
+        self.assertTrue(published, "the rule no longer gives an `(e.g. ...)` example to guard")
+        self.assertEqual(guard.PUBLISHED_INTERNAL_NAMES, published)
+        self.assertIn(
+            "scripts/check_card_language.py",
+            bullet,
+            "AGENTS.md's rule must say what guards its example names",
+        )
+
+    def test_live_deck_names_no_published_internal_name(self) -> None:
+        findings = guard.scan_deck_for_internal_names()
+        self.assertEqual(
+            findings,
+            [],
+            "AGENTS.md forbids naming internal meetings or projects in a card; write "
+            "'a downstream consumer repository' instead. Found: "
+            + "; ".join(f"{path}:{line}" for path, line, _reason in findings),
+        )
+
+    def test_live_deck_scan_reaches_logs(self) -> None:
+        """Guard the guard: the live scan must cover logs, where most names sat."""
+        self.assertGreater(len(list(guard.DECK_DIR.glob("*/log.md"))), 100)
 
 
 if __name__ == "__main__":

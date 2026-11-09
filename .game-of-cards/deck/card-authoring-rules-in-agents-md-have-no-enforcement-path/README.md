@@ -21,6 +21,8 @@ worker: {who: "claude[bot]", where: main}
 
 # AGENTS.md's card-authoring rules have no enforcement path
 
+> Later evidence: the no-internal-names rule already had live instances on the day this card called it audited clean, and its two published example names are now guarded — see [internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded](../internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded/).
+
 ## Resolution
 
 **English-only is now guarded; the two confidentiality rules are still not.**

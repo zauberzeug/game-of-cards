@@ -18,7 +18,7 @@ definition_of_done: |
   - [x] Marketing site section discloses Plausible Analytics with a link to Plausible's own privacy policy and the key facts (no cookies, no IP retention, no third-party sharing)
   - [x] Page is reachable at `https://game-of-cards.com/privacy.html` after the next Pages deploy — confirmed `HTTP/2 200` from GitHub Pages on commit c961f18 (deploy run 25571951008)
   - [x] Footer link to `/privacy.html` added on `site/index.html` so the page is discoverable from the homepage (not only via the marketplace listing)
-  - [x] Rodja signs off on the rendered text before close (UI verification feedback)
+  - [x] The maintainer signs off on the rendered text before close (UI verification feedback)
   - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---

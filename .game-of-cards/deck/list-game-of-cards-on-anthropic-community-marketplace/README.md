@@ -22,7 +22,7 @@ advanced_by:
   - community-marketplace-pin-drifts-silently-behind-releases
 tags: [story, infra, documentation]
 definition_of_done: |
-  - [x] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits Rodja's marketplace-grade sign-off on the rendered README) — done 2026-05-08, as are all eleven `advanced_by` cards.
+  - [x] All hard prereqs closed: `add-readme-to-claude-code-plugin` (whose own prereqs `bundle-goc-engine-inside-plugin-payload` and `align-skill-names-with-agile-vocabulary` are both done; awaits the maintainer's marketplace-grade sign-off on the rendered README) — done 2026-05-08, as are all eleven `advanced_by` cards.
   - [x] Decision recorded on submission channel: PR to `anthropics/claude-code-plugins` (or current canonical name) vs. form at `clau.de/plugin-directory-submission` vs. both. Capture the URL and current submission policy at decision time, since Anthropic's process may change between when the card was filed and when it's worked.
   - [x] ~~Fresh-machine smoke test passes: a clean environment with no prior `game-of-cards` install runs `/plugin marketplace add` (community marketplace) → `/plugin install game-of-cards@…` → prompts agent → agent creates a card. Zero global package installs required. Captured as a screen recording or written reproduction so the submission PR can link to it.~~ — **moved** to [community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation](../community-marketplace-pin-is-frozen-on-a-commit-that-fails-plugin-validation/): a smoke against today's frozen May pin would only re-confirm the known breakage, so it runs once the pin moves.
   - [x] Version bumped intentionally if appropriate. Pre-1.0 (`0.0.x`) is acceptable for community marketplace; document the choice. If 1.0.0 is the chosen stake-in-the-ground, bump pyproject.toml + plugin.json + marketplace.json in lockstep (the existing CI tripwire enforces this).
@@ -78,11 +78,11 @@ install-docs update continue in
 
 ## Why human_gate=decision (while open)
 
-The submission itself is a user action — Rodja decides on the channel
+The submission itself is a user action — the maintainer decides on the channel
 (PR vs form) at submission time, opens it, and shepherds the review.
 An autonomous agent should not file a PR to an Anthropic-owned
 repository on the user's behalf. The card sits in the decision queue
-until Rodja claims it explicitly.
+until the maintainer claims it explicitly.
 
 ## Out of scope
 
@@ -115,7 +115,7 @@ until Rodja claims it explicitly.
   end-to-end on a clean environment than one that has only been
   tested on the maintainer's dev box.
 
-## Decisions (2026-05-08, Rodja)
+## Decisions (2026-05-08, maintainer)
 
 - **Submission channel: form at `clau.de/plugin-directory-submission`.**
   Verified at decision time: `anthropics/claude-plugins-community` is

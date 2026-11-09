@@ -1,6 +1,6 @@
 ---
 title: make-kickoff-idempotent-on-restart
-summary: "Today's kickoff skill writes `.claude/settings.json` mid-flow, instructs the user to fully restart Claude Code, and then expects to 'resume at Stage 5' — but Claude Code sessions are episodic. Restarting without `-r` drops conversation context, and a fresh `Skill(kickoff)` invocation only checks Stage 0 (`.game-of-cards/deck/` exists?). All other stages — intro, persona, three merge questions — are re-asked from scratch. Surfaced today during Rodja's pre-submission smoke test: after the restart prompt, a new session re-asked every kickoff question even though the user had already answered them once. Two design changes are needed in lockstep: (a) make kickoff idempotent via on-disk state detection so a re-run on a partially-set-up repo only asks for the answers not yet captured (preferred over a progress file per Rodja's choice); (b) restructure stage ordering so the restart-required stage — if any — is the LAST stage, with everything else (persona, merges, `goc install`, settings.json write) happening before it. Ideally drop the mandatory mid-flow restart entirely by relying on Claude Code's interactive permission prompt when `goc install` runs without a pre-existing `Bash(goc:*)` allowance."
+summary: "Today's kickoff skill writes `.claude/settings.json` mid-flow, instructs the user to fully restart Claude Code, and then expects to 'resume at Stage 5' — but Claude Code sessions are episodic. Restarting without `-r` drops conversation context, and a fresh `Skill(kickoff)` invocation only checks Stage 0 (`.game-of-cards/deck/` exists?). All other stages — intro, persona, three merge questions — are re-asked from scratch. Surfaced today during the maintainer's pre-submission smoke test: after the restart prompt, a new session re-asked every kickoff question even though the user had already answered them once. Two design changes are needed in lockstep: (a) make kickoff idempotent via on-disk state detection so a re-run on a partially-set-up repo only asks for the answers not yet captured (preferred over a progress file per the maintainer's choice); (b) restructure stage ordering so the restart-required stage — if any — is the LAST stage, with everything else (persona, merges, `goc install`, settings.json write) happening before it. Ideally drop the mandatory mid-flow restart entirely by relying on Claude Code's interactive permission prompt when `goc install` runs without a pre-existing `Bash(goc:*)` allowance."
 status: done
 stage: null
 contribution: medium
@@ -39,11 +39,11 @@ Stage 0 (which only checks `.game-of-cards/deck/`), finds the deck
 still missing (because Stage 5 was the install step that never ran),
 and starts over from Stage 1 — re-asking every question.
 
-Rodja hit this in today's pre-submission smoke test: kickoff wrote
+The maintainer hit this in today's pre-submission smoke test: kickoff wrote
 `.claude/settings.json`, asked for a restart, the user restarted
 without `-r`, and the new session asked everything again.
 
-## Design (Rodja's pick: state-detection)
+## Design (maintainer's pick: state-detection)
 
 Replace the implicit "you need a progress file" model with on-disk
 detection. Each piece of kickoff state has a natural artefact:
@@ -69,7 +69,7 @@ The persona question is special: it has no direct artefact. But it
 only drives Stage 3 defaults — if Stage 3's answers are already
 recoverable from markers, persona is irrelevant on re-entry.
 
-## Restart should be last (Rodja's clarification)
+## Restart should be last (maintainer's clarification)
 
 The deeper fix is to remove the mandatory mid-flow restart. The
 current sequence is "ask everything → write settings.json → restart →

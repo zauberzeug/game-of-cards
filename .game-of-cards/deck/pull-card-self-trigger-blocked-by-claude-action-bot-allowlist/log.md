@@ -12,6 +12,6 @@ Item 3 (cron-only path) annotated N/A. Item 4 (parent card update) handled via a
 
 ## 2026-05-09: closed — empirical N+1 observation landed
 
-Manual `workflow_dispatch` of `pull-card.yml` (run `25601890607`, iter 1, actor=Rodja Trappe → conclusion=success) self-triggered run `25602174782` (iter 2, actor=`github-actions[bot]`). Iter 2 completed with `conclusion=success`; the `Pull one card` step itself reported `conclusion=success` (agent step ran past the bot-actor allowlist gate that was previously failing in run `25601162153`). The `Re-trigger workflow if cards remain` step also succeeded, extending the chain to iter 3 — confirming the loop is now functional end-to-end, not just iter-2 specifically.
+Manual `workflow_dispatch` of `pull-card.yml` (run `25601890607`, iter 1, actor=the maintainer → conclusion=success) self-triggered run `25602174782` (iter 2, actor=`github-actions[bot]`). Iter 2 completed with `conclusion=success`; the `Pull one card` step itself reported `conclusion=success` (agent step ran past the bot-actor allowlist gate that was previously failing in run `25601162153`). The `Re-trigger workflow if cards remain` step also succeeded, extending the chain to iter 3 — confirming the loop is now functional end-to-end, not just iter-2 specifically.
 
 DoD item 2's observation half ticked. Card closed. Parent card (`self-trigger-pull-card-workflow-for-fresh-context-per-card`) already has a `## Resolution (2026-05-09)` block recording the option-(a) outcome.

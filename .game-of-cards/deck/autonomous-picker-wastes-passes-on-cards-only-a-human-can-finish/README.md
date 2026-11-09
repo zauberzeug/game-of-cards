@@ -28,7 +28,7 @@ completable only by a human** — not merely unprovisioned in one
 worktree, but forever off-limits to an unattended agent. The canonical
 shape is an `EMPIRICAL:` item that requires a human to trigger a live,
 side-effecting action, or to verify behaviour on a physical device.
-(This card originally cited the Zoe App card
+(This card originally cited a downstream consumer repository's card
 `conversations-send-and-receive-file-attachments` as its concrete
 instance. That was wrong, and the correction matters for scoping: only
 one of that card's eight DoD items is human-only — a production send
@@ -73,7 +73,7 @@ passes have already been spent discovering it.
 
 ## Prior art — the downstream drain already patches this, in the wrong layer
 
-The Zoe App autonomous loop (a downstream `goc` consumer) hit this
+The autonomous loop of a downstream `goc` consumer hit this
 repeatedly and grew its own **release-attempt counter** as a safety net:
 `_count_release_attempts` / `release_claim_if_stuck` in its
 `tool/_lib.sh`. After a card is auto-released `max_releases` times

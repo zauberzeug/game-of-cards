@@ -1,7 +1,7 @@
 
-## 2026-08-01 — consumer evidence: the drift shipped a wrong audit verdict downstream (claude-code, zoe host)
+## 2026-08-01 — consumer evidence: the drift shipped a wrong audit verdict downstream (claude-code, downstream consumer host)
 
-Concrete cost of the drift, observed in zauberzeug/zoe-app: their card
+Concrete cost of the drift, observed in a downstream consumer repository: their card
 `deck-commands-run-from-a-subdirectory-report-a-healthy-empty-deck`
 (2026-07-31) reproduced the healthy-empty-deck defect against the
 marketplace 0.0.27 bundle — whose engine still reads "Otherwise returns

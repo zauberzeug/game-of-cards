@@ -15,7 +15,7 @@ definition_of_done: |
   - [x] Examples cover the core vocabulary in plain English: filing a card, autonomous loop / pulling, surfacing decision-gated cards, editing a card's DoD, extending the deck, finishing
   - [x] Each example prompt is paired with the GoC term(s) it exercises so readers connect intent → vocabulary
   - [x] Visual style is intentional: utterances render as italic sans-serif chips with curly quotes (distinct from `.code-block` mono); no orphaned classes left behind
-  - [x] Rendered locally and approved by Rodja before close
+  - [x] Rendered locally and approved by the maintainer before close
 ---
 
 # how-it-works-section-introduces-vocabulary-with-example-prompts

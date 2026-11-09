@@ -20,7 +20,7 @@ definition_of_done: |
   - [x] Comic from `create-project-website-explanatory-illustration` is integrated as the primary first-content figure under the lede
   - [x] Install/get-started snippet on the site is accurate for current `game-of-cards` packaging and points at canonical resources (`goc.md`, `ABOUT.md`, GitHub repo)
   - [x] `.github/workflows/pages.yml` serves `site/` at `/`, still renders `goc.md` and `ABOUT.md` as Jekyll subpages, and still mirrors raw markdown (`/index.md`, `/README.md`, `/goc.md`, `/ABOUT.md`, `/llms.txt`) for LLMs
-  - [x] Site renders correctly on desktop and mobile widths — Playwright captures + Rodja visual sign-off before close
+  - [x] Site renders correctly on desktop and mobile widths — Playwright captures + maintainer visual sign-off before close
   - [x] `uv run goc validate` passes
 ---
 
@@ -44,4 +44,4 @@ The site should cover:
 
 *Resolved 2026-05-05:* Hand-crafted static homepage at site/index.html (chronicle/serif aesthetic, dark navy + gold, starfield) replaces the Jekyll-rendered README at /; goc.md and ABOUT.md still render via Jekyll-cayman as subpages; raw markdown mirrors stay untouched for LLMs.
 
-*Reasoning:* Rodja delivered a finished design (zip drop) with a distinct masthead and chronicle styling that the Jekyll-cayman default cannot express. README.md remains the LLM-readable canonical content (mirrored at /index.md, /README.md), so the visual surface and the LLM surface diverge by design.
+*Reasoning:* The maintainer delivered a finished design (zip drop) with a distinct masthead and chronicle styling that the Jekyll-cayman default cannot express. README.md remains the LLM-readable canonical content (mirrored at /index.md, /README.md), so the visual surface and the LLM surface diverge by design.

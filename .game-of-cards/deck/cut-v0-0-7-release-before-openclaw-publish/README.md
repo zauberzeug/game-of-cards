@@ -29,7 +29,7 @@ worker: {who: Rodja Trappe, where: main}
 
 ## Why
 
-The `provide-openclaw-plugin-for-skills-and-hooks` card is parked at gate=session waiting on Rodja's ClawHub + npm publish credentials. Before that publish happens, the PyPI release should be cut so the version numbers align across ecosystems.
+The `provide-openclaw-plugin-for-skills-and-hooks` card is parked at gate=session waiting on the maintainer's ClawHub + npm publish credentials. Before that publish happens, the PyPI release should be cut so the version numbers align across ecosystems.
 
 Today both `pyproject.toml` and `openclaw-plugin/package.json` are pinned at 0.0.6, but ~30 commits have landed since the v0.0.6 tag including substantial work:
 
@@ -54,7 +54,7 @@ The Anthropic community marketplace listing card also benefits — submitting ag
 
 ## Scope boundaries
 
-- This card cuts PyPI only. The actual `npm publish` and ClawHub submission stay in `publish-openclaw-plugin` / `provide-openclaw-plugin-for-skills-and-hooks` so credentials and platform-specific publish flows remain on Rodja.
+- This card cuts PyPI only. The actual `npm publish` and ClawHub submission stay in `publish-openclaw-plugin` / `provide-openclaw-plugin-for-skills-and-hooks` so credentials and platform-specific publish flows remain with the maintainer.
 - No release-notes / changelog generation is in scope. The repo doesn't maintain a CHANGELOG.md today; commit history is the source of truth.
 
 ## Non-goals

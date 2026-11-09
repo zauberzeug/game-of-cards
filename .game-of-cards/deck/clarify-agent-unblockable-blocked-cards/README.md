@@ -44,7 +44,7 @@ status: blocked
 human_gate: session
 ```
 
-Rodja pointed out that this was semantically wrong. The card did not need a human session; it needed recurring agent research. Correct state:
+The maintainer pointed out that this was semantically wrong. The card did not need a human session; it needed recurring agent research. Correct state:
 
 ```yaml
 status: blocked

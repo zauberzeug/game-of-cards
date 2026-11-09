@@ -28,7 +28,7 @@ worker: {who: "claude[bot]", where: main}
 
 ## Why
 
-Reported by Rodja 2026-05-10 after inspecting `/tmp/goc-usage` (an empty
+Reported by the maintainer 2026-05-10 after inspecting `/tmp/goc-usage` (an empty
 non-git dir post-kickoff): "I find it worrysome to have AGENTS.md and
 CLAUDE.md with same content."
 

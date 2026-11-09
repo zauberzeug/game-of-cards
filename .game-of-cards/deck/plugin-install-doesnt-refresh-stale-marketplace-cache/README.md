@@ -69,7 +69,7 @@ both human users and LLM agents the right idiom.
 
 - Discovered while shipping `publish-claude-code-plugin` — every
   iteration of "push fix → reinstall → still broken" was a wasted
-  cycle until Rodja realized the marketplace cache was stale.
+  cycle until the maintainer realized the marketplace cache was stale.
 - The byte-for-byte CI tripwire in `ci.yml` only catches
   symlink-strip-class regressions; it doesn't help with the
   consumer-side stale-cache UX.

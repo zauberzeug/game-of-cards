@@ -1,11 +1,11 @@
 ## 2026-07-22 — filed from a downstream drain observation
 
-Filed after the Zoe App drain repeatedly auto-pulled a verify-first card
+Filed after a downstream consumer repository's drain repeatedly auto-pulled a verify-first card
 (`conversations-send-and-receive-file-attachments`) whose DoD needs a
 human to trigger a production `chat.send` with an attachment plus a
 live-device check — work no unattended agent may do. The card was born at
 `human_gate: none`, so the picker kept offering it; ~2–3 passes were spent
-before the Zoe App drain's own release-attempt counter
+before that drain's own release-attempt counter
 (`_count_release_attempts` / `release_claim_if_stuck` in its `tool/_lib.sh`)
 tripped and escalated it to `human_gate: session`.
 

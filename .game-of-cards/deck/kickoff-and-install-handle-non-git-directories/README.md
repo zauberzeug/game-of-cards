@@ -79,7 +79,7 @@ absent, print:
 > want the deck tracked.
 
 Then continue. **Do not educate.** No explanation of what git does, why
-GoC uses it, or how to fix it beyond the `git init` mention. Per Rodja's
+GoC uses it, or how to fix it beyond the `git init` mention. Per the maintainer's
 explicit feedback (2026-05-10): factual notice, not a tutorial.
 
 ## How

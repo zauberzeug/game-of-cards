@@ -21,7 +21,7 @@ mutations. A human should pick.
 
 ## 2026-10-06T05:22:31Z: decision recorded
 
-Option 1: publish, status active and done (incl. --bundle) refuse to release a draft whose summary fails the published-card rule; validate and the verbs share one summary_problem() rule — Rodja 2026-10-06 (zauberzeug Zoe workspace card goc-publish-laesst-eine-karte-ohne-summary-in-den-stapel); matches the placeholder-scaffold gate already in publish, and option 3 would silently author frontmatter nobody wrote. Gate decision → none.
+Option 1: publish, status active and done (incl. --bundle) refuse to release a draft whose summary fails the published-card rule; validate and the verbs share one summary_problem() rule — maintainer, 2026-10-06 (downstream consumer repository card goc-publish-laesst-eine-karte-ohne-summary-in-den-stapel); matches the placeholder-scaffold gate already in publish, and option 3 would silently author frontmatter nobody wrote. Gate decision → none.
 
 ## 2026-10-06T05:25:55Z — Losing options
 

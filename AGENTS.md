@@ -29,7 +29,7 @@ uv run python -m unittest discover -s tests  # run the regression suite
 uv build                           # produce wheel + sdist in dist/
 pre-commit run --all-files         # sync plugin assets + goc validate + card language + card YAML
 python scripts/sync_plugin_assets.py --check  # verify claude-plugin/ is in sync
-uv run python scripts/check_card_language.py  # cards obey the English-only rule
+uv run python scripts/check_card_language.py  # cards are English and name no published internal term
 uv run python scripts/check_card_frontmatter_yaml.py  # card frontmatter is valid YAML
 ```
 
@@ -601,14 +601,23 @@ When filing GoC cards in this repo:
   internal projects (e.g. Zoe), or individual participants in card
   bodies. State the technical motivation directly. If a card needs
   context that only an internal source provides, summarize the
-  technical fact, not its origin.
-  This rule and the quoting rule above are **unguarded** — no check
-  enforces them, so they hold only as far as the author's care does.
-  Both were audited clean on 2026-07-27. Mechanizing them needs a
-  decision nobody has made yet (a denylist of internal names has to be
-  maintained somewhere, and permitted code/doc quoting is hard to tell
-  from forbidden discussion quoting), which is why the English-only
-  guard stops where it does.
+  technical fact, not its origin: "a downstream consumer repository"
+  for where evidence came from, "the maintainer" for who decided or
+  signed off.
+  Only the two example names are guarded:
+  `scripts/check_card_language.py` fails on either one anywhere
+  under `.game-of-cards/deck/` — frontmatter, body, `log.md`,
+  sibling files — except a README's `worker:` value, which may name
+  a machine. A guard can list no other name: its list would publish
+  what the rule protects, while this file publishes these two
+  already. Individual names, other internal names and the quoting
+  rule above are **unguarded** and hold only as far as the author's
+  care does. The latest sweep, on 2026-11-09, rephrased the example
+  project on 16 lines, individual attributions on 62 and three
+  discussion quotes — all in cards an earlier audit had called
+  clean — so treat the unguarded rules as unaudited. Mechanizing the
+  quoting rule needs a decision nobody has made yet: permitted
+  code/doc quoting is hard to tell from forbidden discussion quoting.
 - **YAML format for list fields:** All four bidirectional-edge list
   fields — `advances`, `advanced_by`, `supersedes`, and
   `superseded_by` — use block-style (one `- item` per line) when

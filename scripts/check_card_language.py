@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Repo-local guard for AGENTS.md § "Card authoring rules" — the English-only rule.
+"""Repo-local guard for AGENTS.md § "Card authoring rules" — English only, and no internal name it publishes.
+
+Two rules, two checks, one script and one pre-commit hook. The English-only
+check is described first; the internal-names check has its own section below,
+"The no-internal-names rule, for the names AGENTS.md publishes".
 
 AGENTS.md requires every card in this repo to be written in English, because
 cards are read cold by future agents and contributors who may not share the
@@ -104,6 +108,35 @@ English sense is the real false positive that earns the word a place: a
 homograph goes into the exclusion list above, a suffixed word into
 `ENGLISH_MARKER_SUFFIX_WORDS`.
 
+## The no-internal-names rule, for the names AGENTS.md publishes
+
+AGENTS.md forbids naming internal meetings, internal projects or individual
+participants in a card, and gives one example of each of the first two kinds.
+`PUBLISHED_INTERNAL_NAMES` holds exactly those two examples and nothing else.
+AGENTS.md publishes them already, so listing them here exposes nothing; a list of
+any other internal name, or of people, would itself publish what the rule
+protects. So individual names stay unguarded, as does every internal name
+AGENTS.md does not print. `tests/test_card_authoring_rules.py` holds the table to
+the rule's examples in both directions, so an example added to or dropped from
+AGENTS.md cannot leave this check behind.
+
+This check reads far more than the language check: every file under the deck —
+frontmatter, body, `log.md`, `reproduce.py` and any other sibling file. All 16
+lines that named the example project when this check landed sat in bodies and
+logs, where the language check never looks. The language check skips bodies
+because they quote foreign identifiers legitimately; a body that names the
+project is not quoting anything, it is the leak.
+
+The single exemption is a card README's frontmatter `worker:` value. AGENTS.md's
+worker docs let it name a person or a machine, and a host named after the project
+is a machine name. The same text anywhere else in the card is flagged.
+
+Matching is whole-word (a letter on either side defeats it, so `zoea` is no hit)
+and runs on text that is lowercased with diacritics stripped. Any run of spaces,
+hyphens or underscores counts as the gap between the words of a two-word name,
+a line break included, so `Zoe App`, `zoe-app`, `Zoë` and a `coding coffee`
+wrapped across two lines all fire.
+
 Usage:
     python scripts/check_card_language.py           # report findings
     python scripts/check_card_language.py --check   # exit 1 on any finding
@@ -114,6 +147,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -314,25 +348,147 @@ def scan_deck(deck_dir: Path = DECK_DIR) -> list[tuple[str, str, str]]:
     ]
 
 
+# The internal meeting and the internal project that AGENTS.md § "Card authoring
+# rules" names as examples of what a card must not name, keyed by AGENTS.md's
+# spelling and valued by the kind the rule calls each one. These two are the only
+# names this table may ever hold — see the module docstring for why.
+PUBLISHED_INTERNAL_NAMES = {
+    "coding coffee": "internal meeting",
+    "Zoe": "internal project",
+}
+
+
+# The combining marks NFKD splits off a Latin base letter: the diacritics block,
+# its extended and supplement blocks, the marks for symbols, and the half marks.
+# A regex over these blocks runs in C; a per-character `unicodedata.combining`
+# loop over the whole deck cost a second on every commit.
+_COMBINING_MARKS = re.compile("[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]")
+
+
+def _fold(text: str) -> str:
+    """Lowercase and strip diacritics. Every newline survives, so line numbers hold."""
+    lowered = text.lower()
+    if lowered.isascii():
+        return lowered
+    return _COMBINING_MARKS.sub("", unicodedata.normalize("NFKD", lowered))
+
+
+def _name_pattern(name: str) -> re.Pattern[str]:
+    """Whole-word pattern for a folded name; any space/hyphen/underscore run between words."""
+    words = r"[\s_-]+".join(re.escape(word) for word in _fold(name).split())
+    return re.compile(rf"(?<![a-z]){words}(?![a-z])")
+
+
+# Each name's first folded word doubles as a substring pre-check: a plain `in`
+# test rules out nearly every file before the lookaround pattern has to run.
+_INTERNAL_NAME_PATTERNS = [
+    (name, kind, _fold(name).split()[0], _name_pattern(name))
+    for name, kind in PUBLISHED_INTERNAL_NAMES.items()
+]
+
+
+def _worker_value_lines(text: str) -> frozenset[int]:
+    """1-based numbers of the lines that hold a README's frontmatter `worker` value.
+
+    Line-based rather than parsed, so a card whose frontmatter the parser refuses
+    keeps its exemption. Covers the one-line forms (`worker: x`,
+    `worker: {who: x, where: y}`) and a block value's continuation lines, whether
+    indented or a same-indent `- ` sequence item.
+    """
+    lines = text.split("\n")
+    if lines[0].rstrip() != "---":
+        return frozenset()
+    exempt: set[int] = set()
+    in_worker = False
+    for number, line in enumerate(lines[1:], start=2):
+        if line.rstrip() == "---":
+            break
+        if in_worker and line[:1] in (" ", "\t", "-"):
+            exempt.add(number)
+            continue
+        in_worker = line.startswith("worker:")
+        if in_worker:
+            exempt.add(number)
+    return frozenset(exempt)
+
+
+def flag_internal_names(
+    text: str, exempt_lines: frozenset[int] = frozenset()
+) -> list[tuple[int, str]]:
+    """Return sorted `(line, reason)` pairs, one per published internal name in `text`.
+
+    A name wrapped across a line break is reported on the line where it starts.
+    """
+    folded = _fold(text)
+    findings: set[tuple[int, str]] = set()
+    for name, kind, first_word, pattern in _INTERNAL_NAME_PATTERNS:
+        if first_word not in folded:
+            continue
+        for match in pattern.finditer(folded):
+            line = folded.count("\n", 0, match.start()) + 1
+            if line not in exempt_lines:
+                findings.add((line, f"names the {kind} {name!r}"))
+    return sorted(findings)
+
+
+def scan_deck_for_internal_names(deck_dir: Path = DECK_DIR) -> list[tuple[str, int, str]]:
+    """Return `(path, line, reason)` triples over every file under `deck_dir`.
+
+    `path` is relative to `deck_dir`. Only a card README's `worker:` value is
+    exempt; a file holding a NUL byte is binary and has no prose to check.
+    """
+    findings: list[tuple[str, int, str]] = []
+    for path in sorted(p for p in deck_dir.rglob("*") if p.is_file()):
+        data = path.read_bytes()
+        if b"\0" in data:
+            continue
+        text = data.decode("utf-8", errors="replace")
+        is_card_readme = path.name == "README.md" and path.parent.parent == deck_dir
+        exempt = _worker_value_lines(text) if is_card_readme else frozenset()
+        hits = flag_internal_names(text, exempt)
+        if hits:
+            rel = path.relative_to(deck_dir).as_posix()
+            findings.extend((rel, line, reason) for line, reason in hits)
+    return findings
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="exit 1 on any finding")
     args = parser.parse_args(argv)
 
-    scanned = len(list(DECK_DIR.glob("*/README.md")))
-    findings = scan_deck()
-    if not findings:
+    deck_dir = DECK_DIR  # read at call time, so a test can point it elsewhere
+    scanned = len(list(deck_dir.glob("*/README.md")))
+    language = scan_deck(deck_dir)
+    names = scan_deck_for_internal_names(deck_dir)
+    if language:
+        for card, field, reason in language:
+            print(f"{card}: {field}: {reason}")
+    else:
         print(f"English-only: clean ({scanned} cards scanned)")
+    if names:
+        for path, line, reason in names:
+            print(f"{path}:{line}: {reason}")
+    else:
+        print(f"Published internal names: clean ({scanned} cards scanned, every file)")
+    if not (language or names):
         return 0
-    for card, field, reason in findings:
-        print(f"{card}: {field}: {reason}")
     sys.stdout.flush()  # keep the findings above the summary when both are piped
-    print(
-        f"\n{len(findings)} finding(s). AGENTS.md § 'Card authoring rules' requires "
-        "English titles, summaries and DoD items — cards are read cold by people who "
-        "do not share the language of the conversation that motivated them.",
-        file=sys.stderr,
-    )
+    if language:
+        print(
+            f"\n{len(language)} non-English finding(s). AGENTS.md § 'Card authoring rules' "
+            "requires English titles, summaries and DoD items — cards are read cold by "
+            "people who do not share the language of the conversation that motivated them.",
+            file=sys.stderr,
+        )
+    if names:
+        print(
+            f"\n{len(names)} internal-name finding(s). AGENTS.md § 'Card authoring rules' "
+            "forbids naming internal meetings, internal projects or individual participants "
+            "anywhere in a card — say 'a downstream consumer repository' or 'the maintainer' "
+            "instead. A README's `worker:` value is the one place exempt.",
+            file=sys.stderr,
+        )
     return 1 if args.check else 0
 
 

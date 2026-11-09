@@ -27,7 +27,7 @@ shape with a less predictable cwd.
 
 ## 2026-10-25T05:20:07Z: decision recorded
 
-Option 2: every plugin start and the engine's own re-invocation run goc/_launch.py by absolute path instead of python3 -m goc.cli; the Python 3.10 floor stays — It covers the goc-package takeover and the stdlib-shadowing variant on every supported Python without a version branch; the maintainer (Rodja, 2026-10-25) delegated the pick and asked for the fix on main. Gate decision → none.
+Option 2: every plugin start and the engine's own re-invocation run goc/_launch.py by absolute path instead of python3 -m goc.cli; the Python 3.10 floor stays — It covers the goc-package takeover and the stdlib-shadowing variant on every supported Python without a version branch; the maintainer (2026-10-25) delegated the pick and asked for the fix on main. Gate decision → none.
 
 ## 2026-10-25T05:24:03Z — Closure
 

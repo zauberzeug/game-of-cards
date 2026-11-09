@@ -42,7 +42,7 @@ for (const candidate of [sessionProjectDir, process.cwd()]) { ... }
 
 ## Impact
 
-On a single-agent install (zoe) `sessionProjectDir` is always the same
+On a single-agent install `sessionProjectDir` is always the same
 workspace, so the bug is invisible. On a multi-agent gateway (fclaw: 5
 agents, one workspace each) a `goc` tool call WITHOUT an explicit `cwd` —
 or with a sandbox-path `cwd` like `/workspace` that does not exist on the

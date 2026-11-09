@@ -16,7 +16,7 @@ definition_of_done: |
   - [x] The "PRIMARY AUDIENCE" badge is removed; primary persona is signalled by the existing brighter gold left-border + subtle background lift
   - [x] The three "Accepts: …" lines end at roughly the same vertical position across all three cards (rebalance copy length where needed; don't force equal heights with min-height hacks)
   - [x] Mobile layout still stacks cleanly (single column at <860px), no regressions
-  - [x] Playwright capture + Rodja visual sign-off before close (per UI-verification rule)
+  - [x] Playwright capture + maintainer visual sign-off before close (per UI-verification rule)
   - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---

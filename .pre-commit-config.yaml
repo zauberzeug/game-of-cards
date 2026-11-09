@@ -35,11 +35,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      # AGENTS.md § "Card authoring rules" requires English cards. goc's own
+      # AGENTS.md § "Card authoring rules" requires English cards and forbids
+      # naming the internal meeting and project it gives as examples. goc's own
       # auto-commit shells out to `git commit` without --no-verify, so this
       # hook fires on `goc new --commit` too — the filing path, not just CI.
       - id: card-language
-        name: cards are written in English
+        name: cards are English and name no published internal term
         entry: uv run python scripts/check_card_language.py --check
         language: system
         pass_filenames: false

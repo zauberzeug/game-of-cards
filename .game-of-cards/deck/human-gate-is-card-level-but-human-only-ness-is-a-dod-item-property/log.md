@@ -1,9 +1,9 @@
 ## 2026-07-26 — filed from a downstream instance, and it corrects a sibling card
 
-Filed while unblocking the zoe-app deck. Rodja asked why the attachments
+Filed while unblocking a downstream consumer deck. The maintainer asked why the attachments
 card was parked at `human_gate: session` when everything except the final
-live check was ordinary agent work — "it should be auto first, and only
-switch back to session once it is otherwise finished."
+live check was ordinary agent work: the card should run without a human
+first and switch back to `session` only once everything else is finished.
 
 Reconstructing the card's history showed the gate was **right when it was
 set** (2026-07-20: the three then-blocking DoD items were live-gateway
@@ -25,7 +25,7 @@ Two further findings folded into the card body:
 
 Also corrected the premise of
 `autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish`, which
-cited this same zoe-app card as its canonical *structurally human-only*
+cited this same downstream card as its canonical *structurally human-only*
 example. Eight DoD items, one human-only — it is a mixed card, and that
 sibling's proposed lint ("any `EMPIRICAL:` item mentioning production or
 a device ⇒ gate at `session`") would have made the observed failure

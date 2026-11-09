@@ -152,7 +152,7 @@ autonomous puller bypasses pre-commit, see
 `pull-card-workflow-skips-pre-commit-so-bot-commits-bypass-goc-validate`).
 The engine fix alone cleared one (a real Bug-1 instance: a `superseded`
 card whose `superseded_by` pointed at a `done` card). The remaining 6 were
-repaired as part of this card (Rodja opted into a full hygiene pass):
+repaired as part of this card (the maintainer opted into a full hygiene pass):
 
 - `install-openclaw-harness`, `make-claude-md-and-agents-md-merge-opt-in-via-skill`,
   `publish-game-of-cards-agent-plugins` — `superseded` with empty

@@ -63,7 +63,7 @@ OK   done           without summary: refused | with summary: released, validate 
 contract holds
 ```
 
-In a consuming repo (zauberzeug's Zoe workspace) this was the single most
+In a downstream consumer repository this was the single most
 frequent nightly red: `goc validate` failed on 14 of 16 nights between
 2026-09-21 and 2026-10-06, 12 summary-less cards on 2026-10-06 alone, almost
 all released through `new` → `status active` → `done`.
@@ -95,5 +95,5 @@ green validate, the four invalid forms, the bundle, and the scope boundary).
 
 *Resolved 2026-10-06T05:22:31Z:* Option 1: publish, status active and done (incl. --bundle) refuse to release a draft whose summary fails the published-card rule; validate and the verbs share one summary_problem() rule
 
-*Reasoning:* Rodja 2026-10-06 (zauberzeug Zoe workspace card goc-publish-laesst-eine-karte-ohne-summary-in-den-stapel); matches the placeholder-scaffold gate already in publish, and option 3 would silently author frontmatter nobody wrote
+*Reasoning:* Maintainer, 2026-10-06 (downstream consumer repository card goc-publish-laesst-eine-karte-ohne-summary-in-den-stapel); matches the placeholder-scaffold gate already in publish, and option 3 would silently author frontmatter nobody wrote
 

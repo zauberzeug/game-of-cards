@@ -20,7 +20,7 @@ definition_of_done: |
   - [x] README documents the install path live at close-time (community marketplace `@claude-community` once listed, otherwise the existing `zauberzeug/game-of-cards` direct path)
   - [x] README explains the first-run experience: plugin install + one prompt; **no** instructions to install a separate PyPI package for normal use
   - [x] README links to the project homepage (game-of-cards.com), the upstream repo, and the MIT license
-  - [x] Rodja reads the rendered text and signs off before close
+  - [x] The maintainer reads the rendered text and signs off before close
   - [x] `uv run goc validate` passes
 worker: {who: Rodja Trappe, where: main}
 ---
@@ -117,14 +117,14 @@ goal that this README is one step toward.
 ## Sign-off required
 
 `claude-plugin/README.md` has been written and committed. Before this
-card can close, Rodja needs to read the rendered text and confirm it's
+card can close, the maintainer needs to read the rendered text and confirm it's
 ready for marketplace-grade use. Gate is raised to `session` pending that
 review.
 
 To close after sign-off:
 
 ```bash
-goc decide add-readme-to-claude-code-plugin --decision "approved" --because "Rodja: text is marketplace-ready"
+goc decide add-readme-to-claude-code-plugin --decision "approved" --because "Maintainer review: text is marketplace-ready"
 goc done add-readme-to-claude-code-plugin
 ```
 
@@ -132,4 +132,4 @@ goc done add-readme-to-claude-code-plugin
 
 *Resolved 2026-05-08:* approved
 
-*Reasoning:* Rodja: text is marketplace-ready
+*Reasoning:* Maintainer review: text is marketplace-ready

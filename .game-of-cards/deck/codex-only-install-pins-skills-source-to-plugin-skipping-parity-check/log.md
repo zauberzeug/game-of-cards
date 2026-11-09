@@ -1,6 +1,6 @@
 ## 2026-05-30: Human directive — verify before deciding
 
-Decision-walk verdict (Rodja): do **not** pick `skills_source`
+Decision-walk verdict (maintainer): do **not** pick `skills_source`
 semantics yet. The card is UNVERIFIED; run the falsification recipe
 first —
 

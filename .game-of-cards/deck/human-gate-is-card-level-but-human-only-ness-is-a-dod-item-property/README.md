@@ -10,7 +10,7 @@ advances:
   - autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish
 advanced_by: []
 tags: [bug, api-contract]
-summary: "`human_gate` is one flag per card, but human-only-ness is a property of individual DoD items. A card whose DoD is mostly agent-workable with one human-only box has no correct value: `none` gets it pulled, worked, and then auto-escalated to `session` by a release counter that cannot tell progress from stalling; `session` freezes the agent-workable majority. Worse, escalation is a one-way hand edit — `goc decide` lowers a gate, nothing raises one, and nothing records WHY it was raised, so an expired reason keeps a card parked indefinitely. Observed downstream: zoe-app's attachments card was gated for discovery boxes on 2026-07-20, those boxes were ticked on 2026-07-23, and it stayed parked (plus `status: active` on a dead worktree claim) until a human noticed on 2026-07-26."
+summary: "`human_gate` is one flag per card, but human-only-ness is a property of individual DoD items. A card whose DoD is mostly agent-workable with one human-only box has no correct value: `none` gets it pulled, worked, and then auto-escalated to `session` by a release counter that cannot tell progress from stalling; `session` freezes the agent-workable majority. Worse, escalation is a one-way hand edit — `goc decide` lowers a gate, nothing raises one, and nothing records WHY it was raised, so an expired reason keeps a card parked indefinitely. Observed downstream: a consumer repository's attachments card was gated for discovery boxes on 2026-07-20, those boxes were ticked on 2026-07-23, and it stayed parked (plus `status: active` on a dead worktree claim) until a human noticed on 2026-07-26."
 definition_of_done: |
   - [ ] PROCESS: pick a model from "## Decision required" and record the choice + rationale here and in log.md; reconcile it with the sibling card `autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish`, whose premise this card corrects.
   - [ ] MECHANICAL: a gate raised by tooling carries a machine-readable reason and, where the reason is a specific DoD item, a pointer to it — so a later pass can tell an expired gate from a live one instead of leaving it forever.
@@ -45,7 +45,7 @@ and may not close it.*
 
 ## The observed instance
 
-zoe-app's `conversations-send-and-receive-file-attachments` (Slack-style
+A downstream consumer repository's `conversations-send-and-receive-file-attachments` (Slack-style
 file attachments in a chat client):
 
 | Date | Event |
@@ -76,7 +76,7 @@ argues the same conflation from the display side.
 ## Why the sibling card's premise is wrong
 
 [`autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish`](../autonomous-picker-wastes-passes-on-cards-only-a-human-can-finish/)
-cites this exact zoe-app card as its canonical example of a
+cites this exact downstream card as its canonical example of a
 **structurally human-only** card, and proposes detecting such cards at
 `goc new` / `goc validate` and gating them at `session` *earlier*.
 

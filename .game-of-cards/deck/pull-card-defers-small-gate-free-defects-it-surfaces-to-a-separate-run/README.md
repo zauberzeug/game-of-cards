@@ -16,7 +16,7 @@ definition_of_done: |
   - [x] MECHANICAL: the body states the explicit non-goals — (a) `audit-deck` stays "flag, don't fix" (breadth-first spike, unchanged); (b) fix-through does NOT mean "drain the whole queue in one run" — at most the entangled small defect(s) plus the pulled card, then exit so fresh context stays the default per the workflow's one-pull-per-run intent.
   - [x] MECHANICAL: the change lands in the source-of-truth template only; `python scripts/sync_plugin_assets.py` regenerates the claude/codex/.claude/.codex mirrors and `python3 scripts/port_skills_to_openclaw.py` re-ports the OpenClaw skill, all staged.
   - [x] PROCESS: `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` both report no drift; `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
-  - [x] PROCESS: decision provenance (Rodja chose "fix-through, keep the card" over inline-no-card / overhead-only / defer) recorded in `log.md`.
+  - [x] PROCESS: decision provenance (the maintainer chose "fix-through, keep the card" over inline-no-card / overhead-only / defer) recorded in `log.md`.
 worker: {who: Rodja Trappe, where: main}
 ---
 
@@ -64,7 +64,7 @@ Measured across the 281 closed cards carrying both `created` and
 
 ## Decision (resolved)
 
-Rodja chose **"fix-through, keep the card"** over three alternatives
+The maintainer chose **"fix-through, keep the card"** over three alternatives
 (inline-fix-with-no-card; reduce-commit/run-overhead-only;
 analysis-only-defer). Rationale: the card artifact carries real,
 load-bearing value even for a 5-line fix — the **record axis** (this

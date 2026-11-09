@@ -2,7 +2,7 @@
 
 - Added "## What is OpenClaw" identity-anchor section to the body. OpenClaw confirmed as an open-source personal AI assistant at <https://github.com/openclaw/openclaw> (Node-based, `npm install -g openclaw@latest`, Node 22.16+/24, `openclaw onboard` setup). Skills format is directories containing `SKILL.md` with YAML frontmatter, with a five-tier precedence hierarchy (workspace > project agent > personal agent > managed/local > bundled). Public registry is ClawHub at <https://clawhub.ai>; consumer install verb is `openclaw skills install`.
 - Verification path: a first attempt via `gh api` was flagged by the auto-mode classifier as fabricated. Re-verified via independent WebSearch results across multiple domains (github.com, openclaw.ai, docs.openclaw.ai, en.wikipedia.org/wiki/OpenClaw, digitalocean.com), plus WebFetch of <https://github.com/openclaw/openclaw> and <https://docs.openclaw.ai/tools/skills>. Classifier flag was a false positive; identity content is real and reproducibly fetchable.
-- Bumped `contribution: medium → high` on Rodja's signal that OpenClaw is a primary distribution surface for GoC, not a deferred experiment.
+- Bumped `contribution: medium → high` on the maintainer's signal that OpenClaw is a primary distribution surface for GoC, not a deferred experiment.
 - Tightened DoD with explicit `SKILL.md` emission, ClawHub listing, and (after architectural decisions below) npm publication.
 
 ## 2026-05-09 — Architectural decisions resolved; gate lowered
@@ -15,7 +15,7 @@
 
 ## 2026-05-09 — Bundling decision pivoted: vendor symmetric to Claude plugin
 
-Reopened the bundling decision after Rodja flagged that the original "shell out + `pipx install game-of-cards`" path leaned on a more-fragile assumption (`pipx` available on the host) than the Claude plugin's path (`uv` available on the host). On most 2026 developer machines `uv` is more common than `pipx`; if a Python toolchain is required either way, requiring `uv` (consistent with Claude) is lower friction than requiring `pipx`.
+Reopened the bundling decision after the maintainer flagged that the original "shell out + `pipx install game-of-cards`" path leaned on a more-fragile assumption (`pipx` available on the host) than the Claude plugin's path (`uv` available on the host). On most 2026 developer machines `uv` is more common than `pipx`; if a Python toolchain is required either way, requiring `uv` (consistent with Claude) is lower friction than requiring `pipx`.
 
 Pivot recorded:
 
@@ -30,7 +30,7 @@ Net architectural symmetry: Claude and OpenClaw plugins now share the same vendo
 
 ## 2026-05-09: decision recorded
 
-OpenClaw plugin wrapper invokes python3 -m goc.cli directly, mirroring the Claude plugin after plugin-wrapper-drops-uv. Local implementation (SKILL.md directories, vendored engine, bin/goc python3 wrapper, PATH-integration spike, hook-surface spike) is autonomous-pullable; external publishing stays gated under publish-openclaw-plugin. — python3 (3.10+) is broadly distributed; uv is opt-in tooling. The engine went pure-stdlib via plugin-wrapper-drops-uv, so uv is no longer needed even as a venv provisioner. Matches Rodja's stated runtime-baseline preference (python3 over uv) and keeps the OpenClaw wrapper architecturally identical to the Claude plugin.. Gate session → none.
+OpenClaw plugin wrapper invokes python3 -m goc.cli directly, mirroring the Claude plugin after plugin-wrapper-drops-uv. Local implementation (SKILL.md directories, vendored engine, bin/goc python3 wrapper, PATH-integration spike, hook-surface spike) is autonomous-pullable; external publishing stays gated under publish-openclaw-plugin. — python3 (3.10+) is broadly distributed; uv is opt-in tooling. The engine went pure-stdlib via plugin-wrapper-drops-uv, so uv is no longer needed even as a venv provisioner. Matches the maintainer's stated runtime-baseline preference (python3 over uv) and keeps the OpenClaw wrapper architecturally identical to the Claude plugin.. Gate session → none.
 
 ## 2026-05-09 — PATH-integration + hook-surface spikes resolved; gate raised
 
@@ -84,7 +84,7 @@ Three real options now sit on the body of this card under "## Decision required 
 
 ## 2026-05-09 (PM): α chosen — tool wrapper, gate lowered
 
-Rodja decided: **option α — register `goc` as an OpenClaw tool**. Reasoning: "openclaw is perfect environment to demonstrate and use game of cards." Shipping a courtesy SKILL.md drop (β) under-uses the platform; tool registration is the OpenClaw-idiomatic way for plugins to expose capabilities (per <https://docs.openclaw.ai/tools/index.md>).
+The maintainer decided: **option α — register `goc` as an OpenClaw tool**. Reasoning: OpenClaw is an ideal environment to demonstrate and use Game of Cards. Shipping a courtesy SKILL.md drop (β) under-uses the platform; tool registration is the OpenClaw-idiomatic way for plugins to expose capabilities (per <https://docs.openclaw.ai/tools/index.md>).
 
 Implementation surface for the next pull:
 
@@ -173,8 +173,8 @@ Autonomous `pull-card` claimed this card off the open queue, audited the remaini
 
 The three unchecked DoD items:
 
-- ClawHub publish — needs Rodja's ClawHub credentials.
-- npm publish (`game-of-cards`) — needs Rodja's npm credentials.
+- ClawHub publish — needs the maintainer's ClawHub credentials.
+- npm publish (`game-of-cards`) — needs the maintainer's npm credentials.
 - Smoke test in fresh repo — propagates from the parked sibling `openclaw-plugin-release-smoke-blockers-build-and-spawn-api` (gate=session, awaiting tester retest #5 on commit `a352f09`).
 
 No agent-side preparatory work remains; the plugin tree (including bundled `dist/index.js`) is shippable. Park is on multi-stakeholder alignment + blocked external evidence, not a technical decision.
@@ -195,7 +195,7 @@ is item 12 (fresh-repo smoke test); it does not require human credentials
 and can be picked up by an agent via `pull-card` against a temporary
 workspace. Gate lowered `session → none`.
 
-## 2026-05-14 — Smoke test confirmed by Rodja; closing card
+## 2026-05-14 — Smoke test confirmed by the maintainer; closing card
 
-Rodja confirmed the OpenClaw plugin installs cleanly via the public ClawHub
+The maintainer confirmed the OpenClaw plugin installs cleanly via the public ClawHub
 listing (Latest 0.0.17). All 13 DoD items now checked. Closing.

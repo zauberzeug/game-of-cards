@@ -249,7 +249,7 @@ lands.
 
 MIT license, Copyright (c) 2026 Zauberzeug GmbH. Mirrors nicegui's
 house convention (Zauberzeug's most public open-source project). The
-copyright-holder choice is corrigible — if you'd prefer "Rodja Trappe"
+copyright-holder choice is corrigible — if you'd prefer the maintainer
 personally or another entity, edit `LICENSE` in the new repo and
 amend the inaugural commit. MIT was preferred over Apache-2.0 for
 matching the company portfolio (nicegui, rosys); Apache-2.0 would only

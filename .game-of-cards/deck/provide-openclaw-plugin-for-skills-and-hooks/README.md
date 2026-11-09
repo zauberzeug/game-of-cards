@@ -33,7 +33,7 @@ definition_of_done: |
   - [x] Plugin published on ClawHub (<https://clawhub.ai>) so consumers can `openclaw skills install <id>` — `clawhub package inspect game-of-cards` reports Latest 0.0.17 (Owner: zauberzeug, Updated 2026-05-11T13:52:32Z); driven automatically by the OIDC publish leg of `release.yml` once the publisher-identity bug closed
   - [x] Plugin published as the npm package `game-of-cards` (name verified available on the npm registry 2026-05-09; first publish claims it) — `npm view game-of-cards version` returns 0.0.17, dist-tag `latest`
   - [x] Docs list OpenClaw plugin support separately from repo-local harness installation; document the `python3` (3.10+) prerequisite explicitly (no `uv` required)
-  - [x] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback — confirmed by Rodja 2026-05-14: OpenClaw plugin installs cleanly
+  - [x] Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback — confirmed by the maintainer 2026-05-14: OpenClaw plugin installs cleanly
   - [x] `uv run goc validate` passes
 worker: {who: "claude[bot]", where: main}
 supersedes:
@@ -48,13 +48,13 @@ Pulled by autonomous pull-card 2026-05-09 to drain the queue. Implementation is 
 
 The unchecked items and what they need:
 
-1. **Plugin published on ClawHub.** Requires Rodja's ClawHub account credentials and submission flow at <https://clawhub.ai>. No agent-side preparatory work remains — the plugin tree is shippable as-is (see commit `a352f09 openclaw-plugin: bundle dist with esbuild` and the ported `dist/index.js` checked in).
-2. **Plugin published as npm package `game-of-cards`.** Requires Rodja's npm credentials. Name verified available 2026-05-09; first publish claims it. The `package.json`, `prepublishOnly` build script, and bundled `dist/` are already in place.
+1. **Plugin published on ClawHub.** Requires the maintainer's ClawHub account credentials and submission flow at <https://clawhub.ai>. No agent-side preparatory work remains — the plugin tree is shippable as-is (see commit `a352f09 openclaw-plugin: bundle dist with esbuild` and the ported `dist/index.js` checked in).
+2. **Plugin published as npm package `game-of-cards`.** Requires the maintainer's npm credentials. Name verified available 2026-05-09; first publish claims it. The `package.json`, `prepublishOnly` build script, and bundled `dist/` are already in place.
 3. **Smoke test confirms OpenClaw can discover/use the plugin in a fresh repo with no `pipx`-style fallback.** This propagates up from the parked sibling `openclaw-plugin-release-smoke-blockers-build-and-spawn-api` (gate=session, awaiting tester retest #5 on commit `a352f09`). When that retest passes and that card closes, this DoD item ticks; until then there is nothing for an agent to do.
 
 **Human action menu** (any one resumes progress):
 
-- Run the publish flows (ClawHub + npm) under Rodja's credentials, then tick items 1 and 2.
+- Run the publish flows (ClawHub + npm) under the maintainer's credentials, then tick items 1 and 2.
 - Delegate the publish flows by lowering this card's gate to `none` with a `--decision` that authorizes another worker (e.g., a CI job with stored secrets) to publish.
 - Acknowledge that DoD item 3 is now mechanically dependent on the sibling smoke-blockers card and either (a) keep this card parked until the sibling closes, or (b) split the smoke-test DoD item out into a separate card and close this one immediately on items 1 and 2.
 

@@ -70,7 +70,7 @@ PAT or GitHub App with workflow scope, or `repository_dispatch`. Pre-rejected by
 
 ## Recommendation
 
-Option (a) is the lowest-cost path that preserves the parent card's design intent. It's a one-line YAML change with bounded security delta (specific bot, not `*`). If Rodja prefers to honor the original "no new permissions/credentials" posture strictly, option (b) is the clean cron-only fallback.
+Option (a) is the lowest-cost path that preserves the parent card's design intent. It's a one-line YAML change with bounded security delta (specific bot, not `*`). If the maintainer prefers to honor the original "no new permissions/credentials" posture strictly, option (b) is the clean cron-only fallback.
 
 ## Decision
 

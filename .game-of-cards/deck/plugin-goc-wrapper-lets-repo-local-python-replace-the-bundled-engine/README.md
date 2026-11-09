@@ -143,7 +143,7 @@ harmless dogfooding, which is part of why it has gone unnoticed.
 
 *Resolved 2026-10-25T05:20:07Z:* Option 2: every plugin start and the engine's own re-invocation run goc/_launch.py by absolute path instead of python3 -m goc.cli; the Python 3.10 floor stays
 
-*Reasoning:* It covers the goc-package takeover and the stdlib-shadowing variant on every supported Python without a version branch; the maintainer (Rodja, 2026-10-25) delegated the pick and asked for the fix on main
+*Reasoning:* It covers the goc-package takeover and the stdlib-shadowing variant on every supported Python without a version branch; the maintainer (2026-10-25) delegated the pick and asked for the fix on main
 
 ## Fix
 
