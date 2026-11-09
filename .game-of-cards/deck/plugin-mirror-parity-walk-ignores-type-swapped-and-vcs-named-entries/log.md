@@ -19,3 +19,18 @@ install)". Rather than file a near-duplicate, the finding is recorded here.
   the mirror trees.
 - **Not changed**: status, gate, DoD. Still `unverified` and awaiting the
   decision this card was parked on; the new shape is one more input to it.
+
+## 2026-11-09T01:55:44Z — Unverified park retried: defect reproduced
+
+Refine-deck pass: this `unverified` park was past its 90-day clock (filed
+2026-07-24, no re-check since 2026-07-26), so its falsification recipe was run
+instead of re-parked. Landed `reproduce.py` (0/1/2 exit contract, two positive
+controls). On main at `92f8bb55` it exits 1: all four shapes (type swap, broken
+symlink, drift under `goc/tags/`, working outside-pointing symlink) pass
+`validate_plugin_mirror_parity()` clean, while a one-byte content edit is
+reported. The `_walk` code the card cites is unchanged.
+
+- **Changed**: dropped the `unverified` tag; added § Empirical evidence; the
+  Hypothesis heading now records the confirmation.
+- **Not changed**: status, gate, DoD. The first DoD box stays open: its
+  contract ends "then zero after the fix", which only the fix can satisfy.

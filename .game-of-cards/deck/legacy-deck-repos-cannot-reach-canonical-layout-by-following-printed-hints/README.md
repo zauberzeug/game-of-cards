@@ -9,9 +9,9 @@ closed_at: null
 human_gate: decision
 advances: []
 advanced_by: []
-tags: [bug, api-contract, documentation, unverified]
+tags: [bug, api-contract, documentation]
 definition_of_done: |
-  - [ ] TDD: a committed `reproduce.py` scaffolds a legacy-only repo in a temp dir and demonstrates the closed loop (migrate exits 1 pointing at install; install exits 1 pointing at upgrade; upgrade exits 0 yet `.game-of-cards/deck/` still absent; migrate exits 1 again) — drop the `unverified` tag when it lands.
+  - [x] TDD: a committed `reproduce.py` scaffolds a legacy-only repo in a temp dir and demonstrates the closed loop (migrate exits 1 pointing at install; install exits 1 pointing at upgrade; upgrade exits 0 yet `.game-of-cards/deck/` still absent; migrate exits 1 again) — drop the `unverified` tag when it lands.
   - [ ] MECHANICAL: the chosen fix (see `## Decision required`) lands so that at least one printed hint, followed literally, reaches the canonical layout.
   - [ ] TDD: a regression test covers the legacy-only escape path end-to-end and the suite passes.
   - [ ] PROCESS: `uv run goc validate` passes.
@@ -62,10 +62,32 @@ dir still absent → `migrate` fails identically. The only escape is a manual
 `mkdir -p .game-of-cards/deck` (documented nowhere), which then routes
 through the dual-tree state.
 
-## Evidence (unverified — no committed reproduce.py yet)
+## Evidence
 
-A hunter agent reproduced the full loop in a scratch git repo containing only
-`deck/my-card/` + `deck/.goc-version`:
+[`reproduce.py`](reproduce.py) scaffolds a throwaway git repo with only
+`deck/my-card/` + `deck/.goc-version` (0.0.20) and drives this source tree's
+engine through the loop. On main at `92f8bb55` (2026-11-09) it exits 1:
+
+```text
+control: goc validate -> exit 0, legacy warning printed: True
+  WARNING: using legacy deck/ location. Run `goc upgrade` to migrate to .game-of-cards/deck/.
+goc migrate  -> exit 1; .game-of-cards/deck exists: False
+  Run `goc install` first to set up the canonical deck location.
+goc install  -> exit 1; .game-of-cards/deck exists: False
+  Run `goc upgrade` to re-sync templates.
+goc upgrade  -> exit 0; .game-of-cards/deck exists: False
+  goc upgrade complete for agents: claude — 0.0.20 → 0.0.28.post1.dev194.
+goc migrate  -> exit 1; .game-of-cards/deck exists: False
+  Run `goc install` first to set up the canonical deck location.
+
+after the loop: canonical card present: False; legacy card still in deck/: True
+legacy sentinel deck/.goc-version now reads: 0.0.28.post1.dev194
+
+DEFECT PRESENT: migrate -> install -> upgrade -> migrate never creates .game-of-cards/deck/.
+```
+
+The audit hunter that filed this card saw the same loop by hand in a scratch
+git repo holding only `deck/my-card/` + `deck/.goc-version`:
 
 - `goc migrate` → exit 1, "Run `goc install` first"
 - `goc install` → exit 1, "Run `goc upgrade` to re-sync templates"

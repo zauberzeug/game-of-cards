@@ -9,7 +9,7 @@ closed_at: null
 human_gate: decision
 advances: []
 advanced_by: []
-tags: [bug, infra, unverified]
+tags: [bug, infra]
 definition_of_done: |
   - [ ] TDD: reproduce.py lands and exits non-zero on current code for all three shapes (type swap, broken symlink, DEFAULT_IGNORES-named dir), then zero after the fix — drop the unverified tag when it lands
   - [ ] TDD: regression test asserts validate_plugin_mirror_parity reports common_funny / funny_files entries and drift inside a directory named `tags`
@@ -34,7 +34,7 @@ tripwire clean.
 `goc/engine.py:1444-1472` (`_walk`); `_DeepDircmp` instantiation without an
 `ignore=` override near `goc/engine.py:1857`.
 
-## Hypothesis (unverified — parked by an audit round)
+## Hypothesis (confirmed 2026-11-09 — see § Empirical evidence)
 
 ```python
 out += [
@@ -50,8 +50,8 @@ for (a) `claude-plugin/goc/engine.py` replaced by a *directory*, (b) a broken
 symlink in the mirror, and (c) content drift under a `goc/tags/` subtree,
 while plain content drift correctly returned
 `['plugin mirror drift: goc vs claude-plugin/goc: engine.py (differs)']`.
-Not independently re-run in a committed reproduce.py yet — hence
-`unverified`.
+The committed [`reproduce.py`](reproduce.py) re-ran all three shapes, plus
+the fourth below, on 2026-11-09.
 
 ### Fourth shape: a *valid* outside-pointing symlink (verified 2026-07-26)
 
@@ -78,6 +78,28 @@ only the `./claude-plugin` subtree, so the link target is simply absent on the
 consumer's disk while every local check stays green. Whatever fix this card
 takes should therefore assert entry *type* (`Path.is_symlink()` / `os.lstat`)
 across the mirror trees, not just read the extra `dircmp` buckets.
+
+## Empirical evidence
+
+[`reproduce.py`](reproduce.py) copies this repo's real `goc/` and
+`claude-plugin/` trees into a temp dir, points `engine.REPO_ROOT` at the copy,
+and applies each shape to a fresh copy. On main at `92f8bb55` (2026-11-09) it
+exits 1:
+
+```text
+control 1 — untouched copy        : no drift
+control 2 — one-byte content edit : ['plugin mirror drift: goc vs claude-plugin/goc: engine.py (differs)']
+a. type swap (file -> directory)        : passes clean
+b. broken symlink in the mirror         : passes clean
+c. content drift under goc/tags/        : passes clean
+d. working symlink to an outside file   : passes clean
+
+DEFECT PRESENT: 4 of 4 mirror shapes pass the parity walk clean.
+```
+
+The two controls show the walk is live on the copy before any shape is
+judged. Shape (c) uses a `tags/` directory, which `goc/` does not have today,
+so it pins the `DEFAULT_IGNORES` skip rather than a drift that exists now.
 
 ## Why it matters
 
