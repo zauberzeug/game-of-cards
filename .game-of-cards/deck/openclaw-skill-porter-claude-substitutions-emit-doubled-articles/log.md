@@ -11,3 +11,13 @@ Verdict: still live. Not placed: `openclaw-plugin/skills/kickoff/SKILL.md:172`
 verbatim-copied sibling where it reads "the Claude-only path" (no doubled
 article), so no home carries the cited artifact; left as is.
 Gate unchanged.
+
+## 2026-11-09T02:25:39Z — Grep transcript restored to what grep printed
+
+§ Empirical evidence quotes a `grep -rnE` run from filing (`8606e990`). The
+2026-08-17 (`f290f5f7`) and 2026-08-24 (`e8449764`) hygiene passes, which
+predate the rule that fenced records are out of scope (`eae2bea9`), rewrote two
+of its `path:line:content` lines: `:123` → `:133` → `:143` and `:133` →
+`:143`. That left two different lines claiming the same number, output grep
+never produced. Both are restored to the filing-time `:123` and `:133`. The
+transcript is a dated record; § Location carries the current addresses.

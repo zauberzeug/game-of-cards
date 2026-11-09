@@ -90,8 +90,8 @@ gives a durable tripwire either way.
 
 ```
 $ grep -rnE '\bthe the\b|\ba the\b' openclaw-plugin/skills/
-openclaw-plugin/skills/kickoff/SKILL.md:143:> instructions plus, when CLAUDE.md is the home, the the agent-specific
-openclaw-plugin/skills/kickoff/SKILL.md:143:>    plus the the agent-specific extras live inline. **Cross-runtime
+openclaw-plugin/skills/kickoff/SKILL.md:123:> instructions plus, when CLAUDE.md is the home, the the agent-specific
+openclaw-plugin/skills/kickoff/SKILL.md:133:>    plus the the agent-specific extras live inline. **Cross-runtime
 openclaw-plugin/skills/kickoff/SKILL.md:172:briefing. `--briefing-target CLAUDE.md` is the the agent-only path: the
 openclaw-plugin/skills/openclaw-kickoff/SKILL.md:81:hunting for a the host-style analog:
 ```
