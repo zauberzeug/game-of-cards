@@ -1,7 +1,7 @@
 ---
 title: citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card
 summary: "refine-deck's citation recipe anchors a cite at the commit that last wrote its number, assuming the number was computed against that commit's tree. On this repo's shared main, a card can be numbered against the tree of a parallel commit to the cited file that lands minutes before or after it, and the recipe then reads unrelated code at the anchor and moves a correct cite past every guard it has. Two cards found: five cites misread, one moved by this pass and restored, three tracked onto the wrong lines by every pass since 2026-08-10."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-09T02:13:07Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: `goc/templates/skills/refine-deck/SKILL.md` § Defunct file:line citations carries the rule's one-line form and names the new decline in its list of declines
   - [ ] TDD: `tests/test_refine_deck_citation_anchor.py` gains cases replaying both instances (later tree, earlier tree): the documented recipe does not relocate them on the anchor alone, a recipe without the rule does; its residue-count and decline-naming tests pass
   - [ ] MECHANICAL: plugin mirrors and the OpenClaw port re-synced (`python scripts/sync_plugin_assets.py`, `python3 scripts/port_skills_to_openclaw.py`); `uv run goc validate` and the regression suite pass
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Citation repair pass moves correct cites when a parallel commit lands beside the card
