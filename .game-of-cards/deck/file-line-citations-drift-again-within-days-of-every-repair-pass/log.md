@@ -284,3 +284,16 @@ the whole time. Under bare line numbers, as today, these names were caught
 only by an agent reading the card against the code. The same pass filed
 `citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`,
 a second failure that only the line-number scheme has.
+
+## 2026-11-09T05:05:46Z — Parallel-commit instance closed by another recipe rule
+
+`citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`
+closed in `69ca3e93` by patching the line-number recipe, not by changing the
+scheme this card asks about. For the cost side of the decision: that is
+another per-pass step (read the card's sentence for every defunct cite whose
+line a commit within ten minutes of its anchor changed — about two dozen on
+the 2026-11-09 pass), a seventh decline class (`anchor tree ambiguous`), and
+the eleventh raise of the refine-deck `SKILL.md` size cap. Two shapes stay
+out of the patch's reach and are recorded in refine-deck's reference: a
+misread an earlier pass already applied, and an earlier-tree cite before a
+later change moves its line. A symbol-anchored cite would carry neither.
