@@ -171,3 +171,13 @@ hook was renamed to `card-language-DISABLED` — `assertIn("id: card-language")`
 matches that substring — so the check became a line-anchored regex. Re-verified:
 renaming the hook fails, deleting the hook block fails, widening the guard to
 bodies fails, dropping the script name from AGENTS.md fails. 833 tests green.
+
+## 2026-11-09T02:35:38Z — Post-closure: the zero-instance premise did not hold
+
+The scope decision above left the no-internal-names rule unguarded because
+"neither has an observed instance". A 2026-11-09 sweep found the rule's own
+example term on 16 lines across 6 cards. Three of them carried it on
+2026-07-26 and 2026-06-12, before this card's audit reported the deck clean.
+Individual attributions also appear in card prose, mostly in May 2026
+decision records. Follow-up:
+[internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded](../internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded/).
