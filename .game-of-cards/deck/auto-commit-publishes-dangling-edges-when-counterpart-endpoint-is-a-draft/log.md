@@ -24,4 +24,4 @@ Re-anchored by the prose, matching the staleness re-check above:
 `_git_auto_commit` call), Option A's `engine.py:6851` → `:6857`, and
 `_cmd_unadvance`'s `:5725` → `:7463` in § Location and Option A. Recorded as
 the second instance on
-`citation-repair-pass-moves-correct-cites-written-against-code-committed-after-the-card`.
+`citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`.
