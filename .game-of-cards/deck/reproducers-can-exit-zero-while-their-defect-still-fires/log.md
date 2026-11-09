@@ -179,3 +179,55 @@ Nothing in CI runs deck reproducers, so an engine refactor breaks them
 without warning. That is one more reason a classification run must read a
 traceback as exit 2 whatever the code, and a reason a refactor should grep
 `.game-of-cards/deck/*/reproduce.py` before changing a signature.
+
+## 2026-11-09T02:22:47Z — Refine-deck staleness re-check: 31 gated reproducers classified
+
+The first refine-deck pass to run the stale-parks category (`1a76d728`) ran
+the reproducers of 31 gated cards and read each one's output, not just its
+exit code. Against the 0/1/2 contract:
+
+- **20 on contract**: exit 1 with the defect printed. This includes
+  `goc-validate-crashes-with-typeerror-on-non-string-element-in-relationship-list`,
+  whose traceback is the defect itself.
+- **8 inverted**: exit 0 while printing the defect. None is listed above yet:
+  `plugin-context-detection-never-fires-on-real-marketplace-installs`,
+  `bundled-closure-skips-configured-attestation-checks`,
+  `editing-one-field-rewrites-unrelated-created-and-summary-lines`,
+  `upgrade-divergence-report-marks-pristine-config-as-authored-divergence`,
+  `draft-gating-is-opt-in-per-surface-and-new-verbs-keep-missing-it`,
+  `mutate-frontmatter-field-append-truncates-final-keep-block-scalar`,
+  `vendored-engine-reports-co-installed-distribution-version-not-its-own`
+  (exits 0 whichever verdict it prints), and
+  `openclaw-plugin-manifest-config-options-do-not-behave-as-documented`.
+  The bundled-closure card's DoD also reads "reproduce.py exits zero after
+  the fix", which this script cannot satisfy.
+- **3 harness drift**: exit 1 from a crash before the defect is reached, each
+  through a precondition or private name the engine changed after filing:
+  `auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft`
+  (`goc publish` now requires a summary; the shape in the 2026-10-29 entry),
+  `repair-edges-apply-writes-superseded-by-onto-non-superseded-cards`
+  (`goc new` refuses without a deck since `3e17e3b3`; the script never
+  creates `.game-of-cards/deck/`), and
+  `pattern-generalization-opt-out-regex-matches-anywhere-in-the-file`
+  (imports `_opted_out`, which `d6f53e79` renamed to `_enabled` and
+  inverted). Scratch copies of the first two that fix only the setup still
+  print their defect.
+
+Two shapes not logged above:
+
+- **Pinned line numbers.**
+  `skill-context-blocks-truncate-deck-output-hiding-active-cards-and-breaking-json`
+  asserts its six probe sites by line number, so it prints six "block
+  drifted" FAILs about its own pins. It cannot exit 0 after a fix until its
+  `BLOCKS` list is re-pinned: the same drift the citation pass repairs in
+  card prose, but inside an executable verdict.
+- **A copy of the code under test.**
+  `append-marker-block-matches-prose-mentions-of-the-marker-syntax` runs its
+  own copy of `_append_marker_block`'s regex instead of calling the
+  function. The copy matches today, and calling the real function shows the
+  defect, but a fix to the function would leave the reproducer failing.
+
+Every verdict and crash is recorded in that card's `Staleness re-check`
+entry. The four reproducers this pass landed follow the contract, each with a
+positive control: the plugin-mirror, backfill and legacy-deck parks, and the
+new parallel-commit citation card.
