@@ -148,6 +148,15 @@ encoded in the old style and recommend the axis-specific replacement
 (drop to `open` for dependency-derived cases; set `waiting_on` for
 exogenous waits). Nothing is ever steady-state `blocked`.
 
+The third blocker-coherence finding, `CASCADE_CHAIN_ROOT`, outlives
+the migration: it reads the closure gate, not a stored status. It
+names a live card with a raised `human_gate` that holds up a chain of
+other live cards — everything below it along `advanced_by` edges that
+is neither terminal nor a draft, which the `advanced-by-closed` check
+keeps from closing first (§ Value-chain rule). The warning prints the
+count. One gate decision at the root frees the whole chain: surface
+the cord, not the leaf.
+
 A card with an open `advances` prereq is still pullable — it surfaces
 in `--ready` with an "awaiting: <prereqs> (you may start)" advisory
 line. A genuine "must wait to start" is expressed explicitly via

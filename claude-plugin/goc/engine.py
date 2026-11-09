@@ -2645,30 +2645,42 @@ def validate_epic_edge_direction(cards: list[Card]) -> list[BlockerWarning]:
 
 
 def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
-    """Return non-fatal warnings about cards whose `status` is inconsistent
-    with their blocker graph.
+    """Return the advisory warnings read off the `advanced_by` graph.
 
-    Three warning classes, all advisory — none contributes to `validate`'s
-    exit code:
+    Three warning classes; none contributes to `validate`'s exit code.
+
+    The first two are migration aids for the retired `status: blocked`
+    (`Skill(card-schema)` reference.md § Three-axis model) and fire only on
+    a card still stored that way:
 
     - STALE_BLOCKED: `status: blocked` with `advanced_by` non-empty whose
-      entries all sit in TERMINAL_STATUSES. No active prereq remains; the
-      card should flip to `open` or its blocker list should be refreshed.
-      With derived dependency-readiness (`card_is_ready` /
-      `dependency_blocked`), the recommended pattern is to leave the card
-      `open` and let the queue hide it via the derived predicate — so the
-      card self-clears the moment its last prereq closes. This warning
-      remains as a migration aid for cards still using the legacy
-      `status: blocked` for a dependency wait.
+      entries all sit in TERMINAL_STATUSES. No prereq is left to wait for,
+      so the card should flip to `open`. A card never needs a status for an
+      open prereq either: it stays `open` and pullable (`card_is_ready`
+      does not read prereqs), and derived dependency-readiness
+      (`dependency_blocked`) shows the prereq as an advisory "awaiting"
+      line that clears itself when the last one closes.
     - ORPHAN_BLOCKED: `status: blocked` with empty `advanced_by` and
       `human_gate == "none"`. The real blocker is body-only and invisible
       to graph walkers. Suppressed for raised gates because the gate
       itself already names the bottleneck (Option B from the spec, extended
       from `decision` to any raised gate).
-    - CASCADE_CHAIN_ROOT: a `human_gate != "none"` card whose `advances`
-      transitively reach at least CASCADE_ROOT_THRESHOLD blocked cards.
-      One human action at the root cascade-unblocks the whole subtree
-      (Lean Andon — surface the cord, not the leaf).
+
+    The third does not depend on the legacy value and outlives the migration:
+
+    - CASCADE_CHAIN_ROOT: a live card (not terminal, not a draft) with a
+      raised `human_gate` whose closure holds up at least
+      CASCADE_ROOT_THRESHOLD other live cards. It is a closure-gate signal:
+      the `advanced-by-closed` check keeps a card from closing while any
+      `advanced_by` entry is non-terminal, and a gated card cannot close
+      until a human lowers its gate, so every live card reachable down
+      `advanced_by` edges from the root waits on that one human action
+      (Lean Andon — surface the cord, not the leaf). `active`, gated,
+      waiting and legacy `blocked` descendants all count; none of them can
+      close first. The walk neither counts nor passes through a terminal
+      card (a closed prereq holds nothing up) or a draft (an unauthored
+      scaffold is not yet real work, the rule `card_is_draft` sets for
+      every queue surface), and a terminal or draft card is never a root.
     """
     by_title = {c.title: c for c in cards}
     warnings: list[BlockerWarning] = []
@@ -2709,17 +2721,23 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
                 f"all advanced_by entries inactive: [{detail}]",
             ))
 
+    def live(card: Card) -> bool:
+        return card.status not in TERMINAL_STATUSES and not card_is_draft(card)
+
     for root in cards:
-        if root.human_gate == "none":
+        if root.human_gate == "none" or not live(root):
             continue
         cluster: set[str] = set()
         stack = list(unblocks.get(root.title, []))
         while stack:
             title = stack.pop()
-            if title in cluster:
+            # A cycle back to the root is already a validate ERROR
+            # (`detect_advance_cycles`); it must not count the root as
+            # one of the cards it holds up.
+            if title in cluster or title == root.title:
                 continue
             descendant = by_title.get(title)
-            if descendant is None or descendant.status != "blocked":
+            if descendant is None or not live(descendant):
                 continue
             cluster.add(title)
             stack.extend(unblocks.get(title, []))
@@ -2727,8 +2745,8 @@ def validate_blocker_coherence(cards: list[Card]) -> list[BlockerWarning]:
             warnings.append(BlockerWarning(
                 "CASCADE_CHAIN_ROOT",
                 root.title,
-                f"{len(cluster)} blocked {_plural(len(cluster), 'card')} "
-                f"rooted here (gate={root.human_gate})",
+                f"{len(cluster)} {_plural(len(cluster), 'card')} cannot close "
+                f"until this one does (gate={root.human_gate})",
             ))
 
     return warnings

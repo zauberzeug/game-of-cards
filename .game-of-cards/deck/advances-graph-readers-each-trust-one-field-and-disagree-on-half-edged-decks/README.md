@@ -49,13 +49,9 @@ consumers read `advances`, backward ones `advanced_by`. So wherever one
 half is missing, the consumers split into two groups that see different
 graphs. Nothing ties them to one definition of an edge.
 
-`CASCADE_CHAIN_ROOT` shows the drift in its own docstring, which describes
-the walk in terms of the other field:
-
-> CASCADE_CHAIN_ROOT: a `human_gate != "none"` card whose `advances`
-> transitively reach at least CASCADE_ROOT_THRESHOLD blocked cards.
-
-while the walk builds its adjacency from `advanced_by`:
+`CASCADE_CHAIN_ROOT` is one of the backward readers. Its walk builds its
+adjacency from `advanced_by` alone, so an edge recorded only in `advances`
+is invisible to it:
 
 ```python
 for c in cards:

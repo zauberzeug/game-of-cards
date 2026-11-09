@@ -36,6 +36,8 @@ worker: {who: Rodja Trappe, where: main}
 
 # goc-validate-warns-on-stale-blocked-orphan-blocked-and-cascade-roots
 
+> Later evidence: see [cascade-root-warning-counts-only-cards-in-the-retired-blocked-status](../cascade-root-warning-counts-only-cards-in-the-retired-blocked-status/). The CASCADE_CHAIN_ROOT built below counts only `status: blocked` cards, so it went silent once the three-axis model retired that value; it now counts every non-terminal, non-draft card below the gated root. STALE_BLOCKED and ORPHAN_BLOCKED are unchanged and serve as migration aids.
+
 ## Problem
 
 `goc validate` is well-tuned for **schema** conformance — frontmatter

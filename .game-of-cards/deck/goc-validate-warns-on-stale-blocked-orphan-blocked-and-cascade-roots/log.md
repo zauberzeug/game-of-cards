@@ -41,3 +41,11 @@ new warning, recorded here for whoever picks them up.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-05-21 — Closure' present
+
+## 2026-11-09T04:34:53Z — Post-close amendment
+
+Extended by [`cascade-root-warning-counts-only-cards-in-the-retired-blocked-status`](../cascade-root-warning-counts-only-cards-in-the-retired-blocked-status/)
+— CASCADE_CHAIN_ROOT counted only `status: blocked` descendants, so it could
+not fire once the three-axis model kept waiting cards `open`. It now counts
+every live (non-terminal, non-draft) card below a live gated root, which is
+what the `advanced-by-closed` check holds until the root closes.
