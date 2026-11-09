@@ -46,6 +46,7 @@ advanced_by:
   - engine-still-names-the-deck-script-and-schema-file-goc-replaced
   - reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml
   - plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped
+  - internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded
 tags: [meta-fix, documentation, infra]
 definition_of_done: |
   - [ ] (replace with real criteria once the decision below is recorded)
@@ -91,10 +92,11 @@ the *unguarded* claims.
 | `ClaudeSettingsHookEditClaimsTest` (own file, `tests/test_claude_settings_hook_edit_claims.py`) | [agents-md-says-goc-validate-checks-hook-entries-in-claude-settings](../agents-md-says-goc-validate-checks-hook-entries-in-claude-settings/) | 2026-10-07 |
 | `ShippedRecipeTest` + `PreFixRecipeFiresTest` (own file, `tests/test_reproduce_recipe_root.py`) | [reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml](../reproduce-py-recipe-crashes-in-repos-without-a-pyproject-toml/) | 2026-10-17 |
 | `PayloadManifestTest` + `PreFixManifestFiresTest` + `ManifestFormatTest` (own file, `tests/test_plugin_payload_dependency_manifests.py`) | [plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped](../plugin-payload-still-declares-click-and-pyyaml-dependencies-the-engine-dropped/) | 2026-10-17 |
+| `PublishedInternalNamesGuardTest` (in `tests/test_card_authoring_rules.py`) | [internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded](../internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded/) | 2026-11-09 |
 
-Thirty-seven instances across five months, each its own file → claim → fix →
+Thirty-eight instances across six months, each its own file → claim → fix →
 guard cycle. `advanced_by` is the authoritative count; the table above shows
-twenty-seven of them, because nine closed instances and one still-open one carry
+twenty-eight of them, because nine closed instances and one still-open one carry
 the edge but no row yet
 ([five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs](../five-of-six-content-stubs-promise-inlining-no-shipped-skill-performs/),
 [meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card](../meta-fix-predicate-cannot-fire-on-a-newly-filed-umbrella-card/),

@@ -7,7 +7,8 @@ contribution: medium
 created: "2026-11-09T02:34:58Z"
 closed_at: "2026-11-09T05:27:54Z"
 human_gate: none
-advances: []
+advances:
+  - doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them
 advanced_by: []
 tags: [bug, documentation, infra]
 definition_of_done: |
@@ -19,6 +20,7 @@ definition_of_done: |
   - [x] MECHANICAL: the verbatim discussion quotes carried by the swept lines are paraphrased, and AGENTS.md no longer vouches for the quoting rule either (added during the work, see § Fix step 2)
 worker: {who: "claude[bot]", where: main}
 ---
+
 # Internal project name keeps reaching cards because the rule against it is unguarded
 
 ## Resolution

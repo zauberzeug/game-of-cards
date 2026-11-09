@@ -469,3 +469,33 @@ rowless instances the paragraph already named are joined by four linked
 between 2026-10-08 and 2026-10-14, none of whose DoDs named a row. The
 frontmatter summary still narrates the instances only up to the fourteenth
 and is not touched here.
+
+## 2026-11-09T05:30:36Z — Thirty-eighth instance: an audit verdict written into AGENTS.md
+
+[internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded](../internal-project-name-keeps-reaching-cards-because-the-rule-against-it-is-unguarded/)
+(done). AGENTS.md § Card authoring rules said the no-internal-names and
+quoting rules were "audited clean on 2026-07-27". That restates the deck's own
+content, a tree-derived fact, and it was false on the day it was written:
+three cards already named the rule's example project. Nothing pinned it. A
+refine-deck pass found it, not CI. The 2026-07-27 card's scope note judged
+itself "adjacent, not an eighth instance", because the *rules* carry no tree
+state. That was true of the rules but not of the audit verdict it added
+beside them.
+
+The guard is `PublishedInternalNamesGuardTest` in
+`tests/test_card_authoring_rules.py`. It derives the derivable part of the
+claim: no file under the deck names either example AGENTS.md publishes. It
+also proves its sensitivity on the pre-fix deck, which gives 16 of 16
+findings.
+
+The datum for the scope question: the rest of the claim cannot be derived.
+For individual names, a guard would need a list that publishes what the rule
+protects. Discussion quotes cannot be told from permitted code quotes. So the
+replacement text dates the 2026-11-09 sweep as history and tells readers to
+treat the unguarded rules as unaudited, instead of restating a standing
+verdict. This adds a class to Option A's scope: an audit verdict in prose is a
+claim about the tree. Either a guard derives it, or the doc must date it and
+disclaim it, because no later reader can re-check a bare "clean".
+
+Row added; the count is reconciled in place: 38 edges, 28 rows, the gap still
+ten.

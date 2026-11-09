@@ -92,3 +92,11 @@ brought it to 0.25 s, against 0.54 s for the existing language check.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-11-09T05:27:09Z — Closure' present
+
+## 2026-11-09T05:30:36Z — Post-close amendment
+
+Linked as the thirty-eighth instance of
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/)
+(`advances` edge plus a row in its table). The "audited clean on 2026-07-27"
+sentence was an unpinned prose restatement of deck content, false when
+written. `PublishedInternalNamesGuardTest` now derives the derivable part.
