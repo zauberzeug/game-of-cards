@@ -22,9 +22,9 @@ definition_of_done: |
 ## Location
 
 - `goc/engine.py:5690-5700` — `_git_auto_commit`'s `exclude_draft` filter.
-- `goc/engine.py:5234-5237` — `_cmd_status`: `commit_targets = [card_dir]`
+- `goc/engine.py:6854-6857` — `_cmd_status`: `commit_targets = [card_dir]`
   plus `DECK_DIR / successor` for `superseded --by`.
-- `goc/engine.py:7429` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
+- `goc/engine.py:7429` / `:7463` — `_cmd_advance` / `_cmd_unadvance`:
   `_git_auto_commit([DECK_DIR / title, DECK_DIR / advancer], ...)`.
 
 ## What's broken
@@ -110,7 +110,7 @@ committed trees. A human should pick which invariant bends.
 
 **Option A — commit the draft counterpart together with the edge
 (atomicity wins).** Pass `exclude_draft=False` from the two-card call
-sites at `engine.py:6851`, `:7429`, `:5725`.
+sites at `engine.py:6857`, `:7429`, `:7463`.
 
 - Pros: committed tree always validates; matches the `goc new --commit`
   precedent and the half-edge rule; smallest behavior change.
