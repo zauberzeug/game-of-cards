@@ -1,7 +1,7 @@
 ---
 title: cascade-root-warning-counts-only-cards-in-the-retired-blocked-status
 summary: "goc validate's CASCADE_CHAIN_ROOT warning walks down from a gated card only through cards stored as status: blocked, a value the three-axis model retired, so on a deck encoded the current way (dependents stay open) it can never fire. This repo's deck holds no blocked card, yet the decision-gated deck-auto-commit-ignores-card-files-other-than-readme-and-log heads a three-card chain whose closures the advanced-by-closed check holds until it closes, and validate stays silent. The blocked-status deprecation reconciled STALE_BLOCKED and ORPHAN_BLOCKED but never this third class, and no card tracks it."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-09T00:52:40Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the function docstring (`goc/engine.py:2654-2671`) no longer says the queue hides a card with an open prerequisite (contradicts `card_is_ready`, `goc/engine.py:3164`), and describes CASCADE_CHAIN_ROOT by the closure gate rather than by `blocked` cards.
   - [ ] MECHANICAL: `Skill(card-schema)` reference.md § Three-axis model names CASCADE_CHAIN_ROOT as the blocker-coherence class that outlives the migration and says what it flags; `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass, and the closure entry in `log.md` records how many CASCADE_CHAIN_ROOT warnings this repo's deck prints after the fix (one at filing time, see Empirical evidence).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The cascade-root warning counts only cards in the retired `blocked` status
