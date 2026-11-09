@@ -249,7 +249,12 @@ blocked`, which the docs call deprecated.
    `blocked` cards all count: each is work that cannot close before the
    root. A terminal descendant holds nothing up, since the closure check
    passes on a closed prereq. A draft is not yet real work. The walk
-   neither counts nor passes through either.
+   neither counts nor passes through either. `live()` is one more inline
+   copy of the live-variant gate that
+   [waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift](../waiting-impedes-callers-reimplement-the-terminal-status-liveness-gate-and-drift/)
+   tracks. There is no bare live predicate to reuse (`live_impeded` folds
+   in the overlay), and the helper's shape is that card's pending
+   decision, so the walk keeps a local copy.
 2. **The root must be live too** (`goc/engine.py:2728`), which the filed
    plan did not ask for. A closed root holds nothing up. That state is
    already a validate ERROR (`human_gate` must be `none` on a terminal

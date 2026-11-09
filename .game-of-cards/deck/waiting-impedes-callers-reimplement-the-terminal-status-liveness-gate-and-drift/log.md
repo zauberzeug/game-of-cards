@@ -43,3 +43,16 @@ Reproducer: none.
 Verdict: not verified (no reproducer) — needs a human re-read. Reading HEAD: a `live_impeded` helper (added in `fd34c7cc`) now owns the live variant and the `--waiting` filter routes through it, so the table's `--waiting` row is out of date; board `card_cell`, `card_is_workable_for_scheduler`, `card_is_ready` and the gated-leverage line still inline the gate.
 Re-anchored `engine.py:2982-2986` → `:4141-4145` (board `card_cell`'s `not_ready`).
 Gate unchanged.
+
+## 2026-11-09T04:39:42Z — Another copy of the live variant, outside the overlay callers
+
+[cascade-root-warning-counts-only-cards-in-the-retired-blocked-status](../cascade-root-warning-counts-only-cards-in-the-retired-blocked-status/)
+retargeted the CASCADE_CHAIN_ROOT walk from `status: blocked` to live
+cards. It added a local `live()` in `validate_blocker_coherence`, the
+live variant without the overlay, because no bare live predicate exists
+to call. The README now lists it after the caller table. The table stays
+scoped to `waiting_impedes` callers. This site belongs to the same rule,
+so the helper decision should say whether a bare live predicate is part
+of it.
+
+No status or gate change.

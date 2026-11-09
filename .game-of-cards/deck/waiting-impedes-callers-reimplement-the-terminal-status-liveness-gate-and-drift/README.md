@@ -52,6 +52,16 @@ gated-leverage); the rest are the live variant (non-terminal, includes
 The last row is the one that changes the shape of this card: it is not a
 Python caller. See "A caller no helper can reach" below.
 
+One more copy sits outside the `waiting_impedes` callers. The
+CASCADE_CHAIN_ROOT walk in `validate_blocker_coherence` gates its root
+and every descendant on a local `live()` (`goc/engine.py:2724-2725`). That
+is the live variant with no overlay: `status not in TERMINAL_STATUSES and
+not card_is_draft`. It came from
+[cascade-root-warning-counts-only-cards-in-the-retired-blocked-status](../cascade-root-warning-counts-only-cards-in-the-retired-blocked-status/),
+because there is no bare live predicate to call: `live_impeded` folds the
+overlay in. A helper shape that factors that predicate out of
+`live_impeded` would absorb this copy too.
+
 ## Why it matters — the drift already shipped
 
 The `--waiting` filter shipped with **no** liveness gate at all, so it
