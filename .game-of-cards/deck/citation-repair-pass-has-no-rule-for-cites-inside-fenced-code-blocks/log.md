@@ -31,3 +31,18 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-09-01 — Closure' present
+
+## 2026-11-09T02:36:25Z — Post-closure: damage from before the rule, repaired
+
+The rule this card landed (`eae2bea9`) stopped passes from rewriting fenced
+records. It did not repair records the 2026-08-10, 08-17 and 08-24 passes had
+already renumbered. A 2026-11-09 sweep checked every record cite in live
+cards for a hygiene-pass commit as its writer. It found four pasted
+transcripts with rewritten numbers; two of them claimed the same number for
+two different lines. All four were restored to their filing-time output
+(`7e8549ae`, `f868a963`):
+`openclaw-skill-porter-claude-substitutions-emit-doubled-articles`,
+`goc-decide-archived-deliberation-entry-uses-card-filing-time`,
+`openclaw-porter-arguments-substitution-breaks-single-quoted-python-literals`
+and `agent-manifest-guidance-block-is-built-but-silently-ignored`. The same
+check over closed cards found none. No remediation remains open.
