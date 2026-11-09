@@ -262,3 +262,25 @@ instrument this card reads its datapoints through.
 
 For those datapoints: a pass's re-run result is evidence only if it ran after
 that pass's commit.
+
+## 2026-11-09T02:36:09Z — Evidence for Options B and D: identifiers in prose rot too, and some never existed
+
+A 2026-11-09 refine-deck sweep checked the backticked private identifiers
+that live cards name against the code: 11 names on 15 cards appear nowhere in
+HEAD. Most are proposed helpers in Fix sections, which is legitimate. Three
+are named as existing code but have never existed in code history:
+`_migrate_precommit_validate_pattern` and `_precommit_hook_drifted` on
+`install-writes-pre-commit-entry-that-fails-on-plugin-only-hosts` (real:
+`_refresh_goc_validate_block`), and `_coerce_scalar` on
+`frontmatter-emitter-quote-trigger-reenumerates-parser-shapes-and-keeps-drifting`
+(real: `_parse_scalar`). Both were corrected in place. One more,
+`_opted_out`, was renamed to `_enabled` by `d6f53e79`, and its card still
+quotes the old name.
+
+Relevance to the decision: a symbol-relative scheme (B or D) needs a
+resolver. The same resolver would flag all three invented names at filing,
+which no line-number repair can do, since those cites resolved to real lines
+the whole time. Under bare line numbers, as today, these names were caught
+only by an agent reading the card against the code. The same pass filed
+`citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`,
+a second failure that only the line-number scheme has.

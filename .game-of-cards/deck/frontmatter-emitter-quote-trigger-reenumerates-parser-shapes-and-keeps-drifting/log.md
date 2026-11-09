@@ -17,3 +17,12 @@
   `tests/test_emitter_strict_yaml_quoting.py`.
 - **Still gated**: `human_gate: decision` unchanged — nobody has picked a
   factoring for the parser half.
+
+## 2026-11-09T02:36:09Z — Named the real scalar-coercion function
+
+§ What's broken located the parser's scalar coercion in `_coerce_scalar`.
+No function of that name has existed in the code: `git log -S` over
+`goc/`, `scripts/` and `tests/` finds none. The coercion is `_parse_scalar`
+(`goc/_vendor/yaml_lite.py:353`), which maps null, boolean, integer and date
+shapes. The sentence now names it. Found by a refine-deck sweep for
+identifiers that live cards claim exist.

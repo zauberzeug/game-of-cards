@@ -64,7 +64,7 @@ if (
 
 Each clause is a hand-maintained restatement of one parser rule. The parser's
 authoritative recognizers live elsewhere (`yaml_lite.py`: `_BLOCK_INDICATOR_RE`,
-`_FOLDED_INDICATOR_RE`, the scalar coercion in `_coerce_scalar`, etc.). When
+`_FOLDED_INDICATOR_RE`, the scalar coercion in `_parse_scalar`, etc.). When
 the two restatements disagree, the emitter writes a value bare that the parser
 then reinterprets — silent data loss on round-trip, or (once the parser was
 hardened to *raise*) a hard `FrontmatterError` crash.
