@@ -31,10 +31,10 @@ top-level files are destroyed without ever being copied.
 
 ## Location
 
-- `goc/engine.py:131` — `if canonical.exists() and legacy.exists(): _DUAL_TREE_CONFLICT = True`
-- `goc/engine.py:4202` — every verb except `migrate` exits 1 on the conflict, suggesting `goc migrate`
-- `goc/engine.py:7067` — `legacy_dirs = {d.name: d for d in legacy.iterdir() if d.is_dir()}` (only dirs are ever copied)
-- `goc/engine.py:7149` — `shutil.rmtree(legacy)` (deletes the whole folder, including never-copied top-level files)
+- `goc/engine.py:189` — `if canonical.exists() and legacy.exists(): _DUAL_TREE_CONFLICT = True`
+- `goc/engine.py:4740` — every verb except `migrate` exits 1 on the conflict, suggesting `goc migrate`
+- `goc/engine.py:7984` — `legacy_dirs = {d.name: d for d in legacy.iterdir() if d.is_dir()}` (only dirs are ever copied)
+- `goc/engine.py:8066` — `shutil.rmtree(legacy)` (deletes the whole folder, including never-copied top-level files)
 - `goc/install.py:470-478` — `_find_installed_deck_dir` requires `deck/.goc-version` before treating `deck/` as a GoC install (the contrasting predicate)
 - `goc/templates/hooks/deck_prompt_router.py:225-228` (`_has_deck`) and `goc/templates/hooks/deck_session_start.py:424-430` — the runtime hooks' opt-in gate, added 2026-10-24 after this card was filed, makes the same bare `(project_dir / "deck").is_dir()` check; `openclaw-plugin/index.ts:569-573` (`hasDeck`) is its OpenClaw port
 

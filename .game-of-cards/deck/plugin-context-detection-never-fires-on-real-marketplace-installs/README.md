@@ -32,9 +32,9 @@ with a raw `FileNotFoundError` traceback instead.
 
 ## Location
 
-- `goc/install.py:541` — `return _PACKAGE_DIR.parent.name in {"claude-plugin", "codex-plugin", "openclaw-plugin"}`
-- `goc/install.py:555` — `return _PACKAGE_DIR.parent.name == "openclaw-plugin"`
-- `goc/engine.py:5467-5471` — `_claude_plugin_present()` documents the real layouts
+- `goc/install.py:553` — `return _PACKAGE_DIR.parent.name in {"claude-plugin", "codex-plugin", "openclaw-plugin"}`
+- `goc/install.py:567` — `return _PACKAGE_DIR.parent.name == "openclaw-plugin"`
+- `goc/engine.py:6176-6180` — `_claude_plugin_present()` documents the real layouts
 - `tests/test_install.py:2230` — test fabricates `cwd / "_plugin" / "claude-plugin"`, the one layout that matches
 
 ## What's broken
@@ -66,7 +66,7 @@ refusal:
 
 With the detection dead, that safety story is false on every real install.
 The OpenClaw no-harness default (`_is_openclaw_plugin_context`, used at
-`install.py:1802` and `install.py:1973`) is equally dead — real OpenClaw
+`install.py:1889` and `install.py:2060`) is equally dead — real OpenClaw
 installs fall back to the Claude-harness default the docstring says must
 never happen (the closed card
 [openclaw-kickoff-defaults-to-claude-install](../openclaw-kickoff-defaults-to-claude-install/)

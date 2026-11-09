@@ -44,7 +44,7 @@ definition_of_done: |
   → `/`, `README.md` → `/README.md` and `/index.md`, `goc.md` → `/goc/` and
   `/goc.md`, `ABOUT.md` → `/about/` and `/ABOUT.md`; `site/llms.txt` reaches
   `/llms.txt` through the verbatim `site/` copy.
-- `.github/workflows/pull-card.yml:75` — `github_token: ${{ github.token }}`,
+- `.github/workflows/pull-card.yml:83` — `github_token: ${{ github.token }}`,
   plus the default `persist-credentials` on its checkout. The autonomous
   agent commits and pushes to `main` as `GITHUB_TOKEN`. `audit-deck.yml:53`
   and `refine-deck.yml:55` push the same way.

@@ -43,8 +43,8 @@ explicit flag:
         claude_skills_mode = "vendored"
 ```
 
-`goc/install.py:1434` — the unguarded walk it reaches, via
-`_plan_upgrade_writes` → `_plan_writes` (`goc/install.py:963`):
+`goc/install.py:1520` — the unguarded walk it reaches, via
+`_plan_upgrade_writes` → `_plan_writes` (`goc/install.py:1049`):
 
 ```python
     for skill_dir in sorted(p for p in skills_src.iterdir() if p.is_dir()):

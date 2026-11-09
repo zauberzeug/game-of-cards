@@ -30,11 +30,11 @@ Six live `!`-blocks, all in `goc/templates/skills/<skill>/SKILL.md`:
 | Site | Query | Cap | Failure |
 |---|---|---|---|
 | `pull-card/SKILL.md:30` | `--status active -v` | `head -20` | drops cards from the soft-lock table |
-| `pull-card/SKILL.md:42` | `--ready -v` | `head -22` | latent — fires at ~7 ready cards |
-| `next-card/SKILL.md:17` | `--status active -v` | `head -20` | drops cards from the soft-lock table |
+| `pull-card/SKILL.md:46` | `--ready -v` | `head -22` | latent — fires at ~7 ready cards |
+| `next-card/SKILL.md:20` | `--status active -v` | `head -20` | drops cards from the soft-lock table |
 | `standup/SKILL.md:24` | `--status open --json` | `head -60` | invalid JSON |
-| `refine-deck/SKILL.md:91` | `--status open --json` | `head -100` | invalid JSON |
-| `retrospective/SKILL.md:17` | `--closed-since 90d --json` | `head -100` | invalid JSON |
+| `refine-deck/SKILL.md:103` | `--status open --json` | `head -100` | invalid JSON |
+| `retrospective/SKILL.md:19` | `--closed-since 90d --json` | `head -100` | invalid JSON |
 
 Engine side: `--max-rows` (`goc/engine.py`, exposed in `_build_parser`) is
 the only row bound the CLI has, and it is board-only —

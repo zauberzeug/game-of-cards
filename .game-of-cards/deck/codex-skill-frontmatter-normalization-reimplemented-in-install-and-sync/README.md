@@ -52,7 +52,7 @@ Three independent implementations of the same Codex SKILL.md transform:
       dst.write_text(codex_frontmatter + CODEX_GOC_COMMAND_RESOLVER + body)
   ```
 
-- `scripts/sync_plugin_assets.py:350-368` — `_codex_skill_text`:
+- `scripts/sync_plugin_assets.py:350-374` — `_codex_skill_text`:
 
   ```python
   def _codex_skill_text(src: Path, *, skill_name: str) -> str:
@@ -90,7 +90,7 @@ Three independent implementations of the same Codex SKILL.md transform:
 
 The sync script already imports `CODEX_GOC_COMMAND_RESOLVER` and
 `_frontmatter_value` from `goc.install` (sync_plugin_assets.py:38-43), and the
-engine imports the same two constants (engine.py:1661-1665) — both share the
+engine imports the same two constants (engine.py:1891-1895) — both share the
 *constants* and re-derive the *transform*.
 
 The third site was found by

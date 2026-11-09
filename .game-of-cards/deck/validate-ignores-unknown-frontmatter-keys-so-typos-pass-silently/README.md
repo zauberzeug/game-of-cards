@@ -27,8 +27,8 @@ or invented key is silently accepted.
 - `goc/schema.yaml:9-20` declares the closed `optional_fields` set
   (`summary`, `stage`, `closed_at`, the four relation fields, `tags`,
   `worker`, `waiting_on`, `waiting_until`).
-- `goc/engine.py:691` (`optional_fields: list[str]` dataclass field)
-  and `goc/engine.py:712` (`optional_fields=fm["optional_fields"]`) are
+- `goc/engine.py:860` (`optional_fields: list[str]` dataclass field)
+  and `goc/engine.py:881` (`optional_fields=fm["optional_fields"]`) are
   the ONLY references. `grep -rn "optional_fields" goc/` returns no read
   site. `validate_card` checks `required_fields` and per-field value
   enums but has no "key present in card but not in the known set" check.

@@ -28,7 +28,7 @@ definition_of_done: |
 
 - `goc/install.py:928-992` — `_strip_claude_vendored_harness`, called from the vendored→plugin migration cleanup path (`install.py:2082-2094`)
 - `goc/install.py:1217-1255` — `_sync_skill_tree` `replace_skills` path, called from the vendored in-place refresh during `goc upgrade --keep-local-skills`
-- `goc/install.py:890-893` — hook-file enumeration inside `_strip_claude_vendored_harness` (same shape)
+- `goc/install.py:958-961` — hook-file enumeration inside `_strip_claude_vendored_harness` (same shape)
 
 ## What's broken
 
@@ -140,7 +140,7 @@ Exit code 1 (bug reproduced). The current-template skill (`kickoff`)
 is correctly removed; the prior-version GoC skill (`bootstrap`)
 survives despite being equally GoC-owned content. The reproducer
 exercises `_strip_claude_vendored_harness` directly; the analogous
-hook-loop omission (install.py:890-893) is verified by reading —
+hook-loop omission (install.py:958-961) is verified by reading —
 `GOC_CLAUDE_HOOKS` only enumerates the current registration set.
 
 ## Decision required

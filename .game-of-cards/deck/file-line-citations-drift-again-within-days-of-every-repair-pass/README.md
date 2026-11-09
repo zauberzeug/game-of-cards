@@ -197,7 +197,7 @@ the card states what it expects to find.
   at the same frequency with a cheaper per-cite step. 109 cites cannot be
   migrated mechanically.
 - *Edit preview*: `goc/templates/skills/create-card/SKILL.md:155` gains the
-  anchor form; `goc/templates/skills/refine-deck/SKILL.md:103`
+  anchor form; `goc/templates/skills/refine-deck/SKILL.md:134`
   (`### Defunct file:line citations`) drops steps 2 and 4's history walk for a
   read-and-compare; `reference.md:111` (`## Citation anchor check`) loses its
   Getting-the-anchor section; plus a 729-cite migration pass over the deck.

@@ -54,7 +54,7 @@ definition_of_done: |
 - `.github/workflows/ci.yml:56` — `Run regression tests`
   (`uv run python -m unittest discover -s tests`), the step AGENTS.md names as
   the gate for code correctness.
-- `.github/workflows/pull-card.yml:48` — `actions/checkout@v6` with default
+- `.github/workflows/pull-card.yml:56` — `actions/checkout@v6` with default
   `persist-credentials: true`, which leaves the default `GITHUB_TOKEN` in the
   git remote; `:116` — `GH_TOKEN: ${{ github.token }}`. The agent's `git push`
   therefore authenticates as `GITHUB_TOKEN`.

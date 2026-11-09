@@ -184,7 +184,7 @@ which costs an agent round-trip each time (the reason the hook is opt-in).
 **C. Stop matching tool names.** Ask the host for the mutation signal —
 if OpenClaw's `agent_end` context exposes file-change or diff metadata,
 key off that instead of a name list. Most robust, and would let the
-`TODO(verify-context-shape)` at `index.ts:789-792` be resolved in the same
+`TODO(verify-context-shape)` at `index.ts:804-807` be resolved in the same
 pass. Requires knowing what `agent_end` actually carries, which the same
 `npm install` spike in the falsification recipe would establish.
 

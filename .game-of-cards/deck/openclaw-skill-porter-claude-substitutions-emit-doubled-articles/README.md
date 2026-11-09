@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-`scripts/port_skills_to_openclaw.py:64-68` — the host-neutral substitution
+`scripts/port_skills_to_openclaw.py:65-69` — the host-neutral substitution
 table:
 
 ```python
@@ -40,7 +40,7 @@ ignoring sentence-initial position. The corruption is committed in the
 shipped plugin payload today:
 
 - `openclaw-plugin/skills/kickoff/SKILL.md:143` — "the **the agent**-specific"
-  (source `goc/templates/skills/kickoff/SKILL.md:133`: "the Claude-specific")
+  (source `goc/templates/skills/kickoff/SKILL.md:139`: "the Claude-specific")
 - `openclaw-plugin/skills/kickoff/SKILL.md:143` — "plus the **the agent**-specific extras"
 - `openclaw-plugin/skills/kickoff/SKILL.md:172` — "is the **the agent**-only path"
 - `openclaw-plugin/skills/openclaw-kickoff/SKILL.md:81` — "hunting for a

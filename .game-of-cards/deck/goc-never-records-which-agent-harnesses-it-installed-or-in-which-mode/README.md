@@ -30,7 +30,7 @@ definition_of_done: |
 - `goc/engine.py:1480`: `validate_skill_dir_parity` returns `[]` when
   `effective_skills_source() == "plugin"`, before it checks either
   `.claude/skills` or `.codex/skills`.
-- `goc/engine.py:5819`: in a repo with no pin,
+- `goc/engine.py:6235`: in a repo with no pin,
   `return "plugin" if _claude_plugin_present() else "vendored"` decides by
   what is installed on the machine running the check.
 

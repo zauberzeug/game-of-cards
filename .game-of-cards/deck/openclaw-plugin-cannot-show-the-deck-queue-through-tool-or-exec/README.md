@@ -25,15 +25,15 @@ definition_of_done: |
 
 - `openclaw-plugin/index.ts:77-86` — `GocToolParams.verb` is a required
   literal union (`Type.Union`, **not** wrapped in `Type.Optional`).
-- `openclaw-plugin/index.ts:139` — `buildArgs` returns
+- `openclaw-plugin/index.ts:147` — `buildArgs` returns
   `[...flagTokens, input.verb, ...(input.args ?? [])]`; the verb is spliced
   unconditionally.
-- `openclaw-plugin/dist/index.js:2406-2457` — the compiled artifact consumers
+- `openclaw-plugin/dist/index.js:2409-2460` — the compiled artifact consumers
   actually load; identical on both points.
-- `goc/engine.py:4219-4220` — `if args.command is None: _cmd_default(args)`.
+- `goc/engine.py:4757-4758` — `if args.command is None: _cmd_default(args)`.
   The queue table, `--board`, `--ready`, `--json` and the leverage line all
   live behind that branch.
-- `scripts/port_skills_to_openclaw.py:106-107` — the porter's injected
+- `scripts/port_skills_to_openclaw.py:107-108` — the porter's injected
   fallback text: *"For bare-queue listings with no subcommand, shell out via
   the `exec` tool:"*.
 - `openclaw-plugin/package.json` — no `bin` field, no `bin/` entry in
@@ -45,7 +45,7 @@ definition_of_done: |
 The engine renders the deck only when argparse resolves **no subcommand**:
 
 ```python
-# goc/engine.py:4219
+# goc/engine.py:4757
     if args.command is None:
         _cmd_default(args)
 ```
@@ -88,7 +88,7 @@ produce.
 paragraph into every ported skill whose source has a `## Context` block:
 
 ```python
-# scripts/port_skills_to_openclaw.py:102-108
+# scripts/port_skills_to_openclaw.py:103-109
         "Before running the body of this skill, the agent should see current "
         "deck state. Run these via the `goc` tool (top-level filters like "
         "`--status` / `--tag` / `--worker` map to the tool's `flags` "
@@ -185,7 +185,7 @@ and the choice changes what gets tested and re-ported.
 `execute` maps it to an empty subcommand slot so `buildArgs` emits
 `[...flagTokens]` with no verb. Keeps the parity contract intact (`skill`
 already established the tool-only escape hatch at
-`openclaw-plugin/index.ts:68-75`), and the verb list stays self-documenting
+`openclaw-plugin/index.ts:76-83`), and the verb list stays self-documenting
 in the tool schema the agent sees. Costs an `index.ts` change plus an
 `npm run build` to refresh `dist/index.js`. Needs a name the agent will
 guess — `queue` reads well next to `--board` / `--ready`, but it is not a

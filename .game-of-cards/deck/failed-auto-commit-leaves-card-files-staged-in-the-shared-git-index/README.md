@@ -51,10 +51,10 @@ definition_of_done: |
   There is no `git restore --staged` / `git reset` on this path. The
   `git add` side effect survives the failure.
 
-- Seven auto-committing call sites reach it: `goc status` (`engine.py:6018`),
+- Seven auto-committing call sites reach it: `goc status` (`engine.py:6857`),
   `goc publish` (`:5763`), `goc new --commit` (`:5959`), `goc wait` (`:6216`),
   `goc advance` (`:6238`), `goc unadvance` (`:6253`), `goc decide` (`:6582`).
-  `auto_commit_enabled` (`engine.py:5230-5238`) defaults to **true** whenever
+  `auto_commit_enabled` (`engine.py:5939-5947`) defaults to **true** whenever
   the deck is git-tracked, so this is the default path, not an opt-in one.
 
 ## What's broken
@@ -146,9 +146,9 @@ second only re-routed the diagnostic to stderr.
 
 **Why this is a single-site defect, not a family.** The engine already has
 the convention this call site is missing: the claim-push path aborts its own
-half-finished git state on failure (`git rebase --abort`, `engine.py:5373`),
+half-finished git state on failure (`git rebase --abort`, `engine.py:6082`),
 and `goc move`'s `git mv` falls back rather than stranding a side effect
-(`engine.py:6736-6738`). `_git_auto_commit` is the outlier against a local
+(`engine.py:7607-7609`). `_git_auto_commit` is the outlier against a local
 convention, and it is the one shared helper every auto-committing verb routes
 through — so the fix is one function, not an architectural sweep. It is also
 adjacent to but NOT a member of

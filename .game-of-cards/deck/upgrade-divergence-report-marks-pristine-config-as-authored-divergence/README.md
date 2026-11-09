@@ -22,13 +22,13 @@ definition_of_done: |
 
 ## Location
 
-- `goc/install.py:1218-1230` — `_classify_user_owned_file` (raw byte compare).
-- `goc/install.py:1857` and `goc/install.py:2104` — `goc install` calls
+- `goc/install.py:1304-1316` — `_classify_user_owned_file` (raw byte compare).
+- `goc/install.py:1944` and `goc/install.py:2212` — `goc install` calls
   `_write_skills_source(target, ...)` immediately after copying the
   template config.
 - `goc/install.py:1832-1865` — `_write_skills_source` rewrites the
   `skills_source:` line.
-- `goc/templates/game_of_cards/config.yaml:94` — ships
+- `goc/templates/game_of_cards/config.yaml:96` — ships
   `# skills_source: auto` (commented).
 - `goc/templates/skills/upgrade/SKILL.md:59-61` — the consumer that
   reconciles every `evolving` + `preserved` file.
@@ -106,7 +106,7 @@ classifier bug.
 
 The reachability path is the shipping install→upgrade flow with no
 unusual input: `goc install [--claude|--codex|--local-skills]` writes
-`skills_source: <value>` into config.yaml (`install.py:1857`/`:1780`),
+`skills_source: <value>` into config.yaml (`install.py:1944`/`:1780`),
 then on the consumer's next `goc upgrade` the engine emits the
 divergence report (`status: preserved` for config.yaml), and
 `Skill(upgrade)` reads it and runs an interactive 2-way reconcile.

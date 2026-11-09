@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:6883-6911` — the `_cmd_decide` function, specifically
+`goc/engine.py:7774-7811` — the `_cmd_decide` function, specifically
 line 4593 (`filed = t.created or now`) and line 4595
 (`f"## {filed}: decision deliberation archived\n\n..."`).
 

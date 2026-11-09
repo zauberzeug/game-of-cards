@@ -111,7 +111,7 @@ just-fixed `deck_session_start.py`:
 
 - `pattern_generalization_check.py:216` reads only
   `CLAUDE_PROJECT_DIR`, never `CODEX_PROJECT_DIR`.
-- `deck_session_start.py:282-283` reads both env vars, with a
+- `deck_session_start.py:416-417` reads both env vars, with a
   helper `_project_dir_from_hook_input()`.
 
 Under a Codex host that sets `CODEX_PROJECT_DIR` and does not pass

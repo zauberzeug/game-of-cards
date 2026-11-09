@@ -46,7 +46,7 @@ const GOC_VERBS = [
 
 The plugin's own ported onboarding skills, shipped in the same payload:
 
-- `openclaw-plugin/skills/kickoff/SKILL.md:164` — "On confirmation, run
+- `openclaw-plugin/skills/kickoff/SKILL.md:170` — "On confirmation, run
   `goc install --briefing-target <chosen file>`"
 - `openclaw-plugin/skills/openclaw-kickoff/SKILL.md:94-96` — "Run from the
   OpenClaw plugin, `goc install` recognizes the host and scaffolds a
@@ -60,7 +60,7 @@ fails typebox validation. Every fallback is worse:
 
 - `exec` of bare `goc install` → ENOENT on a plugin-only host.
 - A pipx-installed `goc install` runs *outside* the plugin payload, so
-  `_is_openclaw_plugin_context()` (`goc/install.py:544-555`, keyed on
+  `_is_openclaw_plugin_context()` (`goc/install.py:556-567`, keyed on
   `_PACKAGE_DIR.parent.name == "openclaw-plugin"`) is False and install
   defaults to the **Claude** harness — writing the `CLAUDE.md` import that
   `openclaw-kickoff` explicitly promises never appears ("No `CLAUDE.md`

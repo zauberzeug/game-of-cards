@@ -27,7 +27,7 @@ definition_of_done: |
 
 - `goc/install.py:165` — `_briefing_body`, the read that kills `goc install`.
 - `goc/engine.py:4382` — `_cmd_default`, the `print` that kills the bare queue.
-- `goc/engine.py:99` — the first of 47 encoding-less text reads in the engine.
+- `goc/engine.py:95` — the first of 47 encoding-less text reads in the engine.
 - `goc/cli.py:35` — `main()`, the one place a process-wide UTF-8 pin could go.
 
 ## What's broken

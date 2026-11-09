@@ -26,7 +26,7 @@ definition_of_done: |
 
 ## The pattern
 
-`_cmd_default` (`goc/engine.py:4429`) answers one query and renders it
+`_cmd_default` (`goc/engine.py:4814`) answers one query and renders it
 as several views in one invocation. The table and `--json` print the
 query result. The `--board` grid, the `ACTIVE:` banner above the table,
 the `--ready` leverage line below it, and the zero-match line each pick
@@ -146,7 +146,7 @@ each filter, and fails on any ignore that is not declared.
   the regression test.
 - **Cons:** touches every view in `_cmd_default`, and needs the board
   and banner contracts decided first.
-- **Preview:** `goc/engine.py:4543` becomes
+- **Preview:** `goc/engine.py:4933` becomes
   `board_cards = filter_cards(cards, status=status, **scope)` (or the
   board option chosen). `:4593` becomes
   `filter_cards(cards, status=None, worker=args.worker)` with the

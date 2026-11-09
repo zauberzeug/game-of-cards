@@ -25,8 +25,8 @@ definition_of_done: |
 - `goc/templates/skills/` — 19 sites per tree write `deck/<title>/...`. The
   executable ones:
   - `finish-card/SKILL.md:59` — ``Run `uv run python deck/<title>/reproduce.py` ``
-  - `create-card/SKILL.md:204` — ``Run via `uv run python deck/<title>/reproduce.py` ``
-  - `create-card/SKILL.md:185`, `audit-deck/SKILL.md:131,195` — tell the author
+  - `create-card/SKILL.md:206` — ``Run via `uv run python deck/<title>/reproduce.py` ``
+  - `create-card/SKILL.md:186`, `audit-deck/SKILL.md:131,195` — tell the author
     to *write* `deck/<title>/reproduce.py`
 - `goc/templates/game_of_cards/config.yaml:4` — ``records their results in
   `deck/<title>/log.md` ``

@@ -95,7 +95,7 @@ that bug.
 
 The fix itself is determined — quote the expansion
 (`python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/…"`), matching Claude
-Code's documented examples; `_HOOK_FILE_RE` (`install.py:602`) is
+Code's documented examples; `_HOOK_FILE_RE` (`install.py:615`) is
 unanchored and still matches through a leading quote, so GoC-managed
 entry detection survives. The open question is the rollout for
 already-installed consumers:

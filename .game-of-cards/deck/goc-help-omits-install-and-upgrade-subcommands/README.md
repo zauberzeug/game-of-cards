@@ -94,7 +94,7 @@ leads them astray:
 - `goc/templates/AGENTS_GOC.md:5` — *"The CLI is `goc` (`goc --help`)."*
   This is installed into every consumer repo's AGENTS.md/CLAUDE.md by
   `goc install`, so every shipped repo carries the misleading hint.
-- `goc/templates/skills/deck/SKILL.md:95` — *"Run `goc --help` for
+- `goc/templates/skills/deck/SKILL.md:97` — *"Run `goc --help` for
   the full verb list."*
 - `goc/templates/skills/codex-kickoff/SKILL.md:70` — kickoff itself
   invokes `goc --help` while onboarding the user.
@@ -129,7 +129,7 @@ Three credible fix paths; the choice changes the engine/cli boundary:
 
 Add lightweight `subparsers.add_parser("install", help="...")` and
 `subparsers.add_parser("upgrade", help="...")` entries in
-`_build_parser` (`goc/engine.py:3985`) with the same flag set the cli.py
+`_build_parser` (`goc/engine.py:4516`) with the same flag set the cli.py
 intercept defines. The cli.py early-route keeps short-circuiting the
 actual invocation (so `install` / `upgrade` continue to bypass the
 engine's deck loader, which is appropriate — they run before a deck

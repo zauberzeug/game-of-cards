@@ -36,7 +36,7 @@ hook GoC shipped under a *different* command string in a prior version — the
 direct consequence of renaming or repathing a hook file — is invisible to both
 the dedup and the removal logic.
 
-**Merge side** (`_merge_claude_settings`), the dedup at `install.py:711`:
+**Merge side** (`_merge_claude_settings`), the dedup at `install.py:758`:
 
 ```python
 already = any(
@@ -53,7 +53,7 @@ A stale prior-version registration does not equal `command`, so `already` is
 `False` and the current command is **appended as a second group** — leaving
 both the stale and the current registration live.
 
-**Strip side** (`_strip_goc_settings_entries`), `install.py:761` + `736`:
+**Strip side** (`_strip_goc_settings_entries`), `install.py:815` + `736`:
 
 ```python
 goc_commands = set(GOC_CLAUDE_HOOKS.values())   # current strings only

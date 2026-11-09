@@ -44,7 +44,7 @@ The two lists it reads are `EXPLORATION` (8 patterns,
 `deck_prompt_router.py:49-55`).
 
 The OpenClaw TypeScript port makes the same structure explicit as two
-consecutive returns — `openclaw-plugin/index.ts:755-756`:
+consecutive returns — `openclaw-plugin/index.ts:769-770`:
 
 ```ts
       if ((hasExploration || hasTooling) && !hasWork) return;
@@ -141,7 +141,7 @@ byte-identical Python mirrors that `scripts/sync_plugin_assets.py`
 regenerates and CI enforces with `--check`; the seventh is a hand-ported
 TypeScript translation whose comment claims the patterns "mirror
 `goc/templates/hooks/deck_prompt_router.py` exactly"
-(`openclaw-plugin/index.ts:353`). Every future edit to the suppression
+(`openclaw-plugin/index.ts:361`). Every future edit to the suppression
 vocabulary pays full sync and review cost for zero behavior.
 
 **Misdirected diagnosis.** Two open cards attribute the router's
@@ -197,11 +197,11 @@ why both survived — the code is live, only the effect is absent.
 **Sweep, bounded and reported.** Scanned every module-level constant in
 `goc/` and `scripts/` (93 names, `_vendor/` excluded as third-party) for
 definitions with no reader anywhere in `goc/`, `scripts/`, or `tests/`. One
-hit: `SUPERSEDE_REL_FIELDS` (`goc/engine.py:1316`), whose three neighbours
+hit: `SUPERSEDE_REL_FIELDS` (`goc/engine.py:1487`), whose three neighbours
 `LIST_REL_FIELDS`, `ADVANCE_REL_FIELDS` and `INVERSE_REL` all have readers —
-`HalfEdge.is_advance` (`goc/engine.py:1353`) consults `ADVANCE_REL_FIELDS`,
+`HalfEdge.is_advance` (`goc/engine.py:1524`) consults `ADVANCE_REL_FIELDS`,
 while the supersession branch is written out longhand as
-`edge.field == "superseded_by"` (`goc/engine.py:6383`) rather than through
+`edge.field == "superseded_by"` (`goc/engine.py:7192`) rather than through
 the constant sitting right beside it. That is the degenerate case of this
 shape — an unused name, not a misleading contract — so it is noted here
 rather than filed. The sweep did NOT cover unread dataclass *fields* or dict

@@ -37,12 +37,12 @@ definition_of_done: |
   `effective_skills_source() == "plugin"`, before its loop over
   `.claude/skills` and `.codex/skills` (`:1488`). The docstring gives a reason
   for skipping `.claude/skills/` and none for `.codex/skills/`.
-- `goc/engine.py:1497-1499`: the drift message tells both trees to run
+- `goc/engine.py:1600-1602`: the drift message tells both trees to run
   `goc upgrade --keep-local-skills` or to "set `skills_source: plugin` … to
   skip this check".
 - `goc/install.py:2139`, `:2212`: `goc upgrade` reads and re-pins the key only
   `if "claude" in agents`, so no Codex upgrade ever revisits it.
-- `AGENTS.md:320-329`: the section is titled "which install path owns
+- `AGENTS.md:342-351`: the section is titled "which install path owns
   `.claude/skills/`", but its table says `plugin` makes `goc validate` skip
   "the skill-dir parity check", which covers both trees. It also says
   `vendored` is "Written when `goc install --local-skills` is used", which is
@@ -115,7 +115,7 @@ vendored whenever it exists, which every install makes true today.
 - Preview: at `goc/engine.py:1480` the `plugin` skip moves inside the loop and
   skips only `.claude/skills`. The Codex tree's message at `:1497-1499` drops
   the `skills_source: plugin` escape and points at plain `goc upgrade`, which
-  resyncs `.codex/skills/` in every mode. `AGENTS.md:328-329` says the key
+  resyncs `.codex/skills/` in every mode. `AGENTS.md:350-351` says the key
   covers Claude only and that `--local-skills` does not change it on a
   codex-only install. Install and upgrade stay as they are.
 
@@ -136,10 +136,10 @@ its own value.
   validator and every doc that names the key, and repos already pinned to the
   single value need a migration. All of that describes a Codex mode that has
   only one possible value today.
-- Preview: `goc/engine.py:5738` and `:5808` read a per-host value;
+- Preview: `goc/engine.py:6154` and `:5808` read a per-host value;
   `goc/install.py:1832` writes one; `:1943` pins Codex from
   `local_skills_agents`; `:2139` and `:2212` re-pin for Codex too; the loop at
-  `goc/engine.py:1488` picks each tree's value.
+  `goc/engine.py:1591` picks each tree's value.
 
 **Recommendation:** Option A, decided together with
 `codex-install-defaults-to-plugin-path`. It is right for today's

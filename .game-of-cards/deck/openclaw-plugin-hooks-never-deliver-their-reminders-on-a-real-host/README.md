@@ -27,7 +27,7 @@ definition_of_done: |
 - `openclaw-plugin/index.ts:763` — `before_prompt_build`: reads
   `ctx.userPrompt` (`:764`), delivers through `ctx.appendSystemContext`
   (`:773`) or `ctx.prependSystemContext`.
-- `openclaw-plugin/index.ts:797` — `agent_end`: reads `ctx.projectDir`
+- `openclaw-plugin/index.ts:804` — `agent_end`: reads `ctx.projectDir`
   (`:798`) and `ctx.toolCalls` / `ctx.events.toolCalls` (`:808`), delivers
   through `ctx.notify` / `ctx.appendSystemContext` (`:819`, `:821`).
 - The SDK side, in `openclaw@2026.5.7` (the version

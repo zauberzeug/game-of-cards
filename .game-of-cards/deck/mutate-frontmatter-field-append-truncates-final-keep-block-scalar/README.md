@@ -32,7 +32,7 @@ passes before and after — fully silent data loss, reachable from
 
 ## Location
 
-- `goc/engine.py:571-573` — the field-absent append:
+- `goc/engine.py:648-650` — the field-absent append:
 
   ```python
   if not pattern.search(fm_text):
@@ -46,7 +46,7 @@ passes before and after — fully silent data loss, reachable from
   return f"---\n{fm_text}{trailing}---\n{body}"
   ```
 
-- `goc/engine.py:155-160` — the contract being violated: `FRONTMATTER_RE`'s
+- `goc/engine.py:215-220` — the contract being violated: `FRONTMATTER_RE`'s
   `(\n+)` group exists "so that yaml_lite — not the delimiter — decides
   their fate (a `|+` keep scalar must retain its trailing blank line…)".
   The append branch hands that blank run to the appended flat field

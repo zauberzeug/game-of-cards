@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:5040-5050` — `_git_auto_commit`'s `exclude_draft` filter.
+- `goc/engine.py:5690-5700` — `_git_auto_commit`'s `exclude_draft` filter.
 - `goc/engine.py:5234-5237` — `_cmd_status`: `commit_targets = [card_dir]`
   plus `DECK_DIR / successor` for `superseded --by`.
 - `goc/engine.py:7429` / `:5725` — `_cmd_advance` / `_cmd_unadvance`:
@@ -110,7 +110,7 @@ committed trees. A human should pick which invariant bends.
 
 **Option A — commit the draft counterpart together with the edge
 (atomicity wins).** Pass `exclude_draft=False` from the two-card call
-sites at `engine.py:6064`, `:7429`, `:5725`.
+sites at `engine.py:6851`, `:7429`, `:5725`.
 
 - Pros: committed tree always validates; matches the `goc new --commit`
   precedent and the half-edge rule; smallest behavior change.
@@ -144,7 +144,7 @@ nothing and prints a "left uncommitted: counterpart is a draft" notice.
 - Cons: silently downgrades auto_commit's atomicity promise — mutations
   linger as ambient worktree changes that the next unrelated commit may
   sweep up, which is the failure auto_commit was built to avoid.
-- Preview: change the filter at `engine.py:5040-5050` to all-or-nothing
+- Preview: change the filter at `engine.py:5690-5700` to all-or-nothing
   plus a stderr notice.
 
 **Recommendation.** Option A — the committed-tree referential-integrity

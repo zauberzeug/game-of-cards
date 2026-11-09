@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:3970` — the **global** `--worker` flag, documented and
+- `goc/engine.py:4501` — the **global** `--worker` flag, documented and
   intended as a queue/triage **filter**, with the env var as its default:
 
   ```python
@@ -30,7 +30,7 @@ definition_of_done: |
                       help="Filter by worker.who (substring match). Also read from GOC_WORKER env var.")
   ```
 
-- `goc/engine.py:4073` — `goc new`'s own `--worker`, declared with
+- `goc/engine.py:4607` — `goc new`'s own `--worker`, declared with
   `default=argparse.SUPPRESS` and sharing the default dest `worker`:
 
   ```python
@@ -56,7 +56,7 @@ definition_of_done: |
 — flows straight into `args.worker` and gets stamped onto the card as
 its authored worker designation.
 
-The global `--worker` is documented (engine.py:3971, AGENTS.md) as a
+The global `--worker` is documented (engine.py:4502, AGENTS.md) as a
 **read-side queue filter** for runner-scoped views; the worker field
 on a card is a **write-side authorship designation**. The two share a
 dest, and the filter value leaks into the authored field.

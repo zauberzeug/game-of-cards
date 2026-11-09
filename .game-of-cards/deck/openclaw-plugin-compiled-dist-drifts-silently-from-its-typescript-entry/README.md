@@ -32,7 +32,7 @@ build`. It is the only generated tree in this repo without a drift guard.
 - `openclaw-plugin/package.json:42-44` — `"openclaw": { "extensions":
   ["./dist/index.js"] }`
 - `.pre-commit-config.yaml:4-9` — the only sync hook, scoped `files: ^goc/`
-- `.github/workflows/release.yml:665-671` (npm leg) vs `:710-721` (ClawHub leg)
+- `.github/workflows/release.yml:677-683` (npm leg) vs `:710-721` (ClawHub leg)
 - `.game-of-cards/deck/openclaw-plugin-release-smoke-blockers-build-and-spawn-api/README.md:124`
   — where this was explicitly deferred
 
@@ -133,7 +133,7 @@ not an active corruption.
 
 Two consumer paths read the committed bundle rather than a fresh build.
 
-1. **Checkout-based installs.** `goc.md:232` documents this as the supported
+1. **Checkout-based installs.** `goc.md:247` documents this as the supported
    local-development path: "for local development the bundled `dist/index.js`
    is checked in so the plugin is loadable without a build step." A stale
    bundle means the plugin a tester loads is not the plugin whose source they
@@ -167,7 +167,7 @@ Two consumer paths read the committed bundle rather than a fresh build.
    ```
 
    If that reusable workflow bundles the subtree as-committed, ClawHub and npm
-   ship **different plugin code from the same tag**, while `goc.md:228` tells
+   ship **different plugin code from the same tag**, while `goc.md:243` tells
    consumers "The same artifact is published to npm as `game-of-cards`."
    Whether ClawHub's publisher happens to run the `prepare` script (which would
    rebuild) is unverified from this repo — hence the EMPIRICAL DoD item. The

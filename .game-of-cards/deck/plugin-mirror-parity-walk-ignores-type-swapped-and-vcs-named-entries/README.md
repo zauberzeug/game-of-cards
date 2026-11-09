@@ -32,14 +32,14 @@ tripwire clean.
 ## Location
 
 `goc/engine.py:1444-1472` (`_walk`); `_DeepDircmp` instantiation without an
-`ignore=` override near `goc/engine.py:1857`.
+`ignore=` override near `goc/engine.py:2106`.
 
 ## Hypothesis (confirmed 2026-11-09 — see § Empirical evidence)
 
 ```python
 out += [
     f"{prefix}{n} (differs)"
-    for n in cmp.diff_files            # engine.py:1703 — common_funny/funny_files never read
+    for n in cmp.diff_files            # engine.py:1935 — common_funny/funny_files never read
     if (prefix + n) not in exclude
 ]
 ```

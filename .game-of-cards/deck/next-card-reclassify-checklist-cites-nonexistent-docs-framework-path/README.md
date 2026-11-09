@@ -29,9 +29,9 @@ definition_of_done: |
   ```
 
 - Auto-synced mirrors carry the same line:
-  - `.claude/skills/next-card/SKILL.md:121`
+  - `.claude/skills/next-card/SKILL.md:124`
   - `.codex/skills/next-card/SKILL.md:144`
-  - `claude-plugin/skills/next-card/SKILL.md:121`
+  - `claude-plugin/skills/next-card/SKILL.md:124`
   - `codex-plugin/skills/next-card/SKILL.md:144`
   - `openclaw-plugin/skills/next-card/SKILL.md` (hand-ported via `scripts/port_skills_to_openclaw.py`)
 

@@ -24,8 +24,8 @@ definition_of_done: |
 ## Location
 
 - Worker-update path that only runs on `active`: `goc/engine.py:4003-4004`
-- Args parsed but never reached: `goc/engine.py:5964-5965`
-- Argparser that advertises the flags without restriction: `goc/engine.py:4038-4041`
+- Args parsed but never reached: `goc/engine.py:6738-6739`
+- Argparser that advertises the flags without restriction: `goc/engine.py:4571-4574`
 - The sister `--by` validator that DOES reject for the wrong `new_status`: `goc/engine.py:5917-5923`
 
 ## What's broken
@@ -130,7 +130,7 @@ and the sibling `goc-status-active-discards-worker-overrides-when-target-already
 Reachable without contrived input:
 
 - The argparser at `engine.py:3989-3992` exposes both flags on every
-  `new_status` choice (the `choices=` list at `engine.py:4030` is
+  `new_status` choice (the `choices=` list at `engine.py:4563` is
   `MUTABLE_STATUS_VALUES` — all non-`done` statuses).
 - `_cmd_status` accepts the args without ever rejecting them
   (`engine.py:5912-5913` just reads them).

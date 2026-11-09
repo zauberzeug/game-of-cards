@@ -23,8 +23,8 @@ definition_of_done: |
 
 ## Location
 
-- `scripts/port_skills_to_openclaw.py:72` — the substitution
-- `goc/templates/skills/retrospective/SKILL.md:53` — the source snippet
+- `scripts/port_skills_to_openclaw.py:73` — the substitution
+- `goc/templates/skills/retrospective/SKILL.md:56` — the source snippet
 - `openclaw-plugin/skills/retrospective/SKILL.md:49` — the broken output
 
 ## What's broken
