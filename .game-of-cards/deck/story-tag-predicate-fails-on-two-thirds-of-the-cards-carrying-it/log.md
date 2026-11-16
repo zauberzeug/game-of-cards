@@ -173,3 +173,10 @@ in-repo `.claude/` + `.codex/` mirrors), `reproduce.py` exits 0.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-27 — Closure' present
+
+## 2026-11-16T02:30:00Z — Post-close amendment
+
+Extended by [`bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal`](../bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal/)
+— the `bug` row kept its `not epic` clause when this card made `epic` orthogonal
+to the delivery question, so the two rows and the reference disagree about a
+bug-family umbrella.
