@@ -1,7 +1,7 @@
 ---
 title: publish-and-claim-commit-a-new-card-without-the-parent-edge-goc-new-wrote
 summary: "goc new child --advances parent writes the parent's advanced_by on disk but, without --commit (the default), leaves it uncommitted. The verbs that release the new card, goc publish and the goc status active claim, auto-commit only the card's own directory, so HEAD gets child.advances naming a parent whose committed advanced_by lacks it, and a fresh clone fails goc validate with a half-edge. The documented default flow, scaffold then author then publish or claim, corrupts the committed deck with no manual staging step involved."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-11-16T01:20:11Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: if the hypothesis holds, `reproduce.py` exits 0 after the fix. After either release verb, `git status --porcelain` shows no uncommitted edge counterpart of the released card, and `goc validate` on a fresh clone of HEAD exits 0.
   - [ ] TDD: `tests/test_new_wires_edges.py` (or a sibling) pins both release verbs on a card filed with `--advances` and without `--commit`, and fails on today's engine.
   - [ ] MECHANICAL: the `_git_auto_commit` docstring (`goc/engine.py:5698-5699`) and `Skill(create-card)` Step 4 (`SKILL.md:130-132`) describe what the release commit contains, and plugin mirrors are re-synced (`python scripts/sync_plugin_assets.py --check` green).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Publishing or claiming a new card commits it without the parent edge `goc new` wrote
