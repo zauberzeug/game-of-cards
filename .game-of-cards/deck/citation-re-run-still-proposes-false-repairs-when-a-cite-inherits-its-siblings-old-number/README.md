@@ -26,7 +26,7 @@ definition_of_done: |
 - `goc/templates/skills/refine-deck/SKILL.md:162-173` — step 2 of the
   citation recipe: the anchor is the newest commit where the cite TOKEN
   turns from absent to present.
-- `goc/templates/skills/refine-deck/SKILL.md:202-209` — the closing
+- `goc/templates/skills/refine-deck/SKILL.md:203-210` — the closing
   re-run that must propose zero further repairs.
 - `goc/templates/skills/refine-deck/reference.md:662-685` — **The commit
   comes first because the walk reads history**, which ends in the claim
