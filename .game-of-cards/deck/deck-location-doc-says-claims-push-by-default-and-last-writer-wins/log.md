@@ -82,3 +82,14 @@ plus six mirrors, so it is not fix-through. It is filed as
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-10-04 — Closure' present
+
+## 2026-11-16T00:58:33Z — Post-close amendment
+
+Extended by [`regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories`](../regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories/). This card's `reproduce.py` (`:114`,
+`:148`, `:151`, `:157`, `:160`) and the guard it added,
+`tests/test_deck_location_claim_rows.py`, read their scratch bare remote by
+running git inside it. Git refuses that under `safe.bareRepository = explicit`,
+and every autonomous session now runs with that setting. Inside a session the
+reproducer exits 1 with a traceback, and the guard's 3 tests never run. With
+an empty global git config the reproducer still exits 0, so the verdict
+recorded above holds.

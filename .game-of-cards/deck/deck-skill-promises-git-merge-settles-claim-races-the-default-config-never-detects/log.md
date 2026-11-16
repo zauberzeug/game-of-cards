@@ -86,3 +86,13 @@ anything settles a race.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-10-04 — Closure' present
+
+## 2026-11-16T00:58:33Z — Post-close amendment
+
+Extended by [`regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories`](../regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories/). This card's `reproduce.py` (`:123`) and the
+guard it added, `tests/test_claim_race_reassurance.py`, read their scratch
+bare remote by running git inside it. Git refuses that under
+`safe.bareRepository = explicit`, and every autonomous session now runs with
+that setting. Inside a session the reproducer exits 1, and the guard's 4 tests
+never run. With an empty global git config the reproducer still exits 0, so
+the verdict recorded above holds.

@@ -88,3 +88,12 @@ Option C's default-no-commit branch), and
 `test_new_commit_and_no_commit_mutually_exclusive` (pre-disk-write
 abort on flag conflict). `reproduce.py` now exits 0 against the
 fixed CLI. Full 312-test suite green.
+
+## 2026-11-16T01:30:00Z — Post-close amendment
+
+Extended by [`publish-and-claim-commit-a-new-card-without-the-parent-edge-goc-new-wrote`](../publish-and-claim-commit-a-new-card-without-the-parent-edge-goc-new-wrote/).
+The default this card kept, `goc new` without `--commit`, still reaches a
+committed half-edge, and no agent staging choice is needed. With
+`auto_commit: true`, `goc publish` and the `goc status active` claim commit
+only the new card's directory. The parent's `advanced_by` stays uncommitted,
+and a fresh clone of HEAD fails `goc validate`.

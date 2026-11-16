@@ -48,3 +48,11 @@ Implement all three as defense-in-depth — A: engine guard rejecting terminal t
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-06-29 — Closure' present
+
+## 2026-11-16T01:30:00Z — Post-close amendment
+
+Extended by [`goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder`](../goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder/).
+The `goc publish` refusal this card introduced fires only while *both*
+scaffold placeholders remain. A draft with only its body, or only its DoD,
+written publishes and enters `goc --ready`. The card-schema reference and the
+refusal text both say publish needs the body and the DoD written.
