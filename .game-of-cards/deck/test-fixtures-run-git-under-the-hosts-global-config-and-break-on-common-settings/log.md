@@ -31,3 +31,32 @@ Two earlier sightings of the same family were never filed:
   standard practice. The open choice, a static or dynamic guard, is
   engineering, and the body recommends both shapes without needing a human
   pick.
+
+## 2026-11-16T04:42:04Z — Instance closed: the bare-repository hardening
+
+[`regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories`](../regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories/)
+closed. Its 11 reads inside a bare remote now pass `--git-dir`, so the
+`bare-repos` config no longer changes the suite's result. `reproduce.py`,
+re-run after that fix (git 2.56, Python 3.12):
+
+```
+control     ran 1501, OK
+bare-repos  ran 1501, OK  [same as control]
+signing     ran 1494, FAILED (errors=54)  [CHANGED]
+              16 module(s) with errors or failures: ...
+hooks       ran 1494, FAILED (errors=55)  [CHANGED]
+              17 module(s) with errors or failures: ...
+
+DEFECT: 2 of 3 host git config(s) change the suite's result (signing, hooks). The fixtures inherit the host's global git config.
+```
+
+It still exits 1. Signing and hooks still break 16 and 17 modules, with the
+same error counts as filed. The suite gained 2 tests: the instance's guard,
+which gives its children a HOME of its own and so passes under every config.
+
+That guard puts one constraint on this card's fix, recorded in § Fix. It
+fails any bare-remote module after whose import git no longer sees
+`safe.bareRepository = explicit`. The shared helper sets HOME on import, so
+its minimal `.gitconfig` has to carry that setting, or the guard turns red
+on both modules. The summary, the Instances row and the bot-session bullet in
+§ Why it matters now say the instance is fixed.

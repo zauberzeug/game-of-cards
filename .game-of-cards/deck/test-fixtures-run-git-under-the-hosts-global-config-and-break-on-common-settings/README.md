@@ -1,6 +1,6 @@
 ---
 title: test-fixtures-run-git-under-the-hosts-global-config-and-break-on-common-settings
-summary: "No test module isolates git from the host's global config, so every git process the suite starts, in a fixture or through goc's own auto-commit, reads the .gitconfig of whoever runs it. On an unchanged tree three common settings each break the suite: safe.bareRepository=explicit (2 errors, in every bot session), commit signing with an unavailable key (54 errors in 16 modules) and a refusing global pre-commit hook (55 errors in 17 modules). Two modules already guard against signing on their own, and a 2026-05 closure ran the suite with GIT_CONFIG_GLOBAL=/dev/null to get past a host-identity leak. One shared isolation would end these per-module fixes."
+summary: "No test module isolates git from the host's global config, so every git process the suite starts, in a fixture or through goc's own auto-commit, reads the .gitconfig of whoever runs it. On an unchanged tree two common settings each break the suite: commit signing with an unavailable key (54 errors in 16 modules) and a refusing global pre-commit hook (55 errors in 17 modules). A third, safe.bareRepository=explicit (2 errors, in every bot session), was fixed on 2026-11-16 by its instance card. Two modules already guard against signing on their own, and a 2026-05 closure ran the suite with GIT_CONFIG_GLOBAL=/dev/null to get past a host-identity leak. One shared isolation would end these per-module fixes."
 status: open
 stage: null
 contribution: medium
@@ -63,7 +63,7 @@ step:
 |---|---|---|---|
 | a long global `user.name` | it widened the worker label on the board, which clipped the slug a board test read | a local run, 2026-05 | noted in [test-move-asserts-old-inline-advances-format](../test-move-asserts-old-inline-advances-format/) § Notes and resolved through the board renderer by [board-active-card-worker-label-not-truncated](../board-active-card-worker-label-not-truncated/), not through test isolation |
 | global identity (same class) | one environment-sensitive board test failed, so the suite was run as `env GIT_CONFIG_GLOBAL=/dev/null uv run pytest` | closure log of [half-edge-repair-requires-manual-multi-file-edits](../half-edge-repair-requires-manual-multi-file-edits/), 2026-05-18 | none filed |
-| `safe.bareRepository = explicit` | 2 `setUpClass` errors; 7 tests never run | every autonomous session since `anthropics/claude-code-action@v1` began writing it (first seen 2026-11-16) | [regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories](../regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories/) (advances this card) |
+| `safe.bareRepository = explicit` | 2 `setUpClass` errors; 7 tests never run | every autonomous session since `anthropics/claude-code-action@v1` began writing it (first seen 2026-11-16) | [regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories](../regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories/) (advances this card; closed 2026-11-16, the remote named with `--git-dir`) |
 | `commit.gpgsign = true` with a key that is not available | 54 errors in 16 modules: each fixture's own `git commit … check=True` raises (`error: gpg failed to sign the data`) | reproduced here | this card |
 | `core.hooksPath` with a refusing `pre-commit` | 55 errors in 17 modules: the same fixture commits, refused by the hook | reproduced here | this card |
 
@@ -122,9 +122,9 @@ when the control itself fails or git is older than 2.38.
   machine.
 - **A common way to hit the signing row.** Some dev containers and sandboxes
   copy the host `.gitconfig` without the key agent it names.
-- **Bot sessions already hit it.** The bare-repository instance is live in
-  every autonomous workflow run, where the bot's own suite run is the only
-  gate on its commits
+- **Bot sessions already hit it.** The bare-repository instance was live in
+  every autonomous workflow run until its own card fixed it on 2026-11-16,
+  and there the bot's own suite run is the only gate on its commits
   ([autonomous-pushes-do-not-trigger-ci-so-the-regression-suite-gates-nothing](../autonomous-pushes-do-not-trigger-ci-so-the-regression-suite-gates-nothing/)).
 - **Per-module fixes do not converge.** Each instance so far was handled
   where it showed up: a `commit.gpgsign false` in two fixtures, a board
@@ -156,9 +156,15 @@ through it:
 
 This does not replace the bare-repository instance's own fix. Isolation would
 stop the action's setting from reaching the tests, but that card's `--git-dir`
-edits are correct either way. Its guard deliberately runs the bare-remote
-fixtures *under* the hardened config, and the two closed cards' reproducers it
-repairs are not part of the suite at all.
+edits are correct either way. Its guard,
+`tests/test_bare_repository_fixtures_name_their_git_dir.py`, deliberately runs
+the bare-remote fixtures *under* the hardened config, and the two closed
+cards' reproducers it repaired are not part of the suite at all. The guard
+also fails a module after whose import git no longer sees
+`safe.bareRepository = explicit`. The helper above sets HOME on import, so its
+minimal `.gitconfig` has to set `safe.bareRepository = explicit` too, which
+also keeps the whole suite under the setting every bot session runs with.
+Without it the guard turns red on both bare-remote modules.
 
 Deck reproducers have the same exposure but are out of scope here. They are
 records, run one at a time, and each can pin its own HOME, as this card's and
