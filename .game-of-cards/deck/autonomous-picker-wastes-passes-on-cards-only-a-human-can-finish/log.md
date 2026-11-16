@@ -153,3 +153,12 @@ The split-out card
 was returned to `draft: true` rather than deleted — its counter analysis
 stands, but its escalation trigger inherits defect 2 and must not be
 implemented before the prerequisite is decided.
+
+## 2026-11-16T02:03:00Z — Cites re-anchored by their prose
+
+`goc/engine.py:3002` → `:3008` (`def card_is_draft`) and
+`goc/engine.py:6883` → `:6882` (`def _cmd_publish`), the two functions the
+prose names. Both were authored after the card's creating commit; the
+2026-08-10 pass (`69e1e4f2`) read them at the creating commit and moved them
+onto a `card_is_draft` docstring line and a `_cmd_publish` error string, and
+later passes tracked those lines.

@@ -33,3 +33,12 @@ is the *remove* sibling silently corrupting the card-under-edit;
 renderer; `goc-repair-edges-apply-leaves-edge-repairs-uncommitted` assumes
 repair succeeds. This is the *add* sibling (`_add_to_list_field`) crashing the
 repair tool on the endpoint card — a detector/repairer asymmetry.
+
+## 2026-11-16T02:03:00Z — Traceback frame restored
+
+The body's dry-run traceback line (`ValueError: advanced_by: not a list`
+at `engine.py:4954 → 4911`) is the frame chain a live run printed on
+2026-06-23: a record, not a claim about where the code sits now. Every
+hygiene pass from 2026-08-10 on renumbered its first frame (to `7165` by
+2026-11-09) and left the second, so the line matched no run. Restored to the
+filing-time `4954`.

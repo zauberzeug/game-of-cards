@@ -24,3 +24,16 @@ The sibling card fixed exec failures (EACCES, ENOEXEC) and
 undecodable output for a well-shaped `cmd`. That fix adds an
 `except OSError` branch after the `FileNotFoundError` one and leaves
 the `command not found: {cmd[0]}` message for this card's decision.
+
+## 2026-11-16T02:03:00Z — Cites re-anchored by their prose
+
+`engine.py:7206` (summary) and `goc/engine.py:7206` (body) → `:6603`, the
+`all_check_names = {c["name"] for c in layer_2_checks} | …` line the body
+quotes. Both were written correctly on 2026-06-12 (`5ee8150e`, then line
+4266). The 2026-08-10 pass (`69e1e4f2`) read that number at the card's
+creating commit `fb3c509a`, where line 4266 was
+`print("Structural problems requiring human review:", file=sys.stderr)`,
+and moved both cites onto that print; every pass since anchored on its own
+rewrite and tracked the print faithfully. The `:4283` / `:4296` numbers
+in the same body sentence are bare continuations no pass can see and are
+left as they are.

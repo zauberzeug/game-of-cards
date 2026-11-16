@@ -71,10 +71,10 @@ A later audit pass (2026-08-07) found instance six, which is the
 sharpest of the set because the offending text is goc's own:
 
 3. **`goc validate` warns about the placeholder it just wrote.**
-   `validate_dod_method_tags` (`engine.py:2910-2936`) exempts terminal
+   `validate_dod_method_tags` (`engine.py:2755-2781`) exempts terminal
    cards but not drafts, and `goc new`'s generated DoD stub —
    `SCAFFOLD_DOD_PLACEHOLDER = "- [ ] (replace with real criteria)"`
-   (`engine.py:3220`) — carries no method tag. So every freshly
+   (`engine.py:2988`) — carries no method tag. So every freshly
    scaffolded card immediately produces
    `WARN UNTAGGED_DOD_ITEM <title>: 1 DoD item(s) lack a method tag …
    [- [ ] (replace with real criteria)]`. The validator's own docstring

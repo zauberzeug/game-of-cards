@@ -92,3 +92,12 @@ crash the render path" + summary amended to record this. The shipped
 render-path coercions are themselves per-consumer guards — more
 instances of the model this card argues against. Card stays at
 `human_gate: decision` pending the A/B/C choice.
+
+## 2026-11-16T02:03:00Z — Summary cite re-anchored by its prose
+
+The summary's `engine.py:4500` for the `render_table` verbose `-vv` raw-dump
+loop → `engine.py:3980` (`if verbose >= 2:`), the line the DoD's and body's
+ranges already open on. The 2026-08-10 pass (`69e1e4f2`) anchored the
+later-authored cite at the creating commit and moved it onto an argparse
+`help="Filter to cards advanced by this title."` line; the two ranges were
+restored by hand afterwards, the summary cite never was.

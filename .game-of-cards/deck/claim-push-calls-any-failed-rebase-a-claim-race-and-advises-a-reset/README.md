@@ -205,7 +205,7 @@ Coupled sub-question, whichever option wins: **the exit code.** Today any
 `False` return becomes `sys.exit(2)` (`goc/engine.py:6021`). `pull-card` runs
 `goc status <title> active` to claim, so exit 2 aborts the pull. If a non-race
 failure warns instead of aborting, the claim stands locally but unpublished —
-which is what the detached-HEAD branch (`goc/engine.py:6061`) already does,
+which is what the detached-HEAD branch (`goc/engine.py:6063`) already does,
 except that it too returns `False` and therefore exits 2 after printing the word
 "Warning". That inconsistency should be resolved in the same pass.
 

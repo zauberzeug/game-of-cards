@@ -113,3 +113,13 @@ moved by `3413b1b0` (now `card_dir = resolve_card_dir(title)`).
 Reproducer: `reproduce.py` → exit 0 (inverted: prints "DEFECT CONFIRMED: quality-pass audits draft scaffolds and decide falsely announces a hidden draft as claimable.").
 Verdict: still live. Re-anchored `goc/engine.py:5951` ff. → `:7754` ff. (`_cmd_decide`'s card load and its lone `human_gate == "none"` guard).
 Gate unchanged.
+
+## 2026-11-16T02:03:00Z — Cites re-anchored by their prose
+
+`engine.py:2910-2936` → `:2755-2781` (the whole of `validate_dod_method_tags`,
+the same 27-line span the cite was written with on 2026-08-07) and
+`engine.py:3220` → `:2988` (`SCAFFOLD_DOD_PLACEHOLDER = ...`). Both were added
+by `9bf07443` after the card's creating commit; the 2026-08-10 pass
+(`69e1e4f2`) read them at the creating commit and moved them into
+`dependency_blockers` and a `waiting_impedes` docstring line, which every
+later pass, including the 2026-11-09 staleness re-check above, tracked.

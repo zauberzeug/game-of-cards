@@ -297,3 +297,20 @@ the eleventh raise of the refine-deck `SKILL.md` size cap. Two shapes stay
 out of the patch's reach and are recorded in refine-deck's reference: a
 misread an earlier pass already applied, and an earlier-tree cite before a
 later change moves its line. A symbol-anchored cite would carry neither.
+
+## 2026-11-16T02:05:00Z — Measured: how long a misread an earlier pass applied stays invisible
+
+The entry above names "a misread an earlier pass already applied" as out of
+the line-number recipe's reach. The 2026-11-16 pass priced it. Replaying the
+2026-08-10 pass (`69e1e4f2`) with the last-write anchor it predated finds 12
+of its rewrites anchored at a card's creating commit on cites authored in a
+later edit, so each moved onto whatever the creating commit held at that
+number. Five were later restored by hand. The other seven, in four open
+cards, survived the seven citation passes since, across three months: each
+anchored on the previous rewrite, found it unique in HEAD, and called it
+current or moved it faithfully. They surfaced only because this pass read
+the prose beside each of its 181 proposals, which also found an eighth: an
+author's off-by-16 at filing that every pass had carried. All eight are
+re-anchored by their prose in the 2026-11-16 commit and logged on their
+cards. A symbol-anchored cite would have failed to resolve instead of
+resolving cleanly onto the wrong code.
