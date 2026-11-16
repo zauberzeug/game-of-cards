@@ -5683,6 +5683,127 @@ def _cmd_done_bundle(titles: list[str], force: bool) -> None:
 # .game-of-cards/config.yaml; per-command flags override it.
 
 
+def _git_head_texts(rel_paths: list[str], git_cwd: str) -> dict[str, str | None] | None:
+    """Return HEAD's text for each path, relative to `git_cwd`.
+
+    A path HEAD lacks maps to None; so does every path in a repository that
+    has no commit yet. One `git cat-file --batch` round trip serves every
+    path, rather than a `git show` each, because an epic's commit consults one
+    counterpart per child. The `./` prefix resolves each path against
+    `git_cwd` rather than the top of the repository, which matters when the
+    deck lives below it. Returns None when git itself fails, so the caller
+    falls back instead of guessing.
+    """
+    if not rel_paths:
+        return {}
+    proc = subprocess.run(
+        ["git", "cat-file", "--batch"],
+        input="".join(f"HEAD:./{p}\n" for p in rel_paths).encode(),
+        capture_output=True,
+        cwd=git_cwd,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    out = proc.stdout
+    texts: dict[str, str | None] = {}
+    pos = 0
+    for p in rel_paths:
+        end = out.find(b"\n", pos)
+        if end < 0:
+            return None
+        fields = out[pos:end].split()
+        pos = end + 1
+        # A found object answers `<oid> <type> <size>` and then its content;
+        # anything else (`<name> missing`, `<name> ambiguous`) has no content.
+        if len(fields) != 3 or not fields[2].isdigit():
+            texts[p] = None
+            continue
+        size = int(fields[2])
+        content = out[pos:pos + size]
+        pos += size + 1
+        texts[p] = content.decode("utf-8", errors="replace") if fields[1] == b"blob" else None
+    return texts
+
+
+def _uncommitted_edge_counterparts(card_dirs: list[Path], git_cwd: str) -> list[tuple[Path, bool]]:
+    """Return the edge counterparts a commit of `card_dirs` must carry along.
+
+    A counterpart qualifies when a card in the commit records an edge to it,
+    the counterpart's worktree README records the other half, and its
+    committed README does not. Committing the card without it would give HEAD
+    a half-edge that the worktree does not have, and a fresh clone would fail
+    `goc validate` on it. `goc new <child> --advances <parent>` without
+    `--commit` leaves exactly that state: it writes the parent's half and
+    commits nothing.
+
+    Returns `(card_dir, whole)` pairs. `whole` is True when HEAD lacks the
+    counterpart card altogether, so the commit must take its log.md as well
+    as the README that holds the edge. Each counterpart taken is checked the
+    same way in turn, because git commits a README whole, and it would
+    otherwise bring along its own edges to cards HEAD has not seen.
+
+    A draft counterpart is never added. Whether a draft may join the commit
+    for the sake of an edge is the open decision on
+    `auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft`.
+    A counterpart whose committed README already records the edge stays out,
+    so its unrelated uncommitted edits are not swept along. Removals are not
+    tracked: no default flow leaves a removal half-written (`goc unadvance`
+    commits both endpoints).
+    """
+    taken = {d.name for d in card_dirs}
+    queue = list(card_dirs)
+    extra: list[tuple[Path, bool]] = []
+    while queue:
+        try:
+            card = load_card(queue.pop(0))
+        except FrontmatterError:
+            continue
+        if card is None:
+            continue
+        # counterpart dir -> the inverse fields whose worktree copy names `card`
+        wanted: dict[Path, list[str]] = {}
+        for field, inverse in INVERSE_REL.items():
+            refs = card.frontmatter.get(field)
+            if not isinstance(refs, list):
+                continue
+            for ref in refs:
+                # Frontmatter is untrusted: only a bare card-directory name may
+                # become a path (see resolve_card_dir), and never a dot entry.
+                if not isinstance(ref, str) or ref in taken or ref != Path(ref).name or ref in {"", ".", ".."}:
+                    continue
+                ref_dir = DECK_DIR / ref
+                try:
+                    other = load_card(ref_dir)
+                except FrontmatterError:
+                    continue
+                if other is None or card_is_draft(other) or not _edge_field_lists(other, inverse, card.title):
+                    continue
+                wanted.setdefault(ref_dir, []).append(inverse)
+        if not wanted:
+            continue
+        rel = {d: (d / "README.md").relative_to(DECK_ROOT).as_posix() for d in wanted}
+        head = _git_head_texts(list(rel.values()), git_cwd)
+        if head is None:
+            return extra
+        for ref_dir, inverses in wanted.items():
+            text = head.get(rel[ref_dir])
+            if text is not None:
+                try:
+                    committed, _ = parse_frontmatter(text)
+                except FrontmatterError:
+                    committed = {}  # an unparseable committed copy records nothing
+                if all(
+                    isinstance(committed.get(inverse), list) and card.title in committed[inverse]
+                    for inverse in inverses
+                ):
+                    continue
+            taken.add(ref_dir.name)
+            queue.append(ref_dir)
+            extra.append((ref_dir, text is None))
+    return extra
+
+
 def _git_auto_commit(card_dirs: list[Path], message: str, *, exclude_draft: bool = True) -> bool:  # noqa: PLR0911
     """Stage README.md + log.md across the given card dirs and commit.
 
@@ -5695,14 +5816,26 @@ def _git_auto_commit(card_dirs: list[Path], message: str, *, exclude_draft: bool
     (`card_is_draft`) are dropped from the commit set: a consumer with
     `workflow.auto_commit: true` must not publish a card that is still a
     placeholder — exactly the dedup/supersede race the draft state guards
-    against. Verbs that legitimately commit a freshly-authored card clear the
-    draft flag first (`goc publish` / `goc status active` / `goc done`), so the
-    card is no longer a draft by the time it reaches here. The lone caller that
-    opts out is `goc new --commit`, an explicit user action that must commit the
-    new card together with its edge writes to avoid a half-edge (one endpoint
-    committed, the other left untracked). External auto-commit services bypass
-    goc entirely and must filter drafts themselves — see
-    `.game-of-cards/config.yaml`."""
+    against. The verbs that release a freshly-authored card through here clear
+    the draft flag first (`goc publish` and the `goc status active` claim), so
+    the card is no longer a draft by the time it reaches here; `goc done` clears
+    it too but leaves the commit to the caller. The lone caller that opts out is
+    `goc new --commit`, an explicit user action that must commit the new card
+    together with its edge writes to avoid a half-edge (one endpoint committed,
+    the other left untracked). External auto-commit services bypass goc
+    entirely and must filter drafts themselves — see
+    `.game-of-cards/config.yaml`.
+
+    The commit also carries every edge counterpart holding the uncommitted
+    other half of an edge a committed card records
+    (`_uncommitted_edge_counterparts`), so HEAD never gains a half-edge the
+    worktree does not have. The release commit is the case that needs it:
+    `goc new <child> --advances <parent>` without `--commit`, the default,
+    writes the parent's `advanced_by` and leaves it uncommitted, so releasing
+    the child commits the child's README.md + log.md plus the parent's
+    README.md. Git commits that README whole, other uncommitted edits in it
+    included. A counterpart whose committed README already records the edge
+    stays out, and a draft counterpart is never added."""
     if not card_dirs:
         return False
     if exclude_draft:
@@ -5745,10 +5878,13 @@ def _git_auto_commit(card_dirs: list[Path], message: str, *, exclude_draft: bool
         ):
             print("  (auto-commit skipped: merge/rebase/cherry-pick in progress)", file=sys.stderr)
             return False
+        counterparts = _uncommitted_edge_counterparts(card_dirs, git_cwd)
+        card_files = [(d, ("README.md", "log.md")) for d in card_dirs]
+        card_files += [(d, ("README.md", "log.md") if whole else ("README.md",)) for d, whole in counterparts]
         paths: list[str] = [
             str(p.relative_to(DECK_ROOT))
-            for d in card_dirs
-            for fname in ("README.md", "log.md")
+            for d, fnames in card_files
+            for fname in fnames
             if (p := d / fname).exists()
         ]
         if not paths:
@@ -5783,6 +5919,10 @@ def _git_auto_commit(card_dirs: list[Path], message: str, *, exclude_draft: bool
             ["git", "commit", "-m", message, "--", *paths],
             check=True, cwd=git_cwd, capture_output=True, text=True,
         )
+        if counterparts:
+            names = ", ".join(d.name for d, _ in counterparts)
+            holds = "it holds" if len(counterparts) == 1 else "they hold"
+            print(f"  also committed {names}: {holds} the other half of an edge this commit records")
         return True
     except subprocess.CalledProcessError as e:
         # Capturing must not silence the failure path. git's own diagnostic

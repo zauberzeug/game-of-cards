@@ -204,6 +204,143 @@ class NewWiresEdgesTest(unittest.TestCase):
             self.assertIn("child-card", status)
             self.assertIn("parent-card/README.md", status)
 
+    # The release verbs below are the auto-committing step that follows a
+    # default `goc new` filing: `goc publish` and the `goc status active`
+    # claim. Card: publish-and-claim-commit-a-new-card-without-the-parent-edge-goc-new-wrote
+
+    _RELEASES = {
+        "publish": ("publish", "child-card"),
+        "claim": ("status", "child-card", "active"),
+    }
+
+    def _author(self, cwd: Path, title: str) -> None:
+        readme = cwd / ".game-of-cards" / "deck" / title / "README.md"
+        readme.write_text(
+            readme.read_text()
+            .replace("- [ ] (replace with real criteria)", "- [ ] MECHANICAL: real criterion")
+            .replace("(write the design doc here)", "Authored body.")
+        )
+
+    def _committed_parent(self, cwd: Path) -> None:
+        """A git repo whose HEAD holds one authored, published `parent-card`."""
+        self._init_git_repo(cwd)
+        self.assert_goc_ok(self.run_goc(
+            cwd, "new", "parent-card", "--summary", "parent", "--gate", "none", "--tag", "story", "--commit",
+        ))
+        self._author(cwd, "parent-card")
+        self.assert_goc_ok(self.run_goc(cwd, "publish", "parent-card"))
+        self.assertEqual(self._git_status(cwd), "")
+
+    def _file_child(self, cwd: Path, *wiring: str) -> None:
+        """`goc new child-card <wiring>` without --commit, then author it."""
+        self.assert_goc_ok(self.run_goc(
+            cwd, "new", "child-card", *wiring, "--summary", "child", "--gate", "none", "--tag", "story",
+        ))
+        self._author(cwd, "child-card")
+
+    def _head_readme(self, cwd: Path, title: str) -> str:
+        return subprocess.run(
+            ["git", "show", f"HEAD:.game-of-cards/deck/{title}/README.md"],
+            cwd=cwd, check=True, capture_output=True, text=True,
+        ).stdout
+
+    def _validate_fresh_clone(self, cwd: Path) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as clone_tmp:
+            clone = Path(clone_tmp) / "clone"
+            subprocess.run(["git", "clone", "-q", str(cwd), str(clone)], check=True, capture_output=True)
+            return self.run_goc(clone, "validate", "--quiet")
+
+    def test_release_verbs_commit_the_edge_half_goc_new_left_uncommitted(self) -> None:
+        for wire, parent_field in (("--advances", "advanced_by"), ("--advanced-by", "advances")):
+            for release, verb in self._RELEASES.items():
+                with self.subTest(wire=wire, release=release), tempfile.TemporaryDirectory() as tmp:
+                    cwd = Path(tmp)
+                    self._committed_parent(cwd)
+                    self._file_child(cwd, wire, "parent-card")
+                    self.assertIn("parent-card/README.md", self._git_status(cwd))
+
+                    released = self.run_goc(cwd, *verb)
+
+                    self.assert_goc_ok(released)
+                    self.assertIn("also committed parent-card", released.stdout)
+                    self.assertEqual(self._git_status(cwd), "")
+                    self.assertIn(f"{parent_field}:\n  - child-card\n", self._head_readme(cwd, "parent-card"))
+                    self.assert_goc_ok(self._validate_fresh_clone(cwd))
+
+    def test_release_commit_takes_only_the_readme_of_a_tracked_counterpart(self) -> None:
+        # The edge lives in the README; the counterpart's journal is its own
+        # owner's uncommitted work and stays out of someone else's release.
+        for release, verb in self._RELEASES.items():
+            with self.subTest(release=release), tempfile.TemporaryDirectory() as tmp:
+                cwd = Path(tmp)
+                self._committed_parent(cwd)
+                parent_log = cwd / ".game-of-cards" / "deck" / "parent-card" / "log.md"
+                parent_log.write_text("## parent's own uncommitted journal entry\n")
+                self._file_child(cwd, "--advances", "parent-card")
+
+                self.assert_goc_ok(self.run_goc(cwd, *verb))
+
+                self.assertEqual(self._git_status(cwd), " M .game-of-cards/deck/parent-card/log.md\n")
+                self.assert_goc_ok(self._validate_fresh_clone(cwd))
+
+    def test_release_commit_leaves_out_a_counterpart_head_already_agrees_with(self) -> None:
+        # `--commit` committed both halves at filing time, so the parent's
+        # later, unrelated README edit has no edge reason to join the claim.
+        for release, verb in self._RELEASES.items():
+            with self.subTest(release=release), tempfile.TemporaryDirectory() as tmp:
+                cwd = Path(tmp)
+                self._committed_parent(cwd)
+                self._file_child(cwd, "--advances", "parent-card", "--commit")
+                parent = cwd / ".game-of-cards" / "deck" / "parent-card" / "README.md"
+                parent.write_text(parent.read_text() + "\nAn unrelated edit in progress.\n")
+
+                released = self.run_goc(cwd, *verb)
+
+                self.assert_goc_ok(released)
+                self.assertNotIn("also committed", released.stdout)
+                self.assertEqual(self._git_status(cwd), " M .game-of-cards/deck/parent-card/README.md\n")
+                self.assertNotIn("An unrelated edit in progress.", self._head_readme(cwd, "parent-card"))
+
+    def test_release_commit_follows_counterparts_to_cards_head_has_not_seen(self) -> None:
+        # The parent's README is committed whole, so it brings its edge to
+        # `sibling-card` (authored, released with --no-commit, never committed)
+        # and that card must come along, log.md and all, for HEAD to validate.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._committed_parent(cwd)
+            self.assert_goc_ok(self.run_goc(
+                cwd, "new", "sibling-card", "--advances", "parent-card",
+                "--summary", "sibling", "--gate", "none", "--tag", "story",
+            ))
+            self._author(cwd, "sibling-card")
+            self.assert_goc_ok(self.run_goc(cwd, "publish", "sibling-card", "--no-commit"))
+            self._file_child(cwd, "--advances", "parent-card")
+
+            released = self.run_goc(cwd, "publish", "child-card")
+
+            self.assert_goc_ok(released)
+            self.assertIn("also committed parent-card, sibling-card", released.stdout)
+            self.assertEqual(self._git_status(cwd), "")
+            self.assert_goc_ok(self._validate_fresh_clone(cwd))
+
+    def test_release_commit_never_adds_a_draft_counterpart(self) -> None:
+        # A draft is never committed implicitly. The dangling edge this leaves
+        # in HEAD is the open decision on
+        # auto-commit-publishes-dangling-edges-when-counterpart-endpoint-is-a-draft;
+        # this pins only that the draft guard still holds.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self._init_git_repo(cwd)
+            self.assert_goc_ok(self.run_goc(cwd, "new", "parent-card", "--gate", "none", "--tag", "story"))
+            self._file_child(cwd, "--advances", "parent-card")
+
+            released = self.run_goc(cwd, "publish", "child-card")
+
+            self.assert_goc_ok(released)
+            self.assertIn("  committed", released.stdout)
+            self.assertNotIn("also committed", released.stdout)
+            self.assertEqual(self._git_status(cwd), "?? .game-of-cards/deck/parent-card/\n")
+
     def test_new_commit_and_no_commit_mutually_exclusive(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

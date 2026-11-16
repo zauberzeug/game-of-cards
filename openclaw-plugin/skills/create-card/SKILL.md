@@ -123,9 +123,9 @@ project-local tags register in `.game-of-cards/canonical-tags.md`
 
 - **Known value-flow at filing time** → pass `--advances` /
   `--advanced-by` AND `--commit` so both edge endpoints land in one
-  atomic commit (without `--commit`, an explicit-pathspec commit of
-  just the new directory ships a half-edge). The `goc new` +
-  `goc advance` two-step is the fallback for edges discovered later.
+  atomic commit. Without it, the release commit (`goc publish` or the
+  claim) carries the other half along; a commit of only the new
+  directory ships a half-edge. `goc advance` wires edges found later.
 - **Coordinating card?** Aggregation epic (closes when its children
   close) → `child.advances: [epic]`. Governing cluster (closes when
   *decided*) → shared tag, NO edge. Never `epic.advances: [children]`
