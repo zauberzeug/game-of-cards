@@ -25,3 +25,18 @@ Re-anchored by the prose, matching the staleness re-check above:
 `_cmd_unadvance`'s `:5725` → `:7463` in § Location and Option A. Recorded as
 the second instance on
 `citation-repair-pass-moves-correct-cites-when-a-parallel-commit-lands-beside-the-card`.
+
+## 2026-11-16T05:03:45Z — Staleness re-check
+
+Still live after `1fbd50f2`. That commit closed
+`publish-and-claim-commit-a-new-card-without-the-parent-edge-goc-new-wrote`
+by making `_git_auto_commit` also commit edge counterparts whose committed
+README lacks an edge the commit records. It never adds a draft counterpart,
+which leaves this card's question open.
+
+Before that fix could be checked, `reproduce.py` needed a setup repair.
+Its `goc new parent-card` call gained `--summary`: since `goc publish`
+began refusing summary-less cards, its setup had died on an assertion
+before reaching the defect. With that, it prints the same `DEFECT` lines the README quotes
+and exits 1. Exit 1 had also been the result of the setup crash, so the exit
+code alone could not tell the two apart.

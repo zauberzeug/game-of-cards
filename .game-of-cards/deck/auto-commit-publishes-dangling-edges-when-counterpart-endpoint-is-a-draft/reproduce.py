@@ -60,7 +60,7 @@ def main() -> int:
         git("commit", "-qm", "init")
 
         print("setup: fresh git repo, workflow.auto_commit: true, parent-card committed")
-        r = goc("new", "parent-card", "--gate", "none", "--commit")
+        r = goc("new", "parent-card", "--summary", "parent", "--gate", "none", "--commit")
         assert r.returncode == 0, r.stderr
         parent_readme = gm / "deck" / "parent-card" / "README.md"
         authored = parent_readme.read_text()
