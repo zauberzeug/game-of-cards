@@ -1,7 +1,7 @@
 ---
 title: regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories
 summary: "Two regression-test classes, and the reproducers of the two closed cards that added them, read a scratch bare remote by running git inside it, and git refuses that when the global config sets safe.bareRepository=explicit, which anthropics/claude-code-action@v1 writes before every Claude session. So in every pull-card, refine-deck and audit-deck run the suite reports FAILED (errors=2) with 1492 tests run instead of 1499 OK, the 7 claim-race doc guards never execute, and the 55 live cards whose DoD says the suite passes cannot be closed honestly by a bot. Naming the remote with --git-dir at the 11 call sites fixes all four."
-status: open
+status: active
 stage: null
 contribution: high
 created: "2026-11-16T00:52:01Z"
@@ -16,6 +16,7 @@ definition_of_done: |
   - [ ] MECHANICAL: all 11 git calls that run inside a bare remote name it explicitly with `--git-dir` (or read it through a clone): `tests/test_claim_race_reassurance.py:149,156`, `tests/test_deck_location_claim_rows.py:169,172,178`, and the `reproduce.py` of the two closed cards under Location (`:114,148,151,157,160` and `:123`). Each closed card gets a `log.md` post-close amendment that names the edit and points here. Nothing opts out with `-c safe.bareRepository=all`.
   - [ ] TDD: a new test runs every `tests/` module that creates a bare repository under a HOME whose `.gitconfig` sets `safe.bareRepository = explicit`, and asserts each module runs all its tests and passes. It fails on today's fixtures before they are fixed (record that run in log.md), so the next fixture that runs git inside a bare repository turns CI red and not only bot sessions.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` passes with the same test count under the session's own git config and with HOME pointed at an empty `.gitconfig` (both counts recorded in log.md), and `uv run goc validate` passes.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The regression suite is red inside every bot run: two fixtures open a bare repository that git refuses to find
