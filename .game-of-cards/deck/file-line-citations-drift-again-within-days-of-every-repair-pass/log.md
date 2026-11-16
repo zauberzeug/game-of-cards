@@ -314,3 +314,11 @@ author's off-by-16 at filing that every pass had carried. All eight are
 re-anchored by their prose in the 2026-11-16 commit and logged on their
 cards. A symbol-anchored cite would have failed to resolve instead of
 resolving cleanly onto the wrong code.
+
+## 2026-11-16T02:31:00Z — Another line-number recipe instance filed
+
+[`citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number`](../citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number/):
+the closing re-run proposes moving a correct cite onto its sibling's code when
+one commit hands the sibling's number to it, because a token-level walk sees no
+turn at that commit. Two live instances on 2026-11-16, neither applied. A
+symbol-anchored cite has no number to hand over.

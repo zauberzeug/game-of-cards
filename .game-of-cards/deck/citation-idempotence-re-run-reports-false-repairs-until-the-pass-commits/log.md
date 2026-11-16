@@ -63,3 +63,11 @@ README's "21 cites across 19 cards" claim was rewritten in place.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-09-25 — Closure' present
+
+## 2026-11-16T02:30:00Z — Post-close amendment
+
+Extended by [`citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number`](../citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number/)
+— committing first does not make the re-run valid when the pass's own commit
+moves one cite onto the number a sibling cite in the same card vacates: the
+token never turns from absent to present, and the 2026-11-16 re-run proposed
+two false moves after its commit.

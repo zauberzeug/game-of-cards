@@ -48,6 +48,9 @@ worker: {who: "claude[bot]", where: main}
 
 # Citation idempotence re-run reports false repairs until the pass commits
 
+> Later evidence: committing first is not sufficient when one commit hands a
+> cite's number to its sibling; see [`citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number`](../citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number/).
+
 ## Location
 
 - `goc/templates/skills/refine-deck/reference.md` — § "Citation anchor check",
