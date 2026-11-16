@@ -118,6 +118,13 @@ def _git(cwd: Path, *args: str) -> str:
     ).stdout.strip()
 
 
+def _remote_git(remote: Path, *args: str) -> str:
+    # Name the bare remote: under safe.bareRepository=explicit, which
+    # claude-code-action sets for every session, git refuses to find it through
+    # the working directory (tests/test_bare_repository_fixtures_name_their_git_dir.py).
+    return _git(remote, f"--git-dir={remote}", *args)
+
+
 def _claim(clone: Path, when: str | None = None) -> subprocess.CompletedProcess[str]:
     # A pinned commit date keeps two same-identity claims from landing in the
     # same second as byte-identical commits; the rebase path is the one tested.
@@ -166,16 +173,16 @@ def _clone(work: Path, remote: Path, name: str, who: str | None = None) -> Path:
 def observe(tmp: Path) -> Observations:
     remote = _seed(tmp / "default", claim_push=False)
     a, b = _clone(tmp / "default", remote, "agent-A"), _clone(tmp / "default", remote, "agent-B")
-    before = _git(remote, "rev-parse", "main")
+    before = _remote_git(remote, "rev-parse", "main")
     _uncontested(_claim(a))
     default_b = _claim(b)
-    default_pushes = _git(remote, "rev-parse", "main") != before
+    default_pushes = _remote_git(remote, "rev-parse", "main") != before
 
     remote = _seed(tmp / "claim_push", claim_push=True)
     a, b = _clone(tmp / "claim_push", remote, "agent-A"), _clone(tmp / "claim_push", remote, "agent-B")
     _uncontested(_claim(a))
     _claim(b)
-    remote_card = _git(remote, "show", f"main:.game-of-cards/deck/{CARD}/README.md")
+    remote_card = _remote_git(remote, "show", f"main:.game-of-cards/deck/{CARD}/README.md")
     winner = "first" if re.search(r"^worker: .*\bagent-A\b", remote_card, re.MULTILINE) else "last"
 
     remote = _seed(tmp / "identical", claim_push=True)

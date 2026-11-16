@@ -93,3 +93,16 @@ and every autonomous session now runs with that setting. Inside a session the
 reproducer exits 1 with a traceback, and the guard's 3 tests never run. With
 an empty global git config the reproducer still exits 0, so the verdict
 recorded above holds.
+
+## 2026-11-16T04:28:10Z — Post-close amendment
+
+Extended by [`regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories`](../regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories/)
+— this card's `reproduce.py` now names its bare remote with `--git-dir`.
+A new `_remote_git(remote, *args)` helper passes `--git-dir=<remote>`, and
+the five reads that ran git inside the remote go through it: `_remote_card`'s
+`show` and the four `rev-parse main` calls in `observe()`. The guard this
+card added, `tests/test_deck_location_claim_rows.py`, got the same helper for
+its three remote reads. The protocol each runs is unchanged. Under an empty
+global git config and under `safe.bareRepository = explicit`, the reproducer
+exits 0 with its no-defect verdict, `Both rows match the observed claim
+protocol.`

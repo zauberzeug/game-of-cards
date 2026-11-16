@@ -93,6 +93,13 @@ def _git(cwd: Path, *args: str) -> str:
     ).stdout.strip()
 
 
+def _remote_git(remote: Path, *args: str) -> str:
+    # Name the bare remote: under safe.bareRepository=explicit, which
+    # claude-code-action sets for every session, git refuses to find it through
+    # the working directory.
+    return _git(remote, f"--git-dir={remote}", *args)
+
+
 def _goc(cwd: Path, *args: str, when: str | None = None) -> subprocess.CompletedProcess[str]:
     # Pinning the commit date keeps two same-identity claims from landing in
     # the same second, which would make them byte-identical commits.
@@ -111,7 +118,7 @@ def _clone(work: Path, remote: Path, name: str, who: str | None = None) -> Path:
 
 
 def _remote_card(remote: Path) -> dict[str, str]:
-    text = _git(remote, "show", f"main:{CARD_README}")
+    text = _remote_git(remote, "show", f"main:{CARD_README}")
     return dict(re.findall(r"^(status|worker): (.*)$", text, re.MULTILINE))
 
 
@@ -145,19 +152,19 @@ def observe() -> dict:
         work = Path(tmp) / "default"
         remote = _seed(work, claim_push=False)
         a, b = _clone(work, remote, "agent-A"), _clone(work, remote, "agent-B")
-        before = _git(remote, "rev-parse", "main")
+        before = _remote_git(remote, "rev-parse", "main")
         facts["default_a"] = _goc(a, "status", CARD, "active")
         facts["default_b"] = _goc(b, "status", CARD, "active")
-        facts["default_pushes"] = _git(remote, "rev-parse", "main") != before
+        facts["default_pushes"] = _remote_git(remote, "rev-parse", "main") != before
         facts["default_detects_race"] = facts["default_b"].returncode != 0
 
         work = Path(tmp) / "claim_push"
         remote = _seed(work, claim_push=True)
         a, b = _clone(work, remote, "agent-A"), _clone(work, remote, "agent-B")
-        before = _git(remote, "rev-parse", "main")
+        before = _remote_git(remote, "rev-parse", "main")
         facts["push_a"] = _goc(a, "status", CARD, "active")
         facts["push_b"] = _goc(b, "status", CARD, "active")
-        facts["claim_push_pushes"] = _git(remote, "rev-parse", "main") != before
+        facts["claim_push_pushes"] = _remote_git(remote, "rev-parse", "main") != before
         facts["claim_push_remote"] = _remote_card(remote)
         facts["claim_push_winner"] = "first" if "agent-A" in facts["claim_push_remote"].get("worker", "") else "last"
         facts["loser_refused_naming_winner"] = facts["push_b"].returncode != 0 and "'agent-A'" in facts["push_b"].stderr

@@ -123,6 +123,13 @@ def _git(cwd: Path, *args: str) -> str:
     ).stdout.strip()
 
 
+def _remote_git(remote: Path, *args: str) -> str:
+    # Name the bare remote: under safe.bareRepository=explicit, which
+    # claude-code-action sets for every session, git refuses to find it through
+    # the working directory (tests/test_bare_repository_fixtures_name_their_git_dir.py).
+    return _git(remote, f"--git-dir={remote}", *args)
+
+
 def _clone(work: Path, remote: Path, name: str) -> Path:
     dest = work / name
     _git(work, "clone", "-q", str(remote), str(dest))
@@ -146,14 +153,14 @@ def default_claim_pushes(work: Path) -> bool:
     _git(seed, "push", "-q", "origin", "main")
 
     agent = _clone(work, remote, "agent")
-    before = _git(remote, "rev-parse", "main")
+    before = _remote_git(remote, "rev-parse", "main")
     claim = subprocess.run(
         [sys.executable, "-m", "goc.cli", "status", CARD, "active"],
         cwd=agent, env=_env(), capture_output=True, text=True,
     )
     if claim.returncode != 0:
         raise AssertionError(f"an uncontested claim failed (exit {claim.returncode}): {claim.stderr}")
-    return _git(remote, "rev-parse", "main") != before
+    return _remote_git(remote, "rev-parse", "main") != before
 
 
 def swept_files() -> dict[str, str]:

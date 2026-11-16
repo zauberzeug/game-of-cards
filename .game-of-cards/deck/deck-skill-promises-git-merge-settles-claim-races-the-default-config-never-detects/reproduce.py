@@ -120,7 +120,10 @@ def race(work: Path, first_who: str, second_who: str) -> dict:
     pull_2 = _run(two, "git", "pull", "-q", "--rebase", "origin", "main")
     if pull_2.returncode != 0:
         _run(two, "git", "rebase", "--abort")
-    remote_card = _git(remote, "show", f"main:.game-of-cards/deck/{CARD}/README.md")
+    # Named with --git-dir: under safe.bareRepository=explicit, which
+    # claude-code-action sets for every session, git refuses to find a bare
+    # repository through the working directory.
+    remote_card = _git(remote, f"--git-dir={remote}", "show", f"main:.game-of-cards/deck/{CARD}/README.md")
     return {
         "claims": (claim_1.returncode, claim_2.returncode),
         "first_push": push_1.returncode,

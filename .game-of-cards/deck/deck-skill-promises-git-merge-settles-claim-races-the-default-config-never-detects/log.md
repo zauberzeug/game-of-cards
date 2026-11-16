@@ -96,3 +96,15 @@ bare remote by running git inside it. Git refuses that under
 that setting. Inside a session the reproducer exits 1, and the guard's 4 tests
 never run. With an empty global git config the reproducer still exits 0, so
 the verdict recorded above holds.
+
+## 2026-11-16T04:28:10Z — Post-close amendment
+
+Extended by [`regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories`](../regression-suite-is-red-in-bot-runs-whose-git-refuses-implicit-bare-repositories/)
+— this card's `reproduce.py` now names its bare remote with `--git-dir`.
+Its one read inside the remote, the `show` of the race card in `race()`,
+passes `--git-dir=<remote>`. The guard this card added,
+`tests/test_claim_race_reassurance.py`, got a `_remote_git(remote, *args)`
+helper that does the same for its two `rev-parse main` reads. The race each
+runs is unchanged. Under an empty global git config and under
+`safe.bareRepository = explicit`, the reproducer exits 0 with its no-defect
+verdict, `No surface says git's merge settles the race.`
