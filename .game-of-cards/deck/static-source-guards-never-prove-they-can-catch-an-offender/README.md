@@ -263,7 +263,7 @@ Option B cannot catch it. A generated sensitivity case runs the scanner over a
 the production corpus goes empty. The registration needs a fourth element — a
 corpus floor asserting the tree the scanner walks in production still exists and
 still holds a plausible number of files. The precedent is in-tree and predates
-this card: `tests/test_card_authoring_rules.py:600`
+this card: `tests/test_card_authoring_rules.py:609`
 (`test_live_deck_is_actually_being_scanned`, "a clean result must come from real
 cards, not an empty glob") is exactly this element, and the new guard's
 `test_the_trees_are_actually_being_swept` is its generalization to a multi-tree

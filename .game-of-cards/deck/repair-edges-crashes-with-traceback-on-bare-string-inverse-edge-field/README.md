@@ -32,7 +32,7 @@ same crash hits `goc advance <child> --by <parent>` (and the other
 
 - `goc/engine.py:6252-6262` — `_add_to_list_field` (the repairer; raises).
 - `goc/engine.py:6297-6312` — `_repair_edge_diff` (calls it in the dry-run preview).
-- `goc/engine.py:7139-7152` — `_mutate_pair` (calls it via `--apply`, `advance`, `new`, `superseded --by`).
+- `goc/engine.py:7157-7170` — `_mutate_pair` (calls it via `--apply`, `advance`, `new`, `superseded --by`).
 - `goc/engine.py:2370-2388` — `find_half_edges` (the detector; tolerates the bare string).
 
 ## What's broken
@@ -52,7 +52,7 @@ if t.title not in inverse_list:
 ```
 
 The REPAIRER refuses the very same shape with an uncaught `raise`
-(`engine.py:7108-7113`):
+(`engine.py:7126-7131`):
 
 ```python
 def _add_to_list_field(text: str, field: str, title_to_add: str) -> str:

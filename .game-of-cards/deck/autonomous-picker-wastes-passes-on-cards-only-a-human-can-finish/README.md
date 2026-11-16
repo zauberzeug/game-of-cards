@@ -169,7 +169,7 @@ This is a pure fact about the code and holds under every model.
 
 **Counting `## ` headings in `log.md` is not a usable attempt metric.**
 There is partial precedent for the engine reading log.md as machine
-state (the `log-md-closure-entry` derived check, `goc/engine.py:6451`),
+state (the `log-md-closure-entry` derived check, `goc/engine.py:6469`),
 but that is a *presence check for one well-known heading at one decision
 point*, not a tally over an open vocabulary. Heading formats are already
 heterogeneous — `goc decide` writes `## {ts}: decision recorded`,

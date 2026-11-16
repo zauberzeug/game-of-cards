@@ -136,7 +136,7 @@ its own value.
   validator and every doc that names the key, and repos already pinned to the
   single value need a migration. All of that describes a Codex mode that has
   only one possible value today.
-- Preview: `goc/engine.py:6154` and `:5808` read a per-host value;
+- Preview: `goc/engine.py:6172` and `:5808` read a per-host value;
   `goc/install.py:1832` writes one; `:1943` pins Codex from
   `local_skills_agents`; `:2139` and `:2212` re-pin for Codex too; the loop at
   `goc/engine.py:1591` picks each tree's value.

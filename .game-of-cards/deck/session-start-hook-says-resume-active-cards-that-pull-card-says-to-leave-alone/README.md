@@ -32,7 +32,7 @@ definition_of_done: |
 - `goc/templates/skills/deck/SKILL.md:47` and
   `goc/templates/skills/deck/reference.md:85`: "`status: active` is the
   soft lock".
-- `goc/engine.py:6667` (`_auto_populate_worker`): what a claim records.
+- `goc/engine.py:6685` (`_auto_populate_worker`): what a claim records.
   It writes `worker: {who, where}`, from git's `user.name` and the
   current branch (or `--worker-who` / `--worker-where`), and nothing
   else.

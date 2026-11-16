@@ -69,7 +69,7 @@ elif closed_at is not None:
 ```
 
 `TERMINAL_STATUSES = frozenset({"done", "disproved", "superseded"})`
-(`engine.py:2895`).
+(`engine.py:2913`).
 
 So `closed_at` is in fact:
 

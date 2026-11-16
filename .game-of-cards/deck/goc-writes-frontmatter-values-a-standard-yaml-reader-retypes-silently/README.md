@@ -178,7 +178,7 @@ why the missing term has to be written by hand.
 
 **Reachability is the CLI, not a hand edit.** Check B does no hand-editing: it
 creates a branch, commits, and runs `goc status <title> active`. The engine's
-`_auto_populate_worker` (`goc/engine.py:6667`) reads
+`_auto_populate_worker` (`goc/engine.py:6685`) reads
 `git rev-parse --abbrev-ref HEAD` and stores it as `worker.where`, which
 `_emit_worker` (`goc/engine.py:536`) interpolates into a flow mapping through
 `_yaml_inline`. `1.5` is an ordinary version-branch name and `off` is an

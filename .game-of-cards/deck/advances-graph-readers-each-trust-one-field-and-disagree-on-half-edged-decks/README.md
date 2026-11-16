@@ -32,11 +32,11 @@ Every reader of the advances relation picks one of its two fields:
 | `detect_advance_cycles`, the `goc validate` cycle gate | `advances` | `goc/engine.py:2324` |
 | `_would_create_advance_cycle`, the guard of `advance`, `new` and `repair-edges` | `advances` | `goc/engine.py:2447` |
 | `validate_epic_edge_direction` (`BACKWARDS_EPIC_EDGE`) | `advances` | `goc/engine.py:2609` |
-| `filter_cards` for `--advances` | `advances` | `goc/engine.py:3531` |
-| `dependency_blockers`, readiness and the `awaiting:` line | `advanced_by` | `goc/engine.py:2911` |
-| the `advanced-by-closed` attest check | `advanced_by` | `goc/engine.py:6429` |
-| `filter_cards` for `--advanced-by` | `advanced_by` | `goc/engine.py:3538` |
-| `validate_blocker_coherence` (`STALE_BLOCKED`, `ORPHAN_BLOCKED`, `CASCADE_CHAIN_ROOT`) | `advanced_by` | `goc/engine.py:2681`, `:2598` |
+| `filter_cards` for `--advances` | `advances` | `goc/engine.py:3549` |
+| `dependency_blockers`, readiness and the `awaiting:` line | `advanced_by` | `goc/engine.py:2929` |
+| the `advanced-by-closed` attest check | `advanced_by` | `goc/engine.py:6447` |
+| `filter_cards` for `--advanced-by` | `advanced_by` | `goc/engine.py:3556` |
+| `validate_blocker_coherence` (`STALE_BLOCKED`, `ORPHAN_BLOCKED`, `CASCADE_CHAIN_ROOT`) | `advanced_by` | `goc/engine.py:2693`, `:2598` |
 
 Only `find_half_edges` (`goc/engine.py:2370`) and the edge-exists checks
 in `goc advance` / `goc unadvance` read both halves.

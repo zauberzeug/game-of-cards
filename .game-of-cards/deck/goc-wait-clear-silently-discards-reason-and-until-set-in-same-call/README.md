@@ -52,7 +52,7 @@ def _cmd_wait(args):
         ...
 ```
 
-The argparse wiring at `goc/engine.py:4620-4637` declares `--clear`,
+The argparse wiring at `goc/engine.py:4638-4655` declares `--clear`,
 `--reason`, and `--until` as three independent flags with no
 `mutually_exclusive_group`, so all three pass argparse cleanly:
 

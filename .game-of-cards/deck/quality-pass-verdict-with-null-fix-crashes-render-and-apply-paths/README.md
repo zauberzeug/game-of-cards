@@ -23,8 +23,8 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:5235` (`_is_fixable` inside `_render_verdict`) and
-`goc/engine.py:5289` (`fix_by_idx` comprehension in
+`goc/engine.py:5253` (`_is_fixable` inside `_render_verdict`) and
+`goc/engine.py:5307` (`fix_by_idx` comprehension in
 `_apply_dod_rewrite`).
 
 ## What's broken
