@@ -89,7 +89,7 @@ stage — the case the same section's `git commit -- <path>...` pathspec rule
 exists to contain ("The pathspec is the last guard against accidentally
 bundling unrelated staged files").
 
-The trigger is not exotic. `.pre-commit-config.yaml:38-40` says so in its own
+The trigger is not exotic. `.pre-commit-config.yaml:38-41` says so in its own
 comment:
 
 > AGENTS.md § "Card authoring rules" requires English cards. goc's own
