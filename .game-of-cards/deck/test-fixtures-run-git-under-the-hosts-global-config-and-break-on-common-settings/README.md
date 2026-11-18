@@ -1,7 +1,7 @@
 ---
 title: test-fixtures-run-git-under-the-hosts-global-config-and-break-on-common-settings
 summary: "No test module isolates git from the host's global config, so every git process the suite starts, in a fixture or through goc's own auto-commit, reads the .gitconfig of whoever runs it. On an unchanged tree two common settings each break the suite: commit signing with an unavailable key (54 errors in 16 modules) and a refusing global pre-commit hook (55 errors in 17 modules). A third, safe.bareRepository=explicit (2 errors, in every bot session), was fixed on 2026-11-16 by its instance card. Two modules already guard against signing on their own, and a 2026-05 closure ran the suite with GIT_CONFIG_GLOBAL=/dev/null to get past a host-identity leak. One shared isolation would end these per-module fixes."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-16T01:13:32Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] TDD: a guard fails in CI when a test module starts git outside that isolation. It is shown to catch a planted offender before the fix lands, and it costs far less than another full-suite run.
   - [ ] MECHANICAL: the AGENTS.md paragraph on `tests/` says the suite runs git isolated from the host's git config, so a new fixture author knows the contract.
   - [ ] PROCESS: every instance card wired into `advanced_by` is closed, and `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Test fixtures run git under the host's global config and break on common settings
