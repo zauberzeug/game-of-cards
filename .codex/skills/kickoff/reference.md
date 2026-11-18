@@ -60,6 +60,13 @@ multiple branches on the same project and wants a single queue. When
 auto-commit is on, deck mutations from a worktree commit to the
 primary working tree's branch, not the worktree's branch.
 
+A bare clone (`git clone --bare`, then `git worktree add` per branch or
+per parallel agent) has no primary working tree, so the setting cannot
+apply there. Each worktree keeps its own deck, and `goc` prints a
+warning naming the bare repository on every command. A claim made in
+one worktree then reaches the others only through a merge. For a
+single shared queue, add the worktrees to an ordinary clone instead.
+
 ## Multi-team coordination opt-ins
 
 Both default off; turn on for setups where several humans and agents

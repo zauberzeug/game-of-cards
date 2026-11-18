@@ -50,14 +50,14 @@ _DUAL_TREE_CONFLICT: bool = False
 _LEGACY_ONLY: bool = False
 
 
-def _detect_worktree_common_root(cwd: Path) -> Path | None:
-    """Return primary working tree root if cwd is inside a git worktree, else None.
+def _linked_worktree_common_dir(cwd: Path) -> Path | None:
+    """Return git's common directory if cwd is inside a linked worktree, else None.
 
     Signal: git rev-parse --git-common-dir differs from --git-dir when cwd is
-    a linked worktree; the common dir is then the primary .git directory.
-    The two are compared as resolved paths, never as printed: from a
-    subdirectory of the primary working tree git prints --git-dir absolute and
-    --git-common-dir relative to cwd, two spellings of the same directory.
+    a linked worktree. The two are compared as resolved paths, never as
+    printed: from a subdirectory of the primary working tree git prints
+    --git-dir absolute and --git-common-dir relative to cwd, two spellings of
+    the same directory.
     """
     try:
         r_git = subprocess.run(
@@ -77,27 +77,105 @@ def _detect_worktree_common_root(cwd: Path) -> Path | None:
     common_path = (cwd / r_common.stdout.strip()).resolve()
     if git_dir == common_path:
         return None  # primary working tree, not a worktree
-    return common_path.parent
+    return common_path
 
 
-def _shared_worktree_deck_root(cwd: Path) -> Path | None:
-    """Return the primary working tree root when cwd is in a linked git
-    worktree that opted into worktree_deck=shared, else None."""
-    common_root = _detect_worktree_common_root(cwd)
-    if common_root is None:
+def _is_bare_repository(git_dir: Path) -> bool:
+    """Whether the config in `git_dir` sets `core.bare` (`git clone --bare`
+    writes it). Read with `--file` so no repository discovery runs."""
+    try:
+        r = subprocess.run(
+            ["git", "config", "--file", str(git_dir / "config"),
+             "--bool", "--get", "core.bare"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return r.stdout.strip() == "true"
+
+
+def _primary_working_tree(common_dir: Path) -> Path | None:
+    """Return the primary working tree of the repository whose git common
+    directory is `common_dir`, or None when there is none to find.
+
+    Git derives the main working tree by stripping `/.git` from the common
+    directory (`git worktree list` lists it first). So the parent is the
+    primary working tree only for a non-bare directory named `.git`. A bare
+    clone has no primary working tree at all. That covers `repo.git`, `.bare`
+    behind a `.git` gitfile, and a bare repository cloned as `.git`. A git
+    directory kept apart from its checkout (`--separate-git-dir`, a submodule's
+    `.git/modules/<name>`) does not sit inside its primary working tree. In
+    each case the parent is a plain folder that holds no deck to share.
+    """
+    if common_dir.name != ".git" or _is_bare_repository(common_dir):
         return None
-    # Env var wins without requiring the config to exist yet.
+    return common_dir.parent
+
+
+def _detect_worktree_common_root(cwd: Path) -> Path | None:
+    """Return the primary working tree root if cwd is inside a linked git
+    worktree of a repository that has one (`_primary_working_tree`), else None.
+    """
+    common_dir = _linked_worktree_common_dir(cwd)
+    return None if common_dir is None else _primary_working_tree(common_dir)
+
+
+def _shared_deck_request(config_root: Path) -> str | None:
+    """Name what asks for the shared worktree deck, or None when nothing does.
+
+    The GOC_WORKTREE_DECK=shared env var wins without requiring the config to
+    exist yet. Otherwise `workflow.worktree_deck: shared` in
+    `config_root/.game-of-cards/config.yaml` does.
+    """
     if os.environ.get("GOC_WORKTREE_DECK", "").lower() == "shared":
-        return common_root
-    config_path = common_root / ".game-of-cards" / "config.yaml"
+        return "GOC_WORKTREE_DECK=shared"
+    config_path = config_root / ".game-of-cards" / "config.yaml"
     if config_path.exists():
         try:
             cfg = yaml.safe_load(config_path.read_text()) or {}
             if (cfg.get("workflow") or {}).get("worktree_deck") == "shared":
-                return common_root
+                return f"worktree_deck: shared in {config_path}"
         except Exception:
             pass
     return None
+
+
+def _shared_worktree_deck_root(cwd: Path) -> Path | None:
+    """Return the primary working tree root when cwd is in a linked git
+    worktree that opted into worktree_deck=shared, else None. The opt-in is
+    read from the primary's config, which governs the deck it holds."""
+    common_root = _detect_worktree_common_root(cwd)
+    if common_root is None:
+        return None
+    return common_root if _shared_deck_request(common_root) else None
+
+
+def _unshareable_worktree_deck_warning(cwd: Path, deck_root: Path) -> str | None:
+    """Return why the shared deck asked for from cwd is off, or None.
+
+    That happens in a linked worktree of a repository with no primary working
+    tree to share a deck from (`_primary_working_tree`), a bare clone above
+    all. Shared mode then stays off, and the walk resolves the worktree's own
+    deck, goc's per-worktree default. The caller asked for one shared deck, so
+    the CLI says it is off. Otherwise a claim made here would stop reaching the
+    other worktrees without a word. The request is the env var, or the key in
+    the config the walk found (`deck_root`). With no primary there is no other
+    config to read.
+    """
+    request = _shared_deck_request(deck_root)
+    if request is None:
+        return None
+    common_dir = _linked_worktree_common_dir(cwd)
+    if common_dir is None or _primary_working_tree(common_dir) is not None:
+        return None
+    if _is_bare_repository(common_dir):
+        why = f"{common_dir} is a bare repository, so this layout has no primary working tree"
+    else:
+        why = (f"{common_dir} is not the .git directory of a working tree, so goc "
+               "finds no primary working tree to read")
+    return (f"{request} is ignored: shared mode reads the deck from the primary "
+            f"working tree, but {why}. goc uses this worktree's own deck instead, "
+            "so a claim made here reaches other worktrees only through a merge.")
 
 
 def _git_toplevel(cwd: Path) -> Path | None:
@@ -138,7 +216,9 @@ def _resolve_deck_root(cwd: Path) -> Path:
     When running inside a git worktree AND worktree_deck=shared is enabled
     (GOC_WORKTREE_DECK=shared env var or workflow.worktree_deck: shared in
     the common root's config.yaml), returns the primary working tree root so
-    all worktrees share a single deck. Otherwise, walk from cwd towards the
+    all worktrees share a single deck. A repository with no primary working
+    tree (a bare clone, `_primary_working_tree`) takes the walk instead, and
+    `cli()` warns that the request is ignored. Otherwise, walk from cwd towards the
     filesystem root and return the nearest ancestor that already contains a
     `.game-of-cards/` directory. The walk may climb through plain directories
     (a workspace holding several repos can own one deck above them), but it
@@ -4771,6 +4851,12 @@ def cli(argv=None):
             "WARNING: using legacy deck/ location. Run `goc upgrade` to migrate to .game-of-cards/deck/.",
             file=sys.stderr,
         )
+    # Only where the shared redirect is not in effect (the roots differ there
+    # alone) can a shared-deck request have been turned down.
+    if REPO_ROOT == DECK_ROOT:
+        unshared = _unshareable_worktree_deck_warning(Path.cwd(), DECK_ROOT)
+        if unshared is not None:
+            print(f"WARNING: {unshared}", file=sys.stderr)
 
     if args.command is None:
         _cmd_default(args)
@@ -4821,11 +4907,19 @@ MISSING_DECK_PHRASE = "no such file or directory: .game-of-cards/deck/"
 
 def _missing_deck_message() -> str:
     """The one wording for "no deck here": `goc new` errors with it, the read
-    views print it as a notice."""
+    views print it as a notice. It names where goc looked. Under the shared
+    worktree deck (`REPO_ROOT` differs from `DECK_ROOT` only there) that is the
+    primary working tree alone. The linked worktree goc runs in is not
+    searched and may hold a deck of its own."""
+    if DECK_ROOT != REPO_ROOT:
+        searched = f"in the primary working tree {DECK_ROOT} (worktree_deck: shared)"
+        install_at = "in that primary working tree"
+    else:
+        searched = f"from {REPO_ROOT} upward"
+        install_at = "at the intended project root"
     return (
-        f"no Game of Cards deck found from {REPO_ROOT} upward "
-        f"({MISSING_DECK_PHRASE}). Run `goc install` at the intended project "
-        "root first (agents: invoke Skill(kickoff))."
+        f"no Game of Cards deck found {searched} ({MISSING_DECK_PHRASE}). "
+        f"Run `goc install` {install_at} first (agents: invoke Skill(kickoff))."
     )
 
 

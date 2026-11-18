@@ -52,6 +52,10 @@ workflow:
   #                         # from the primary working tree instead of the
   #                         # worktree's own checkout. Also available as the
   #                         # GOC_WORKTREE_DECK=shared environment variable.
+  #                         # A bare clone (`git clone --bare`) has no primary
+  #                         # working tree, so there `goc` warns that the
+  #                         # setting is ignored and each worktree keeps its
+  #                         # own deck.
 
 hooks:
   # Set to true to enable the Stop hook that prompts the agent to file

@@ -386,5 +386,157 @@ class PrimaryCheckoutIsNotALinkedWorktreeTest(_Fixture):
         self.assertFalse((self.repo / ".game-of-cards").exists())
 
 
+class BareCloneHasNoPrimaryWorkingTreeTest(_Fixture):
+    """Shared mode reads the deck from the primary working tree, taken to be
+    the parent of git's common directory. A bare clone has no primary working
+    tree: its common directory is the bare repository, whose parent is a plain
+    folder. goc looked for the deck there, reported a missing deck naming the
+    worktree it never searched, and ignored the opt-in in the worktree's own
+    config (shared-worktree-deck-finds-no-deck-when-the-repository-is-a-bare-clone).
+    Shared mode now stays off in such a layout, the walk finds the worktree's
+    own deck, and goc says why."""
+
+    CONFIG = "workflow:\n  auto_commit: false\n  worktree_deck: shared\n"
+
+    def source(self) -> Path:
+        src = self.tmp / "src"
+        src.mkdir()
+        self.init_repo(src)
+        self.git(src, "commit", "-q", "--allow-empty", "-m", "init")
+        return src
+
+    def add_worktree(self, git_dir: Path, path: Path) -> Path:
+        """A linked worktree of `git_dir` holding its own deck and the config
+        opt-in. `--git-dir` names a bare repository explicitly, as a host with
+        `safe.bareRepository=explicit` requires."""
+        self.git(self.tmp, f"--git-dir={git_dir}", "worktree", "add", "-q",
+                 "-b", path.name, str(path))
+        (path / ".game-of-cards" / "deck").mkdir(parents=True)
+        (path / ".game-of-cards" / "config.yaml").write_text(self.CONFIG)
+        (path / "src" / "pkg").mkdir(parents=True)
+        return path
+
+    def layouts(self) -> dict[str, tuple[Path, Path]]:
+        """Layout name -> (git common directory, linked worktree)."""
+        src = self.source()
+        layouts = {}
+        # `git clone --bare … repo.git`, the card's layout.
+        bare = self.tmp / "repo.git"
+        self.git(self.tmp, "clone", "-q", "--bare", str(src), str(bare))
+        layouts["repo.git"] = (bare, self.add_worktree(bare, self.tmp / "wt-feat"))
+        # A `.bare` repository behind a `.git` gitfile, worktrees beside it.
+        folder = self.tmp / "dotbare"
+        folder.mkdir()
+        dotbare = folder / ".bare"
+        self.git(self.tmp, "clone", "-q", "--bare", str(src), str(dotbare))
+        (folder / ".git").write_text("gitdir: ./.bare\n")
+        layouts[".bare"] = (dotbare, self.add_worktree(dotbare, folder / "feat"))
+        # A bare repository cloned as `.git`: the name alone would pass.
+        project = self.tmp / "project"
+        dotgit = project / ".git"
+        self.git(self.tmp, "clone", "-q", "--bare", str(src), str(dotgit))
+        layouts["bare .git"] = (dotgit, self.add_worktree(dotgit, project / "feat"))
+        # Not bare, but the git directory sits apart from its primary checkout.
+        gitdir = self.tmp / "separate-gitdir"
+        self.git(self.tmp, "init", "-q", f"--separate-git-dir={gitdir}", str(self.tmp / "work"))
+        self.git(self.tmp / "work", "-c", "user.name=probe", "-c",
+                 "user.email=probe@example.invalid", "-c", "commit.gpgsign=false",
+                 "commit", "-q", "--allow-empty", "-m", "init")
+        layouts["separate git dir"] = (gitdir, self.add_worktree(gitdir, self.tmp / "sep-linked"))
+        return layouts
+
+    def readers(self) -> dict:
+        readers = {"engine": engine}
+        readers.update((name, _load_hook(name)) for name in HookProjectDirWalkTest.HOOK_NAMES)
+        return readers
+
+    def test_no_reader_finds_a_primary_and_every_walk_stays_in_the_worktree(self) -> None:
+        readers = self.readers()
+        for layout, (common_dir, worktree) in self.layouts().items():
+            for start in (worktree, worktree / "src" / "pkg"):
+                where = f"{layout}: {start.relative_to(self.tmp)}"
+                for name, module in readers.items():
+                    with self.subTest(reader=name, start=where):
+                        self.assertIsNone(module._detect_worktree_common_root(start))
+                for case, env in (("config opt-in", {}), ("env opt-in", {"GOC_WORKTREE_DECK": "shared"})):
+                    with mock.patch.dict(os.environ):
+                        os.environ.pop("GOC_WORKTREE_DECK", None)
+                        os.environ.update(env)
+                        self.assertEqual(worktree, engine._resolve_deck_root(start),
+                                         msg=f"engine, {case}, {where}")
+                        for name, hook in readers.items():
+                            if hook is engine:
+                                continue
+                            with self.subTest(hook=name, case=case, start=where):
+                                self.assertEqual(worktree, hook._find_project_dir(str(start)))
+
+    def test_the_engine_says_why_the_shared_deck_is_off(self) -> None:
+        for layout, (common_dir, worktree) in self.layouts().items():
+            with mock.patch.dict(os.environ):
+                os.environ.pop("GOC_WORKTREE_DECK", None)
+                warning = engine._unshareable_worktree_deck_warning(worktree, worktree)
+                self.assertIsNotNone(warning, msg=f"{layout}: the config opt-in is dropped silently")
+                self.assertIn(str(worktree / ".game-of-cards" / "config.yaml"), warning)
+                self.assertIn(str(common_dir), warning)
+                if layout == "separate git dir":
+                    self.assertIn("is not the .git directory of a working tree", warning)
+                else:
+                    self.assertIn("is a bare repository, so this layout has no primary "
+                                  "working tree", warning)
+                os.environ["GOC_WORKTREE_DECK"] = "shared"
+                warning = engine._unshareable_worktree_deck_warning(worktree, worktree)
+                self.assertIn("GOC_WORKTREE_DECK=shared is ignored", warning or "")
+                # Without any opt-in the per-worktree deck is what was asked for.
+                del os.environ["GOC_WORKTREE_DECK"]
+                (worktree / ".game-of-cards" / "config.yaml").write_text("workflow: {}\n")
+                self.assertIsNone(engine._unshareable_worktree_deck_warning(worktree, worktree),
+                                  msg=layout)
+
+    def test_goc_files_and_lists_in_the_worktree_deck_and_names_the_bare_repository(self) -> None:
+        src = self.source()
+        bare = self.tmp / "repo.git"
+        self.git(self.tmp, "clone", "-q", "--bare", str(src), str(bare))
+        worktree = self.add_worktree(bare, self.tmp / "wt-feat")
+        for case, extra in (("config opt-in", {}), ("env opt-in", {"GOC_WORKTREE_DECK": "shared"})):
+            env = _env(self.home, **extra)
+            card = f"card-{len(extra)}"
+            created = self.goc(worktree / "src" / "pkg", "new", card, "--summary",
+                               "Fixture card.", "--gate", "none", "--no-commit", env=env)
+            listed = self.goc(worktree, "--status", "all", env=env)
+            for verb, r in (("new", created), ("--status all", listed)):
+                with self.subTest(case=case, verb=verb):
+                    self.assert_ok(r)
+                    self.assertNotIn(engine.MISSING_DECK_PHRASE, r.stderr)
+                    self.assertIn(f"{bare} is a bare repository, so this layout has no "
+                                  "primary working tree", r.stderr)
+            self.assertTrue((worktree / ".game-of-cards" / "deck" / card).is_dir(), msg=case)
+            self.assertIn(card, listed.stdout, msg=case)
+        self.assertEqual([], sorted(p.name for p in self.tmp.glob(".game-of-cards")),
+                         msg="goc must not scaffold the folder holding the bare repository")
+
+    def test_a_primary_checkout_keeps_the_shared_deck_and_names_it_when_missing(self) -> None:
+        """The control: with a primary working tree shared mode applies and
+        says nothing. When the primary has no deck the notice names the
+        primary goc searched, not the linked worktree, which holds a deck."""
+        self.init_repo(self.repo)
+        self.git(self.repo, "commit", "-q", "--allow-empty", "-m", "init")
+        linked = self.tmp / "linked"
+        self.git(self.repo, "worktree", "add", "-q", "-b", "feature", str(linked))
+        (linked / ".game-of-cards" / "deck").mkdir(parents=True)
+        env = _env(self.home, GOC_WORKTREE_DECK="shared")
+
+        r = self.goc(linked, "--status", "all", env=env)
+        self.assert_ok(r)
+        self.assertNotIn("is ignored", r.stderr)
+        self.assertIn(f"no Game of Cards deck found in the primary working tree {self.repo} ",
+                      r.stderr)
+        self.assertNotIn(str(linked), r.stderr)
+
+        (self.repo / ".game-of-cards" / "deck").mkdir(parents=True)
+        r = self.goc(linked, "--status", "all", env=env)
+        self.assert_ok(r)
+        self.assertEqual("", r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

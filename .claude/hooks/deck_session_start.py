@@ -282,12 +282,29 @@ _SHARED_DECK_LINE_RE = re.compile(
 )
 
 
+def _is_bare_repository(git_dir: Path) -> bool:
+    """Whether the config in `git_dir` sets `core.bare`. Mirror of
+    `goc.engine._is_bare_repository`."""
+    try:
+        r = subprocess.run(
+            ["git", "config", "--file", str(git_dir / "config"),
+             "--bool", "--get", "core.bare"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
+    return r.stdout.strip() == "true"
+
+
 def _detect_worktree_common_root(cwd: Path) -> Path | None:
     """Return the primary working tree root if `cwd` is inside a linked git
-    worktree, else None. Mirror of `goc.engine._detect_worktree_common_root`:
-    there `git rev-parse --git-common-dir` differs from `--git-dir`, compared
-    as resolved paths because git prints one absolute and the other relative
-    from a subdirectory of the primary working tree.
+    worktree of a repository that has one, else None. Mirror of
+    `goc.engine._detect_worktree_common_root`: there `git rev-parse
+    --git-common-dir` differs from `--git-dir`, compared as resolved paths
+    because git prints one absolute and the other relative from a
+    subdirectory of the primary working tree. The common directory's parent is
+    the primary working tree only for a non-bare `.git`. A bare clone has
+    none, and goc's walk then finds the worktree's own deck.
     """
     try:
         r_git = subprocess.run(
@@ -308,6 +325,8 @@ def _detect_worktree_common_root(cwd: Path) -> Path | None:
     common_path = (cwd / r_common.stdout.strip()).resolve()
     if git_dir == common_path:
         return None  # primary working tree, not a worktree
+    if common_path.name != ".git" or _is_bare_repository(common_path):
+        return None  # no primary working tree to find: a bare clone, above all
     return common_path.parent
 
 

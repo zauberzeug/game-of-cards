@@ -39,3 +39,17 @@ names as the code to port. git prints `--git-dir` absolute and `--git-common-dir
 relative from a subdirectory of the primary checkout, and the old raw-string
 comparison read that as a linked worktree. A TypeScript port must compare the two as
 resolved paths, the way the Python block now does. The decision itself is untouched.
+
+## 2026-11-18 — Reference block corrected again
+
+`shared-worktree-deck-finds-no-deck-when-the-repository-is-a-bare-clone` changed
+`_detect_worktree_common_root` in the engine and in all three Python hook blocks.
+The parent of git's common directory now counts as the primary working tree only
+when that directory is a non-bare `.git`. `core.bare` is read with
+`git config --file <common>/config`. A bare clone (`repo.git`, `.bare`, a bare
+`.git`) and a git directory kept apart from its checkout return None, so shared
+mode stays off there and the walk finds the worktree's own deck. A TypeScript port
+under Option A must carry the same check, or it reintroduces the bare-clone defect.
+The engine-only `WARNING` that names the ignored request is the CLI's concern. A
+port that delegates to the engine (Option B) gets both for free. The decision
+itself is untouched.
