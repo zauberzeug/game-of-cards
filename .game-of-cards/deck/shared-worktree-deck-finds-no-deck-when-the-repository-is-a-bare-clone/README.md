@@ -1,7 +1,7 @@
 ---
 title: shared-worktree-deck-finds-no-deck-when-the-repository-is-a-bare-clone
 summary: "Shared worktree-deck mode assumes the parent of git's common directory is the primary working tree. In a bare clone with linked worktrees, a common layout for parallel agents, that parent is just the folder holding the bare repository. With GOC_WORKTREE_DECK=shared, goc then looks for the deck there and reports that no deck exists, naming the worktree it did not search, even when the worktree holds one, and every skill preflight routes that message to Skill(kickoff). The config-file opt-in is never read in this layout."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-16T01:01:16Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: if the hypothesis holds, `reproduce.py` exits 0 after the fix: in a bare-clone layout, shared mode either refuses with a message that names the bare repository and says the layout has no primary working tree, or resolves to a documented location. It never reports a missing deck that names a directory it did not search.
   - [ ] TDD: a regression test in `tests/test_project_root_from_subdirectory.py` (or a sibling) pins the bare-clone case for `_detect_worktree_common_root` / `_shared_worktree_deck_root` (`goc/engine.py:53-100`), next to the primary-checkout cases already there.
   - [ ] MECHANICAL: the `worktree_deck` comment in `goc/templates/game_of_cards/config.yaml:49-54` (and the shared-deck docs it points to) says what shared mode does in a bare-clone layout. Plugin mirrors re-synced (`python scripts/sync_plugin_assets.py --check` green).
+worker: {who: "claude[bot]", where: main}
 ---
 
 # Shared worktree-deck mode finds no deck when the repository is a bare clone
