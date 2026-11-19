@@ -4940,6 +4940,19 @@ def _missing_deck_message() -> str:
     )
 
 
+def _note_missing_deck() -> None:
+    """Name a missing deck on stderr. Every read view calls this before it
+    loads the deck, because `load_all_cards()` returns `[]` for no deck and
+    for an empty one alike, so without the notice a repo with no deck renders
+    exactly like an empty queue.
+
+    On stderr only: exit 0 and the `--json` stdout stay as they are, so a
+    script counting the queue is unaffected. DECK_DIR is the resolved deck,
+    so a legacy `deck/` or a shared worktree deck suppresses the notice."""
+    if not DECK_DIR.exists():
+        print(f"goc: {_missing_deck_message()}", file=sys.stderr)
+
+
 def _cmd_default(args):
     # Flag conflicts are refused before `load_all_cards()`: a usage error must
     # not first pay for a full deck walk.
@@ -4959,11 +4972,7 @@ def _cmd_default(args):
             file=sys.stderr,
         )
         sys.exit(2)
-    # On stderr only: exit 0 and the `--json` stdout stay as they are, so a
-    # script counting the queue is unaffected. DECK_DIR is the resolved deck,
-    # so a legacy `deck/` or a shared worktree deck suppresses the notice.
-    if not DECK_DIR.exists():
-        print(f"goc: {_missing_deck_message()}", file=sys.stderr)
+    _note_missing_deck()
     cards = load_all_cards()
     closed_since_threshold = parse_closed_since(getattr(args, "closed_since", None))
     if args.done_flag:
@@ -8110,6 +8119,7 @@ def _cmd_triage(args):
     """List parked cards (gate ≠ none), grouped by gate, oldest-first."""
     as_json = args.as_json
     worker = args.worker
+    _note_missing_deck()
     parked = [
         t for t in load_all_cards() if t.status == "open" and t.human_gate != "none"
     ]

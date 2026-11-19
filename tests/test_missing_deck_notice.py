@@ -78,6 +78,27 @@ class MissingDeckNoticeTest(unittest.TestCase):
         self.assertEqual("[]", result.stdout.strip())
         self.assertIn(MISSING_DECK_PHRASE, result.stderr)
 
+    def test_triage_names_the_missing_deck_like_the_queue_view(self) -> None:
+        # `goc triage` is Skill(scan-deck)'s first answer, and scan-deck has no
+        # Preflight: without the notice a repo with no deck reads as one where
+        # nothing waits on the human. Exit 0 and stdout stay the empty-queue
+        # answer, as for `--ready --json` above.
+        forms = {
+            ("triage",): "No parked cards (status: open; gate ≠ none).",
+            ("triage", "--json"): "[]",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.repo(tmp)
+            notice = self.run_goc(root).stderr.strip()
+            results = {argv: self.run_goc(root, *argv) for argv in forms}
+        self.assertIn(MISSING_DECK_PHRASE, notice)
+        for argv, stdout in forms.items():
+            with self.subTest(argv=argv):
+                result = results[argv]
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(stdout, result.stdout.strip())
+                self.assertEqual(notice, result.stderr.strip())
+
     def test_existing_deck_stays_silent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = self.repo(tmp)
@@ -85,6 +106,15 @@ class MissingDeckNoticeTest(unittest.TestCase):
             result = self.run_goc(root)
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertNotIn(MISSING_DECK_PHRASE, result.stderr)
+
+    def test_triage_stays_silent_on_an_existing_deck(self) -> None:
+        for deck in (Path(".game-of-cards") / "deck", Path("deck")):
+            with self.subTest(deck=str(deck)), tempfile.TemporaryDirectory() as tmp:
+                root = self.repo(tmp)
+                (root / deck).mkdir(parents=True)
+                result = self.run_goc(root, "triage")
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertNotIn(MISSING_DECK_PHRASE, result.stderr)
 
     def test_legacy_deck_stays_silent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

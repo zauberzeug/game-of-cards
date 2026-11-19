@@ -1,27 +1,27 @@
 ---
 title: goc-triage-reports-no-parked-cards-in-a-repo-that-has-no-deck
 summary: "In a repo with no deck, goc triage prints No parked cards and goc triage --json prints [], exit 0 with nothing on stderr. The missing-deck notice that every other read view prints, carrying the phrase the skill Preflights route to Skill(kickoff) on, was added to the default view only. scan-deck, which has no Preflight, runs goc triage first, so a deckless repo reads as one where nothing waits on the human."
-status: active
+status: done
 stage: null
 contribution: medium
 created: "2026-11-16T01:20:11Z"
-closed_at: null
+closed_at: "2026-11-19T04:49:21Z"
 human_gate: none
 advances: []
 advanced_by: []
-tags: [bug, api-contract, unverified]
+tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] EMPIRICAL: a `reproduce.py` runs `goc triage` and `goc triage --json` in a deckless scratch repo and checks stderr for `MISSING_DECK_PHRASE`, with the default view as the control. Run it on today's engine, record the verdict in log.md, and drop the `unverified` tag once it works.
-  - [ ] TDD: if the hypothesis holds, `reproduce.py` exits 0 after the fix. Both triage forms print the same stderr notice as the default view, and exit 0 and the `[]` stdout of `--json` stay unchanged.
-  - [ ] TDD: `tests/test_missing_deck_notice.py`, whose docstring already states the contract for every read view, covers `goc triage` and `goc triage --json`, and fails on today's engine.
+  - [x] EMPIRICAL: a `reproduce.py` runs `goc triage` and `goc triage --json` in a deckless scratch repo and checks stderr for `MISSING_DECK_PHRASE`, with the default view as the control. Run it on today's engine, record the verdict in log.md, and drop the `unverified` tag once it works.
+  - [x] TDD: if the hypothesis holds, `reproduce.py` exits 0 after the fix. Both triage forms print the same stderr notice as the default view, and exit 0 and the `[]` stdout of `--json` stay unchanged.
+  - [x] TDD: `tests/test_missing_deck_notice.py`, whose docstring already states the contract for every read view, covers `goc triage` and `goc triage --json`, and fails on today's engine.
 worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc triage` reports no parked cards in a repo that has no deck
 
-Parked as `unverified`. A hunter agent reproduced it during an audit-deck run,
-and the auditing agent reproduced it again by hand (output below), but there
-is no `reproduce.py` yet.
+Verified and fixed on 2026-11-19. `reproduce.py`, next to this README, exits 1
+on `476f0b2f`: neither triage form prints the notice. After the fix it exits 0.
+The fix is in [§ Fix](#fix) below. The hypothesis and recipe are kept as filed.
 
 ## Hypothesis
 
@@ -78,6 +78,26 @@ the user gets is "nothing is parked", not "there is no deck here — run
 kickoff". Mode A's follow-up `goc -v` does print the notice on stderr. So
 the damage is a misleading first answer, not a silent dead end. That is why
 this card is `medium`.
+
+## Fix
+
+The notice moved out of `_cmd_default` into a helper, `_note_missing_deck()`
+(`goc/engine.py`, next to `_missing_deck_message()`). Its docstring states the
+contract: every read view calls it before loading the deck. `_cmd_default` and
+`_cmd_triage` now both call it, so both triage forms print the default view's
+notice line on stderr. Exit 0, the empty-triage line and the `[]` stdout of
+`--json` are unchanged, and a canonical or legacy deck stays silent.
+
+`tests/test_missing_deck_notice.py` pins this. Both triage forms must exit 0,
+keep their stdout, and print the default view's notice. `goc triage` must stay
+silent on an existing canonical or legacy deck.
+
+The helper did not make the next read view safe on its own. A survey of every
+engine verb in a repo with no deck (table in log.md) found
+`goc quality-pass` with the same gap. It is fixed through as
+[goc-quality-pass-reports-a-clean-deck-in-a-repo-that-has-no-deck](../goc-quality-pass-reports-a-clean-deck-in-a-repo-that-has-no-deck/).
+The other verbs either exit non-zero with no deck or report work that stays
+accurate when there is none.
 
 ## Why deferred
 
