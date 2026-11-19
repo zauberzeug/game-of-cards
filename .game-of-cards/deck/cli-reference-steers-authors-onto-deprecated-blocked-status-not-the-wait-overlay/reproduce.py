@@ -110,7 +110,7 @@ def behavioral_claim() -> list[str]:
         card.write_text(
             card.read_text(encoding="utf-8").replace(
                 "- [ ] (replace with real criteria)", "- [ ] MECHANICAL: criteria"
-            ),
+            ).replace("(write the design doc here)", "Probe body."),
             encoding="utf-8",
         )
         _run(["publish", "probe-card", "--no-commit"], repo)

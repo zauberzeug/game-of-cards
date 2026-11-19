@@ -48,3 +48,14 @@ helper (the umbrella's decision) subsumes this point-fix.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-01 — Closure' present
+
+## 2026-11-19T04:33:52Z — Reproducer setup restored
+
+The script's `real-ready` card was filed without `--summary` and kept the body
+placeholder. `goc publish` refuses the first since the summary-release gate
+and the second since
+[goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder](../goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder/).
+So the card stayed a draft and the script passed on an empty queue, where the
+leverage line is omitted anyway. The setup now passes `--summary` and replaces
+the body placeholder. `goc --ready` lists `real-ready`, the line still omits
+`phantom-draft`, and the script exits 0 for the reason it states.

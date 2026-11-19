@@ -29,3 +29,16 @@
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 5/5 ticked
 - [x] log-md-closure-entry — '## 2026-07-23 — Closure' present
+
+## 2026-11-19T04:33:52Z — Reproducer setup restored
+
+The script had exited 1 since
+`draft-clearing-verbs-release-summary-less-cards-into-a-validate-red-deck`
+made `goc publish` refuse a summary-less draft. The card stayed a draft, so
+`goc validate` never saw the published summary-less card this card is about.
+Then [goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder](../goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder/)
+made publish also refuse the body placeholder the script had left in place.
+Its setup now replaces that placeholder, so only the summary is missing. When
+publish refuses, the script strips the draft flag by hand, the remaining route
+to a published summary-less card. `goc validate` rejects that card and the
+script exits 0.

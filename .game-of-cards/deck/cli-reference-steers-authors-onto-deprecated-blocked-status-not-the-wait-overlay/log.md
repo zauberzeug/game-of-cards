@@ -31,3 +31,12 @@ edge direction.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 4/4 ticked
 - [x] log-md-closure-entry — '## 2026-09-04 — Closure' present
+
+## 2026-11-19T04:33:52Z — Reproducer setup restored
+
+`goc publish` now refuses a draft whose body is still the `goc new`
+placeholder ([goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder](../goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder/)). This
+script authored only the probe card's DoD. After that fix the probe card stayed a
+hidden draft: the script still exited 0, but behaviour B no longer showed the
+card staying visible. The setup now writes the body too. The output is
+byte-identical to the run before the fix, and the script exits 0.

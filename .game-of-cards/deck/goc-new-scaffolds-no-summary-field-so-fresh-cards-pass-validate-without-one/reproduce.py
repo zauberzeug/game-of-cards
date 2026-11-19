@@ -65,15 +65,26 @@ def main() -> int:
             "- [ ] (replace with real criteria",
             "- [ ] MECHANICAL: the sample edit landed (replace with real criteria",
         )
-        fm, body = text.split("---\n", 2)[1], text.split("---\n", 2)[2]
-        readme.write_text(
-            f"---\n{fm}---\n{body}\nAuthored body prose replacing the scaffold placeholder.\n"
-        )
+        readme.write_text(text.replace(
+            "(write the design doc here)",
+            "Authored body prose replacing the scaffold placeholder.",
+        ))
 
         pub = _goc(scratch, "publish", TITLE)
         print(f"goc publish exit: {pub.returncode}")
         draft_line = [l for l in readme.read_text().splitlines() if l.startswith("draft:")]
         print(f"draft flag after publish: {draft_line or '(removed)'}")
+        if draft_line:
+            # `goc publish` has refused a summary-less draft since
+            # draft-clearing-verbs-release-summary-less-cards-into-a-validate-red-deck,
+            # so a hand edit is what still publishes one. Strip the flag that
+            # way, so validate sees the published summary-less card this card
+            # is about.
+            readme.write_text("".join(
+                line for line in readme.read_text().splitlines(keepends=True)
+                if not line.startswith("draft:")
+            ))
+            print("draft flag stripped by hand: publish refuses a summary-less card")
 
         val = _goc(scratch, "validate")
         print(f"goc validate exit: {val.returncode}")

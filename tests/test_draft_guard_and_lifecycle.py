@@ -5,7 +5,8 @@ Covers the placeholder-cards-superseded-before-they-are-authored fix:
 - `goc new` stamps `draft: true` (B).
 - `goc status {superseded,disproved}` refuses on a draft (A), and succeeds
   once the card is authored + published.
-- `goc publish` clears the flag, but refuses on a pure scaffold.
+- `goc publish` clears the flag, but refuses while the DoD or the body is
+  still the placeholder (goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder).
 - `goc status active` and `goc done` auto-clear the flag.
 - `goc validate` rejects `draft: true` on a terminal card.
 """
@@ -46,15 +47,18 @@ class DraftGuardAndLifecycleTest(unittest.TestCase):
     def readme(self, cwd: Path, title: str) -> str:
         return (cwd / ".game-of-cards" / "deck" / title / "README.md").read_text()
 
-    def author(self, cwd: Path, title: str) -> None:
-        """Replace both generated placeholders so the card is no longer a
-        scaffold (DoD checked off, body written)."""
+    def author(self, cwd: Path, title: str, *, dod: bool = True, body: bool = True) -> None:
+        """Replace the generated placeholders so the card is no longer a
+        scaffold (DoD checked off, body written). `dod=False` / `body=False`
+        leave that half as the placeholder: a half-authored draft."""
         path = cwd / ".game-of-cards" / "deck" / title / "README.md"
         text = path.read_text()
-        text = text.replace(
-            "- [ ] (replace with real criteria)", "- [x] MECHANICAL: real criterion met"
-        )
-        text = text.replace("(write the design doc here)", "Real authored body.")
+        if dod:
+            text = text.replace(
+                "- [ ] (replace with real criteria)", "- [x] MECHANICAL: real criterion met"
+            )
+        if body:
+            text = text.replace("(write the design doc here)", "Real authored body.")
         # Releasing a draft needs a summary (draft-clearing-verbs-release-summary-less-cards-into-a-validate-red-deck).
         if "\nsummary:" not in text:
             text = text.replace(f"title: {title}\n", f"title: {title}\nsummary: Authored card summary.\n", 1)
@@ -95,6 +99,36 @@ class DraftGuardAndLifecycleTest(unittest.TestCase):
             self.assertNotEqual(0, result.returncode)
             self.assertIn("unauthored scaffold", result.stderr)
             self.assertIn("\ndraft: true\n", self.readme(cwd, "card-a"))
+
+    def test_publish_refuses_half_authored_draft(self) -> None:
+        # One half written is not an authored card: the placeholder DoD leaves
+        # a pullable card with no closure contract, the placeholder body one
+        # with no briefing (goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder).
+        for half, authored in (("DoD", {"body": True, "dod": False}), ("body", {"dod": True, "body": False})):
+            with self.subTest(placeholder_left=half), tempfile.TemporaryDirectory() as tmp:
+                cwd = Path(tmp)
+                self.assert_ok(self.run_goc(cwd, "new", "card-a", "--gate", "none", "--tag", "story"))
+                self.author(cwd, "card-a", **authored)
+                result = self.run_goc(cwd, "publish", "card-a", "--no-commit")
+                self.assertEqual(2, result.returncode, msg=result.stdout + result.stderr)
+                self.assertIn(f"unauthored scaffold (placeholder {half})", result.stderr)
+                self.assertIn("\ndraft: true\n", self.readme(cwd, "card-a"))
+                self.assertNotIn("card-a", self.run_goc(cwd, "--ready").stdout)
+
+    def test_publish_releases_draft_that_quotes_a_placeholder_in_a_sentence(self) -> None:
+        # Only the placeholder LINE counts: a card about the scaffold may quote
+        # the stub inside its prose and still be fully authored.
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            self.assert_ok(self.run_goc(cwd, "new", "card-a", "--gate", "none", "--tag", "story"))
+            self.author(cwd, "card-a")
+            path = cwd / ".game-of-cards" / "deck" / "card-a" / "README.md"
+            path.write_text(path.read_text().replace(
+                "Real authored body.",
+                "The scaffold body `(write the design doc here)` was replaced.",
+            ))
+            self.assert_ok(self.run_goc(cwd, "publish", "card-a", "--no-commit"))
+            self.assertNotIn("draft:", self.readme(cwd, "card-a"))
 
     def test_publish_clears_flag_on_authored_draft(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

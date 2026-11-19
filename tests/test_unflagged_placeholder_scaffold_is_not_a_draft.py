@@ -5,7 +5,7 @@ placeholders, the stub DoD and the stub body, but no `draft: true` flag: a
 card scaffolded before the flag existed, or one whose flag was stripped by
 hand. `card_is_draft` keys on the flag alone, by the decision recorded on
 placeholder-cards-superseded-before-they-are-authored, so such a card is
-ordinary queue work. `is_placeholder_scaffold` serves `goc publish` only.
+ordinary queue work. `scaffold_placeholders_left` serves `goc publish` only.
 
 Three engine comments used to say the opposite, that the draft gate also
 caught these cards, and two later fixtures repeated the claim. Every test
@@ -117,7 +117,7 @@ class UnflaggedPlaceholderScaffoldIsNotADraftTest(unittest.TestCase):
         self.assertEqual(without_title_and_stamps(FLAGGED), without_title_and_stamps(UNFLAGGED))
         for title in (FLAGGED, UNFLAGGED):
             with self.subTest(title=title):
-                self.assertTrue(engine.is_placeholder_scaffold(self.card(title)))
+                self.assertEqual(["DoD", "body"], engine.scaffold_placeholders_left(self.card(title)))
         self.assertTrue(self.card(FLAGGED).draft)
         self.assertFalse(self.card(UNFLAGGED).draft)
 

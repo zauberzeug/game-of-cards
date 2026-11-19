@@ -60,3 +60,14 @@ deck has done before
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 3/3 ticked
 - [x] log-md-closure-entry — '## 2026-10-09 — Closure' present
+
+## 2026-11-19T04:33:52Z — Predicate renamed
+
+[goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder](../goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder/)
+renamed `is_placeholder_scaffold` to `scaffold_placeholders_left`. It now
+returns the parts still holding their placeholder line, and `goc publish`
+refuses while either is left. This card's README quotes the old name as the
+record of what it fixed. `reproduce.py` now checks
+`scaffold_placeholders_left(card) == ["DoD", "body"]` for its "both
+placeholders present" row and exits 0. The flag-only contract it pins is
+unchanged.

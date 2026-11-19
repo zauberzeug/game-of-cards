@@ -56,14 +56,15 @@ def main() -> int:
         )
 
         # An authored, ready, low-contribution card (open, gate none, not draft).
-        _goc(repo, "new", "real-ready", "--contribution", "low", "--gate", "none")
+        _goc(repo, "new", "real-ready", "--contribution", "low", "--gate", "none",
+             "--summary", "An authored ready card.")
         readme = repo / ".game-of-cards" / "deck" / "real-ready" / "README.md"
         body = readme.read_text()
         body = body.replace(
             "- [ ] (replace with real criteria)",
             "- [ ] Real criterion for the authored ready card.",
         )
-        body = body.rstrip() + "\n\n## Context\n\nAuthored ready card.\n"
+        body = body.replace("(write the design doc here)", "## Context\n\nAuthored ready card.")
         readme.write_text(body)
         _goc(repo, "publish", "real-ready")
 

@@ -164,7 +164,8 @@ authored afterwards into `README.md`. See `card_is_draft`
 (`goc/engine.py:3008`). A heuristic there would inspect the placeholder
 and find nothing. Any authoring-time detection must hook `_cmd_publish`
 (`goc/engine.py:6882`) — where the authored DoD first reaches the queue,
-and where the sibling `is_placeholder_scaffold` guard already lives.
+and where the sibling `scaffold_placeholders_left` guard already lives
+(named `is_placeholder_scaffold` until 2026-11-19).
 This is a pure fact about the code and holds under every model.
 
 **Counting `## ` headings in `log.md` is not a usable attempt metric.**

@@ -138,7 +138,7 @@ def observe_behavior() -> dict[str, object]:
             root, "status", "legacy-scaffold", "superseded", "--by", "successor-card", "--no-commit"
         )
         return {
-            "both placeholders present": engine.is_placeholder_scaffold(card),
+            "both placeholders present": engine.scaffold_placeholders_left(card) == ["DoD", "body"],
             "card_is_draft": engine.card_is_draft(card),
             "--json draft field": flagged["legacy-scaffold"],
             "listed by `goc`": "legacy-scaffold" in listed,
