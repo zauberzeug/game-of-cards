@@ -1,19 +1,19 @@
 ---
 title: goc-quality-pass-reports-a-clean-deck-in-a-repo-that-has-no-deck
 summary: "In a repo with no deck, goc quality-pass prints Quality pass over 0 cards with both checks clean, exit 0, and nothing on stderr. It is a read view that never got the missing-deck notice the queue view and goc triage print, so an unscaffolded repo or a wrong cwd reads as a clean deck instead of one that does not exist."
-status: active
+status: done
 stage: null
 contribution: low
 created: "2026-11-19T04:44:45Z"
-closed_at: null
+closed_at: "2026-11-19T04:52:25Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, api-contract]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits 0. `goc quality-pass` at `--status open` and at `--status all` print the default view's missing-deck notice line on stderr, and exit 0 and the zero-card stdout stay unchanged.
-  - [ ] TDD: `tests/test_missing_deck_notice.py` covers `goc quality-pass` in a repo with no deck and stays silent on an existing deck. The new case fails on the engine before the fix.
-  - [ ] MECHANICAL: `_cmd_quality_pass` calls `_note_missing_deck()`, the helper the queue view and `goc triage` call, rather than a copy of the notice. Plugin mirrors are re-synced.
+  - [x] TDD: `reproduce.py` exits 0. `goc quality-pass` at `--status open` and at `--status all` print the default view's missing-deck notice line on stderr, and exit 0 and the zero-card stdout stay unchanged.
+  - [x] TDD: `tests/test_missing_deck_notice.py` covers `goc quality-pass` in a repo with no deck and stays silent on an existing deck. The new case fails on the engine before the fix.
+  - [x] MECHANICAL: `_cmd_quality_pass` calls `_note_missing_deck()`, the helper the queue view and `goc triage` call, rather than a copy of the notice. Plugin mirrors are re-synced.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -26,8 +26,9 @@ fixed through in the same session, as its own card and commit.
 
 ## Location
 
-`goc/engine.py:5496` `_cmd_quality_pass` loads the deck at `:5508` with
-`cards = load_all_cards()` and never checks whether the deck exists.
+At `5475e43d`, `goc/engine.py:5496` `_cmd_quality_pass` loads the deck at
+`:5508` with `cards = load_all_cards()` and never checks whether the deck
+exists.
 `load_all_cards()` returns `[]` both for an empty deck and for no deck at all,
 so with no deck Layer 1 runs over zero cards and prints `Title antipatterns:
 clean.` (`:5532`) and `Missing summary: clean.`
@@ -79,7 +80,13 @@ runs the verb directly.
 
 ## Fix
 
-Call `_note_missing_deck()` at the top of `_cmd_quality_pass`, before
-`load_all_cards()`. The notice goes to stderr only, so the exit code and the
-zero-card stdout stay as they are, and a legacy `deck/` or an existing deck
-keeps it silent. `--llm` mode gets the notice too, since it shares the load.
+`_cmd_quality_pass` now calls `_note_missing_deck()` just before
+`load_all_cards()`. That is the helper the queue view and `goc triage` call, so
+the notice line is the same. It goes to stderr only: the exit code and the
+zero-card stdout are unchanged, and an existing deck keeps it silent. `--llm`
+mode gets the notice too, since it shares the load. After the fix,
+`reproduce.py` exits 0.
+
+`tests/test_missing_deck_notice.py` gains
+`test_quality_pass_names_the_missing_deck_like_the_queue_view`, which fails
+before the fix, and `test_quality_pass_stays_silent_on_an_existing_deck`.

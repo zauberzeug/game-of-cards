@@ -99,6 +99,31 @@ class MissingDeckNoticeTest(unittest.TestCase):
                 self.assertEqual(stdout, result.stdout.strip())
                 self.assertEqual(notice, result.stderr.strip())
 
+    def test_quality_pass_names_the_missing_deck_like_the_queue_view(self) -> None:
+        # Layer 1 of `goc quality-pass` only reads. Over no deck it found zero
+        # cards and called every check clean, which reads as a tidy deck.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.repo(tmp)
+            notice = self.run_goc(root).stderr.strip()
+            result = self.run_goc(root, "quality-pass")
+        self.assertIn(MISSING_DECK_PHRASE, notice)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            "Quality pass over 0 cards (status=open):\n\n"
+            "Title antipatterns: clean.\n\n"
+            "Missing summary: clean.",
+            result.stdout.strip(),
+        )
+        self.assertEqual(notice, result.stderr.strip())
+
+    def test_quality_pass_stays_silent_on_an_existing_deck(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.repo(tmp)
+            (root / ".game-of-cards" / "deck").mkdir(parents=True)
+            result = self.run_goc(root, "quality-pass")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertNotIn(MISSING_DECK_PHRASE, result.stderr)
+
     def test_existing_deck_stays_silent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = self.repo(tmp)

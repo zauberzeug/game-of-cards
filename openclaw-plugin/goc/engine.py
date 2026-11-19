@@ -5505,6 +5505,7 @@ def _cmd_quality_pass(args):
     dry_run = args.dry_run
     auto_yes = args.auto_yes
 
+    _note_missing_deck()
     cards = load_all_cards()
     if status_flag != "all":
         cards = [c for c in cards if c.status == status_flag]
