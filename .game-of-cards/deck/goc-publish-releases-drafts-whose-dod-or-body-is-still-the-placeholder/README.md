@@ -1,7 +1,7 @@
 ---
 title: goc-publish-releases-drafts-whose-dod-or-body-is-still-the-placeholder
 summary: "goc publish refuses a draft only while both scaffold placeholders remain, so a draft with a real body but the placeholder DoD, or a real DoD but the placeholder body, publishes and enters goc --ready. The card-schema reference says publish has nothing to release until body and DoD are written, and publish's own refusal tells the author to write both. The ready queue then offers the autonomous loop cards with no closure contract or no briefing."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-16T01:20:11Z"
@@ -15,6 +15,7 @@ definition_of_done: |
   - [ ] TDD: if the hypothesis holds, `reproduce.py` exits 0 after the fix. `goc publish` exits 2 on a draft that still carries either placeholder and still releases a fully authored one. The fix may instead resolve the conflict the other way, with the reference and refusal text saying publish checks only for a pure placeholder; that choice and its reason go in log.md.
   - [ ] TDD: `tests/test_draft_guard_and_lifecycle.py` gains the two half-authored cases next to the existing all-placeholder and fully authored ones (`author()` at `:49` replaces both today).
   - [ ] MECHANICAL: `is_placeholder_scaffold`'s docstring (`goc/engine.py:2992-3002`), the refusal text (`:6901-6902`) and `Skill(card-schema)` reference.md § Draft contract (`:62-63`) state one rule, and plugin mirrors are re-synced.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # `goc publish` releases drafts whose DoD or body is still the placeholder
