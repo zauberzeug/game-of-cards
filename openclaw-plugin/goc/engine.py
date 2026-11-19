@@ -5558,6 +5558,12 @@ def _cmd_quality_pass(args):
         if not live:
             return
     sample = live if limit is None else live[:limit]
+    # The guard above covers only an all-closed selection. No deck, a filter
+    # that matched nothing, or `--limit 0` leave the sample empty too, and
+    # `claude` must not be started, or required, to audit no card.
+    if not sample:
+        print("Layer-2 (Sonnet pass): no live card selected, so there is nothing to audit.")
+        return
     print(f"Layer-2 (Sonnet pass): auditing {len(sample)} {_plural(len(sample), 'card')} via `claude --model sonnet -p`…")
     prompt = _build_quality_prompt(sample)
     try:

@@ -177,6 +177,42 @@ class QualityPassCliTest(unittest.TestCase):
         self.assertNotIn("batch", help_text.lower())
         self.assertIn("one `claude -p` call", help_text)
 
+    def test_an_empty_selection_never_starts_claude(self) -> None:
+        # The pass once skipped `claude` only when every selected card was
+        # closed: that guard sat inside the branch that reports skipped closed
+        # cards. A selection holding no card at all still sent `claude` a
+        # prompt that listed none.
+        self._install_fake_claude()
+
+        def assert_not_started(selection: str, *flags: str) -> None:
+            with self.subTest(selection=selection):
+                res = self._goc("quality-pass", "--llm", "--dry-run", *flags)
+                self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+                self.assertIn("Layer-2 (Sonnet pass): no live card selected", res.stdout)
+                self.assertNotIn("auditing 0 cards", res.stdout)
+                self.assertEqual([], self._calls())
+
+        self.project.mkdir()
+        assert_not_started("no deck")
+        self.deck.mkdir(parents=True)
+        assert_not_started("empty deck")
+        self.deck.rmdir()
+        _write_deck(self.deck, 1)
+        assert_not_started("--limit 0", "--limit", "0")
+        assert_not_started("a status no card has", "--status", "active")
+        # The control: the fake is wired, so the silence above means something.
+        res = self._goc("quality-pass", "--llm", "--dry-run")
+        self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+        self.assertEqual(1, len(self._calls()))
+
+    def test_an_empty_selection_needs_no_claude_on_path(self) -> None:
+        # No fake installed: the PATH directory is empty. Nothing to audit is
+        # not a failure, so the missing `claude` must not turn the run red.
+        self.deck.mkdir(parents=True)
+        res = self._goc("quality-pass", "--llm", "--dry-run")
+        self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+        self.assertNotIn("ERROR", res.stderr)
+
     def test_a_missing_claude_is_one_error_line_not_a_parse_failure(self) -> None:
         # No fake installed: the PATH directory is empty.
         _write_deck(self.deck, 2)
