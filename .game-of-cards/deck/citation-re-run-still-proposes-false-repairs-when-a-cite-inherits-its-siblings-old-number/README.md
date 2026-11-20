@@ -1,7 +1,7 @@
 ---
 title: citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number
 summary: "The citation pass ends with a re-run that must propose zero further repairs, and the recipe says the re-run is valid once the rewrites are committed. That fails when one commit moves a cite onto the line number a sibling cite in the same card just vacated: the token never turns from absent to present, so the walk anchors the cite on the sibling's old line and proposes moving a correct cite onto the sibling's code. The 2026-11-16 pass hit it twice after committing, and the next pass will propose the same two moves as ordinary repairs."
-status: open
+status: active
 stage: null
 contribution: medium
 created: "2026-11-16T02:11:21Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: the two live instances are read against their prose at closure, and restored if any pass moved them: the summary's `_remove_from_list_field` cite on `bare-string-scalars-on-list-fields-keep-spawning-per-consumer-guard-fixes`, and the comment label beside `if check.returncode == 1:` on `claim-push-calls-any-failed-rebase-a-claim-race-and-advises-a-reset`.
   - [ ] MECHANICAL: all five mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The citation re-run still proposes false repairs when a cite inherits its sibling's old number
