@@ -312,8 +312,20 @@ the deck, and `bug`'s "(default for findings)" is a default, not an
 obligation.
 
 **`epic` — whether the card coordinates others.** Orthogonal to the
-first question: an epic that is itself a capability delivery
-legitimately carries `epic` *and* `story`.
+first question, so neither delivery row names it and either delivery
+tag may sit beside it: an epic that is itself a capability delivery
+carries `epic` *and* `story`, and an umbrella that fixes a family of
+defects — the cards fixing its instances blocking its closure —
+carries `epic` *and* `bug`. Neither tag implies the other; each still
+needs its own row to hold.
+
+The `bug` row also excluded `epic` until 2026-11-20, a leftover from
+the first table, where the three tags were structural roles: `epic`
+the coordinator, `story` a member of its grouping, `bug` a finding
+that was neither. Under the split above the clause left a bug-family
+umbrella no consistent tagging: of the 28 `meta-fix` umbrellas a
+2026-11-16 sweep found meeting the `epic` row, 11 carried `bug`, 4
+`epic` and 13 neither.
 
 **Epic membership is not what makes a card a `story`.** Membership is
 recorded by an `advances` edge from the child to the epic (§

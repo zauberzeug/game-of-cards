@@ -309,3 +309,13 @@ merely unlikely. And the widening precedent this card cites from the
 `meta-fix` row is retired: widening is no longer the standard answer to a row
 that under-fires, because it was the answer twice and the shape recurred both
 times.
+
+## Post-closure: the `bug` row followed on 2026-11-20
+
+This card made `epic` orthogonal to the bug-or-story question but left
+the `bug` row's `not epic` clause, a leftover from the first table's
+structural roles. So a bug-family umbrella could not carry `bug` and
+`epic` together, although a capability epic carries `story` and `epic`.
+[bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal](../bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal/)
+dropped the clause: the row now reads `not story (default for
+findings)`, and the reference names both pairs.

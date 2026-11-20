@@ -1,22 +1,22 @@
 ---
 title: bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal
-summary: "The card-schema tag table defines bug as 'not epic and not story', while the schema reference says epic answers a separate question, whether a card coordinates others, orthogonal to the bug-or-story question of what it delivers. The regression test pins bug plus epic as mistagged. So an umbrella fixing a family of defects cannot be both a bug and the epic its own edges make it, and the deck's 28 meta-fix umbrellas with two or more blocking instances are tagged three ways: 11 bug, 4 epic, 13 neither."
-status: active
+summary: "RESOLVED (2026-11-20): the card-schema tag table defined bug as 'not epic and not story' while its reference calls epic, whether a card coordinates others, orthogonal to the bug-or-story question of what a card delivers, and the regression test pinned bug plus epic as mistagged, so a bug-family umbrella had no consistent tagging: of 28 meta-fix umbrellas with two or more blocking instances, 11 carried bug, 4 epic and 13 neither. The recommended fix landed: the row reads 'not story (default for findings)', the reference says a bug-family umbrella carries bug and epic as a capability epic carries story and epic, and the test accepts the pair and guards both delivery rows against naming epic again. No card was retagged; tagging the umbrellas consistently is a per-card call."
+status: done
 stage: null
 contribution: low
 created: "2026-11-16T02:13:20Z"
-closed_at: null
+closed_at: "2026-11-20T04:56:11Z"
 human_gate: none
 advances: []
 advanced_by: []
 tags: [bug, documentation]
 definition_of_done: |
-  - [ ] TDD: `reproduce.py` exits zero — the `bug` row and the schema reference's `epic` paragraph agree on whether one card may carry both tags.
-  - [ ] MECHANICAL: the `bug` row in `goc/templates/skills/card-schema/SKILL.md` and § "The `bug` / `story` / `epic` rows" in its `reference.md` state one rule. Recommended: the row drops its `not epic` clause, leaving `not story (default for findings)`, and the reference says a bug-family umbrella may carry `bug` and `epic` together, as it already says of `story` and `epic`.
-  - [ ] TDD: `tests/test_canonical_tag_rows.py` `_score_bug` transcribes the amended row, and the `bug carrying epic` offender becomes an accepted case. Under the alternative (keep the exclusion), the offender stays and the reference states the exclusion and why.
-  - [ ] MECHANICAL: no card's tags are changed mechanically by this card. Retagging any of the umbrellas the census lists is a per-card judgment, recorded on that card if made.
-  - [ ] MECHANICAL: all five mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are clean.
-  - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+  - [x] TDD: `reproduce.py` exits zero — the `bug` row and the schema reference's `epic` paragraph agree on whether one card may carry both tags. — exits 0: `excludes epic: False`, `reference calls epic orthogonal: True`, `PASS: the bug row and the reference agree.` (exited 1 before the fix).
+  - [x] MECHANICAL: the `bug` row in `goc/templates/skills/card-schema/SKILL.md` and § "The `bug` / `story` / `epic` rows" in its `reference.md` state one rule. Recommended: the row drops its `not epic` clause, leaving `not story (default for findings)`, and the reference says a bug-family umbrella may carry `bug` and `epic` together, as it already says of `story` and `epic`. — took the recommended path: the row reads `not `story` (default for findings)`; the reference's `epic` paragraph says either delivery tag may sit beside `epic`, names the bug-family umbrella beside the capability epic, and records why the clause was dropped.
+  - [x] TDD: `tests/test_canonical_tag_rows.py` `_score_bug` transcribes the amended row, and the `bug carrying epic` offender becomes an accepted case. Under the alternative (keep the exclusion), the offender stays and the reference states the exclusion and why. — `_score_bug` now rejects only `story`; `bug carrying epic` left `OFFENDERS` for `test_a_bug_family_umbrella_satisfies_both_bug_and_epic` (one umbrella card, accepted by both the `bug` and `epic` scorers). Added `test_delivery_rows_leave_epic_orthogonal`, which demonstrates it rejects the pre-fix row. Both new tests fail against the pre-fix row and scorer (verified).
+  - [x] MECHANICAL: no card's tags are changed mechanically by this card. Retagging any of the umbrellas the census lists is a per-card judgment, recorded on that card if made. — the only deck files this card touches are its own; the census is unchanged (11 / 4 / 13).
+  - [x] MECHANICAL: all five mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are clean. — both print OK.
+  - [x] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass. — 1534 tests OK; `goc validate` exits 0.
 worker: {who: "claude[bot]", where: main}
 ---
 
@@ -24,23 +24,28 @@ worker: {who: "claude[bot]", where: main}
 
 ## Location
 
+As fixed on 2026-11-20:
+
 - `goc/templates/skills/card-schema/SKILL.md:258` — the `bug` row of the
-  canonical tag table.
-- `goc/templates/skills/card-schema/SKILL.md:259` — the `epic` row.
-- `goc/templates/skills/card-schema/reference.md:313-315` — the `epic`
-  paragraph of § "The `bug` / `story` / `epic` rows".
-- `tests/test_canonical_tag_rows.py:92-94` — `_score_bug`, and line 135,
-  the `bug carrying epic` offender.
+  canonical tag table, now `not `story` (default for findings)`.
+- `goc/templates/skills/card-schema/reference.md:314-328` — the `epic`
+  paragraph of § "The `bug` / `story` / `epic` rows", now naming the
+  bug-family umbrella beside the capability epic, and a note on the
+  dropped clause.
+- `tests/test_canonical_tag_rows.py:118` — `_score_bug`;
+  `:255` — `test_a_bug_family_umbrella_satisfies_both_bug_and_epic`;
+  `:270` — `test_delivery_rows_leave_epic_orthogonal`, over
+  `DELIVERY_ROWS` and `delivery_rows_naming_epic` at `:97-102`.
 - Mirrors of both skill files under `.claude/`, `.codex/`,
   `claude-plugin/`, `codex-plugin/` and `openclaw-plugin/`.
 
-## What's broken
+## What was broken
 
-The tag table defines `bug` by excluding `epic`:
+The tag table defined `bug` by excluding `epic`:
 
 > | `bug` | not `epic` and not `story` (default for findings) | state |
 
-The reference that explains the table says the two questions are
+The reference that explains the table said the two questions are
 independent:
 
 > **`epic` — whether the card coordinates others.** Orthogonal to the
@@ -50,21 +55,22 @@ independent:
 The first question is bug-or-story, what the card delivers. If `epic` is
 orthogonal to it, a card that fixes something broken and coordinates
 the cards that fix its instances is a `bug` and an `epic`. The row
-forbids that, and the regression test pins the row: `_score_bug` returns
-false for any card carrying `epic`, and `bug carrying epic` sits in the
-offender list the scorer must reject.
+forbade that, and the regression test pinned the row: `_score_bug`
+returned false for any card carrying `epic`, and `bug carrying epic` sat
+in the offender list the scorer had to reject.
 
 The `story` half of this was reconciled when
 [story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it](../story-tag-predicate-fails-on-two-thirds-of-the-cards-carrying-it/)
-closed: its row now says only "disjoint from `bug`", and the reference
+closed: its row says only "disjoint from `bug`", and the reference
 gained the orthogonal `epic` paragraph quoted above. The `bug` row kept
 its `not epic` clause.
 
 ## Empirical evidence
 
-`reproduce.py` reads the row, the reference paragraph and the test, and
-groups every `meta-fix` card whose closure two or more `advanced_by`
-instances block, the shape the `epic` row describes:
+At filing, `reproduce.py` read the row, the reference paragraph and the
+test, grouped every `meta-fix` card whose closure two or more
+`advanced_by` instances block (the shape the `epic` row describes), and
+exited 1. That run, preserved:
 
 ```
 card-schema SKILL.md bug row      : | `bug` | not `epic` and not `story` (default for findings) | state |
@@ -112,33 +118,84 @@ axes independent, so a bug-family umbrella has no consistent tagging.
 The umbrellas are wired the way
 [meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired](../meta-fix-umbrella-cards-leave-sibling-family-advanced-by-edges-unwired/)
 prescribes, instances in `advanced_by`, so each one meets the `epic`
-row. Authors then pick between a `bug` tag the row forbids next to
-`epic`, an `epic` tag that drops `bug`, or neither.
+row. Authors had to pick between a `bug` tag the row forbade next to
+`epic`, an `epic` tag that dropped `bug`, or neither. At closure no
+card carries both, of 838 in any status.
+
+After the fix the same script exits 0 with the census unchanged, as
+the non-goal requires (per-card lists elided, identical to the run
+above):
+
+```
+card-schema SKILL.md bug row      : | `bug` | not `story` (default for findings) | state |
+  excludes epic                   : False
+reference calls epic orthogonal   : True
+test pins 'bug carrying epic' bad : False
+
+meta-fix cards with >=2 advanced_by (the epic row fires on each): 28
+  tagged bug     : 11
+  tagged epic    : 4
+  tagged neither : 13
+
+PASS: the bug row and the reference agree.
+```
 
 ## Why it matters
 
-- `goc --tag bug` and `goc --tag epic` each return an arbitrary subset
-  of the deck's umbrellas, so neither filter answers "which open cards
-  fix a family of defects" or "which cards coordinate others".
-- A tag sweep scoring the `bug` row literally would report any umbrella
-  that gains `epic` while keeping `bug`, although the reference says the
-  pair is coherent. `Skill(refine-deck)` reports and never strips, so
-  the cost is noise, but it is noise about a rule the schema itself
-  contradicts.
+- A bug-family umbrella can now be tagged consistently: `bug` for what
+  it delivers, `epic` when its instances block its closure. Until the
+  umbrellas above are retagged, `goc --tag bug` and `goc --tag epic`
+  still each return an arbitrary subset of them, but the schema no
+  longer stands in the way.
+- A tag sweep scoring the `bug` row literally no longer reports an
+  umbrella that carries `epic` beside `bug`, a pair the reference
+  always called coherent.
 - The table ships to every consumer through `Skill(card-schema)`.
 
-## Fix
+## Resolution — the recommended fix
 
-Recommended: drop the `not epic` clause from the `bug` row, leaving
-`not story (default for findings)`; say in the reference that a
-bug-family umbrella may carry `bug` and `epic`, as it says of `story`;
-make `_score_bug` transcribe the new row and move `bug carrying epic`
-from the offenders to the accepted cases. This matches the reference's
-own reasoning and the `story` precedent, and needs no retagging.
+- **Row.** `goc/templates/skills/card-schema/SKILL.md` — the `bug` row
+  reads `not `story` (default for findings)`, the same shape as the
+  `story` row, which never named `epic`.
+- **Reference.** `goc/templates/skills/card-schema/reference.md` § "The
+  `bug` / `story` / `epic` rows" — the `epic` paragraph says either
+  delivery tag may sit beside `epic`, names the bug-family umbrella
+  next to the capability epic, and adds that neither tag implies the
+  other: each still needs its own row to hold. A second paragraph
+  records that the `bug` row excluded `epic` until 2026-11-20, where
+  the clause came from and the three-way split it produced, so the
+  next reader does not restore it as an apparent omission.
+- **Test.** `tests/test_canonical_tag_rows.py` — `_score_bug` rejects
+  only `story`. `bug carrying epic` left `OFFENDERS` and became
+  `test_a_bug_family_umbrella_satisfies_both_bug_and_epic`, which
+  scores one umbrella card through both the `bug` and `epic` scorers.
+  `test_delivery_rows_leave_epic_orthogonal` reads the row text, which
+  the scorers are copied from by hand and which nothing else compares
+  against the reference, and fails if either delivery row names
+  `epic`. Following
+  [static-source-guards-never-prove-they-can-catch-an-offender](../static-source-guards-never-prove-they-can-catch-an-offender/),
+  it first shows it rejects the pre-fix row. Both new tests fail
+  against the pre-fix row and scorer.
 
-Alternative: keep the exclusion, and have the reference say that a
-coordinating card is an `epic` and never a `bug`, and why. The 11
-`bug`-tagged umbrellas would then be mistagged, each a per-card call.
+### Why not the alternative
+
+Keeping the exclusion would have made `epic` orthogonal to `story` but
+exclusive with `bug`, and nothing specific to defects supports that
+asymmetry. The argument that would carry it, that an epic's
+deliverable is its children's, applies equally to a capability epic,
+and the reference already rejects it there.
+
+The clause's own reason is gone. It dates from the first packaged
+table (`94975556`, 2026-05-04), where the three tags were structural
+roles: `epic` a coordinator, `story` "part of an epic-grouping", and
+`bug` the standalone finding that was neither. In that table `not
+epic and not story` was coherent. The `story` card redefined `story`
+as what a card delivers and made `epic` orthogonal to it, but left the
+`bug` row alone, judging that its exclusion "stops being circular"
+once `story` had positive content. It never weighed `bug` beside
+`epic`, so the row kept a role-based clause inside a table that no
+longer assigns roles. The alternative would also have turned 11 live
+umbrellas into `bug` mistags, against none for the recommended fix.
 
 ## Non-goals
 

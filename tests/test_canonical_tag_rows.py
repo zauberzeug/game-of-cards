@@ -18,7 +18,9 @@ that classification honest:
 - the live tagged population satisfies every `state` row, so the next drift is
   caught by CI instead of by the next hygiene pass;
 - the sweep's action on a non-firing row stays `report`, never `strip` — the
-  half that makes a misclassification recoverable rather than destructive.
+  half that makes a misclassification recoverable rather than destructive;
+- the delivery rows (`bug`, `story`) never name `epic`, which the reference
+  keeps orthogonal to them, so a bug-family umbrella may carry `bug` and `epic`.
 
 Per the card `static-source-guards-never-prove-they-can-catch-an-offender`, a
 guard must demonstrate it can catch an offender rather than merely reporting a
@@ -55,8 +57,8 @@ STRIP_INSTRUCTIONS = [
 ]
 
 
-def tag_rows() -> dict[str, str]:
-    """Parse the "Canonical tags" table into {tag: check-class}.
+def _tag_table() -> dict[str, tuple[str, str]]:
+    """Parse the "Canonical tags" table into {tag: (applies-iff, check-class)}.
 
     The table is `| tag | applies iff | check |`. Rows are matched on the
     leading backticked tag so the prose column may contain pipes-free markdown
@@ -67,13 +69,37 @@ def tag_rows() -> dict[str, str]:
     next_heading = text.find("\n## ", start + 1)
     section = text[start:] if next_heading == -1 else text[start:next_heading]
 
-    rows: dict[str, str] = {}
+    rows: dict[str, tuple[str, str]] = {}
     row_re = re.compile(r"^\|\s*`([a-z0-9-]+)`\s*\|(.*)\|([^|]*)\|\s*$")
     for line in section.splitlines():
         match = row_re.match(line)
         if match:
-            rows[match.group(1)] = match.group(3).strip()
+            rows[match.group(1)] = (match.group(2).strip(), match.group(3).strip())
     return rows
+
+
+def tag_rows() -> dict[str, str]:
+    """{tag: check-class} from the "Canonical tags" table."""
+    return {tag: check for tag, (_, check) in _tag_table().items()}
+
+
+def tag_predicates() -> dict[str, str]:
+    """{tag: applies-iff column} from the "Canonical tags" table."""
+    return {tag: predicate for tag, (predicate, _) in _tag_table().items()}
+
+
+# The delivery rows answer what a card delivers; `epic` answers whether it
+# coordinates others, and the card-schema reference § "The `bug` / `story` /
+# `epic` rows" keeps the two questions orthogonal. The `bug` row excluded
+# `epic` anyway until 2026-11-20, which left a bug-family umbrella no
+# consistent tagging (card
+# `bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal`).
+DELIVERY_ROWS = ("bug", "story")
+
+
+def delivery_rows_naming_epic(predicates: dict[str, str]) -> list[str]:
+    """The delivery rows whose applies-iff column names the `epic` tag."""
+    return [tag for tag in DELIVERY_ROWS if "`epic`" in predicates.get(tag, "")]
 
 
 # --- `state` row scorers -------------------------------------------------
@@ -90,8 +116,8 @@ def _edge_field(card, field: str) -> list[str]:
 
 
 def _score_bug(card) -> bool:
-    """`bug` | not `epic` and not `story`."""
-    return not ({"epic", "story"} & set(card.tags or []))
+    """`bug` | not `story` (default for findings)."""
+    return "story" not in set(card.tags or [])
 
 
 def _score_epic(card) -> bool:
@@ -132,7 +158,6 @@ class _FakeCard:
 # Each entry must be REJECTED by its scorer. These are the shapes the sweep
 # exists to surface, so a scorer that stopped discriminating fails here.
 OFFENDERS = [
-    ("bug carrying epic", "bug", _FakeCard(["bug", "epic"])),
     ("bug carrying story", "bug", _FakeCard(["bug", "story"])),
     ("epic with one blocking child", "epic", _FakeCard(["epic"], {"advanced_by": ["a"]})),
     ("epic with zero edges", "epic", _FakeCard(["epic"], {"advanced_by": []})),
@@ -226,6 +251,40 @@ class CanonicalTagRowsTest(unittest.TestCase):
         self.assertTrue(_score_bug(_FakeCard(["bug", "api-contract"])))
         self.assertTrue(_score_epic(_FakeCard(["epic"], {"advanced_by": ["a", "b"]})))
         self.assertTrue(_score_unverified(_FakeCard(["unverified"], path="/nonexistent")))
+
+    def test_a_bug_family_umbrella_satisfies_both_bug_and_epic(self) -> None:
+        """One card meets both rows, because `epic` is orthogonal to `bug`.
+
+        Until 2026-11-20 `bug carrying epic` sat in `OFFENDERS`, pinning a row
+        the reference contradicted: of 28 umbrellas meeting the `epic` row, 11
+        carried `bug`, 4 `epic` and 13 neither.
+        """
+        umbrella = _FakeCard(["bug", "epic", "meta-fix"], {"advanced_by": ["a", "b"]})
+        for tag in ("bug", "epic"):
+            with self.subTest(row=tag):
+                self.assertTrue(
+                    STATE_SCORERS[tag](umbrella),
+                    msg=f"the `{tag}` scorer rejects a bug-family umbrella carrying `bug` and `epic`",
+                )
+
+    def test_delivery_rows_leave_epic_orthogonal(self) -> None:
+        """The table's own rows must not re-couple what the reference separates."""
+        self.assertEqual(
+            ["bug"],
+            delivery_rows_naming_epic({"bug": "not `epic` and not `story` (default for findings)"}),
+            msg="the guard no longer catches the `bug` row as it read before 2026-11-20",
+        )
+        self.assertEqual(
+            [],
+            delivery_rows_naming_epic(tag_predicates()),
+            msg=(
+                f"{SKILL.relative_to(ROOT)}: a delivery row names `epic`, but the "
+                "reference § 'The `bug` / `story` / `epic` rows' makes `epic` orthogonal "
+                "to what a card delivers — a bug-family umbrella carries `bug` and `epic`, "
+                "a capability epic `story` and `epic`. Change the reference first if the "
+                "axes are meant to couple."
+            ),
+        )
 
     def test_meta_fix_is_a_judgment_row(self) -> None:
         """The specific regression: `meta-fix` asserts scope, not a literal.

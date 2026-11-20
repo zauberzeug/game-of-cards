@@ -278,7 +278,7 @@ surface: `reference.md` § Why rows split.
 
 | tag | applies iff | check |
 |---|---|---|
-| `bug` | not `epic` and not `story` (default for findings) | state |
+| `bug` | not `story` (default for findings) | state |
 | `epic` | multiple cards block its closure (≥2 `advanced_by`) OR carry its epic-grouping tag | state |
 | `story` | delivers new/changed capability, not a fix; disjoint from `bug` | judgment |
 | `unverified` | no working `reproduce.py` AND tagged at filing | state |
