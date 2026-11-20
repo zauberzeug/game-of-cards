@@ -499,3 +499,44 @@ disclaim it, because no later reader can re-check a bare "clean".
 
 Row added; the count is reconciled in place: 38 edges, 28 rows, the gap still
 ten.
+
+## 2026-11-20T05:10:00Z — Thirty-ninth instance: the ninth's own repair left a second stale row
+
+[bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal](../bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal/)
+(done). The card-schema tag table's `bug` row read "not `epic` and not
+`story`". Its `reference.md` sibling calls `epic` orthogonal to the
+bug-or-story question, in a paragraph the ninth instance's repair wrote
+on 2026-07-27 (`06b1d53f`). That repair reconciled the `story` row and
+left the `bug` row's clause, a leftover from the first table, where the
+three tags were structural roles. A refine-deck tag sweep found it on
+2026-11-16, 112 days later. CI did not.
+
+Three datums for the scope question:
+
+- **The ninth's lesson recurred from the ninth's own fix.** The body
+  records that "the act of fixing the first assertion is what created
+  the stale second one". Here the stale second assertion came from the
+  same repair, within one skill: a `SKILL.md` row against its
+  `reference.md` sibling. Grepping the new orthogonality claim's
+  subject, the `epic` tag, across the tag table at repair time would
+  have found the clause. A claim-keyed sweep (Option B) is the shape
+  that does that.
+- **A guard pinned the stale side.** On 2026-08-03 (`361d1d3d`)
+  `tests/test_canonical_tag_rows.py` transcribed the row into a scorer
+  and listed `bug carrying epic` as an offender. The guard restated the
+  doc, so it inherited the doc's contradiction and made the stale
+  clause load-bearing in CI. A transcribing guard is one more
+  restatement and can rot like any other.
+- **Prose restating prose was guardable here.** The body says "add a
+  guard" is not available for this surface class, because checking it
+  means comparing the meanings of two paragraphs. Here the agreement
+  reduced to a lexical constraint: a delivery row must not name
+  `epic`. `test_delivery_rows_leave_epic_orthogonal` pins that and
+  shows it rejects the pre-fix row. The bound is narrower than the body
+  states. Prose-against-prose is unguardable where the relation is
+  semantic, but guardable where one paragraph's claim implies something
+  the other must not say. Any option adopted should keep that sub-class
+  in scope.
+
+Row added; the count is reconciled in place: 39 edges, 29 rows, the gap
+still ten.

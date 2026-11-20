@@ -71,3 +71,13 @@ changes what the schema allows and no existing card.
 - [x] advanced-by-closed — no advanced_by edges
 - [x] dod-100-percent — 6/6 ticked
 - [x] log-md-closure-entry — '## 2026-11-20T04:56:00Z — Closure' present
+
+## 2026-11-20T05:10:00Z — Connected to the doc-accuracy umbrella
+
+Wired as the thirty-ninth `advanced_by` instance of
+[doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them](../doc-accuracy-guards-are-opt-in-per-claim-and-new-doc-facts-keep-missing-them/),
+the family this card belongs to: a doc claim went stale, an audit pass
+found it rather than CI, and a reactive single-claim guard fixed it. The
+umbrella's ninth instance is the `story` card whose repair left this
+row stale. The datums this instance adds to the umbrella's scope
+question are in its log.
