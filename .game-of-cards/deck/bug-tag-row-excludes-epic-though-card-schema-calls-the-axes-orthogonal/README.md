@@ -1,7 +1,7 @@
 ---
 title: bug-tag-row-excludes-epic-though-card-schema-calls-the-axes-orthogonal
 summary: "The card-schema tag table defines bug as 'not epic and not story', while the schema reference says epic answers a separate question, whether a card coordinates others, orthogonal to the bug-or-story question of what it delivers. The regression test pins bug plus epic as mistagged. So an umbrella fixing a family of defects cannot be both a bug and the epic its own edges make it, and the deck's 28 meta-fix umbrellas with two or more blocking instances are tagged three ways: 11 bug, 4 epic, 13 neither."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-11-16T02:13:20Z"
@@ -17,6 +17,7 @@ definition_of_done: |
   - [ ] MECHANICAL: no card's tags are changed mechanically by this card. Retagging any of the umbrellas the census lists is a per-card judgment, recorded on that card if made.
   - [ ] MECHANICAL: all five mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` are clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The `bug` tag row excludes `epic` though the card schema calls the two axes orthogonal
