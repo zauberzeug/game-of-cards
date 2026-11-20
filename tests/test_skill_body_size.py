@@ -218,6 +218,22 @@ def taxed_size(path: Path) -> int:
 # substantial anchor, unique match, a first-round proposal the re-run accepts
 # — so a pass carrying only a pointer has no symptom to send it looking. The
 # skill had 102 bytes of headroom.
+#
+# refine-deck was raised a twelfth time on 2026-11-20 by the card
+# `citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number`:
+# step 2's walk took the commit where a cite token turns from absent to
+# present, and a renumbering pass that moves one cite off a number and its
+# sibling onto it in ONE commit writes the sibling's number without the token
+# ever turning, so the walk anchored the inheriting cite on the sibling's code
+# (measured: the 2026-11-16 pass's committed re-run proposed two such moves,
+# both false, and by 2026-11-20 the file had grown past the HEAD check that
+# had held them back). What stayed in the core is the slot comparison — the
+# cite's line with numbers masked plus its place on the line, and the two
+# tests that make a commit a hand-off; the shape, the reworded-line case and
+# the census went to the reference sibling. A pointer alone fails the way it
+# did on the seventh and eleventh raises: every per-cite rule passes on the
+# move, and the next pass meets it in its FIRST round, where nothing sets it
+# apart from a real repair. The skill had 25 bytes of headroom.
 BODY_CAPS = {
     "create-card": 10_500,
     "finish-card": 10_500,
@@ -227,7 +243,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_100,
-    "refine-deck": 16_000,
+    "refine-deck": 16_300,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }

@@ -185,10 +185,14 @@ Per cite (long form: `reference.md` § Citation anchor check):
    at the filing commit reads unrelated code and moves the cite onto it.
    Presence is SET MEMBERSHIP over that version's extracted cite tokens,
    never a substring search: `path:N` must not read as present inside
-   `path:N-M`, or it inherits the range's older anchor. And a token the
-   card holds at TWO OR MORE in-scope occurrences is undecidable — the
-   occurrences share one history, so no walk anchors them apart. DECLINE
-   it, report it, leave the numbers alone.
+   `path:N-M`, or it inherits the range's older anchor. Where the token
+   is on BOTH sides of a commit, compare its SLOT — its line with cite
+   numbers masked, plus its place among that line's cites: if the slot
+   holding it held another number before, or the slot that held it
+   holds another number after, that commit HANDED it over and wrote it.
+   And a token the card holds at TWO OR MORE in-scope occurrences is
+   undecidable — the occurrences share one history, so no walk anchors
+   them apart. DECLINE it, report it, leave the numbers alone.
 3. Refuse a trivial anchor BEFORE comparing it: a blank, a bare brace,
    or anything under ~12 chars matches everywhere, so re-finding it at
    the cited offset is no evidence the cite is current. DECLINE and

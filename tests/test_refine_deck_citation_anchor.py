@@ -104,6 +104,17 @@ cite past every guard it has (five cites over two cards on this deck). The
 fixtures replay both directions with pinned commit times, the classifier
 pins the window, the two readings, the prose read and the decline, and the
 scope tests prove the rule leaves an ordinary repair alone.
+
+Committing first did not close the re-run either:
+`citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number`
+found a commit that writes a number without the token ever turning. When
+two cites of one card sit exactly one shift apart, a renumbering pass moves
+one cite off `N` and the other onto it in the same commit, so the token is
+present on both sides of the commit that wrote the inheriting cite's number
+and the walk takes the sibling's older turn. The 2026-11-16 pass's committed
+re-run proposed two such moves, both false. The fixture builds that pass,
+on two lines and inside one line, and a reworded line proves the rule
+leaves a cite that merely kept its number alone.
 """
 
 from __future__ import annotations
@@ -165,6 +176,13 @@ RERUN_UNORDERED = "re-run-with-the-commit-unplaced"
 # tree the number was counted on, and no other tree is ever consulted.
 NEIGHBOUR_GUARDED = "neighbour-tree-read-and-decided-by-the-prose"
 NEIGHBOUR_UNREAD = "neighbour-tree-never-read"
+
+# Hand-off verdicts. HANDOFF_UNSEEN is the recipe as it shipped from
+# 2026-08-17 to 2026-11-20: a commit with the token on both sides never
+# wrote it, so a number one rewrite moved from one cite to another keeps
+# the first cite's history.
+HANDOFF_FOLLOWED = "slot-compared-where-the-token-is-on-both-sides"
+HANDOFF_UNSEEN = "a-token-kept-across-a-commit-was-never-written-there"
 
 # What the recipe answers about one cited line.
 CURRENT = "current"
@@ -350,6 +368,17 @@ RETIRE_FILED = (6, 11)  # (target, decoy) at the filing commit
 RETIRE_PASS_1 = (6, 16)  # the first pass repairs the decoy cite only
 RETIRE_PASS_2 = (11, 21)  # the second pass: both correct in HEAD
 RETIRED_TOKEN = f"{CITED_FILE}:11"
+
+# The hand-off fixture reuses V1, INSERT_1 and the retire card's sentences,
+# with the two cites filed exactly one shift apart: `:6` on the target's `def`
+# and `:11` on the decoy's return, five lines apart, and INSERT_1 is five
+# lines. Growing the file above both moves the target onto 11 and the decoy
+# onto 16, so ONE repair commit moves the decoy cite off `:11` and the target
+# cite onto it. `:11` is present on both sides of that commit — the decoy's
+# before, the target's after — and never turns there.
+HANDOFF_FILED = (6, 11)  # (target, decoy) at the filing commit
+HANDOFF_PASS = (11, 16)  # one commit repairs both: both correct in HEAD
+HANDED_TOKEN = f"{CITED_FILE}:11"
 
 # The neighbouring-commit fixtures carry pinned commit times, because the rule
 # is a window: the file's first commit lands an hour before the card, the card
@@ -660,6 +689,35 @@ def documented_neighbour_rule(prose: str) -> str | None:
     return NEIGHBOUR_UNREAD
 
 
+def documented_handoff_rule(prose: str) -> str | None:
+    """Does this stretch of skill prose follow a number one commit hands over?
+
+    The walk's turn identifies the commit that wrote a number only while one
+    cite holds the token. A renumbering pass moves cite B off `N` and cite A
+    onto it in one commit whenever the two sit one shift apart, so the token
+    is present on both sides of the commit that wrote A's number. Three
+    things have to be in the prose, and a pass needs all three. The trigger:
+    a commit with the token on BOTH sides. The identity that survives a
+    renumbering: the cite's SLOT, its line with cite numbers masked plus its
+    place among that line's cites, since hand-offs happen inside one line
+    too. And both tests that make the commit a hand-off: the slot holding the
+    token held another number before, or the slot that held it holds another
+    number after.
+
+    Prose that never walks the history is not the anchor rule and returns
+    None. Prose that walks it without all three is HANDOFF_UNSEEN — the
+    shipped text this was filed against, which reads as complete because the
+    walk IS complete for every commit where only one cite ever held the token.
+    """
+    flat = _flat(prose)
+    if "absent to present" not in flat:
+        return None
+    trigger = "both sides" in flat
+    slot = "masked" in flat and "place among" in flat
+    both_tests = "another number before" in flat and "another number after" in flat
+    return HANDOFF_FOLLOWED if trigger and slot and both_tests else HANDOFF_UNSEEN
+
+
 def documented_decline_count(prose: str) -> str | None:
     """The word this prose uses for how many ways the declines split.
 
@@ -757,6 +815,23 @@ def reference_deciding_paragraph() -> str:
         raise AssertionError(
             "refine-deck reference.md § Citation anchor check no longer has a "
             "'**Deciding.**' paragraph"
+        )
+    return match.group(0)
+
+
+def reference_commit_first_paragraph() -> str:
+    """The reference sibling's paragraph on why the re-run waits for the commit."""
+    match = re.search(
+        r"^\*\*The commit comes first because the walk reads history\.\*\* "
+        r".*?(?=\n\n|\Z)",
+        reference_anchor_section(),
+        re.S | re.M,
+    )
+    if match is None:
+        raise AssertionError(
+            "refine-deck reference.md § Citation anchor check no longer has a "
+            "'**The commit comes first because the walk reads history.**' "
+            "paragraph"
         )
     return match.group(0)
 
@@ -1093,14 +1168,125 @@ def build_engine_repo(
     commit_at(repo, "the file grows a day later", T_LATER)
 
 
+def write_handoff_card(
+    repo: Path, target: int, decoy: int, *, one_line: bool = False
+) -> None:
+    """The retire card's two cites, on two lines or side by side on one."""
+    if not one_line:
+        write_retire_card(repo, target, decoy)
+        return
+    (repo / card_readme()).write_text(
+        f"# {CARD}\n\n"
+        f"`{CITED_FILE}:{target}` is the entry point and `{CITED_FILE}:{decoy}` "
+        "the sentinel it must never return.\n",
+        encoding="utf-8",
+    )
+
+
+def build_handoff_repo(repo: Path, *, one_line: bool = False) -> None:
+    """File two cites one shift apart, grow the file above both, repair both.
+
+    Ends AFTER the pass's commit, the state the retired-occurrence fix made the
+    closing re-run wait for: the rewrites are history, and the walk reads them.
+    """
+    init_fixture_repo(repo)
+    write_source(repo, V1)
+    write_handoff_card(repo, *HANDOFF_FILED, one_line=one_line)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "file the card citing src/app.py:6 and :11")
+
+    write_source(repo, INSERT_1 + V1)  # target 6 -> 11, decoy 11 -> 16
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the source above both cites")
+
+    write_handoff_card(repo, *HANDOFF_PASS, one_line=one_line)  # `:11` changes hands
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "hygiene pass: repair both cites")
+
+
+def build_reworded_line_repo(repo: Path) -> None:
+    """File two cites, grow the file above both, then reword the target's line.
+
+    Ends at a pass's INPUT state: both cites are defunct, and the target cite's
+    slot changed beyond its number after the number was written — a prose edit,
+    the only shape on this deck where a slot changes without a hand-off.
+    """
+    init_fixture_repo(repo)
+    write_source(repo, V1)
+    write_retire_card(repo, *HANDOFF_FILED)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "file the card citing src/app.py:6 and :11")
+
+    write_source(repo, INSERT_1 + V1)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "grow the source above both cites")
+
+    (repo / card_readme()).write_text(
+        f"# {CARD}\n\n"
+        f"`{CITED_FILE}:{HANDOFF_FILED[0]}`, the entry point, is what this card "
+        "is about,\n"
+        f"and `{CITED_FILE}:{HANDOFF_FILED[1]}` is the sentinel it must never "
+        "return.\n",
+        encoding="utf-8",
+    )
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "reword the entry-point sentence")
+
+
+def cite_slots(text: str, *, by_place: bool = True) -> dict[tuple[str, int], list[str]]:
+    """Every cite's SLOT in one version of a card, mapped to the token(s) there.
+
+    A slot is what a renumbering leaves alone: the cite's line with every
+    cite number masked, plus its place among that line's cites. `by_place=
+    False` drops the place, the weaker reading under which a hand-off inside
+    one line keeps its slot.
+    """
+    slots: dict[tuple[str, int], list[str]] = {}
+    for line in text.splitlines():
+        masked = CITE_TOKEN.sub(lambda m: m.group(0).rsplit(":", 1)[0] + ":#", line)
+        for place, token in enumerate(card_cite_tokens(line)):
+            slots.setdefault((masked, place if by_place else 0), []).append(token)
+    return slots
+
+
+def handed_off(
+    before: str, after: str, cite_token: str, *, by_place: bool = True
+) -> bool:
+    """Did the commit between these two versions hand `cite_token` to a new cite?
+
+    Both versions hold the token. The same slot on both sides is one cite
+    keeping its number. A different slot is a hand-off — the commit wrote the
+    number — when the slot holding it now held another number before, or the
+    slot that held it holds another number after. A slot that changed beyond
+    its numbers on both sides is a reworded line, and the token was kept.
+    """
+    old = cite_slots(before, by_place=by_place)
+    new = cite_slots(after, by_place=by_place)
+    held_before = {slot for slot, tokens in old.items() if cite_token in tokens}
+    held_after = {slot for slot, tokens in new.items() if cite_token in tokens}
+    if held_before & held_after:
+        return False
+    return any(slot in old for slot in held_after) or any(
+        slot in new for slot in held_before
+    )
+
+
 def anchor_commit(
-    repo: Path, cite_token: str, mode: str, *, exact: bool = False
+    repo: Path,
+    cite_token: str,
+    mode: str,
+    *,
+    exact: bool = False,
+    handoff: bool = False,
+    by_place: bool = True,
 ) -> str:
     """Run the anchor rule `mode` names over the card's README history.
 
     `exact=False` is the presence test as it shipped — a substring search
     over the README text. `exact=True` is the fixed rule: membership in
-    that version's own extracted cite tokens.
+    that version's own extracted cite tokens. `handoff=True` adds the slot
+    comparison at every commit with the token on both sides, so a commit
+    that handed the token to this cite counts as the one that wrote it.
     """
     history = git(
         repo, "log", "--follow", "--format=%H", "--", card_readme()
@@ -1108,7 +1294,7 @@ def anchor_commit(
     history.reverse()  # oldest first
     if mode == CREATING:
         return history[0]
-    intro, present_before = history[0], False
+    intro, present_before, previous = history[0], False, ""
     for commit in history:
         version = git(repo, "show", f"{commit}:{card_readme()}")
         present = (
@@ -1118,7 +1304,11 @@ def anchor_commit(
         )
         if present and not present_before:
             intro = commit
-        present_before = present
+        elif present and handoff and handed_off(
+            previous, version, cite_token, by_place=by_place
+        ):
+            intro = commit
+        present_before, previous = present, version
     return intro
 
 
@@ -1212,7 +1402,14 @@ def repair(repo: Path, mode: str, *, by_name: bool = False) -> int | None:
     return relocate(anchored, head, cited_line, by_name=by_name)
 
 
-def repair_token(repo: Path, cite_token: str, *, occurrence: bool):
+def repair_token(
+    repo: Path,
+    cite_token: str,
+    *,
+    occurrence: bool,
+    handoff: bool = False,
+    by_place: bool = True,
+):
     """The recipe on ONE single-line cite token, occurrence rule on or off.
 
     `occurrence=False` is the recipe as it shipped: a substring presence
@@ -1221,6 +1418,7 @@ def repair_token(repo: Path, cite_token: str, *, occurrence: bool):
     prescribes — presence is membership in the version's extracted cite
     tokens, and a token the card holds at two or more in-scope
     occurrences is DECLINED, since no walk can anchor them apart.
+    `handoff=True` adds the slot comparison (`anchor_commit`).
 
     Returns the line number the pass would write, None where step 4
     declines, or DECLINE_OCCURRENCE.
@@ -1229,7 +1427,10 @@ def repair_token(repo: Path, cite_token: str, *, occurrence: bool):
     cited_line = int(cite_token.rsplit(":", 1)[1])
     if occurrence and card_cite_tokens(readme).count(cite_token) > 1:
         return DECLINE_OCCURRENCE
-    commit = anchor_commit(repo, cite_token, AUTHORING, exact=occurrence)
+    commit = anchor_commit(
+        repo, cite_token, AUTHORING, exact=occurrence, handoff=handoff,
+        by_place=by_place,
+    )
     anchored = git(repo, "show", f"{commit}:{CITED_FILE}").splitlines()
     head = (repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
     return relocate(anchored, head, cited_line)
@@ -1269,18 +1470,23 @@ def repair_range(
     return new_start, new_end
 
 
-def cite_rewrites(repo: Path) -> dict[str, int]:
+def cite_rewrites(
+    repo: Path, *, handoff: bool = False, by_place: bool = True
+) -> dict[str, int]:
     """One round of the decision phase over the card as it stands on disk.
 
     Maps every single-line cite token the round would rewrite to the number
     it would write. A cite verdicted current, or declined, proposes nothing.
     The card is read from the working tree and its history from `git log`,
-    which is the whole defect: the two disagree until the pass commits.
+    which is the retired-occurrence defect: the two disagree until the pass
+    commits. `handoff` switches the slot comparison on.
     """
     readme = (repo / card_readme()).read_text(encoding="utf-8")
     rewrites = {}
     for token in card_cite_tokens(readme):
-        new = repair_token(repo, token, occurrence=True)
+        new = repair_token(
+            repo, token, occurrence=True, handoff=handoff, by_place=by_place
+        )
         if isinstance(new, int) and new != int(token.rsplit(":", 1)[1]):
             rewrites[token] = new
     return rewrites
@@ -2320,6 +2526,218 @@ class RetiredOccurrenceRerunTest(unittest.TestCase):
             anchor_commit(self.repo, RETIRED_TOKEN, AUTHORING, exact=True),
             "once committed, the fresh cite anchors on the commit that wrote it",
         )
+
+
+class DocumentedHandoffRuleTest(unittest.TestCase):
+    """A commit can write a number without the token ever turning."""
+
+    # Step 2's walk as it shipped from 2026-08-17 to 2026-11-20, abridged to
+    # the sentences the classifier reads: the turn, and presence by membership.
+    SHIPPED_STEP_TWO = (
+        "2. Anchor = that line's text at the commit that last WROTE the number: "
+        "walk `git log --follow --format=%H -- <card>/README.md` oldest → newest "
+        "and take the newest commit where the cite token turns from absent to "
+        "present — the filing commit for a virgin cite, the repair commit for "
+        "one an earlier pass rewrote. Presence is SET MEMBERSHIP over that "
+        "version's extracted cite tokens, never a substring search."
+    )
+    # A plausible weaker rule: the line alone, without the cite's place on it.
+    # A hand-off between two cites sharing one line leaves it unchanged.
+    LINE_ONLY = SHIPPED_STEP_TWO + (
+        " Where the token is on both sides of a commit, compare the line holding "
+        "it with cite numbers masked: if that line held another number before, "
+        "or the line that held it holds another number after, that commit "
+        "wrote it."
+    )
+
+    def test_core_skill_compares_the_slot_where_the_token_is_on_both_sides(
+        self,
+    ) -> None:
+        self.assertEqual(
+            HANDOFF_FOLLOWED,
+            documented_handoff_rule(skill_step_two()),
+            "refine-deck SKILL.md step 2 must say how a commit with the token on "
+            "BOTH sides can still have written it: compare the cite's slot — "
+            "its line with cite numbers masked, plus its place among that "
+            "line's cites — and take the commit when the slot holding the token "
+            "held another number before, or the slot that held it holds another "
+            "number after; without it a cite that inherited its sibling's "
+            "number is anchored on the sibling's code",
+        )
+
+    def test_reference_sibling_prescribes_the_same_rule(self) -> None:
+        self.assertEqual(
+            documented_handoff_rule(skill_step_two()),
+            documented_handoff_rule(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling disagree on "
+            "which commit wrote a number one rewrite handed between two cites",
+        )
+
+    def test_the_shipped_walk_this_amended_is_classified_as_unseen(self) -> None:
+        # The classifier's own proof that it can fail.
+        self.assertEqual(
+            HANDOFF_UNSEEN, documented_handoff_rule(self.SHIPPED_STEP_TWO)
+        )
+
+    def test_a_line_without_the_cites_place_is_not_the_rule(self) -> None:
+        self.assertEqual(HANDOFF_UNSEEN, documented_handoff_rule(self.LINE_ONLY))
+
+    def test_prose_that_never_walks_the_history_is_unclassifiable(self) -> None:
+        self.assertIsNone(
+            documented_handoff_rule(
+                "Resolve the path — cards write `engine.py:N` for "
+                "`goc/engine.py:N`; prefer a non-mirror match."
+            )
+        )
+
+    def test_reference_no_longer_calls_the_commit_sufficient(self) -> None:
+        # The claim this card disproved: a committed re-run still proposed two
+        # false moves, because the commit it waited for was the hand-off.
+        paragraph = _flat(reference_commit_first_paragraph())
+        self.assertIn(
+            "not sufficient",
+            paragraph,
+            "refine-deck reference.md must not say committing alone makes the "
+            "closing re-run valid: the pass's own commit can hand a number "
+            "between two of its cites",
+        )
+        self.assertIn(
+            "slot",
+            paragraph,
+            "the paragraph must name what makes the committed re-run valid "
+            "across a hand-off — step 2's slot comparison",
+        )
+
+    def test_retired_occurrence_row_names_the_hand_off(self) -> None:
+        rows = [
+            line
+            for line in reference_anchor_section().splitlines()
+            if line.startswith("|") and "retired occurrence" in line
+        ]
+        self.assertEqual(1, len(rows))
+        self.assertIn(
+            "hand-off",
+            _flat(rows[0]),
+            "the retired-occurrence row assumed the colliding occurrence lay in "
+            "an earlier commit than the pass's own; it must name the shape where "
+            "the pass's own rewrite retires it",
+        )
+
+
+class SameCommitHandoffTest(unittest.TestCase):
+    """One commit moves a cite off a number and its sibling onto it."""
+
+    def rewrites(self, *, one_line: bool = False, **rule: bool) -> dict[str, int]:
+        """The closing re-run over the committed pass, under the given rule."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.repo = Path(tmp.name)
+        build_handoff_repo(self.repo, one_line=one_line)
+        return cite_rewrites(self.repo, **rule)
+
+    def documented(self) -> bool:
+        rule = documented_handoff_rule(skill_step_two())
+        self.assertIsNotNone(
+            rule, "refine-deck SKILL.md step 2 no longer walks the card's history"
+        )
+        return rule == HANDOFF_FOLLOWED
+
+    def test_documented_recipe_re_runs_to_a_fixed_point(self) -> None:
+        self.assertEqual(
+            {},
+            self.rewrites(handoff=self.documented()),
+            "the committed re-run refine-deck ships must find a card whose two "
+            "cites one commit renumbered a fixed point; a proposal here moves "
+            "the cite that inherited its sibling's number onto the sibling's "
+            "code",
+        )
+
+    def test_documented_recipe_follows_a_hand_off_inside_one_line(self) -> None:
+        self.assertEqual(
+            {},
+            self.rewrites(one_line=True, handoff=self.documented()),
+            "the recipe refine-deck ships must follow a hand-off between two "
+            "cites sharing one line, where the line with its numbers masked "
+            "reads the same before and after",
+        )
+
+    def test_token_walk_moves_the_inheriting_cite_onto_its_sibling(self) -> None:
+        # Not a spec — the fixture's own proof that it exercises the defect.
+        # Both cites are right in HEAD, and the proposal moves the target cite
+        # onto the decoy: a number the card already holds for the decoy.
+        self.assertEqual(
+            {HANDED_TOKEN: HANDOFF_PASS[1]}, self.rewrites(handoff=False)
+        )
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual("def target(payload):", line_at(head, HANDOFF_PASS[0]))
+        self.assertEqual(
+            '    return "decoy sentinel that is long and unique"',
+            line_at(head, HANDOFF_PASS[1]),
+        )
+
+    def test_the_commit_the_walk_needed_is_already_in_history(self) -> None:
+        # Committing first did not help: the pass's commit is HEAD, and the
+        # token never turned there, so the walk anchors at the filing commit.
+        self.rewrites()
+        history = git(self.repo, "log", "--format=%H", "--", card_readme()).split()
+        pass_commit, filing = history[0], history[-1]
+        self.assertEqual(
+            filing, anchor_commit(self.repo, HANDED_TOKEN, AUTHORING, exact=True)
+        )
+        self.assertEqual(
+            pass_commit,
+            anchor_commit(
+                self.repo, HANDED_TOKEN, AUTHORING, exact=True, handoff=True
+            ),
+            "the slot comparison anchors the inheriting cite on the commit that "
+            "handed it the number",
+        )
+
+    def test_the_line_alone_misses_a_hand_off_inside_one_line(self) -> None:
+        # Not a spec — the proof that the cite's place on its line is
+        # load-bearing: without it, the one-line hand-off keeps its slot.
+        self.assertEqual(
+            {HANDED_TOKEN: HANDOFF_PASS[1]},
+            self.rewrites(one_line=True, handoff=True, by_place=False),
+        )
+
+
+class RewordedLineScopeTest(unittest.TestCase):
+    """A slot that changed beyond its numbers is a reworded line, not a hand-off."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self._tmp.name)
+        build_reworded_line_repo(self.repo)
+        self.addCleanup(self._tmp.cleanup)
+
+    def test_a_reworded_line_keeps_the_anchor_its_number_was_written_at(
+        self,
+    ) -> None:
+        guarded = cite_rewrites(self.repo, handoff=True)
+        self.assertEqual(
+            {
+                f"{CITED_FILE}:{HANDOFF_FILED[0]}": HANDOFF_PASS[0],
+                f"{CITED_FILE}:{HANDOFF_FILED[1]}": HANDOFF_PASS[1],
+            },
+            guarded,
+            "a cite whose line was reworded after its number was written must "
+            "be repaired as before; the rewording wrote no number",
+        )
+        self.assertEqual(cite_rewrites(self.repo, handoff=False), guarded)
+
+    def test_anchoring_at_the_reword_would_certify_the_rotted_cite(self) -> None:
+        # Not a spec — why a reworded line reads as kept rather than as the
+        # commit that wrote the number. The reword's tree is the grown file,
+        # whose line 6 is still there in HEAD: anchored at it, the cite reads
+        # `current` while the function it names sits five lines further down.
+        reword = git(self.repo, "log", "-1", "--format=%H", "--", card_readme())
+        at_reword = show_lines(self.repo, reword.strip(), CITED_FILE)
+        head = (self.repo / CITED_FILE).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(
+            CURRENT, decide(at_reword, head, HANDOFF_FILED[0], guard=True)
+        )
+        self.assertEqual("def target(payload):", line_at(head, HANDOFF_PASS[0]))
 
 
 class DocumentedNeighbourRuleTest(unittest.TestCase):

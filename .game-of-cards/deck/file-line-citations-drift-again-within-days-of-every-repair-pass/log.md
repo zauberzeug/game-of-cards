@@ -322,3 +322,17 @@ the closing re-run proposes moving a correct cite onto its sibling's code when
 one commit hands the sibling's number to it, because a token-level walk sees no
 turn at that commit. Two live instances on 2026-11-16, neither applied. A
 symbol-anchored cite has no number to hand over.
+
+## 2026-11-20T04:41:11Z — The hand-off instance fixed, and what it cost
+
+[`citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number`](../citation-re-run-still-proposes-false-repairs-when-a-cite-inherits-its-siblings-old-number/)
+closed: step 2 of the line-number recipe now compares a cite's slot (its
+line with cite numbers masked, plus its place among that line's cites)
+wherever the token sits on both sides of a commit, and takes a commit that
+handed the number over as the one that wrote it. Cost of this patch: one
+more clause in step 2, the twelfth raise of the refine-deck size cap
+(16,000 to 16,300 bytes), three reference paragraphs, and 14 regression
+tests. Between filing and fix the engine grew 269 lines, which carried both
+live instances past the "already resolves at HEAD" advice that had held
+them back: the bare token walk would have applied both false moves in the
+next pass's first round. A symbol-anchored cite has no number to hand over.

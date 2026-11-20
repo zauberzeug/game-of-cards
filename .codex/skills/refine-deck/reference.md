@@ -439,12 +439,13 @@ one an earlier pass rewrote. Find it by walking the card's own history:
 list `git log --follow --format=%H -- <deck>/<card>/README.md` oldest to
 newest (check the legacy `deck/` path too), read the README at each
 commit, and take the newest commit at which the cite token turns from
-absent to present. Presence is SET MEMBERSHIP, not a substring search:
-extract that version's cite tokens with the same pattern the pass uses
-to find cites in the card, and ask whether this token is one of them.
-Read the cited file at that commit — `git show <commit>:<path>` — and
-take the cited line's text. That text is what the card meant; the number
-is only its address at the time.
+absent to present — or, with the token on both sides, hands it to this
+cite (the slot comparison below). Presence is SET MEMBERSHIP, not a
+substring search: extract that version's cite tokens with the same
+pattern the pass uses to find cites in the card, and ask whether this
+token is one of them. Read the cited file at that commit —
+`git show <commit>:<path>` — and take the cited line's text. That text
+is what the card meant; the number is only its address at the time.
 
 **Why the presence test has to be token-exact.** A plain text search
 reads `path:N` as present inside `path:N-M`, so a single-line cite that
@@ -478,6 +479,44 @@ can say otherwise. That would have stopped all three false repairs this
 rule was written for. It is belt-and-braces rather than the fix — it
 silences the symptom for cites that happen to be right and does nothing
 for one that is genuinely defunct and anchored on a neighbour's history.
+
+**A commit can hand the token from one cite to another.** The turn finds
+the commit that wrote a number only while one cite at a time holds the
+token. A renumbering pass breaks that whenever two cites of one card sit
+exactly one shift apart: one commit moves cite B off `N` and cite A onto
+it, so the token is present on both sides of the commit that wrote A's
+number, never turns there, and the walk takes B's older turn. B's line
+at that commit is substantial and unique in HEAD, so the recipe proposes
+moving A onto B's code — a number the card already holds for B — past
+every per-cite guard: the token occurs once, the anchor is not trivial,
+the match is unique. So where the token is on BOTH sides of a commit,
+compare its SLOT before and after: its line with cite numbers masked
+(`path:#`), plus its place among that line's cites. The same slot on
+both sides is one cite keeping its number. A different slot is a
+hand-off, and that commit wrote this cite's number, when the slot
+holding it held another number before, or the slot that held it holds
+another number after: anchor there, as at a turn. The place belongs to
+the slot because two cites sharing a line hand off too, and their line
+with its numbers masked reads the same before and after.
+
+A slot that changed beyond its numbers on both sides — the old one gone
+after the commit, the new one absent before it — is a reworded line, and
+the token was kept: keep walking. Taking that commit would anchor on the
+reword's tree, where a number that had already rotted reads `current`.
+Declining it would be honest and, where it was measured, wrong: replayed
+over this deck's open and active cards on 2026-11-20, one of 568
+single-occurrence cites crossed such a commit, and it was a prose edit
+that kept its number.
+
+Measured on this deck 2026-11-16: a pass committed 171 repairs, one
+uniform shift in one file, and its closing re-run proposed two more, both
+this shape and both false. The 2026-11-20 replay found those two and no
+other cite whose anchor a hand-off moves, and 65 of the 754 cites on
+those cards share their line with a cite of the same file. By then the
+file had grown again, so neither cite resolved at HEAD: the bare token
+walk would have proposed both moves in the next pass's FIRST round,
+where nothing sets them apart from a real repair and the
+already-resolves-at-HEAD check above no longer reaches them.
 
 **Why not the creating commit.** It is the same commit for a cite no
 pass has ever rewritten, so the walk subsumes that older rule rather
@@ -635,7 +674,7 @@ and each is reported for a human read:
 | ambiguous match (>1 hit in HEAD) | boilerplate, a repeated idiom, or a definition name HEAD holds more than once — an overload in a mirror tree, a method beside a module-level function; the card's surrounding text disambiguates, the matcher cannot |
 | anchor text absent | neither the anchor text nor — for a definition line — a unique `def`/`class` of that name is anywhere in HEAD; the code may have been refactored away, but it may equally have been renamed or split, so re-read the card before reading the decline as evidence the defect is gone, and close it per the core skill only if a refactor did fix it |
 | incoherent range pair | the two endpoints no longer bound a block — one half-moved by this pass, or a range that arrived already broken; a reader must re-derive the block from the card's prose |
-| retired occurrence (re-run before the commit) | a second-round proposal on a cite this pass itself wrote, made while the rewrite was still uncommitted: the walk cannot see the rewrite, so it anchored on the last commit that carried the number — a different cite's, before an earlier pass moved it. The cite is not defunct and the proposal is not a repair; apply nothing that round proposed, commit, and re-run |
+| retired occurrence (re-run before the commit) | a second-round proposal on a cite this pass itself wrote, made while the rewrite was still uncommitted: the walk cannot see the rewrite, so it anchored on the last commit that carried the number — a different cite's, which an earlier pass moved off it, or which this pass moves off it in the same rewrite (a hand-off, which step 2's slot comparison follows once the rewrite is committed). The cite is not defunct and the proposal is not a repair; apply nothing that round proposed, commit, and re-run. A committed re-run that still proposes one is a recipe defect to file, not this row |
 
 A pass that printed only the cites it could auto-repair would report a
 shrinking problem while the unmappable majority rotted unseen — the
@@ -673,16 +712,19 @@ the colliding occurrence is in the card's PAST, where no count of
 current occurrences reaches. Measured on this deck 2026-09-21: one pass
 re-ran over its identical 269 repairs twice, and proposed 3 further
 repairs before its commit, all three false, and 0 after it. So the
-re-run is only valid once the rewrites are committed, which a local
-commit satisfies; pushing can wait for the verdict. A pass that cannot
-commit yet — another agent holds the shared index — commits the
-rewrites in a throwaway worktree and re-runs there, or holds the step
-open until its own commit lands. It never re-runs over the working
-tree, and it applies nothing such a run proposes (the retired-occurrence
-row above). Reading the working-tree README as the walk's newest
-version would make the re-run valid at any point, but it would anchor
-cites on edits nobody has committed and redefine the walk every other
-rule here is built on, where the ordering costs one sentence.
+re-run reads only committed history: a local commit is what it waits
+for, and pushing can wait for the verdict. The commit is necessary, not
+sufficient — the pass's own commit can hand a number between two of its
+cites, and only step 2's slot comparison follows the number there; on
+2026-11-16 a committed re-run still proposed two false moves of that
+shape. A pass that cannot commit yet — another agent holds the shared
+index — commits the rewrites in a throwaway worktree and re-runs there,
+or holds the step open until its own commit lands. It never re-runs over
+the working tree, and it applies nothing such a run proposes (the
+retired-occurrence row above). Reading the working-tree README as the
+walk's newest version would spare the commit, but it would anchor cites
+on edits nobody has committed and redefine the walk every other rule
+here is built on, where the ordering costs one sentence.
 
 ## Tag sweeps
 
