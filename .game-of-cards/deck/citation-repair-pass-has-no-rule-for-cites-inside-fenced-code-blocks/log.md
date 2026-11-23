@@ -46,3 +46,14 @@ two different lines. All four were restored to their filing-time output
 `openclaw-porter-arguments-substitution-breaks-single-quoted-python-literals`
 and `agent-manifest-guidance-block-is-built-but-silently-ignored`. The same
 check over closed cards found none. No remediation remains open.
+
+## 2026-11-23T02:40:00Z — Post-closure: a record quoted in prose, outside this rule's test
+
+The rule this card landed tests records only inside fences. A traceback frame
+quoted in a prose bullet on
+`repair-edges-crashes-with-traceback-on-bare-string-inverse-edge-field` was
+rewritten by all four passes that ran after it shipped (2026-09-07, 09-14,
+09-21, 11-09), restored by hand on 2026-11-16, and proposed again on
+2026-11-23. Filed as
+[citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose](../citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose/).
+The closure stands: fenced records are still protected.
