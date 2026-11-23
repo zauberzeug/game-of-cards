@@ -336,3 +336,20 @@ tests. Between filing and fix the engine grew 269 lines, which carried both
 live instances past the "already resolves at HEAD" advice that had held
 them back: the bare token walk would have applied both false moves in the
 next pass's first round. A symbol-anchored cite has no number to hand over.
+
+## 2026-11-23T02:50:00Z — Another line-number recipe instance filed, and this pass's cost
+
+[`citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose`](../citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose/):
+the scope rule tests for records only inside fences, so a traceback frame
+quoted in a prose bullet reads as a cite about current code. Every pass after
+the rule shipped rewrote it, four in a row, until a hand restore on
+2026-11-16. This pass proposed it again in both rounds, and a manual read
+held it. Under a verify-only citation form the frame would be reported
+instead of rewritten. That removes the damage but not the classification
+question, so that card fixes the scope test on its own.
+
+Cost of the 2026-11-23 pass: 258 cites re-anchored across 91 cards (252 in
+`goc/engine.py`, which grew 8194 → 8464 lines in seven days). This card's
+`reproduce.py` measured the 2026-11-16 pass at 165 of 166 cites (99%)
+already wrong after six days. 326 cites were declined for a reader, and
+the committed re-run proposed no further repairs.
