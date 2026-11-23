@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:7061-7072` (`cmd_new`):
+`goc/engine.py:7330-7341` (`cmd_new`):
 
 ```python
     card_dir = resolve_card_dir(title)
@@ -31,9 +31,9 @@ definition_of_done: |
 ```
 
 None of the three title gates bounds length: `_check_title_antipatterns`
-(engine.py:6941), the schema `title_pattern` regex check (engine.py:7057
+(engine.py:7210), the schema `title_pattern` regex check (engine.py:7326
 — `^[a-z0-9][a-z0-9-]*[a-z0-9]$` matches any length), and
-`resolve_card_dir` (engine.py:1276).
+`resolve_card_dir` (engine.py:1356).
 
 ## What's broken
 

@@ -32,7 +32,7 @@ passes before and after — fully silent data loss, reachable from
 
 ## Location
 
-- `goc/engine.py:648-650` — the field-absent append:
+- `goc/engine.py:728-730` — the field-absent append:
 
   ```python
   if not pattern.search(fm_text):
@@ -46,7 +46,7 @@ passes before and after — fully silent data loss, reachable from
   return f"---\n{fm_text}{trailing}---\n{body}"
   ```
 
-- `goc/engine.py:215-220` — the contract being violated: `FRONTMATTER_RE`'s
+- `goc/engine.py:295-300` — the contract being violated: `FRONTMATTER_RE`'s
   `(\n+)` group exists "so that yaml_lite — not the delimiter — decides
   their fate (a `|+` keep scalar must retain its trailing blank line…)".
   The append branch hands that blank run to the appended flat field
@@ -79,10 +79,10 @@ DEFECT REPRODUCED: appended field wedged inside the keep scalar's trailing blank
 ## Why it matters
 
 Reachability: `goc status <title> active` on a card without a `worker`
-field appends one via `_auto_populate_worker` (`goc/engine.py:6746`) — the
+field appends one via `_auto_populate_worker` (`goc/engine.py:7013`) — the
 routine claim step every pull-card session performs. `goc done` /
 `goc status <t> disproved|superseded` append `closed_at` the same way on
-hand-authored cards lacking the key (`goc/engine.py:4905`, `5310`). The
+hand-authored cards lacking the key (`goc/engine.py:5682`, `5310`). The
 precondition — a `|+` keep scalar as the *final* frontmatter field — is the
 exact shape the closed cards
 [frontmatter-re-drops-trailing-blank-line-of-final-keep-block-scalar](../frontmatter-re-drops-trailing-blank-line-of-final-keep-block-scalar/)

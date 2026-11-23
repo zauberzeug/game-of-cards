@@ -161,16 +161,16 @@ options but do not resolve them.
 **Option A cannot hook `goc new`.** `goc new` stamps `draft: true` and
 writes a *placeholder* DoD (`SCAFFOLD_DOD_PLACEHOLDER`); the real DoD is
 authored afterwards into `README.md`. See `card_is_draft`
-(`goc/engine.py:3008`). A heuristic there would inspect the placeholder
+(`goc/engine.py:3104`). A heuristic there would inspect the placeholder
 and find nothing. Any authoring-time detection must hook `_cmd_publish`
-(`goc/engine.py:6882`) — where the authored DoD first reaches the queue,
+(`goc/engine.py:7149`) — where the authored DoD first reaches the queue,
 and where the sibling `scaffold_placeholders_left` guard already lives
 (named `is_placeholder_scaffold` until 2026-11-19).
 This is a pure fact about the code and holds under every model.
 
 **Counting `## ` headings in `log.md` is not a usable attempt metric.**
 There is partial precedent for the engine reading log.md as machine
-state (the `log-md-closure-entry` derived check, `goc/engine.py:6469`),
+state (the `log-md-closure-entry` derived check, `goc/engine.py:6736`),
 but that is a *presence check for one well-known heading at one decision
 point*, not a tally over an open vocabulary. Heading formats are already
 heterogeneous — `goc decide` writes `## {ts}: decision recorded`,

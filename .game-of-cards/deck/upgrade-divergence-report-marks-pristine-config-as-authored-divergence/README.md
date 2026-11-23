@@ -28,7 +28,7 @@ definition_of_done: |
   template config.
 - `goc/install.py:1832-1865` — `_write_skills_source` rewrites the
   `skills_source:` line.
-- `goc/templates/game_of_cards/config.yaml:96` — ships
+- `goc/templates/game_of_cards/config.yaml:100` — ships
   `# skills_source: auto` (commented).
 - `goc/templates/skills/upgrade/SKILL.md:59-61` — the consumer that
   reconciles every `evolving` + `preserved` file.

@@ -24,7 +24,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:5389-5390` (`_cmd_quality_pass`) — the only filter is
+- `goc/engine.py:5510-5511` (`_cmd_quality_pass`) — the only filter is
   status:
 
   ```python
@@ -32,13 +32,13 @@ definition_of_done: |
       cards = [c for c in cards if c.status == status_flag]
   ```
 
-  No `card_is_draft` gate, unlike `filter_cards` (`engine.py:3534`)
+  No `card_is_draft` gate, unlike `filter_cards` (`engine.py:3631`)
   which hides drafts from every listing.
 
 - `goc/engine.py:7754` ff. (`_cmd_decide`) — the only guard is
   `if t.human_gate == "none"`; no draft guard (contrast
   `_cmd_status`'s draft refusal for superseded/disproved at
-  `engine.py:6820`). The unconditional next-step at `engine.py:7846`:
+  `engine.py:7087`). The unconditional next-step at `engine.py:8115`:
 
   ```python
   print("Next: gate lowered to none — any agent can now claim this card. goc to see the queue.")
@@ -57,7 +57,7 @@ Three surfaces already forgot and were fixed one at a time —
 
 1. **quality-pass audits drafts.** Draft scaffolds flow into the
    antipattern/missing-summary report, and into the `--llm` sample,
-   where `_apply_verdict_interactive` (`engine.py:5330`) with `--yes`
+   where `_apply_verdict_interactive` (`engine.py:5450`) with `--yes`
    would rewrite the `summary`/DoD of — and `goc move` — a card nobody
    has authored yet: exactly the race `draft: true` exists to prevent.
 2. **decide unparks a draft into nowhere.** `goc new --gate decision`
@@ -74,7 +74,7 @@ sharpest of the set because the offending text is goc's own:
    `validate_dod_method_tags` (`engine.py:2755-2781`) exempts terminal
    cards but not drafts, and `goc new`'s generated DoD stub —
    `SCAFFOLD_DOD_PLACEHOLDER = "- [ ] (replace with real criteria)"`
-   (`engine.py:2988`) — carries no method tag. So every freshly
+   (`engine.py:3068`) — carries no method tag. So every freshly
    scaffolded card immediately produces
    `WARN UNTAGGED_DOD_ITEM <title>: 1 DoD item(s) lack a method tag …
    [- [ ] (replace with real criteria)]`. The validator's own docstring
@@ -101,11 +101,11 @@ appear if its draft flag were cleared?"* — and because the gate is
 inlined per site, the counterfactual has to be threaded through **every
 site separately**, as an opt-in `include_drafts` keyword:
 
-- `filter_cards` (`engine.py:3520`) — added by
+- `filter_cards` (`engine.py:3617`) — added by
   [empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card](../empty-queue-line-reports-a-drained-deck-right-after-goc-new-scaffolds-a-card/)
-- `card_is_ready` (`engine.py:3196`) — same commit; readiness drops
+- `card_is_ready` (`engine.py:3293`) — same commit; readiness drops
   drafts on a second, independent axis
-- `live_impeded` (`engine.py:3281`) — a *third* axis, missed by that
+- `live_impeded` (`engine.py:3378`) — a *third* axis, missed by that
   commit and found only when `goc --waiting --status open` reported a
   draft as hidden that publishing would not have revealed
 

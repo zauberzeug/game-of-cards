@@ -26,7 +26,7 @@ definition_of_done: |
 
 ## The duplicated rule
 
-`waiting_impedes(card)` (`goc/engine.py:3232`) answers "does this card's
+`waiting_impedes(card)` (`goc/engine.py:3329`) answers "does this card's
 overlay impede *right now*" purely from `waiting_on` / `waiting_until`.
 It deliberately does **not** consult the card's own progress status —
 so a terminal card with a stale overlay (closing never clears the
@@ -39,10 +39,10 @@ phrasings:
 | Caller | file:line | Liveness phrasing |
 |---|---|---|
 | board `card_cell` | `engine.py:4141-4145` | `live and (... or waiting_impedes(t))`, `live = status not in TERMINAL_STATUSES` |
-| `--waiting` filter | `engine.py:4935` | `status not in TERMINAL_STATUSES and waiting_impedes(t)` (just fixed) |
+| `--waiting` filter | `engine.py:5055` | `status not in TERMINAL_STATUSES and waiting_impedes(t)` (just fixed) |
 | `card_is_workable_for_scheduler` | `engine.py:2244-2248` | `if status in TERMINAL_STATUSES: return False` then `waiting_impedes` |
 | `card_is_ready` | `engine.py:2219-2223` | `if status != "open": return False` then `waiting_impedes` (stricter: open-only) |
-| gated-leverage line | `engine.py:4245-4250` | `status == "open" and ... and not waiting_impedes(t)` (open-only) |
+| gated-leverage line | `engine.py:4342-4347` | `status == "open" and ... and not waiting_impedes(t)` (open-only) |
 | standup Section 2 block | `goc/templates/skills/standup/SKILL.md:22` | `c['status'] not in ('done','disproved','superseded') and not c.get('draft')` (live variant, **outside Python**) |
 
 Two of these are the stricter open-only variant (`card_is_ready`,
@@ -54,7 +54,7 @@ Python caller. See "A caller no helper can reach" below.
 
 One more copy sits outside the `waiting_impedes` callers. The
 CASCADE_CHAIN_ROOT walk in `validate_blocker_coherence` gates its root
-and every descendant on a local `live()` (`goc/engine.py:2724-2725`). That
+and every descendant on a local `live()` (`goc/engine.py:2804-2805`). That
 is the live variant with no overlay: `status not in TERMINAL_STATUSES and
 not card_is_draft`. It came from
 [cascade-root-warning-counts-only-cards-in-the-retired-blocked-status](../cascade-root-warning-counts-only-cards-in-the-retired-blocked-status/),

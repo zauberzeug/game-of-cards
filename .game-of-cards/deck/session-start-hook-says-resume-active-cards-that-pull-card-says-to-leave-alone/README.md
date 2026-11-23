@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/templates/hooks/deck_session_start.py:453`: the reminder for every
+- `goc/templates/hooks/deck_session_start.py:472`: the reminder for every
   `status: active` card with `human_gate: none` and no live wait.
 - `openclaw-plugin/index.ts:730`: the same reminder in the OpenClaw port.
 - `goc/templates/skills/pull-card/SKILL.md:36-38` and `:60`: the soft-lock
@@ -32,7 +32,7 @@ definition_of_done: |
 - `goc/templates/skills/deck/SKILL.md:47` and
   `goc/templates/skills/deck/reference.md:85`: "`status: active` is the
   soft lock".
-- `goc/engine.py:6685` (`_auto_populate_worker`): what a claim records.
+- `goc/engine.py:6952` (`_auto_populate_worker`): what a claim records.
   It writes `worker: {who, where}`, from git's `user.name` and the
   current branch (or `--worker-who` / `--worker-where`), and nothing
   else.

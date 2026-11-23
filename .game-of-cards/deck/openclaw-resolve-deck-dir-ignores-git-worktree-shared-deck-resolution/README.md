@@ -35,7 +35,7 @@ definition_of_done: |
   }
   ```
 
-- `goc/engine.py:44-143` — the engine's two-stage resolution this is meant to
+- `goc/engine.py:115-281` — the engine's two-stage resolution this is meant to
   mirror:
   - `_detect_worktree_common_root` / `_resolve_deck_root` (lines 44-118): when
     `cwd` is inside a git worktree **and** `worktree_deck: shared` is enabled

@@ -24,8 +24,8 @@ definition_of_done: |
 
 `goc/engine.py` `validate_card` — the `closed_at` conditional:
 
-- terminal `status` ⇒ `closed_at` must be set (~engine.py:2197).
-- non-terminal `status` ⇒ `closed_at` must be null (~engine.py:2210).
+- terminal `status` ⇒ `closed_at` must be set (~engine.py:2277).
+- non-terminal `status` ⇒ `closed_at` must be null (~engine.py:2290).
 
 ## What's broken
 

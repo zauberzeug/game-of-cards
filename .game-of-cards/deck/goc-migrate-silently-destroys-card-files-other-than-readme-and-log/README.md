@@ -21,7 +21,7 @@ definition_of_done: |
 
 ## Location
 
-`goc/engine.py:8009-8084` — the drift/identity check and the unconditional
+`goc/engine.py:8279-8354` — the drift/identity check and the unconditional
 `shutil.rmtree(legacy)` in `_cmd_migrate`.
 
 ## What's broken

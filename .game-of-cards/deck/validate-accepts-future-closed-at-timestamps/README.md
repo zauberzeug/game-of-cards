@@ -22,7 +22,7 @@ definition_of_done: |
 
 ## Location
 
-- `goc/engine.py:2151-2153` — `validate_card`'s `closed_at` check:
+- `goc/engine.py:2231-2233` — `validate_card`'s `closed_at` check:
 
   ```python
   closed_at = fm.get("closed_at")
@@ -47,13 +47,13 @@ definition_of_done: |
       )
   ```
 
-- `goc/engine.py:1327` — `_is_iso_date` (the predicate behind every date
+- `goc/engine.py:1407` — `_is_iso_date` (the predicate behind every date
   field) is shape + calendar-validity only; no temporal-ordering.
 
 ## What's missing
 
 `closed_at` is documented as "a single date per terminal exit" (see
-`Card.closed_at` at `goc/engine.py:1096-1101`). A timestamp in the future
+`Card.closed_at` at `goc/engine.py:1176-1181`). A timestamp in the future
 contradicts the field's semantic: a card cannot have been closed at a
 time that has not yet happened. The validator catches the syntactic
 adjacent failures (non-ISO shape; calendar-impossible like `2026-13-45`)
@@ -64,9 +64,9 @@ covers it.
 The validator's contract is now strictly weaker than the implicit
 invariant `closed_at <= now` that consumers assume:
 
-- `--done --since YYYY-MM-DD` (engine.py:3544) silently includes a card
+- `--done --since YYYY-MM-DD` (engine.py:3641) silently includes a card
   whose `closed_at` is `2099-12-31` for any `--since` in this century.
-- `--closed-since WINDOW` (engine.py:3624) compares against `now -
+- `--closed-since WINDOW` (engine.py:3721) compares against `now -
   window`; a future timestamp passes the `>= threshold` test trivially
   for any reasonable window, so audit windows include fictional closures.
 - `goc validate`'s own date-field tightening peer
@@ -88,10 +88,11 @@ DEFECT: validator accepts closed_at ~73 years in the future
 ## Why it matters
 
 **Reachability path.** The engine itself always writes `closed_at` via
-`_utc_now_iso()` (`_cmd_done` at engine.py:4905; `_cmd_status` for
-`disproved`/`superseded` at engine.py:5003; `_auto_populate_worker`-adjacent
-flips at engine.py:6852). So the offending input is **not** produced by
-shipping code in normal operation. The realistic input paths are:
+`_utc_now_iso()` (`_cmd_done` at engine.py:5682; `_cmd_done_bundle` at
+engine.py:5796; `_cmd_status` for `disproved`/`superseded`, beside its
+`_auto_populate_worker` call, at engine.py:7119). So the offending input
+is **not** produced by shipping code in normal operation. The realistic
+input paths are:
 
 1. **Hand-edit.** Agents and humans hand-edit frontmatter when migrating,
    decomposing, or repairing cards — `goc move` and decomposition flows
@@ -131,7 +132,7 @@ Out-of-scope on this card unless the decision says otherwise:
 
 ## Fix sketch (depending on decision)
 
-Add a helper next to `_closed_at_instant` (engine.py:3666):
+Add a helper next to `_closed_at_instant` (engine.py:3763):
 
 ```python
 def _is_in_future(value, *, tolerance: timedelta = timedelta(0)) -> bool:
