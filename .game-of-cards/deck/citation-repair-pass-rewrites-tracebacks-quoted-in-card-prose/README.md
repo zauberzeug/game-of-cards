@@ -1,7 +1,7 @@
 ---
 title: citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose
 summary: "The refine-deck citation scope rule puts a quoted error or transcript out of scope but gives a mechanical record test only for fenced blocks, so a cite in prose reads as an assertion about current code. A traceback frame quoted in prose on repair-edges-crashes-with-traceback-on-bare-string-inverse-edge-field was renumbered by all four passes that ran after the rule shipped, until the 2026-11-16 pass restored it by hand; the 2026-11-23 pass's classifier proposed it again and only a manual read held it. Records belong in fences, where the existing marker test already protects them."
-status: open
+status: active
 stage: null
 contribution: low
 created: "2026-11-23T02:09:59Z"
@@ -18,6 +18,7 @@ definition_of_done: |
   - [ ] TDD: `tests/test_refine_deck_citation_anchor.py` classifies the shipped scope prose for the prose-record rule beside `documented_fenced_scope`, failing on today's text and passing after the edit.
   - [ ] MECHANICAL: mirrors regenerate — `python scripts/sync_plugin_assets.py --check` and `python3 scripts/port_skills_to_openclaw.py --check` clean.
   - [ ] PROCESS: `uv run python -m unittest discover -s tests` and `uv run goc validate` both pass.
+worker: {who: "claude[bot]", where: main}
 ---
 
 # The citation repair pass rewrites tracebacks quoted in card prose
