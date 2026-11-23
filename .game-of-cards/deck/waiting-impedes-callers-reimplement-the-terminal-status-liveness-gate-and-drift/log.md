@@ -56,3 +56,26 @@ so the helper decision should say whether a bare live predicate is part
 of it.
 
 No status or gate change.
+
+## 2026-11-23T02:30:00Z — Two caller rows rewritten: the standup copy is retired, `--waiting` calls the helper
+
+The 2026-11-23 refine-deck citation pass declined
+`goc/templates/skills/standup/SKILL.md:22` as `anchor text absent`: the
+hand-typed gate the table quoted is gone from the template. Since `6291964e`
+(2026-10-22) the Section 2 block runs `goc --waiting -v`, so it inherits the
+engine's `live_impeded` — the delegate-to-the-CLI route `## A caller no
+helper can reach` proposed for non-importers.
+`standup-impeded-filter-drifts-from-engine-on-elapsed-and-bare-waits` closed
+on the same evidence that day.
+
+The 2026-11-09 re-check already noted that the `--waiting` row was out of
+date; the filter calls `live_impeded(t, include_drafts=include_drafts)`
+(`goc/engine.py:5064`), as does `format_waiting_overlay` (`:3435`). Both rows
+and the "No single function owns the rule" sentence are rewritten in place;
+`## A caller no helper can reach` keeps its argument under a note.
+
+Still inlined at HEAD: board `card_cell`'s `not_ready`, `card_is_ready`,
+`card_is_workable_for_scheduler`, the gated-leverage line, and the local
+`live()` in `validate_blocker_coherence`. The SessionStart hook is the
+remaining non-importer. The decision is unchanged in substance; its scope is
+one copy smaller. Gate unchanged.

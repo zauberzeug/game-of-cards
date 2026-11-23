@@ -164,3 +164,22 @@ Option B — a Skill(refine-deck) category runs the as-filed anchor scan over ga
 - The maintainer chose Option B over the card's revised A-or-D recommendation, so this is a re-scope of the stated recommendation. The summary, the DoD (items 3 and 6 ticked, two new items for the refine-deck category and its test) and the "How big it is" section now carry the decision.
 - New evidence from a read-only bulk pass over the gated backlog on 2026-10-22: 38 anchor-stale gated cards, every `reproduce.py` re-run against `af6ce90d` (code read where none exists) → 37 still live (2 narrowed, 1 re-scoped), 1 actually fixed (`unguarded-loader-callsites-keep-spawning-non-dict-shape-guard-fixes`). `0be57d4d` alone moved 9 anchors. Two reproducers no longer run although their defect is live, and two cards are stale by content with every anchor resolving.
 - Consequence written into the DoD: the category re-runs the reproducer first and re-anchors live defects; a vanished anchor or a crashing reproducer is never treated as a fix, and retirement stays with the human because the gate keeps blocking `superseded`.
+
+## 2026-11-23T02:10:00Z — Instance connected: a park whose defect lived in the deck, not the code
+
+The 2026-11-23 refine-deck pass found a third content-stale park, and found
+it by accident: its tag-row survey, not the stale-parks scan.
+`regression-suite-red-on-main-over-the-unverified-tag-row` (decision, filed
+2026-08-06) reports CI red because a live card carried `unverified` beside a
+working `reproduce.py`. That card left `unverified` in `f290f5f7` on
+2026-08-17, so the suite has been green for three months; the park's own
+`reproduce.py` exits 0 and `tests.test_canonical_tag_rows` passes. A
+staleness re-check entry now sits in its `log.md`, gate unchanged.
+
+The scan could not have seen it, for a reason the two earlier content-stale
+cards did not show: the defect was a fact about a *card* (its `tags`), and
+the scan only anchors cites into code. The test code this card cites merely
+moved, so its as-filed anchor text is all still in HEAD — the scan reported 0
+candidates over 373 as-filed anchors that day. A park whose subject is deck
+data goes stale when another card changes, which no `git log` of a source
+file records.

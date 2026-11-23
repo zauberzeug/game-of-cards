@@ -39,18 +39,22 @@ phrasings:
 | Caller | file:line | Liveness phrasing |
 |---|---|---|
 | board `card_cell` | `engine.py:4141-4145` | `live and (... or waiting_impedes(t))`, `live = status not in TERMINAL_STATUSES` |
-| `--waiting` filter | `engine.py:5055` | `status not in TERMINAL_STATUSES and waiting_impedes(t)` (just fixed) |
+| `--waiting` filter | `engine.py:5055` | `live_impeded(t, include_drafts=include_drafts)` — calls the helper; it inlined `status not in TERMINAL_STATUSES and waiting_impedes(t)` when this card was filed |
 | `card_is_workable_for_scheduler` | `engine.py:2244-2248` | `if status in TERMINAL_STATUSES: return False` then `waiting_impedes` |
 | `card_is_ready` | `engine.py:2219-2223` | `if status != "open": return False` then `waiting_impedes` (stricter: open-only) |
 | gated-leverage line | `engine.py:4342-4347` | `status == "open" and ... and not waiting_impedes(t)` (open-only) |
-| standup Section 2 block | `goc/templates/skills/standup/SKILL.md:22` | `c['status'] not in ('done','disproved','superseded') and not c.get('draft')` (live variant, **outside Python**) |
+| standup Section 2 block | retired | delegates to `goc --waiting -v` (the engine's `live_impeded`) since `6291964e`, 2026-10-22; it hand-typed `c['status'] not in ('done','disproved','superseded') and not c.get('draft')` (live variant, **outside Python**) until then |
 
 Two of these are the stricter open-only variant (`card_is_ready`,
 gated-leverage); the rest are the live variant (non-terminal, includes
-`active`). No single function owns the rule.
+`active`). `live_impeded` now owns the live variant, but only the
+`--waiting` filter and the table's overlay line (`format_waiting_overlay`)
+call it; the board, scheduler, ready and gated-leverage sites still
+inline their gate.
 
-The last row is the one that changes the shape of this card: it is not a
-Python caller. See "A caller no helper can reach" below.
+The last row is the one that changed the shape of this card: it was not a
+Python caller. See "A caller no helper can reach" below — it has since
+taken that section's delegate-to-the-CLI route.
 
 One more copy sits outside the `waiting_impedes` callers. The
 CASCADE_CHAIN_ROOT walk in `validate_blocker_coherence` gates its root
@@ -88,6 +92,12 @@ the live variant, or the consolidation will leave `--waiting` /
 can drift a third time.
 
 ## A caller no helper can reach
+
+> Since `6291964e` (2026-10-22) the standup block below calls
+> `goc --waiting -v`, which runs the engine's `live_impeded`: the
+> delegate-to-the-CLI route this section proposes. That copy is retired;
+> the SessionStart hook remains the non-importer named here. The section
+> is kept as the record of why the route matters.
 
 [standup-impeded-section-omits-active-cards-carrying-a-waiting-overlay](../standup-impeded-section-omits-active-cards-carrying-a-waiting-overlay/)
 (done) added a **seventh** copy of the rule, and it is the first one that
