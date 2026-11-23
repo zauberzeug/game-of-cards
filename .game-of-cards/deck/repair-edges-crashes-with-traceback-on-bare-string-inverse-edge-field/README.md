@@ -98,11 +98,14 @@ CONFIRMED: the validator-recommended repair path raises ValueError('advanced_by:
 ```
 
 Live CLI confirmation against a throwaway deck (`card-a.advances: [card-b]`,
-`card-b.advanced_by: card-a` as a bare string):
+`card-b.advanced_by: card-a` as a bare string), recorded when the card was
+filed — the frame numbers are what those tracebacks printed on 2026-06-23:
 
-- `goc repair-edges` (dry run) → traceback ending `ValueError: advanced_by: not a list` at `engine.py:4954 → 4911`.
-- `goc repair-edges --apply` → same traceback via `_cmd_repair_edges → _mutate_pair → 4911`.
-- `goc advance card-b --by card-a` → same `ValueError` traceback.
+```text
+- goc repair-edges (dry run) → traceback ending ValueError: advanced_by: not a list at engine.py:4954 → 4911.
+- goc repair-edges --apply → same traceback via _cmd_repair_edges → _mutate_pair → 4911.
+- goc advance card-b --by card-a → same ValueError traceback.
+```
 
 ## Why it matters
 

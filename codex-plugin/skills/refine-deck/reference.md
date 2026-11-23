@@ -397,6 +397,36 @@ records and leaves no trace that it did. Both readings are wrong on one
 of the two shapes, which is why the split is stated here rather than
 re-derived per pass.
 
+**A record quoted in prose is still a record — and only a fence says so.**
+The marker test reads fenced lines only. Outside a fence nothing marks a
+cite as output, so a record quoted in prose — a traceback frame, an
+error location, a line a command printed, written as a bullet or a
+sentence — reads exactly like a cite about HEAD: its anchor is a real
+line, its match is unique, every guard in the recipe passes, and the
+pass moves it. "Undecidable → record" protects only a line a pass
+notices is undecidable, and a quoted result line does not look
+undecidable. Recognition by reading therefore has to happen on every
+pass, and on this deck it did not. One card quoted a dry-run traceback's
+frame chain, `engine.py:N → M`, in a prose bullet; every pass after this
+scope rule shipped renumbered its first frame, four in a row, until the
+2026-11-16 pass restored it by hand, and the 2026-11-23 pass's classifier
+proposed the move again in both its rounds, held only by a manual read.
+The second frame carried no path, so no pass touched it: from the first
+rewrite on, the card quoted a chain no run of the command could print.
+So a record quoted in prose is still a record, and the pass that
+recognises one moves it into a fence with its numbers unchanged — as
+filed, restoring from the card's own history any number an earlier pass
+rewrote — so the next pass's marker test protects it without a re-read.
+Recognition then happens once per record instead of once per pass.
+Report the records fenced this way with the records' count. Leave an
+undecidable prose cite in place: fencing it would put a cite that may be
+a label out of every later pass's reach, where it rots unseen. A keyword
+test for prose — `traceback`, `→`, "printed" — was rejected: it catches
+the one known line, nothing shows it catches the next, and it keeps the
+classification a per-pass judgment. New records should not need the
+move at all: `Skill(create-card)` Step 5 puts quoted output in a fenced
+block when the card is written.
+
 **Resolving the cite.** Cards write paths as they read in prose, so
 accept the bare basename (`engine.py:N` for `goc/engine.py:N`) and
 prefer a match outside vendored/mirror trees when several exist.

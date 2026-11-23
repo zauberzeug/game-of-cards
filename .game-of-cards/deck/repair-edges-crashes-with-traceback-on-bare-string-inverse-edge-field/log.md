@@ -42,3 +42,17 @@ at `engine.py:4954 → 4911`) is the frame chain a live run printed on
 hygiene pass from 2026-08-10 on renumbered its first frame (to `7165` by
 2026-11-09) and left the second, so the line matched no run. Restored to the
 filing-time `4954`.
+
+## 2026-11-23T04:35:00Z — Quoted CLI results moved into a fence
+
+The three "Live CLI confirmation" result bullets under `## Empirical
+evidence` now sit in a fenced block, numbers as filed (`4954 → 4911`), with
+the inline-code markup dropped and the wording otherwise unchanged. In prose
+the citation pass's scope rule read the frame chain as a cite about where
+the code lives now: four consecutive passes renumbered it before the
+2026-11-16 restore, and the 2026-11-23 pass proposed the move again. Inside a
+fence with no `#` or `//` marker before the cite, the marker test reads it
+as a record, so no later pass has to recognise it by reading the line.
+Rule and its history:
+[citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose](../citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose/).
+The defect this card describes and its gate are unchanged.

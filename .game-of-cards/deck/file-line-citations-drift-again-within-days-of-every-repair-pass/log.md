@@ -353,3 +353,17 @@ Cost of the 2026-11-23 pass: 258 cites re-anchored across 91 cards (252 in
 `reproduce.py` measured the 2026-11-16 pass at 165 of 166 cites (99%)
 already wrong after six days. 326 cites were declined for a reader, and
 the committed re-run proposed no further repairs.
+
+## 2026-11-23T04:37:55Z — The prose-record instance fixed, and what it cost
+
+[`citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose`](../citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose/)
+closed: the scope rule now says a record quoted in prose is still a record,
+which the pass moves into a fence with its numbers as filed, so the marker
+test reads it as a record on every later pass; `Skill(create-card)` Step 5
+puts quoted output in a fenced block from the start, and the one live
+instance is fenced. Cost of this patch: one sentence in the scope paragraph,
+the thirteenth raise of the refine-deck size cap (16,300 to 16,500 bytes)
+plus a create-card raise (10,500 to 10,600), one reference paragraph, and 6
+regression tests. As the entry above notes, a citation form chosen here would
+change what a misread record costs, not whether a pass must tell a record
+from a claim.

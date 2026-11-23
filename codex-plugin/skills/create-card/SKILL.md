@@ -178,7 +178,9 @@ knowledge, rewritten in place as understanding evolves. Do NOT append
 - **Location** — `file:line` (bug-class) or doc/section (doc-class).
 - **What's broken** — prose with **quoted code AND quoted
   contradicted doc/comment**; the reader must see the conflict.
-- **Empirical evidence** — `reproduce.py` output verbatim (Step 6).
+- **Empirical evidence** — quoted output (`reproduce.py`, tracebacks,
+  error text) verbatim in a fenced block, so no citation pass renumbers
+  it (Step 6).
 - **Why it matters** — connect to a real symptom; cross-link cards as
   `[<title>](../<title>/)`. For parser / emitter / storage-layer
   defects, name the reachability path that produces the offending

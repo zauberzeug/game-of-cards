@@ -15,8 +15,8 @@ This script does two things:
    chain (`path:N → N`) or a line that says "traceback". Those cites are
    records the rule cannot see.
 2. Replays the history of the known instance: every commit that changed
-   the quoted frame's number, and whether the scope rule (eae2bea9,
-   2026-09-01) had already shipped at that commit.
+   the quoted frame's number or moved it into a fence, and whether the
+   scope rule (eae2bea9, 2026-09-01) had already shipped at that commit.
 
 Exit 1 while any live card carries such a prose cite; 0 once none does.
 """
@@ -44,7 +44,9 @@ FENCE = re.compile(r"^\s*(```|~~~)")
 FRAME_CHAIN = re.compile(r"\s*(?:→|->)\s*`?\d")
 STATUS = re.compile(r"^status:\s*(\S+)", re.M)
 INSTANCE = "repair-edges-crashes-with-traceback-on-bare-string-inverse-edge-field"
-FRAME = re.compile(r"traceback ending .*? at `engine\.py:(\d+) → (\d+)`")
+# Backticks optional: the prose bullet as filed wraps the chain in inline
+# code, and the fenced record it became carries no markup.
+FRAME = re.compile(r"traceback ending .*? at `?engine\.py:(\d+) → (\d+)")
 RULE_COMMIT = "eae2bea9"  # fix(refine-deck): scope a cite by what it claims
 
 
@@ -74,6 +76,15 @@ def prose_records(text: str) -> list[tuple[int, str, str]]:
             if FRAME_CHAIN.match(rest) or "traceback" in line.lower():
                 hits.append((i, m.group(0), line.strip()))
     return hits
+
+
+def in_fence(text: str, pos: int) -> bool:
+    """Is the line holding offset ``pos`` inside a fenced block?"""
+    inside = False
+    for line in text[:pos].split("\n")[:-1]:
+        if FENCE.match(line):
+            inside = not inside
+    return inside
 
 
 def scan() -> int:
@@ -106,6 +117,7 @@ def replay() -> None:
     print(f"\nHistory of the frame quoted on {INSTANCE}")
     print(f"(first number of `engine.py:N → M`; scope rule = {RULE_COMMIT}):")
     previous = filed = None
+    was_fenced = False
     after_rule = 0
     for row in log:
         full, short, day = row.split()
@@ -114,7 +126,8 @@ def replay() -> None:
         if m is None:
             continue
         number = m.group(1)
-        if number == previous:
+        fenced = in_fence(version, m.start())
+        if number == previous and fenced == was_fenced:
             continue
         shipped = subprocess.run(
             ["git", "merge-base", "--is-ancestor", RULE_COMMIT, full],
@@ -123,6 +136,11 @@ def replay() -> None:
         if previous is None:
             note = "as filed"
             filed = number
+        elif fenced and not was_fenced:
+            note = "moved into a fence, " + (
+                "number as filed" if number == filed
+                else f"number NOT as filed ({filed})"
+            )
         elif number == filed:
             note = "restored to the filed number by hand"
         elif shipped:
@@ -131,7 +149,7 @@ def replay() -> None:
         else:
             note = "rewritten before the scope rule"
         print(f"  {short} {day}  {number:>5} → {m.group(2)}  {note}")
-        previous = number
+        previous, was_fenced = number, fenced
     print(f"Rewrites after the rule shipped: {after_rule}")
 
 

@@ -139,8 +139,11 @@ alike — the fenced form is a COMMENT LABEL, a `#` or `//` marker before
 the cite on its line. A cite that is part of a dated record — pasted
 `grep -n` output (`path:line:content`), a `reproduce.py` transcript, a
 quoted error — is OUT of scope: rewriting its number fabricates output
-the command never produced. Repair the labels; leave the records and
-report their count apart from the declines below. Undecidable → record.
+the command never produced. A record quoted in prose is still a record:
+move it into a fence with its numbers as filed, so the next pass's
+marker test holds it without a re-read. Repair the labels; leave the
+records and report their count apart from the declines below.
+Undecidable → record, left in place.
 
 Per cite (long form: `reference.md` § Citation anchor check):
 

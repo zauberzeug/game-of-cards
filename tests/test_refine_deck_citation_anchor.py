@@ -115,6 +115,17 @@ and the walk takes the sibling's older turn. The 2026-11-16 pass's committed
 re-run proposed two such moves, both false. The fixture builds that pass,
 on two lines and inside one line, and a reworded line proves the rule
 leaves a cite that merely kept its number alone.
+
+The scope rule had a gap of its own, in where its test reaches:
+`citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose` found the
+comment-marker test, the scope rule's only mechanical record test, reading
+fenced lines only. A traceback frame quoted in a prose bullet therefore read
+as a cite about HEAD, and every pass after the rule shipped renumbered the one
+such frame on this deck, four in a row, until a hand restore. The classifier
+beside the fenced-scope one pins the move that brings such a record under the
+marker test (into a fence, numbers as filed) and the reason for it, and two
+weaker rules prove the classifier refuses a record recognised but left in
+prose, and one fenced only after its numbers moved.
 """
 
 from __future__ import annotations
@@ -139,6 +150,13 @@ AUTHORING = "authoring-commit"
 # a disposition per shape, so the prose reads the same to the classifier.
 SPLIT_BY_CLAIM = "split-by-what-the-cite-claims"
 BLANKET = "one-rule-for-every-fenced-cite"
+
+# Prose-record verdicts. PROSE_RECORD_UNREACHED is the scope rule as it
+# shipped from 2026-09-01 to 2026-11-23: its one mechanical record test, the
+# marker test, reads fenced lines only, so a record quoted in prose reads as a
+# cite about HEAD unless a pass recognises it by reading — on every pass anew.
+PROSE_RECORD_FENCED = "prose-record-moved-under-the-marker-test"
+PROSE_RECORD_UNREACHED = "prose-record-left-to-each-pass"
 
 # Range-repair verdicts. PAIR_UNCHECKED is the recipe as it shipped from
 # 2026-08-10 to 2026-09-07: two endpoints mapped, nothing asked afterwards
@@ -484,6 +502,47 @@ def documented_fenced_scope(prose: str) -> str | None:
     if labels_repaired and records_excluded:
         return SPLIT_BY_CLAIM
     return BLANKET
+
+
+# The sentence carrying the prose-record rule: from its claim to the next full
+# stop, so the move, the numbers and the reason must sit in one sentence with
+# it rather than anywhere in a section that mentions "as filed" for its own
+# reasons (the reference sibling's anchor walk does, twice).
+_PROSE_RECORD_SENTENCE = re.compile(r"in prose is still a record\b[^.]*")
+
+
+def documented_prose_record_rule(prose: str) -> str | None:
+    """Does this stretch of skill prose bring a record quoted in PROSE under the marker test?
+
+    The scope rule's only mechanical record test is the marker test, and it
+    reads fenced lines only. Outside a fence nothing marks a cite as output,
+    so a traceback frame quoted in a prose bullet reads like any cite about
+    HEAD: its anchor is a real line, its match is unique, and every guard in
+    the recipe passes on the move. One sentence of the prose has to carry
+    four things, and a pass needs all four. That a record in prose is still a
+    record. That the pass MOVES it into a fence: a rule that only recognises
+    it leaves the recognition to every later pass, and per-pass recognition
+    is what failed four passes running. That its numbers go in as filed,
+    since a fence around a renumbered frame protects the fabrication. And the
+    reason, the next pass's marker test holding it without a re-read,
+    because without it leaving the line alone reads as the cautious choice.
+
+    Prose with no fenced-scope rule is not the scope rule and returns None.
+    Prose that scopes without all four is PROSE_RECORD_UNREACHED — the shipped
+    text this was filed against, which reads as complete because its first
+    sentence does reach prose: it calls every prose cite an assertion about
+    where code lives now.
+    """
+    if documented_fenced_scope(prose) is None:
+        return None
+    for match in _PROSE_RECORD_SENTENCE.finditer(_flat(prose)):
+        sentence = match.group(0)
+        moved = "into a fence" in sentence
+        as_filed = "as filed" in sentence or "unchanged" in sentence
+        reason = "marker test" in sentence and "re-read" in sentence
+        if moved and as_filed and reason:
+            return PROSE_RECORD_FENCED
+    return PROSE_RECORD_UNREACHED
 
 
 def _flat(prose: str) -> str:
@@ -1703,6 +1762,97 @@ class DocumentedFencedScopeTest(unittest.TestCase):
         # it shipped before this rule existed named no fence at all.
         self.assertIsNone(
             documented_fenced_scope(
+                "Relocate the anchor text in HEAD and rewrite the number only "
+                "on a unique match of a non-trivial line. Never guess."
+            )
+        )
+
+
+class DocumentedProseRecordRuleTest(unittest.TestCase):
+    """A record quoted in prose is still a record; the fence is what says so."""
+
+    # The core skill's scope paragraph as it shipped from 2026-09-01 to
+    # 2026-11-23. Under it the one traceback frame this deck quoted in prose
+    # was renumbered by every pass, four in a row, until a hand restore.
+    SHIPPED_SCOPE = (
+        "Scope by what the cite CLAIMS, not by where it sits. A cite asserting "
+        "where code lives NOW is in scope in prose and inside a fenced block "
+        "alike — the fenced form is a COMMENT LABEL, a `#` or `//` marker "
+        "before the cite on its line. A cite that is part of a dated record — "
+        "pasted `grep -n` output (`path:line:content`), a `reproduce.py` "
+        "transcript, a quoted error — is OUT of scope: rewriting its number "
+        "fabricates output the command never produced. Repair the labels; "
+        "leave the records and report their count apart from the declines "
+        "below. Undecidable → record."
+    )
+    # A plausible weaker rule: the record is recognised and left where it
+    # sits, so the next pass must recognise it again by reading the line.
+    RECOGNISED_IN_PLACE = SHIPPED_SCOPE + (
+        " A record quoted in prose is still a record: leave it where it sits "
+        "with its numbers as filed, and re-read it on the next pass."
+    )
+    # Another: the record is fenced, but with whatever number the pass has
+    # just given it, so the fence protects a frame no traceback printed.
+    FENCED_AFTER_REPAIR = SHIPPED_SCOPE + (
+        " A record quoted in prose is still a record: once its numbers are "
+        "repaired, move it into a fence, so the next pass's marker test holds "
+        "it without a re-read."
+    )
+
+    def test_core_skill_moves_a_prose_record_into_a_fence(self) -> None:
+        self.assertEqual(
+            PROSE_RECORD_FENCED,
+            documented_prose_record_rule(skill_citation_section()),
+            "refine-deck SKILL.md § Defunct file:line citations must say that "
+            "a record quoted in prose is still a record and that the pass "
+            "moves it into a fence with its numbers as filed, so the next "
+            "pass's marker test holds it without a re-read; the marker test "
+            "reads fenced lines only, and a traceback frame in a prose bullet "
+            "reads as a cite about HEAD to every pass that does not stop to "
+            "read it",
+        )
+
+    def test_reference_sibling_prescribes_the_same_rule(self) -> None:
+        self.assertEqual(
+            documented_prose_record_rule(skill_citation_section()),
+            documented_prose_record_rule(reference_anchor_section()),
+            "refine-deck's core skill and its reference sibling disagree on "
+            "what a pass does with a record quoted in prose",
+        )
+
+    def test_the_shipped_scope_this_amended_is_classified_as_unreached(
+        self,
+    ) -> None:
+        # The classifier's own proof that it can fail: the shipped paragraph
+        # is a complete fenced-scope rule and still leaves prose records to
+        # each pass.
+        self.assertEqual(
+            SPLIT_BY_CLAIM, documented_fenced_scope(self.SHIPPED_SCOPE)
+        )
+        self.assertEqual(
+            PROSE_RECORD_UNREACHED,
+            documented_prose_record_rule(self.SHIPPED_SCOPE),
+        )
+
+    def test_a_record_recognised_but_left_in_prose_is_not_the_rule(
+        self,
+    ) -> None:
+        self.assertEqual(
+            PROSE_RECORD_UNREACHED,
+            documented_prose_record_rule(self.RECOGNISED_IN_PLACE),
+        )
+
+    def test_a_record_fenced_after_its_numbers_moved_is_not_the_rule(
+        self,
+    ) -> None:
+        self.assertEqual(
+            PROSE_RECORD_UNREACHED,
+            documented_prose_record_rule(self.FENCED_AFTER_REPAIR),
+        )
+
+    def test_prose_with_no_scope_rule_is_unclassifiable(self) -> None:
+        self.assertIsNone(
+            documented_prose_record_rule(
                 "Relocate the anchor text in HEAD and rewrite the number only "
                 "on a unique match of a non-trivial line. Never guess."
             )

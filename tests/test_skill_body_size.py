@@ -234,8 +234,32 @@ def taxed_size(path: Path) -> int:
 # did on the seventh and eleventh raises: every per-cite rule passes on the
 # move, and the next pass meets it in its FIRST round, where nothing sets it
 # apart from a real repair. The skill had 25 bytes of headroom.
+#
+# refine-deck was raised a thirteenth time on 2026-11-23 by the card
+# `citation-repair-pass-rewrites-tracebacks-quoted-in-card-prose`: the scope
+# rule's only mechanical record test, the comment-marker test, reads fenced
+# lines only, so a traceback frame quoted in a prose bullet read as a cite
+# about HEAD (measured: every pass after the rule shipped renumbered the one
+# such frame on this deck, four in a row, until a hand restore, and the next
+# pass proposed the move again). What stayed in the core is one sentence —
+# a record quoted in prose is still a record, moved into a fence with its
+# numbers as filed so the marker test holds it from then on — plus "left in
+# place" for an undecidable cite; the history, the restore-from-history rule
+# and the rejected keyword test went to the reference sibling. A pointer
+# alone fails the way it did on the fourth raise, sharpened: the core's own
+# test calls every prose cite an assertion, so a pass that applies it has no
+# reason to suspect a record. The skill had 26 bytes of headroom.
+#
+# create-card was raised on 2026-11-23 by the same card: Step 5 said which
+# evidence a card carries and not where it goes, so a card quoted a
+# traceback's frame chain in a prose bullet, outside the only place the
+# citation pass can tell a record from a cite. The rule that quoted output
+# goes verbatim in a fenced block is the authoring half of that fix, and it
+# has to sit on the line an author writes the evidence from: a pointer is
+# followed only by a reader who already suspects a rule. The skill had 1 byte
+# of headroom, so no addition of any size would have fit.
 BODY_CAPS = {
-    "create-card": 10_500,
+    "create-card": 10_600,
     "finish-card": 10_500,
     "advance-card": 10_000,
     "decide-card": 10_000,
@@ -243,7 +267,7 @@ BODY_CAPS = {
     "pull-card": 10_000,
     "card-schema": 12_800,
     "deck": 10_100,
-    "refine-deck": 16_300,
+    "refine-deck": 16_500,
     "kickoff": 11_000,
     "audit-deck": 10_000,
 }
